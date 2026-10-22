@@ -11,3 +11,6 @@ public/data/
 coverage/
 .DS_Store
 *.tsbuildinfo
+test-results/
+playwright-report/
+*.egg-info/

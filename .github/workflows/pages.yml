@@ -1,0 +1,109 @@
+# Build and deploy the static site to GitHub Pages.
+#
+# Triggers: push to main, manual dispatch, and completion of a successful "Data refresh" run (commits
+# pushed with GITHUB_TOKEN do not trigger `push` workflows, so the refresh hands over via workflow_run).
+# Any failure in the build job (validation, data build, site build, privacy check) stops the run before
+# deploy; the previous deployment stays live.
+#
+# One-time setup: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions" (docs/DEPLOYMENT.md).
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Data refresh"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+# One deployment at a time; never cancel a deployment that is already running.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  build:
+    name: Build site
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # On workflow_run this checks out the latest commit on main, i.e. including the refresh commit.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -e .
+          npm ci
+
+      - name: Validate snapshot
+        run: python -m pipeline validate
+
+      - name: Build site data (public/data)
+        run: python -m pipeline build
+
+      - name: Build site
+        env:
+          # "/eu-intel" for a project site, "" for a custom domain -> "/eu-intel/" or "/".
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+        run: |
+          echo "BASE_PATH=$BASE_PATH"
+          npm run build
+
+      - name: Privacy check
+        run: node scripts/check_privacy.mjs
+
+      - name: Check Pages size limit
+        run: |
+          du -sh dist
+          kb=$(du -sk dist | cut -f1)
+          # GitHub Pages sites may be at most 1 GB; fail well before that.
+          if [ "$kb" -gt 900000 ]; then echo "::error::dist is ${kb} KB (Pages limit is 1 GB)"; exit 1; fi
+          if [ "$kb" -gt 500000 ]; then echo "::warning::dist is ${kb} KB; Pages limit is 1 GB"; fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist/
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

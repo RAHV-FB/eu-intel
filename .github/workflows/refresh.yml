@@ -1,0 +1,123 @@
+# Weekly data refresh: fetch official sources -> validate -> record activity -> commit the snapshot.
+#
+# - Each source is failure-isolated by `python -m pipeline fetch`: a failed source keeps its previous
+#   snapshot files and is recorded as failed in data/snapshot/_manifest.json; the job carries on.
+# - If structural validation fails, nothing is committed and the job fails (so no deploy is triggered).
+# - On success, "Deploy to GitHub Pages" runs via its workflow_run trigger and publishes the new data.
+# - GitHub runs scheduled workflows on a best-effort basis (they can be delayed or skipped under load) and
+#   disables them in public repos after 60 days without repository activity. Re-enable from the Actions tab.
+# Manual run: Actions -> Data refresh -> Run workflow (optionally list specific sources).
+name: Data refresh
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # Mondays 05:17 UTC
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: "Sources to fetch, space-separated (blank = all): ep_people ep_procedures ep_votes eurlex council implementation train"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  EU_INTEL_NO_CACHE: "1"
+
+jobs:
+  refresh:
+    name: Fetch, validate, commit
+    # Scheduled runs only in the canonical repository (forks can still dispatch manually).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'rahv-fb/eu-intel' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: python -m pip install -e .
+
+      - name: Fetch official sources
+        id: fetch
+        env:
+          SOURCES: ${{ inputs.sources }}
+        run: |
+          if [[ ! "$SOURCES" =~ ^[a-z_\ ]*$ ]]; then
+            echo "::error::invalid sources input"; exit 2
+          fi
+          set +e
+          # shellcheck disable=SC2086  # word splitting of the source list is intended
+          python -m pipeline fetch $SOURCES
+          rc=$?
+          set -e
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          if [ "$rc" -eq 2 ]; then echo "::error::unknown source name"; exit 2; fi
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning::One or more sources failed; their previous snapshot files were kept (see data/snapshot/_manifest.json)."
+          fi
+
+      - name: Source status
+        if: ${{ always() && steps.fetch.outcome != 'skipped' }}
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          p = pathlib.Path("data/snapshot/_manifest.json")
+          m = json.loads(p.read_text()) if p.exists() else {}
+          print("| source | status | last successful fetch | records | note |")
+          print("| --- | --- | --- | --- | --- |")
+          for k, v in sorted(m.items()):
+              recs = ", ".join(f"{a}: {b}" for a, b in (v.get("records") or {}).items())
+              note = (v.get("note") or "").replace("|", "/")[:160]
+              print(f"| {k} | {v.get('status')} | {v.get('fetched_at') or '-'} | {recs} | {note} |")
+          PY
+
+      - name: Validate snapshot (blocks the commit on failure)
+        run: python -m pipeline validate
+
+      - name: Build and record activity
+        env:
+          EU_INTEL_RECORD_ACTIVITY: "1"
+        run: python -m pipeline build
+
+      - name: Commit and push snapshot
+        run: |
+          paths="data/snapshot"
+          [ -d data/state ] && paths="$paths data/state"
+          # shellcheck disable=SC2086
+          git add -A -- $paths
+          if git diff --cached --quiet; then
+            echo "No data changes." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git diff --cached --stat | tail -n 30
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "Data refresh $(date -u +%Y-%m-%d)" \
+            -m "Automated by .github/workflows/refresh.yml (run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "Pushed $(git rev-parse --short HEAD)." | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Push rejected (main moved?); rebasing (attempt $attempt)."
+            git pull --rebase origin main
+          done
+          echo "::error::could not push the data refresh commit"
+          exit 1

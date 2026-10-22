@@ -1,53 +1,12 @@
 /**
  * Smoke, deep-link, search, privacy and accessibility checks on the built site under the Pages subpath.
- * See playwright.config.ts for how to build and run. Every test automatically fails on:
- *   - a request to any origin other than the site's own (CSP-blocked loads surface as console errors), and
- *   - console errors, uncaught exceptions, or failed (>= 400) same-origin requests.
+ * See playwright.config.ts for how to build and run; tests/e2e/fixtures.ts for the automatic
+ * third-party-request and console-error guard applied to every test.
  */
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test as base, type APIRequestContext, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { AI_ACT_ID, BASE_PATH, PAGES_ORIGIN, SITE_NAME } from './env';
-
-interface Guard {
-  /** Ignore console/response errors matching this pattern for the current test (e.g. an expected 404). */
-  ignore(re: RegExp): void;
-}
-
-const test = base.extend<{ guard: Guard }>({
-  guard: [
-    async ({ page }, use) => {
-      const errors: string[] = [];
-      const external: string[] = [];
-      const ignored: RegExp[] = [];
-      let siteOrigin: string | null = null;
-      const skip = (u: URL) => u.protocol === 'data:' || u.protocol === 'blob:' || u.protocol === 'about:';
-
-      page.on('request', (req) => {
-        const u = new URL(req.url());
-        if (skip(u)) return;
-        if (siteOrigin === null && req.isNavigationRequest() && req.frame() === page.mainFrame()) siteOrigin = u.origin;
-        if (u.origin !== siteOrigin) external.push(`${req.resourceType()} ${req.url()}`);
-      });
-      page.on('response', (res) => {
-        const u = new URL(res.url());
-        if (!skip(u) && u.origin === siteOrigin && res.status() >= 400) errors.push(`HTTP ${res.status()} ${res.url()}`);
-      });
-      page.on('console', (msg) => {
-        if (msg.type() === 'error') errors.push(`console.error: ${msg.text()} (${msg.location().url})`);
-      });
-      page.on('pageerror', (err) => errors.push(`uncaught: ${err.message}`));
-
-      await use({ ignore: (re) => ignored.push(re) });
-
-      expect(external, 'requests to third-party origins').toEqual([]);
-      expect(
-        errors.filter((e) => !ignored.some((re) => re.test(e))),
-        'console errors, uncaught exceptions or failed same-origin requests',
-      ).toEqual([]);
-    },
-    { auto: true },
-  ],
-});
+import { evenSample, expect, expectHealthy, indexIds, open, settle, test } from './fixtures';
 
 const PRIMARY = [
   { path: './', label: 'Discover' },
@@ -59,37 +18,6 @@ const PRIMARY = [
 ];
 const SECONDARY = ['about', 'privacy', 'following', 'search?q=climate'];
 const AI_ACT_TITLE = /artificial intelligence|\bAI Act\b/i;
-
-/** Wait until the page has loaded its data and rendered a heading. */
-async function settle(page: Page) {
-  await page.waitForLoadState('networkidle');
-  await expect(page.locator('.state--loading')).toHaveCount(0);
-  await expect(page.locator('main h1').first()).toBeVisible();
-}
-
-/** Navigate relative to the base URL ("legislation", not "/legislation", which would drop the subpath). */
-async function open(page: Page, path: string) {
-  const res = await page.goto(path);
-  await settle(page);
-  return res;
-}
-
-async function expectHealthy(page: Page) {
-  await expect(page).toHaveTitle(new RegExp(SITE_NAME));
-  await expect(page.locator('main h1').first()).not.toBeEmpty();
-  await expect(page.locator('.state--error'), 'error state rendered').toHaveCount(0);
-  await expect(page.getByText(/We couldn.t find this/), 'not-found page rendered').toHaveCount(0);
-}
-
-async function indexIds(request: APIRequestContext, origin: string, file: string, key: string): Promise<string[]> {
-  const res = await request.get(`${origin}${BASE_PATH}data/${file}`);
-  if (!res.ok()) return [];
-  const rows = (await res.json()) as Record<string, unknown>[];
-  return rows.map((r) => String(r[key]));
-}
-
-const evenSample = <T,>(xs: T[], n: number) =>
-  xs.length <= n ? xs : Array.from({ length: n }, (_, i) => xs[Math.floor((i * xs.length) / n)]);
 
 // ------------------------------------------------------------------ routes
 
