@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { BallotPosition, EpVoteSummary, GroupDetail, MepSummary, PositionCounts } from '../types/data';
+import type { BallotPosition, EpVoteSummary, GroupDetail, MepSummary, Meta, PositionCounts } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber, pct } from '../lib/format';
@@ -23,6 +23,8 @@ export default function Group() {
   const { data: g, error, loading } = useData<GroupDetail>(`people/groups/${encodeURIComponent(id)}.json`);
   const meps = useData<MepSummary[]>(g && g.member_ids.length > 0 ? 'people/meps.json' : null);
   const votesIndex = useData<EpVoteSummary[]>(g && g.votes.length > 0 ? 'votes/index.json' : null);
+  const meta = useData<Meta>('meta.json');
+  const noVoteData = meta.data ? meta.data.counts.ep_votes_with_ballots === 0 : false;
   const [shown, setShown] = useState(VOTES_PAGE);
   useDocumentTitle(g ? `${g.code} – ${g.name}` : 'Political group');
 
@@ -221,7 +223,15 @@ export default function Group() {
           check the number of recorded votes before drawing conclusions.
         </p>
         {g.votes.length === 0 ? (
-          <EmptyState title="No recorded votes for this group on the votes we index" />
+          <EmptyState
+            title={noVoteData ? 'Parliament vote data is not available in this release' : 'No recorded votes for this group on the votes we index'}
+          >
+            {noVoteData && (
+              <>
+                See <Link to="/about#coverage">coverage</Link> for the status of each source.
+              </>
+            )}
+          </EmptyState>
         ) : (
           <>
             <div className="table-wrap table-card">

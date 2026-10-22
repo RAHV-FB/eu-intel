@@ -283,3 +283,9 @@
     grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
   }
 }
+
+.facts dt .term__btn {
+  text-transform: inherit;
+  letter-spacing: inherit;
+  font-weight: inherit;
+}

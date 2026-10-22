@@ -254,22 +254,21 @@ class SheetError(ValueError):
 def analyse_sheet(img: Raster) -> Sheet:
     """Read a GSC voting sheet image. Raises SheetError if the template is not recognised exactly."""
     px = img.px
-    cand: list[tuple[float, float, int, int]] = []  # (xc, yc, size, class)
-    big: list[tuple[float, float, int, int]] = []
+    # Single-colour, roughly square components: (xc, yc, width, class, fill ratio). Icons are drawn
+    # slightly wider than tall in some templates, flags are ~1.5:1 and multi-coloured.
+    squares: list[tuple[float, float, int, int, float]] = []
     for x0, y0, x1, y1, cnt in _components(img):
         bw, bh = x1 - x0 + 1, y1 - y0 + 1
         n = sum(cnt)
         k = max((GREEN, RED, YELLOW), key=lambda i: cnt[i])
-        if abs(bw - bh) > max(3, 0.12 * bw) or cnt[k] < 0.85 * n:
-            continue
-        if 10 <= bw <= 45 and n >= 0.6 * bw * bh:
-            cand.append(((x0 + x1) / 2, (y0 + y1) / 2, bw, k))
-        elif bw > 45 and n >= 0.15 * bw * bh:
-            big.append(((x0 + x1) / 2, (y0 + y1) / 2, bw, k))
-    if len(cand) < 10:
-        raise SheetError(f"too few vote icons ({len(cand)})")
-    s = statistics.median(c[2] for c in cand)
-    cand = sorted(c for c in cand if 0.8 * s <= c[2] <= 1.25 * s)
+        if 0.7 <= bh / bw <= 1.35 and cnt[k] >= 0.85 * n and bw >= 8:
+            squares.append(((x0 + x1) / 2, (y0 + y1) / 2, bw, k, n / (bw * bh)))
+    solid = [c for c in squares if c[2] <= 45 and c[4] >= 0.6]
+    if len(solid) < 10:
+        raise SheetError(f"too few vote icons ({len(solid)})")
+    s = statistics.median(c[2] for c in solid)
+    cand = sorted(c[:4] for c in solid if 0.8 * s <= c[2] <= 1.25 * s)
+    big = [c[:4] for c in squares if c[2] >= 2 * s and c[4] >= 0.15]
 
     clusters: list[list[tuple[float, float, int, int]]] = []
     for c in cand:
@@ -283,10 +282,24 @@ def analyse_sheet(img: Raster) -> Sheet:
     grid = sorted(clusters[:2], key=lambda cl: cl[0][0])
     xl = statistics.median(c[0] for c in grid[0])
     xr = statistics.median(c[0] for c in grid[1])
-    legend = sorted(
-        (c for cl in clusters[2:] if len(cl) == 3 for c in cl if c[0] < xl - s), key=lambda c: c[1]
+    # Legend of the summary table: yes/no/abstain icons stacked vertically, left of the grid.
+    left_of_grid = sorted(
+        (c[:4] for c in squares if c[0] < xl - s and 0.6 * s <= c[2] <= 1.4 * s and c[4] >= 0.5),
+        key=lambda c: c[1],
     )
-    if [c[3] for c in legend] != [GREEN, RED, YELLOW]:
+    legend = []
+    for i in range(len(left_of_grid) - 2):
+        a, b, c = left_of_grid[i : i + 3]
+        if (
+            [a[3], b[3], c[3]] == [GREEN, RED, YELLOW]
+            and abs(a[0] - b[0]) <= s / 2
+            and abs(b[0] - c[0]) <= s / 2
+            and 0.7 * s <= b[1] - a[1] <= 2.5 * s
+            and 0.7 * s <= c[1] - b[1] <= 2.5 * s
+        ):
+            legend = [a, b, c]
+            break
+    if not legend:
         raise SheetError("legend (yes/no/abstain icons) not found")
 
     # Row pitch and origin, fitted on all grid icons of both columns.
@@ -352,9 +365,12 @@ def analyse_sheet(img: Raster) -> Sheet:
 
     left = [slot(xl, k) for k in range(14)]
     right = [slot(xr, k) for k in range(14)]
-    n_icons = sum(len(cl) for cl in grid)
-    if sum(1 for v in left + right if v != "grey") != n_icons:
-        raise SheetError("icon count does not match classified slots")
+    # Every icon detected in a vote column must sit on a slot classified with the same colour.
+    for col, cl in ((left, grid[0]), (right, grid[1])):
+        for _xc, yc, _w, k in cl:
+            row = round((yc - row0) / p)
+            if not 0 <= row <= 13 or abs(yc - (row0 + row * p)) > 0.3 * s or col[row] != ICON_POSITION[k]:
+                raise SheetError("detected icons inconsistent with the slot grid")
 
     # Final result: one large green/red square to the right of the left vote column.
     finals = [b for b in big if b[0] > xl and b[3] in (GREEN, RED) and b[1] < row0]
@@ -369,26 +385,27 @@ def analyse_sheet(img: Raster) -> Sheet:
         for x in range(int(xl + 0.08 * span), int(xl + 0.35 * span) + 1):
             if _is_text(*px(x, y)):
                 pop_pixels += 1
-    # Signal 2: width of the first footnote line below the grid.
+    # Signal 2: width of the first footnote text line below the grid (a full-width QMV explanation vs
+    # "* Abstentions do not prevent unanimity being reached"). Thin rules (separators) are ignored;
+    # some published sheets are cropped and have no footnote.
     xa, xb = int(legend[0][0] - s), int(xr + s)
-    y_start = int(row0 + 13 * p + 0.6 * p)
-    first = lo = hi = None
-    for y in range(y_start, min(img.h, y_start + int(4 * p))):
+    y_start = int(row0 + 13.6 * p)
+    foot: float | None = None
+    run: list[list[int]] = []
+    for y in range(y_start, min(img.h, y_start + int(3 * p))):
         xs = [x for x in range(xa, xb) if _is_text(*px(x, y))]
         if len(xs) >= 2:
-            if first is None:
-                first, lo, hi = y, min(xs), max(xs)
-            else:
-                lo, hi = min(lo, min(xs)), max(hi, max(xs))
-        elif first is not None and y - first > 2:
-            break
-    foot = (hi - lo) / (xb - xa) if first is not None and lo is not None and hi is not None else None
+            run.append(xs)
+        elif run:
+            if len(run) >= 4:
+                foot = (max(max(r) for r in run) - min(min(r) for r in run)) / (xb - xa)
+                break
+            run = []
     rule = "unknown"
-    if foot is not None:
-        if pop_pixels >= 20 and foot >= 0.75:
-            rule = "qmv"
-        elif pop_pixels == 0 and foot <= 0.6:
-            rule = "unanimity"
+    if pop_pixels >= 8 and (foot is None or foot >= 0.75):
+        rule = "qmv"
+    elif pop_pixels == 0 and foot is not None and foot <= 0.6:
+        rule = "unanimity"
     return Sheet(
         left=left,
         right=right,

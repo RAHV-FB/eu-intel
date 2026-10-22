@@ -383,3 +383,23 @@ def test_output_matches_data_ts_contract(out: Path):
         _check(d, "SearchDoc", ifs, "search.json")
     for a in load(out, "activity.json"):
         _check(a, "ActivityItem", ifs, "activity.json")
+
+
+def test_close_votes_use_margin_when_available(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    import pipeline.build as B
+
+    def fake_margin(vote, component_members):  # stand-in for pipeline.analysis.ep_margin.margin
+        cast = (vote.n_for or 0) + (vote.n_against or 0)
+        thr = cast // 2 + 1
+        return {"rule": "votes_cast", "rule_label": "TEST rule", "threshold": thr, "distance": vote.n_for - thr,
+                "relative": (vote.n_for - thr) / cast, "label": "TEST label", "extra_field": 1}  # fmt: skip
+
+    real_lazy = B._lazy
+    monkeypatch.setattr(B, "_lazy", lambda m, a: fake_margin if m.endswith("ep_margin") else real_lazy(m, a))
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    o = tmp_path / "public"
+    build(out=o, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state", today="2025-01-20")
+    v1 = load(o, "votes/V1.json")
+    assert v1["margin"]["threshold"] == 2 and "extra_field" not in v1["margin"]
+    close = next(x for x in load(o, "home.json")["lists"] if x["id"] == "close_votes")["items"]
+    assert [i["vote_id"] for i in close] == ["V1"]  # V3 is a resolution, not a final vote

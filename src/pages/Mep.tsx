@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { EpVoteSummary, MembershipPeriod, MepDetail } from '../types/data';
+import type { EpVoteSummary, MembershipPeriod, MepDetail, Meta } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
@@ -41,6 +41,8 @@ export default function Mep() {
   const { data: m, error, loading } = useData<MepDetail>(`people/meps/${encodeURIComponent(id)}.json`);
   const groups = useGroups();
   const votesIndex = useData<EpVoteSummary[]>(m && m.votes.length > 0 ? 'votes/index.json' : null);
+  const meta = useData<Meta>('meta.json');
+  const noVoteData = meta.data ? meta.data.counts.ep_votes_with_ballots === 0 : false;
   const [shown, setShown] = useState(VOTES_PAGE);
   useDocumentTitle(m ? m.name : 'MEP');
 
@@ -185,7 +187,13 @@ export default function Mep() {
           (for example when the MEP was absent) are not shown; that is not the same as abstaining.
         </p>
         {m.votes.length === 0 ? (
-          <EmptyState title="No recorded votes on the votes we index">Individual votes are only published for roll-call votes.</EmptyState>
+          noVoteData ? (
+            <EmptyState title="Parliament vote data is not available in this release">
+              See <Link to="/about#coverage">coverage</Link> for the status of each source.
+            </EmptyState>
+          ) : (
+            <EmptyState title="No recorded votes on the votes we index">Individual votes are only published for roll-call votes.</EmptyState>
+          )
         ) : (
           <>
             <div className="table-wrap table-card">
