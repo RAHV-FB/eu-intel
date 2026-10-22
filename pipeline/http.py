@@ -35,6 +35,10 @@ EP_API = "https://data.europarl.europa.eu/api/v2"
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CACHE = ROOT / ".cache" / "http"
 
+# Minimum seconds between requests per host (per process). The EP Open Data API documents a cap of
+# 500 requests per 5 minutes (~1.67/s); stay below it.
+HOST_MIN_INTERVAL: dict[str, float] = {"data.europarl.europa.eu": 0.65}
+
 
 class HttpError(RuntimeError):
     """Raised when a request fails permanently (after retries)."""
@@ -106,7 +110,8 @@ class Http:
         host = urlparse(url).netloc
         with self._lock:
             last = self._host_last.get(host, 0.0)
-            wait = self.min_interval_s - (time.monotonic() - last)
+            interval = max(self.min_interval_s, HOST_MIN_INTERVAL.get(host, 0.0))
+            wait = interval - (time.monotonic() - last)
             self._host_last[host] = time.monotonic() + max(wait, 0)
         if wait > 0:
             time.sleep(wait)
