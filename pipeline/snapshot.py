@@ -118,3 +118,49 @@ def update_manifest(status: SourceStatus) -> None:
         + "\n",
         encoding="utf-8",
     )
+
+
+# ---------------------------------------------------------------- incremental / resumable fetching
+#
+# The committed snapshot is the checkpoint. A source can fetch in chunks and upsert each chunk as soon as it
+# is complete, so an interrupted run (crash, CI timeout, rate limit) keeps everything already downloaded and
+# the next run continues from `_state.json` instead of starting over. No HTTP cache is required.
+
+
+def upsert_records[M: BaseModel](
+    source: str,
+    name: str,
+    model: type[M],
+    records: Iterable[M],
+    id_of: Callable[[M], object],
+    key: Callable[[M], object] | None = None,
+) -> int:
+    """Merge `records` into data/snapshot/<source>/<name>.json by id (same id => replaced). Returns total count."""
+    merged: dict[object, M] = {id_of(r): r for r in read_records(source, name, model)}
+    for r in records:
+        merged[id_of(r)] = r
+    write_records(source, name, merged.values(), key=key or id_of)
+    return len(merged)
+
+
+def read_state(source: str) -> dict:
+    """Resumable fetch state (cursor, pending ids, last full sync) committed next to the source's snapshot."""
+    path = SNAPSHOT / source / "_state.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def write_state(source: str, state: dict) -> None:
+    path = SNAPSHOT / source / "_state.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(state, indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def fetch_deadline() -> float | None:
+    """Monotonic deadline from EU_INTEL_FETCH_BUDGET_S (seconds); sources stop starting new chunks after it."""
+    import os
+    import time
+
+    budget = os.environ.get("EU_INTEL_FETCH_BUDGET_S")
+    return time.monotonic() + float(budget) if budget else None

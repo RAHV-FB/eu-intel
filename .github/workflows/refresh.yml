@@ -30,6 +30,10 @@ env:
   PYTHON_VERSION: "3.12"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   EU_INTEL_NO_CACHE: "1"
+  # Per-source time budget (seconds). Sources fetch in chunks, upsert each finished chunk into the committed
+  # snapshot and record pending work in data/snapshot/<source>/_state.json, so a long backfill that exceeds the
+  # budget stops cleanly, is committed, and continues on the next run instead of hitting the job timeout.
+  EU_INTEL_FETCH_BUDGET_S: "1500"
 
 jobs:
   refresh:
