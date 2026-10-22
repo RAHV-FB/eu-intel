@@ -231,7 +231,7 @@ def test_meta_sources_and_counts(out: Path):
         "train",
     }
     assert all(s["licence"] for s in meta["sources"])
-    assert meta["counts"]["dossiers"] == 4 and meta["counts"]["ep_votes"] == 2
+    assert meta["counts"]["dossiers"] == 4 and meta["counts"]["ep_votes"] == 3
     assert meta["snapshot_at"] == "2099-01-01T00:00:00Z"
     assert any("Country indicators" in n for n in meta["coverage_notes"])
 

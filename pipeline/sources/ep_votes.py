@@ -58,6 +58,7 @@ import re
 import threading
 import time
 from collections import Counter
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
@@ -598,15 +599,34 @@ def draft(dec: dict, sitting: Sitting) -> Draft:
     )
 
 
-def doc_index(sittings: list[Sitting]) -> dict[str, set[str]]:
-    """Document id -> process ids of the vote items (in any sitting) that are based on that document."""
-    out: dict[str, set[str]] = {}
+DocIndex = dict[str, dict[str, list[str]]]  # document id -> {"procs": [...], "symbols": [...]}
+
+
+def item_doc_index(sittings: list[Sitting], known: DocIndex | None = None) -> DocIndex:
+    """Document id -> process ids and procedure symbols of the vote items (in any sitting) based on it.
+
+    `known` is the index persisted in _state.json from earlier runs, so an incremental run still sees vote
+    items of sittings it does not re-fetch. Symbols matter because some items omit "***II" on one day but
+    carry it on another (e.g. the 2020 Mobility Package second readings, A9-0114..0116/2020)."""
+    out: dict[str, dict[str, set[str]]] = {}
+    for doc, v in (known or {}).items():
+        out[doc] = {"procs": set(v.get("procs", ())), "symbols": set(v.get("symbols", ()))}
     for s in sittings:
         for it in s.items.values():
-            for d in it.docs:
-                if it.procs:
-                    out.setdefault(d, set()).update(it.procs)
-    return out
+            for doc in it.docs:
+                e = out.setdefault(doc, {"procs": set(), "symbols": set()})
+                e["procs"].update(it.procs)
+                if it.symbol:
+                    e["symbols"].add(it.symbol)
+    return {d: {k: sorted(v) for k, v in e.items()} for d, e in out.items() if e["procs"] or e["symbols"]}
+
+
+def _docs_procs(idx: DocIndex) -> dict[str, set[str]]:
+    return {d: set(e["procs"]) for d, e in idx.items() if e.get("procs")}
+
+
+def _doc_symbols(idx: DocIndex) -> dict[str, set[str]]:
+    return {d: set(e["symbols"]) for d, e in idx.items() if e.get("symbols")}
 
 
 def resolve_procs(
@@ -634,20 +654,6 @@ def resolve_procs(
         if procs:  # joint motion -> the motions it replaces -> their vote item
             return procs, "item"
     return [], ""
-
-
-def doc_symbol_index(sittings: list[Sitting]) -> dict[str, set[str]]:
-    """Document id -> procedure symbols ("***II") of the vote items based on it, in any sitting.
-
-    Some vote items omit the symbol from their title on one day but carry it on another (e.g. the 2020
-    Mobility Package second readings, A9-0114..0116/2020)."""
-    out: dict[str, set[str]] = {}
-    for s in sittings:
-        for it in s.items.values():
-            if it.symbol:
-                for doc in it.docs:
-                    out.setdefault(doc, set()).add(it.symbol)
-    return out
 
 
 def symbol_of(d: Draft, doc_symbols: dict[str, set[str]] | None) -> str | None:
@@ -800,25 +806,29 @@ class Result:
     duplicates: int
 
 
-def plan_lookups(data: list[Sitting], proc_labels: dict[str, str]) -> list[str]:
-    """Plenary documents that must be looked up to link votes no vote item links to a procedure."""
+def plan_lookups(
+    data: list[Sitting],
+    proc_labels: dict[str, str],
+    known_docs: DocIndex | None = None,
+    done: Iterable[str] = (),
+) -> list[str]:
+    """Plenary documents to look up to link votes that no vote item links to a procedure (minus `done`)."""
     ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
-    docs_procs = doc_index(data)
-    return sorted(
-        {
-            doc
-            for s in data
-            for dec in s.decisions
-            for doc in needs_doc_lookup(draft(dec, s), docs_procs, ref_to_id)
-        }
-    )
+    docs_procs = _docs_procs(item_doc_index(data, known_docs))
+    wanted = {
+        doc for s in data for dec in s.decisions for doc in needs_doc_lookup(draft(dec, s), docs_procs, ref_to_id)
+    }
+    return sorted(wanted - set(done))
 
 
 def linked_process_ids(
-    data: list[Sitting], proc_labels: dict[str, str], doc_links: dict[str, tuple[list[str], list[str]]]
+    data: list[Sitting],
+    proc_labels: dict[str, str],
+    doc_links: dict[str, tuple[list[str], list[str]]],
+    known_docs: DocIndex | None = None,
 ) -> set[str]:
     ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
-    docs_procs = doc_index(data)
+    docs_procs = _docs_procs(item_doc_index(data, known_docs))
     return {
         p
         for s in data
@@ -832,11 +842,12 @@ def assemble(
     proc_labels: dict[str, str],
     doc_links: dict[str, tuple[list[str], list[str]]],
     retrieved: str,
+    known_docs: DocIndex | None = None,
 ) -> Result:
     """Offline: raw sittings + procedure references + document links -> EpVote / EpBallots records."""
     ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
-    docs_procs = doc_index(data)
-    doc_symbols = doc_symbol_index(data)
+    idx = item_doc_index(data, known_docs)
+    docs_procs, doc_symbols = _docs_procs(idx), _doc_symbols(idx)
     votes: dict[str, EpVote] = {}
     ballots: list[EpBallots] = []
     how: Counter[str] = Counter()
@@ -858,9 +869,17 @@ def assemble(
                 ballots.append(b)
                 if problems := ballot_issues(vote, b):
                     issues[vote.id] = problems
-    vote_list = sorted(votes.values(), key=lambda v: (v.date, len(v.id), v.id))
-    ballots.sort(key=lambda b: (len(b.vote_id), b.vote_id))
+    vote_list = sorted(votes.values(), key=vote_key)
+    ballots.sort(key=ballot_key)
     return Result(vote_list, ballots, how, issues, duplicates)
+
+
+def vote_key(v: EpVote) -> tuple:
+    return (v.date, len(v.id), v.id)
+
+
+def ballot_key(b: EpBallots) -> tuple:
+    return (len(b.vote_id), b.vote_id)
 
 
 def fetch(http: Http) -> SourceStatus:

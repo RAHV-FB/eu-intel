@@ -381,7 +381,7 @@ train = [
     E.TrainFile(
         url="https://example.invalid/train/gadgets",
         title="TEST gadgets",
-        status="Blocked in Council",
+        status="Blocked",
         procedure_refs=["2099/0002(CNS)"],
         source=src("LegislativeTrain", "train-gadgets"),
     )
