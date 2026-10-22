@@ -22,12 +22,15 @@
   "status": "ok"
  },
  "ep_procedures": {
-  "attempted_at": "2026-10-22T17:54:46Z",
-  "fetched_at": "2026-10-22T18:27:42Z",
-  "note": "Scope: COD, CNS, APP with reference year >= 2014 (API totals all years: {'COD': 2968, 'CNS': 2664, 'APP': 58}) + 30 featured. OEIL enrichment for 1329/1332. Failures: 0 EP API, 0 build, 3 OEIL. 2026/0324(COD): 404 https://oeil.europarl.europa.eu/oeil/en/procedure-file: {\"timestamp\":\"2026-10-22T17:54:53.736+00:00\",\"status\":404,\"e; 2023/0077(COD): 404 https://oeil.europarl.europa.eu/oeil/en/procedure-file: {\"timestamp\":\"2026-10-22T18:03:19.737+00:00\",\"status\":404,\"e; 2016/0224(COD): 404 https://oeil.europarl.europa.eu/oeil/en/procedure-file: {\"timestamp\":\"2026-10-22T18:21:48.533+00:00\",\"status\":404,\"e",
+  "attempted_at": "2026-10-22T18:27:58Z",
+  "fetched_at": "2026-10-22T18:28:41Z",
+  "note": "Scope: COD, CNS, APP with reference year >= 2014 (API totals all years: {'COD': 2968, 'CNS': 2664, 'APP': 58}) + 30 featured. Mode full: fetched 1332 ({'full refresh': 1332}), reused 0 from the snapshot. OEIL enrichment for 1329/1332. Failures: 0 EP API, 0 build, 3 OEIL. 2026/0324(COD): 404 https://oeil.europarl.europa.eu/oeil/en/procedure-file: {\"timestamp\":\"2026-10-22T18:28:00.510+00:00\",\"status\":404,\"e; 2023/0077(COD): 404 https://oeil.europarl.europa.eu/oeil/en/procedure-file: {\"timestamp\":\"2026-10-22T18:28:11.181+00:00\",\"status\":404,\"e; 2016/0224(COD): 404 https://oeil.europarl.europa.eu/oeil/en/procedure-file: {\"timestamp\":\"2026-10-22T18:28:34.733+00:00\",\"status\":404,\"e",
   "records": {
    "events": 14715,
+   "fetched_this_run": 1332,
+   "pending": 0,
    "procedures": 1332,
+   "requests_this_run": 2671,
    "type_APP": 39,
    "type_CNS": 161,
    "type_COD": 1132,
