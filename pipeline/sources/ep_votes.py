@@ -54,6 +54,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import threading
 import time
@@ -66,7 +67,7 @@ from typing import Any
 
 from pipeline.http import EP_API, Http, HttpError
 from pipeline.models.entities import EpBallots, EpVote, SourceRef, SourceStatus, VoteKind
-from pipeline.snapshot import now_iso, write_records
+from pipeline.snapshot import fetch_deadline, now_iso, read_records, read_state, write_records, write_state
 
 log = logging.getLogger("pipeline.sources.ep_votes")
 
@@ -124,11 +125,11 @@ def _today() -> str:
     return datetime.now(UTC).date().isoformat()
 
 
-def list_sittings(http: Http, today: str | None = None) -> list[dict]:
+def list_sittings(http: Http, today: str | None = None, from_year: int | None = None) -> list[dict]:
     """Plenary sittings of the 9th and 10th terms up to today: [{id, date, term}] sorted by date."""
     today = today or _today()
     out: dict[str, dict] = {}
-    for year in range(int(FIRST_SITTING[:4]), int(today[:4]) + 1):
+    for year in range(max(from_year or 0, int(FIRST_SITTING[:4])), int(today[:4]) + 1):
         offset, page = 0, 100
         while True:
             rows = _get_data(
@@ -816,7 +817,10 @@ def plan_lookups(
     ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
     docs_procs = _docs_procs(item_doc_index(data, known_docs))
     wanted = {
-        doc for s in data for dec in s.decisions for doc in needs_doc_lookup(draft(dec, s), docs_procs, ref_to_id)
+        doc
+        for s in data
+        for dec in s.decisions
+        for doc in needs_doc_lookup(draft(dec, s), docs_procs, ref_to_id)
     }
     return sorted(wanted - set(done))
 
@@ -882,51 +886,153 @@ def ballot_key(b: EpBallots) -> tuple:
     return (len(b.vote_id), b.vote_id)
 
 
+# ================================================================================ incremental fetching
+# The committed snapshot is the checkpoint (no HTTP cache needed). A run re-fetches the sittings on or after
+# (latest sitting in the snapshot - WINDOW_DAYS), the window in which intended-vote corrections and late
+# results are published, plus the sittings still pending from an interrupted run; older votes are kept.
+# Sittings are processed oldest first in chunks of CHUNK; after each chunk votes.json / ballots.json and
+# _state.json are written, so an interruption loses at most one chunk. After fetch_deadline() (from
+# EU_INTEL_FETCH_BUDGET_S) no new chunk is started and the run ends "partial". EU_INTEL_FULL_REFRESH=1 (or
+# an empty snapshot) makes every sitting of the 9th and 10th terms pending.
+#
+# _state.json:
+#   pending      sitting ids still to fetch in the current pass
+#   doc_links    {document id: [process ids]} from /plenary-documents (never re-requested; [] = no link)
+#   item_docs    {document id: {"procs": [...], "symbols": [...]}} from the vote items of all fetched sittings
+#   proc_refs    {process id: reference} for every procedure linked so far
+#   last_full    time of the last completed full pass
+CHUNK = 20
+WINDOW_DAYS = 60
+
+
+def _out_of_time(deadline: float | None) -> bool:
+    return deadline is not None and time.monotonic() > deadline
+
+
+def _sitting_of(v: EpVote) -> str:
+    return v.event_id[:17]  # "MTG-PL-2024-03-13-DEC-166051" -> "MTG-PL-2024-03-13"
+
+
+def _merge_chunk(chunk_ids: set[str], res: Result) -> tuple[int, int]:
+    """Replace the chunk's sittings in votes.json / ballots.json by `res` (other sittings are kept)."""
+    new_ids = {v.id for v in res.votes}
+    votes = [
+        v
+        for v in read_records(SOURCE_ID, "votes", EpVote)
+        if _sitting_of(v) not in chunk_ids and v.id not in new_ids
+    ]
+    votes += res.votes
+    keep = {v.id for v in votes if v.has_ballots} - new_ids
+    ballots = [b for b in read_records(SOURCE_ID, "ballots", EpBallots) if b.vote_id in keep] + res.ballots
+    write_records(SOURCE_ID, "votes", votes, key=vote_key)
+    write_records(SOURCE_ID, "ballots", ballots, key=ballot_key)
+    return len(votes), len(ballots)
+
+
+def _procedure_refs(state: dict, votes: list[EpVote]) -> dict[str, str]:
+    """Process id -> reference already known from the snapshot and the state."""
+    refs = dict(state.get("proc_refs", {}))
+    for v in votes:
+        for r in v.procedure_refs:
+            refs.setdefault(ref_to_process_id(r), r)
+    return refs
+
+
 def fetch(http: Http) -> SourceStatus:
     t0 = time.monotonic()
     attempted = now_iso()
     today = _today()
-    sittings = list_sittings(http, today)
-    if not sittings:
+    deadline = fetch_deadline()
+    state = read_state(SOURCE_ID)
+    existing = read_records(SOURCE_ID, "votes", EpVote)
+    full = os.environ.get("EU_INTEL_FULL_REFRESH") == "1" or not existing
+    pending_before = set(state.get("pending", []))
+    if full:
+        start = FIRST_SITTING
+    else:
+        latest = max(v.date for v in existing)
+        start = max(FIRST_SITTING, (date.fromisoformat(latest) - timedelta(days=WINDOW_DAYS)).isoformat())
+    years = {int(start[:4])} | {int(sid[7:11]) for sid in pending_before}
+    sittings = list_sittings(http, today, from_year=min(years))
+    targets = [s for s in sittings if full or s["date"] >= start or s["id"] in pending_before]
+    if not sittings or (full and not targets):
         raise RuntimeError("no plenary sittings listed")
-    data = _fetch_sittings(http, sittings, today)
-    proc_labels = fetch_procedure_labels(http)
-    if len(proc_labels) < 1000:
-        raise RuntimeError(f"procedure list looks incomplete ({len(proc_labels)} procedures)")
-    lookups = plan_lookups(data, proc_labels)
-    log.info("%d sittings; %d document lookups", len(data), len(lookups))
-    with ThreadPoolExecutor(WORKERS) as ex:
-        doc_links = dict(
-            zip(lookups, ex.map(lambda doc: fetch_document_links(http, doc), lookups), strict=True)
-        )
-    missing = sorted(linked_process_ids(data, proc_labels, doc_links) - set(proc_labels))
-    if missing:
-        log.info("%d linked procedures missing from the /procedures list; fetching them by id", len(missing))
-        proc_labels = {**proc_labels, **fetch_procedures_by_id(http, missing)}
-    res = assemble(data, proc_labels, doc_links, now_iso())
-    if not res.votes:
-        raise RuntimeError("no votes parsed")
-    write_records(SOURCE_ID, "votes", res.votes)
-    write_records(SOURCE_ID, "ballots", res.ballots)
 
-    kinds = Counter(v.kind for v in res.votes)
-    rollcalls = sum(1 for v in res.votes if v.method == ROLLCALL)
-    linked = sum(1 for v in res.votes if v.procedure_refs)
+    proc_refs = _procedure_refs(state, existing)
+    if full:
+        proc_refs = {**fetch_procedure_labels(http), **proc_refs}  # one listing per full pass
+    doc_links: dict[str, list[str]] = dict(state.get("doc_links", {}))
+    known_docs: DocIndex = dict(state.get("item_docs", {}))
+    pending = [s["id"] for s in targets]
+    counts = Counter()
+
+    def save() -> None:
+        used = {p for e in known_docs.values() for p in e.get("procs", [])}
+        used |= {p for ps in doc_links.values() for p in ps}
+        used |= {
+            ref_to_process_id(r) for v in read_records(SOURCE_ID, "votes", EpVote) for r in v.procedure_refs
+        }
+        write_state(
+            SOURCE_ID,
+            {
+                "pending": pending,
+                "doc_links": dict(sorted(doc_links.items())),
+                "item_docs": dict(sorted(known_docs.items())),
+                "proc_refs": {p: proc_refs[p] for p in sorted(used) if p in proc_refs},
+                "last_full": state.get("last_full"),
+            },
+        )
+
+    save()
+    totals = (len(existing), len(read_records(SOURCE_ID, "ballots", EpBallots)))
+    for i in range(0, len(targets), CHUNK):
+        if _out_of_time(deadline):
+            break
+        chunk = targets[i : i + CHUNK]
+        data = _fetch_sittings(http, chunk, today)
+        lookups = plan_lookups(data, proc_refs, known_docs, done=doc_links)
+        links = {doc: fetch_document_links(http, doc) for doc in lookups}
+        doc_links.update({doc: procs for doc, (procs, _derived) in links.items()})
+        as_links = {doc: (procs, []) for doc, procs in doc_links.items()}
+        missing = sorted(linked_process_ids(data, proc_refs, as_links, known_docs) - set(proc_refs))
+        proc_refs.update(fetch_procedures_by_id(http, missing))
+        res = assemble(data, proc_refs, as_links, now_iso(), known_docs)
+        known_docs = item_doc_index(data, known_docs)
+        totals = _merge_chunk({s["id"] for s in chunk}, res)
+        done = {s["id"] for s in chunk}
+        pending = [sid for sid in pending if sid not in done]
+        counts.update(
+            sittings=len(chunk),
+            votes=len(res.votes),
+            lookups=len(lookups),
+            proc_by_id=len(missing),
+            unlinked=sum(1 for v in res.votes if not v.procedure_refs),
+            issues=len(res.issues),
+        )
+        counts.update({f"via_{k}": n for k, n in res.linked_via.items()})
+        if not pending and full:
+            state["last_full"] = now_iso()
+        save()
+        log.info("ep_votes: %d/%d sittings done, %d pending", counts["sittings"], len(targets), len(pending))
+
+    votes = read_records(SOURCE_ID, "votes", EpVote)
+    kinds = Counter(v.kind for v in votes)
+    rollcalls = sum(1 for v in votes if v.method == ROLLCALL)
+    linked = sum(1 for v in votes if v.procedure_refs)
+    mode = "full refresh" if full else f"incremental from {start}"
     note = (
-        f"{len(sittings)} sittings ({sum(1 for s in data if s.decisions)} with votes), {len(res.votes)} votes "
-        f"({rollcalls} roll-call, {len(res.ballots)} with ballots), {linked} linked to procedures "
-        f"(via {dict(sorted(res.linked_via.items()))}); kinds {dict(sorted(kinds.items()))}; "
-        f"{len(lookups)} document lookups; {len(res.issues)} votes whose voter lists differ from the counts"
-        + (f"; {res.duplicates} duplicate voting ids skipped" if res.duplicates else "")
-        + f"; {time.monotonic() - t0:.0f}s"
+        f"{mode}: {counts['sittings']}/{len(targets)} sittings fetched ({counts['votes']} votes, "
+        f"{counts['lookups']} document lookups, {counts['proc_by_id']} procedures by id)"
+        + (f"; {len(pending)} sittings pending; resumes next run" if pending else "")
+        + f". Snapshot: {len(votes)} votes ({rollcalls} roll-call, {totals[1]} with ballots), {linked} linked "
+        f"to procedures; kinds {dict(sorted(kinds.items()))}; {counts['issues']} fetched votes whose voter "
+        f"lists differ from the counts; {time.monotonic() - t0:.0f}s"
     )
-    if res.issues:
-        log.warning("ballot/count differences: %s", dict(list(res.issues.items())[:20]))
     return SourceStatus(
         source=SOURCE_ID,
-        status="ok",
+        status="partial" if pending else "ok",
         fetched_at=now_iso(),
         attempted_at=attempted,
-        records={"votes": len(res.votes), "ballots": len(res.ballots), "sittings": len(sittings)},
+        records={"votes": len(votes), "ballots": totals[1], "sittings": len({_sitting_of(v) for v in votes})},
         note=note,
     )
