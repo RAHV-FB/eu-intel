@@ -102,7 +102,29 @@ def test_parse_dates():
     assert C.parse_dates("21 May 2024, Brussels") == ["2024-05-21"]
     assert C.parse_dates("3 and 4 December 2018, Brussels") == ["2018-12-03", "2018-12-04"]
     assert C.parse_dates("27-28 October 2025, Luxembourg") == ["2025-10-27", "2025-10-28"]
+    assert C.parse_dates("7+8 June 2021, Luxembourg") == ["2021-06-07", "2021-06-08"]
+    assert C.parse_dates("Brussels, 27.05.2025") == ["2025-05-27"]
+    assert C.parse_dates("4 Decmber 2020") == ["2020-12-04"]  # typo in the published note
     assert C.parse_dates("no date") == []
+
+
+def test_subject_variants():
+    m = C.NoteMeta(
+        subject="Voting result X Adoption 3638th meeting of the COUNCIL OF THE EUROPEAN UNION "
+        "(Competitiveness (Internal Market, Industry, Research and Space)) 27 and 28 September 2018, Brussels"
+    )
+    C._parse_subject(m)
+    assert (m.title, m.step) == ("X", "Adoption")
+    assert m.configuration == "Competitiveness (Internal Market, Industry, Research and Space)"
+    m = C.NoteMeta(
+        subject="Voting result X Adoption of the legislative act 4100th meeting of the COUNCIL OF THE "
+        "EUROPEAN UNION (General Affairs), Brussels, 27.05.2025"
+    )
+    C._parse_subject(m)
+    assert (m.configuration, m.meeting_dates) == ("General Affairs", ["2025-05-27"])
+    m = C.NoteMeta(subject="Voting result X Outcome of the written procedure completed on 4 Decmber 2020")
+    C._parse_subject(m)
+    assert m.written_procedure and m.written_procedure_date == "2020-12-04" and m.meeting is None
 
 
 # ------------------------------------------------------------------ Cellar listing

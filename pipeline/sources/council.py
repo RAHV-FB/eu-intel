@@ -63,7 +63,7 @@ REGISTER_NOTE = "Council of the EU – Voting result {num}"
 RENDER_DPI = 100
 MAX_WORKERS = 4
 # Bump when parsing changes: every note is then re-processed on the next fetch.
-PARSER_VERSION = "2026-10-22.3"
+PARSER_VERSION = "2026-10-22.4"
 
 # Protocol order of the GSC voting sheet (Member States by their name in their own language).
 LEFT_COLUMN = ["BE", "BG", "CZ", "DK", "DE", "EE", "IE", "GR", "ES", "FR", "HR", "IT", "CY", "LV"]
@@ -470,18 +470,24 @@ def _iso(day: int, month: str, year: int) -> str | None:
         return None
 
 
+DATE_RE = re.compile(
+    r"(\d{1,2})\s*(?:(?:-|–|and|\+)\s*(\d{1,2})\s*)?\s([A-Za-z]{3,})\s+(\d{4})|(\d{1,2})\.(\d{1,2})\.(\d{4})"
+)
+
+
 def parse_dates(text: str) -> list[str]:
-    """'21 May 2024' -> [..]; '27-28 October 2025' / '3 and 4 December 2018' -> both days."""
-    t = re.sub(r"\s+", " ", text)
-    m = re.search(r"(\d{1,2})\s*(?:-|–|and)\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})", t)
-    if m:
-        d1, d2, mon, y = int(m.group(1)), int(m.group(2)), m.group(3), int(m.group(4))
-        return [x for x in (_iso(d1, mon, y), _iso(d2, mon, y)) if x]
-    m = re.search(r"(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})", t)
-    if m:
-        d = _iso(int(m.group(1)), m.group(2), int(m.group(3)))
-        return [d] if d else []
-    return []
+    """'21 May 2024' -> [..]; '27-28 October 2025', '3 and 4 December 2018', '7+8 June 2021' -> both days;
+    '27.05.2025' -> [..]. Uses the first date expression in `text`."""
+    m = DATE_RE.search(re.sub(r"\s+", " ", text))
+    if not m:
+        return []
+    if m.group(5):
+        try:
+            return [Date(int(m.group(7)), int(m.group(6)), int(m.group(5))).isoformat()]
+        except ValueError:
+            return []
+    days = [int(m.group(1))] + ([int(m.group(2))] if m.group(2) else [])
+    return [x for x in (_iso(d, m.group(3), int(m.group(4))) for d in days) if x]
 
 
 def _indent(line: str) -> int:
@@ -553,15 +559,21 @@ def _parse_subject(meta: NoteMeta) -> None:
         meta.meeting = re.sub(
             r"\s+", " ", meeting.group(1)
         )  # verbatim, e.g. "4024th meeting of the COUNCIL ..."
-        rest = meeting.group(2)
-        # "(Configuration), 21 May 2024, Brussels" / "Configuration Council 22 and 23 May 2023, Brussels"
-        date = re.search(r"\d{1,2}(?:\s*(?:-|–|and)\s*\d{1,2})?\s+[A-Za-z]+\s+\d{4}(?!.*\d{4})", rest)
+        rest = meeting.group(2).strip()
+        # "(Configuration), 21 May 2024, Brussels" / "(Configuration), Brussels, 27.05.2025" /
+        # "Configuration Council 22 and 23 May 2023, Brussels"
+        date = DATE_RE.search(rest)
         if date:
             meta.meeting_dates = parse_dates(date.group(0))
-            config = rest[: date.start()].strip(" ,")
-            if config.startswith("(") and config.endswith(")"):
-                config = config[1:-1]
-            meta.configuration = config.strip() or None
+        if rest.startswith("("):
+            depth = 0
+            for i, ch in enumerate(rest):
+                depth += {"(": 1, ")": -1}.get(ch, 0)
+                if depth == 0:
+                    meta.configuration = rest[1:i].strip() or None
+                    break
+        elif date:
+            meta.configuration = rest[: date.start()].strip(" ,") or None
         cut = meeting.start()
     if written:
         meta.written_procedure = True

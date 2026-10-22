@@ -1135,10 +1135,14 @@ class Builder:
                 votes_by_date[v.date].append(v)
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
+        seen_ev: set[tuple[str, str, str]] = set()
         for e in p.events:
             if e.date > self.today:  # forecasts are not legally fixed dates
                 continue
             kind = e.kind.value
+            if (kind, e.date, e.title) in seen_ev:  # same step recorded by two EP sources (API and OEIL)
+                continue
+            seen_ev.add((kind, e.date, e.title))
             vote_id = None
             if kind in VOTE_EVENT_KINDS and votes_by_date.get(e.date):
                 docs = {d.id for d in e.docs}
