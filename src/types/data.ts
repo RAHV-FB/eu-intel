@@ -159,8 +159,12 @@ export interface NextStep {
 
 export interface Stall {
   days_since_last_event: number;
+  text?: string | null; // neutral description, e.g. "No recorded procedural update in 412 days"
+  last_event_date?: ISODate | null;
   official_label?: string | null; // e.g. Legislative Train status, verbatim
   official_source_url?: string | null;
+  official_label_date?: ISODate | null; // the Legislative Train file's "information updated as of" date
+  official_text?: string | null; // sentence citing the official classification
 }
 
 export interface ApplicationInfo {

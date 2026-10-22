@@ -301,6 +301,22 @@ votes = [
         has_ballots=True,
         source=src("EP", "V3"),
     ),
+    # outcome not recorded by the source: no margin may be shown (regression for a known defect)
+    E.EpVote(
+        id="V4",
+        event_id="TEST-DEC-V4",
+        date="2022-06-01",
+        term=9,
+        title="TEST vote with unrecorded outcome",
+        kind="final",
+        outcome="unknown",
+        n_for=300,
+        n_against=200,
+        n_abstain=10,
+        majority_rule="votes_cast",
+        procedure_refs=["2099/0003(COD)"],
+        source=src("EP", "V4"),
+    ),
 ]
 ballots = [
     E.EpBallots(vote_id="V1", favor=["T1", "T2"], against=["T3"]),

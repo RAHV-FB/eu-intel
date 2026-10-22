@@ -154,7 +154,10 @@ def test_vote_breakdowns_use_membership_on_vote_date(out: Path):
     t4 = next(b for b in v3["ballots"] if b["mep"] == "T4")
     assert t4["pos"] == "against" and t4["intended"] == "for"
     idx = [v["id"] for v in load(out, "votes/index.json")]
-    assert idx == ["V3", "V1"] and not (out / "votes/V2.json").exists()
+    assert idx == ["V3", "V1", "V4"] and not (out / "votes/V2.json").exists()
+    v4 = load(out, "votes/V4.json")
+    assert v4["outcome"] == "unknown" and v4["margin"] is None  # never "Passed by N" without a known outcome
+    assert v4["has_ballots"] is False and v4["ballots"] == [] and v4["for"] == 300
 
 
 def test_groups_merge_across_terms_and_people_files(out: Path):

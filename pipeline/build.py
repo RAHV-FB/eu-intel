@@ -410,6 +410,10 @@ def _index_entry(d: dict) -> dict:
     return out
 
 
+STALL_KEYS = (
+    "days_since_last_event", "text", "last_event_date", "official_label", "official_source_url",
+    "official_label_date", "official_text",
+)  # fmt: skip
 UNKNOWN_STEPS = {"Not available.", "Not determined from the recorded events."}
 _MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
            "November", "December"]  # fmt: skip
@@ -843,10 +847,18 @@ class Builder:
         if n_for is None and b is not None:
             n_for, n_against, n_abs = len(b.favor), len(b.against), len(b.abstain)
         margin = None
-        if margin_fn is not None:
+        # a margin is shown only when the official outcome is known and the majority rule is established,
+        # so its label can never contradict the outcome
+        if margin_fn is not None and v.outcome in ("adopted", "rejected") and v.majority_rule != "unknown":
             try:
                 m = _as_dict(margin_fn(v, self.component_members(v.date)))
-                if m and m.get("rule") in RULE_LABELS and isinstance(m.get("relative"), (int, float)):
+                passed = isinstance(m, dict) and isinstance(m.get("distance"), int) and m["distance"] >= 0
+                if (
+                    m
+                    and m.get("rule") in RULE_LABELS
+                    and isinstance(m.get("relative"), (int, float))
+                    and passed == (v.outcome == "adopted")
+                ):
                     margin = {
                         "rule": m["rule"],
                         "rule_label": m.get("rule_label") or RULE_LABELS[m["rule"]],
@@ -1053,9 +1065,7 @@ class Builder:
         }  # fmt: skip
         stall = r.get("stall")
         if stall:
-            stall = {
-                k: stall.get(k) for k in ("days_since_last_event", "official_label", "official_source_url")
-            }
+            stall = {k: stall.get(k) for k in STALL_KEYS}
         ns = r.get("next_step") or {}
         return {
             "status": {k: status.get(k) for k in ("stage", "label", "explanation", "since", "basis")},
@@ -1729,11 +1739,9 @@ class Builder:
                                       "date": d["last_event"], "badge": "Officially blocked", "_o": 0})  # fmt: skip
         inactive = []
         for d in summ.values():
-            if (
-                d["officially_blocked"]
-                or d["stage"] not in ACTIVE_STAGES
-                or d["type"] not in LEGISLATIVE_TYPES
-            ):
+            # inactivity is only meaningful where both co-legislators must still act (ordinary procedure);
+            # old consultation/consent files often end with a Council step that Parliament does not record
+            if d["officially_blocked"] or d["stage"] not in ACTIVE_STAGES or d["type"] != "COD":
                 continue
             if not d["last_event"]:
                 continue
