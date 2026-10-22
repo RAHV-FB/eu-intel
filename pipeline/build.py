@@ -1740,8 +1740,9 @@ class Builder:
             n = _days_between(d["last_event"], today)
             if n >= 365:
                 inactive.append((n, d))
-        inactive.sort(key=lambda x: (x[0], x[1]["id"]))
-        for n, d in inactive[: max(0, 12 - len(stalled_items))]:
+        inactive.sort(key=lambda x: (-x[0], x[1]["id"]))
+        stalled_items = stalled_items[:12]
+        for n, d in inactive[:6]:
             stalled_items.append({"dossier_id": d["id"], "title": d["title"],
                                   "subtitle": f"No recorded procedural update in {n} days", "date": d["last_event"],
                                   "badge": d["status_label"], "_o": 1})  # fmt: skip
