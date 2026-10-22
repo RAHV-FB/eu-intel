@@ -11,7 +11,8 @@ pipeline runs in CI without credentials). Details are refined from each ingestio
 | EP `doceo` documents (RCV XML/PDF) | HTML/XML | ⚠️ 202 bot challenge | — | Roll-calls come from the API instead |
 | Cellar SPARQL `publications.europa.eu/webapi/rdf/sparql` | SPARQL 1.1 | ✅ | Legal acts (CELEX, ELI, dates incl. phased entry-into-force/application, procedure links, amendments), national implementing measures | Batched queries; CDM ontology |
 | EUR-Lex website | HTML | ⚠️ 202 bot challenge | Human links only | Not scraped |
-| Council voting results (consilium.europa.eu) | HTML / open data | ❌ 403 "Browser check" | Member State positions | See Council section below |
+| Council voting results (consilium.europa.eu pages) | HTML | ❌ 403 "Browser check" | — | Not used; see Council section |
+| Council "voting result" documents (ST notes) | Cellar SPARQL + PDF at data.consilium.europa.eu | ✅ | Member State positions, voting rule, outcome | Annex table is an image; parsed deterministically, fail-closed |
 | Single Market Scoreboard | HTML/JSON | ❌ 403 | Transposition deficit indicators | Alternatives investigated by the implementation module |
 | Commission infringement decisions | HTML / search | ⚠️ redirects to commission.europa.eu | Infringement cases | See implementation section below |
 
@@ -80,9 +81,33 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
 - Country indicators (Single Market Scoreboard): **unavailable** — host returns a CloudFront 403 to scripts;
   data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed.
 
+### Council of the EU (`council`) — ok
+- The Council's voting-results web pages are behind a browser check (403), and the data.europa.eu dataset
+  "Council votes on legislative acts" is marked discontinued (its download returns 404).
+- Route used: Cellar lists the Council's official "Voting result" notes (ST documents); each PDF is downloadable
+  from `https://data.consilium.europa.eu/doc/document/ST-NNNNN-YYYY-INIT/EN/pdf`. Page 1 (text) gives the procedure,
+  title, meeting or written procedure and statements; the per-country table in the annex is a raster image with a
+  fixed template, read deterministically (`pdftoppm` + pixel classification, no OCR). Every one of the slots must
+  classify, otherwise positions are left empty ("fail closed"). The voting rule requires two agreeing signals, and
+  the sheet's printed result is cross-checked against QMV arithmetic (0 contradictions).
+- 720 votes 2019-01 → 2026-10; 717 with positions (672 QMV, 43 unanimity, 5 unknown). Verified against the
+  rendered sheets: AI Act (ST 10199/24, 27 in favour), Copyright Directive 2019 (6 against, 3 abstentions),
+  Eurodac 2024 (DK/IE not participating) and random samples.
+- QMV population figures per year from the Council decisions amending Annex III of its Rules of Procedure
+  (CELEX 32018D2076, 32019D2209, 32020D2030, 32021D2320, 32022D2518, 32023D2827, 32024D3231, 32025D2427).
+- "Not participating" (opt-outs, e.g. DK/IE in justice and home affairs) is kept distinct from abstention.
+
+### Legislative Train (`train`) — ok
+- 1,492 files across the 2014–19, 2019–24 and 2024–29 Commission terms; 663 carry procedure references. Statuses
+  verbatim. "Blocked" is the Train's own classification (no progress by a co-legislator for at least nine
+  months); 35 Blocked files name the blocking institution(s). The Train updates monthly and can lag recorded
+  facts, so EP/EUR-Lex records take precedence.
+
 ### Licences
 - EP open data: CC BY 4.0 (stated by the EP Open Data Portal).
 - EUR-Lex / Cellar: reuse authorised with acknowledgement ("© European Union, https://eur-lex.europa.eu") under the
   EUR-Lex legal notice and Commission Decision 2011/833/EU. The live notice page is bot-protected for scripts and
   should be re-checked manually before any change of attribution text.
 - Commission infringement register: Commission reuse policy (Decision 2011/833/EU), "© European Union".
+- Council documents: reuse permitted with acknowledgement of the source ("© European Union", Council of the EU),
+  per the Council's copyright notice.
