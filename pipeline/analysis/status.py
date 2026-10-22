@@ -43,6 +43,8 @@ StepBasis = Literal["source", "derived", "unknown"]
 
 LEGISLATIVE_TYPES = {"COD", "CNS", "APP", "SYN", "AVC"}
 TERMINAL: set[str] = {"published", "in_force", "withdrawn", "rejected", "lapsed"}
+# Stages in which the co-legislators still have to act (Train "Blocked" may be shown).
+ACTIVE_STAGES: set[str] = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
 
 # Rank of the "positive" lifecycle stages, used to reconcile event-derived stages with the
 # official OEIL status label. Negative terminal stages are handled before ranking.
@@ -92,8 +94,10 @@ class Stall(_M):
     days_since_last_event: int
     last_event_date: str
     text: str  # neutral description, e.g. "No recorded procedural update in 412 days"
-    official_label: str | None = None  # only an official assessment (Legislative Train)
+    official_label: str | None = None  # Legislative Train "Blocked", verbatim (active stages only)
     official_source_url: str | None = None
+    official_label_date: str | None = None  # the Train file's "Information updated as of" date
+    official_text: str | None = None  # e.g. "Classified as “Blocked” by the EP Legislative Train ..."
 
 
 class Application(_M):
@@ -197,24 +201,40 @@ def application_of(acts: list[LegalAct], today: date) -> Application | None:
 def _stall(stage: str, events: list[Event], train: list[TrainFile], today: date) -> Stall | None:
     if stage in TERMINAL:
         return None
-    past = [e for e in events if e.date <= today.isoformat()]
+    t = today.isoformat()
+    past = [e for e in events if e.date <= t]
     if not past:
         return None
     last = max(e.date for e in past)
     days = (today - date.fromisoformat(last)).days
-    label = url = None
-    for tf in train:
-        if tf.status.strip().lower() in TRAIN_STALL_STATUSES:
-            label, url = tf.status, tf.url
-            break
     unit = "day" if days == 1 else "days"
-    return Stall(
+    stall = Stall(
         days_since_last_event=days,
         last_event_date=last,
         text=f"No recorded procedural update in {days} {unit} (last recorded: {_fmt(last)}).",
-        official_label=label,
-        official_source_url=url,
     )
+    # The Train lags (monthly updates) and never overrides recorded EP/EUR-Lex facts: its
+    # "Blocked" label is shown only while the procedure's own stage is still active, and only
+    # if the Train file was updated on or before `today`.
+    if stage not in ACTIVE_STAGES:
+        return stall
+    for tf in sorted(train, key=lambda f: (f.last_updated or "", f.url), reverse=True):
+        if tf.status.strip().lower() not in TRAIN_STALL_STATUSES:
+            continue
+        if tf.last_updated and tf.last_updated > t:
+            continue
+        text = f"Classified as \u201c{tf.status}\u201d by the EP Legislative Train"
+        if tf.blocking_institution:
+            text += f" (blocking institution named by the Train: {tf.blocking_institution})"
+        if tf.last_updated:
+            text += f", information updated as of {_fmt(tf.last_updated)}"
+        text += ". The Train uses this label when no progress has been recorded for at least nine months."
+        stall.official_label = tf.status
+        stall.official_source_url = tf.url
+        stall.official_label_date = tf.last_updated
+        stall.official_text = text
+        break
+    return stall
 
 
 # ====================================================================== stage derivation
@@ -268,8 +288,8 @@ def _acts_stage(proc: Procedure, acts: list[LegalAct], events: list[Event], toda
             later = [d for a in acts for d in a.other_application_dates if d and eif and d > eif]
             if later:
                 text += (
-                    " Entry into force is not the same as application: some provisions apply only from "
-                    "later dates."
+                    " Entry into force is not the same as application: EUR-Lex records later dates from "
+                    "which (parts of) the act apply."
                 )
             return _S("in_force", "In force", text, eif or pub_date, basis)
         if pub_date:
@@ -608,7 +628,7 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
             )
             pending = [d for d in (app.application_dates if app else []) if d > t]
             if pending:
-                parts.append(f"Further dates recorded for its provisions: {_join_dates(pending)}.")
+                parts.append(f"Later application date(s) recorded in EUR-Lex: {_join_dates(pending)}.")
                 basis = "source"
             return NextStep(text=" ".join(parts), basis=basis)
         if act.act_type == "decision":

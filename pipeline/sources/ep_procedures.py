@@ -1148,7 +1148,8 @@ def fetch(http: Http) -> SourceStatus:
 
     raw: dict[str, tuple[dict[str, Any], str]] = {}
     oeil: dict[str, OeilInfo | None] = {}
-    errors: list[str] = []
+    errors: dict[str, str] = {}  # transient/unexpected failures (retried once)
+    not_found: list[str] = []  # listed by the API but GET /procedures/{id} answers 404
     oeil_errors: list[str] = []
     lock = threading.Lock()
 
@@ -1160,10 +1161,19 @@ def fetch(http: Http) -> SourceStatus:
             if not procs:
                 raise ValueError("empty response")
             proc = procs[0]
+        except HttpError as e:
+            with lock:
+                if e.status == 404:
+                    not_found.append(pid)
+                else:
+                    errors[pid] = str(e)[:120]
+            return
         except Exception as e:  # noqa: BLE001
             with lock:
-                errors.append(f"{pid}: {str(e)[:120]}")
+                errors[pid] = str(e)[:120]
             return
+        with lock:
+            errors.pop(pid, None)
         retrieved = now_iso()
         reference = proc.get("label") or wanted.get(pid) or pid
         info: OeilInfo | None = None
@@ -1182,6 +1192,10 @@ def fetch(http: Http) -> SourceStatus:
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
         list(ex.map(work, ids))
+    if errors:  # one sequential retry pass (e.g. after HTTP 429 bursts caused by shared use)
+        log.info("ep_procedures: retrying %d failed procedures", len(errors))
+        for pid in sorted(errors):
+            work(pid)
 
     if not raw or len(errors) > MAX_FAILURE_RATIO * len(ids):
         return SourceStatus(
@@ -1189,7 +1203,7 @@ def fetch(http: Http) -> SourceStatus:
             status="failed",
             attempted_at=attempted,
             note=f"{len(errors)}/{len(ids)} procedure requests failed; snapshot not updated. "
-            + "; ".join(errors[:5]),
+            + "; ".join(f"{k}: {v}" for k, v in sorted(errors.items())[:5]),
         )
 
     people = _people_from(p for p, _ in raw.values())
@@ -1220,12 +1234,14 @@ def fetch(http: Http) -> SourceStatus:
         counts[f"type_{r.type}"] = counts.get(f"type_{r.type}", 0) + 1
     counts["with_oeil"] = sum(1 for r in records if r.stage_raw is not None)
     counts["events"] = sum(len(r.events) for r in records)
-    problems = errors + build_errors
+    problems = [f"{k}: {v}" for k, v in sorted(errors.items())] + build_errors
     note = (
         f"Scope: {', '.join(PROCEDURE_TYPES)} with reference year >= {MIN_YEAR} "
         f"(API totals all years: {by_type}) + {len(featured)} featured. "
         f"OEIL enrichment for {counts['with_oeil']}/{len(records)}."
     )
+    if not_found:
+        note += f" {len(not_found)} listed procedures answer 404 at /procedures/{{id}}: {', '.join(sorted(not_found)[:10])}."
     if problems or oeil_errors:
         note += (
             f" Failures: {len(errors)} EP API, {len(build_errors)} build, {len(oeil_errors)} OEIL. "

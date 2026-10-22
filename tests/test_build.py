@@ -143,6 +143,9 @@ def test_vote_breakdowns_use_membership_on_vote_date(out: Path):
     assert groups["greens-efa"]["for"] == 1 and "s-d" not in groups
     assert groups["epp"]["for"] == 1 and groups["epp"]["against"] == 1
     assert v1["reconciliation"]["matches"] is True
+    # real pipeline.analysis.ep_margin: 2 for / 1 against, majority of votes cast -> threshold 2
+    assert v1["margin"]["threshold"] == 2 and v1["margin"]["distance"] == 0
+    assert v1["margin"]["rule_label"].startswith("Majority of votes cast")
     assert v1["display_title"] == "Test Widgets Act — final vote on the text"
     v3 = load(out, "votes/V3.json")
     assert v3["reconciliation"]["matches"] is False  # 1 official abstention, none recorded
@@ -395,7 +398,7 @@ def test_close_votes_use_margin_when_available(tmp_path: Path, monkeypatch: pyte
                 "relative": (vote.n_for - thr) / cast, "label": "TEST label", "extra_field": 1}  # fmt: skip
 
     real_lazy = B._lazy
-    monkeypatch.setattr(B, "_lazy", lambda m, a: fake_margin if m.endswith("ep_margin") else real_lazy(m, a))
+    monkeypatch.setattr(B, "_lazy", lambda m, a: fake_margin if a == "margin" else real_lazy(m, a))
     shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
     o = tmp_path / "public"
     build(out=o, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state", today="2025-01-20")

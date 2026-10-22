@@ -340,7 +340,9 @@ _PART = re.compile(
 _AMENDMENT_TAIL = re.compile(r"^(am|ams|amendments?|block|bloc|budget line|vote en bloc)(?![a-z])", re.I)
 _BUDGET_LINE = re.compile(r"^(?:\d{1,2}(?: \d{1,2}){1,4}|[O0]\d(?: \d{2}){1,3})$")  # "07 20 04 01"
 _AMENDMENT_NUMBER = re.compile(r"^\d+[A-Z]*(=|/rev\d*)?$")  # "235/rev", "56": old labels omit "Am"
-_WHOLE_DOC = re.compile(r"^(RC-B|B)\d{1,2}-\d{4}/\d{4}(/REV\d*)?$", re.I)  # "B10-0441/2026": another motion as a whole
+_WHOLE_DOC = re.compile(
+    r"^(RC-B|B)\d{1,2}-\d{4}/\d{4}(/REV\d*)?$", re.I
+)  # "B10-0441/2026": another motion as a whole
 # Procedure types whose "motion for a resolution" is the legislative resolution (the EP's position)
 LEGISLATIVE_TYPES = frozenset({"COD", "CNS", "APP", "SYN", "AVC"})
 
@@ -716,6 +718,64 @@ def _fetch_sittings(http: Http, sittings: list[dict], today: str) -> list[Sittin
     return [out[s["id"]] for s in sittings]
 
 
+@dataclass
+class Result:
+    votes: list[EpVote]
+    ballots: list[EpBallots]
+    linked_via: Counter[str]
+    issues: dict[str, list[str]]  # vote id -> differences between counts and voter lists
+    duplicates: int
+
+
+def plan_lookups(data: list[Sitting], proc_labels: dict[str, str]) -> list[str]:
+    """Plenary documents that must be looked up to link votes no vote item links to a procedure."""
+    ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
+    docs_procs = doc_index(data)
+    return sorted(
+        {
+            doc
+            for s in data
+            for dec in s.decisions
+            for doc in needs_doc_lookup(draft(dec, s), docs_procs, ref_to_id)
+        }
+    )
+
+
+def assemble(
+    data: list[Sitting],
+    proc_labels: dict[str, str],
+    doc_links: dict[str, tuple[list[str], list[str]]],
+    retrieved: str,
+) -> Result:
+    """Offline: raw sittings + procedure references + document links -> EpVote / EpBallots records."""
+    ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
+    docs_procs = doc_index(data)
+    votes: dict[str, EpVote] = {}
+    ballots: list[EpBallots] = []
+    how: Counter[str] = Counter()
+    issues: dict[str, list[str]] = {}
+    duplicates = 0
+    for s in data:
+        for dec in s.decisions:
+            if not dec.get("notation_votingId"):
+                continue
+            d = draft(dec, s)
+            procs, via = resolve_procs(d, docs_procs, doc_links, ref_to_id)
+            vote, b = build_records(d, procs, proc_labels, retrieved)
+            if vote.id in votes:
+                duplicates += 1
+                continue
+            votes[vote.id] = vote
+            how[via or "none"] += 1
+            if b is not None:
+                ballots.append(b)
+                if problems := ballot_issues(vote, b):
+                    issues[vote.id] = problems
+    vote_list = sorted(votes.values(), key=lambda v: (v.date, len(v.id), v.id))
+    ballots.sort(key=lambda b: (len(b.vote_id), b.vote_id))
+    return Result(vote_list, ballots, how, issues, duplicates)
+
+
 def fetch(http: Http) -> SourceStatus:
     t0 = time.monotonic()
     attempted = now_iso()
@@ -727,57 +787,36 @@ def fetch(http: Http) -> SourceStatus:
     proc_labels = fetch_procedure_labels(http)
     if len(proc_labels) < 1000:
         raise RuntimeError(f"procedure list looks incomplete ({len(proc_labels)} procedures)")
-    ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
-
-    drafts = [draft(dec, s) for s in data for dec in s.decisions]
-    docs_procs = doc_index(data)
-    lookups = sorted({doc for d in drafts for doc in needs_doc_lookup(d, docs_procs, ref_to_id)})
-    log.info("%d decisions in %d sittings; %d document lookups", len(drafts), len(data), len(lookups))
+    lookups = plan_lookups(data, proc_labels)
+    log.info("%d sittings; %d document lookups", len(data), len(lookups))
     with ThreadPoolExecutor(WORKERS) as ex:
         doc_links = dict(
             zip(lookups, ex.map(lambda doc: fetch_document_links(http, doc), lookups), strict=True)
         )
+    res = assemble(data, proc_labels, doc_links, now_iso())
+    if not res.votes:
+        raise RuntimeError("no votes parsed")
+    write_records(SOURCE_ID, "votes", res.votes)
+    write_records(SOURCE_ID, "ballots", res.ballots)
 
-    retrieved = now_iso()
-    votes: dict[str, EpVote] = {}
-    ballots: list[EpBallots] = []
-    how: Counter[str] = Counter()
-    issues: dict[str, list[str]] = {}
-    duplicates = 0
-    for d in drafts:
-        procs, via = resolve_procs(d, docs_procs, doc_links, ref_to_id)
-        vote, b = build_records(d, procs, proc_labels, retrieved)
-        if vote.id in votes:
-            duplicates += 1
-            continue
-        votes[vote.id] = vote
-        how[via or "none"] += 1
-        if b is not None:
-            ballots.append(b)
-            if problems := ballot_issues(vote, b):
-                issues[vote.id] = problems
-
-    vote_list = sorted(votes.values(), key=lambda v: (v.date, int(v.id) if v.id.isdigit() else 0, v.id))
-    write_records(SOURCE_ID, "votes", vote_list)
-    write_records(SOURCE_ID, "ballots", ballots, key=lambda b: (len(b.vote_id), b.vote_id))
-
-    kinds = Counter(v.kind for v in vote_list)
-    rollcalls = sum(1 for v in vote_list if v.method == ROLLCALL)
-    linked = sum(1 for v in vote_list if v.procedure_refs)
+    kinds = Counter(v.kind for v in res.votes)
+    rollcalls = sum(1 for v in res.votes if v.method == ROLLCALL)
+    linked = sum(1 for v in res.votes if v.procedure_refs)
     note = (
-        f"{len(sittings)} sittings, {len(vote_list)} votes ({rollcalls} roll-call, {len(ballots)} with ballots), "
-        f"{linked} linked to procedures (via {dict(how)}); kinds {dict(sorted(kinds.items()))}; "
-        f"{len(lookups)} document lookups; {len(issues)} votes whose voter lists differ from the counts"
-        + (f"; {duplicates} duplicate voting ids skipped" if duplicates else "")
+        f"{len(sittings)} sittings ({sum(1 for s in data if s.decisions)} with votes), {len(res.votes)} votes "
+        f"({rollcalls} roll-call, {len(res.ballots)} with ballots), {linked} linked to procedures "
+        f"(via {dict(sorted(res.linked_via.items()))}); kinds {dict(sorted(kinds.items()))}; "
+        f"{len(lookups)} document lookups; {len(res.issues)} votes whose voter lists differ from the counts"
+        + (f"; {res.duplicates} duplicate voting ids skipped" if res.duplicates else "")
         + f"; {time.monotonic() - t0:.0f}s"
     )
-    if issues:
-        log.warning("ballot/count differences: %s", dict(list(issues.items())[:20]))
+    if res.issues:
+        log.warning("ballot/count differences: %s", dict(list(res.issues.items())[:20]))
     return SourceStatus(
         source=SOURCE_ID,
         status="ok",
         fetched_at=now_iso(),
         attempted_at=attempted,
-        records={"votes": len(vote_list), "ballots": len(ballots), "sittings": len(sittings)},
+        records={"votes": len(res.votes), "ballots": len(res.ballots), "sittings": len(sittings)},
         note=note,
     )

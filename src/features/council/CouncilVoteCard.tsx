@@ -156,7 +156,7 @@ export function CouncilVoteCard({
                 <li>
                   <b className="num">{formatNumber(a.states_for)}</b> Member States voted in favour
                   {participating > 0 && recorded.length > 0 ? <> out of {formatNumber(participating)} taking part</> : null}; at least{' '}
-                  <b className="num">{formatNumber(a.states_required)}</b> were needed (55% of the Council’s members).
+                  <b className="num">{formatNumber(a.states_required)}</b> were needed.
                 </li>
                 {popFor && (
                   <li>
@@ -203,7 +203,11 @@ export function CouncilVoteCard({
               ) : (
                 <>
                   <strong>Could a single country block it?</strong> No. Only under unanimity can one Member State block a decision on
-                  its own{a.rule === 'qmv' ? '; under qualified majority a blocking minority needs at least four Member States' : ''}.
+                  its own
+                  {a.rule === 'qmv'
+                    ? '; under qualified majority a blocking minority needs at least four Member States representing more than 35% of the EU population'
+                    : ''}
+                  .
                 </>
               )}
             </li>

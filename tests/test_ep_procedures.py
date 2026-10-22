@@ -33,9 +33,7 @@ def oeil_info(pid: str) -> m.OeilInfo:
 
 
 def build(pid: str, with_oeil: bool = True) -> Procedure:
-    return m.build_procedure(
-        ep_proc(pid), RETRIEVED, oeil_info(pid) if with_oeil else None, lambda _id: None
-    )
+    return m.build_procedure(ep_proc(pid), RETRIEVED, oeil_info(pid) if with_oeil else None, lambda _id: None)
 
 
 # ---------------------------------------------------------------- mapping table
@@ -62,7 +60,9 @@ def test_unknown_activity_type_is_neutral_other():
 
 def test_reading_is_added_only_when_stated():
     rdg1 = "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
-    assert m.activity_title("PLENARY_ADOPT_POSITION", rdg1)[1] == "Parliament took its decision (first reading)"
+    assert (
+        m.activity_title("PLENARY_ADOPT_POSITION", rdg1)[1] == "Parliament took its decision (first reading)"
+    )
     assert m.activity_title("PLENARY_ADOPT_POSITION")[1] == "Parliament took its decision"
     # second-reading types carry the reading in their own title
     assert "second reading" in m.activity_title("PLENARY_APPROVE_COUNCIL_POSITION")[1]
@@ -70,9 +70,7 @@ def test_reading_is_added_only_when_stated():
 
 def test_list_valued_activity_type_uses_specific_type():
     # 2022/0051(COD): a plenary vote carries [PLENARY_VOTE, PLENARY_ACTIVITY]
-    events = [
-        e for e in ep_proc("2022-0051")["consists_of"] if isinstance(e.get("had_activity_type"), list)
-    ]
+    events = [e for e in ep_proc("2022-0051")["consists_of"] if isinstance(e.get("had_activity_type"), list)]
     assert events, "fixture should contain a list-valued had_activity_type"
     assert m.last_segment(m.activity_type(events[0])) == "PLENARY_VOTE"
 
@@ -143,7 +141,11 @@ def test_build_ai_act():
     assert p.celex_refs == ["32024R1689"]
     assert p.stage_raw == "Procedure completed"
     assert p.started == "2021-04-21"
-    assert {(c.code, c.role) for c in p.committees} >= {("IMCO", "joint"), ("LIBE", "joint"), ("ENVI", "opinion")}
+    assert {(c.code, c.role) for c in p.committees} >= {
+        ("IMCO", "joint"),
+        ("LIBE", "joint"),
+        ("ENVI", "opinion"),
+    }
     rapporteurs = {(r.mep_id, r.role, r.committee) for r in p.rapporteurs}
     assert ("124867", "rapporteur", "IMCO") in rapporteurs  # Brando Benifei
     assert ("197665", "rapporteur", "LIBE") in rapporteurs
@@ -258,7 +260,9 @@ def test_fetch_end_to_end_offline(monkeypatch):
     ids = [r.id for r in recs]
     assert ids == sorted(ids)
     # every COD fixture with reference year >= 2014, plus the featured GDPR file (2012)
-    expected = {p.stem[3:] for p in FIX.glob("ep_2*.json") if ep_proc(p.stem[3:])["process_type"].endswith("COD")}
+    expected = {
+        p.stem[3:] for p in FIX.glob("ep_2*.json") if ep_proc(p.stem[3:])["process_type"].endswith("COD")
+    }
     assert set(ids) == {i for i in expected if int(i[:4]) >= 2014} | {"2012-0011"}
     assert status.status == "ok", status.note
     assert status.records["procedures"] == len(recs)

@@ -172,12 +172,18 @@ VOTE_EVENT_KINDS = {"ep_position", "plenary_vote", "rejection"}
 ACTIVE_STAGES = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
 ADOPTED_STAGES = {"adopted", "published", "in_force"}
 
+RULE_LABELS = {
+    "votes_cast": "Majority of votes cast (abstentions are not counted)",
+    "component_members": "Majority of Parliament's component Members (abstentions and absences count like votes against)",
+    "two_thirds_cast": "Two-thirds of the votes cast, representing a majority of component Members",
+}
 PAST_TITLES = {
     "entry_into_force": "Entered into force",
     "application": "Further provisions started to apply (date recorded by EUR-Lex)",
     "transposition_deadline": "Deadline for Member States to transpose the directive (passed)",
 }
-INDEX_TITLE_MAX = 220
+INDEX_OFFICIAL_TITLE_MAX = 140  # dossiers/index.json only; full titles are in dossiers/<id>.json
+INDEX_TITLE_MAX = 180
 
 STAGE_LABELS: dict[str, str] = {
     "proposed": "Proposed",
@@ -393,7 +399,8 @@ def _index_entry(d: dict) -> dict:
     """Compact DossierSummary for dossiers/index.json: long official titles shortened (full text in
     dossiers/<id>.json), optional fields omitted when empty."""
     out = {k: v for k, v in d.items() if not (k in _OPTIONAL_SUMMARY and v is None)}
-    out["official_title"] = _truncate(d["official_title"], INDEX_TITLE_MAX)
+    out["official_title"] = _truncate(d["official_title"], INDEX_OFFICIAL_TITLE_MAX)
+    out["title"] = _truncate(d["title"], INDEX_TITLE_MAX)
     if out.get("short"):
         out["short"] = _truncate(out["short"], 240)
     return out
@@ -779,7 +786,7 @@ class Builder:
         idx.sort(key=lambda v: (v.date, v.id), reverse=True)
         self.indexed_votes = idx
         self.indexed_vote_ids = {v.id for v in idx}
-        self.component_cache: dict[str, int] = {}
+        self.component_cache: dict[str, int | None] = {}
         margin_fn = _lazy("pipeline.analysis.ep_margin", "margin")
         self.vote_summary: dict[str, dict] = {}
         self.group_votes: dict[str, list[dict]] = defaultdict(list)
@@ -792,9 +799,12 @@ class Builder:
             self.files[f"votes/{v.id}.json"] = det
         self.files["votes/index.json"] = [_vote_index_entry(self.vote_summary[v.id]) for v in idx]
 
-    def component_members(self, d: str) -> int:
+    def component_members(self, d: str) -> int | None:
+        """Number of component Members for majority rules: the statutory number of seats documented in
+        pipeline.analysis.ep_margin (None when not covered; margins needing it are then not computed)."""
         if d not in self.component_cache:
-            self.component_cache[d] = sum(1 for m in self.s.meps if self.group_at(m.id, d))
+            seats = _lazy("pipeline.analysis.ep_margin", "statutory_seats")
+            self.component_cache[d] = seats(d) if seats else None
         return self.component_cache[d]
 
     def ep_vote_summary(self, v: EpVote, margin_fn: Any) -> dict:
@@ -809,8 +819,15 @@ class Builder:
         if margin_fn is not None:
             try:
                 m = _as_dict(margin_fn(v, self.component_members(v.date)))
-                if m and m.get("rule") in ("votes_cast", "component_members", "two_thirds_cast"):
-                    margin = {k: m.get(k) for k in ("rule", "rule_label", "threshold", "distance", "relative", "label")}
+                if m and m.get("rule") in RULE_LABELS and isinstance(m.get("relative"), (int, float)):
+                    margin = {
+                        "rule": m["rule"],
+                        "rule_label": m.get("rule_label") or RULE_LABELS[m["rule"]],
+                        "threshold": m["threshold"],
+                        "distance": m["distance"],
+                        "relative": m["relative"],
+                        "label": m["label"],
+                    }
             except Exception as e:  # noqa: BLE001
                 log.debug("margin failed for %s: %r", v.id, e)
         if p is not None:

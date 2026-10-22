@@ -24,7 +24,7 @@
   line-height: 1.08;
   letter-spacing: -0.025em;
   color: var(--navy);
-  max-width: 22ch;
+  max-width: 30ch;
   margin-bottom: var(--sp-4);
 }
 
@@ -210,13 +210,8 @@
 
 @media (min-width: 48rem) {
   .hl-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 72rem) {
-  .hl-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* fills the row whether 2, 3 or more lists have items */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   }
 }
 

@@ -154,3 +154,6 @@
 .cvote__foot {
   margin-top: calc(-1 * var(--sp-1));
 }
+.cvote__assessment > p {
+  margin: 0;
+}
