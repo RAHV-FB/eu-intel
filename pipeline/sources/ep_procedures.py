@@ -69,6 +69,7 @@ DOCEO = "https://www.europarl.europa.eu/doceo/document/{id}_EN.html"
 MAX_WORKERS = 4  # team rule: at most 4 concurrent threads
 EP_API_GAP_S = 0.75  # EP API allows 500 requests / 5 min; stay well below (~400) as hosts are shared
 OEIL_GAP_S = 0.5
+FALLBACK_TERMS = (7, 8, 9, 10)  # parliamentary terms covering procedures from 2009 onwards
 MAX_FAILURE_RATIO = 0.2  # above this, do not overwrite the previous snapshot
 
 # --------------------------------------------------------------------------------------
@@ -523,11 +524,19 @@ class OeilPlayer:
 
 
 # OEIL key-players table headers -> CommitteeRole.role
+# ("Former ..." = committee of a previous parliamentary term; same role.)
 OEIL_COMMITTEE_HEADER = {
     "Committee responsible": "responsible",
+    "Former committee responsible": "responsible",
     "Joint committee responsible": "joint",
+    "Former joint committee responsible": "joint",
     "Committee for opinion": "opinion",
+    "Former committee for opinion": "opinion",
     "Committee for opinion on the legal basis": "opinion",
+    "Former committee for opinion on the legal basis": "opinion",
+    "Committee for opinion on the recast technique": "opinion",
+    "Former committee for opinion on the recast technique": "opinion",
+    "Committee for budgetary assessment": "other",
 }
 
 
@@ -550,6 +559,8 @@ def _text(el: Any) -> str:
 
 def parse_oeil(body: bytes | str) -> OeilInfo:
     """Parse an OEIL procedure-file page. Missing sections simply leave fields empty."""
+    if isinstance(body, bytes):  # OEIL serves UTF-8; do not let lxml guess (it defaults to latin-1)
+        body = body.decode("utf-8", errors="replace")
     doc = lxml_html.fromstring(body)
     info = OeilInfo()
 
@@ -878,19 +889,49 @@ def build_participants(
                     mep_id = last_segment(person)
                     name = names(mep_id)
                     if not name:
-                        log.warning("no name for EP person %s (%s); skipped", mep_id, proc.get("process_id"))
+                        log.debug("no name for EP person %s (%s); skipped", mep_id, proc.get("process_id"))
                         continue
                     key = (mep_id, RAPPORTEUR_ROLE[role], committee)
                     rapps.setdefault(
                         key,
                         Rapporteur(mep_id=mep_id, name=name, committee=committee, role=RAPPORTEUR_ROLE[role]),
                     )
+    return _sorted_participants(committees.values(), rapps.values())
+
+
+def oeil_participants(
+    oeil: OeilInfo, names: Callable[[str], str | None], committee_names: dict[str, str]
+) -> tuple[list[CommitteeRole], list[Rapporteur]]:
+    """Fallback for procedures without participations in the EP API (mostly older files)."""
+    committees: dict[tuple[str, str], CommitteeRole] = {}
+    rapps: dict[tuple[str, str, str | None], Rapporteur] = {}
+    for pl in oeil.players:
+        committees.setdefault(
+            (pl.code, pl.role), CommitteeRole(code=pl.code, name=committee_names.get(pl.code), role=pl.role)
+        )
+        main = pl.role in ("responsible", "joint")
+        groups = (
+            (pl.rapporteurs, "rapporteur" if main else "opinion_rapporteur"),
+            (pl.shadows, "shadow" if main else "other"),
+        )
+        for ids, role in groups:
+            for mep_id in ids:
+                name = names(mep_id)
+                if name:
+                    rapps.setdefault(
+                        (mep_id, role, pl.code),
+                        Rapporteur(mep_id=mep_id, name=name, committee=pl.code, role=role),
+                    )
+    return _sorted_participants(committees.values(), rapps.values())
+
+
+def _sorted_participants(
+    committees: Iterable[CommitteeRole], rapps: Iterable[Rapporteur]
+) -> tuple[list[CommitteeRole], list[Rapporteur]]:
     role_order = {"responsible": 0, "joint": 1, "opinion": 2, "other": 3}
     rrole_order = {"rapporteur": 0, "shadow": 1, "opinion_rapporteur": 2, "other": 3}
-    cs = sorted(committees.values(), key=lambda c: (role_order[c.role], c.code))
-    rs = sorted(
-        rapps.values(), key=lambda r: (rrole_order[r.role], r.committee or "", r.name, r.mep_id or "")
-    )
+    cs = sorted(committees, key=lambda c: (role_order[c.role], c.code))
+    rs = sorted(rapps, key=lambda r: (rrole_order[r.role], r.committee or "", r.name, r.mep_id or ""))
     return cs, rs
 
 
@@ -917,6 +958,10 @@ def build_procedure(
         return names(mep_id) or (oeil.mep_names.get(mep_id) if oeil else None)
 
     committees, rapporteurs = build_participants(proc, name_of, committee_names)
+    if oeil and (not committees or not rapporteurs):
+        o_committees, o_rapporteurs = oeil_participants(oeil, name_of, committee_names)
+        committees = committees or o_committees
+        rapporteurs = rapporteurs or o_rapporteurs
 
     documents: dict[str, DocRef] = {}
     if oeil:
@@ -1026,16 +1071,22 @@ def featured_ids() -> list[str]:
     return out
 
 
-def mep_name_resolver(http: Http, terms: Iterable[int]) -> Callable[[str], str | None]:
-    """EP person id -> display name. Prefers the ep_people snapshot; otherwise the EP API MEP
-    lists per parliamentary term (givenName + familyName as published)."""
+def mep_name_resolver(http: Http, people: Iterable[tuple[str, int | None]]) -> Callable[[str], str | None]:
+    """EP person id -> display name. Prefers the ep_people snapshot; for persons it lacks, the
+    EP API MEP list of the parliamentary term(s) in which they took part (givenName +
+    familyName as published). `people` = (person id, term) pairs from the participations."""
     names: dict[str, str] = {}
     try:
         for m in read_records("ep_people", "meps", Mep):
             names[m.id] = m.name
     except Exception as e:  # noqa: BLE001 - snapshot of another source may be absent/invalid
         log.info("ep_people snapshot not usable (%s); using EP API MEP lists", e)
-    for term in sorted(set(terms)):
+    missing = {(pid, t) for pid, t in people if pid not in names}
+    # persons known only from OEIL (no term given): look them up in all terms since 2009
+    terms = {t for _, t in missing if t is not None} | (
+        set(FALLBACK_TERMS) if any(t is None for _, t in missing) else set()
+    )
+    for term in sorted(terms):
         try:
             offset = 0
             while True:
@@ -1064,15 +1115,17 @@ def mep_name_resolver(http: Http, terms: Iterable[int]) -> Callable[[str], str |
     return names.get
 
 
-def _terms_from(procs: Iterable[dict[str, Any]]) -> set[int]:
-    terms: set[int] = set()
+def _people_from(procs: Iterable[dict[str, Any]]) -> set[tuple[str, int | None]]:
+    out: set[tuple[str, int | None]] = set()
     for p in procs:
         for part in as_list(p.get("had_participation")):
-            if isinstance(part, dict):
-                m = re.search(r"ep-(\d+)$", str(part.get("parliamentary_term") or ""))
-                if m:
-                    terms.add(int(m[1]))
-    return terms
+            if not isinstance(part, dict):
+                continue
+            m = re.search(r"ep-(\d+)$", str(part.get("parliamentary_term") or ""))
+            for person in as_list(part.get("had_participant_person")):
+                if isinstance(person, str):
+                    out.add((last_segment(person), int(m[1]) if m else None))
+    return out
 
 
 def fetch(http: Http) -> SourceStatus:
@@ -1139,7 +1192,15 @@ def fetch(http: Http) -> SourceStatus:
             + "; ".join(errors[:5]),
         )
 
-    names = mep_name_resolver(http, _terms_from(p for p, _ in raw.values()))
+    people = _people_from(p for p, _ in raw.values())
+    people |= {
+        (i, None)
+        for info in oeil.values()
+        if info
+        for pl in info.players
+        for i in pl.rapporteurs + pl.shadows
+    }
+    names = mep_name_resolver(http, people)
     # Committee code -> name, across all OEIL pages (closed files often omit key players).
     all_committees: dict[str, str] = {}
     for pid in sorted(oeil, reverse=True):  # newest first: current committee names win

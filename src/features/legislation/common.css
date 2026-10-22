@@ -127,7 +127,7 @@
 }
 
 .lx-field > label,
-.lx-field > .lx-field__label {
+.lx-field__label {
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   color: var(--text-2);

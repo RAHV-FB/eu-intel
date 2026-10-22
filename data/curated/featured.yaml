@@ -148,27 +148,6 @@
     - {label: "Legislative Observatory – 2025/0360(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0360(COD)"}
   reviewed: "2026-10-22"
 
-- id: "2022-0303"
-  reference: "2022/0303(COD)"
-  celex: []
-  short_title: "AI Liability Directive"
-  what: >-
-    Proposal would set common rules for claims for damage caused by AI systems under national
-    non-contractual (fault-based) liability law, including the disclosure of evidence about high-risk
-    AI systems and a rebuttable presumption of a causal link.
-  why: >-
-    If adopted, people harmed by an AI system would find it easier to obtain evidence and prove their
-    compensation claims in national courts; claims would still be brought under national liability
-    law.
-  aliases: ["AI Liability Directive", "AILD", "AI liability"]
-  topics: ["tech", "rights"]
-  featured: false
-  feature_order: null
-  sources:
-    - {label: "Commission proposal COM(2022) 496 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52022PC0496"}
-    - {label: "Legislative Observatory – 2022/0303(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0303(COD)"}
-  reviewed: "2026-10-22"
-
 - id: "2022-0277"
   reference: "2022/0277(COD)"
   celex: ["32024R1083"]
@@ -521,6 +500,28 @@
   reviewed: "2026-10-22"
 
 # ----------------------------------------------------------------------------------- Transport
+
+- id: "2018-0332"
+  reference: "2018/0332(COD)"
+  celex: []
+  short_title: "Ending seasonal clock changes"
+  what: >-
+    Proposal would end the twice-yearly switch between summer time and standard time required by the
+    Summer-Time Directive (2000/84/EC), which it would repeal; each Member State would choose whether
+    to stay permanently on summer time or on standard time.
+  why: >-
+    If adopted, clocks in the EU would no longer change in March and October; Parliament's position
+    adds a coordination mechanism so that Member States make their choice of time in a harmonised
+    way.
+  aliases: ["clock change", "daylight saving time", "summer time", "winter time", "time change"]
+  topics: ["transport", "economy", "health"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Commission proposal COM(2018) 639 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52018PC0639"}
+    - {label: "Legislative Train – Discontinuing seasonal changes of time", url: "https://www.europarl.europa.eu/legislative-train/theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness/file-discontinuing-seasonal-changes-of-time"}
+    - {label: "Legislative Observatory – 2018/0332(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2018/0332(COD)"}
+  reviewed: "2026-10-22"
 
 - id: "2025-0420"
   reference: "2025/0420(COD)"

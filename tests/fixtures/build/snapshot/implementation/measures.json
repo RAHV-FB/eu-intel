@@ -1,0 +1,4 @@
+[
+{"commission_ref": null, "country": "ES", "date": "2025-01-01", "directive_celex": "32099L0003", "id": "M1", "journal": null, "national_ref": null, "notified": null, "source": {"identifier": "M1", "institution": "EUR-Lex", "label": "TEST ONLY M1", "published": null, "retrieved_at": "2099-01-01T00:00:00Z", "url": "https://example.invalid/M1"}, "title": "TEST Ley de prueba", "url": null},
+{"commission_ref": null, "country": "DE", "date": "2025-02-01", "directive_celex": "32099L0003", "id": "M2", "journal": null, "national_ref": null, "notified": null, "source": {"identifier": "M2", "institution": "EUR-Lex", "label": "TEST ONLY M2", "published": null, "retrieved_at": "2099-01-01T00:00:00Z", "url": "https://example.invalid/M2"}, "title": "TEST Gesetz", "url": null}
+]

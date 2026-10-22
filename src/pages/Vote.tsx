@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { EpVoteDetail, GroupSummary } from '../types/data';
-import { NotFoundError, useData } from '../lib/data';
+import { useData } from '../lib/data';
+import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
 import { Disclosure, ErrorState, Loading, NotFound, PageHeader, SourceLink, Term, VoteBar } from '../components/ui';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
@@ -23,7 +24,7 @@ export default function Vote() {
   }, [groupsState.data, v]);
 
   if (loading) return <div className="container page"><Loading label="Loading vote…" /></div>;
-  if (error instanceof NotFoundError) return <NotFound what="vote" />;
+  if (isMissing(error)) return <NotFound what="vote" />;
   if (error || !v) return <div className="container page"><ErrorState error={error} title="This vote could not be loaded" /></div>;
 
   const corrections = v.ballots.filter((b) => b.intended && b.intended !== b.pos);

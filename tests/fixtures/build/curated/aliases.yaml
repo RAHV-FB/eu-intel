@@ -1,0 +1,2 @@
+# TEST ONLY alias rules
+- {terms: ["gizmo"], expands_to: ["test thingamajigs"]}

@@ -4,7 +4,6 @@ import type { DossierDetail, DossierImplementation, ISODate, LegalInstrument, Tr
 import { ExtLink, SourceLink, Term } from '../../../components/ui';
 import { countryName, formatDate, formatNumber, safeUrl } from '../../../lib/format';
 import { ACTIVE_STAGES, ADOPTED_STAGES, TRANSPOSITION_LABEL } from '../labels';
-import { KeyDates } from './Summary';
 
 const STATUS_ORDER: TranspositionStatus[] = ['measures_notified', 'none_found', 'deadline_not_reached', 'unavailable'];
 
@@ -175,18 +174,30 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
       <>
         <p className="dz-lede">
           <strong>Applies directly; no national transposition needed.</strong> A <Term id="regulation">regulation</Term> is
-          binding in its entirety in every Member State from the dates it sets.
+          binding in its entirety in every Member State from the dates it sets
+          {d.application ? (
+            <>
+              {' '}
+              (see <a href="#summary">When it applies</a> above)
+            </>
+          ) : null}
+          .
         </p>
-        {d.application && <KeyDates app={d.application} today={today} />}
       </>
     );
   } else if (instrument === 'decision') {
     body = (
       <>
         <p className="dz-lede">
-          A decision is binding on those it is addressed to; it does not need national transposition.
+          A decision is binding on those it is addressed to; it does not need national transposition
+          {d.application ? (
+            <>
+              {' '}
+              (see <a href="#summary">When it applies</a> above)
+            </>
+          ) : null}
+          .
         </p>
-        {d.application && <KeyDates app={d.application} today={today} />}
       </>
     );
   } else {
@@ -194,9 +205,8 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
       <>
         <p className="dz-none">
           Our sources do not record how this act applies in the Member States.
-          {d.application ? ' The dates below are recorded by EUR-Lex.' : ''}
+          {d.application ? ' The dates recorded by EUR-Lex are shown under “When it applies” above.' : ''}
         </p>
-        {d.application && <KeyDates app={d.application} today={today} />}
       </>
     );
   }

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { DossierDetail, Meta, Topic } from '../types/data';
-import { NotFoundError, useData } from '../lib/data';
+import { useData } from '../lib/data';
 import { formatDate } from '../lib/format';
 import { changeSince, getWatchlist, markSeen, type ChangeInfo } from '../lib/watchlist';
 import { ErrorState, ExtLink, Loading, NotFound, Term } from '../components/ui';
-import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, isSameTitle, useDocumentTitle } from '../features/legislation/labels';
+import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, isMissing, isSameTitle, useDocumentTitle } from '../features/legislation/labels';
 import { todayISO } from '../features/legislation/explorer';
 import { DossierSummaryPanel } from '../features/legislation/dossier/Summary';
 import { WhereIsIt } from '../features/legislation/dossier/WhereIsIt';
@@ -37,7 +37,7 @@ export default function Dossier() {
     markSeen(d);
   }, [d]);
 
-  if (!valid || error instanceof NotFoundError) return <NotFound what="legislative file" />;
+  if (!valid || isMissing(error)) return <NotFound what="legislative file" />;
   if (error)
     return (
       <div className="container page">
@@ -85,13 +85,9 @@ export default function Dossier() {
       </nav>
 
       <header className="dz-head" id="summary">
-        <h1 className="dz-title">{d.title}</h1>
-        {!isSameTitle(d.title, d.official_title) && (
-          <p className="dz-official">
-            <span className="visually-hidden">Official title: </span>
-            {d.official_title}
-          </p>
-        )}
+        <h1 className={`dz-title${d.title.length > 110 ? ' dz-title--long' : ''}`}>{d.title}</h1>
+        {/* Without an editorial summary, "What is it?" below already shows the official title in full. */}
+        {d.editorial && !isSameTitle(d.title, d.official_title) && <OfficialTitle text={d.official_title} />}
         {change && (
           <p className="dz-changed" role="status">
             <span className="lx-changed">Updated since you last looked</span>{' '}
@@ -128,14 +124,24 @@ export default function Dossier() {
                   {d.instrument && d.instrument !== 'other' && <> · {INSTRUMENT_LABEL[d.instrument]}</>}
                 </dd>
               </div>
-              <div>
-                <dt>Proposed</dt>
-                <dd>{d.started ? formatDate(d.started) : '—'}</dd>
-              </div>
-              <div>
-                <dt>Latest recorded step</dt>
-                <dd>{d.last_event ? formatDate(d.last_event) : '—'}</dd>
-              </div>
+              {d.started && (
+                <div>
+                  <dt>Proposed</dt>
+                  <dd>{formatDate(d.started)}</dd>
+                </div>
+              )}
+              {d.adopted && (
+                <div>
+                  <dt>Adopted</dt>
+                  <dd>{formatDate(d.adopted)}</dd>
+                </div>
+              )}
+              {d.last_event && (
+                <div>
+                  <dt>Latest recorded step</dt>
+                  <dd>{formatDate(d.last_event)}</dd>
+                </div>
+              )}
               {primaryAct && (
                 <div>
                   <dt>
@@ -198,5 +204,24 @@ export default function Dossier() {
         </div>
       </div>
     </article>
+  );
+}
+
+/** Official titles can run to several hundred characters: show the first lines, expandable on request. */
+function OfficialTitle({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 180;
+  return (
+    <div className="dz-official-wrap">
+      <p className={`dz-official${long && !open ? ' is-clamped' : ''}`} id="official-title">
+        <span className="dz-official__label">Official title: </span>
+        {text}
+      </p>
+      {long && (
+        <button type="button" className="lx-linkbtn" aria-expanded={open} aria-controls="official-title" onClick={() => setOpen((o) => !o)}>
+          {open ? 'Show less' : 'Show full official title'}
+        </button>
+      )}
+    </div>
   );
 }

@@ -1,0 +1,72 @@
+{
+ "council": {
+  "attempted_at": "2099-01-01T00:00:00Z",
+  "fetched_at": "2099-01-01T00:00:00Z",
+  "note": null,
+  "records": {
+   "test": 1
+  },
+  "source": "council",
+  "status": "ok"
+ },
+ "ep_people": {
+  "attempted_at": "2099-01-01T00:00:00Z",
+  "fetched_at": "2099-01-01T00:00:00Z",
+  "note": null,
+  "records": {
+   "test": 1
+  },
+  "source": "ep_people",
+  "status": "ok"
+ },
+ "ep_procedures": {
+  "attempted_at": "2099-01-01T00:00:00Z",
+  "fetched_at": "2099-01-01T00:00:00Z",
+  "note": null,
+  "records": {
+   "test": 1
+  },
+  "source": "ep_procedures",
+  "status": "ok"
+ },
+ "ep_votes": {
+  "attempted_at": "2099-01-01T00:00:00Z",
+  "fetched_at": "2099-01-01T00:00:00Z",
+  "note": null,
+  "records": {
+   "test": 1
+  },
+  "source": "ep_votes",
+  "status": "ok"
+ },
+ "eurlex": {
+  "attempted_at": "2099-01-01T00:00:00Z",
+  "fetched_at": "2099-01-01T00:00:00Z",
+  "note": null,
+  "records": {
+   "test": 1
+  },
+  "source": "eurlex",
+  "status": "ok"
+ },
+ "implementation": {
+  "attempted_at": "2099-01-01T00:00:00Z",
+  "fetched_at": "2099-01-01T00:00:00Z",
+  "note": null,
+  "records": {
+   "test": 1
+  },
+  "source": "implementation",
+  "status": "ok"
+ },
+ "train": {
+  "attempted_at": "2099-01-01T00:00:00Z",
+  "fetched_at": "2099-01-01T00:00:00Z",
+  "note": null,
+  "records": {
+   "test": 1
+  },
+  "source": "train",
+  "status": "ok"
+ }
+}

@@ -47,34 +47,48 @@ function Row({ it }: { it: HomeListItem }) {
 
 export function HomeLists({ lists }: { lists: HomeList[] }) {
   if (!lists.length) return null;
+  const filled = lists.filter((l) => l.items.length > 0);
+  const empty = lists.filter((l) => l.items.length === 0);
   return (
-    <div className="hl-grid">
-      {lists.map((l) => {
-        const more = MORE[l.id];
-        const headingId = `hl-${l.id}`;
-        return (
-          <section key={l.id} className="hl" aria-labelledby={headingId}>
-            <h3 id={headingId} className="hl__heading">
+    <>
+      {filled.length > 0 && (
+        <div className="hl-grid">
+          {filled.map((l) => {
+            const more = MORE[l.id];
+            const headingId = `hl-${l.id}`;
+            return (
+              <section key={l.id} className="hl" aria-labelledby={headingId}>
+                <h3 id={headingId} className="hl__heading">
+                  {l.title}
+                </h3>
+                {l.description && <p className="hl__desc">{l.description}</p>}
+                <ol className="hl__list">
+                  {l.items.slice(0, 6).map((it, i) => (
+                    <Row key={`${it.dossier_id ?? it.vote_id ?? ''}-${i}`} it={it} />
+                  ))}
+                </ol>
+                {more && (
+                  <Link to={more.to} className="hl__more">
+                    {more.label} →
+                  </Link>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
+      {empty.length > 0 && (
+        <p className="hl-empty">
+          <strong>Nothing recorded in the current data for:</strong>{' '}
+          {empty.map((l, i) => (
+            <span key={l.id} title={l.description}>
+              {i > 0 && ' · '}
               {l.title}
-            </h3>
-            {l.description && <p className="hl__desc">{l.description}</p>}
-            {l.items.length ? (
-              <ol className="hl__list">
-                {l.items.slice(0, 6).map((it, i) => (
-                  <Row key={`${it.dossier_id ?? it.vote_id ?? ''}-${i}`} it={it} />
-                ))}
-              </ol>
-            ) : (
-              <p className="hl__empty">Nothing recorded in the current data.</p>
-            )}
-            {more && l.items.length > 0 && (
-              <Link to={more.to} className="hl__more">
-                {more.label} →
-              </Link>
-            )}
-          </section>
-        );
-      })}
-    </div>
+            </span>
+          ))}
+          . These lists fill in as the official sources report activity — see <Link to="/about#coverage">what’s covered</Link>.
+        </p>
+      )}
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import type { DossierDetail, EventKind, ISODate, LifecycleStage, TimelineEvent } from '../../../types/data';
 import { ExtLink, Term, institutionLabel } from '../../../components/ui';
 import { formatDate, formatNumber } from '../../../lib/format';
+import { institutionSuffix } from '../labels';
 
 interface Step {
   key: string;
@@ -86,8 +87,10 @@ export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
           <dd>
             {milestone ? (
               <>
-                <time dateTime={milestone.date}>{formatDate(milestone.date, true)}</time> — {milestone.title}{' '}
-                <span className="meta">({institutionLabel(milestone.institution)})</span>
+                <time dateTime={milestone.date}>{formatDate(milestone.date, true)}</time> — {milestone.title}
+                {institutionSuffix(milestone.title, milestone.institution) && (
+                  <span className="meta"> ({institutionSuffix(milestone.title, milestone.institution)})</span>
+                )}
               </>
             ) : (
               <span className="meta">No milestone recorded yet.</span>

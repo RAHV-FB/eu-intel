@@ -1,7 +1,7 @@
 import type { ApplicationInfo, DossierDetail, ISODate, TimelineEvent } from '../../../types/data';
 import { BasisNote, ExtLink, SourceLink, StatusBadge, Term, institutionLabel } from '../../../components/ui';
 import { formatDate } from '../../../lib/format';
-import { ADOPTED_STAGES } from '../labels';
+import { ADOPTED_STAGES, institutionSuffix } from '../labels';
 
 /** Most recent recorded (done) event on or before today. */
 export function latestDone(timeline: TimelineEvent[], today: ISODate): TimelineEvent | null {
@@ -46,6 +46,7 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
     });
   if (!rows.length) return <p className="meta">No application dates are recorded for this act in EUR-Lex.</p>;
   return (
+    <>
     <dl className="dz-dates">
       {rows.map((r, i) => (
         <div key={i}>
@@ -61,12 +62,48 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
           </dd>
         </div>
       ))}
-      {instrument === 'regulation' && (
-        <p className="dz-dates__note meta">
-          A <Term id="regulation">regulation</Term> applies directly in every Member State.
-        </p>
-      )}
     </dl>
+    {instrument === 'regulation' && (
+      <p className="dz-dates__note meta">
+        A <Term id="regulation">regulation</Term> applies directly in every Member State.
+      </p>
+    )}
+    </>
+  );
+}
+
+/** First legally fixed date still ahead (application, transposition deadline…). */
+export function nextScheduled(timeline: TimelineEvent[], today: ISODate): TimelineEvent | null {
+  return timeline.find((e) => e.date > today) ?? null;
+}
+
+/**
+ * The next procedural step when the records establish one; otherwise the next date fixed in law, if any.
+ * Never invents a step.
+ */
+export function NextStep({ d, today }: { d: DossierDetail; today: ISODate }) {
+  const ns = d.next_step;
+  const sched = nextScheduled(d.timeline, today);
+  if (ns.basis === 'unknown') {
+    return sched ? (
+      <>
+        <p className="dz-fact__date">
+          <time dateTime={sched.date}>{formatDate(sched.date, true)}</time>
+        </p>
+        <p className="dz-fact__text">{sched.title}</p>
+        <p className="meta">Date fixed in the law ({institutionLabel(sched.institution)})</p>
+      </>
+    ) : (
+      <p className="dz-fact__text meta">No next step is recorded in the official sources.</p>
+    );
+  }
+  return (
+    <>
+      <p className="dz-fact__text">
+        {ns.text} <BasisNote basis={ns.basis} />
+      </p>
+      {ns.institution && <p className="meta">{institutionLabel(ns.institution)}</p>}
+    </>
   );
 }
 
@@ -141,7 +178,10 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
                   <time dateTime={latest.date}>{formatDate(latest.date, true)}</time>
                 </p>
                 <p className="dz-fact__text">
-                  {latest.title} <span className="meta">({institutionLabel(latest.institution)})</span>
+                  {latest.title}
+                  {institutionSuffix(latest.title, latest.institution) && (
+                    <span className="meta"> ({institutionSuffix(latest.title, latest.institution)})</span>
+                  )}
                 </p>
                 <SourceLink source={latest.source} />
               </>
@@ -153,10 +193,7 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
         <div className="dz-fact">
           <dt className="dz-label">What happens next</dt>
           <dd>
-            <p className="dz-fact__text">
-              {d.next_step.text} <BasisNote basis={d.next_step.basis} />
-            </p>
-            {d.next_step.institution && <p className="meta">{institutionLabel(d.next_step.institution)}</p>}
+            <NextStep d={d} today={today} />
           </dd>
         </div>
       </dl>

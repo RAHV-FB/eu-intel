@@ -130,8 +130,8 @@ export function CouncilVotes({ votes, meta }: { votes: CouncilVote[]; meta: Meta
         </div>
       ) : unavailable ? (
         <p className="dz-none">
-          Council voting results could not be retrieved for this release{src?.note ? ` (${src.note})` : ''}, so we cannot show
-          how Member States voted. See <Link to="/about#sources">data sources</Link>.
+          Council voting results are not available in this release, so we cannot show how Member States voted on this file.
+          See <Link to="/about#sources">data sources</Link>.
         </p>
       ) : (
         <p className="dz-none">

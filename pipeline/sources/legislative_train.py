@@ -8,8 +8,10 @@ Structure (verified 2026-10-22):
   the Commission's political priorities) with a count of files per status.
 - Theme page ``theme-<slug>``: lists every file ("carriage") of that theme as a link
   ``/legislative-train/theme-<slug>/file-<file-slug>``.
-- File page: sidebar "Metadata" with ``Status:`` (a badge), ``Procedure:`` (procedure reference(s),
-  plain text), and "Information updated as of DD/MM/YYYY." above the text.
+- File page: sidebar "Metadata" with ``Status:`` (a badge), ``Procedure:`` (procedure reference,
+  plain text; Parliament legislative-initiative files have ``Adopted INL report:`` instead),
+  optionally ``Blocking institutions:`` (not stored: no field in TrainFile), and
+  "Information updated as of DD/MM/YYYY." above the text.
 
 A file carried over from one Commission term to the next is listed under a theme of each term,
 with the same file slug, status and text (only the "In <theme>" heading differs). Files are
@@ -53,11 +55,11 @@ BASE = "https://www.europarl.europa.eu/legislative-train/"
 # Commission terms offered by the schedule's "Commission" selector, most recent first.
 COMMISSION_TERMS: tuple[str, ...] = ("2024-29", "2019-24", "2014-19")
 
-# Status values exactly as they appear in the file-page "Status:" badge. Observed on the live
-# site; the schedule glossary defines the same seven statuses.
+# Status values exactly as they appear in the file-page "Status:" badge, as observed on all
+# 1,492 file pages on 2026-10-22; the schedule glossary defines the same seven statuses.
 STATUS_VOCABULARY: frozenset[str] = frozenset(
     {
-        "Legislative initiative",
+        "Legislative initiatives",
         "Announced",
         "Tabled",
         "Blocked",
@@ -78,7 +80,11 @@ SCHEDULE_COLUMNS: tuple[str, ...] = (
     "Withdrawn",
 )
 
-_PROC_RE = re.compile(r"\b(\d{4})/(\d{4}[A-Z]?)\(([A-Z]{3})\)")
+# Procedure references as printed on file pages, e.g. "2021/0106(COD)", "2020/2012(INL)"; a few
+# pages print a two-letter type ("2023/2670(NA)"), kept as published.
+_PROC_RE = re.compile(r"\b(\d{4})/(\d{4}[A-Z]?)\(([A-Z]{2,3})\)")
+# Metadata fields that carry procedure references.
+PROCEDURE_FIELDS: tuple[str, ...] = ("Procedure", "Adopted INL report")
 _UPDATED_RE = re.compile(r"Information updated as of\s+(\d{1,2})/(\d{1,2})/(\d{4})")
 _IN_THEME_RE = re.compile(r"^\s*In\s+[“\"](.*)[”\"]\s*$", re.S)
 _FILE_HREF_RE = re.compile(r"^/legislative-train/(theme-[^/]+)/file-(.+)$")
@@ -123,7 +129,9 @@ def parse_schedule(html: str) -> list[ThemeRow]:
         if slug in seen:
             continue
         seen.add(slug)
-        nums = [int(_text(td)) for td in tr.xpath("./td[contains(@class,'tableValue')]") if _text(td).isdigit()]
+        nums = [
+            int(_text(td)) for td in tr.xpath("./td[contains(@class,'tableValue')]") if _text(td).isdigit()
+        ]
         counts = dict(zip(SCHEDULE_COLUMNS, nums, strict=False)) if len(nums) == len(SCHEDULE_COLUMNS) else {}
         rows.append(ThemeRow(slug=slug, title=(a.get("title") or _text(a)).strip(), counts=counts))
     return rows
@@ -175,8 +183,12 @@ def parse_file_page(html: str) -> FilePage:
             theme = m.group(1).strip()
             break
 
+    meta_items = doc.xpath("//h2[normalize-space()='Metadata']/following-sibling::ul[1]/li") or doc.xpath(
+        "//ul/li[contains(@class,'d-flex')]"
+    )
+
     def meta_value(label: str):
-        for li in doc.xpath("//ul/li[contains(@class,'d-flex')]"):
+        for li in meta_items:
             ps = li.xpath("./p")
             if ps and _text(ps[0]).rstrip(":").strip().lower() == label.lower():
                 return li
@@ -190,8 +202,10 @@ def parse_file_page(html: str) -> FilePage:
         status = status or None
 
     refs: list[str] = []
-    li = meta_value("Procedure")
-    if li is not None:
+    for label in PROCEDURE_FIELDS:
+        li = meta_value(label)
+        if li is None:
+            continue
         value = " ".join(_text(p) for p in li.xpath("./p")[1:]) or _text(li)
         for y, n, t in _PROC_RE.findall(value):
             ref = f"{y}/{n}({t})"
@@ -234,7 +248,9 @@ def _get(http: Http, url: str) -> str:
     return http.get(url, headers=HEADERS).decode("utf-8", errors="replace")
 
 
-def discover_files(http: Http, terms: Iterable[str] = COMMISSION_TERMS) -> tuple[dict[str, tuple[str, str]], list[str]]:
+def discover_files(
+    http: Http, terms: Iterable[str] = COMMISSION_TERMS
+) -> tuple[dict[str, tuple[str, str]], list[str]]:
     """Return ({file slug: (url, listed title)}, notes). Most recent term wins for duplicates."""
     files: dict[str, tuple[str, str]] = {}
     notes: list[str] = []

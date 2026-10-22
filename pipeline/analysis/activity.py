@@ -1,9 +1,11 @@
 """Change detection between snapshots, and the public activity list.
 
 State (committed, data/state/):
-    digest.json    {dossier_id: {stage, label, title, events[], votes[], council[], acts[]}}
+    digest.json    {version, sources: {source: seen?}, dossiers: {dossier_id: {stage, label, title,
+                   events[], votes[], council[], acts[]}}}
                    ids are the union of everything ever seen, so a temporarily missing source
-                   never makes old records look "new" when it comes back.
+                   never makes old records look "new" when it comes back; records of a source seen
+                   for the first time are a baseline, not changes.
     activity.json  append-only list of verified changes, each with `detected_at`.
 
 What counts as a change (substantive only — never a metadata refresh such as a new retrieved_at):
@@ -46,6 +48,13 @@ SNAPSHOT_EVENT_KINDS = {
 }
 
 
+def short_title(t: str, n: int = 110) -> str:
+    """Dossier titles can be very long official titles; keep activity/feeds lines readable."""
+    if len(t) <= n:
+        return t
+    return t[: n - 1].rsplit(" ", 1)[0].rstrip(",;:(") + "…"
+
+
 def _item(
     id: str,
     date_: str,
@@ -84,17 +93,30 @@ def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
     out: list[dict] = []
     for pid in b.dossier_ids:
         det = b.dossier_detail[pid]
-        title = det["title"]
+        title = short_title(det["title"])
         for e in det["timeline"]:
-            if e["state"] != "done" or not (cut <= e["date"] <= today) or e["kind"] not in SNAPSHOT_EVENT_KINDS:
+            if (
+                e["state"] != "done"
+                or not (cut <= e["date"] <= today)
+                or e["kind"] not in SNAPSHOT_EVENT_KINDS
+            ):
                 continue
             out.append(
-                _item(f"ev:{e['id']}", e["date"], _event_kind(e["kind"]), f"{title}: {e['title']}", pid,
-                      e.get("vote_id"), e.get("source"))  # fmt: skip
+                _item(
+                    f"ev:{e['id']}",
+                    e["date"],
+                    _event_kind(e["kind"]),
+                    f"{title}: {e['title']}",
+                    pid,
+                    e.get("vote_id"),
+                    e.get("source"),
+                )  # fmt: skip
             )
     for v in b.vote_summary.values():
         if v["kind"] in ("final", "motion") and cut <= v["date"] <= today:
-            res = {"adopted": "adopted", "rejected": "rejected", "lapsed": "lapsed"}.get(v["outcome"], "voted on")
+            res = {"adopted": "adopted", "rejected": "rejected", "lapsed": "lapsed"}.get(
+                v["outcome"], "voted on"
+            )
             out.append(_item(f"vote:{v['id']}", v["date"], "ep_vote", f"Parliament {res}: {v['display_title']}",
                              v.get("dossier_id"), v["id"], v.get("source")))  # fmt: skip
     for cv in b.council_public:
@@ -121,59 +143,95 @@ def digest(b: Any) -> dict[str, dict]:
     return out
 
 
-def diff(old: dict[str, dict], new: dict[str, dict], b: Any, detected_at: str, stage_reliable: bool) -> list[dict]:
-    """Verified substantive changes from `old` to `new` digests."""
+def sources_present(b: Any) -> dict[str, bool]:
+    """Which inputs were present in this snapshot (ids from an absent source are never 'new')."""
+    s = b.s
+    return {
+        "ep_procedures": bool(s.procedures),
+        "eurlex": bool(s.acts),
+        "ep_votes": bool(s.votes),
+        "council": bool(s.council),
+        "stage_reliable": bool(s.procedures) and bool(s.acts),
+    }
+
+
+def diff(
+    old: dict[str, dict],
+    new: dict[str, dict],
+    b: Any,
+    detected_at: str,
+    stage_reliable: bool,
+    seen: dict[str, bool] | None = None,
+) -> list[dict]:
+    """Verified substantive changes from `old` to `new` digests.
+
+    `seen` says which sources were already present when `old` was recorded: records of a source that
+    was absent then are the first observation of that source (a baseline), not changes.
+    """
+    seen = seen or dict.fromkeys(("ep_procedures", "eurlex", "ep_votes", "council", "stage_reliable"), True)
+    stubs = getattr(b, "stub_ids", set())
     items: list[dict] = []
     today = b.today
     for pid in sorted(new):
         n = new[pid]
         det = b.dossier_detail[pid]
-        title = det["title"]
+        title = short_title(det["title"])
         src = det["sources"][0] if det.get("sources") else None
         o = old.get(pid)
         if o is None:
-            items.append(_item(f"chg:{pid}:new", det.get("started") or det.get("last_event") or today, "new_dossier",
-                               f"New file: {title}", pid, None, src, detected_at))  # fmt: skip
+            if seen["eurlex" if pid in stubs else "ep_procedures"]:
+                items.append(_item(f"chg:{pid}:new", det.get("started") or det.get("last_event") or today,
+                                   "new_dossier", f"New file: {title}", pid, None, src, detected_at))  # fmt: skip
             continue
-        if stage_reliable and n["stage"] != o.get("stage"):
+        if stage_reliable and seen["stage_reliable"] and n["stage"] != o.get("stage"):
             since = (det.get("status") or {}).get("since") or today
             items.append(_item(f"chg:{pid}:stage:{n['stage']}:{since}", since, "status_change",
                                f"{title}: status now “{n['label']}” (previously “{o.get('label', o.get('stage'))}”)",
                                pid, None, src, detected_at))  # fmt: skip
-        ev_by_id = {e["id"]: e for e in det["timeline"]}
-        for eid in sorted(set(n["events"]) - set(o.get("events", []))):
-            e = ev_by_id.get(eid)
-            if e:
-                items.append(_item(f"chg:{pid}:ev:{eid}", e["date"], _event_kind(e["kind"]) if e["kind"] != "proposal"
-                                   else "milestone", f"{title}: {e['title']}", pid, e.get("vote_id"), e.get("source"),
+        if seen["ep_procedures"]:
+            ev_by_id = {e["id"]: e for e in det["timeline"]}
+            for eid in sorted(set(n["events"]) - set(o.get("events", []))):
+                e = ev_by_id.get(eid)
+                if e:
+                    kind = "milestone" if e["kind"] == "proposal" else _event_kind(e["kind"])
+                    items.append(_item(f"chg:{pid}:ev:{eid}", e["date"], kind, f"{title}: {e['title']}", pid,
+                                       e.get("vote_id"), e.get("source"), detected_at))  # fmt: skip
+        if seen["ep_votes"]:
+            votes = {v["id"]: v for v in det["ep_votes"]}
+            for vid in sorted(set(n["votes"]) - set(o.get("votes", []))):
+                v = votes[vid]
+                items.append(_item(f"chg:{pid}:vote:{vid}", v["date"], "ep_vote",
+                                   f"New Parliament vote: {v['display_title']}", pid, vid, v.get("source"),
                                    detected_at))  # fmt: skip
-        votes = {v["id"]: v for v in det["ep_votes"]}
-        for vid in sorted(set(n["votes"]) - set(o.get("votes", []))):
-            v = votes[vid]
-            items.append(_item(f"chg:{pid}:vote:{vid}", v["date"], "ep_vote", f"New Parliament vote: {v['display_title']}",
-                               pid, vid, v.get("source"), detected_at))  # fmt: skip
-        cvs = {c["id"]: c for c in det["council_votes"]}
-        for cid in sorted(set(n["council"]) - set(o.get("council", []))):
-            c = cvs[cid]
-            items.append(_item(f"chg:{pid}:council:{cid}", c["date"], "council_vote", f"Council vote: {c['title']}",
-                               pid, None, c.get("source"), detected_at))  # fmt: skip
-        acts = {a["celex"]: a for a in det["acts"]}
-        for celex in sorted(set(n["acts"]) - set(o.get("acts", []))):
-            a = acts[celex]
-            items.append(_item(f"chg:{pid}:act:{celex}", a.get("date_publication") or a.get("date_document") or today,
-                               "publication", f"{title}: legal act {celex} recorded by EUR-Lex", pid, None, None,
-                               detected_at))  # fmt: skip
+        if seen["council"]:
+            cvs = {c["id"]: c for c in det["council_votes"]}
+            for cid in sorted(set(n["council"]) - set(o.get("council", []))):
+                c = cvs[cid]
+                items.append(_item(f"chg:{pid}:council:{cid}", c["date"], "council_vote",
+                                   f"Council vote: {c['title']}", pid, None, c.get("source"), detected_at))  # fmt: skip
+        if seen["eurlex"]:
+            acts = {a["celex"]: a for a in det["acts"]}
+            for celex in sorted(set(n["acts"]) - set(o.get("acts", []))):
+                a = acts[celex]
+                items.append(_item(f"chg:{pid}:act:{celex}",
+                                   a.get("date_publication") or a.get("date_document") or today, "publication",
+                                   f"{title}: legal act {celex} recorded by EUR-Lex", pid, None, None,
+                                   detected_at))  # fmt: skip
     return items
 
 
-def _merge_digest(old: dict[str, dict], new: dict[str, dict]) -> dict[str, dict]:
+def _merge_digest(old: dict[str, dict], new: dict[str, dict], stage_reliable: bool = True) -> dict[str, dict]:
+    """Union of ids ever seen; the stage is only updated when it was computed from complete inputs."""
     out = dict(old)
     for pid, n in new.items():
         o = old.get(pid, {})
-        out[pid] = {
+        merged = {
             **n,
             **{k: sorted(set(o.get(k, [])) | set(n[k])) for k in ("events", "votes", "council", "acts")},
         }
+        if not stage_reliable and o:
+            merged["stage"], merged["label"] = o.get("stage"), o.get("label")
+        out[pid] = merged
     return dict(sorted(out.items()))
 
 
@@ -200,17 +258,29 @@ def update_state(b: Any, state_dir: Path, record: bool = False) -> list[dict]:
     if not b.dossier_ids:  # procedures unavailable: nothing reliable to compare
         return recorded
     new = digest(b)
-    old = _read(dig_path, None)
+    stored = _read(dig_path, None)
     detected_at = os.environ.get("EU_INTEL_NOW") or now_iso()
+    present = sources_present(b)
+    stage_reliable = present["stage_reliable"]
+    old: dict[str, dict] | None = None
+    seen = dict.fromkeys(present, False)
+    if isinstance(stored, dict):
+        if "dossiers" in stored:
+            old, seen = stored["dossiers"], {**seen, **stored.get("sources", {})}
+        else:  # plain {dossier_id: entry} map
+            old, seen = stored, dict.fromkeys(present, True)
     if old is not None:
-        stage_reliable = bool(b.s.acts) and bool(b.s.procedures)
         known = {it["id"] for it in recorded}
-        fresh = [it for it in diff(old, new, b, detected_at, stage_reliable) if it["id"] not in known]
+        fresh = [it for it in diff(old, new, b, detected_at, stage_reliable, seen) if it["id"] not in known]
         recorded = recorded + fresh
         _write(act_path, recorded)
     elif not act_path.exists():
         _write(act_path, [])
-    _write(dig_path, _merge_digest(old or {}, new))
+    _write(dig_path, {
+        "version": 1,
+        "sources": {k: bool(seen.get(k)) or v for k, v in present.items()},
+        "dossiers": _merge_digest(old or {}, new, stage_reliable),
+    })  # fmt: skip
     return recorded
 
 

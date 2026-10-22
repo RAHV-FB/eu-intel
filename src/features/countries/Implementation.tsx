@@ -7,12 +7,6 @@ import { EURLEX_CELEX, TRANSPOSITION_LABEL, dossierPath } from '../legislation/l
 import { SortTh, useSortable } from '../votes/sortable';
 import './countries.css';
 
-const T_ICON: Record<TranspositionStatus, string> = {
-  measures_notified: '●',
-  deadline_not_reached: '◔',
-  none_found: '○',
-  unavailable: '–',
-};
 const T_ORDER: TranspositionStatus[] = ['measures_notified', 'none_found', 'deadline_not_reached', 'unavailable'];
 
 export const NIM_URL = (celex: string) => `https://eur-lex.europa.eu/legal-content/EN/NIM/?uri=CELEX:${encodeURIComponent(celex)}`;
@@ -20,9 +14,7 @@ export const NIM_URL = (celex: string) => `https://eur-lex.europa.eu/legal-conte
 export function TranspositionStatusLabel({ status }: { status: TranspositionStatus }) {
   return (
     <span className={`tstatus tstatus--${status}`}>
-      <span className="tstatus__icon" aria-hidden="true">
-        {T_ICON[status]}
-      </span>
+      <span className="tstatus__icon" aria-hidden="true" />
       {TRANSPOSITION_LABEL[status]}
     </span>
   );

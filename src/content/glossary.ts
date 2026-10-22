@@ -104,4 +104,43 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     term: 'Procedure reference',
     short: 'The identifier Parliament uses for a legislative file, e.g. 2021/0106(COD): year, number, and procedure type.',
   },
+  cjeu: {
+    term: 'Court of Justice of the EU',
+    short:
+      'Interprets EU law so it is applied the same way everywhere, and rules on cases such as infringements. Only the Court can rule that a Member State has breached EU law.',
+    href: '/how-the-eu-works#cjeu',
+  },
+  'special-procedure': {
+    term: 'Special legislative procedure',
+    short:
+      'Used in some areas set by the treaties: the Council adopts the law after consulting Parliament (consultation) or with its approval (consent), often by unanimity.',
+    href: '/how-the-eu-works#special',
+  },
+  'blocking-minority': {
+    term: 'Blocking minority',
+    short:
+      'Under qualified majority voting, at least four Member States representing more than 35% of the EU population can stop a decision. One country cannot do so alone.',
+    href: '/how-the-eu-works#council-voting',
+  },
+  'absolute-majority': {
+    term: 'Majority of component members',
+    short: 'A majority of all MEPs (361 of 720), however many take part in the vote. Needed for some decisions, such as second-reading amendments.',
+    href: '/how-the-eu-works#parliament-voting',
+  },
+  decision: {
+    term: 'Decision',
+    short: 'An EU act that is binding in full on those it is addressed to, such as a Member State or a company.',
+    href: '/how-the-eu-works#instruments',
+  },
+  'official-journal': {
+    term: 'Official Journal of the EU',
+    short: 'The EU’s official publication. Adopted laws are published in it, and enter into force on the date they set.',
+    href: '/how-the-eu-works#olp',
+  },
+  'reasoned-opinion': {
+    term: 'Reasoned opinion',
+    short:
+      'A stage of an infringement procedure: the Commission’s formal request to a Member State to comply with EU law, explaining why it sees a breach.',
+    href: '/how-the-eu-works#infringements',
+  },
 };

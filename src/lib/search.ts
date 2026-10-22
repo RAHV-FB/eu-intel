@@ -8,7 +8,7 @@
  *   3. name starts with / contains the query as a phrase
  *   4. every meaningful word matches (exact word, synonym, plural, or prefix)
  *   5. same, but at least one word only matched approximately (typo tolerance)
- *   6. all but one word matched exactly (multi-word queries only)
+ *   6. all but one word matched exactly (queries of three or more meaningful words only)
  * Inside a tier: field weight (title > alias > keyword), match quality, then the static boost `w`
  * (featured dossiers, active MEPs, countries, groups), then shorter titles and newer dates.
  *
@@ -143,6 +143,17 @@ function lowerBound(arr: string[], x: string): number {
   return lo;
 }
 
+/** The phrase with one word replaced by a synonym, e.g. ["ai", "law"] -> "ai act", "ai regulation". */
+function phraseVariants(qWords: string[]): string[] {
+  const out: string[] = [];
+  qWords.forEach((w, k) => {
+    for (const s of SYNONYMS[w] ?? []) {
+      if (s !== w) out.push([...qWords.slice(0, k), s, ...qWords.slice(k + 1)].join(' '));
+    }
+  });
+  return out.slice(0, 16);
+}
+
 /** Build a search engine over SearchDoc[] (exported for tests). */
 export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
   const prepared: Prepared[] = [];
@@ -236,6 +247,12 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
       const exactTier = prepared[i].doc.k === 'topic' && prepared[i].title !== phrase ? TIER.starts : TIER.exact;
       bump(i, exactTier + boost(i) + (prepared[i].title === phrase ? 300 : 0));
     }
+    // synonym variants of the whole phrase ("ai law" -> "ai act"), just below exact names
+    if (qWords.length <= 4) {
+      for (const v of phraseVariants(qWords)) {
+        for (const i of byName.get(v) ?? []) bump(i, TIER.starts + 100 + boost(i));
+      }
+    }
     if (phrase.length >= 2) {
       prepared.forEach((p, i) => {
         let best = 0;
@@ -254,7 +271,9 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     // 4-6. words
     const required = qWords.filter((w) => !STOP.has(w));
     const req = required.length ? required : qWords;
-    const per = req.map((w, k) => wordMatches(w, w.length >= 3 || (k === req.length - 1 && w.length >= 2)));
+    // prefix matching only for the word being typed (the last one): "chat control" must not match "chatbots"
+    const lastTyped = qWords[qWords.length - 1];
+    const per = req.map((w) => wordMatches(w, w === lastTyped && w.length >= 2));
     const optional = qWords.filter((w) => STOP.has(w) && required.length).map((w) => wordMatches(w, false).m);
     const counts = new Map<number, { n: number; sum: number; fuzzy: boolean; exactN: number }>();
     per.forEach(({ m, fuzzyOnly }) => {
@@ -274,7 +293,7 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
       const extra = optional.reduce((acc, m) => acc + (m.get(i) ?? 0) * 0.2, 0);
       bump(i, (c.fuzzy ? TIER.fuzzy : TIER.all) + (c.sum + extra) * 100 + boost(i));
     }
-    if (!anyFull && scores.size === 0 && req.length >= 2) {
+    if (!anyFull && scores.size === 0 && req.length >= 3) {
       for (const [i, c] of counts) {
         if (c.exactN >= req.length - 1 && !c.fuzzy) bump(i, TIER.partial + c.sum * 100 + boost(i));
       }

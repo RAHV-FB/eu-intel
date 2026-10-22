@@ -3,6 +3,8 @@
  * Used by the legislation explorer, the dossier page, the homepage and the watchlist.
  */
 import { useEffect } from 'react';
+import { NotFoundError } from '../../lib/data';
+import { institutionLabel } from '../../components/ui';
 import type { DossierSummary, LegalInstrument, LifecycleStage, TranspositionStatus } from '../../types/data';
 
 export const SITE_TITLE = 'EU Legislative Intelligence';
@@ -102,3 +104,18 @@ export function isSameTitle(a: string | null | undefined, b: string | null | und
 
 export const EURLEX_CELEX = (celex: string) =>
   `https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:${encodeURIComponent(celex)}`;
+
+/**
+ * A missing data file is a 404 on GitHub Pages, but a dev/preview server may answer with the SPA's HTML
+ * (which fails JSON parsing). Treat both as "not in our dataset".
+ */
+export function isMissing(e: unknown): boolean {
+  return e instanceof NotFoundError || e instanceof SyntaxError;
+}
+
+/** Institution label to append after an event title, or '' when the title already names it. */
+export function institutionSuffix(title: string, institution: string): string {
+  const label = institutionLabel(institution);
+  const t = title.toLowerCase();
+  return t.includes(label.toLowerCase()) || t.includes(institution.toLowerCase()) ? '' : label;
+}

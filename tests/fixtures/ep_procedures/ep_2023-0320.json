@@ -1,0 +1,218 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2023-0320",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/MTG-PL-2024-04-10-VOT-ITM-944685",
+     "type": "Activity",
+     "activity_date": "2024-04-10",
+     "activity_id": "MTG-PL-2024-04-10-VOT-ITM-944685",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2024-0064"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-9-2024-04-10-VOT-ITM-050"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2023-0320-ANPRO-2023-12-11",
+     "type": "Activity",
+     "activity_date": "2023-12-11",
+     "activity_id": "2023-0320-ANPRO-2023-12-11",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2023-0320-DEC-DCPL-2024-04-10",
+     "type": "Decision",
+     "activity_date": "2024-04-10",
+     "activity_id": "2023-0320-DEC-DCPL-2024-04-10",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/TA-9-2024-0218"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DECISION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/ECON-PR-755999-DEPOT-2023-11-17",
+     "type": "Activity",
+     "activity_date": "2023-11-17",
+     "activity_id": "ECON-PR-755999-DEPOT-2023-11-17",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/ECON-PR-755999"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2023-0320-DEC-ADCP-2024-02-22",
+     "type": "Decision",
+     "activity_date": "2024-02-22",
+     "activity_id": "2023-0320-DEC-ADCP-2024-02-22",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-04-10-PVCRE-ITM-21-43",
+     "type": "Activity",
+     "activity_date": "2024-04-10",
+     "activity_id": "MTG-PL-2024-04-10-PVCRE-ITM-21-43",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2024-04-10-ITM-021-43",
+      "eli/dl/doc/PV-9-2024-04-10-ITM-021-43"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2023-0320-DEPOT-2024-02-28",
+     "type": "Activity",
+     "activity_date": "2024-02-28",
+     "activity_id": "2023-0320-DEPOT-2024-02-28",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2024-0064"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/ECON-PR-755999",
+    "eli/dl/doc/A-9-2024-0064",
+    "eli/dl/doc/SP-2024-377-TA-9-2024-0218",
+    "eli/dl/doc/TA-9-2024-0218"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2023-0320-NMCP-197738-ECON-2023-09-19",
+     "type": "Participation",
+     "activity_date": "2023-09-19",
+     "had_participant_person": [
+      "person/197738"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/ECON",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 801
+    },
+    {
+     "id": "eli/dl/participation/2023-0320-NMSR-197526-2023-10-02",
+     "type": "Participation",
+     "activity_date": "2023-10-02",
+     "had_participant_person": [
+      "person/197526"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 5
+    },
+    {
+     "id": "eli/dl/participation/2023-0320-MAIN-ECON",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/ECON"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2023-0320-NMSR-204420-2023-10-02",
+     "type": "Participation",
+     "activity_date": "2023-10-02",
+     "had_participant_person": [
+      "person/204420"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 6
+    },
+    {
+     "id": "eli/dl/participation/2023-0320-NMSR-197697-2023-10-02",
+     "type": "Participation",
+     "activity_date": "2023-10-02",
+     "had_participant_person": [
+      "person/197697"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 2
+    },
+    {
+     "id": "eli/dl/participation/2023-0320-NMSR-197541-2023-10-02",
+     "type": "Participation",
+     "activity_date": "2023-10-02",
+     "had_participant_person": [
+      "person/197541"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 4
+    }
+   ],
+   "process_id": "2023-0320",
+   "process_title": {
+    "da": "Indførelse af et hovedkontorsbaseret beskatningssystem for mikrovirksomheder og små og mellemstore virksomheder og ændring af direktiv 2011/16/EU",
+    "ro": "Instituirea unui sistem de impunere în funcție de sediul central pentru microîntreprinderi și întreprinderi mici și mijlocii și modificarea Directivei 2011/16/UE",
+    "ga": "Córas Cánach Ceannoifige do mhicrifhiontair, d’fhiontair bheaga agus d’fhiontair mheánmhéide a bhunú, agus lena leasaítear Treoir 2011/16/AE",
+    "bg": "Създаване на система за данъчно облагане по главно управление за микро-, малките и средните предприятия и изменение на Директива 2011/16/ЕС",
+    "et": "Mikro-, väikeste ja keskmise suurusega ettevõtjate peakontori maksustamise süsteemi kehtestamine ning direktiivi 2011/16/EL muutmine",
+    "hu": "A mikro-, kis- és középvállalkozások által alkalmazható, központ szerinti adórendszer létrehozása és a 2011/16/EU irányelv módosítása",
+    "it": "Istituzione di un sistema fiscale basato sulle norme della sede centrale per le microimprese e le piccole e medie imprese e modifica della direttiva 2011/16/UE",
+    "es": "Establecimiento de un sistema de imposición en la sede destinado a las microempresas y a las pequeñas y medianas empresas, y modificación de la Directiva 2011/16/UE",
+    "mt": "L-istabbiliment ta' sistema ta' Taxxa tal-Uffiċċju Reġistrat għall-intrapriżi mikro, żgħar u ta' daqs medju, u l-emenda tad-Direttiva 2011/16/UE",
+    "nl": "Vaststelling van een belastingstelsel voor micro-, kleine en middelgrote ondernemingen volgens de regels van de lidstaat van het hoofdkantoor en wijziging van Richtlijn 2011/16/EU",
+    "cs": "Zavedení systému zdanění na základě ústředí pro mikropodniky a malé a střední podniky a změna směrnice 2011/16/EU",
+    "en": "Establishing a Head Office Tax system for micro, small and medium sized enterprises, and amending Directive 2011/16/EU",
+    "fr": "Mise en place d'un système fiscal fondé sur les règles de l'État membre du siège social pour les micro, petites et moyennes entreprises, et modification de la directive 2011/16/UE",
+    "sv": "Inrättande av ett huvudkontorsbaserat skattesystem för mikroföretag samt små och medelstora företag och ändring av direktiv 2011/16/EU",
+    "lt": "Labai mažų, mažųjų ir vidutinių įmonių pagrindine buveine grindžiamos mokesčių sistemos nustatymas ir dalinis Direktyvos 2011/16/ES keitimas",
+    "lv": "Priekšlikums izveidot galvenā biroja nodokļu sistēmu mikrouzņēmumiem, maziem un vidējiem uzņēmumiem un grozīt Direktīvu 2011/16/ES",
+    "fi": "Päätoimipaikkaan perustuvan verojärjestelmän perustaminen mikro- ja pk-yrityksiä varten ja direktiivin 2011/16/EU muuttaminen",
+    "sl": "Uvedba sistema davčnih pravil države sedeža za mikro, mala in srednja podjetja ter spremembi Direktive 2011/16/EU",
+    "sk": "Ustanovenie daňového systému ústredia pre mikropodniky, malé a stredné podniky a zmena smernice 2011/16/EÚ",
+    "pl": "Ustanowienie systemu opodatkowania według siedziby głównej dla mikroprzedsiębiorstw oraz małych i średnich przedsiębiorstw i zmiana dyrektywy 2011/16/UE",
+    "el": "Θέσπιση συστήματος φορολόγησης εταιρικής έδρας για τις πολύ μικρές, τις μικρές και τις μεσαίες επιχειρήσεις και τροποποίηση της οδηγίας 2011/16/ΕΕ",
+    "de": "Einführung eines hauptsitzbasierten Steuersystems für Kleinstunternehmen, kleine und mittlere Unternehmen sowie Änderung der Richtlinie 2011/16/EU",
+    "hr": "Uspostava sustava oporezivanja sjedišta za mikropoduzeća te mala i srednja poduzeća, te izmjena Direktive 2011/16/EU",
+    "pt": "Criação de um sistema de tributação da sede social para as micro, pequenas e médias empresas e alteração da Diretiva 2011/16/UE"
+   },
+   "process_type": "def/ep-procedure-types/CNS",
+   "was_scheduled_in": [
+    {
+     "id": "eli/dl/event/MTG-PL-2024-04-10-OJ-ITM-V-62",
+     "type": "ForeseenActivity",
+     "activity_date": "2024-04-10",
+     "activity_id": "MTG-PL-2024-04-10-OJ-ITM-V-62",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-9-2024-04-10"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "V-62"
+    }
+   ],
+   "label": "2023/0320(CNS)",
+   "identifierYear": "2023"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

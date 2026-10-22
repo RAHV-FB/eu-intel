@@ -51,12 +51,28 @@
   overflow-wrap: anywhere;
 }
 
+.dz-title--long {
+  font-size: clamp(1.375rem, 1.1rem + 1.2vw, 1.875rem);
+  line-height: 1.2;
+}
+
 .dz-official {
   margin: 0;
   color: var(--text-2);
   font-size: var(--fs-base);
   line-height: var(--lh-snug);
   max-width: 48rem;
+}
+
+.dz-official.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dz-official__label {
+  color: var(--text-3);
 }
 
 .dz-changed {
@@ -117,7 +133,7 @@
   font-weight: var(--fw-semibold);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--blue-muted);
+  color: #445f93; /* darker than --blue-muted: ≥ 5.5:1 on white and on --blue-paler */
 }
 
 .dz-what {
@@ -200,6 +216,17 @@
   margin: 0;
 }
 
+/* Tinted band: secondary text uses --text-2 so it stays above 4.5:1 on --blue-paler. */
+.dz-fact .meta,
+.dz-fact .basis,
+.dz-fact .source {
+  color: var(--text-2);
+}
+
+.dz-fact .basis {
+  border-bottom-color: var(--text-2);
+}
+
 .dz-fact .badge {
   white-space: normal;
   margin: 2px 0 var(--sp-1);
@@ -244,8 +271,7 @@
 }
 
 .dz-dates__note {
-  grid-column: 1 / -1;
-  margin: 0;
+  margin: var(--sp-3) 0 0;
 }
 
 .dz-upcoming {
@@ -454,6 +480,7 @@
   position: relative;
   display: grid;
   grid-template-columns: 1.5rem minmax(0, 1fr);
+  align-content: start;
   column-gap: var(--sp-3);
   padding: 0 0 var(--sp-4);
 }
@@ -604,6 +631,10 @@
 
 .dz-official-status p {
   margin: 0;
+}
+
+.dz-official-status .meta {
+  color: var(--text-2);
 }
 
 .dz-official-status p + p {
@@ -764,6 +795,8 @@
   .tl__date {
     grid-column: 1;
     grid-row: 1;
+    align-self: start;
+    align-content: flex-start;
     justify-content: flex-end;
     text-align: right;
     padding-top: 1px;

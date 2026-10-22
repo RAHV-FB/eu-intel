@@ -1,0 +1,339 @@
+"""Offline checks of the normalized snapshot (data/snapshot/**).
+
+    python -m pipeline validate
+
+Errors (exit code 1) are STRUCTURAL problems only: unreadable files, records that do not match
+the schema in pipeline/models/entities.py, duplicate ids, malformed dates.
+Everything else is reported as a warning: dangling references, official totals that differ from the
+recorded individual votes (official discrepancies are facts, not bugs), implausible dates,
+transposition data on non-directives, "veto" wording outside unanimity, odd act/procedure pairs.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from collections import Counter, defaultdict
+from collections.abc import Callable
+from datetime import date
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, ValidationError
+
+from pipeline.models import entities as E
+from pipeline.models.countries import FORMER_MEMBER_STATES, MEMBER_STATES
+from pipeline.snapshot import ROOT, SNAPSHOT
+
+COUNTRIES = set(MEMBER_STATES) | set(FORMER_MEMBER_STATES)
+# National measures notified as transposing a directive can be old national laws (e.g. a 19th-century code).
+MIN_DATE = {("implementation", "measures"): "1800-01-01"}
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+REF_RE = re.compile(r"^(\d{4})/(\d{4})\(([A-Z]{3})\)$")
+CELEX_TYPE = {"R": "regulation", "L": "directive", "D": "decision", "H": "recommendation"}
+PUBLIC_FILES = [
+    "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "council/index.json",
+    "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
+    "topics.json", "search.json", "activity.json", "feeds/updates.xml",
+]  # fmt: skip
+
+# (source, file, model name, id function)
+FILES: list[tuple[str, str, str, Callable[[Any], Any] | None]] = [
+    ("ep_people", "meps", "Mep", lambda r: r.id),
+    ("ep_people", "orgs", "Organization", lambda r: r.id),
+    ("ep_procedures", "procedures", "Procedure", lambda r: r.id),
+    ("ep_votes", "votes", "EpVote", lambda r: r.id),
+    ("ep_votes", "ballots", "EpBallots", lambda r: r.vote_id),
+    ("eurlex", "acts", "LegalAct", lambda r: r.celex),
+    ("council", "votes", "CouncilVote", lambda r: r.id),
+    ("implementation", "measures", "NationalMeasure", lambda r: r.id),
+    ("implementation", "infringements", "InfringementCase", lambda r: r.id),
+    ("implementation", "indicators", "CountryIndicator", lambda r: (r.country, r.indicator, r.period)),
+    ("implementation", "coverage", "ImplementationCoverage", lambda r: r.celex),
+    ("train", "files", "TrainFile", lambda r: r.url),
+]
+
+
+class Report:
+    def __init__(self) -> None:
+        self.errors: list[str] = []
+        self.warnings: dict[str, list[str]] = defaultdict(list)
+        self.info: list[str] = []
+
+    def error(self, msg: str) -> None:
+        self.errors.append(msg)
+
+    def warn(self, check: str, msg: str) -> None:
+        self.warnings[check].append(msg)
+
+    def print(self, out=sys.stdout, examples: int = 5) -> None:
+        for line in self.info:
+            print(f"  {line}", file=out)
+        for check in sorted(self.warnings):
+            items = self.warnings[check]
+            print(f"WARNING [{check}] {len(items)}", file=out)
+            for m in items[:examples]:
+                print(f"    - {m}", file=out)
+            if len(items) > examples:
+                print(f"    … {len(items) - examples} more", file=out)
+        for m in self.errors[:50]:
+            print(f"ERROR {m}", file=out)
+        if len(self.errors) > 50:
+            print(f"ERROR … {len(self.errors) - 50} more errors", file=out)
+        status = "FAILED" if self.errors else "OK"
+        n_warn = sum(len(v) for v in self.warnings.values())
+        print(f"validate: {status} — {len(self.errors)} errors, {n_warn} warnings", file=out)
+
+
+def _valid_date(s: str) -> bool:
+    if not DATE_RE.match(s):
+        return False
+    try:
+        date.fromisoformat(s)
+    except ValueError:
+        return False
+    return True
+
+
+def _load(snapshot: Path, source: str, name: str, model_name: str, rep: Report) -> list[BaseModel] | None:
+    path = snapshot / source / f"{name}.json"
+    if not path.exists():
+        return None
+    model: type[BaseModel] | None = getattr(E, model_name, None)
+    if model is None:
+        rep.warn("schema", f"{source}/{name}.json present but model {model_name} is not defined")
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        rep.error(f"{source}/{name}.json: unreadable JSON ({e})")
+        return None
+    if not isinstance(raw, list):
+        rep.error(f"{source}/{name}.json: expected a JSON array")
+        return None
+    out: list[BaseModel] = []
+    bad = 0
+    for i, x in enumerate(raw):
+        try:
+            out.append(model.model_validate(x))
+        except ValidationError as e:
+            bad += 1
+            if bad <= 5:
+                first = e.errors()[0]
+                rep.error(f"{source}/{name}.json[{i}]: {'.'.join(map(str, first['loc']))}: {first['msg']}")
+    if bad > 5:
+        rep.error(f"{source}/{name}.json: {bad} invalid records in total")
+    rep.info.append(f"{source}/{name}.json: {len(out)} records")
+    return out
+
+
+def _dates(obj: Any, path: str = "") -> list[tuple[str, str]]:
+    """All (field path, value) pairs for date-like fields of a model dump."""
+    out: list[tuple[str, str]] = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            p = f"{path}.{k}" if path else k
+            if isinstance(v, str) and (k in ("date", "start", "end", "started", "published", "last_updated",
+                                             "notified", "latest_decision_date")
+                                       or k.startswith("date_") or k in ("entry_into_force", "end_of_validity")):  # fmt: skip
+                out.append((p, v))
+            elif isinstance(v, list) and k in ("other_application_dates", "transposition_deadlines"):
+                out += [(p, x) for x in v if isinstance(x, str)]
+            elif isinstance(v, (dict, list)) and k != "source":
+                out += _dates(v, p)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            out += _dates(v, f"{path}[{i}]")
+    return out
+
+
+def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | None = None) -> Report:
+    rep = Report()
+    today = today or date.today().isoformat()
+    data: dict[tuple[str, str], list[Any]] = {}
+    # manifest
+    man = snapshot / "_manifest.json"
+    if man.exists():
+        try:
+            raw = json.loads(man.read_text(encoding="utf-8"))
+            for k, v in raw.items():
+                try:
+                    E.SourceStatus.model_validate(v)
+                except ValidationError as e:
+                    rep.error(f"_manifest.json[{k}]: {e.errors()[0]['msg']}")
+        except (OSError, json.JSONDecodeError) as e:
+            rep.error(f"_manifest.json unreadable ({e})")
+    else:
+        rep.warn("manifest", "data/snapshot/_manifest.json missing")
+    # schema + duplicates + date format
+    for source, name, model_name, key in FILES:
+        recs = _load(snapshot, source, name, model_name, rep)
+        if recs is None:
+            continue
+        data[(source, name)] = recs
+        if key:
+            dup = [k for k, n in Counter(key(r) for r in recs).items() if n > 1]
+            for k in dup[:20]:
+                rep.error(f"{source}/{name}.json: duplicate id {k!r}")
+            if len(dup) > 20:
+                rep.error(f"{source}/{name}.json: {len(dup)} duplicate ids in total")
+        for r in recs:
+            for p, v in _dates(r.model_dump(mode="json")):
+                if not _valid_date(v[:10]) or (len(v) > 10 and not v[10] == "T"):
+                    rep.error(f"{source}/{name}.json {key(r) if key else '?'}: malformed date {p}={v!r}")
+                elif not ((MIN_DATE.get((source, name), "1950-01-01")) <= v[:10] <= "2100-12-31"):
+                    rep.warn("date-range", f"{source}/{name} {key(r) if key else '?'}: {p}={v}")
+
+    meps = {m.id: m for m in data.get(("ep_people", "meps"), [])}
+    orgs = {o.id: o for o in data.get(("ep_people", "orgs"), [])}
+    procs = data.get(("ep_procedures", "procedures"), [])
+    proc_refs = {p.reference for p in procs}
+    proc_by_ref = {p.reference: p for p in procs}
+    votes = {v.id: v for v in data.get(("ep_votes", "votes"), [])}
+    ballots = data.get(("ep_votes", "ballots"), [])
+    acts = {a.celex: a for a in data.get(("eurlex", "acts"), [])}
+
+    # people
+    for m in meps.values():
+        if m.country not in COUNTRIES:
+            rep.warn("country-code", f"MEP {m.id}: country {m.country!r}")
+        for ms in m.memberships:
+            if orgs and ms.org_id not in orgs and ms.kind in ("group", "party", "committee"):
+                rep.warn("ref-org", f"MEP {m.id}: membership org {ms.org_id} not in orgs.json")
+            if ms.start and ms.end and ms.end < ms.start:
+                rep.warn(
+                    "date-order", f"MEP {m.id}: membership {ms.org_id} ends {ms.end} before start {ms.start}"
+                )
+        spans = sorted((x.start or "", x.end or "9999-12-31") for x in m.memberships if x.kind == "group")
+        for (_s1, e1), (s2, _e2) in zip(spans, spans[1:], strict=False):
+            if s2 <= e1:
+                rep.warn("group-overlap", f"MEP {m.id}: overlapping political-group memberships around {s2}")
+                break
+    # procedures
+    for p in procs:
+        if not REF_RE.match(p.reference):
+            rep.warn("procedure-ref", f"procedure {p.id}: unusual reference {p.reference!r}")
+        elif REF_RE.match(p.reference).group(3) != p.type:  # type: ignore[union-attr]
+            rep.warn(
+                "procedure-type", f"procedure {p.id}: type {p.type} differs from reference {p.reference}"
+            )
+        dates = [e.date for e in p.events]
+        if dates != sorted(dates):
+            rep.warn("event-order", f"procedure {p.id}: events not sorted by date")
+        for e in p.events:
+            if e.date > today:
+                rep.warn("future-event", f"procedure {p.id}: event {e.id} dated {e.date} (after today)")
+        for r in p.rapporteurs:
+            if r.mep_id and meps and r.mep_id not in meps:
+                rep.warn("ref-mep", f"procedure {p.id}: rapporteur {r.mep_id} not in meps.json")
+    # votes + ballots
+    ballot_ids = set()
+    for b in ballots:
+        ballot_ids.add(b.vote_id)
+        v = votes.get(b.vote_id)
+        if v is None:
+            rep.warn("ref-vote", f"ballots for unknown vote {b.vote_id}")
+            continue
+        recorded = b.favor + b.against + b.abstain
+        dup = [k for k, n in Counter(recorded).items() if n > 1]
+        if dup:
+            rep.warn("ballot-duplicate", f"vote {v.id}: {len(dup)} MEPs recorded with more than one position")
+        missing = [i for i in recorded if meps and i not in meps]
+        if missing:
+            rep.warn(
+                "ref-mep", f"vote {v.id}: {len(missing)} ballot MEP ids not in meps.json (e.g. {missing[0]})"
+            )
+        if v.n_for is not None and (len(b.favor), len(b.against), len(b.abstain)) != (
+            v.n_for,
+            v.n_against,
+            v.n_abstain,
+        ):
+            rep.warn("ballot-totals", f"vote {v.id} {v.date}: recorded {len(b.favor)}/{len(b.against)}/"
+                     f"{len(b.abstain)} vs official {v.n_for}/{v.n_against}/{v.n_abstain}")  # fmt: skip
+    for v in votes.values():
+        if v.has_ballots and ballots and v.id not in ballot_ids:
+            rep.warn("ballots-missing", f"vote {v.id}: has_ballots but no ballots record")
+        if v.date > today:
+            rep.warn("future-event", f"vote {v.id} dated {v.date}")
+        for r in v.procedure_refs:
+            if procs and r not in proc_refs:
+                rep.warn("ref-procedure", f"vote {v.id}: procedure {r} not in procedures.json")
+    # acts
+    for a in acts.values():
+        m = re.match(r"^\d(\d{4})([A-Z])", a.celex)
+        if m and CELEX_TYPE.get(m.group(2)) and CELEX_TYPE[m.group(2)] != a.act_type:
+            rep.warn("act-type", f"{a.celex}: act_type {a.act_type} but CELEX type letter {m.group(2)}")
+        if a.transposition_deadlines and a.act_type != "directive":
+            rep.warn("transposition-non-directive", f"{a.celex} ({a.act_type}) has transposition deadlines")
+        if a.date_publication and a.date_document and a.date_publication < a.date_document:
+            rep.warn(
+                "date-order",
+                f"{a.celex}: published {a.date_publication} before document date {a.date_document}",
+            )
+        if a.other_application_dates != sorted(a.other_application_dates):
+            rep.warn("date-order", f"{a.celex}: other_application_dates not ascending")
+        for r in a.procedure_refs:
+            rm = REF_RE.match(r)
+            if not rm:
+                rep.warn("procedure-ref", f"{a.celex}: unusual procedure reference {r!r}")
+                continue
+            ptype, num = rm.group(3), int(rm.group(2))
+            if ptype in ("COD", "CNS") and num >= 2000:
+                rep.warn("act-procedure-mismatch", f"{a.celex} ({a.act_type}) linked to {r}: number range is "
+                         "not used for legislative procedures")  # fmt: skip
+            p = proc_by_ref.get(r)
+            if p is not None and p.type != ptype:
+                rep.warn(
+                    "act-procedure-mismatch", f"{a.celex} linked to {r} but the procedure type is {p.type}"
+                )
+    # council
+    for cv in data.get(("council", "votes"), []):
+        for c in cv.positions:
+            if c not in COUNTRIES:
+                rep.warn("country-code", f"council vote {cv.id}: position for {c!r}")
+        text = " ".join([cv.title, *cv.statements]).lower()
+        if cv.voting_rule != "unanimity" and re.search(r"\bveto", text):
+            rep.warn("veto-wording", f"council vote {cv.id}: 'veto' wording but voting rule {cv.voting_rule}")
+        for r in cv.procedure_refs:
+            if procs and r not in proc_refs:
+                rep.warn("ref-procedure", f"council vote {cv.id}: procedure {r} not in procedures.json")
+    # implementation
+    for nm in data.get(("implementation", "measures"), []):
+        if nm.country not in COUNTRIES:
+            rep.warn("country-code", f"measure {nm.id}: country {nm.country!r}")
+        if not re.match(r"^3\d{4}L\d+", nm.directive_celex):
+            rep.warn(
+                "transposition-non-directive",
+                f"measure {nm.id}: {nm.directive_celex} is not a directive CELEX",
+            )
+        a = acts.get(nm.directive_celex)
+        if a is not None and a.act_type != "directive":
+            rep.warn("transposition-non-directive", f"measure {nm.id}: act {a.celex} is a {a.act_type}")
+    for ic in data.get(("implementation", "infringements"), []):
+        if ic.country not in COUNTRIES:
+            rep.warn("country-code", f"infringement {ic.id}: country {ic.country!r}")
+    # train
+    for t in data.get(("train", "files"), []):
+        for r in t.procedure_refs:
+            if not REF_RE.match(r):
+                rep.warn("procedure-ref", f"train file {t.url}: unusual reference {r!r}")
+
+    # built output (optional): derived claims must respect the rules too
+    if public is not None and public.exists():
+        for f in PUBLIC_FILES:
+            if not (public / f).exists():
+                rep.warn("public-missing", f"public/data/{f} missing (run `python -m pipeline build`)")
+        cpath = public / "council" / "index.json"
+        if cpath.exists():
+            for cv in json.loads(cpath.read_text(encoding="utf-8")):
+                a = cv.get("assessment") or {}
+                if a.get("single_state_veto_possible") and cv.get("voting_rule") != "unanimity":
+                    rep.error(f"public council/index.json {cv['id']}: single-state veto outside unanimity")
+    return rep
+
+
+def validate() -> int:
+    rep = check(public=ROOT / "public" / "data")
+    rep.print()
+    return 1 if rep.errors else 0

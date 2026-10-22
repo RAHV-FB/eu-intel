@@ -74,7 +74,7 @@ export default function Home() {
                 <Link to="/about#selection">How we select</Link>. Status and dates come from official records.
               </p>
             </div>
-            <div className="fcards">
+            <div className={`fcards${featured.length % 3 === 0 ? ' fcards--3' : ''}`}>
               {featured.slice(0, 6).map((f) => (
                 <FeaturedCard key={f.dossier.id} item={f} topicLabel={topicLabel} />
               ))}

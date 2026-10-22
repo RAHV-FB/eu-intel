@@ -1,0 +1,3 @@
+[
+{"celex": null, "country": "FR", "court_ref": null, "id": "INFR(2099)0001", "latest_decision_date": "2025-04-01", "latest_stage": "Letter of formal notice", "legal_basis": ["32099L0003"], "non_communication": true, "press_release_url": null, "source": {"identifier": "INFR(2099)0001", "institution": "Commission", "label": "TEST ONLY INFR(2099)0001", "published": null, "retrieved_at": "2099-01-01T00:00:00Z", "url": "https://example.invalid/INFR(2099)0001"}, "status": "open", "title": "TEST failure to notify"}
+]

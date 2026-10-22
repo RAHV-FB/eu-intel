@@ -1,0 +1,303 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2024-0098",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2024-0098-SIGN-2026-10-21",
+     "type": "Activity",
+     "activity_date": "2026-10-21",
+     "activity_id": "2024-0098-SIGN-2026-10-21",
+     "had_activity_type": "def/ep-activities/SIGNATURE"
+    },
+    {
+     "id": "eli/dl/event/2024-0098-DEC-ADCP-2025-07-16",
+     "type": "Decision",
+     "activity_date": "2025-07-16",
+     "activity_id": "2024-0098-DEC-ADCP-2025-07-16",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-09-15-VOT-ITM-993061",
+     "type": "Activity",
+     "activity_date": "2026-09-15",
+     "activity_id": "MTG-PL-2026-09-15-VOT-ITM-993061",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2025-0150"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-10-2026-09-15-VOT-ITM-011"
+     ]
+    },
+    {
+     "id": "eli/dl/event/PECH-AM-771930-DEPOT-2025-04-16",
+     "type": "Activity",
+     "activity_date": "2025-04-16",
+     "activity_id": "PECH-AM-771930-DEPOT-2025-04-16",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/PECH-AM-771930"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/PECH-PR-765292-DEPOT-2025-02-25",
+     "type": "Activity",
+     "activity_date": "2025-02-25",
+     "activity_id": "PECH-PR-765292-DEPOT-2025-02-25",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/PECH-PR-765292"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0098-DEC-DCPL-2026-09-15",
+     "type": "Decision",
+     "activity_date": "2026-09-15",
+     "activity_id": "2024-0098-DEC-DCPL-2026-09-15",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/TA-10-2026-0281"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_ADOPT_POSITION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0098-DEPOT-2025-07-23",
+     "type": "Activity",
+     "activity_date": "2025-07-23",
+     "activity_id": "2024-0098-DEPOT-2025-07-23",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2025-0150"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0098-ANPRO-2024-09-16",
+     "type": "Activity",
+     "activity_date": "2024-09-16",
+     "activity_id": "2024-0098-ANPRO-2024-09-16",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0098-DEC-PLEIN1-2025-09-10",
+     "type": "Decision",
+     "activity_date": "2025-09-10",
+     "activity_id": "2024-0098-DEC-PLEIN1-2025-09-10",
+     "had_activity_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-09-15-PVCRE-ITM-5-11",
+     "type": "Activity",
+     "activity_date": "2026-09-15",
+     "activity_id": "MTG-PL-2026-09-15-PVCRE-ITM-5-11",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-10-2026-09-15-ITM-005-11",
+      "eli/dl/doc/CRE-10-2026-09-15-ITM-005-11"
+     ]
+    },
+    {
+     "id": "eli/dl/event/A-10-2025-0150-AM-130-130-DEPOT-2026-09-09",
+     "type": "Activity",
+     "activity_date": "2026-09-09",
+     "activity_id": "A-10-2025-0150-AM-130-130-DEPOT-2026-09-09",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2025-0150-AM-130-130"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0098-DEC-VOAGT-2026-06-03",
+     "type": "Decision",
+     "activity_date": "2026-06-03",
+     "activity_id": "2024-0098-DEC-VOAGT-2026-06-03",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/PECH-AG-788776"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_APPROVE_PROVISIONAL_AGREEMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-10-2025-0150-AM-001-129-DEPOT-2026-09-15",
+     "type": "Activity",
+     "activity_date": "2026-09-15",
+     "activity_id": "A-10-2025-0150-AM-001-129-DEPOT-2026-09-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2025-0150-AM-001-129"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/PECH-PR-765292",
+    "eli/dl/doc/TA-10-2026-0281",
+    "eli/dl/doc/A-10-2025-0150",
+    "eli/dl/doc/C-10-2026-0260",
+    "eli/dl/doc/PECH-AG-788776"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2024-0098-NMSR-96675-2024-10-15",
+     "type": "Participation",
+     "activity_date": "2024-10-15",
+     "had_participant_person": [
+      "person/96675"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1806
+    },
+    {
+     "id": "eli/dl/participation/2024-0098-MAIN-PECH",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/PECH"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2024-0098-NMSR-256961-2024-11-07",
+     "type": "Participation",
+     "activity_date": "2024-11-07",
+     "had_participant_person": [
+      "person/256961"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 1807
+    },
+    {
+     "id": "eli/dl/participation/2024-0098-NMSR-256936-2024-10-03",
+     "type": "Participation",
+     "activity_date": "2024-10-03",
+     "had_participant_person": [
+      "person/256936"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1802
+    },
+    {
+     "id": "eli/dl/participation/2024-0098-NMSR-214839-2024-10-03",
+     "type": "Participation",
+     "activity_date": "2024-10-03",
+     "had_participant_person": [
+      "person/214839"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1805
+    },
+    {
+     "id": "eli/dl/participation/2024-0098-NMSR-257131-2024-10-15",
+     "type": "Participation",
+     "activity_date": "2024-10-15",
+     "had_participant_person": [
+      "person/257131"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PFE",
+     "precedenceOrder": 1803
+    },
+    {
+     "id": "eli/dl/participation/2024-0098-NMCP-185341-PECH-2024-09-19",
+     "type": "Participation",
+     "activity_date": "2024-09-19",
+     "had_participant_person": [
+      "person/185341"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/PECH",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1801
+    },
+    {
+     "id": "eli/dl/participation/2024-0098-NMSR-197824-2024-09-19",
+     "type": "Participation",
+     "activity_date": "2024-09-19",
+     "had_participant_person": [
+      "person/197824"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 1804
+    }
+   ],
+   "process_id": "2024-0098",
+   "process_title": {
+    "pl": "Zmiana rozporządzenia (UE) 2023/2124 w sprawie niektórych przepisów dotyczących połowów na obszarze objętym porozumieniem Generalnej Komisji Rybołówstwa Morza Śródziemnego (GFCM)",
+    "sl": "Sprememba Uredbe (EU) 2023/2124 o nekaterih določbah za ribolov na območju Sporazuma Generalne komisije za ribištvo v Sredozemlju (GFCM)",
+    "nl": "Wijziging van Verordening (EU) 2023/2124 tot vaststelling van een aantal bepalingen voor de visserij in het overeenkomstgebied van de Algemene Visserijcommissie voor de Middellandse Zee (General Fisheries Commission for the Mediterranean, GFCM)",
+    "lv": "Grozījumi Regulā (ES) 2023/2124 ar atsevišķiem noteikumiem attiecībā uz zveju Vidusjūras Vispārējās zivsaimniecības komisijas (GFCM) nolīguma apgabalā",
+    "ro": "Modificarea Regulamentului (UE) nr. 2023/2124 privind unele dispoziții referitoare la pescuitul în zona Acordului de instituire a Comisiei Generale pentru Pescuit în Marea Mediterană (CGPM)",
+    "es": "Modificación del Reglamento (UE) 2023/2124 sobre determinadas disposiciones aplicables a la pesca del Acuerdo CGPM (Comisión General de Pesca del Mediterráneo)",
+    "de": "Änderung der Verordnung (EU) 2023/2124 mit Vorschriften für die Fischerei im Übereinkommensgebiet der GFCM (Allgemeine Kommission für die Fischerei im Mittelmeer)",
+    "da": "Ændring af forordning (EU) 2023/2124 om visse bestemmelser for fiskeri i aftaleområdet for Den Almindelige Kommission for Fiskeri i Middelhavet (GFCM)",
+    "et": "Määruse (EL) 2023/2124 (mis käsitleb teatavaid kalapüüki käsitlevaid sätteid Vahemere üldise kalanduskomisjoni (GFCM) lepinguga hõlmatud piirkonnas) muutmine",
+    "hr": "Izmjena Uredbe (EU) 2023/2124 o određenim odredbama za ribolov na području Sporazuma o Općoj komisiji za ribarstvo Sredozemlja (GFCM)",
+    "lt": "Reglamento (ES) 2023/2124 dėl tam tikrų nuostatų, skirtų žvejybai Bendrosios Viduržemio jūros žvejybos komisijos (GFCM) susitarimo rajone, dalinis keitimas",
+    "mt": "Emenda tar-Regolament (UE) Nru 2023/2124 dwar ċerti dispożizzjonijiet għas-sajd fiż-żona tal-Ftehim tal-GFCM (il-Kummissjoni Ġenerali tas-Sajd għall-Baħar Mediterran)",
+    "sv": "Ändring av förordning (EU) No 2023/2124 om vissa bestämmelser om fiske i Allmänna kommissionen för fiske i Medelhavets (AKFM) avtalsområde",
+    "fi": "Eräistä kalastusta koskevista säännöksistä GFCM:n (Välimeren yleisen kalastuskomission) sopimusalueella annetun asetuksen (EU) 2023/2124 muuttaminen",
+    "ga": "Leasú a dhéanamh ar Rialachán (AE) Uimh. 2023/2124 maidir le forálacha áirithe i ndáil le hiascaireacht i limistéar Chomhaontú CGIM (An Coimisiún Ginearálta Iascaigh don Mheánmhuir)",
+    "pt": "Alteração do Regulamento (UE) 2023/2124 relativo a determinadas disposições aplicáveis à pesca na zona do Acordo da Comissão Geral das Pescas do Mediterrâneo (CGPM)",
+    "bg": "Изменение на Регламент (ЕС) 2023/2124 относно определени разпоредби за риболова в зоната по Споразумението за Генералната комисия по рибарство за Средиземно море (GFCM)",
+    "it": "Modifica del regolamento (UE) 2023/2124 relativo a talune disposizioni per la pesca nella zona di applicazione dell'accordo relativo alla Commissione generale per la pesca nel Mediterraneo (CGPM)",
+    "fr": "Modification du règlement (UE) 2023/2124 concernant certaines dispositions relatives à la pêche dans la zone couverte par l’accord de la CGPM (Commission générale des pêches pour la Méditerranée)",
+    "cs": "Změna nařízení (EU) 2023/2124 o některých ustanoveních pro rybolov v oblasti dohody Generální komise pro rybolov ve Středozemním moři (GFCM)",
+    "el": "Τροποποίηση του κανονισμού (ΕΕ) 2023/2124 σχετικά με ορισμένες διατάξεις περί αλιείας στην περιοχή της συμφωνίας της Γενικής Επιτροπής Αλιείας για τη Μεσόγειο (ΓΕΑΜ)",
+    "hu": "A Földközi-tengeri Általános Halászati Bizottság (GFCM) létrehozásáról szóló megállapodás hatálya alá tartozó területen folytatott halászattal kapcsolatos egyes rendelkezésekről szóló (EU) 2023/2124 rendelet módosítása",
+    "en": "Amending Regulation (EU) No 2023/2124 on certain provisions for fishing in the GFCM (General Fisheries Commission for the Mediterranean) Agreement area",
+    "sk": "Zmena nariadenia (EÚ) 2023/2124 o niektorých ustanoveniach týkajúcich sa rybolovu v oblasti dohody o Všeobecnej rybárskej komisii pre Stredozemné more (GFCM)"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "was_scheduled_in": [
+    {
+     "id": "eli/dl/event/MTG-PL-2026-09-15-OJ-ITM-V-42",
+     "type": "ForeseenActivity",
+     "activity_date": "2026-09-15",
+     "activity_id": "MTG-PL-2026-09-15-OJ-ITM-V-42",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-10-2026-09-15"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "V-42"
+    }
+   ],
+   "label": "2024/0098(COD)",
+   "identifierYear": "2024"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

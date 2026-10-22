@@ -66,16 +66,14 @@ OEIL_STAGE: dict[str, tuple[str, ...]] = {
     "Awaiting Parliament's vote": ("proposed", "negotiations", "provisional_agreement"),
     "Awaiting Council's 1st reading position": ("parliament_position",),
     "Awaiting final decision": ("parliament_position",),
-    "Awaiting Parliament 2nd reading vote": ("negotiations",),
-    "Awaiting Parliament's position in 2nd reading": ("negotiations",),
-    "Awaiting Council decision, 2nd reading": ("parliament_position",),
-    "Awaiting signature of act": ("adopted",),
+    "Awaiting Parliament 2nd reading": ("negotiations",),
     "Procedure completed, awaiting publication in Official Journal": ("adopted",),
     "Procedure completed": ("adopted", "published", "in_force"),
 }
 LAPSED_OR_WITHDRAWN = "Procedure lapsed or withdrawn"
-# Words in a Legislative Train status that signal an official "stalled" assessment.
-TRAIN_STALL_WORDS = ("derail", "block", "stall", "deadlock", "stuck", "suspend", "frozen")
+# Legislative Train statuses that are an official "stalled" assessment. The Train glossary
+# defines "Blocked" as no progress over at least the previous nine months.
+TRAIN_STALL_STATUSES = ("blocked",)
 
 FIRST_READING_POSITION_CODES = {"PLENARY_ADOPT_POSITION", "PLENARY_AMEND_PROPOSAL", "PLENARY_DECISION"}
 
@@ -154,6 +152,28 @@ def _join_dates(ds: list[str]) -> str:
     return f[0] if len(f) == 1 else ", ".join(f[:-1]) + " and " + f[-1]
 
 
+ADOPTION_KINDS = (EventKind.signature, EventKind.publication, EventKind.council_adoption)
+
+
+def relevant_acts(proc: Procedure, acts: list[LegalAct], events: list[Event], today: date) -> list[LegalAct]:
+    """Acts that can establish this procedure's status. An act linked by EUR-Lex to several
+    procedures (e.g. a new proposal that replaced an older one) only counts when this procedure
+    itself shows the act was adopted under it: its final act (OEIL) or a recorded adoption,
+    signature or publication. Acts dated after `today` are ignored."""
+    t = today.isoformat()
+    out = []
+    adopted_here = any(e.kind in ADOPTION_KINDS for e in events) or (proc.stage_raw or "").startswith(
+        "Procedure completed"
+    )
+    for a in acts:
+        dated = a.date_publication or a.date_signature or a.date_document
+        if dated and dated > t:
+            continue
+        if a.celex in proc.celex_refs or len(a.procedure_refs) <= 1 or adopted_here:
+            out.append(a)
+    return out
+
+
 def _main_act(proc: Procedure, acts: list[LegalAct]) -> LegalAct | None:
     if not acts:
         return None
@@ -184,7 +204,7 @@ def _stall(stage: str, events: list[Event], train: list[TrainFile], today: date)
     days = (today - date.fromisoformat(last)).days
     label = url = None
     for tf in train:
-        if any(w in tf.status.lower() for w in TRAIN_STALL_WORDS):
+        if tf.status.strip().lower() in TRAIN_STALL_STATUSES:
             label, url = tf.status, tf.url
             break
     unit = "day" if days == 1 else "days"
@@ -220,8 +240,13 @@ def _acts_stage(proc: Procedure, acts: list[LegalAct], events: list[Event], toda
     pub_date = (act.date_publication if act else None) or (pub_ev.date if pub_ev else None)
     if act:
         eif = act.entry_into_force
-        ended = act.end_of_validity and act.end_of_validity <= t
-        if act.in_force is False and ended:
+        if eif and eif > t:
+            text = (
+                f"The act was published in the Official Journal{' on ' + _fmt(pub_date) if pub_date else ''}. "
+                f"It enters into force on {_fmt(eif)}."
+            )
+            return _S("published", "Published, not yet in force", text, pub_date, "source")
+        if act.end_of_validity and act.end_of_validity <= t:
             return _S(
                 "published",
                 "No longer in force",
@@ -229,15 +254,23 @@ def _acts_stage(proc: Procedure, acts: list[LegalAct], events: list[Event], toda
                 act.end_of_validity,
                 "source",
             )
-        if eif and eif > t:
-            text = (
-                f"The act was published in the Official Journal{' on ' + _fmt(pub_date) if pub_date else ''}. "
-                f"It enters into force on {_fmt(eif)}."
+        if act.in_force is False and not act.end_of_validity:
+            return _S(
+                "published",
+                "No longer in force",
+                "The act was adopted and published, but EUR-Lex records it as no longer in force.",
+                None,
+                "source",
             )
-            return _S("published", "Published, not yet in force", text, pub_date, "source")
-        if act.in_force is True or (act.in_force is None and eif and eif <= t):
+        if act.in_force is True or (eif and eif <= t):
             basis: Basis = "source" if act.in_force is True else "derived"
-            text = "The act is in force" + (f" since {_fmt(eif)}." if eif else ".")
+            text = f"The act has been in force since {_fmt(eif)}." if eif else "The act is in force."
+            later = [d for a in acts for d in a.other_application_dates if d and eif and d > eif]
+            if later:
+                text += (
+                    " Entry into force is not the same as application: some provisions apply only from "
+                    "later dates."
+                )
             return _S("in_force", "In force", text, eif or pub_date, basis)
         if pub_date:
             return _S(
@@ -403,6 +436,11 @@ def _cns_app_stage(ptype: str, events: list[Event]) -> _S:
         )
     rej = _last(events, EventKind.rejection)
     ep_pos = _last(events, EventKind.ep_position)
+    # In CNS/APP files the EP API often records Parliament's vote only as PLENARY_AMEND
+    # ("Amending a text in plenary"); OEIL lists the same sitting as "Decision by Parliament".
+    amend = [e for e in events if _code(e) == "PLENARY_AMEND"]
+    if amend and (not ep_pos or amend[-1].date > ep_pos.date):
+        ep_pos = amend[-1]
     if ptype == "APP" and rej and (not ep_pos or rej.date >= ep_pos.date):
         return _S(
             "rejected",
@@ -473,16 +511,20 @@ def _reconcile_with_oeil(proc: Procedure, s: _S, events: list[Event]) -> _S:
     target = allowed[0]
     if RANK[target] <= RANK[s.stage]:
         return s  # label lags behind dated events; keep the recorded events
+    position = {
+        "CNS": "Parliament has given its opinion; the Council takes the final decision.",
+        "APP": "Parliament has decided on its consent; the Council takes the final decision.",
+    }.get(proc.type, "Parliament has adopted its position; the Council has not yet acted on it.")
     labels = {
-        "parliament_position": (
-            "Awaiting Council action",
-            "Parliament has taken its position; the Council has not yet acted on it.",
-        ),
+        "parliament_position": ("Awaiting Council action", position),
         "adopted": (
             "Adopted, awaiting publication",
             "The act has been adopted but not yet published in the Official Journal.",
         ),
-        "negotiations": ("Second reading", "The procedure is at second reading."),
+        "negotiations": (
+            "Second reading in Parliament",
+            "The Council has adopted its position; Parliament has not yet concluded its second reading.",
+        ),
         "proposed": ("Under examination in Parliament", "Parliament is examining the proposal."),
         "provisional_agreement": (
             "Provisional agreement reached",
@@ -682,6 +724,10 @@ def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], toda
     t = today.isoformat()
     events = sorted((e for e in proc.events if e.date <= t), key=lambda e: e.date)
     ptype = proc.type
+    if proc.stage_raw and proc.source.retrieved_at[:10] > t:
+        # The OEIL label describes the file as of retrieval, i.e. after `today`: not usable.
+        proc = proc.model_copy(update={"stage_raw": None})
+    acts = relevant_acts(proc, acts, events, today)
 
     s: _S | None = None
     withdrawal = _last(events, EventKind.withdrawal)

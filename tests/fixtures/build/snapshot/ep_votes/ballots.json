@@ -1,0 +1,5 @@
+[
+{"abstain": [], "against": ["T3"], "favor": ["T1", "T2"], "intended_abstain": [], "intended_against": [], "intended_favor": [], "vote_id": "V1"},
+{"abstain": [], "against": ["T2", "T3"], "favor": ["T1"], "intended_abstain": [], "intended_against": [], "intended_favor": [], "vote_id": "V2"},
+{"abstain": [], "against": ["T2", "T4"], "favor": ["T1"], "intended_abstain": [], "intended_against": [], "intended_favor": ["T4"], "vote_id": "V3"}
+]

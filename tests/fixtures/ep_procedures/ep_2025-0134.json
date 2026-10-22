@@ -1,0 +1,299 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2025-0134",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2025-0134-MEET-TRI1-2026-04-15",
+     "type": "Activity",
+     "activity_date": "2026-04-15",
+     "activity_id": "2025-0134-MEET-TRI1-2026-04-15",
+     "had_activity_type": "def/ep-activities/INTERINSTITUTIONAL_NEGOTIATION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0134-DEPOT-2026-02-17",
+     "type": "Activity",
+     "activity_date": "2026-02-17",
+     "activity_id": "2025-0134-DEPOT-2026-02-17",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0024"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0134-MEET-TRI1-2026-06-09",
+     "type": "Activity",
+     "activity_date": "2026-06-09",
+     "activity_id": "2025-0134-MEET-TRI1-2026-06-09",
+     "had_activity_type": "def/ep-activities/INTERINSTITUTIONAL_NEGOTIATION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0134-DEC-ADCP-ENVI-2025-12-03",
+     "type": "Decision",
+     "activity_date": "2025-12-03",
+     "activity_id": "2025-0134-DEC-ADCP-ENVI-2025-12-03",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/ENVI-AD-778344"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0134-ANPRO-2025-07-10",
+     "type": "Activity",
+     "activity_date": "2025-07-10",
+     "activity_id": "2025-0134-ANPRO-2025-07-10",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0134-DEC-ADCP-2026-01-27",
+     "type": "Decision",
+     "activity_date": "2026-01-27",
+     "activity_id": "2025-0134-DEC-ADCP-2026-01-27",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/IMCO-AM-779374-DEPOT-2025-10-24",
+     "type": "Activity",
+     "activity_date": "2025-10-24",
+     "activity_id": "IMCO-AM-779374-DEPOT-2025-10-24",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/IMCO-AM-779374"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0134-DEC-VOAGT-2026-07-14",
+     "type": "Decision",
+     "activity_date": "2026-07-14",
+     "activity_id": "2025-0134-DEC-VOAGT-2026-07-14",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/IMCO-AG-790900"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_APPROVE_PROVISIONAL_AGREEMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0134-DEC-PLEIN1-2026-03-11",
+     "type": "Decision",
+     "activity_date": "2026-03-11",
+     "activity_id": "2025-0134-DEC-PLEIN1-2026-03-11",
+     "had_activity_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/ENVI-AD-778344",
+    "eli/dl/doc/IMCO-AG-790900",
+    "eli/dl/doc/A-10-2026-0024"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2025-0134-NMCP-257030-ENVI-2025-10-13",
+     "type": "Participation",
+     "activity_date": "2025-10-13",
+     "had_participant_person": [
+      "person/257030"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/ENVI",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1101
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMSR-185619-2025-11-17",
+     "type": "Participation",
+     "activity_date": "2025-11-17",
+     "had_participant_person": [
+      "person/185619"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1102
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMSR-28223-2025-10-09",
+     "type": "Participation",
+     "activity_date": "2025-10-09",
+     "had_participant_person": [
+      "person/28223"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1401
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMSR-257096-2025-11-17",
+     "type": "Participation",
+     "activity_date": "2025-11-17",
+     "had_participant_person": [
+      "person/257096"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 1104
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMSR-257061-2025-11-17",
+     "type": "Participation",
+     "activity_date": "2025-11-17",
+     "had_participant_person": [
+      "person/257061"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1105
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMSR-198073-2025-09-24",
+     "type": "Participation",
+     "activity_date": "2025-09-24",
+     "had_participant_person": [
+      "person/198073"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1405
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-AVI-ENVI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/ENVI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMSR-257135-2025-11-17",
+     "type": "Participation",
+     "activity_date": "2025-11-17",
+     "had_participant_person": [
+      "person/257135"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 1107
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMCP-256978-IMCO-2025-10-02",
+     "type": "Participation",
+     "activity_date": "2025-10-02",
+     "had_participant_person": [
+      "person/256978"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/IMCO",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1406
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMSR-37312-2025-09-23",
+     "type": "Participation",
+     "activity_date": "2025-09-23",
+     "had_participant_person": [
+      "person/37312"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1402
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-MAIN-IMCO",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/IMCO"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMSR-197627-2025-09-19",
+     "type": "Participation",
+     "activity_date": "2025-09-19",
+     "had_participant_person": [
+      "person/197627"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PFE",
+     "precedenceOrder": 1403
+    },
+    {
+     "id": "eli/dl/participation/2025-0134-NMSR-239260-2025-09-23",
+     "type": "Participation",
+     "activity_date": "2025-09-23",
+     "had_participant_person": [
+      "person/239260"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 1404
+    }
+   ],
+   "process_id": "2025-0134",
+   "process_title": {
+    "sk": "Zmena nariadení (EÚ) č. 765/2008, (EÚ) 2016/424, (EÚ) 2016/425, (EÚ) 2016/426, (EÚ) 2023/1230, (EÚ) 2023/1542 a (EÚ) 2024/1781, pokiaľ ide o digitalizáciu a spoločné špecifikácie",
+    "el": "Τροποποίηση των κανονισμών (ΕΕ) αριθ. 765/2008, (ΕΕ) 2016/424, (ΕΕ) 2016/425, (ΕΕ) 2016/426, (ΕΕ) 2023/1230, (ΕΕ) 2023/1542 και (ΕΕ) 2024/1781 σχετικά με την ψηφιοποίηση και τις κοινές προδιαγραφές",
+    "hu": "A 765/2008/EK, az (EU) 2016/424, az (EU) 2016/425, az (EU) 2016/426, az (EU) 2023/1230, az (EU) 2023/1542 és az (EU) 2024/1781 rendeletnek a digitalizáció és az egységes előírások tekintetében történő módosítása",
+    "bg": "Изменение на регламенти (ЕС) № 765/2008, (ЕС) 2016/424, (ЕС) 2016/425, (ЕС) 2016/426, (ЕС) 2023/1230, (ЕС) 2023/1542 и (ЕС) 2024/1781 по отношение на цифровизацията и общите спецификации",
+    "en": "Amending Regulations (EU) No 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 and (EU) 2024/1781 as regards digitalisation and common specifications",
+    "et": "Määruste (EL) nr 765/2008, (EL) 2016/424, (EL) 2016/425, (EL) 2016/426, (EL) 2023/1230, (EL) 2023/1542 ja (EL) 2024/1781 muutmine seoses digitaliseerimise ja ühiste spetsifikatsioonidega",
+    "lv": "Regulu (ES) Nr. 765/2008, (ES) 2016/424, (ES) 2016/425, (ES) 2016/426, (ES) 2023/1230, (ES) 2023/1542 un (ES) 2024/1781 grozīšana attiecībā uz digitalizāciju un kopējām specifikācijām",
+    "nl": "Wijziging van de Verordeningen (EG) nr. 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 en (EU) 2024/1781 wat betreft digitalisering en gemeenschappelijke specificaties",
+    "pt": "Alteração dos Regulamentos (UE) n.º 765/2008, (UE) 2016/424, (UE) 2016/425, (UE) 2016/426, (UE) 2023/1230, (UE) 2023/1542 e (UE) 2024/1781 no que respeita à digitalização e às especificações comuns",
+    "da": "Ændring af forordning (EU) nr. 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 og (EU) 2024/1781 for så vidt angår digitalisering og fælles specifikationer",
+    "sl": "Sprememba uredb (ES) št. 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 in (EU) 2024/1781 glede digitalizacije in skupnih specifikacij",
+    "de": "Änderung der Verordnungen (EU) Nr. 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 und (EU) 2024/1781 im Hinblick auf die Digitalisierung und gemeinsame Spezifikationen",
+    "cs": "Změna nařízení (EU) 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 a (EU) 2024/1781, pokud jde o digitalizaci a společné specifikace",
+    "fi": "Asetusten (EU) N:o 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 ja (EU) 2024/1781 muuttaminen siltä osin kuin on kyse digitalisaatiosta ja yhteisistä eritelmistä",
+    "it": "Modifica dei regolamenti (UE) n. 765/2008, (UE) 2016/424, (UE) 2016/425, (UE) 2016/426, (UE) 2023/1230, (UE) 2023/1542 e (UE) 2024/1781 per quanto riguarda la digitalizzazione e le specifiche comuni",
+    "es": "Modificación de los Reglamentos (UE) n.º 765/2008, (UE) 2016/424, (UE) 2016/425, (UE) 2016/426, (UE) 2023/1230, (UE) 2023/1542 y (UE) 2024/1781 en lo que respecta a la digitalización y las especificaciones comunes",
+    "fr": "Modification des règlements (UE) nº 765/2008, (UE) 2016/424, (UE) 2016/425, (UE) 2016/426, (UE) 2023/1230, (UE) 2023/1542 et (UE) 2024/1781 concernant la numérisation et les spécifications communes",
+    "hr": "Izmjena uredbi (EU) br. 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 i (EU) 2024/1781 u pogledu digitalizacije i zajedničkih specifikacija",
+    "lt": "Reglamentų (ES) Nr. 765/2008, (ES) 2016/424, (ES) 2016/425, (ES) 2016/426, (ES) 2023/1230, (ES) 2023/1542 ir (ES) 2024/1781 dalinis keitimas dėl skaitmenizacijos ir bendrųjų specifikacijų",
+    "ga": "Leasú a dheánamh ar Rialacháin (AE) Uimh. 765/2008, (AE) 2016/424, (AE) 2016/425, (AE) 2016/426, (AE) 2023/1230, (AE) 2023/1542 agus (AE) 2024/1781 a mhéid a bhaineann le digiteáil agus sonraíochtaí coiteanna",
+    "mt": "Emenda tar-Regolamenti (UE) Nru 765/2008, (UE) 2016/424, (UE) 2016/425, (UE) 2016/426, (UE) 2023/1230, (UE) 2023/1542 u (UE) 2024/1781 fir-rigward tad-diġitalizzazzjoni u l-ispeċifikazzjonijiet komuni",
+    "ro": "Modificarea Regulamentelor (UE) nr. 765/2008, (UE) 2016/424, (UE) 2016/425, (UE) 2016/426, (UE) 2023/1230, (UE) 2023/1542 și (UE) 2024/1781 în ceea ce privește digitalizarea și specificațiile comune",
+    "pl": "Zmiana rozporządzeń (UE) nr 765/2008, (UE) 2016/424, (UE) 2016/425, (UE) 2016/426, (UE) 2023/1230, (UE) 2023/1542 i (UE) 2024/1781 w odniesieniu do cyfryzacji i wspólnych specyfikacji",
+    "sv": "Ändring av förordningarna (EU) nr 765/2008, (EU) 2016/424, (EU) 2016/425,\n(EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 och (EU) 2024/1781 vad gäller\ndigitalisering och gemensamma specifikationer"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "label": "2025/0134(COD)",
+   "identifierYear": "2025"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

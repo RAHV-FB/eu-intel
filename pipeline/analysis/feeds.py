@@ -34,7 +34,9 @@ def _tag_base(site_url: str) -> str:
     return f"tag:{host},2026:eu-intel"
 
 
-def atom(title: str, subtitle: str, feed_path: str, items: list[dict], site_url: str, fallback_updated: str) -> str:
+def atom(
+    title: str, subtitle: str, feed_path: str, items: list[dict], site_url: str, fallback_updated: str
+) -> str:
     site = site_url if site_url.endswith("/") else site_url + "/"
     tag = _tag_base(site)
     items = items[:FEED_LIMIT]
@@ -45,8 +47,8 @@ def atom(title: str, subtitle: str, feed_path: str, items: list[dict], site_url:
         f"  <title>{escape(title)}</title>",
         f"  <subtitle>{escape(subtitle)}</subtitle>",
         f"  <id>{escape(tag)}/{escape(feed_path)}</id>",
-        f"  <link rel=\"self\" type=\"application/atom+xml\" href={quoteattr(site + 'data/' + feed_path)}/>",
-        f"  <link rel=\"alternate\" type=\"text/html\" href={quoteattr(site)}/>",
+        f'  <link rel="self" type="application/atom+xml" href={quoteattr(site + "data/" + feed_path)}/>',
+        f'  <link rel="alternate" type="text/html" href={quoteattr(site)}/>',
         f"  <updated>{escape(updated)}</updated>",
         f"  <author><name>{escape(TITLE)}</name><uri>{escape(site)}</uri></author>",
         f"  <generator>{escape(TITLE)} pipeline</generator>",
@@ -61,7 +63,7 @@ def atom(title: str, subtitle: str, feed_path: str, items: list[dict], site_url:
             "  <entry>",
             f"    <title>{escape(it['title'])}</title>",
             f"    <id>{escape(tag)}/activity/{escape(quote(it['id'], safe=':-_.'))}</id>",
-            f"    <link rel=\"alternate\" type=\"text/html\" href={quoteattr(link)}/>",
+            f'    <link rel="alternate" type="text/html" href={quoteattr(link)}/>',
             f"    <updated>{escape(_ts(it))}</updated>",
             f"    <published>{escape(it['date'])}T00:00:00Z</published>",
             f"    <summary>{escape(summary)}</summary>",
@@ -69,7 +71,7 @@ def atom(title: str, subtitle: str, feed_path: str, items: list[dict], site_url:
         ]
         src = it.get("source") or {}
         if src.get("url"):
-            lines.append(f"    <link rel=\"via\" href={quoteattr(src['url'])}/>")
+            lines.append(f'    <link rel="via" href={quoteattr(src["url"])}/>')
         lines.append("  </entry>")
     lines.append("</feed>")
     return "\n".join(lines) + "\n"

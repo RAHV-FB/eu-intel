@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { FeaturedItem } from '../../types/data';
-import { BasisNote, SourceLink, StatusBadge, institutionLabel } from '../../components/ui';
+import { BasisNote, SourceLink, StatusBadge } from '../../components/ui';
 import { formatDate } from '../../lib/format';
 import { dossierPath } from '../legislation/labels';
 
@@ -33,7 +33,6 @@ export function FeaturedCard({ item, topicLabel }: { item: FeaturedItem; topicLa
                 <time dateTime={item.latest.date}>{formatDate(item.latest.date)}</time>
                 {' · '}
                 {item.latest.title}
-                <span className="meta"> ({institutionLabel(item.latest.institution)})</span>
               </>
             ) : (
               <span className="meta">No dated step recorded</span>
@@ -43,7 +42,7 @@ export function FeaturedCard({ item, topicLabel }: { item: FeaturedItem; topicLa
         <div>
           <dt>What happens next</dt>
           <dd>
-            {item.next_step.text} <BasisNote basis={item.next_step.basis} />
+            <NextStepText item={item} />
           </dd>
         </div>
       </dl>
@@ -54,5 +53,28 @@ export function FeaturedCard({ item, topicLabel }: { item: FeaturedItem; topicLa
         </Link>
       </div>
     </article>
+  );
+}
+
+/**
+ * The next procedural step when one is recorded or derivable; for adopted acts without one,
+ * the next date fixed in law (application / transposition) when there is one.
+ */
+function NextStepText({ item }: { item: FeaturedItem }) {
+  const ns = item.next_step;
+  const today = new Date().toISOString().slice(0, 10);
+  const next = item.dossier.next_date && item.dossier.next_date >= today ? item.dossier.next_date : null;
+  if (ns.basis === 'unknown' && next) {
+    return (
+      <>
+        Next date fixed in law: <time dateTime={next}>{formatDate(next)}</time>
+      </>
+    );
+  }
+  if (ns.basis === 'unknown') return <span className="meta">No next step recorded</span>;
+  return (
+    <>
+      {ns.text} <BasisNote basis={ns.basis} />
+    </>
   );
 }

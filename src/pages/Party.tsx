@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { PartyDetail } from '../types/data';
-import { NotFoundError, useData } from '../lib/data';
+import { useData } from '../lib/data';
+import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
 import { ErrorState, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
@@ -26,7 +27,7 @@ export default function Party() {
   const history = useMemo(() => [...(p?.group_history ?? [])].sort((a, b) => (b.from ?? '').localeCompare(a.from ?? '')), [p]);
 
   if (loading) return <div className="container page"><Loading label="Loading party…" /></div>;
-  if (error instanceof NotFoundError) return <NotFound what="national party" />;
+  if (isMissing(error)) return <NotFound what="national party" />;
   if (error || !p) return <div className="container page"><ErrorState error={error} title="This party could not be loaded" /></div>;
 
   return (

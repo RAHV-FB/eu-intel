@@ -1,0 +1,4 @@
+[
+{"celex": "32099L0003", "measures": 2, "source": {"identifier": "cov-32099L0003", "institution": "EUR-Lex", "label": "TEST ONLY cov-32099L0003", "published": null, "retrieved_at": "2099-01-01T00:00:00Z", "url": "https://example.invalid/cov-32099L0003"}},
+{"celex": "32099L0009", "measures": 0, "source": {"identifier": "cov-32099L0009", "institution": "EUR-Lex", "label": "TEST ONLY cov-32099L0009", "published": null, "retrieved_at": "2099-01-01T00:00:00Z", "url": "https://example.invalid/cov-32099L0009"}}
+]

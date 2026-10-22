@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import type { DossierSummary } from '../../types/data';
 import { StatusBadge } from '../../components/ui';
 import { formatDate } from '../../lib/format';
-import { INSTRUMENT_LABEL, dossierPath, isSameTitle } from './labels';
+import { INSTRUMENT_LABEL, dossierPath } from './labels';
 import type { SortKey } from './explorer';
 
 function relevantDate(d: DossierSummary, sort: SortKey, today: string): { label: string; date: string } | null {
@@ -32,18 +32,15 @@ export function DossierRow({
 }) {
   const H = `h${headingLevel}` as 'h2' | 'h3';
   const rd = relevantDate(d, sort, today);
-  const showOfficial = !d.short && !isSameTitle(d.title, d.official_title);
   return (
     <li className="drow">
       <div className="drow__main">
         <H className="drow__title">
-          <Link to={dossierPath(d.id)}>{d.title}</Link>
+          <Link to={dossierPath(d.id)} title={d.title.length > 160 ? d.title : undefined}>
+            {d.title}
+          </Link>
         </H>
-        {d.short ? (
-          <p className="drow__short">{d.short}</p>
-        ) : (
-          showOfficial && <p className="drow__official">{d.official_title}</p>
-        )}
+        {d.short && <p className="drow__short">{d.short}</p>}
         <p className="drow__meta">
           <span>{d.type_label || d.type}</span>
           {d.instrument && d.instrument !== 'other' && <span>{INSTRUMENT_LABEL[d.instrument]}</span>}

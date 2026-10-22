@@ -142,6 +142,16 @@ export default function Legislation() {
   const anyFilter = !!(state.topic || state.stage || advancedActive || hasQuery);
   const visible = sorted.slice(0, state.show);
 
+  // "Show more": move keyboard focus to the first newly revealed result.
+  const listRef = useRef<HTMLOListElement>(null);
+  const focusFrom = useRef<number | null>(null);
+  useEffect(() => {
+    const i = focusFrom.current;
+    if (i == null) return;
+    focusFrom.current = null;
+    listRef.current?.querySelectorAll<HTMLAnchorElement>('.drow__title a')[i]?.focus();
+  }, [visible.length]);
+
   const ids = useId();
   const [copied, setCopied] = useState(false);
   const copyLink = async () => {
@@ -295,18 +305,27 @@ export default function Legislation() {
               <span className="lx-field__label" id={`${ids}-blocked-l`}>
                 Official monitoring
               </span>
-              <label className="lx-check">
-                <input
-                  type="checkbox"
-                  checked={state.blocked}
-                  onChange={(e) => update({ blocked: e.target.checked ? '1' : null })}
-                  aria-describedby={`${ids}-blocked-d`}
-                />
-                Only files officially reported as blocked ({formatNumber(facets.blocked)})
-              </label>
-              <span className="meta" id={`${ids}-blocked-d`}>
-                As recorded by the European Parliament’s Legislative Train Schedule.
-              </span>
+              {anyBlocked || state.blocked ? (
+                <>
+                  <label className="lx-check">
+                    <input
+                      type="checkbox"
+                      checked={state.blocked}
+                      onChange={(e) => update({ blocked: e.target.checked ? '1' : null })}
+                      aria-describedby={`${ids}-blocked-d`}
+                    />
+                    Only files officially reported as blocked ({formatNumber(facets.blocked)})
+                  </label>
+                  <span className="meta" id={`${ids}-blocked-d`}>
+                    As recorded by the European Parliament’s Legislative Train Schedule.
+                  </span>
+                </>
+              ) : (
+                <span className="meta">
+                  No file is officially reported as blocked in the current data (source: the European Parliament’s Legislative
+                  Train Schedule).
+                </span>
+              )}
             </div>
           </div>
         </details>
@@ -386,7 +405,7 @@ export default function Legislation() {
             </EmptyState>
           ) : (
             <>
-              <ol className="drows" aria-label="Legislative files">
+              <ol className="drows" aria-label="Legislative files" ref={listRef}>
                 {visible.map((d) => (
                   <DossierRow key={d.id} d={d} sort={state.sort} today={today} topicLabel={topicLabel} following={followed.has(d.id)} />
                 ))}
@@ -399,7 +418,10 @@ export default function Legislation() {
                   <button
                     type="button"
                     className="btn"
-                    onClick={() => update({ show: String(state.show + PAGE_SIZE * 2) }, { keepShow: true, replace: true })}
+                    onClick={() => {
+                      focusFrom.current = visible.length;
+                      update({ show: String(state.show + PAGE_SIZE * 2) }, { keepShow: true, replace: true });
+                    }}
                   >
                     Show {formatNumber(Math.min(PAGE_SIZE * 2, sorted.length - visible.length))} more
                   </button>

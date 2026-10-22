@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { EpVoteSummary, MembershipPeriod, MepDetail } from '../types/data';
-import { NotFoundError, useData } from '../lib/data';
+import { useData } from '../lib/data';
+import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
 import { EmptyState, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
@@ -46,7 +47,7 @@ export default function Mep() {
   const voteById = useMemo(() => new Map((votesIndex.data ?? []).map((v) => [v.id, v])), [votesIndex.data]);
 
   if (loading) return <div className="container page"><Loading label="Loading MEP…" /></div>;
-  if (error instanceof NotFoundError) return <NotFound what="MEP" />;
+  if (isMissing(error)) return <NotFound what="MEP" />;
   if (error || !m) return <div className="container page"><ErrorState error={error} title="This MEP could not be loaded" /></div>;
 
   const currentGroup = m.groups.find((g) => !g.to) ?? null;

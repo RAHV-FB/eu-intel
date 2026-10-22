@@ -101,22 +101,34 @@
 .tstatus {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.35em;
+  gap: 0.45em;
   font-size: var(--fs-sm);
   white-space: normal;
+  min-width: 10rem;
 }
 .tstatus__icon {
-  font-size: 0.85em;
+  flex-shrink: 0;
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  border: 2px solid var(--text-3);
+  position: relative;
+  top: 0.05em;
 }
 .tstatus--measures_notified .tstatus__icon {
-  color: var(--st-done);
+  background: var(--st-done);
+  border-color: var(--st-done);
 }
 .tstatus--deadline_not_reached .tstatus__icon {
-  color: var(--st-progress);
+  border-color: var(--st-progress);
+  background: linear-gradient(90deg, var(--st-progress) 50%, transparent 50%);
 }
-.tstatus--none_found .tstatus__icon,
+.tstatus--none_found .tstatus__icon {
+  background: transparent;
+}
 .tstatus--unavailable .tstatus__icon {
-  color: var(--text-3);
+  border-style: dashed;
 }
 
 .indicators {

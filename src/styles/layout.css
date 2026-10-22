@@ -114,6 +114,9 @@ main:focus {
   .site-header__search {
     display: none;
   }
+  .site-header__search + .menu-toggle {
+    margin-left: auto;
+  }
 }
 
 @media (min-width: 64rem) {

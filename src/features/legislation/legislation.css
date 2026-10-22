@@ -167,6 +167,10 @@
 .drow__title a {
   color: var(--navy);
   text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .drow__title a:hover {
@@ -178,15 +182,8 @@
   margin: var(--sp-1) 0 0;
   color: var(--text-2);
   max-width: 44rem;
-}
-
-.drow__official {
-  margin: var(--sp-1) 0 0;
-  color: var(--text-3);
-  font-size: var(--fs-sm);
-  max-width: 44rem;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

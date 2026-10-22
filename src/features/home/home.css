@@ -24,7 +24,7 @@
   line-height: 1.08;
   letter-spacing: -0.025em;
   color: var(--navy);
-  max-width: 16ch;
+  max-width: 22ch;
   margin-bottom: var(--sp-4);
 }
 
@@ -60,21 +60,19 @@
 }
 
 .home-hero__fresh {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 var(--sp-1);
   margin: var(--sp-5) 0 0;
   font-size: var(--fs-sm);
   color: var(--text-3);
 }
 
 .home-hero__fresh-dot {
+  display: inline-block;
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
   background: var(--st-done);
-  margin-right: var(--sp-1);
+  margin-right: var(--sp-2);
+  vertical-align: 1px;
 }
 
 @media (min-width: 48rem) {
@@ -96,7 +94,7 @@
 }
 
 @media (min-width: 72rem) {
-  .fcards {
+  .fcards--3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -265,6 +263,10 @@
   line-height: var(--lh-snug);
   text-decoration: none;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 a.hl__title:hover {
@@ -284,6 +286,23 @@ a.hl__title:hover {
 .hl__badge {
   font-weight: var(--fw-semibold);
   color: var(--text-2);
+}
+
+.hl__badge::first-letter {
+  text-transform: uppercase;
+}
+
+.hl-empty {
+  margin: var(--sp-6) 0 0;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.hl-empty strong {
+  color: var(--text-2);
+  font-weight: var(--fw-semibold);
 }
 
 .hl__empty {
@@ -355,7 +374,7 @@ a.hl__title:hover {
 
 .topic-grid__count {
   font-size: var(--fs-sm);
-  color: var(--text-3);
+  color: var(--text-2);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

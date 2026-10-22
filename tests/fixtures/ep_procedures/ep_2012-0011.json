@@ -1,0 +1,126 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2012-0011",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2012-0011-ANPRO-2016-04-11",
+     "type": "Activity",
+     "activity_date": "2016-04-11",
+     "activity_id": "2012-0011-ANPRO-2016-04-11",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2"
+    },
+    {
+     "id": "eli/dl/event/2012-0011-ANPRO-2012-02-16",
+     "type": "Activity",
+     "activity_date": "2012-02-16",
+     "activity_id": "2012-0011-ANPRO-2012-02-16",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2012-0011-DEC-DCPL-2016-04-14",
+     "type": "Decision",
+     "activity_date": "2016-04-14",
+     "activity_id": "2012-0011-DEC-DCPL-2016-04-14",
+     "had_activity_type": "def/ep-activities/PLENARY_APPROVE_COUNCIL_POSITION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2"
+    },
+    {
+     "id": "eli/dl/event/2012-0011-PUB-2016-05-04",
+     "type": "Activity",
+     "activity_date": "2016-05-04",
+     "activity_id": "2012-0011-PUB-2016-05-04",
+     "had_activity_type": "def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2016-04-14-VOT-ITM-522221-1",
+     "type": "Activity",
+     "activity_date": "2016-04-14",
+     "activity_id": "MTG-PL-2016-04-14-VOT-ITM-522221-1",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-8-2016-0139"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-8-2016-04-14-VOT-ITM-001"
+     ]
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2014-03-12-VOT-ITM-348762-5",
+     "type": "Activity",
+     "activity_date": "2014-03-12",
+     "activity_id": "MTG-PL-2014-03-12-VOT-ITM-348762-5",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-7-2013-0402"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-7-2014-03-12-VOT-ITM-005"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2012-0011-SIGN-2016-04-27",
+     "type": "Activity",
+     "activity_date": "2016-04-27",
+     "activity_id": "2012-0011-SIGN-2016-04-27",
+     "had_activity_type": "def/ep-activities/SIGNATURE"
+    },
+    {
+     "id": "eli/dl/event/2012-0011-DEC-DCPL-2014-03-12",
+     "type": "Decision",
+     "activity_date": "2014-03-12",
+     "activity_id": "2012-0011-DEC-DCPL-2014-03-12",
+     "had_activity_type": "def/ep-activities/PLENARY_ADOPT_POSITION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/TA-8-2016-0125",
+    "eli/dl/doc/A-8-2016-0139",
+    "eli/dl/doc/A-7-2013-0402",
+    "eli/dl/doc/C-8-2016-0154",
+    "eli/dl/doc/SP-2014-455-TA-7-2014-0212"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+   "process_id": "2012-0011",
+   "process_title": {
+    "mt": "Il-protezzjoni tal-individwi fir-rigward tal-ipproċessar ta’ dejta personali u l-moviment liberu ta’ dik id-dejta (Regolament dwar il-Protezzjoni ta’ Dejta Ġenerali)",
+    "de": "Schutz natürlicher Personen bei der Verarbeitung personenbezogener Daten und freier Datenverkehr (Datenschutz-Grundverordnung)",
+    "en": "Protection of individuals with regard to the processing of personal data, and the free movement of such data (General Data Protection Regulation)",
+    "cs": "Ochrana fyzických osob v souvislosti se zpracováním osobních údajů a volný pohyb těchto údajů (obecné nařízení o ochraně údajů)",
+    "sv": "Skydd för enskilda personer med avseende på behandling av personuppgifter, och det fria flödet av sådana uppgifter (allmän förordning om uppgiftskydd)",
+    "nl": "Bescherming van natuurlijke personen in verband met de verwerking van persoonsgegevens en het vrije verkeer van die gegevens (algemene verordening gegevensbescherming)",
+    "lt": "Fizinių asmenų apsauga tvarkant asmens duomenis ir laisvas tokių duomenų judėjimas (Bendrasis reglamentas dėl duomenų apsaugos)",
+    "da": "Beskyttelse af fysiske personer i forbindelse med behandling af personoplysninger og om fri udveksling af sådanne oplysninger (generel forordning om databeskyttelse)",
+    "el": "Προστασία των φυσικών προσώπων έναντι της επεξεργασίας δεδομένων προσωπικού χαρακτήρα και ελεύθερη κυκλοφορία των δεδομένων αυτών (γενικός κανονισμός για την προστασία των δεδομένων)",
+    "et": "Üksikisikute kaitse isikuandmete töötlemisel ja selliste andmete vaba liikumine (isikuandmete kaitse üldmäärus)",
+    "sk": "Ochrana fyzických osôb pri spracúvaní osobných údajov a voľný pohyb takýchto údajov (všeobecné nariadenie o ochrane údajov)",
+    "it": "Tutela delle persone fisiche con riguardo al trattamento dei dati personali e libera circolazione di tali dati (regolamento generale sulla protezione dei dati)",
+    "bg": "Защита на физическите лица във връзка с обработването на лични данни и свободното движение на такива данни (общ регламент относно защитата на данни)",
+    "hr": "Zaštita pojedinaca pri obradi osobnih podataka i slobodni protok takvih podataka (Opća uredba o zaštiti podataka)",
+    "pl": "Ochrona osób fizycznych w związku z przetwarzaniem danych osobowych i swobodnym przepływem takich danych (ogólne rozporządzenie o ochronie danych)",
+    "fi": "Yksilöiden suojelu henkilötietojen käsittelyssä sekä näiden tietojen vapaa liikkuvuus (yleinen tietosuoja-asetus)",
+    "es": "Protección de las personas físicas en lo que respecta al tratamiento de datos personales y a la libre circulación de estos datos (Reglamento general de protección de datos)",
+    "ro": "Protecția persoanelor fizice referitor la prelucrarea datelor cu caracter personal și libera circulație a acestor date (Regulament general privind protecția datelor)",
+    "pt": "Proteção das pessoas singulares no que diz respeito ao tratamento de dados pessoais e à livre circulação desses dados (regulamento geral sobre a proteção de dados)",
+    "fr": "Protection des personnes physiques à l'égard du traitement des données à caractère personnel, et libre circulation de ces données (règlement général sur la protection des données)",
+    "lv": "Fizisku personu aizsardzība attiecībā uz personas datu apstrādi un šādu datu brīva aprite (Vispārīgā datu aizsardzības regula)",
+    "hu": "Az egyén védelme a személyes adatok feldolgozása során, és az ilyen adatok szabad áramlása (általános adatvédelmi rendelet)",
+    "sl": "Varstvo posameznikov pri obdelavi osebnih podatkov in prosti pretok takih podatkov (splošna uredba o varstvu podatkov)"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "label": "2012/0011(COD)",
+   "identifierYear": "2012"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

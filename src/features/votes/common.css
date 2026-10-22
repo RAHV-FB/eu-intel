@@ -156,7 +156,7 @@
 /* ---------- key facts ---------- */
 .facts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 7.5rem), 1fr));
   gap: var(--sp-4) var(--sp-5);
   margin: 0;
 }
@@ -257,4 +257,29 @@
 }
 .section-head h2 {
   margin: 0;
+}
+
+/* Row headers (<th scope="row">) read like body cells, not like column headings. */
+.table tbody th {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: inherit;
+  color: var(--text);
+  border-bottom-color: var(--border);
+}
+
+/* Grid children must be allowed to shrink so wide tables scroll inside .table-wrap instead of widening the page. */
+.grid > * {
+  min-width: 0;
+}
+
+/* Contain absolutely positioned descendants (e.g. .visually-hidden text in cells) so they scroll with the table. */
+.table-wrap {
+  position: relative;
+}
+
+@media (min-width: 48rem) {
+  .facts {
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  }
 }

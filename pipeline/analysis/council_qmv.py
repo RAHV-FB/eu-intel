@@ -186,7 +186,9 @@ def assess(
     if rule not in ("qmv", "unanimity", "simple_majority"):
         return None
     members = set(positions)
-    if members not in (EU27, EU28) or any(p not in ("for", "against", "abstain", "not_participating") for p in positions.values()):
+    if members not in (EU27, EU28) or any(
+        p not in ("for", "against", "abstain", "not_participating") for p in positions.values()
+    ):
         return None
     if "GB" in members and year > 2020:
         return None
@@ -243,7 +245,9 @@ def assess(
     if rule == "simple_majority":
         required = n_part // 2 + 1
         if not all_take_part:
-            notes.append("Simple majority computed over participating members (Treaty text: component members).")
+            notes.append(
+                "Simple majority computed over participating members (Treaty text: component members)."
+            )
         adopted = n_for >= required
         return CouncilAssessment(
             **base,
@@ -285,7 +289,7 @@ def assess(
         population_required_pct=65.0,
         margin_states=n_for - required,
         single_state_veto_possible=False,
-        blocking_minority_min_states=min_block if (on_commission_proposal) else None,
+        blocking_minority_min_states=min_block,
     )
 
     if pop_for is None or pop_part is None:

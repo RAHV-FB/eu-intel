@@ -18,6 +18,8 @@ const INSTITUTION_SHORT: Record<string, string> = {
 function EventItem({ e, today }: { e: TimelineEvent; today: ISODate }) {
   const scheduled = e.state === 'scheduled' || e.date > today;
   const docs = e.docs ?? [];
+  // Avoid repeating the same official link twice (document link and source often coincide).
+  const sourceIsDoc = !!e.source && docs.some((doc) => doc.url && doc.url === e.source?.url);
   return (
     <li className={`tl__item${scheduled ? ' is-scheduled' : ''}${e.key ? ' is-key' : ''}`}>
       <span className="tl__mark" aria-hidden="true" />
@@ -52,7 +54,7 @@ function EventItem({ e, today }: { e: TimelineEvent; today: ISODate }) {
                 ))}
               </ul>
             )}
-            {e.source && <SourceLink source={e.source} />}
+            {e.source && !sourceIsDoc && <SourceLink source={e.source} />}
           </div>
         )}
       </div>

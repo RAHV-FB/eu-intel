@@ -29,10 +29,11 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from pipeline.models import entities
 from pipeline.models.countries import MEMBER_STATES
 from pipeline.models.entities import (
-    CountryIndicator,
     CouncilVote,
+    CountryIndicator,
     EpBallots,
     EpVote,
     InfringementCase,
@@ -286,12 +287,20 @@ def _src(ref: Any) -> dict | None:
     return ref.model_dump(mode="json") if ref is not None else None
 
 
+# Same political group under an earlier official short label (EP corporate bodies are re-created at
+# renamings): GUE/NGL was renamed "The Left in the European Parliament – GUE/NGL" in December 2020.
+GROUP_SLUG_MERGE = {"gue-ngl": "the-left"}
+
+
 def group_slug(code: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", code.lower()).strip("-") or "unknown"
+    slug = re.sub(r"[^a-z0-9]+", "-", code.lower()).strip("-") or "unknown"
+    return GROUP_SLUG_MERGE.get(slug, slug)
 
 
 REF_RE = re.compile(r"^(\d{4})/(\d{4})\(([A-Z]{3})\)$")
-_SHORT_NAME = re.compile(r"\(([A-Z][^()]{2,70}?(?:Act|Regulation|Directive|Package|Code|Mechanism|Instrument|Fund|Programme))\)")
+_SHORT_NAME = re.compile(
+    r"\(([A-Z][^()]{2,70}?(?:Act|Regulation|Directive|Package|Code|Mechanism|Instrument|Fund|Programme))\)"
+)
 
 
 def short_names(title: str) -> list[str]:
@@ -327,8 +336,10 @@ def _lazy(module: str, attr: str) -> Any:
     return getattr(mod, attr, None)
 
 
-def _load[M: BaseModel](source: str, name: str, model: type[M], issues: list[str]) -> list[M]:
-    path = SNAPSHOT / source / f"{name}.json"
+def _load[M: BaseModel](
+    source: str, name: str, model: type[M], issues: list[str], root: Path = SNAPSHOT
+) -> list[M]:
+    path = root / source / f"{name}.json"
     if not path.exists():
         return []
     try:
@@ -349,8 +360,8 @@ def _load[M: BaseModel](source: str, name: str, model: type[M], issues: list[str
     return out
 
 
-def _load_yaml(name: str) -> Any:
-    path = CURATED / name
+def _load_yaml(name: str, curated: Path = CURATED) -> Any:
+    path = curated / name
     if not path.exists():
         return None
     try:
@@ -388,8 +399,39 @@ def _index_entry(d: dict) -> dict:
     return out
 
 
+def _vote_index_entry(v: dict) -> dict:
+    """Compact EpVoteSummary for votes/index.json (full record in votes/<id>.json)."""
+    out = {k: x for k, x in v.items() if not (k in ("dossier_id", "dossier_ref", "margin") and x is None)}
+    src = v.get("source") or {}
+    out["source"] = {k: src[k] for k in ("institution", "url", "identifier") if src.get(k)}
+    return out
+
+
 def _valid_on(start: str | None, end: str | None, d: str) -> bool:
     return (start is None or start <= d) and (end is None or d <= end)
+
+
+def council_assessment(a: dict | None) -> dict | None:
+    """pipeline.analysis.council_qmv.CouncilAssessment -> CouncilAssessment in src/types/data.ts."""
+    if not a:
+        return None
+    notes = a.get("notes") or ([a["note"]] if a.get("note") else [])
+    return {
+        "rule": a.get("rule"),
+        "states_for": a.get("states_for"),
+        "states_required": a.get("states_required"),
+        "population_for_pct": a.get("population_for_pct"),
+        "population_required_pct": a.get("population_required_pct"),
+        "adopted_by_rule": a.get("adopted_by_rule"),
+        "blocking_minority_existed": a.get("blocking_minority_formed", a.get("blocking_minority_existed")),
+        "single_state_veto_possible": bool(a.get("single_state_veto_possible"))
+        and a.get("rule") == "unanimity",
+        "note": " ".join(str(n) for n in notes),
+        "legal_basis": a.get("legal_basis"),
+        "states_against": a.get("states_against"),
+        "states_abstain": a.get("states_abstain"),
+        "states_not_participating": a.get("states_not_participating"),
+    }
 
 
 # ------------------------------------------------------------------------------------------- titles
@@ -404,7 +446,10 @@ _BOILER = re.compile(
     r"\s*[,:]?\s*",
     re.IGNORECASE,
 )
-_TAIL = re.compile(r"\s*\((?:Text with EEA relevance|codification|recast)\)\s*$", re.IGNORECASE)
+_TAIL = re.compile(
+    r"\s*(?:\((?:Text with EEA relevance|codification|recast)\.?\)|Text with EEA relevance\.?)\s*$",
+    re.IGNORECASE,
+)
 _LEAD = re.compile(r"^(?:on|concerning|establishing|laying\s+down|setting\s+out|as\s+regards)\s+(?:the\s+)?",
                    re.IGNORECASE)  # fmt: skip
 
@@ -421,20 +466,23 @@ def clean_title(title: str) -> str:
         t = _TAIL.sub("", t)
     m = _BOILER.match(t)
     if m and m.end() > 0:
-        rest = t[m.end():]
+        rest = t[m.end() :]
         rest2 = _LEAD.sub("", rest)
         # keep verbs such as "amending ..." (the instrument amended is the meaningful part)
-        if len(rest2.split()) >= 3 and not re.match(r"^(?:\(|\d)", rest2):
+        if len(rest2.split()) >= 2 and not re.match(r"^(?:\(|\d)", rest2):
             t = rest2
+    t = t.strip().rstrip(",;:").strip()
     return t[:1].upper() + t[1:] if t else t
 
 
 # ------------------------------------------------------------------------------------------- curated
-def load_curated() -> tuple[dict[str, dict], dict[str, dict], list[dict]]:
+def load_curated(curated: Path = CURATED) -> tuple[dict[str, dict], dict[str, dict], list[dict]]:
     """Returns (featured by normalized reference/id, topics by slug, alias rules)."""
-    featured_raw = _load_yaml("featured.yaml") or []
+    featured_raw = _load_yaml("featured.yaml", curated) or []
     if isinstance(featured_raw, dict):
-        featured_raw = featured_raw.get("dossiers") or featured_raw.get("featured") or list(featured_raw.values())
+        featured_raw = (
+            featured_raw.get("dossiers") or featured_raw.get("featured") or list(featured_raw.values())
+        )
     featured: dict[str, dict] = {}
     for e in featured_raw if isinstance(featured_raw, list) else []:
         if not isinstance(e, dict):
@@ -442,7 +490,7 @@ def load_curated() -> tuple[dict[str, dict], dict[str, dict], list[dict]]:
         key = norm_ref(str(e.get("reference") or "")) or str(e.get("id") or "")
         if key:
             featured[key] = e
-    topics_raw = _load_yaml("topics.yaml") or {}
+    topics_raw = _load_yaml("topics.yaml", curated) or {}
     topics: dict[str, dict] = {}
     if isinstance(topics_raw, dict):
         topics_raw = topics_raw.get("topics", topics_raw)
@@ -454,7 +502,7 @@ def load_curated() -> tuple[dict[str, dict], dict[str, dict], list[dict]]:
         for t in topics_raw:
             if isinstance(t, dict) and t.get("slug"):
                 topics[str(t["slug"])] = t
-    aliases_raw = _load_yaml("aliases.yaml") or []
+    aliases_raw = _load_yaml("aliases.yaml", curated) or []
     if isinstance(aliases_raw, dict):
         aliases_raw = aliases_raw.get("aliases", [])
     aliases = [a for a in aliases_raw if isinstance(a, dict)] if isinstance(aliases_raw, list) else []
@@ -471,31 +519,47 @@ def _as_list(v: Any) -> list[str]:
 
 # ------------------------------------------------------------------------------------------- context
 class Snapshot:
-    def __init__(self) -> None:
+    def __init__(self, root: Path = SNAPSHOT) -> None:
+        self.root = root
         self.issues: list[str] = []
         i = self.issues
-        self.manifest: dict[str, SourceStatus] = read_manifest()
-        self.meps = _load("ep_people", "meps", Mep, i)
-        self.orgs = _load("ep_people", "orgs", Organization, i)
-        self.procedures = _load("ep_procedures", "procedures", Procedure, i)
-        self.votes = _load("ep_votes", "votes", EpVote, i)
-        self.ballots = _load("ep_votes", "ballots", EpBallots, i)
-        self.acts = _load("eurlex", "acts", LegalAct, i)
-        self.council = _load("council", "votes", CouncilVote, i)
-        self.measures = _load("implementation", "measures", NationalMeasure, i)
-        self.infringements = _load("implementation", "infringements", InfringementCase, i)
-        self.indicators = _load("implementation", "indicators", CountryIndicator, i)
-        self.train = _load("train", "files", TrainFile, i)
+        self.manifest: dict[str, SourceStatus] = self._manifest()
+        self.meps = _load("ep_people", "meps", Mep, i, root)
+        self.orgs = _load("ep_people", "orgs", Organization, i, root)
+        self.procedures = _load("ep_procedures", "procedures", Procedure, i, root)
+        self.votes = _load("ep_votes", "votes", EpVote, i, root)
+        self.ballots = _load("ep_votes", "ballots", EpBallots, i, root)
+        self.acts = _load("eurlex", "acts", LegalAct, i, root)
+        self.council = _load("council", "votes", CouncilVote, i, root)
+        self.measures = _load("implementation", "measures", NationalMeasure, i, root)
+        self.infringements = _load("implementation", "infringements", InfringementCase, i, root)
+        self.indicators = _load("implementation", "indicators", CountryIndicator, i, root)
+        cov_model = getattr(entities, "ImplementationCoverage", None)
+        self.coverage = _load("implementation", "coverage", cov_model, i, root) if cov_model else []
+        self.has_coverage_file = self.file_exists("implementation", "coverage")
+        self.train = _load("train", "files", TrainFile, i, root)
+
+    def _manifest(self) -> dict[str, SourceStatus]:
+        if self.root == SNAPSHOT:
+            return read_manifest()
+        path = self.root / "_manifest.json"
+        if not path.exists():
+            return {}
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return {k: SourceStatus.model_validate(v) for k, v in raw.items()}
 
     def file_exists(self, source: str, name: str) -> bool:
-        return (SNAPSHOT / source / f"{name}.json").exists()
+        return (self.root / source / f"{name}.json").exists()
 
 
 class Builder:
-    def __init__(self, snap: Snapshot, today: str | None = None) -> None:
+    def __init__(
+        self, snap: Snapshot, today: str | None = None, curated: Path = CURATED, state: Path = STATE
+    ) -> None:
         self.s = snap
         self.today = today or _today()
-        self.featured_cur, self.topics_cur, self.alias_rules = load_curated()
+        self.state_dir = state
+        self.featured_cur, self.topics_cur, self.alias_rules = load_curated(curated)
         self.files: dict[str, Any] = {}
         self._index()
 
@@ -537,12 +601,17 @@ class Builder:
         self.measures_by: dict[tuple[str, str], list[NationalMeasure]] = defaultdict(list)
         for nm in s.measures:
             self.measures_by[(nm.directive_celex, nm.country)].append(nm)
-        self.measure_celexes = {nm.directive_celex for nm in s.measures}
+        # directives whose national measures were queried: coverage.json when published by the source;
+        # otherwise only directives with at least one measure are known to have been queried
+        if s.has_coverage_file:
+            self.measure_celexes = {c.celex for c in s.coverage}
+        else:
+            self.measure_celexes = {nm.directive_celex for nm in s.measures}
         self.infr_by_celex: dict[str, list[InfringementCase]] = defaultdict(list)
         self.infr_by_country: dict[str, list[InfringementCase]] = defaultdict(list)
-        for ic in s.infringements:
-            if ic.celex:
-                self.infr_by_celex[ic.celex].append(ic)
+        for ic in sorted(s.infringements, key=lambda c: (c.latest_decision_date or "", c.id), reverse=True):
+            for c in sorted({*(getattr(ic, "legal_basis", None) or []), *([ic.celex] if ic.celex else [])}):
+                self.infr_by_celex[c].append(ic)
             self.infr_by_country[ic.country].append(ic)
 
     def _register(self, procs: list[Procedure]) -> None:
@@ -721,7 +790,7 @@ class Builder:
         for v in idx:
             det = self.ep_vote_detail(v)
             self.files[f"votes/{v.id}.json"] = det
-        self.files["votes/index.json"] = [self.vote_summary[v.id] for v in idx]
+        self.files["votes/index.json"] = [_vote_index_entry(self.vote_summary[v.id]) for v in idx]
 
     def component_members(self, d: str) -> int:
         if d not in self.component_cache:
@@ -739,11 +808,13 @@ class Builder:
         margin = None
         if margin_fn is not None:
             try:
-                margin = _as_dict(margin_fn(v, self.component_members(v.date)))
+                m = _as_dict(margin_fn(v, self.component_members(v.date)))
+                if m and m.get("rule") in ("votes_cast", "component_members", "two_thirds_cast"):
+                    margin = {k: m.get(k) for k in ("rule", "rule_label", "threshold", "distance", "relative", "label")}
             except Exception as e:  # noqa: BLE001
                 log.debug("margin failed for %s: %r", v.id, e)
         if p is not None:
-            display = f"{self.dossier_title(p)} — {VOTE_KIND_PHRASE.get(v.kind, 'vote')}"
+            display = f"{_truncate(self.dossier_title(p), 120)} — {VOTE_KIND_PHRASE.get(v.kind, 'vote')}"
             if v.kind in ("amendment", "split_or_separate") and v.reference_text:
                 display += f" ({v.reference_text})"
         else:
@@ -793,10 +864,12 @@ class Builder:
                     party = self.party_at(mid, v.date)
                     country = m.country if m else None
                     it = intended.get(mid)
-                    ballots.append({
-                        "mep": mid, "pos": pos, "group": slug, "country": country, "party": party,
-                        "intended": it if it and it != pos else None,
-                    })  # fmt: skip
+                    ballot = {"mep": mid, "pos": pos, "group": slug, "country": country}
+                    if party:
+                        ballot["party"] = party
+                    if it and it != pos:
+                        ballot["intended"] = it  # correction recorded after the vote
+                    ballots.append(ballot)
                     names[mid] = m.name if m else mid
                     groups[slug or "unknown"][pos] += 1
                     if country:
@@ -805,7 +878,10 @@ class Builder:
             ballots.sort(key=lambda x: (x["pos"], names.get(x["mep"], ""), x["mep"]))
             rf, ra, rb = len(b.favor), len(b.against), len(b.abstain)
             if v.n_for is None:
-                recon = {"matches": False, "note": "Official totals not published; counts are recorded individual votes."}
+                recon = {
+                    "matches": False,
+                    "note": "Official totals not published; counts are recorded individual votes.",
+                }
             elif (rf, ra, rb) == (v.n_for, v.n_against, v.n_abstain):
                 recon = {"matches": True, "note": None}
             else:
@@ -864,9 +940,11 @@ class Builder:
             if assess is not None and cv.voting_rule != "unknown" and cv.positions:
                 on_prop = bool(p and (p.com_refs or p.type in ("COD", "CNS")))
                 try:
-                    assessment = _as_dict(assess(cv.positions, cv.voting_rule, on_prop, int(cv.date[:4])))
+                    assessment = council_assessment(
+                        _as_dict(assess(cv.positions, cv.voting_rule, on_prop, year=int(cv.date[:4])))
+                    )
                 except Exception as e:  # noqa: BLE001
-                    log.debug("council assessment failed for %s: %r", cv.id, e)
+                    log.warning("council assessment failed for %s: %r", cv.id, e)
             if assessment and cv.voting_rule != "unanimity":
                 assessment["single_state_veto_possible"] = False
             rec = {
@@ -882,20 +960,20 @@ class Builder:
 
     # ---------------------------------------------------------------- dossiers
     def classify(self, p: Procedure) -> dict:
-        fn = _lazy("pipeline.analysis.status", "classify") if not hasattr(self, "_classify") else self._classify
+        fn = (
+            _lazy("pipeline.analysis.status", "classify")
+            if not hasattr(self, "_classify")
+            else self._classify
+        )
         self._classify = fn
         acts = self.acts_of.get(p.id, [])
         train = self.train_of.get(p.id, [])
         if fn is not None:
             try:
-                return self._status_dict(_as_dict(fn(p, acts, train, self.today)))
-            except TypeError:
-                try:
-                    return self._status_dict(_as_dict(fn(p, acts, train[0] if train else None, self.today)))
-                except Exception as e:  # noqa: BLE001
-                    log.debug("classify failed for %s: %r", p.id, e)
-            except Exception as e:  # noqa: BLE001
-                log.debug("classify failed for %s: %r", p.id, e)
+                return self._status_dict(_as_dict(fn(p, acts, train, date.fromisoformat(self.today))))
+            except Exception as e:  # noqa: BLE001 - never let one dossier break the build
+                log.warning("classify failed for %s: %r", p.id, e)
+                self.s.issues.append(f"status.classify failed for {p.id}: {e!r}"[:300])
         return self.fallback_status(p, acts, train)
 
     @staticmethod
@@ -904,12 +982,20 @@ class Builder:
             "stage": r.get("stage", "unknown"), "label": r.get("label") or STAGE_LABELS.get(r.get("stage"), ""),
             "explanation": r.get("explanation") or "", "since": r.get("since"), "basis": r.get("basis", "derived"),
         }  # fmt: skip
+        stall = r.get("stall")
+        if stall:
+            stall = {
+                k: stall.get(k) for k in ("days_since_last_event", "official_label", "official_source_url")
+            }
+        ns = r.get("next_step") or {}
         return {
-            "status": status,
-            "next_step": r.get("next_step") or {"text": "Not available.", "institution": None, "basis": "unknown"},
-            "stall": r.get("stall"),
+            "status": {k: status.get(k) for k in ("stage", "label", "explanation", "since", "basis")},
+            "next_step": {"text": ns.get("text") or "Not available.", "institution": ns.get("institution"),
+                          "basis": ns.get("basis") or "unknown"} if ns else
+                         {"text": "Not available.", "institution": None, "basis": "unknown"},
+            "stall": stall,
             "application": r.get("application"),
-        }
+        }  # fmt: skip
 
     def fallback_status(self, p: Procedure, acts: list[LegalAct], train: list[TrainFile]) -> dict:
         """Minimal conservative classification used only when pipeline.analysis.status is unavailable."""
@@ -985,16 +1071,24 @@ class Builder:
             label = f"{a.act_type.capitalize()} {a.celex}" if a.act_type != "other" else f"Act {a.celex}"
             synth: list[tuple[str, str, str]] = []
             if a.date_signature:
-                synth.append(("signature", a.date_signature, "Signed by the Presidents of Parliament and Council"))
+                synth.append(
+                    ("signature", a.date_signature, "Signed by the Presidents of Parliament and Council")
+                )
             if a.date_publication:
-                synth.append(("publication", a.date_publication, "Published in the Official Journal of the EU"))
+                synth.append(
+                    ("publication", a.date_publication, "Published in the Official Journal of the EU")
+                )
             if a.entry_into_force:
                 synth.append(("entry_into_force", a.entry_into_force, "Enters into force"))
             for d in a.other_application_dates:
-                synth.append(("application", d, "Further provisions start to apply (date recorded by EUR-Lex)"))
+                synth.append(
+                    ("application", d, "Further provisions start to apply (date recorded by EUR-Lex)")
+                )
             if a.act_type == "directive":
                 for d in a.transposition_deadlines:
-                    synth.append(("transposition_deadline", d, "Deadline for Member States to transpose the directive"))
+                    synth.append(
+                        ("transposition_deadline", d, "Deadline for Member States to transpose the directive")
+                    )
             for kind, d, title in synth:
                 if (kind, d) in seen:
                     continue
@@ -1031,9 +1125,9 @@ class Builder:
             return "deadline_not_reached"
         return "none_found"
 
-    def infr_info(self, ic: InfringementCase) -> dict:
+    def infr_info(self, ic: InfringementCase, celex: str | None = None) -> dict:
         return {
-            "id": ic.id, "country": ic.country, "celex": ic.celex, "title": ic.title,
+            "id": ic.id, "country": ic.country, "celex": celex or ic.celex, "title": ic.title,
             "non_communication": ic.non_communication, "latest_stage": ic.latest_stage,
             "latest_decision_date": ic.latest_decision_date, "status": ic.status, "source": _src(ic.source),
         }  # fmt: skip
@@ -1051,7 +1145,8 @@ class Builder:
             countries.append({
                 "country": c, "measures": len(ms), "status": self.transposition_status(a.celex, c, deadline),
                 "latest_measure_date": dates[-1] if dates else None,
-                "infringements": [self.infr_info(i) for i in self.infr_by_celex.get(a.celex, []) if i.country == c],
+                "infringements": [self.infr_info(i, a.celex) for i in self.infr_by_celex.get(a.celex, [])
+                                  if i.country == c],
             })  # fmt: skip
         note = (
             "Counts are national measures notified to the Commission and listed by EUR-Lex. "
@@ -1091,11 +1186,17 @@ class Builder:
             fut = sorted(
                 d
                 for a in acts
-                for d in [*a.other_application_dates, *(a.transposition_deadlines if a.act_type == "directive" else [])]
+                for d in [
+                    *a.other_application_dates,
+                    *(a.transposition_deadlines if a.act_type == "directive" else []),
+                ]
                 + ([a.entry_into_force] if a.entry_into_force else [])
                 if d > self.today
             )
-            blocked = any("block" in t.status.lower() for t in self.train_of.get(pid, []))
+            if self._classify is not None:
+                blocked = bool(st.get("stall") and st["stall"].get("official_label"))
+            else:
+                blocked = any("block" in t.status.lower() for t in self.train_of.get(pid, []))
             summ = {
                 "id": pid,
                 "ref": p.reference,
@@ -1181,7 +1282,9 @@ class Builder:
                                 related[other] = {"id": other, "title": self.dossier_summary[other]["title"],
                                                   "relation": label}  # fmt: skip
             det["related"] = [related[k] for k in sorted(related)]
-        index = sorted(self.dossier_summary.values(), key=lambda d: (d["last_event"] or "", d["id"]), reverse=True)
+        index = sorted(
+            self.dossier_summary.values(), key=lambda d: (d["last_event"] or "", d["id"]), reverse=True
+        )
         self.files["dossiers/index.json"] = [_index_entry(d) for d in index]
 
     # ---------------------------------------------------------------- people
@@ -1257,8 +1360,12 @@ class Builder:
                 **summ,
                 "member_ids": sorted(m.id for m in members),
                 "parties": [
-                    {"id": pid, "label": self.org[pid].label if pid in self.org else pid,
-                     "country": (self.org[pid].country if pid in self.org else None) or "", "members": n}
+                    {
+                        "id": pid,
+                        "label": self.org[pid].label if pid in self.org else pid,
+                        "country": (self.org[pid].country if pid in self.org else None) or "",
+                        "members": n,
+                    }
                     for pid, n in sorted(parties.items(), key=lambda kv: (-kv[1], kv[0]))
                 ],  # fmt: skip
                 "votes": [{k: x[k] for k in ("vote_id", "majority", "cohesion", "counts")} for x in gv],
@@ -1309,8 +1416,12 @@ class Builder:
                 **summ,
                 "meps": sorted(meps_rows.values(), key=lambda r: (not r["active"], r["name"], r["id"])),
                 "group_history": [
-                    {"group": h["group"], "from": h["from"], "to": None if h["to"] == "9999-12-31" else h["to"],
-                     "meps": len(h["meps"])}
+                    {
+                        "group": h["group"],
+                        "from": h["from"],
+                        "to": None if h["to"] == "9999-12-31" else h["to"],
+                        "meps": len(h["meps"]),
+                    }
                     for h in sorted(gh.values(), key=lambda h: (h["from"] or "", h["group"]))
                 ],  # fmt: skip
                 "source": _src(o.source),
@@ -1323,12 +1434,19 @@ class Builder:
         s = self.s
         infr_available = s.file_exists("implementation", "infringements")
         directives = sorted(
-            {a.celex: a for d in self.dossier_ids for a in self.acts_of.get(d, []) if a.act_type == "directive"}.values(),
+            {
+                a.celex: a
+                for d in self.dossier_ids
+                for a in self.acts_of.get(d, [])
+                if a.act_type == "directive"
+            }.values(),
             key=lambda a: a.celex,
         )
         index = []
         for code, name in sorted(MEMBER_STATES.items()):
-            active = sorted((m for m in s.meps if m.active and m.country == code), key=lambda m: m.sort_label or m.name)
+            active = sorted(
+                (m for m in s.meps if m.active and m.country == code), key=lambda m: m.sort_label or m.name
+            )
             groups = Counter(self.mep_summary[m.id]["group"] or "unknown" for m in active)
             cpos = Counter({"for": 0, "against": 0, "abstain": 0, "not_participating": 0})
             cvotes = []
@@ -1368,10 +1486,19 @@ class Builder:
                 })  # fmt: skip
             self.files[f"countries/{code}.json"] = {
                 **summ,
-                "meps": [{"id": m.id, "name": m.name, "group": self.mep_summary[m.id]["group"],
-                          "party_label": self.mep_summary[m.id]["party_label"]} for m in active],  # fmt: skip
-                "parties": [{"id": pid, "label": self.org[pid].label if pid in self.org else pid, "members_active": n}
-                            for pid, n in sorted(party_counts.items(), key=lambda kv: (-kv[1], kv[0]))],  # fmt: skip
+                "meps": [
+                    {
+                        "id": m.id,
+                        "name": m.name,
+                        "group": self.mep_summary[m.id]["group"],
+                        "party_label": self.mep_summary[m.id]["party_label"],
+                    }
+                    for m in active
+                ],  # fmt: skip
+                "parties": [
+                    {"id": pid, "label": self.org[pid].label if pid in self.org else pid, "members_active": n}
+                    for pid, n in sorted(party_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+                ],  # fmt: skip
                 "council_votes": cvotes,
                 "transposition": trans,
                 "infringements": [self.infr_info(i) for i in infr],
@@ -1394,7 +1521,7 @@ class Builder:
 
         snapshot_items = activity.snapshot_items(self)
         record = os.environ.get("EU_INTEL_RECORD_ACTIVITY") == "1"
-        recorded = activity.update_state(self, STATE, record=record)
+        recorded = activity.update_state(self, self.state_dir, record=record)
         items = activity.merge(recorded, snapshot_items, today=self.today)
         self.activity_items = items
         self.files["activity.json"] = items
@@ -1404,7 +1531,9 @@ class Builder:
                 by_dossier[it["dossier_id"]].append(it)
         for pid, its in by_dossier.items():
             if pid in self.dossier_detail:
-                self.dossier_detail[pid]["changes"] = sorted(its, key=lambda x: (x["date"], x["id"]), reverse=True)
+                self.dossier_detail[pid]["changes"] = sorted(
+                    its, key=lambda x: (x["date"], x["id"]), reverse=True
+                )
         for pid, det in self.dossier_detail.items():
             self.files[f"dossiers/{pid}.json"] = det
 
@@ -1418,7 +1547,10 @@ class Builder:
         featured = []
         cur_sorted = sorted(
             ((pid, c) for pid, c in self.curated_of.items() if c.get("featured")),
-            key=lambda kv: (kv[1].get("feature_order") if isinstance(kv[1].get("feature_order"), (int, float)) else 1e9, kv[0]),
+            key=lambda kv: (
+                kv[1].get("feature_order") if isinstance(kv[1].get("feature_order"), (int, float)) else 1e9,
+                kv[0],
+            ),
         )
         for pid, c in cur_sorted:
             det = self.dossier_detail[pid]
@@ -1449,27 +1581,44 @@ class Builder:
             if v["kind"] == "final" and v.get("margin") and v["date"] >= recent_cut
             and isinstance(v["margin"].get("relative"), (int, float))
         ]  # fmt: skip
-        close.sort(key=lambda v: (abs(v["margin"]["relative"]), v["date"] and -int(v["date"].replace("-", "")), v["id"]))
+        close.sort(
+            key=lambda v: (
+                abs(v["margin"]["relative"]),
+                v["date"] and -int(v["date"].replace("-", "")),
+                v["id"],
+            )
+        )
         close_votes = [{"vote_id": v["id"], "dossier_id": v["dossier_id"], "title": v["display_title"],
                         "subtitle": v["margin"].get("label"), "date": v["date"], "badge": v["outcome"]}
                        for v in close[:10]]  # fmt: skip
-        rej_votes = [v for v in self.vote_summary.values() if v["outcome"] == "rejected" and v["kind"] in ("final", "motion")]
+        rej_votes = [
+            v
+            for v in self.vote_summary.values()
+            if v["outcome"] == "rejected" and v["kind"] in ("final", "motion")
+        ]
         rej_items = [{"vote_id": v["id"], "dossier_id": v["dossier_id"], "title": v["display_title"],
                       "subtitle": v["kind_label"], "date": v["date"], "badge": "Rejected"} for v in rej_votes]  # fmt: skip
         rej_items += [{"dossier_id": d["id"], "title": d["title"], "subtitle": d["status_label"],
                        "date": self.dossier_detail[d["id"]]["status"].get("since") or d["last_event"], "badge": "Rejected"}
                       for d in summ.values() if d["stage"] == "rejected"]  # fmt: skip
-        rej_items.sort(key=lambda x: (x["date"] or "", x.get("vote_id") or x.get("dossier_id") or ""), reverse=True)
+        rej_items.sort(
+            key=lambda x: (x["date"] or "", x.get("vote_id") or x.get("dossier_id") or ""), reverse=True
+        )
         stalled_items = []
         for d in sorted(summ.values(), key=lambda d: d["id"]):
             if d["officially_blocked"]:
-                t = next((t for t in self.train_of.get(d["id"], []) if "block" in t.status.lower()), None)
+                stall = self.dossier_detail[d["id"]].get("stall") or {}
+                label = stall.get("official_label")
                 stalled_items.append({"dossier_id": d["id"], "title": d["title"],
-                                      "subtitle": f"Legislative Train: {t.status}" if t else "Officially blocked",
-                                      "date": d["last_event"], "badge": "Blocked", "_o": 0})  # fmt: skip
+                                      "subtitle": f"Legislative Train: {label}" if label else "Officially reported as blocked",
+                                      "date": d["last_event"], "badge": "Officially blocked", "_o": 0})  # fmt: skip
         inactive = []
         for d in summ.values():
-            if d["officially_blocked"] or d["stage"] not in ACTIVE_STAGES or d["type"] not in LEGISLATIVE_TYPES:
+            if (
+                d["officially_blocked"]
+                or d["stage"] not in ACTIVE_STAGES
+                or d["type"] not in LEGISLATIVE_TYPES
+            ):
                 continue
             if not d["last_event"]:
                 continue
@@ -1487,8 +1636,11 @@ class Builder:
         upcoming = []
         for pid in self.dossier_ids:
             for e in self.dossier_detail[pid]["timeline"]:
-                if e["state"] == "scheduled" and e["kind"] in ("application", "transposition_deadline", "entry_into_force") \
-                        and today < e["date"] <= horizon:
+                if (
+                    e["state"] == "scheduled"
+                    and e["kind"] in ("application", "transposition_deadline", "entry_into_force")
+                    and today < e["date"] <= horizon
+                ):
                     upcoming.append({"dossier_id": pid, "title": summ[pid]["title"], "subtitle": e["title"],
                                      "date": e["date"], "badge": "Deadline" if e["kind"] == "transposition_deadline"
                                      else "Applies"})  # fmt: skip
@@ -1546,7 +1698,9 @@ class Builder:
                 "meps": len(s.meps),
                 "meps_active": sum(1 for x in s.meps if x.active),
                 "ep_votes": len(self.indexed_votes),
-                "ep_votes_with_ballots": sum(1 for v in self.indexed_votes if v.id in self.ballots and v.has_ballots),
+                "ep_votes_with_ballots": sum(
+                    1 for v in self.indexed_votes if v.id in self.ballots and v.has_ballots
+                ),
                 "council_votes": len(s.council),
                 "national_measures": len(s.measures),
                 "infringements": len(s.infringements),
@@ -1568,11 +1722,18 @@ class Builder:
                          "political group and national party memberships as recorded by the European Parliament.")  # fmt: skip
         else:
             notes.append("MEPs: not available in this release.")
-        if avail("ep_procedures"):
-            notes.append(f"Legislation: {len(self.dossier_summary)} procedures recorded by the European Parliament. "
-                         "Status is derived from the recorded procedural steps and EUR-Lex dates.")  # fmt: skip
+        n_ep = len(self.dossier_summary) - len(self.stub_ids)
+        if avail("ep_procedures") and n_ep:
+            notes.append(f"Legislation: {n_ep:,} procedures recorded by the European Parliament. Status is derived "
+                         "from the recorded procedural steps and EUR-Lex dates.")  # fmt: skip
         else:
-            notes.append("Legislation: the European Parliament procedure data was not available for this release.")
+            notes.append(
+                "Legislation: the European Parliament procedure data was not available for this release."
+            )
+        if self.stub_ids:
+            notes.append(f"{len(self.stub_ids):,} adopted laws are shown from their EUR-Lex record only (procedure "
+                         "reference, title and legal dates), because the European Parliament procedure record is "
+                         "not in this release; their Parliament steps are not shown.")  # fmt: skip
         if avail("ep_votes"):
             notes.append(f"Parliament votes: {len(self.indexed_votes)} plenary votes are listed (votes on whole texts, "
                          "resolutions and motions with roll-call results, and all final votes linked to a procedure). "
@@ -1591,13 +1752,22 @@ class Builder:
         else:
             notes.append("Council votes: not available from an accessible official machine-readable source in "
                          "this release.")  # fmt: skip
-        if avail("implementation") and (s.measures or s.infringements or s.indicators):
-            notes.append("National implementation: national transposition measures as listed by EUR-Lex. "
-                         "'No measures found' only means none appear in the available dataset — it is not, by "
-                         "itself, evidence of non-compliance. Infringement cases and indicators are shown separately.")  # fmt: skip
+        if s.measures:
+            notes.append(f"National implementation: {len(s.measures):,} national transposition measures notified "
+                         f"for {len(self.measure_celexes):,} directives, as listed by EUR-Lex. 'No measures found' "
+                         "only means none appear in the available dataset — it is not, by itself, evidence that a "
+                         "country has failed to transpose a directive.")  # fmt: skip
         else:
-            notes.append("National implementation (transposition measures, infringements, indicators): not "
-                         "available in this release.")  # fmt: skip
+            notes.append("National transposition measures: not available in this release.")
+        if s.infringements:
+            notes.append(f"Infringements: {len(s.infringements):,} cases from the European Commission's infringement "
+                         "decisions register, shown separately from transposition data. A case is linked to a "
+                         "directive only when the register names it as the legal basis.")  # fmt: skip
+        else:
+            notes.append("Infringement cases: not available in this release.")
+        if not s.indicators:
+            notes.append("Country indicators (e.g. Single Market Scoreboard transposition deficit): not available "
+                         "from an accessible official machine-readable source in this release.")  # fmt: skip
         if avail("train"):
             notes.append("'Officially blocked' labels come only from the European Parliament's Legislative Train "
                          "Schedule; other inactivity is shown as the number of days without a recorded procedural update.")  # fmt: skip
@@ -1734,17 +1904,25 @@ def write_output(files: dict[str, Any], extra: dict[str, str], out: Path = OUT) 
     tmp.rename(out)
 
 
-def build(out: Path | None = None) -> int:
+def build(
+    out: Path | None = None,
+    snapshot: Path | None = None,
+    curated: Path | None = None,
+    state: Path | None = None,
+    today: str | None = None,
+) -> int:
     from pipeline.analysis import feeds
 
     out = out or OUT
-    snap = Snapshot()
-    b = Builder(snap)
+    snap = Snapshot(snapshot or SNAPSHOT)
+    b = Builder(snap, today=today, curated=curated or CURATED, state=state or STATE)
     files = b.run()
     site = os.environ.get("SITE_URL") or DEFAULT_SITE_URL
     extra = feeds.build_feeds(b, site_url=site)
     write_output(files, extra, out)
-    sizes = {k: len(json.dumps(v, ensure_ascii=False, separators=(",", ":")).encode()) for k, v in files.items()}
+    sizes = {
+        k: len(json.dumps(v, ensure_ascii=False, separators=(",", ":")).encode()) for k, v in files.items()
+    }
     for k in ("dossiers/index.json", "votes/index.json", "search.json", "home.json", "people/meps.json"):
         log.info("%-22s %8.1f KB", k, sizes.get(k, 0) / 1024)
     total = sum(sizes.values())
@@ -1755,4 +1933,3 @@ def build(out: Path | None = None) -> int:
         if sizes.get(k, 0) > 1_500_000:
             log.warning("%s exceeds 1.5 MB (%.2f MB)", k, sizes[k] / 1e6)
     return 0
-

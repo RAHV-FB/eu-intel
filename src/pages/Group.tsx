@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { BallotPosition, EpVoteSummary, GroupDetail, MepSummary, PositionCounts } from '../types/data';
-import { NotFoundError, useData } from '../lib/data';
+import { useData } from '../lib/data';
+import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber, pct } from '../lib/format';
 import { EmptyState, ErrorState, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
@@ -63,7 +64,7 @@ export default function Group() {
   }, [g, meps.data]);
 
   if (loading) return <div className="container page"><Loading label="Loading group…" /></div>;
-  if (error instanceof NotFoundError) return <NotFound what="political group" />;
+  if (isMissing(error)) return <NotFound what="political group" />;
   if (error || !g) return <div className="container page"><ErrorState error={error} title="This group could not be loaded" /></div>;
 
   const totalMembers = countryRows.reduce((n, r) => n + r.members, 0) || g.members;

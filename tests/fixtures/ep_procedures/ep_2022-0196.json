@@ -1,0 +1,522 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2022-0196",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/MTG-PL-2023-11-22-PVCRE-ITM-8-13",
+     "type": "Activity",
+     "activity_date": "2023-11-22",
+     "activity_id": "MTG-PL-2023-11-22-PVCRE-ITM-8-13",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339",
+      "eli/dl/doc/C-9-2022-0207"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2023-11-22-ITM-008-13",
+      "eli/dl/doc/PV-9-2023-11-22-ITM-008-13"
+     ]
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-447-453-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-447-453-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-447-453"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-429-438-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-429-438-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-429-438"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-493-502-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-493-502-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-493-502"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-533-542-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-533-542-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-533-542"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-454-455-DEPOT-2023-11-14",
+     "type": "Activity",
+     "activity_date": "2023-11-14",
+     "activity_id": "A-9-2023-0339-AM-454-455-DEPOT-2023-11-14",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-454-455"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-463-472-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-463-472-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-463-472"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-459-461-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-459-461-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-459-461"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-462-462-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-462-462-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-462-462"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/DEVE-AM-749082-DEPOT-2023-05-16",
+     "type": "Activity",
+     "activity_date": "2023-05-16",
+     "activity_id": "DEVE-AM-749082-DEPOT-2023-05-16",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/DEVE-AM-749082"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-483-492-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-483-492-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-483-492"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0196-DEC-ADCP-2023-10-24",
+     "type": "Decision",
+     "activity_date": "2023-10-24",
+     "activity_id": "2022-0196-DEC-ADCP-2023-10-24",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-473-482-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-473-482-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-473-482"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-523-532-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-523-532-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-523-532"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-001-428-DEPOT-2023-11-21",
+     "type": "Activity",
+     "activity_date": "2023-11-21",
+     "activity_id": "A-9-2023-0339-AM-001-428-DEPOT-2023-11-21",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-001-428"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2023-11-22-VOT-ITM-939720",
+     "type": "Activity",
+     "activity_date": "2023-11-22",
+     "activity_id": "MTG-PL-2023-11-22-VOT-ITM-939720",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-9-2023-11-22-VOT-ITM-013"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2022-0196-DEC-ADCP-DEVE-2023-05-23",
+     "type": "Decision",
+     "activity_date": "2023-05-23",
+     "activity_id": "2022-0196-DEC-ADCP-DEVE-2023-05-23",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/DEVE-AD-745174"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0196-ANPRO-2022-07-04",
+     "type": "Activity",
+     "activity_date": "2022-07-04",
+     "activity_id": "2022-0196-ANPRO-2022-07-04",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/AGRI-PA-746873-DEPOT-2023-05-11",
+     "type": "Activity",
+     "activity_date": "2023-05-11",
+     "activity_id": "AGRI-PA-746873-DEPOT-2023-05-11",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/AGRI-PA-746873"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0196-DEC-DCPL-2023-11-22",
+     "type": "Decision",
+     "activity_date": "2023-11-22",
+     "activity_id": "2022-0196-DEC-DCPL-2023-11-22",
+     "had_activity_type": "def/ep-activities/PLENARY_ADOPT_POSITION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-456-458-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-456-458-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-456-458"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/ENVI-PR-742368-DEPOT-2023-02-06",
+     "type": "Activity",
+     "activity_date": "2023-02-06",
+     "activity_id": "ENVI-PR-742368-DEPOT-2023-02-06",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/ENVI-PR-742368"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0196-DEC-ADCP-AGRI-2023-10-09",
+     "type": "Decision",
+     "activity_date": "2023-10-09",
+     "activity_id": "2022-0196-DEC-ADCP-AGRI-2023-10-09",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/AGRI-AD-746873"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-513-522-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-513-522-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-513-522"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-439-446-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-439-446-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-439-446"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0196-DEPOT-2023-11-07",
+     "type": "Activity",
+     "activity_date": "2023-11-07",
+     "activity_id": "2022-0196-DEPOT-2023-11-07",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/DEVE-PA-745174-DEPOT-2023-03-08",
+     "type": "Activity",
+     "activity_date": "2023-03-08",
+     "activity_id": "DEVE-PA-745174-DEPOT-2023-03-08",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/DEVE-PA-745174"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-9-2023-0339-AM-503-512-DEPOT-2023-11-15",
+     "type": "Activity",
+     "activity_date": "2023-11-15",
+     "activity_id": "A-9-2023-0339-AM-503-512-DEPOT-2023-11-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339-AM-503-512"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/DEVE-AM-746658-DEPOT-2023-04-04",
+     "type": "Activity",
+     "activity_date": "2023-04-04",
+     "activity_id": "DEVE-AM-746658-DEPOT-2023-04-04",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/DEVE-AM-746658"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2023-11-21-PVCRE-ITM-2",
+     "type": "Activity",
+     "activity_date": "2023-11-21",
+     "activity_id": "MTG-PL-2023-11-21-PVCRE-ITM-2",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0339",
+      "eli/dl/doc/C-9-2022-0207"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2023-11-21-ITM-002",
+      "eli/dl/doc/PV-9-2023-11-21-ITM-002"
+     ]
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/SP-2024-109-TA-9-2023-0424",
+    "eli/dl/doc/ENVI-PR-742368",
+    "eli/dl/doc/A-9-2023-0339",
+    "eli/dl/doc/DEVE-AD-745174",
+    "eli/dl/doc/DEVE-PA-745174",
+    "eli/dl/doc/AGRI-AD-746873",
+    "eli/dl/doc/TA-9-2023-0424",
+    "eli/dl/doc/AGRI-PA-746873"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2022-0196-AVI-DEVE",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/DEVE"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-NMSR-124936-2022-07-12",
+     "type": "Participation",
+     "activity_date": "2022-07-12",
+     "had_participant_person": [
+      "person/124936"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1102
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-NMCP-125045-AGRI-2022-11-08",
+     "type": "Participation",
+     "activity_date": "2022-11-08",
+     "had_participant_person": [
+      "person/125045"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/AGRI",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1702
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-NMSR-58789-2022-07-12",
+     "type": "Participation",
+     "activity_date": "2022-07-12",
+     "had_participant_person": [
+      "person/58789"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1105
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-NMCP-197675-ENVI-2022-09-01",
+     "type": "Participation",
+     "activity_date": "2022-09-01",
+     "had_participant_person": [
+      "person/197675"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/ENVI",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1106
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-NMCP-96743-DEVE-2023-01-17",
+     "type": "Participation",
+     "activity_date": "2023-01-17",
+     "had_participant_person": [
+      "person/96743"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/DEVE",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 406
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-NMSR-125023-2022-07-12",
+     "type": "Participation",
+     "activity_date": "2022-07-12",
+     "had_participant_person": [
+      "person/125023"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 1107
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-MHE-ENVI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/ENVI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-AHE-AGRI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/AGRI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION_ASSOCIATED"
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-NMSR-197648-2022-07-12",
+     "type": "Participation",
+     "activity_date": "2022-07-12",
+     "had_participant_person": [
+      "person/197648"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1101
+    },
+    {
+     "id": "eli/dl/participation/2022-0196-NMSR-197537-2022-07-12",
+     "type": "Participation",
+     "activity_date": "2022-07-12",
+     "had_participant_person": [
+      "person/197537"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 4
+    }
+   ],
+   "process_id": "2022-0196",
+   "process_title": {
+    "mt": "L-użu sostenibbli tal-prodotti għall-protezzjoni tal-pjanti u emenda tar-Regolament (UE) 2021/2115",
+    "hr": "Održiva upotreba sredstava za zaštitu bilja i izmjena Uredbe (EU) 2021/2115",
+    "pl": "Zrównoważone stosowanie środków ochrony roślin i zmiana rozporządzenia (UE) 2021/2115",
+    "en": "The sustainable use of plant protection products and amending Regulation (EU) 2021/2115",
+    "de": "Die nachhaltige Verwendung von Pflanzenschutzmitteln und Änderung der Verordnung (EU) 2021/2115",
+    "el": "Βιώσιμη χρήση φυτοπροστατευτικών προϊόντων και τροποποίηση του κανονισμού (ΕΕ) 2021/2115",
+    "pt": "Utilização sustentável de produtos fitofarmacêuticos e alteração do Regulamento (UE) 2021/2115",
+    "lt": "Taususis augalų apsaugos produktų naudojimas ir iš dalies keičiamas Reglamentas (ES) 2021/2115",
+    "ga": "Úsáid inbhuanaithe táirgí cosanta plandaí agus leasú a dhéanamh ar Rialachán (AE) 2021/2115",
+    "sk": "Udržateľné používanie prípravkov na ochranu rastlín a zmena nariadenia (EÚ) 2021/2115",
+    "sl": "Trajnostna raba fitofarmacevtskih sredstev in sprememba Uredbe (EU) 2021/2115",
+    "it": "Uso sostenibile dei prodotti fitosanitari e modifica del regolamento (UE) 2021/2115",
+    "et": "Taimekaitsevahendite säästev kasutamine ja määruse (EL) 2021/2115 muutmine",
+    "lv": "Augu aizsardzības līdzekļu ilgtspējīga lietošana un grozījumu izdarīšana Regulā (ES) 2021/2115",
+    "sv": "Hållbar användning av växtskyddsmedel och ändring av förordning (EU) 2021/2115",
+    "es": "Uso sostenible de los productos fitosanitarios y modificación del Reglamento (UE) 2021/2115",
+    "hu": "A növényvédő szerek fenntartható használata és az (EU) 2021/2115 rendelet módosítása",
+    "cs": "Udržitelné používání přípravků na ochranu rostlin a změna nařízení (EU) 2021/2115",
+    "fr": "L'utilisation durable des produits phytopharmaceutiques et modification du règlement (UE) 2021/2115",
+    "ro": "Utilizarea durabilă a produselor de protecție a plantelor și modificarea Regulamentului (UE) 2021/2115",
+    "nl": "Duurzaam gebruik van gewasbeschermingsmiddelen en wijziging van Verordening (EU) 2021/2115",
+    "fi": "Kasvinsuojeluaineiden kestävä käyttö ja asetuksen (EU) 2021/2115 muuttaminen",
+    "da": "Bæredygtig anvendelse af plantebeskyttelsesmidler og ændring af forordning (EU) 2021/2115",
+    "bg": "Устойчива употреба на продукти за растителна защита и изменяне на Регламент (ЕС) 2021/2115"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "label": "2022/0196(COD)",
+   "identifierYear": "2022"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}
