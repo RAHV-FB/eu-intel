@@ -48,6 +48,18 @@ linked procedure (legislative types make "motion for a resolution" the legislati
 Majority rule (EpVote.majority_rule) — see majority_rule(). Set only where the Treaty text fixes it for
 that kind of vote; everything else stays "unknown". Abstentions are not votes cast (Rule 178(3) RoP as
 quoted in CJEU C-650/18 Hungary v Parliament, ECLI:EU:C:2021:426, paras 7 and 89 ff.).
+
+Outcome (EpVote.outcome / outcome_basis) — see resolve_outcome(): "published" when the decision carries
+decision_outcome (from 2024-01-15); else "minutes" from the sitting's official "Results of votes" annex
+(PV-…-VOT XML, see parse_minutes); else "derived" from the counts when majority_rule is votes_cast and the
+counts are not tied; otherwise "unknown".
+
+Mandates — a vote classified "final" becomes "mandate" when Parliament referred the file back to committee
+for interinstitutional negotiations right after it: an adopted referral-back decision in the same vote item
+(new format) or a PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS event of the linked procedure on
+the vote's date (e.g. the AI Act vote of 14 June 2023, 499-28-93).
+
+Incremental fetching — see the section "incremental fetching" below (window, chunks, _state.json).
 """
 
 from __future__ import annotations
