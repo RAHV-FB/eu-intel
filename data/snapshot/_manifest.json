@@ -40,16 +40,16 @@
   "status": "ok"
  },
  "ep_votes": {
-  "attempted_at": "2026-10-22T18:05:38Z",
-  "fetched_at": "2026-10-22T18:24:53Z",
-  "note": "397 sittings (359 with votes), 35465 votes (26267 roll-call, 2725 with ballots), 30837 linked to procedures (via {'document': 5655, 'item': 27725, 'label': 26, 'none': 2059}); kinds {'amendment': 21019, 'final': 1365, 'motion': 171, 'other': 32, 'procedural': 513, 'resolution': 2513, 'split_or_separate': 9852}; 586 document lookups; 0 votes whose voter lists differ from the counts; 1155s",
+  "attempted_at": "2026-10-22T23:11:16Z",
+  "fetched_at": "2026-10-22T23:23:20Z",
+  "note": "full pass: 180/397 sittings fetched (14159 votes, 543 document lookups, 61 procedures by id); 217 sittings pending; resumes next run (stopped by HttpError('500 https://data.europarl.europa.eu/api/v2/procedures/2022-0371(COD),2022-2022,2022-2866,2022-2894,2022-2896: gave up after 6 attempts: retryable status 500')). Snapshot: 35465 votes (26267 roll-call, 2724 with ballots), 31633 linked to procedures; kinds {'amendment': 21019, 'final': 1330, 'mandate': 34, 'motion': 171, 'other': 32, 'procedural': 514, 'resolution': 2513, 'split_or_separate': 9852}; 0 fetched votes whose voter lists differ from the counts; 724s",
   "records": {
-   "ballots": 2725,
-   "sittings": 397,
+   "ballots": 2724,
+   "sittings": 359,
    "votes": 35465
   },
   "source": "ep_votes",
-  "status": "ok"
+  "status": "partial"
  },
  "eurlex": {
   "attempted_at": "2026-10-22T17:35:28Z",

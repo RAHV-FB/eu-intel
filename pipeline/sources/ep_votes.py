@@ -189,6 +189,13 @@ def fetch_procedure_labels(http: Http) -> dict[str, str]:
 
 
 PROC_BATCH = 50
+PROCESS_ID_RE = re.compile(r"\d{4}-\d{4}[A-Z]?")  # EP process id, e.g. "2021-0106"
+
+
+def process_id(uri: str) -> str | None:
+    """'eli/dl/proc/2021-0106' -> '2021-0106'; some records write the id as '2022-0371(COD)'."""
+    m = re.match(r"(\d{4}-\d{4}[A-Z]?)(?:\([A-Z]{3}\))?$", uri.rstrip("/").rsplit("/", 1)[-1])
+    return m.group(1) if m else None
 
 
 def fetch_procedures_by_id(http: Http, ids: list[str]) -> dict[str, str]:
@@ -218,7 +225,9 @@ def fetch_document_links(http: Http, doc_id: str) -> tuple[list[str], list[str]]
     derived: list[str] = []
     for r in rows:
         procs += [
-            p.rsplit("/", 1)[-1] for p in _ids(r.get("inverse_created_a_realization_of")) if "/proc/" in p
+            pid
+            for p in _ids(r.get("inverse_created_a_realization_of"))
+            if "/proc/" in p and (pid := process_id(p))
         ]
         derived += [_suffix(d) or d for d in _ids(r.get("is_derivative_of"))]
     return sorted(set(procs)), sorted(set(derived))
@@ -336,10 +345,19 @@ def fetch_procedures(http: Http, ids: Iterable[str]) -> tuple[dict[str, str], di
     The referral is a procedure event (e.g. "2021-0106-DEC-REFBAK-2023-06-14",
     PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS) on the day of the vote.
     """
-    ids = sorted(set(ids))
+    ids = sorted({pid for pid in ids if PROCESS_ID_RE.fullmatch(pid)})
     rows: list[dict] = []
     for i in range(0, len(ids), PROC_BATCH):
-        rows += _get_data(http, f"/procedures/{','.join(ids[i : i + PROC_BATCH])}")
+        batch = ids[i : i + PROC_BATCH]
+        try:
+            rows += _get_data(http, f"/procedures/{','.join(batch)}")
+        except HttpError as e:  # one bad id fails the whole batch: retry the ids one by one
+            log.warning("procedures batch failed (%s); fetching %d ids one by one", e.status, len(batch))
+            for pid in batch:
+                try:
+                    rows += _get_data(http, f"/procedures/{pid}")
+                except HttpError as e2:
+                    log.warning("procedure %s: %s", pid, e2)
     return parse_procedures(rows)
 
 
@@ -453,7 +471,7 @@ def index_items(items: list[dict]) -> dict[str, VoteItem]:
         iid = x.get("activity_id") or _suffix(x.get("id"))
         if not iid:
             continue
-        procs = [p.rsplit("/", 1)[-1] for p in _ids(x.get("inverse_consists_of")) if "/proc/" in p]
+        procs = [pid for p in _ids(x.get("inverse_consists_of")) if "/proc/" in p and (pid := process_id(p))]
         docs = [_suffix(d) or d for d in _ids(x.get("based_on_a_realization_of"))]
         out[iid] = VoteItem(id=iid, title=_text(x.get("activity_label")), procs=sorted(set(procs)), docs=docs)
     return out
@@ -868,9 +886,16 @@ def resolve_outcome(
     published = OUTCOMES.get(_suffix(dec.get("decision_outcome")) or "")
     if published:
         return published, "published"
-    if minutes := minutes_outcome(d, counts):
-        return minutes, "minutes"
     n_for, n_against, _ = counts
+    if minutes := minutes_outcome(d, counts):
+        arithmetic = None
+        if rule == "votes_cast" and n_for is not None and n_against is not None and n_for != n_against:
+            arithmetic = "adopted" if n_for > n_against else "rejected"
+        if arithmetic and minutes in ("adopted", "rejected") and minutes != arithmetic:
+            # the minutes contradict their own counts (e.g. 15 Jan 2020, RC-B9-0040/2020 am 64: "+" with
+            # 263 for, 421 against): publish neither
+            return "unknown", None
+        return minutes, "minutes"
     if rule == "votes_cast" and n_for is not None and n_against is not None and n_for != n_against:
         return ("adopted" if n_for > n_against else "rejected"), "derived"
     return "unknown", None
