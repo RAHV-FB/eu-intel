@@ -220,6 +220,8 @@ acts = [
         other_application_dates=["2025-06-01", "2027-01-01"],
         in_force=True,
         procedure_refs=["2099/0001(COD)"],
+        amended_by=["32099R0077"],
+        amends=["32099L0003"],
         eurlex_url="https://example.invalid/eurlex/32099R0001",
         source=src("EUR-Lex", "32099R0001"),
     ),
@@ -313,6 +315,8 @@ council = [
         title="TEST Regulation on widgets",
         procedure_refs=["2099/0001(COD)"],
         voting_rule="qmv",
+        stage="TEST adoption of the legislative act",
+        written_procedure=False,
         outcome="adopted",
         positions={
             c: ("against" if c == "HU" else "abstain" if c == "PL" else "for")
