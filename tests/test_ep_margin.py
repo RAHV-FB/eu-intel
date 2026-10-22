@@ -11,7 +11,7 @@ from tests.test_ep_votes import assemble
 @pytest.fixture(scope="module")
 def votes():
     out = {}
-    for day in ("2024-03-13", "2024-09-19", "2025-07-10", "2026-07-08", "2026-07-09"):
+    for day in ("2024-03-13", "2024-09-19", "2025-07-10", "2025-10-07", "2026-07-08", "2026-07-09"):
         out.update(assemble(day)[0])
     return out
 
@@ -38,9 +38,16 @@ def test_rejected_amendment(votes):
 
 
 def test_one_vote_majority(votes):
-    m = margin(votes["166487"])  # 272 for, 271 against: adopted
-    assert (m.threshold, m.distance) == (272, 0)
+    v = votes["179413"]  # immunity decision, secret ballot: 306 for, 305 against, 17 abstentions, adopted
+    assert (v.kind, v.method, v.procedure_refs) == ("final", "VOTE_ELECTRONIC_SECRET", ["2024/2086(IMM)"])
+    m = margin(v)
+    assert (m.threshold, m.distance) == (306, 0)
     assert m.label == "Passed with exactly the required majority"
+
+
+def test_budget_procedure_rule_unknown(votes):
+    v = votes["166487"]  # 272 for, 271 against in a BUD procedure: Art. 314 TFEU mixes majorities
+    assert v.majority_rule == "unknown" and margin(v) is None
 
 
 def test_motion_of_censure_needs_component_members(votes):
