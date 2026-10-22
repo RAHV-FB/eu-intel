@@ -10,7 +10,7 @@ Structure (verified 2026-10-22):
   ``/legislative-train/theme-<slug>/file-<file-slug>``.
 - File page: sidebar "Metadata" with ``Status:`` (a badge), ``Procedure:`` (procedure reference,
   plain text; Parliament legislative-initiative files have ``Adopted INL report:`` instead),
-  optionally ``Blocking institutions:`` (not stored: no field in TrainFile), and
+  optionally ``Blocking institutions:`` (one or more badges, e.g. "COUNCIL"), and
   "Information updated as of DD/MM/YYYY." above the text.
 
 A file carried over from one Commission term to the next is listed under a theme of each term,
@@ -162,6 +162,7 @@ class FilePage:
     procedure_refs: list[str]
     theme: str | None
     last_updated: str | None
+    blocking_institution: str | None = None
 
 
 def parse_file_page(html: str) -> FilePage:
@@ -212,13 +213,27 @@ def parse_file_page(html: str) -> FilePage:
             if ref not in refs:
                 refs.append(ref)
 
+    # "Blocking institutions:" badges, verbatim; several are joined with ", " in page order.
+    blocking = None
+    li = meta_value("Blocking institutions")
+    if li is not None:
+        names = [_text(a) for a in li.xpath(".//abbr")] or [_text(p) for p in li.xpath("./p")[1:]]
+        blocking = ", ".join(n for n in names if n) or None
+
     last_updated = None
     m = _UPDATED_RE.search(doc.text_content())
     if m:
         d, mo, y = (int(x) for x in m.groups())
         last_updated = f"{y:04d}-{mo:02d}-{d:02d}"
 
-    return FilePage(title=title, status=status, procedure_refs=refs, theme=theme, last_updated=last_updated)
+    return FilePage(
+        title=title,
+        status=status,
+        procedure_refs=refs,
+        theme=theme,
+        last_updated=last_updated,
+        blocking_institution=blocking,
+    )
 
 
 def build_record(url: str, listed_title: str, page: FilePage, retrieved_at: str) -> TrainFile:
@@ -227,6 +242,7 @@ def build_record(url: str, listed_title: str, page: FilePage, retrieved_at: str)
         url=url,
         title=title,
         status=page.status or "",
+        blocking_institution=page.blocking_institution,
         procedure_refs=page.procedure_refs,
         theme=page.theme,
         last_updated=page.last_updated,

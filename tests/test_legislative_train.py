@@ -35,6 +35,22 @@ def test_parse_file_page(name, expected):
     assert p.procedure_refs == expected["procedure_refs"]
     assert p.theme == expected["theme"]
     assert p.last_updated == expected["last_updated"]
+    assert p.blocking_institution == expected["blocking_institution"]
+
+
+def test_blocking_institution_parsed_verbatim():
+    # Single badge, and several badges joined with ", " in page order.
+    assert lt.parse_file_page(page("file_blocked.html.gz")).blocking_institution == "COUNCIL"
+    two = lt.parse_file_page(page("file_blocked_two_institutions.html.gz"))
+    assert two.status == "Blocked"
+    assert two.blocking_institution == "COUNCIL, PARLIAMENT"
+    # Only "Blocked" files name a blocking institution.
+    for name in MANIFEST["files"]:
+        p = lt.parse_file_page(page(name))
+        if p.status != "Blocked":
+            assert p.blocking_institution is None, name
+    rec = lt.build_record(MANIFEST["files"]["file_blocked.html.gz"]["url"], "t", two, "2026-10-22T00:00:00Z")
+    assert TrainFile.model_validate(rec.model_dump()).blocking_institution == "COUNCIL, PARLIAMENT"
 
 
 def test_fixture_statuses_cover_vocabulary():
@@ -95,3 +111,5 @@ def test_snapshot_statuses_in_vocabulary():
     for r in recs:
         for ref in r.procedure_refs:
             assert lt._PROC_RE.fullmatch(ref), ref
+        if r.blocking_institution is not None:
+            assert r.status == "Blocked", r.url

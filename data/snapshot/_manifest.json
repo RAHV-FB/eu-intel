@@ -33,8 +33,8 @@
   "status": "partial"
  },
  "train": {
-  "attempted_at": "2026-10-22T17:47:10Z",
-  "fetched_at": "2026-10-22T17:47:19Z",
+  "attempted_at": "2026-10-22T17:52:55Z",
+  "fetched_at": "2026-10-22T17:53:03Z",
   "note": "statuses: Adopted / Completed=936, Announced=190, Blocked=42, Close to adoption=35, Legislative initiatives=35, Tabled=158, Withdrawn=96",
   "records": {
    "files": 1492
