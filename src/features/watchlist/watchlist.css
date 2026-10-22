@@ -82,21 +82,21 @@
   gap: var(--sp-2);
 }
 
-.btn--quiet {
+.lx-btn-quiet {
   border-color: transparent;
   background: transparent;
   color: var(--eu-blue);
 }
 
-.btn--quiet:hover {
+.lx-btn-quiet:hover {
   border-color: var(--border);
 }
 
-.btn--danger {
+.lx-btn-danger {
   color: var(--st-critical);
 }
 
-.btn--danger:hover {
+.lx-btn-danger:hover {
   color: var(--st-critical);
   border-color: var(--st-critical);
   background: var(--st-critical-bg);
@@ -165,7 +165,7 @@
   flex-wrap: wrap;
 }
 
-.changed {
+.lx-changed {
   display: inline-flex;
   align-items: center;
   gap: 0.35em;
@@ -177,7 +177,7 @@
   font-weight: var(--fw-semibold);
 }
 
-.changed::before {
+.lx-changed::before {
   content: '';
   width: 0.45rem;
   height: 0.45rem;
@@ -198,7 +198,7 @@
   flex-wrap: wrap;
 }
 
-.following__share-row .input {
+.following__share-row .lx-input {
   flex: 1 1 16rem;
   min-width: 0;
   font-family: var(--font-mono);

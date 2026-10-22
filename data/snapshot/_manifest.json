@@ -11,11 +11,11 @@
   "status": "ok"
  },
  "eurlex": {
-  "attempted_at": "2026-10-22T17:26:43Z",
-  "fetched_at": "2026-10-22T17:27:23Z",
-  "note": "1252 acts in scope (COD/CNS/APP procedures, date >= 2014-01-01); 0 featured; 1252 with procedure reference",
+  "attempted_at": "2026-10-22T17:35:28Z",
+  "fetched_at": "2026-10-22T17:35:34Z",
+  "note": "1248 acts in scope (COD/CNS/APP procedures, date >= 2014-01-01); 25 featured; 1248 with procedure reference",
   "records": {
-   "acts": 1252
+   "acts": 1248
   },
   "source": "eurlex",
   "status": "ok"

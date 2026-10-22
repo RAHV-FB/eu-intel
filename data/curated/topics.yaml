@@ -1,0 +1,122 @@
+# Topic taxonomy for browsing and search.
+#
+# `ep_subjects` are code prefixes from the European Parliament's subject classification as used by the
+# Legislative Observatory (OEIL) and the EP procedure records (e.g. "3.30.06 Information and
+# communication technologies, digital technologies"). The labels quoted in the comments are the
+# official OEIL labels, taken from the OEIL search facets
+# (https://oeil.europarl.europa.eu/oeil/en/search/facets, retrieved 2026-10-22).
+#
+# Matching rule: a procedure belongs to a topic if any of its subject codes equals a listed prefix or
+# starts with the prefix followed by "." (so "3.30" matches "3.30.06" but not "3.300").
+# A procedure may belong to several topics; topics overlap on purpose where the official label fits
+# more than one everyday theme. Curated items (featured.yaml) set their topics explicitly.
+#
+# `search_aliases` are everyday words people type; they point a query at this topic.
+
+- slug: tech
+  label: "Technology & AI"
+  description: "Digital services and platforms, artificial intelligence, data, telecoms, cybersecurity and research."
+  ep_subjects:
+    - "3.30"      # Information and communications in general (incl. 3.30.06 ICT/digital, 3.30.07 Cybersecurity, 3.30.25 Internet)
+    - "3.40.06"   # Electronics, electrotechnical industries, ICT, robotics
+    - "3.50"      # Research and technological development and space
+  search_aliases: ["AI", "artificial intelligence", "digital", "internet", "online", "platforms", "social media", "apps", "data", "cybersecurity", "telecoms", "tech", "algorithms", "chatbots", "robotics", "space"]
+
+- slug: economy
+  label: "Economy & Trade"
+  description: "Single market, competition, finance and banking, taxation, industry, business rules, the euro, trade and the EU budget."
+  ep_subjects:
+    - "2.10"      # Free movement of goods
+    - "2.40"      # Free movement of services, freedom to provide
+    - "2.50"      # Free movement of capital (banks, financial markets, payments, insurance)
+    - "2.60"      # Competition
+    - "2.70"      # Taxation
+    - "2.80"      # Cooperation between administrations
+    - "3.40"      # Industrial policy
+    - "3.45"      # Enterprise policy, inter-company cooperation
+    - "3.50.15"   # Intellectual property, copyright
+    - "3.50.16"   # Industrial property, European patent, Community patent, design and pattern
+    - "5"         # Economic and monetary system
+    - "6.20"      # Common commercial policy in general
+    - "8.70"      # Budget of the Union
+  search_aliases: ["economy", "trade", "tariffs", "business", "companies", "banks", "finance", "taxes", "tax", "VAT", "euro", "competition", "industry", "investment", "budget", "single market", "SMEs", "red tape", "simplification"]
+
+- slug: environment
+  label: "Environment & Energy"
+  description: "Climate, nature and biodiversity, pollution, waste and packaging, and energy policy."
+  ep_subjects:
+    - "3.70"      # Environmental policy
+    - "3.60"      # Energy policy
+  search_aliases: ["climate", "climate change", "emissions", "CO2", "carbon", "environment", "nature", "biodiversity", "pollution", "waste", "plastic", "recycling", "energy", "renewables", "gas", "electricity", "green deal", "deforestation"]
+
+- slug: migration
+  label: "Migration & Borders"
+  description: "Asylum, migration, returns, visas, external borders and the Schengen area."
+  ep_subjects:
+    - "7.10"      # Free movement and integration of third-country nationals (incl. 7.10.02 Schengen, 7.10.04 Borders/visas, 7.10.06 Asylum, 7.10.08 Migration policy)
+  search_aliases: ["migration", "migrants", "asylum", "refugees", "borders", "Schengen", "visas", "returns", "deportation", "Frontex", "migration pact"]
+
+- slug: agriculture
+  label: "Agriculture & Food"
+  description: "Farming and the common agricultural policy, fisheries, and food safety."
+  ep_subjects:
+    - "3.10"      # Agricultural policy and economies
+    - "3.15"      # Fisheries policy
+    - "4.60.04.04"  # Food safety
+  search_aliases: ["farmers", "farming", "agriculture", "CAP", "food", "fisheries", "fishing", "pesticides", "GMO", "gene editing", "animal welfare", "livestock", "crops", "rural"]
+
+- slug: rights
+  label: "Rights & Justice"
+  description: "Fundamental rights, privacy and data protection, equality, media freedom, democracy and judicial cooperation."
+  ep_subjects:
+    - "1"         # European citizenship (1.10 Fundamental rights in the EU, Charter; 1.20 Citizen's rights incl. 1.20.09 Protection of privacy and data protection)
+    - "3.30.08"   # Press, media freedom and pluralism
+    - "4.10.04"   # Gender equality
+    - "4.10.08"   # Equal treatment of persons, non-discrimination
+    - "4.10.09"   # Women condition and rights
+    - "6.10.08"   # Fundamental freedoms, human rights, democracy in general
+    - "7.30.08"   # Action to combat racism and xenophobia
+    - "7.40"      # Judicial cooperation
+    - "7.90"      # Justice and home affairs
+  search_aliases: ["rights", "human rights", "privacy", "data protection", "justice", "courts", "equality", "discrimination", "democracy", "elections", "media freedom", "journalists", "rule of law", "women's rights"]
+
+- slug: security
+  label: "Security & Defence"
+  description: "Defence and the defence industry, foreign and security policy, police cooperation, crime and terrorism, civil protection and cybersecurity."
+  ep_subjects:
+    - "3.40.09"   # Defence and arms industry
+    - "6.10.01"   # Foreign and common diplomatic policy
+    - "6.10.02"   # Common security and defence policy (CSDP); WEU, NATO
+    - "6.10.03"   # Armaments control, non-proliferation nuclear weapons
+    - "6.10.04"   # Third-country political situation, local and regional conflicts
+    - "6.10.05"   # Peace preservation, humanitarian and rescue tasks, crisis management
+    - "7.30"      # Police, judicial and customs cooperation in general (terrorism, crime, Europol)
+    - "4.30"      # Civil protection
+    - "3.30.07"   # Cybersecurity, cyberspace policy
+  search_aliases: ["defence", "defense", "security", "military", "weapons", "army", "NATO", "Ukraine", "police", "crime", "terrorism", "Europol", "cyber attacks", "child abuse", "drug trafficking", "organised crime"]
+
+- slug: transport
+  label: "Transport"
+  description: "Road, rail, air and maritime transport, vehicles, driving licences, transport safety and networks."
+  ep_subjects:
+    - "3.20"      # Transport policy in general
+    - "3.40.03"   # Motor industry, cycle and motorcycle, commercial and agricultural vehicles
+  search_aliases: ["transport", "cars", "car", "vehicles", "electric cars", "trucks", "driving licence", "roads", "rail", "trains", "aviation", "flights", "air passengers", "shipping", "ports", "mobility"]
+
+- slug: social
+  label: "Employment & Social Policy"
+  description: "Work and employment, workers' rights, wages, social protection, inclusion, pensions and education and training."
+  ep_subjects:
+    - "4.10"      # Social policy, social charter and protocol
+    - "4.15"      # Employment policy, action to combat unemployment
+    - "2.30"      # Free movement of workers
+    - "4.40"      # Education, vocational training and youth
+  search_aliases: ["jobs", "work", "workers", "employment", "wages", "minimum wage", "pensions", "social security", "unemployment", "gig economy", "platform work", "trade unions", "housing", "poverty", "education", "students", "Erasmus"]
+
+- slug: health
+  label: "Health & Consumers"
+  description: "Public health, medicines, health data, and consumer protection and product safety."
+  ep_subjects:
+    - "4.20"      # Public health
+    - "4.60"      # Consumers' protection in general (incl. 4.60.04.04 Food safety, 4.60.08 Safety of products and services)
+  search_aliases: ["health", "medicines", "drugs", "pharmaceuticals", "hospitals", "patients", "doctors", "tobacco", "consumers", "consumer rights", "product safety", "labelling", "food safety", "toys", "cosmetics"]

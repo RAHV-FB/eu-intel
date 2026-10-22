@@ -1,0 +1,83 @@
+# General search synonyms: standard abbreviations and official short names used by the EU
+# institutions themselves (EUR-Lex titles, Commission/EP/Council pages). No informal nicknames here;
+# dossier-specific common names live in featured.yaml `aliases`, each with its own justification.
+#
+# Semantics: when a query token/phrase matches one of `terms` (case-insensitive, whole word/phrase),
+# search also matches the phrases in `expands_to`. Expansion is one-directional and not recursive.
+
+# ------------------------------------------------------------------ institutions & procedure
+- {terms: ["eu"], expands_to: ["european union"]}
+- {terms: ["ep", "europarl"], expands_to: ["european parliament"]}
+- {terms: ["mep", "meps"], expands_to: ["member of the european parliament"]}
+- {terms: ["cjeu"], expands_to: ["court of justice of the european union"]}
+- {terms: ["ecb"], expands_to: ["european central bank"]}
+- {terms: ["oj", "ojeu"], expands_to: ["official journal of the european union"]}
+- {terms: ["olp", "codecision", "cod"], expands_to: ["ordinary legislative procedure"]}
+- {terms: ["trilogue", "trilogues"], expands_to: ["interinstitutional negotiations", "provisional agreement"]}
+- {terms: ["qmv"], expands_to: ["qualified majority"]}
+- {terms: ["mff"], expands_to: ["multiannual financial framework"]}
+- {terms: ["cwp"], expands_to: ["commission work programme"]}
+
+# ------------------------------------------------------------------------ digital & data
+- {terms: ["ai"], expands_to: ["artificial intelligence"]}
+- {terms: ["gdpr"], expands_to: ["general data protection regulation", "protection of natural persons with regard to the processing of personal data"]}
+- {terms: ["dsa"], expands_to: ["digital services act", "single market for digital services"]}
+- {terms: ["dma"], expands_to: ["digital markets act", "contestable and fair markets in the digital sector"]}
+- {terms: ["cra"], expands_to: ["cyber resilience act", "horizontal cybersecurity requirements for products with digital elements"]}
+- {terms: ["nis2", "nis 2"], expands_to: ["high common level of cybersecurity across the union"]}
+- {terms: ["emfa"], expands_to: ["european media freedom act"]}
+- {terms: ["ehds"], expands_to: ["european health data space"]}
+- {terms: ["dora"], expands_to: ["digital operational resilience"]}
+- {terms: ["mica"], expands_to: ["markets in crypto-assets"]}
+- {terms: ["eprivacy", "e-privacy"], expands_to: ["privacy and electronic communications"]}
+- {terms: ["csam"], expands_to: ["child sexual abuse material", "child sexual abuse"]}
+
+# ------------------------------------------------------------------- climate, energy, nature
+- {terms: ["ets", "eu ets"], expands_to: ["emissions trading system", "greenhouse gas emission allowance trading"]}
+- {terms: ["ets2"], expands_to: ["emissions trading system for buildings, road transport and additional sectors"]}
+- {terms: ["cbam"], expands_to: ["carbon border adjustment mechanism"]}
+- {terms: ["ghg"], expands_to: ["greenhouse gas"]}
+- {terms: ["co2"], expands_to: ["carbon dioxide", "co2 emission"]}
+- {terms: ["lulucf"], expands_to: ["land use, land use change and forestry"]}
+- {terms: ["esr"], expands_to: ["effort sharing"]}
+- {terms: ["red ii", "red iii"], expands_to: ["renewable energy directive", "promotion of the use of energy from renewable sources"]}
+- {terms: ["epbd"], expands_to: ["energy performance of buildings"]}
+- {terms: ["afir"], expands_to: ["alternative fuels infrastructure"]}
+- {terms: ["eudr"], expands_to: ["deforestation regulation", "deforestation and forest degradation"]}
+- {terms: ["nrl"], expands_to: ["nature restoration"]}
+- {terms: ["ppwr"], expands_to: ["packaging and packaging waste"]}
+- {terms: ["nzia"], expands_to: ["net-zero industry act", "net zero industry act"]}
+- {terms: ["crma"], expands_to: ["critical raw materials act", "critical raw materials"]}
+
+# ------------------------------------------------------------- companies, finance, economy
+- {terms: ["csrd"], expands_to: ["corporate sustainability reporting directive", "corporate sustainability reporting"]}
+- {terms: ["csddd", "cs3d"], expands_to: ["corporate sustainability due diligence directive", "corporate sustainability due diligence"]}
+- {terms: ["esrs"], expands_to: ["european sustainability reporting standards"]}
+- {terms: ["esg"], expands_to: ["environmental, social and governance", "sustainability"]}
+- {terms: ["sfdr"], expands_to: ["sustainability-related disclosures in the financial services sector"]}
+- {terms: ["sme", "smes"], expands_to: ["small and medium-sized enterprises"]}
+- {terms: ["vat"], expands_to: ["value added tax"]}
+- {terms: ["aml", "amla"], expands_to: ["anti-money laundering", "money laundering"]}
+- {terms: ["cbdc"], expands_to: ["central bank digital currency", "digital euro"]}
+- {terms: ["psd", "psd3", "psr"], expands_to: ["payment services"]}
+
+# ---------------------------------------------------------------- migration, security, defence
+- {terms: ["ceas"], expands_to: ["common european asylum system"]}
+- {terms: ["ammr"], expands_to: ["asylum and migration management"]}
+- {terms: ["apr"], expands_to: ["asylum procedure", "common procedure for international protection"]}
+- {terms: ["ees"], expands_to: ["entry/exit system", "entry exit system"]}
+- {terms: ["etias"], expands_to: ["european travel information and authorisation system"]}
+- {terms: ["pnr"], expands_to: ["passenger name record"]}
+- {terms: ["edip"], expands_to: ["european defence industry programme"]}
+- {terms: ["safe instrument", "safe regulation"], expands_to: ["security action for europe"]}
+- {terms: ["csdp"], expands_to: ["common security and defence policy"]}
+- {terms: ["cfsp"], expands_to: ["common foreign and security policy"]}
+
+# --------------------------------------------------------------- agriculture, food, health
+- {terms: ["cap"], expands_to: ["common agricultural policy"]}
+- {terms: ["cfp"], expands_to: ["common fisheries policy"]}
+- {terms: ["gmo", "gmos"], expands_to: ["genetically modified organisms", "genetically modified"]}
+- {terms: ["ngt", "ngts"], expands_to: ["new genomic techniques"]}
+- {terms: ["sur"], expands_to: ["sustainable use of plant protection products"]}
+- {terms: ["pesticides"], expands_to: ["plant protection products"]}
+- {terms: ["ema"], expands_to: ["european medicines agency"]}

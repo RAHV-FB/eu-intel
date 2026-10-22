@@ -3,6 +3,7 @@ import type { EpVoteSummary, VoteKind, VoteMargin, VoteOutcome } from '../../typ
 import { Term, VoteBar } from '../../components/ui';
 import { formatDate, formatNumber } from '../../lib/format';
 import { CLOSE_RELATIVE, KIND_EXPLAINER, KIND_LABEL, OUTCOME_ICON, OUTCOME_LABEL, isClose, outcomeTone } from './labels';
+import './common.css';
 import './votes.css';
 
 export function OutcomeBadge({ outcome }: { outcome: VoteOutcome }) {

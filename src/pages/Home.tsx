@@ -8,6 +8,7 @@ import { FeaturedCard } from '../features/home/FeaturedCard';
 import { HomeLists } from '../features/home/HomeLists';
 import { TopicGrid } from '../features/home/TopicGrid';
 import { useDocumentTitle } from '../features/legislation/labels';
+import '../features/legislation/common.css';
 import '../features/home/home.css';
 
 const EXAMPLES = ['AI Act', 'Migration', 'GDPR', 'Spain', 'EPP', 'Agriculture', 'Digital markets', 'Climate'];
@@ -27,26 +28,26 @@ export default function Home() {
 
   return (
     <div className="home">
-      <section className="hero" aria-labelledby="hero-title">
+      <section className="home-hero" aria-labelledby="hero-title">
         <div className="container">
-          <h1 id="hero-title" className="hero__title">
+          <h1 id="hero-title" className="home-hero__title">
             European legislation, made clear.
           </h1>
-          <p className="hero__lead">
+          <p className="home-hero__lead">
             What the EU is deciding, where each law stands, who voted for it and what happens next — in plain
             language, with every fact linked to the official record.
           </p>
-          <div className="hero__search">
+          <div className="home-hero__search">
             <SearchBox placeholder="Search a law, topic, MEP, party or country…" />
           </div>
-          <div className="hero__examples">
-            <span className="hero__try" id="try-label">
+          <div className="home-hero__examples">
+            <span className="home-hero__try" id="try-label">
               Try
             </span>
             <ul aria-labelledby="try-label">
               {EXAMPLES.map((q) => (
                 <li key={q}>
-                  <Link className="chip" to={`/search?q=${encodeURIComponent(q)}`}>
+                  <Link className="lx-chip" to={`/search?q=${encodeURIComponent(q)}`}>
                     {q}
                   </Link>
                 </li>
@@ -63,17 +64,17 @@ export default function Home() {
 
         {featured.length > 0 && (
           <section className="section home__featured" aria-labelledby="featured-title">
-            <div className="section-head">
+            <div className="lx-head">
               <div>
-                <p className="section-kicker">Editorial selection</p>
+                <p className="lx-kicker">Editorial selection</p>
                 <h2 id="featured-title">Selected major legislation</h2>
               </div>
-              <p className="section-head__note">
+              <p className="lx-head__note">
                 Chosen by our editors for public interest, not ranked.{' '}
                 <Link to="/about#selection">How we select</Link>. Status and dates come from official records.
               </p>
             </div>
-            <div className="features">
+            <div className="fcards">
               {featured.slice(0, 6).map((f) => (
                 <FeaturedCard key={f.dossier.id} item={f} topicLabel={topicLabel} />
               ))}
@@ -83,12 +84,12 @@ export default function Home() {
 
         {lists.length > 0 && (
           <section className="section" aria-labelledby="lists-title">
-            <div className="section-head">
+            <div className="lx-head">
               <div>
-                <p className="section-kicker">From the official records</p>
+                <p className="lx-kicker">From the official records</p>
                 <h2 id="lists-title">What’s moving</h2>
               </div>
-              <p className="section-head__note">
+              <p className="lx-head__note">
                 Generated automatically from Parliament, Council and EUR-Lex data. Each item links to its source.
               </p>
             </div>
@@ -98,11 +99,11 @@ export default function Home() {
 
         {topics.length > 0 && (
           <section className="section" aria-labelledby="topics-title">
-            <div className="section-head">
+            <div className="lx-head">
               <div>
                 <h2 id="topics-title">Explore by topic</h2>
               </div>
-              <p className="section-head__note">
+              <p className="lx-head__note">
                 Each topic page is a shareable, filterable list — bookmark it to track a policy area.
               </p>
             </div>
@@ -129,8 +130,8 @@ function Freshness({ meta }: { meta: Meta | undefined }) {
   if (!meta) return null;
   const c = meta.counts;
   return (
-    <p className="hero__fresh">
-      <span className="hero__fresh-dot" aria-hidden="true" />
+    <p className="home-hero__fresh">
+      <span className="home-hero__fresh-dot" aria-hidden="true" />
       Data refreshed {formatDateTime(meta.snapshot_at ?? meta.built_at)}
       {c?.dossiers ? <> · {formatNumber(c.dossiers)} legislative files</> : null}
       {c?.ep_votes ? <> · {formatNumber(c.ep_votes)} Parliament votes</> : null} ·{' '}

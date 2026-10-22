@@ -1,0 +1,116 @@
+import { useId, useState } from 'react';
+import { Link } from 'react-router-dom';
+import type { ActivityItem, ISODate, TimelineEvent } from '../../../types/data';
+import { EmptyState, ExtLink, SourceLink, institutionLabel } from '../../../components/ui';
+import { formatDate, formatDateTime, safeUrl } from '../../../lib/format';
+
+const INSTITUTION_SHORT: Record<string, string> = {
+  EP: 'Parliament',
+  Council: 'Council',
+  'European Council': 'European Council',
+  Commission: 'Commission',
+  'EUR-Lex': 'Official Journal / EUR-Lex',
+  OEIL: 'Legislative Observatory',
+  LegislativeTrain: 'Legislative Train',
+  CJEU: 'Court of Justice',
+};
+
+function EventItem({ e, today }: { e: TimelineEvent; today: ISODate }) {
+  const scheduled = e.state === 'scheduled' || e.date > today;
+  const docs = e.docs ?? [];
+  return (
+    <li className={`tl__item${scheduled ? ' is-scheduled' : ''}${e.key ? ' is-key' : ''}`}>
+      <span className="tl__mark" aria-hidden="true" />
+      <div className="tl__date">
+        <time dateTime={e.date}>{formatDate(e.date)}</time>
+        {scheduled && <span className="tl__sched">Scheduled</span>}
+      </div>
+      <div className="tl__body">
+        <p className="tl__title">{e.title}</p>
+        <p className="tl__inst" title={institutionLabel(e.institution)}>
+          {INSTITUTION_SHORT[e.institution] ?? institutionLabel(e.institution)}
+        </p>
+        {e.detail && <p className="tl__detail">{e.detail}</p>}
+        {(docs.length > 0 || e.vote_id || e.source) && (
+          <div className="tl__links">
+            {e.vote_id && (
+              <Link to={`/votes/${encodeURIComponent(e.vote_id)}`} className="tl__vote">
+                How MEPs voted →
+              </Link>
+            )}
+            {docs.length > 0 && (
+              <ul className="tl__docs" aria-label="Documents">
+                {docs.map((doc) => (
+                  <li key={doc.id}>
+                    {safeUrl(doc.url) ? (
+                      <ExtLink href={doc.url}>{doc.label || doc.id}</ExtLink>
+                    ) : (
+                      <span className="mono">{doc.label || doc.id}</span>
+                    )}
+                    {doc.label && doc.label !== doc.id && <span className="meta mono"> {doc.id}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {e.source && <SourceLink source={e.source} />}
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+export function Timeline({ events, changes, today }: { events: TimelineEvent[]; changes: ActivityItem[]; today: ISODate }) {
+  const [all, setAll] = useState(false);
+  const listId = useId();
+  const keyEvents = events.filter((e) => e.key || e.state === 'scheduled');
+  const hasToggle = keyEvents.length > 0 && keyEvents.length < events.length;
+  const shown = all || !hasToggle ? events : keyEvents;
+
+  return (
+    <section className="dz-section" id="timeline" aria-labelledby="timeline-title">
+      <h2 id="timeline-title">Timeline</h2>
+      <p className="dz-intro">
+        Steps recorded in the official procedure file and in EUR-Lex.{' '}
+        {hasToggle && !all ? 'Showing key milestones. ' : ''}
+        Not every law goes through every step: many are agreed at Parliament’s first reading, some never reach a vote.
+      </p>
+      {events.length === 0 ? (
+        <EmptyState title="No dated steps are recorded for this file." />
+      ) : (
+        <>
+          <ol className="tl" id={listId}>
+            {shown.map((e) => (
+              <EventItem key={e.id} e={e} today={today} />
+            ))}
+          </ol>
+          {hasToggle && (
+            <button type="button" className="btn tl__toggle" aria-controls={listId} aria-expanded={all} onClick={() => setAll((a) => !a)}>
+              {all ? 'Show key milestones only' : `Show all ${events.length} recorded events`}
+            </button>
+          )}
+        </>
+      )}
+
+      {changes.length > 0 && (
+        <div className="dz-changes">
+          <h3>Changes detected since earlier data refreshes</h3>
+          <ul>
+            {changes.slice(0, 10).map((c) => (
+              <li key={c.id}>
+                <time dateTime={c.date}>{formatDate(c.date)}</time> — {c.title}
+                {c.detected_at && <span className="meta"> (first recorded by us {formatDateTime(c.detected_at)})</span>}
+                {c.source && (
+                  <>
+                    {' '}
+                    <SourceLink source={c.source} />
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}

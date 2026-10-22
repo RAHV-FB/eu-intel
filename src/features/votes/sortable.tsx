@@ -3,6 +3,7 @@
  * Used by votes, people and countries features.
  */
 import { useMemo, useState, type ReactNode } from 'react';
+import './common.css';
 
 export type SortDir = 'asc' | 'desc';
 export interface SortState<K extends string> {

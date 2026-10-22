@@ -1,0 +1,249 @@
+{
+ "pageNumber": null,
+ "pageSize": null,
+ "totalRows": 6,
+ "records": [
+  {
+   "infringementNumber": "INFR(2021)0330",
+   "memberState": "Portugal",
+   "leadDg": "Communications Networks, Content and Technology",
+   "caseType": "Non-communication of transposition measures for directives",
+   "title": "Lack of transposition by Portugal of Directive (EU) 2019/790 on copyright and related rights in the Digital Single Market ",
+   "activeInfringementCase": "No",
+   "nonCommunicationCase": "Yes",
+   "policyAreas": null,
+   "decisions": [
+    {
+     "decisionDate": "23/07/2021",
+     "decisionType": "Formal notice Art. 258-260(3) TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": null,
+     "memoURL": null,
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "19/05/2022",
+     "decisionType": "Reasoned opinion Art. 258-260(3) TFEU",
+     "pressRelease": "IP/22/2692",
+     "pressReleaseURL": "https://ec.europa.eu/commission/presscorner/detail/EN/IP_22_2692",
+     "memo": "inf_22_2548",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/inf_22_2548",
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "15/02/2023",
+     "decisionType": "Referral to Court Art. 258 TFEU  - 260(3) TFEU",
+     "pressRelease": "IP/23/704",
+     "pressReleaseURL": "https://ec.europa.eu/commission/presscorner/detail/EN/IP_23_704",
+     "memo": "inf_23_525",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/inf_23_525",
+     "normalCuriaReference": "C-211/23",
+     "normalCuriaReferenceURL": "https://curia.europa.eu/juris/liste.jsf?num=C-211/23"
+    },
+    {
+     "decisionDate": "11/12/2025",
+     "decisionType": "Closing of the case",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": null,
+     "memoURL": null,
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    }
+   ]
+  },
+  {
+   "infringementNumber": "INFR(2024)0279",
+   "memberState": "Ireland",
+   "leadDg": "Communications Networks, Content and Technology",
+   "caseType": "Non-communication of transposition measures for directives",
+   "title": "Lack of transposition of Directive (EU) 2022/2555 on measures for a high common level of cybersecurity across the Union by Ireland",
+   "activeInfringementCase": "Yes",
+   "nonCommunicationCase": "Yes",
+   "policyAreas": null,
+   "decisions": [
+    {
+     "decisionDate": "27/11/2024",
+     "decisionType": "Formal notice Art. 258-260(3) TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": null,
+     "memoURL": null,
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "7/05/2025",
+     "decisionType": "Reasoned opinion Art. 258-260(3) TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": "inf_25_982",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/inf_25_982",
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "8/07/2026",
+     "decisionType": "Referral to Court Art. 258 TFEU  - 260(3) TFEU",
+     "pressRelease": "ip_26_1499",
+     "pressReleaseURL": "https://ec.europa.eu/commission/presscorner/detail/EN/ip_26_1499",
+     "memo": "inf_26_1376",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/inf_26_1376",
+     "normalCuriaReference": "C-1076/26",
+     "normalCuriaReferenceURL": "https://curia.europa.eu/juris/liste.jsf?num=C-1076/26"
+    }
+   ]
+  },
+  {
+   "infringementNumber": "INFR(2019)2137",
+   "memberState": "Poland",
+   "leadDg": "Environment",
+   "caseType": "Bad application of directives",
+   "title": "NATURE – Incomplete Natura 2000 network in Poland",
+   "activeInfringementCase": "Yes",
+   "nonCommunicationCase": "No",
+   "policyAreas": null,
+   "decisions": [
+    {
+     "decisionDate": "25/07/2019",
+     "decisionType": "Formal notice Art. 258 TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": "INF-19-4251",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/INF_19_4251",
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "16/12/2024",
+     "decisionType": "Reasoned opinion Art. 258 TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": "inf_24_6006",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/inf_24_6006",
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    }
+   ]
+  },
+  {
+   "infringementNumber": "INFR(2026)0123",
+   "memberState": "Portugal",
+   "leadDg": "Taxation and Customs Union",
+   "caseType": "Non-communication of transposition measures for directives",
+   "title": "Lack of transposition of Council Directive (EU) 2023/2226 of 17 October 2023 amending Directive 2011/16/EU on administrative cooperation in the field of taxation (DAC8) (first deadline 31 DEC 2025) by Portugal",
+   "activeInfringementCase": "Yes",
+   "nonCommunicationCase": "Yes",
+   "policyAreas": null,
+   "decisions": [
+    {
+     "decisionDate": "29/01/2026",
+     "decisionType": "Formal notice Art. 258-260(3) TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": null,
+     "memoURL": null,
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    }
+   ]
+  },
+  {
+   "infringementNumber": "INFR(2024)0155",
+   "memberState": "Greece",
+   "leadDg": "Mobility and Transport",
+   "caseType": "Non-communication of transposition measures for directives",
+   "title": "Lack of transposition of Directive (EU) 2022/362 - charging of vehicles for the use of certain infrastructures - by Greece",
+   "activeInfringementCase": "Yes",
+   "nonCommunicationCase": "Yes",
+   "policyAreas": null,
+   "decisions": [
+    {
+     "decisionDate": "23/05/2024",
+     "decisionType": "Formal notice Art. 258-260(3) TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": null,
+     "memoURL": null,
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "16/12/2024",
+     "decisionType": "Reasoned opinion Art. 258-260(3) TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": "inf_24_6006",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/inf_24_6006",
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "7/05/2025",
+     "decisionType": "Referral to Court Art. 258 TFEU  - 260(3) TFEU",
+     "pressRelease": "IP/25/1093",
+     "pressReleaseURL": "https://ec.europa.eu/commission/presscorner/detail/EN/IP_25_1093",
+     "memo": "inf_25_982",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/inf_25_982",
+     "normalCuriaReference": "C-443/25",
+     "normalCuriaReferenceURL": "https://curia.europa.eu/juris/liste.jsf?num=C-443/25"
+    }
+   ]
+  },
+  {
+   "infringementNumber": "INFR(2011)2054",
+   "memberState": "United Kingdom",
+   "leadDg": "Justice and Consumers",
+   "caseType": "Non-conformity of transposition for directives",
+   "title": "Comprehensive sickness insurance requirement and treatment of extended family members with prior residence in the UK.",
+   "activeInfringementCase": "Yes",
+   "nonCommunicationCase": "No",
+   "policyAreas": null,
+   "decisions": [
+    {
+     "decisionDate": "16/06/2011",
+     "decisionType": "Formal notice Art. 258 TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": null,
+     "memoURL": null,
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "26/04/2012",
+     "decisionType": "Reasoned opinion Art. 258 TFEU",
+     "pressRelease": "IP-12-417",
+     "pressReleaseURL": "https://ec.europa.eu/commission/presscorner/detail/EN/IP_12_417",
+     "memo": null,
+     "memoURL": null,
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "30/10/2020",
+     "decisionType": "Additional formal notice Art. 258 TFEU",
+     "pressRelease": null,
+     "pressReleaseURL": null,
+     "memo": "INF-20-1687",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/INF_20_1687",
+     "normalCuriaReference": null,
+     "normalCuriaReferenceURL": null
+    },
+    {
+     "decisionDate": "16/12/2024",
+     "decisionType": "Referral to Court Art. 258 TFEU",
+     "pressRelease": "IP/24/6144",
+     "pressReleaseURL": "https://ec.europa.eu/commission/presscorner/detail/EN/IP_24_6144",
+     "memo": "inf_24_6006",
+     "memoURL": "https://ec.europa.eu/commission/presscorner/detail/EN/inf_24_6006",
+     "normalCuriaReference": "C-892/24",
+     "normalCuriaReferenceURL": "https://curia.europa.eu/juris/liste.jsf?num=C-892/24"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,260 @@
+/* Shared building blocks for the votes / people / countries / guide features (Agent F2). */
+
+/* ---------- sortable header ---------- */
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  background: none;
+  border: 0;
+  padding: var(--sp-1) 0;
+  min-height: 2rem;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  font-weight: inherit;
+  text-align: inherit;
+}
+.num .sort-btn {
+  flex-direction: row-reverse;
+}
+.sort-btn:hover {
+  color: var(--eu-blue);
+}
+.sort-btn.is-active {
+  color: var(--eu-blue);
+}
+.sort-btn__icon {
+  font-size: 0.75em;
+  opacity: 0.7;
+}
+
+/* ---------- filter bar ---------- */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+  gap: var(--sp-3) var(--sp-4);
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--sp-4);
+}
+.filters--wide-first > :first-child {
+  grid-column: 1 / -1;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+.field > label,
+.field > .field__label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-2);
+}
+.field .input,
+.field .select {
+  width: 100%;
+  min-width: 0;
+}
+.field--check {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  align-self: end;
+}
+.field--check input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--eu-blue);
+}
+.field--check label {
+  color: var(--text);
+}
+.results-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+.results-bar__count {
+  margin: 0;
+  font-weight: var(--fw-medium);
+}
+.linkish {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  font-size: var(--fs-sm);
+  min-height: 1.5rem;
+}
+
+/* ---------- callouts & notes ---------- */
+.callout {
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 3px solid var(--eu-blue);
+  background: var(--blue-paler);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--text);
+  max-width: 48rem;
+}
+.callout--gold {
+  border-left-color: var(--eu-gold);
+  background: #fffbea;
+}
+.callout > :last-child {
+  margin-bottom: 0;
+}
+.note {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  max-width: 48rem;
+}
+
+/* ---------- segmented navigation (links acting as tabs) ---------- */
+.segnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  padding: var(--sp-1);
+  background: var(--surface-sunk);
+  border-radius: var(--radius-lg);
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: var(--sp-5);
+}
+.segnav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  border-radius: var(--radius);
+  color: var(--text-2);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+.segnav a:hover {
+  color: var(--eu-blue);
+}
+.segnav a[aria-current='page'] {
+  background: var(--surface);
+  color: var(--eu-blue);
+  box-shadow: var(--shadow-sm);
+  font-weight: var(--fw-semibold);
+}
+
+/* ---------- key facts ---------- */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+  gap: var(--sp-4) var(--sp-5);
+  margin: 0;
+}
+.facts dt {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.facts dd {
+  margin: var(--sp-1) 0 0;
+  font-weight: var(--fw-medium);
+}
+.facts dd.big {
+  font-size: var(--fs-lg);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-semibold);
+}
+
+/* ---------- tables ---------- */
+.table caption {
+  text-align: left;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  padding-bottom: var(--sp-2);
+  caption-side: top;
+}
+.table tbody tr:hover {
+  background: var(--blue-paler);
+}
+.table td.nowrap,
+.table th.nowrap {
+  white-space: nowrap;
+}
+.table .muted {
+  color: var(--text-3);
+}
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-2) var(--sp-3);
+}
+.more {
+  margin-top: var(--sp-3);
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- position marks (text + shape + colour) ---------- */
+.pos {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.pos::before {
+  content: '';
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+}
+.pos--for::before {
+  background: var(--vote-for);
+}
+.pos--against::before {
+  background: var(--vote-against);
+}
+.pos--abstain::before {
+  background: var(--vote-abstain);
+}
+.pos--not_participating::before,
+.pos--none::before {
+  border: 1.5px dashed var(--text-3);
+}
+
+.inline-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+.section-head h2 {
+  margin: 0;
+}

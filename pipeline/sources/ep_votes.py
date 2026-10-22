@@ -18,7 +18,7 @@ SOURCE_ID = "ep_votes"
 FMT = {"format": "application/ld+json"}
 FIRST_SITTING = "2019-07-02"  # first sitting of the 9th term
 WORKERS = 2  # the API is shared with other sources and allows 500 requests / 5 min per endpoint
-MIN_GAP_S = 1.5  # per worker, between two requests that actually hit the network
+MIN_GAP_S = 2.5  # per worker, between two requests that actually hit the network (<= 0.8 req/s)
 FRESH_DAYS = 30  # sittings this recent are always re-fetched (late corrections, newly published votes)
 PROCESS_TYPES = (
     "ACI APP AVC BUD CNS COD DEC NLE SYN BUI COS DEA DCE IMM INI INL INS REG RPS RSO RSP GBD".split()

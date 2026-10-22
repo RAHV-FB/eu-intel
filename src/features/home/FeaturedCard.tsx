@@ -9,16 +9,16 @@ export function FeaturedCard({ item, topicLabel }: { item: FeaturedItem; topicLa
   const d = item.dossier;
   const topic = d.topics[0];
   return (
-    <article className="feature">
-      <div className="feature__top">
+    <article className="fcard">
+      <div className="fcard__top">
         <StatusBadge stage={item.status.stage} label={item.status.label} blocked={d.officially_blocked} />
-        {topic && <span className="feature__topic">{topicLabel(topic)}</span>}
+        {topic && <span className="fcard__topic">{topicLabel(topic)}</span>}
       </div>
-      <h3 className="feature__title">
+      <h3 className="fcard__title">
         <Link to={dossierPath(d.id)}>{d.title}</Link>
       </h3>
-      <p className="feature__what">{item.what}</p>
-      <dl className="feature__facts">
+      <p className="fcard__what">{item.what}</p>
+      <dl className="fcard__facts">
         {item.why && (
           <div>
             <dt>Why it matters</dt>
@@ -47,9 +47,9 @@ export function FeaturedCard({ item, topicLabel }: { item: FeaturedItem; topicLa
           </dd>
         </div>
       </dl>
-      <div className="feature__foot">
+      <div className="fcard__foot">
         <SourceLink source={item.source} />
-        <Link to={dossierPath(d.id)} className="feature__more">
+        <Link to={dossierPath(d.id)} className="fcard__more">
           Full details<span className="visually-hidden"> on {d.title}</span> →
         </Link>
       </div>
