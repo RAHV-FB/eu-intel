@@ -133,6 +133,8 @@ export interface DossierSummary {
   status_label: string; // "Approved by Parliament", "In force", ...
   started?: ISODate | null; // proposal date
   last_event?: ISODate | null;
+  adopted?: ISODate | null; // formal adoption (signature) date of the final act; publication date if that's all we have
+  next_date?: ISODate | null; // earliest legally fixed future date (application / transposition deadline), if any
   instrument?: LegalInstrument | null; // final act type if adopted, or proposed instrument if known
   celex: string[];
   featured: boolean;
