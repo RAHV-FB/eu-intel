@@ -197,6 +197,11 @@ hr {
   gap: var(--sp-5);
 }
 
+/* Grid children may shrink so wide tables scroll inside .table-wrap instead of widening the page. */
+.grid > * {
+  min-width: 0;
+}
+
 @media (min-width: 48rem) {
   .grid--2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -303,6 +308,7 @@ hr {
 }
 
 .table-wrap {
+  position: relative; /* contain .visually-hidden text in cells so it scrolls with the table */
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }

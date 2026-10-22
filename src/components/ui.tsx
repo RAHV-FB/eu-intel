@@ -217,7 +217,7 @@ export function VoteBar({
   const total = f + a + x;
   if (forCount == null && against == null) return <span className="meta">Vote counts not recorded</span>;
   const w = (n: number) => (total ? `${(n / total) * 100}%` : '0');
-  const desc = `${label ? label + ': ' : ''}${formatNumber(f)} for, ${formatNumber(a)} against, ${formatNumber(x)} abstentions`;
+  const desc = `${label ? label + ': ' : ''}${formatNumber(f)} for, ${formatNumber(x)} abstentions, ${formatNumber(a)} against`;
   return (
     <div className={`votebar${compact ? ' votebar--compact' : ''}`}>
       <div className="votebar__track" role="img" aria-label={desc}>
@@ -231,12 +231,12 @@ export function VoteBar({
           <b>{formatNumber(f)}</b> for
         </span>
         <span>
-          <i className="dot dot--against" />
-          <b>{formatNumber(a)}</b> against
-        </span>
-        <span>
           <i className="dot dot--abstain" />
           <b>{formatNumber(x)}</b> abstained
+        </span>
+        <span>
+          <i className="dot dot--against" />
+          <b>{formatNumber(a)}</b> against
         </span>
       </div>
     </div>

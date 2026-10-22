@@ -334,8 +334,8 @@ export interface CouncilAssessment {
   rule: 'qmv' | 'unanimity' | 'simple_majority';
   states_for: number;
   states_required: number;
-  population_for_pct?: number | null;
-  population_required_pct?: number | null;
+  population_for_pct?: number | null; // percentage 0–100 of the EU population (participating states)
+  population_required_pct?: number | null; // percentage 0–100, e.g. 65
   adopted_by_rule?: boolean | null;
   blocking_minority_existed?: boolean | null;
   single_state_veto_possible: boolean; // true only under unanimity
