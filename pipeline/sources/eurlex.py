@@ -42,10 +42,12 @@ Source facts relied on (checked against the live endpoint, see tests/test_eurlex
 - `cdm:resource_legal_date_end-of-validity` may hold several values (provisions expiring at
   different dates); the act's end of validity is the latest one, None when it is 9999-12-31.
 - amends / amended_by: `cdm:resource_legal_amends_resource_legal` (both directions). repeals /
-  repealed_by: `cdm:resource_legal_repeals_resource_legal` for whole-act repeals only - a link whose
-  OWL axiom has `annotation:reference_to_modified_location` (an article/annex) is a partial repeal
-  and is left out, as are "implicit repeals" (`..._implicitly_repeals_...`: e.g. the amending acts
-  of a repealed act, or GDPR -> one annex point of Regulation 1882/2003).
+  repealed_by: `cdm:resource_legal_repeals_resource_legal` for whole-act repeals only. A link is a
+  partial repeal (left out) when every OWL axiom on it names a modified location
+  (`annotation:reference_to_modified_location`, an article/annex) or has role fd_375 "AP" (Partial
+  repeal) - e.g. the MDR 32017R0745 -> Directive 93/42/EEC. "Implicit repeals"
+  (`..._implicitly_repeals_...`: e.g. the amending acts of a repealed act, or GDPR -> one annex
+  point of Regulation 1882/2003) are left out too.
 - Linked works are mapped to their CELEX id; only base-act ids are kept (corrigenda "…R(01)" and
   consolidated versions "0…" are dropped) and works without a CELEX id are skipped.
 """
@@ -75,7 +77,7 @@ MIN_DOCUMENT_DATE = "2014-01-01"
 PROCEDURE_TYPES = ("COD", "CNS", "APP")  # legislative / special legislative procedures
 WORKERS = 4
 BATCH = 60
-SCOPE_PAGE = 2000
+SCOPE_PAGE = 1000
 MAX_FAILED_SHARE = 0.05  # more dropped acts than this -> fail the source (keep previous snapshot)
 FEATURED_FILE = CURATED / "featured.yaml"
 
@@ -113,7 +115,6 @@ EFFECT_TYPES = ("PE",)  # date of effect (decisions addressed to Member States: 
 PROPS = {
     "resource_legal_id_celex": "celex",
     "resource_legal_eli": "eli",
-    "resource_legal_type": "type_letter",
     "work_has_resource-type": "resource_type",
     "work_date_document": "date_document",
     "resource_legal_date_signature": "date_signature",
@@ -162,13 +163,9 @@ def _real_dates(values: Iterable[str]) -> list[str]:
     return sorted({d for v in values if (d := _date(v)) and d not in PLACEHOLDER_DATES})
 
 
-def _suffix(uri: str) -> str:
-    return uri.rstrip("/").rsplit("/", 1)[-1]
-
-
 def _authority_code(uri: str) -> str:
     """Last path segment of an authority-table IRI, e.g. ".../fd_335/EV" -> "EV"."""
-    return _suffix(uri)
+    return uri.rstrip("/").rsplit("/", 1)[-1]
 
 
 def _annotation_code(value: str) -> str:
@@ -329,18 +326,19 @@ def subjects_query(works: list[str]) -> str:
 
 
 def relations_query(works: list[str]) -> str:
-    """Amend/repeal links in both directions. ?partial: the link's OWL axiom names a modified
-    location (article, annex point...), i.e. only part of the target is concerned."""
-    partial = """BIND(EXISTS {{ ?ax owl:annotatedSource {s} ; owl:annotatedProperty {p} ;
-      owl:annotatedTarget {o} ; ann:reference_to_modified_location ?loc }} AS ?partial)"""
+    """Amend/repeal links in both directions. For repeal links also the link's OWL axioms: whether
+    each names a modified location (article, annex point...) and its role (fd_375 A = repeal,
+    AP = partial repeal)."""
     rep = "cdm:resource_legal_repeals_resource_legal"
+    axiom = """OPTIONAL {{ ?ax owl:annotatedSource {s} ; owl:annotatedProperty {p} ; owl:annotatedTarget {o} .
+      OPTIONAL {{ ?ax ann:reference_to_modified_location ?loc }} OPTIONAL {{ ?ax ann:role2 ?role }} }}"""
     return (
         PREFIXES
-        + f"""SELECT DISTINCT ?w ?rel ?celex ?partial WHERE {{ {_values(works)}
+        + f"""SELECT DISTINCT ?w ?rel ?celex ?ax ?loc ?role WHERE {{ {_values(works)}
   {{ ?w cdm:resource_legal_amends_resource_legal ?x BIND("amends" AS ?rel) }}
   UNION {{ ?x cdm:resource_legal_amends_resource_legal ?w BIND("amended_by" AS ?rel) }}
-  UNION {{ ?w {rep} ?x BIND("repeals" AS ?rel) {partial.format(s="?w", p=rep, o="?x")} }}
-  UNION {{ ?x {rep} ?w BIND("repealed_by" AS ?rel) {partial.format(s="?x", p=rep, o="?w")} }}
+  UNION {{ ?w {rep} ?x BIND("repeals" AS ?rel) {axiom.format(s="?w", p=rep, o="?x")} }}
+  UNION {{ ?x {rep} ?w BIND("repealed_by" AS ?rel) {axiom.format(s="?x", p=rep, o="?w")} }}
   ?x cdm:resource_legal_id_celex ?celex .
 }}"""
     )
@@ -358,6 +356,8 @@ class Facts:
     procedure_refs: set[tuple[str, str]] = field(default_factory=set)  # (reference, type concept or "")
     subjects: dict[tuple[str, str], str | None] = field(default_factory=dict)
     relations: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
+    # (rel, celex) -> {axiom id -> (names a modified location, role codes)} for repeal links
+    repeal_axioms: dict[tuple[str, str], dict[str, tuple[bool, set[str]]]] = field(default_factory=dict)
 
 
 PROP_KEYS = {CDM + k: v for k, v in PROPS.items()} | {
@@ -406,12 +406,23 @@ def add_subjects(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
 
 
 def add_relations(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
-    """Partial repeals (a repeal link limited to a modified location) are not whole-act repeals and
-    are left out; every amendment is kept (amendments are partial by nature)."""
     for r in rows:
-        if r["rel"] in ("repeals", "repealed_by") and r.get("partial", "0").lower() in ("1", "true"):
+        f = facts[r["w"]]
+        if r["rel"] in ("amends", "amended_by"):
+            f.relations[r["rel"]].add(r["celex"])
             continue
-        facts[r["w"]].relations[r["rel"]].add(r["celex"])
+        axioms = f.repeal_axioms.setdefault((r["rel"], r["celex"]), {})
+        if r.get("ax"):
+            located, roles = axioms.get(r["ax"], (False, set()))
+            if r.get("role"):
+                roles = roles | {_annotation_code(r["role"])}
+            axioms[r["ax"]] = (located or bool(r.get("loc")), roles)
+
+
+def whole_repeal(axioms: dict[str, tuple[bool, set[str]]]) -> bool:
+    """A repeal link is a whole-act repeal unless every annotation on it limits it to a modified
+    location (article, annex point...) or classifies it as a partial repeal (role AP)."""
+    return not axioms or any(not located and "AP" not in roles for located, roles in axioms.values())
 
 
 # Query kinds: (name, query builder, accumulator)
@@ -478,6 +489,10 @@ def _subjects(f: Facts) -> list[Subject]:
     return sorted(out, key=lambda s: (SUBJECT_SCHEMES.index(s.scheme), s.code))
 
 
+def _whole_repeals(f: Facts, rel: str) -> set[str]:
+    return {c for (r, c), axioms in f.repeal_axioms.items() if r == rel and whole_repeal(axioms)}
+
+
 def _linked(values: set[str], own: str) -> list[str]:
     return sorted({c for c in values if LINKED_CELEX_RE.match(c) and c != own})
 
@@ -524,8 +539,8 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         subjects=_subjects(f),
         amends=_linked(f.relations.get("amends", set()), celex),
         amended_by=_linked(f.relations.get("amended_by", set()), celex),
-        repeals=_linked(f.relations.get("repeals", set()), celex),
-        repealed_by=_linked(f.relations.get("repealed_by", set()), celex),
+        repeals=_linked(_whole_repeals(f, "repeals"), celex),
+        repealed_by=_linked(_whole_repeals(f, "repealed_by"), celex),
         eurlex_url=url,
         source=SourceRef(
             institution="EUR-Lex",
@@ -593,7 +608,7 @@ def discover_scope(http: SparqlClient, page: int = SCOPE_PAGE) -> dict[str, str]
         rows = http.sparql(scope_query(offset, page))
         for r in rows:
             ref = format_procedure_ref(r["ref"], r.get("ptype"))
-            if ref and ref[-4:-1] in PROCEDURE_TYPES:
+            if ref and ref[-4:-1] in PROCEDURE_TYPES and BASE_CELEX_RE.match(r["celex"]):
                 out.setdefault(r["w"], r["celex"])
         if len(rows) < page:
             return out
@@ -601,28 +616,30 @@ def discover_scope(http: SparqlClient, page: int = SCOPE_PAGE) -> dict[str, str]
 
 
 def read_featured_celex(path: Path = FEATURED_FILE) -> list[str]:
-    """CELEX ids listed under `celex:` in featured.yaml (strings, or mappings with a celex/id key)."""
+    """CELEX ids listed under `celex:` keys in featured.yaml.
+
+    The file is a list of dossier entries, each with `celex: [ids...]`; a top-level mapping with a
+    `celex:` list, and mappings with a `celex` key inside the lists, are accepted too.
+    """
     if not path.exists():
         return []
-    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
     found: set[str] = set()
 
-    def walk(x: Any) -> None:
-        if isinstance(x, str):
+    def walk(x: Any, under_celex: bool) -> None:
+        if isinstance(x, str) and under_celex:
             if FEATURED_CELEX_RE.match(x.strip()):
                 found.add(x.strip())
             else:
-                log.warning("eurlex: featured.yaml entry %r is not a sector-3 base CELEX id; ignored", x)
+                log.warning("eurlex: featured.yaml celex %r is not a sector-3 base CELEX id; ignored", x)
         elif isinstance(x, dict):
-            for k in ("celex", "id"):
-                if k in x:
-                    walk(x[k])
+            if "celex" in x:
+                walk(x["celex"], True)
         elif isinstance(x, list):
             for i in x:
-                walk(i)
+                walk(i, under_celex)
 
-    if isinstance(doc, dict):
-        walk(doc.get("celex", []))
+    walk(doc, False)
     return sorted(found)
 
 

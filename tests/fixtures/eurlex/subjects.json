@@ -1,0 +1,1820 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "w",
+   "scheme",
+   "s",
+   "label"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/EXT"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "External relations"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/EXT"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "External relations"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/INFO"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Information and verification"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/INFO"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Information and verification"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/INV"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Investments"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/LES"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Freedom of establishment"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/MARI"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Internal market - Principles"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/MARI"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Internal market - Principles"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/PROT"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Consumer protection"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/RDT"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Research and technological development"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/RDT"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Research and technological development"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/SANT"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Public health"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/PIND"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Industrial policy"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/ELSJ"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Area of freedom, security and justice"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/ELSJ"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Area of freedom, security and justice"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/COJC"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judicial cooperation in civil matters"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/TECN"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Technology"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/TECN"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Technology"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/PDON"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Data protection"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/IMED"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Medical devices"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1085"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "France"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1178"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "large business"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1474"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "agreement (EU)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1596"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "health legislation"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2077"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "standard"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2081"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "marketing standard"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/217"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "judicial cooperation"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2338"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "natural person"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2359"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "small and medium-sized enterprises"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2713"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EU production"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2828"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "protection of privacy"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2894"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "activity report"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3139"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "environmental impact"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3299"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "single market"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3453"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "European security"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3462"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "bilateral agreement"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3636"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "new technology"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3648"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "harmonisation of standards"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3648"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "harmonisation of standards"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4025"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "security of supply"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4347"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "market supervision"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/453"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "access to information"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4707"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Viet Nam"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/50"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "electronic component"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5181"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "data protection"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5181"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "data protection"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5234"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "safety standard"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5283"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EU Member State"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5334"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "disclosure of information"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5334"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "disclosure of information"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5451"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "market approval"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5451"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "market approval"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5595"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "personal data"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5749"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "negotiation of an agreement (EU)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/7219"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "digital technology"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/867"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "testing"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1196"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Algeria"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1423"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "trade information"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1439"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "innovation"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3011"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "cross-frontier data flow"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3465"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "international negotiations"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5233"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "quality standard"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5674"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EU initiative"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5726"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EC conformity marking"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3030"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "artificial intelligence"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3844"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "medical device"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/8480"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "judicial cooperation in civil matters in the EU"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3027"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "computer crime"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3466"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "signature of an agreement"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/7942"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "corporate social responsibility"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1132"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "investment protection"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/540"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "family law"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/6222"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "area of freedom, security and justice"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3028"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "data-processing law"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/c_04ae3ba8"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "information security"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/448275"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "European Joint Undertaking"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/c_406ad4cc"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "risk management"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/c_ab46334d"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "value chain"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/c_b18ab65c"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "supply chain"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1376"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "advanced technology industry"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/c_57f3c49f"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "critical infrastructure security"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/c_fc586505"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "environmental auditing"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/c_5a195ffd"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "smart technology"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/11401020"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Mediterranean countries"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/114060"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Asian countries"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/132060"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Information technology, telecommunications and data-processing"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/152020"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Consumer information, education and representation"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/1940"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Programmes"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/152030"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Protection of health and safety"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/1901"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "General"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/131030"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Research and technological development"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/131030"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Research and technological development"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/1920"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judicial cooperation in civil matters"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/1710"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Company law"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/132070"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Other industrial sectors"
+    }
+   }
+  ]
+ }
+}

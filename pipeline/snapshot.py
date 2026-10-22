@@ -30,19 +30,61 @@ def _dump(obj: BaseModel) -> str:
     return json.dumps(obj.model_dump(mode="json"), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
+_IDENTITY_FIELDS = ("id", "vote_id", "celex", "url")
+
+
+def _identity(d: dict) -> object:
+    for f in _IDENTITY_FIELDS:
+        if d.get(f) is not None:
+            return (f, d[f])
+    return None
+
+
+def _strip_retrieved(x: object) -> object:
+    if isinstance(x, dict):
+        return {k: _strip_retrieved(v) for k, v in x.items() if k != "retrieved_at"}
+    if isinstance(x, list):
+        return [_strip_retrieved(v) for v in x]
+    return x
+
+
 def write_records(
     source: str, name: str, records: Iterable[BaseModel], key: Callable[[BaseModel], object] | None = None
 ) -> Path:
+    """Write records atomically, one per line.
+
+    Provenance stability: if a record is identical to the previously written one apart from
+    `retrieved_at` timestamps, the previous line is kept verbatim. `retrieved_at` therefore means
+    "first retrieved in this exact form"; the manifest's `fetched_at` says when the source was last
+    checked. This keeps git diffs and activity detection limited to substantive changes.
+    """
     recs = list(records)
     if key is not None:
         recs.sort(key=key)
     path = SNAPSHOT / source / f"{name}.json"
+    previous: dict[object, tuple[object, str]] = {}
+    if path.exists():
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.rstrip(",")
+                if line.startswith("{"):
+                    d = json.loads(line)
+                    if (ident := _identity(d)) is not None:
+                        previous[ident] = (_strip_retrieved(d), line)
+        except (OSError, ValueError):
+            previous = {}
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
     with tmp.open("w", encoding="utf-8") as f:
         f.write("[\n")
         for i, r in enumerate(recs):
-            f.write(_dump(r))
+            line = _dump(r)
+            if previous:
+                d = json.loads(line)
+                prev = previous.get(_identity(d))
+                if prev is not None and prev[0] == _strip_retrieved(d):
+                    line = prev[1]
+            f.write(line)
             f.write(",\n" if i < len(recs) - 1 else "\n")
         f.write("]\n")
     tmp.replace(path)

@@ -1,0 +1,160 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "w",
+   "oj",
+   "date",
+   "number",
+   "collection"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "oj": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/bc5998d3-315c-11e7-9412-01aa75ed71a1"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2017-05-05"
+    },
+    "number": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#positiveInteger",
+     "value": "117"
+    },
+    "collection": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/document-collection/OJ-L"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "oj": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dfacb707-85bb-11ed-9887-01aa75ed71a1"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2022-12-27"
+    },
+    "number": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#positiveInteger",
+     "value": "333"
+    },
+    "collection": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/document-collection/OJ-L"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "oj": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/99caafe9-11bc-11e6-ba9a-01aa75ed71a1"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2016-05-04"
+    },
+    "number": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#positiveInteger",
+     "value": "119"
+    },
+    "collection": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/document-collection/OJ-L"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1"
+    },
+    "oj": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/6c871e2e-996d-11e9-9d01-01aa75ed71a1"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2019-06-28"
+    },
+    "number": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#positiveInteger",
+     "value": "175"
+    },
+    "collection": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/document-collection/OJ-L"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "oj": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/c5b722d9-7ce2-11ed-9887-01aa75ed71a1"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2022-12-16"
+    },
+    "number": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#positiveInteger",
+     "value": "322"
+    },
+    "collection": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/document-collection/OJ-L"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "oj": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/ba583731-55bc-11ee-9220-01aa75ed71a1"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2023-09-18"
+    },
+    "number": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#positiveInteger",
+     "value": "229"
+    },
+    "collection": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/document-collection/OJ-L"
+    }
+   }
+  ]
+ }
+}

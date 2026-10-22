@@ -123,11 +123,12 @@ class Http:
         *,
         params: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
+        json_body: Any = None,
         headers: dict[str, str] | None = None,
         use_cache: bool = True,
         ok_statuses: tuple[int, ...] = (200,),
     ) -> bytes:
-        key = json.dumps([method, url, params, data, headers], sort_keys=True, default=str)
+        key = json.dumps([method, url, params, data, json_body, headers], sort_keys=True, default=str)
         if use_cache:
             cached = self._cache_get(key)
             if cached is not None:
@@ -137,7 +138,9 @@ class Http:
         for attempt in range(self.max_retries + 1):
             self._throttle(url)
             try:
-                r = self._client.request(method, url, params=params, data=data, headers=headers)
+                r = self._client.request(
+                    method, url, params=params, data=data, json=json_body, headers=headers
+                )
                 status = r.status_code
                 if status in ok_statuses:
                     body = r.content

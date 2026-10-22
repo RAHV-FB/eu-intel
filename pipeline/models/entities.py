@@ -269,15 +269,30 @@ class NationalMeasure(Model):
     directive_celex: str
     country: str
     title: str | None = None
-    date: str | None = None
+    date: str | None = None  # publication date in the national official journal, if known
+    commission_ref: str | None = None  # e.g. "MNE(2025)04528"
+    national_ref: str | None = None
+    journal: str | None = None  # national official journal name
+    notified: str | None = None  # date notified to the Commission, if provided
     url: str | None = None
+    source: SourceRef
+
+
+class ImplementationCoverage(Model):
+    """A directive whose national measures were queried (distinguishes 'none found' from 'not queried')."""
+
+    celex: str
+    measures: int
     source: SourceRef
 
 
 class InfringementCase(Model):
     id: str  # e.g. "INFR(2023)0123"
     country: str
-    celex: str | None = None  # only when the source links the case to an act
+    celex: str | None = None  # only when the source links the case to exactly one act
+    legal_basis: list[str] = Field(default_factory=list)  # all CELEX ids named as legal basis by the register
+    court_ref: str | None = None  # e.g. "C-123/24" when referred to the Court
+    press_release_url: str | None = None
     title: str
     non_communication: bool | None = None  # "failure to notify transposition measures"
     latest_stage: str | None = None  # e.g. "Letter of formal notice", "Reasoned opinion", "Referral to Court"

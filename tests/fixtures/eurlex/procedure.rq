@@ -1,0 +1,13 @@
+PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+PREFIX ann: <http://publications.europa.eu/ontology/annotation#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX cmr: <http://publications.europa.eu/ontology/cdm/cmr#>
+SELECT DISTINCT ?w ?ref ?ptype WHERE { VALUES ?w { <http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1> }
+  { ?dos cdm:dossier_produces_resource_legal ?w }
+  UNION { ?w cdm:resource_legal_produced_by_dossier ?dos }
+  UNION { ?w cdm:resource_legal_adopts_resource_legal ?prop . ?prop cdm:work_part_of_dossier ?dos }
+  ?dos cdm:procedure_code_interinstitutional_reference_procedure ?ref .
+  OPTIONAL { ?dos cdm:procedure_code_interinstitutional_has_type_concept_type_procedure_code_interinstitutional ?ptype }
+}
