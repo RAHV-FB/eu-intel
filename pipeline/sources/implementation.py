@@ -12,6 +12,8 @@ Three independent sub-sources; each output file is written only if its sub-sourc
    it then carries one CELEX-like id per directive ("72022L2555CZE_202504528"), which we use as id.
    Scope: directives (CELEX 3YYYYLNNNN) dated 2014-01-01 or later, plus directives listed under a
    `celex` key in data/curated/featured.yaml. Human list: EUR-Lex NIM page of the directive.
+   coverage.json lists every directive whose measures were queried successfully, including those
+   with 0 measures; a directive absent from coverage.json was not covered by this dataset.
 
    A notified measure is what the Member State told the Commission; it is NOT an assessment that
    the directive is correctly or completely transposed. Absence of records for a country is NOT a
@@ -21,8 +23,9 @@ Three independent sub-sources; each output file is written only if its sub-sourc
    Source: the Commission's infringement decisions register (Themis), whose public web app is
    backed by a JSON API (POST <base>/api/infringements) and an .xlsx export
    (POST <base>/api/INFRINGEMENTS/export). Scope: all open cases, plus every case with a decision
-   dated 2019-01-01 or later. The latest stage is the register's decision type, verbatim. The
-   CELEX link comes only from the register's own "Legal basis" column (export).
+   dated 2019-01-01 or later. The latest stage is the register's decision type, verbatim.
+   `legal_basis` is the register's own "Legal basis" column (export), as given; `celex` is set only
+   when it names exactly one EU act.
    An open case at e.g. "Referral to Court" is not a Court judgment.
 
 3. Country indicators (Single Market Scoreboard) -> indicators.json
@@ -55,6 +58,7 @@ from pipeline.http import Http, HttpError
 from pipeline.models.countries import MEMBER_STATES, normalize_country
 from pipeline.models.entities import (
     CountryIndicator,
+    ImplementationCoverage,
     InfringementCase,
     NationalMeasure,
     SourceRef,
@@ -200,8 +204,9 @@ def parse_measure_rows(
     return out
 
 
-def featured_directives(path: Path = FEATURED_YAML) -> list[str]:
+def featured_directives(path: Path | None = None) -> list[str]:
     """Directive CELEX numbers listed under any `celex` key of the curated featured file."""
+    path = path or FEATURED_YAML
     if not path.exists():
         return []
     found: list[str] = []
@@ -273,9 +278,7 @@ def fetch_measures(
             if m.directive_celex in keep
         ]
         coverage += [
-            c
-            for c in snapshot.read_records(SOURCE_ID, "coverage", ImplementationCoverage)
-            if c.celex in keep
+            c for c in snapshot.read_records(SOURCE_ID, "coverage", ImplementationCoverage) if c.celex in keep
         ]
     info = {
         "directives": len(celexes),
@@ -326,14 +329,12 @@ def _search_body(**filters: Any) -> dict[str, Any]:
     return body
 
 
-def _post_json(http: Http, path: str, body: dict[str, Any], accept: str = "application/json") -> bytes:
-    # The register's API only accepts a JSON request body. `Http.request` has no `json=` argument,
-    # so the encoded body is passed as raw content with an explicit Content-Type.
+def _post_json(
+    http: Http, path: str, body: dict[str, Any], accept: str = "application/json", use_cache: bool = True
+) -> bytes:
+    # The register's API only accepts a JSON request body (form posts get 415, GET 405).
     return http.request(
-        "POST",
-        THEMIS_API + path,
-        data=json.dumps(body, sort_keys=True),  # type: ignore[arg-type]
-        headers={"Content-Type": "application/json", "Accept": accept},
+        "POST", THEMIS_API + path, json_body=body, headers={"Accept": accept}, use_cache=use_cache
     )
 
 
@@ -390,7 +391,8 @@ def parse_export_legal_basis(content: bytes) -> dict[str, list[str]]:
         case_id = (r.get("Infringement case number") or "").strip()
         if not case_id:
             continue
-        out[case_id] = [x.strip() for x in (r.get("Legal basis") or "").splitlines() if x.strip()]
+        values = [x.strip() for x in (r.get("Legal basis") or "").splitlines() if x.strip()]
+        out[case_id] = list(dict.fromkeys(values))  # as given, de-duplicated, order kept
     return out
 
 
@@ -426,6 +428,16 @@ def country_names(refdata: dict[str, Any] | None) -> dict[str, str]:
     return names
 
 
+def _latest_value(decisions: list[dict[str, Any]], field: str) -> str | None:
+    """`field` of the most recent decision that has it (register order breaks date ties)."""
+    dated = [
+        (_ddmmyyyy(d.get("decisionDate")) or "", i, str(d[field]).strip())
+        for i, d in enumerate(decisions)
+        if d.get(field) and str(d[field]).strip()
+    ]
+    return max(dated)[2] if dated else None
+
+
 def parse_case(
     rec: dict[str, Any],
     names: dict[str, str],
@@ -443,10 +455,14 @@ def parse_case(
         latest = max(enumerate(decisions), key=lambda x: (_ddmmyyyy(x[1].get("decisionDate")), x[0]))[1]
     active = rec.get("activeInfringementCase")
     noncom = rec.get("nonCommunicationCase")
+    basis = (legal_basis or {}).get(case_id, [])
     return InfringementCase(
         id=case_id,
         country=country,
-        celex=single_act_celex((legal_basis or {}).get(case_id)),
+        celex=single_act_celex(basis),
+        legal_basis=basis,
+        court_ref=_latest_value(decisions, "normalCuriaReference"),
+        press_release_url=_http_url(_latest_value(decisions, "pressReleaseURL")),
         title=(rec.get("title") or "").strip() or case_id,
         non_communication={"Yes": True, "No": False}.get(noncom),
         latest_stage=latest.get("decisionType") if latest else None,  # verbatim
@@ -460,6 +476,29 @@ def parse_case(
             retrieved_at=retrieved_at,
         ),
     )
+
+
+def _export_legal_basis_checked(http: Http, filters: dict[str, Any]) -> dict[str, list[str]] | None:
+    """Legal basis per case from one export slice, or None if it fails or is inconsistent."""
+    try:
+        expected = json.loads(_post_json(http, "/infringements", _search_body(size=1, **filters)))[
+            "totalRows"
+        ]
+        for use_cache in (True, False):
+            content = _post_json(
+                http,
+                "/INFRINGEMENTS/export",
+                _search_body(**filters),
+                accept="application/octet-stream",
+                use_cache=use_cache,
+            )
+            part = parse_export_legal_basis(content)
+            if len(part) == expected:
+                return part
+            log.warning("register export %s: %d rows, search says %d; retrying", filters, len(part), expected)
+    except (HttpError, zipfile.BadZipFile, etree.XMLSyntaxError, KeyError, ValueError) as e:
+        log.warning("register export failed (%s): %s", filters, e)
+    return None
 
 
 def _export_filters(this_year: int) -> list[dict[str, Any]]:
@@ -489,22 +528,15 @@ def fetch_infringements(http: Http) -> tuple[list[InfringementCase], dict[str, A
     legal_basis: dict[str, list[str]] = {}
     failed_exports: list[str] = []
 
-    def export(filters: dict[str, Any]) -> tuple[str, dict[str, list[str]] | None]:
+    # Exports run one at a time: concurrent export requests were observed to return row sets that
+    # did not match their filters. Each export is checked against the search's row count.
+    for filters in _export_filters(datetime.now(UTC).year):
         label = ",".join(f"{k}={v}" for k, v in filters.items())
-        try:
-            body = _search_body(**filters)
-            content = _post_json(http, "/INFRINGEMENTS/export", body, accept="application/octet-stream")
-            return label, parse_export_legal_basis(content)
-        except (HttpError, zipfile.BadZipFile, etree.XMLSyntaxError, KeyError) as e:
-            log.warning("register export failed (%s): %s", label, e)
-            return label, None
-
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        for label, part in pool.map(export, _export_filters(datetime.now(UTC).year)):
-            if part is None:
-                failed_exports.append(label)
-            else:
-                legal_basis.update(part)
+        part = _export_legal_basis_checked(http, filters)
+        if part is None:
+            failed_exports.append(label)
+        else:
+            legal_basis.update(part)
 
     records: list[InfringementCase] = []
     skipped = 0
@@ -544,12 +576,17 @@ def fetch(http: Http) -> SourceStatus:
     ok_parts = 0
 
     try:
-        measures, mi = fetch_measures(http)
+        measures, coverage, mi = fetch_measures(http)
         snapshot.write_records(
             SOURCE_ID, "measures", measures, key=lambda m: (m.directive_celex, m.country, m.date or "", m.id)
         )
+        snapshot.write_records(SOURCE_ID, "coverage", coverage, key=lambda c: c.celex)
         counts["measures"] = len(measures)
-        note = f"measures: {mi['with_measures']}/{mi['directives']} directives in scope have records"
+        counts["coverage"] = len(coverage)
+        note = (
+            f"measures: {mi['covered']}/{mi['directives']} directives covered, "
+            f"{mi['with_measures']} with records"
+        )
         if mi["failed"]:
             note += f"; {len(mi['failed'])} directive queries failed (previous records kept)"
         else:

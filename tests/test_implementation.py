@@ -10,7 +10,7 @@ import pytest
 
 from pipeline import snapshot
 from pipeline.http import HttpError
-from pipeline.models.entities import InfringementCase, NationalMeasure
+from pipeline.models.entities import ImplementationCoverage, InfringementCase, NationalMeasure
 from pipeline.sources import implementation as imp
 
 FX = Path(__file__).parent / "fixtures" / "implementation"
@@ -68,7 +68,12 @@ def test_parse_measures_nis2():
         == "Measures for a High Common Level of Cybersecurity across the European Union (Malta) Order, 2025"
     )
     assert mt.source.identifier == "MNE(2025)01976"
-    assert mt.url and mt.url.startswith("https://")
+    assert mt.commission_ref == "MNE(2025)01976"
+    assert mt.journal == "The Malta government gazette"
+    assert mt.notified == "2025-04-16"
+    assert mt.url == "https://legislation.mt/eli/ln/2025/71/eng"
+    cz = [r for r in recs if r.country == "CZ"]
+    assert cz and all(r.national_ref and r.journal == "Sbirka Zakonu CR" for r in cz)
 
 
 def test_placeholder_dates_are_dropped():
@@ -134,18 +139,23 @@ def test_parse_cases_stage_verbatim_and_status():
     assert pt.latest_stage == "Closing of the case"
     assert pt.latest_decision_date == "2025-12-11"
     assert pt.celex == "32019L0790"  # stated in the register's legal-basis column
+    assert pt.legal_basis == ["32019L0790"]
     assert pt.non_communication is True
+    assert pt.court_ref == "C-211/23"  # from the referral decision, not a judgment
+    assert pt.press_release_url == "https://ec.europa.eu/commission/presscorner/detail/EN/IP_23_704"
 
     ie = cases["INFR(2024)0279"]  # open case at referral stage: NOT a Court judgment
     assert ie.country == "IE" and ie.status == "open"
     assert ie.latest_stage == "Referral to Court Art. 258 TFEU  - 260(3) TFEU"  # verbatim, double space kept
     assert ie.latest_decision_date == "2026-07-08"
-    assert ie.celex is None  # no legal-basis data for this case in the fixture -> no guess
+    assert ie.celex is None and ie.legal_basis == []  # no legal-basis data in the fixture -> no guess
+    assert ie.court_ref == "C-1076/26"
 
     pl = cases["INFR(2019)2137"]
     assert pl.non_communication is False and pl.status == "open"
     assert pl.latest_stage == "Reasoned opinion Art. 258 TFEU"
     assert pl.latest_decision_date == "2024-12-16"
+    assert pl.court_ref is None and pl.press_release_url is None
 
     assert cases["INFR(2024)0155"].country == "GR"  # register key "EL"
     assert cases["INFR(2011)2054"].country == "GB"  # register key "UK"
@@ -170,13 +180,21 @@ def test_ddmmyyyy():
 
 
 # ------------------------------------------------------------------------------ fetch() wiring
+NO_MEASURES = "32024L2831"  # queried, Cellar returns no measure
+FAILING = "32024L1760"  # query fails
+
+
 class FakeHttp:
     """Serves fixtures; the Scoreboard host is blocked as observed live (CloudFront 403)."""
 
+    export_rows = 23  # rows in themis_export_32019L0790.xlsx
+
     def sparql(self, query: str, **kw):
         if "measure_national_implementing_implements_resource_legal" in query:
+            if FAILING in query:
+                raise HttpError("https://publications.europa.eu/webapi/rdf/sparql", 503, "unavailable")
             return sparql_rows("cellar_nim_32022L2555.json") if NIS2 in query else []
-        return [{"celex": NIS2}, {"celex": "32019L0790R(01)"}]
+        return [{"celex": NIS2}, {"celex": NO_MEASURES}, {"celex": FAILING}, {"celex": "32019L0790R(01)"}]
 
     def get(self, url: str, **kw):
         raise HttpError(url, 403, "Request blocked")
@@ -187,7 +205,9 @@ class FakeHttp:
     def request(self, method: str, url: str, **kw):
         if url.endswith("/export"):
             return (FX / "themis_export_32019L0790.xlsx").read_bytes()
-        body = json.loads(kw["data"])
+        body = kw["json_body"]
+        if body["size"] == 1:  # row count for an export slice: matches the export fixture
+            return json.dumps({"totalRows": self.export_rows, "records": []}).encode()
         recs = cases_fixture() if body["page"] == 0 else []
         return json.dumps({"totalRows": len(cases_fixture()), "records": recs}).encode()
 
@@ -206,6 +226,55 @@ def test_fetch_writes_only_succeeded_outputs(tmp_path, monkeypatch):
     assert "403" in (st.note or "")
     measures = snapshot.read_records(imp.SOURCE_ID, "measures", NationalMeasure)
     assert {m.directive_celex for m in measures} == {NIS2}  # corrigendum CELEX never queried
+
+
+def test_fetch_links_celex_from_consistent_export(tmp_path, monkeypatch):
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.setattr(imp, "FEATURED_YAML", tmp_path / "none.yaml")
+    imp.fetch(FakeHttp())  # type: ignore[arg-type]
+    cases = {c.id: c for c in snapshot.read_records(imp.SOURCE_ID, "infringements", InfringementCase)}
+    assert cases["INFR(2021)0330"].celex == "32019L0790"
+    assert cases["INFR(2021)0330"].legal_basis == ["32019L0790"]
+
+
+def test_inconsistent_export_is_rejected():
+    """An export whose row count differs from the search total is not used (no wrong links)."""
+
+    class Inconsistent(FakeHttp):
+        export_rows = 24
+
+    assert imp._export_legal_basis_checked(Inconsistent(), {"activeCase": "true"}) is None  # type: ignore[arg-type]
+    assert imp._export_legal_basis_checked(FakeHttp(), {"activeCase": "true"})  # type: ignore[arg-type]
+
+
+def test_coverage_semantics(tmp_path, monkeypatch):
+    """coverage.json: every successfully queried directive, incl. 0 measures; failures not covered."""
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.setattr(imp, "FEATURED_YAML", tmp_path / "none.yaml")
+    st = imp.fetch(FakeHttp())  # type: ignore[arg-type]
+    cov = {c.celex: c for c in snapshot.read_records(imp.SOURCE_ID, "coverage", ImplementationCoverage)}
+    assert set(cov) == {NIS2, NO_MEASURES}  # FAILING not covered; corrigendum never in scope
+    assert cov[NIS2].measures == 11
+    assert cov[NO_MEASURES].measures == 0  # -> "No measures found in the available dataset"
+    assert cov[NO_MEASURES].source.url.endswith("CELEX:" + NO_MEASURES)
+    assert st.records["coverage"] == 2
+    measures = snapshot.read_records(imp.SOURCE_ID, "measures", NationalMeasure)
+    by_celex = Counter(m.directive_celex for m in measures)
+    assert all(by_celex.get(c, 0) == e.measures for c, e in cov.items())
+
+
+def test_failed_directive_keeps_previous_records_and_coverage(tmp_path, monkeypatch):
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.setattr(imp, "FEATURED_YAML", tmp_path / "none.yaml")
+    prev = imp.parse_measure_rows(NIS2, sparql_rows("cellar_nim_32022L2555.json"), NOW)[:2]
+    prev = [m.model_copy(update={"directive_celex": FAILING, "id": m.id + "-prev"}) for m in prev]
+    snapshot.write_records(imp.SOURCE_ID, "measures", prev)
+    snapshot.write_records(imp.SOURCE_ID, "coverage", [imp.coverage_entry(FAILING, 2, NOW)])
+    imp.fetch(FakeHttp())  # type: ignore[arg-type]
+    cov = {c.celex: c for c in snapshot.read_records(imp.SOURCE_ID, "coverage", ImplementationCoverage)}
+    assert cov[FAILING].measures == 2
+    measures = snapshot.read_records(imp.SOURCE_ID, "measures", NationalMeasure)
+    assert sum(1 for m in measures if m.directive_celex == FAILING) == 2
 
 
 # ------------------------------------------------------------------------------- live checks
