@@ -1,6 +1,5 @@
 /**
  * Client-side search over public/data/search.json (SearchDoc[]).
- * OWNER: search workstream (Agent E).
  *
  * Ranking, strongest first (a weaker tier never outranks a stronger one):
  *   1. exact identifier      procedure "2021/0106(COD)" or "2021/0106", CELEX "32024R1689", "COM(2021)206"

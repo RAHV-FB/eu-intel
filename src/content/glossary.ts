@@ -1,7 +1,7 @@
 /**
  * Short, accurate explanations shown inline via <Term id="...">.
  * Keep each `short` to 1–2 sentences. `href` points to the relevant section of /how-the-eu-works.
- * OWNER: How-the-EU-works workstream may extend/refine these; keep ids stable.
+ * Keep ids stable: pages link to them.
  */
 export interface GlossaryEntry {
   term: string;

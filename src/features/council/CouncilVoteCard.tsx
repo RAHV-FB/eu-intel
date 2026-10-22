@@ -1,6 +1,6 @@
 /**
  * One recorded vote of the Council of the EU (ministers of the Member States — NOT the European Council).
- * Used on the dossier page (Agent F1) and wherever a full CouncilVote record is available.
+ * Used on the dossier page and wherever a full CouncilVote record is available.
  */
 import { Link } from 'react-router-dom';
 import type { CouncilPosition, CouncilVote } from '../../types/data';
