@@ -639,6 +639,11 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
             basis=basis if parts else "unknown",
         )
     if stage == "adopted":
+        if s.label == "Procedure completed":
+            return NextStep(
+                text="Not determined: signature and publication of the final act are not linked in our data.",
+                basis="unknown",
+            )
         if _last(events, EventKind.signature):
             return NextStep(
                 text="Publication in the Official Journal of the EU.", institution="EUR-Lex", basis="derived"
