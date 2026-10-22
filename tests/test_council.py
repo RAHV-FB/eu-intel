@@ -47,7 +47,8 @@ def test_parse_note_ai_act():
     )
     assert m.title.endswith("(Artificial Intelligence Act)")
     assert m.step == "Adoption of the Legislative Act"
-    assert (m.meeting, m.configuration) == ("4024", "Transport, Telecommunications and Energy")
+    assert m.meeting == "4024th meeting of the COUNCIL OF THE EUROPEAN UNION"
+    assert m.configuration == "Transport, Telecommunications and Energy"
     assert m.meeting_dates == ["2024-05-21"]
     assert m.council_doc == "PE-CONS 24/24"
     assert m.written_procedure_date is None and m.nullified == []
@@ -170,7 +171,10 @@ def test_build_vote_ai_act():
     assert set(vote.positions.values()) == {"for"} and len(vote.positions) == 27
     assert vote.source.institution == "Council"
     assert vote.source.url == "https://data.consilium.europa.eu/doc/document/ST-10199-2024-INIT/EN/pdf"
-    assert vote.source.identifier == "ST 10199 2024 INIT"
+    assert vote.source.identifier == "ST 10199/24"
+    assert vote.stage == "Adoption of the Legislative Act"
+    assert vote.meeting == "4024th meeting of the COUNCIL OF THE EUROPEAN UNION"
+    assert vote.written_procedure is False
 
 
 def test_build_vote_drops_nullified_versions_and_keeps_sheetless_metadata():
@@ -220,3 +224,99 @@ def test_merge_meta_latest_non_empty_wins():
     cor = C.NoteMeta(title="t corrected", procedure_refs=["2023/0238(COD)"])
     m = C._merge_meta([init, cor])
     assert (m.title, m.council_doc, m.procedure_refs) == ("t corrected", "PE-CONS 65/24", ["2023/0238(COD)"])
+
+
+def test_written_procedure_record_fields():
+    groups = C._versions_from_rows(rows())
+    (v,) = groups["ST-9552-2024"]
+    p = pages("ST-9552-2024-INIT.txt")
+    vote, _ = C.build_vote([C.Parsed(v, p, C.parse_note(p[0]), None, "no voting sheet")], "t")
+    assert vote.written_procedure is True and vote.meeting is None and vote.configuration is None
+    assert vote.date == "2024-02-28" and vote.stage == "Adoption of the legislative act"
+    assert vote.source.identifier == "ST 9552/24"
+    assert vote.statements[-1] == "Statement by the Republic of Bulgaria"
+
+
+def test_st_number():
+    groups = C._versions_from_rows(rows())
+    assert [C.st_number(v) for v in groups["ST-15212-2024"]] == [
+        "ST 15212/24",
+        "ST 15212/24 REV 1",
+        "ST 15212/24 COR 1",
+    ]
+
+
+# ------------------------------------------------------------------ incremental fetch
+class FakeHttp:
+    def __init__(self, rows, error=None):
+        self.rows, self.error, self.gets = rows, error, []
+
+    def sparql(self, query, **kw):
+        return self.rows
+
+    def get(self, url, **kw):
+        self.gets.append(url)
+        if self.error:
+            raise self.error
+        raise AssertionError(f"unexpected download {url}")
+
+
+def _seed(tmp_path, monkeypatch, fingerprint):
+    from pipeline import snapshot
+    from pipeline.models.entities import CouncilVote
+
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.setattr(C, "poppler_available", lambda: True)
+    ai_rows = [r for r in rows() if r["docid"] == "consil:ST_10199_2024_INIT"]
+    prev = CouncilVote.model_validate(
+        {
+            "id": "ST-10199-2024",
+            "date": "2024-05-21",
+            "title": "REGULATION ... (Artificial Intelligence Act)",
+            "voting_rule": "qmv",
+            "outcome": "adopted",
+            "positions": {"DE": "for"},
+            "source": {
+                "institution": "Council",
+                "url": C.DOC_URL.format(doc="ST-10199-2024-INIT"),
+                "identifier": "ST 10199/24",
+                "retrieved_at": "2026-01-01T00:00:00Z",
+            },
+        }
+    )
+    fp = fingerprint(C._versions_from_rows(ai_rows)["ST-10199-2024"])
+    state = C.CouncilNoteState(
+        id="ST-10199-2024", fingerprint=fp, versions=["ST-10199-2024-INIT"], vote_id=prev.id
+    )
+    snapshot.write_records("council", "votes", [prev])
+    snapshot.write_records("council", "notes", [state])
+    return snapshot, ai_rows, prev
+
+
+def test_fetch_reuses_unchanged_notes_without_downloading(tmp_path, monkeypatch):
+    snapshot, ai_rows, prev = _seed(tmp_path, monkeypatch, C.note_fingerprint)
+    http = FakeHttp(ai_rows)
+    st = C.fetch(http)
+    assert http.gets == [] and st.status == "ok" and st.records["votes"] == 1
+    from pipeline.models.entities import CouncilVote
+
+    (v,) = snapshot.read_records("council", "votes", CouncilVote)
+    assert v == prev  # including the original retrieved_at
+
+
+def test_fetch_changed_note_with_transient_error_keeps_previous_and_retries(tmp_path, monkeypatch):
+    from pipeline.http import HttpError
+    from pipeline.models.entities import CouncilVote
+
+    snapshot, ai_rows, prev = _seed(tmp_path, monkeypatch, lambda versions: "stale-fingerprint")
+    http = FakeHttp(ai_rows, error=HttpError("u", 503, "unavailable"))
+    st = C.fetch(http)
+    assert len(http.gets) == 1 and st.status == "partial"
+    assert snapshot.read_records("council", "votes", CouncilVote) == [prev]
+    assert snapshot.read_records("council", "notes", C.CouncilNoteState) == []  # retried next run
+
+
+def test_fetch_refuses_truncated_listing(tmp_path, monkeypatch):
+    snapshot, _ai_rows, _prev = _seed(tmp_path, monkeypatch, C.note_fingerprint)
+    st = C.fetch(FakeHttp([]))
+    assert st.status == "failed" and "previously 1" in st.note

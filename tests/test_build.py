@@ -401,8 +401,42 @@ def test_close_votes_use_margin_when_available(tmp_path: Path, monkeypatch: pyte
     monkeypatch.setattr(B, "_lazy", lambda m, a: fake_margin if a == "margin" else real_lazy(m, a))
     shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
     o = tmp_path / "public"
-    build(out=o, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state", today="2025-01-20")
+    build(
+        out=o,
+        snapshot=tmp_path / "snapshot",
+        curated=FIX / "curated",
+        state=tmp_path / "state",
+        today="2025-01-20",
+    )
     v1 = load(o, "votes/V1.json")
     assert v1["margin"]["threshold"] == 2 and "extra_field" not in v1["margin"]
     close = next(x for x in load(o, "home.json")["lists"] if x["id"] == "close_votes")["items"]
     assert [i["vote_id"] for i in close] == ["V1"]  # V3 is a resolution, not a final vote
+
+
+def test_related_next_step_and_sources(out: Path):
+    d1 = load(out, "dossiers/2099-0001.json")
+    rel = {(r["relation"], r["id"]) for r in d1["related"]}
+    assert ("Amended by", "32099R0077") in rel  # amending act not in the snapshot: id is its CELEX
+    assert ("Amends", "2099-0003") in rel
+    d3 = load(out, "dossiers/2099-0003.json")
+    assert ("Amended by", "2099-0001") in {(r["relation"], r["id"]) for r in d3["related"]}
+    srcs = [(x["institution"], x["url"], x.get("identifier")) for x in d1["sources"]]
+    assert len(srcs) == len(set(srcs))
+    for d in load(out, "dossiers/index.json"):
+        det = load(out, f"dossiers/{d['id']}.json")
+        if det["stage"] == "in_force":
+            assert det["next_step"]["basis"] != "unknown", d["id"]
+
+
+def test_council_votes(out: Path):
+    cv = load(out, "council/index.json")[0]
+    a = cv["assessment"]
+    assert cv["dossier_id"] == "2099-0001" and cv["stage"] == "TEST adoption of the legislative act"
+    assert a["rule"] == "qmv" and a["adopted_by_rule"] is True
+    assert a["legal_basis"]  # linked procedure records a COM document -> proposal origin established
+    assert 0 <= (a["population_for_pct"] or 0) <= 100
+    assert a["single_state_veto_possible"] is False
+    pl = load(out, "countries/PL.json")
+    assert pl["council_positions"]["abstain"] == 1
+    assert pl["council_votes"][0]["pos"] == "abstain" and pl["council_votes"][0]["dossier_id"] == "2099-0001"

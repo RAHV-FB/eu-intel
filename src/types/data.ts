@@ -340,6 +340,10 @@ export interface CouncilAssessment {
   blocking_minority_existed?: boolean | null;
   single_state_veto_possible: boolean; // true only under unanimity
   note: string;
+  legal_basis?: string | null; // e.g. "TEU Art. 16(4)"; null when the threshold's legal basis is not established
+  states_against?: number | null;
+  states_abstain?: number | null;
+  states_not_participating?: number | null; // not taking part under the Treaties (opt-outs); not abstentions
 }
 
 export interface CouncilVote {
@@ -349,6 +353,10 @@ export interface CouncilVote {
   dossier_id?: string | null;
   dossier_ref?: string | null;
   configuration?: string | null;
+  stage?: string | null; // e.g. "Adoption of the legislative act" (verbatim from the voting-result document)
+  meeting?: string | null; // meeting reference as published
+  written_procedure?: boolean | null; // adopted by written procedure rather than at a meeting
+  council_doc?: string | null; // e.g. "PE-CONS 24/24"
   voting_rule: 'qmv' | 'unanimity' | 'simple_majority' | 'unknown';
   outcome: 'adopted' | 'not_adopted' | 'unknown';
   positions: Record<string, CouncilPosition>; // ISO2 -> position

@@ -34,6 +34,8 @@ this is kept as "not_participating", distinct from "abstain".
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import re
 import shutil
@@ -45,10 +47,12 @@ from dataclasses import dataclass, field
 from datetime import date as Date
 from pathlib import Path
 
+from pydantic import Field
+
 from pipeline.analysis.council_qmv import assess
 from pipeline.http import Http, HttpError
-from pipeline.models.entities import CouncilPosition, CouncilVote, SourceRef, SourceStatus
-from pipeline.snapshot import now_iso, write_records
+from pipeline.models.entities import CouncilPosition, CouncilVote, Model, SourceRef, SourceStatus
+from pipeline.snapshot import now_iso, read_records, write_records
 
 log = logging.getLogger("pipeline.sources.council")
 
@@ -58,6 +62,8 @@ DOC_URL = "https://data.consilium.europa.eu/doc/document/{doc}/EN/pdf"
 REGISTER_NOTE = "Council of the EU – Voting result {num}"
 RENDER_DPI = 100
 MAX_WORKERS = 4
+# Bump when parsing changes: every note is then re-processed on the next fetch.
+PARSER_VERSION = "2026-10-22.2"
 
 # Protocol order of the GSC voting sheet (Member States by their name in their own language).
 LEFT_COLUMN = ["BE", "BG", "CZ", "DK", "DE", "EE", "IE", "GR", "ES", "FR", "HR", "IT", "CY", "LV"]
@@ -436,7 +442,7 @@ class NoteMeta:
     subject: str = ""
     title: str | None = None
     step: str | None = None
-    meeting: str | None = None
+    meeting: str | None = None  # verbatim, e.g. "4024th meeting of the COUNCIL OF THE EUROPEAN UNION"
     configuration: str | None = None
     meeting_dates: list[str] = field(default_factory=list)  # ISO
     written_procedure_date: str | None = None
@@ -533,14 +539,16 @@ def parse_note(page1: str) -> NoteMeta:
 def _parse_subject(meta: NoteMeta) -> None:
     s = re.sub(r"^Voting results?\b\s*[-–‒:]?\s*", "", meta.subject, flags=re.I)
     meeting = re.search(
-        r"(\d{3,5})\s*(?:st|nd|rd|th)\s+meeting\s+of\s+the\s+COUNCIL\s+OF\s+THE\s+EUROPEAN\s+UNION\s*\((.+)\)\s*,?\s*(.*)$",
+        r"(\d{3,5}\s*(?:st|nd|rd|th)\s+meeting\s+of\s+the\s+COUNCIL\s+OF\s+THE\s+EUROPEAN\s+UNION)\s*\((.+)\)\s*,?\s*(.*)$",
         s,
         re.I,
     )
     written = re.search(r"Outcome\s+of\s+the\s+written\s+procedure\s+completed\s+on\s+(.+?)\s*$", s, re.I)
     cut = None
     if meeting:
-        meta.meeting = meeting.group(1)
+        meta.meeting = re.sub(
+            r"\s+", " ", meeting.group(1)
+        )  # verbatim, e.g. "4024th meeting of the COUNCIL ..."
         meta.configuration = meeting.group(2).strip() or None
         meta.meeting_dates = parse_dates(meeting.group(3))
         cut = meeting.start()
@@ -736,7 +744,6 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
         )
 
     src = sheet_src or meta_src
-    num = (src.meta.doc_number or src.version.base.removeprefix("ST-")).strip()
     statements: list[str] = []
     for p in valid:
         for s in parse_statements(p.pages):
@@ -750,6 +757,9 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
         procedure_refs=meta.procedure_refs,
         council_doc=meta.council_doc,
         configuration=None if meta.written_procedure_date else meta.configuration,
+        stage=meta.step,
+        meeting=None if meta.written_procedure_date else meta.meeting,
+        written_procedure=True if meta.written_procedure_date else (False if meta.meeting else None),
         voting_rule=rule,  # type: ignore[arg-type]
         act_type=_act_type(title),
         outcome=outcome,  # type: ignore[arg-type]
@@ -758,16 +768,20 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
         source=SourceRef(
             institution="Council",
             url=DOC_URL.format(doc=src.version.doc_id),
-            label=REGISTER_NOTE.format(
-                num=f"ST {num}"
-                + ("" if src.version.suffix == "INIT" else f" {src.version.suffix.replace('_', ' ')}")
-            ),
-            identifier=src.version.doc_id.replace("-", " "),
+            label=REGISTER_NOTE.format(num=st_number(src.version)),
+            identifier=st_number(src.version),
             retrieved_at=retrieved_at,
             published=src.version.date,
         ),
     )
     return vote, problem
+
+
+def st_number(v: DocVersion) -> str:
+    """Council register number of a version: "ST 10199/24", "ST 14522/25 REV 1", "ST 15212/24 COR 1"."""
+    _, num, year, *rest = v.doc_id.split("-")
+    suffix = " ".join(rest)
+    return f"ST {num}/{year[2:]}" + ("" if suffix == "INIT" else f" {suffix}")
 
 
 def _act_type(title: str) -> str | None:
@@ -788,6 +802,34 @@ def list_versions(http: Http) -> dict[str, list[DocVersion]]:
     return _versions_from_rows(rows)
 
 
+class CouncilNoteState(Model):
+    """Incremental-fetch index (data/snapshot/council/notes.json): what a note's Cellar metadata looked
+    like when it was last processed, and which vote record it produced."""
+
+    id: str  # base ST number, e.g. "ST-10199-2024"
+    fingerprint: str  # sha256 of the parser version + every version's ST id, date, title, Council event dates
+    versions: list[str] = Field(default_factory=list)  # ST ids of all versions (INIT/REV/COR) at that time
+    vote_id: str | None = None  # None: no record (vote before MIN_VOTE_DATE, or no version available)
+    problem: str | None = None
+
+
+def note_fingerprint(versions: list[DocVersion]) -> str:
+    payload = {
+        "parser": PARSER_VERSION,
+        "versions": [[v.doc_id, v.date, v.title, sorted(v.events)] for v in versions],
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+@dataclass
+class _Result:
+    base: str
+    vote: CouncilVote | None
+    problem: str | None
+    state: CouncilNoteState | None  # None: transient failure, retry next run
+    reused: bool = False
+
+
 def fetch(http: Http) -> SourceStatus:
     attempted = now_iso()
     if not poppler_available():
@@ -799,42 +841,70 @@ def fetch(http: Http) -> SourceStatus:
         )
     groups = list_versions(http)
     bases = sorted(groups)
+    prev_states = {st.id: st for st in read_records(SOURCE_ID, "notes", CouncilNoteState)}
+    prev_votes = {v.id: v for v in read_records(SOURCE_ID, "votes", CouncilVote)}
+    if prev_states and len(bases) < 0.9 * len(prev_states):
+        # A truncated Cellar answer must not shrink the snapshot.
+        return SourceStatus(
+            source=SOURCE_ID,
+            status="failed",
+            attempted_at=attempted,
+            note=f"Cellar listed only {len(bases)} voting-result notes (previously {len(prev_states)}); kept snapshot.",
+        )
     retrieved = now_iso()
 
-    def work(base: str) -> tuple[str, CouncilVote | None, str | None]:
+    def work(base: str) -> _Result:
+        versions = groups[base]
+        fp = note_fingerprint(versions)
+        prev = prev_states.get(base)
+        prev_vote = prev_votes.get(prev.vote_id) if prev and prev.vote_id else None
+        if prev and prev.fingerprint == fp and (prev.vote_id is None or prev_vote is not None):
+            return _Result(base, prev_vote, prev.problem, prev, reused=True)
         parsed = []
-        for v in groups[base]:
+        for v in versions:
             try:
                 pdf = http.get(DOC_URL.format(doc=v.doc_id))
             except HttpError as e:
-                log.warning("council: %s download failed: %s", v.doc_id, e)
-                continue
+                if e.status == 404:  # withdrawn version (e.g. declared null and void)
+                    log.warning("council: %s not in the register (404)", v.doc_id)
+                    continue
+                # Transient: keep the previous record (if any) and retry next run.
+                return _Result(base, prev_vote, f"download failed ({e.status}); previous record kept", None)
             try:
                 parsed.append(parse_document(v, pdf))
             except (subprocess.SubprocessError, ValueError) as e:
                 log.warning("council: %s unreadable: %s", v.doc_id, e)
+        state = CouncilNoteState(id=base, fingerprint=fp, versions=[v.doc_id for v in versions])
         if not parsed:
-            return base, None, "no version could be downloaded/read"
+            state.problem = "no version could be downloaded/read"
+            return _Result(base, None, state.problem, state)
         try:
             vote, problem = build_vote(parsed, retrieved)
         except ValueError as e:  # pydantic validation etc.
-            return base, None, f"invalid record: {e}"
-        return base, vote, problem
+            state.problem = f"invalid record: {e}"
+            return _Result(base, None, state.problem, state)
+        state.vote_id, state.problem = (vote.id if vote else None), problem
+        return _Result(base, vote, problem, state)
 
     votes: list[CouncilVote] = []
+    states: list[CouncilNoteState] = []
     problems: list[str] = []
-    dropped = 0
+    reused = transient = 0
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
-        for i, (base, vote, problem) in enumerate(ex.map(work, bases), start=1):
-            if vote is not None:
-                votes.append(vote)
-            elif problem is None:
-                dropped += 1  # before MIN_VOTE_DATE
-            if problem:
-                problems.append(f"{base}: {problem}")
-                log.info("council: %s: %s", base, problem)
+        for i, r in enumerate(ex.map(work, bases), start=1):
+            if r.vote is not None:
+                votes.append(r.vote)
+            if r.state is not None:
+                states.append(r.state)
+            else:
+                transient += 1
+            reused += r.reused
+            if r.problem:
+                problems.append(f"{r.base}: {r.problem}")
+                if not r.reused:
+                    log.info("council: %s: %s", r.base, r.problem)
             if i % 100 == 0:
-                log.info("council: %d/%d notes processed", i, len(bases))
+                log.info("council: %d/%d notes processed (%d unchanged, reused)", i, len(bases), reused)
 
     if not votes:
         return SourceStatus(
@@ -845,6 +915,7 @@ def fetch(http: Http) -> SourceStatus:
             + "; ".join(problems[:5]),
         )
     write_records(SOURCE_ID, "votes", votes, key=lambda r: (r.date, r.id))  # type: ignore[attr-defined]
+    write_records(SOURCE_ID, "notes", states, key=lambda r: r.id)  # type: ignore[attr-defined]
     with_positions = sum(1 for v in votes if v.positions)
     by_rule: dict[str, int] = {}
     for v in votes:
@@ -852,14 +923,15 @@ def fetch(http: Http) -> SourceStatus:
     note = (
         f"{len(votes)} Council voting results since {MIN_VOTE_DATE} from GSC 'Voting result' notes "
         f"(Cellar list + data.consilium.europa.eu PDFs); {with_positions} with per-country positions read from "
-        f"the annexed voting sheet; rules {by_rule}. {len(problems)} notes with problems"
+        f"the annexed voting sheet; rules {by_rule}. {len(bases) - reused} notes (re)processed, {reused} unchanged "
+        f"and reused; {transient} transient download failures. {len(problems)} notes with problems"
         + (f", e.g. {'; '.join(problems[:3])}" if problems else "")
         + ". The Council's open-data datasets were discontinued (2025) and its web voting-results pages "
         "are bot-protected."
     )
     return SourceStatus(
         source=SOURCE_ID,
-        status="ok" if with_positions >= 0.95 * len(votes) else "partial",
+        status="ok" if with_positions >= 0.95 * len(votes) and not transient else "partial",
         fetched_at=retrieved,
         attempted_at=attempted,
         records={"votes": len(votes), "votes_with_positions": with_positions},

@@ -89,11 +89,11 @@ SOURCES: dict[str, dict[str, str]] = {
         "Decision 2011/833/EU, with acknowledgement of the source.",
     },
     "council": {
-        "name": "Council of the European Union – public voting results",
+        "name": "Council of the European Union – voting results (official voting-result documents)",
         "institution": "Council",
         "url": "https://www.consilium.europa.eu/en/general-secretariat/corporate-policies/transparency/open-data/voting-results/",
-        "licence": "© European Union, Council of the European Union. Reuse authorised with acknowledgement "
-        "of the source (Council open data / legal notice).",
+        "licence": "© European Union, Council of the European Union. Reuse of Council documents is authorised "
+        "under Council Decision (EU) 2017/1842, with acknowledgement of the source.",
     },
     "implementation": {
         "name": "European Commission / EUR-Lex – national transposition measures, infringements and indicators",
@@ -991,6 +991,8 @@ class Builder:
             rec = {
                 "id": cv.id, "date": cv.date, "title": cv.title, "dossier_id": did,
                 "dossier_ref": p.reference if p else None, "configuration": cv.configuration,
+                "stage": getattr(cv, "stage", None), "meeting": getattr(cv, "meeting", None),
+                "written_procedure": getattr(cv, "written_procedure", None), "council_doc": cv.council_doc,
                 "voting_rule": cv.voting_rule, "outcome": cv.outcome, "positions": dict(sorted(cv.positions.items())),
                 "assessment": assessment, "statements": cv.statements, "source": _src(cv.source),
             }  # fmt: skip
@@ -1013,7 +1015,10 @@ class Builder:
             return None
         if cv.voting_rule != "qmv":
             return a  # the proposal origin only matters for qualified majority
-        if (a["adopted_by_rule"], a["blocking_minority_existed"]) != (b["adopted_by_rule"], b["blocking_minority_existed"]):
+        if (a["adopted_by_rule"], a["blocking_minority_existed"]) != (
+            b["adopted_by_rule"],
+            b["blocking_minority_existed"],
+        ):
             return None
         a["legal_basis"] = None
         a["note"] = (a["note"] + " " if a["note"] else "") + (
@@ -1093,7 +1098,9 @@ class Builder:
     def derived_next_step(self, det: dict) -> dict:
         """Next step for in-force acts when the status module gives none (basis 'derived')."""
         ns = det["next_step"]
-        if det["stage"] != "in_force" or (ns.get("basis") != "unknown" and ns.get("text") not in UNKNOWN_STEPS):
+        if det["stage"] != "in_force" or (
+            ns.get("basis") != "unknown" and ns.get("text") not in UNKNOWN_STEPS
+        ):
             return ns
         app = det.get("application") or {}
         apply_dates = [d for d in app.get("application_dates", []) if d > self.today]
@@ -1353,11 +1360,19 @@ class Builder:
             self.dossier_detail[pid] = det
         # officially established relations between dossiers (act amends/repeals another dossier's act)
         rels = (("amends", "Amends"), ("repeals", "Repeals"), ("repealed_by", "Repealed by"))
+        # the inverse of a recorded "amends"/"repeals" is the same official fact
+        inv_amended: dict[str, set[str]] = defaultdict(set)
+        inv_repealed: dict[str, set[str]] = defaultdict(set)
+        for a in self.s.acts:
+            for c in a.amends:
+                inv_amended[c].add(a.celex)
+            for c in a.repeals:
+                inv_repealed[c].add(a.celex)
         for pid, det in self.dossier_detail.items():
             related: dict[str, dict] = {}
             for a in self.acts_of.get(pid, []):
                 # one item per amending act: its dossier when known, else the act itself (id = CELEX)
-                for c in sorted(a.amended_by):
+                for c in sorted(set(a.amended_by) | inv_amended.get(a.celex, set())):
                     others = sorted(o for o in self.act_dossiers.get(c, ()) if o != pid)
                     if others:
                         for other in others:
@@ -1369,7 +1384,8 @@ class Builder:
                             "id": c, "title": f"Act {c} (EUR-Lex)", "relation": "Amended by",
                         })  # fmt: skip
                 for attr, label in rels:
-                    for c in getattr(a, attr):
+                    extra = inv_repealed.get(a.celex, set()) if attr == "repealed_by" else set()
+                    for c in sorted(set(getattr(a, attr)) | extra):
                         for other in sorted(self.act_dossiers.get(c, ())):
                             if other != pid:
                                 related.setdefault(f"{attr}:{other}", {
@@ -1843,13 +1859,25 @@ class Builder:
             notes.append("Adopted acts (EUR-Lex): not available in this release, so adoption, entry-into-force "
                          "and application dates may be missing.")  # fmt: skip
         if avail("council") and s.council:
-            notes.append(f"Council votes: {len(s.council)} public voting results of the Council of the EU.")
+            dates = sorted(c.date for c in s.council)
+            unread = sum(1 for c in s.council if not c.positions)
+            note = (f"Council votes: {len(s.council):,} voting results of the Council of the EU "
+                    f"({dates[0][:4]}–{dates[-1][:4]}), with each Member State government's position read from the "
+                    "official Council voting-result documents. These are positions of national governments in "
+                    "the Council, not of MEPs. Only a vote under unanimity can be blocked by a single country.")  # fmt: skip
+            if unread:
+                note += (
+                    f" {unread} voting-result document(s) could not be read and are shown without positions."
+                )
+            notes.append(note)
         else:
             notes.append("Council votes: not available from an accessible official machine-readable source in "
                          "this release.")  # fmt: skip
         if s.measures:
-            notes.append(f"National implementation: {len(s.measures):,} national transposition measures notified "
-                         f"for {len(self.measure_celexes):,} directives, as listed by EUR-Lex. 'No measures found' "
+            with_m = len({m.directive_celex for m in s.measures})
+            notes.append(f"National implementation: {len(s.measures):,} national transposition measures listed by "
+                         f"EUR-Lex for the {len(self.measure_celexes):,} directives queried ({with_m:,} with at least "
+                         "one measure). Directives not queried are shown as 'not available'. 'No measures found' "
                          "only means none appear in the available dataset — it is not, by itself, evidence that a "
                          "country has failed to transpose a directive.")  # fmt: skip
         else:
