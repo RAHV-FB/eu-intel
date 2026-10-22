@@ -410,6 +410,29 @@ def _index_entry(d: dict) -> dict:
     return out
 
 
+UNKNOWN_STEPS = {"Not available.", "Not determined from the recorded events."}
+_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+           "November", "December"]  # fmt: skip
+
+
+def _long_date(d: str) -> str:
+    y, m, dd = (int(x) for x in d.split("-"))
+    return f"{dd} {_MONTHS[m - 1]} {y}"
+
+
+def _dedupe_sources(sources: list[dict | None]) -> list[dict]:
+    """Keep the first SourceRef per (institution, url, identifier)."""
+    out, seen = [], set()
+    for x in sources:
+        if not x:
+            continue
+        k = (x.get("institution"), x.get("url"), x.get("identifier"))
+        if k not in seen:
+            seen.add(k)
+            out.append(x)
+    return out
+
+
 def _vote_index_entry(v: dict) -> dict:
     """Compact EpVoteSummary for votes/index.json (full record in votes/<id>.json)."""
     out = {k: x for k, x in v.items() if not (k in ("dossier_id", "dossier_ref", "margin") and x is None)}
@@ -959,11 +982,8 @@ class Builder:
             p = self.proc.get(did) if did else None
             assessment = None
             if assess is not None and cv.voting_rule != "unknown" and cv.positions:
-                on_prop = bool(p and (p.com_refs or p.type in ("COD", "CNS")))
                 try:
-                    assessment = council_assessment(
-                        _as_dict(assess(cv.positions, cv.voting_rule, on_prop, year=int(cv.date[:4])))
-                    )
+                    assessment = self.council_rule_assessment(assess, cv, p)
                 except Exception as e:  # noqa: BLE001
                     log.warning("council assessment failed for %s: %r", cv.id, e)
             if assessment and cv.voting_rule != "unanimity":
@@ -978,6 +998,29 @@ class Builder:
             for d in ds:
                 self.council_of[d].append(rec)
         self.files["council/index.json"] = self.council_public
+
+    def council_rule_assessment(self, assess: Any, cv: CouncilVote, p: Procedure | None) -> dict | None:
+        """Apply the voting rule. Whether the Council acted on a Commission proposal (which changes the QMV
+        threshold, TEU 16(4) vs TFEU 238(2)) is taken as established only when the linked procedure records
+        a COM document; otherwise both thresholds are computed and the result is kept only if they agree,
+        without asserting a legal basis."""
+        year = int(cv.date[:4])
+        if p is not None and p.com_refs:
+            return council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, True, year=year)))
+        a = council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, True, year=year)))
+        b = council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, False, year=year)))
+        if a is None or b is None:
+            return None
+        if cv.voting_rule != "qmv":
+            return a  # the proposal origin only matters for qualified majority
+        if (a["adopted_by_rule"], a["blocking_minority_existed"]) != (b["adopted_by_rule"], b["blocking_minority_existed"]):
+            return None
+        a["legal_basis"] = None
+        a["note"] = (a["note"] + " " if a["note"] else "") + (
+            "Whether the Council acted on a Commission proposal is not recorded in our data; the result is the "
+            "same under both qualified-majority thresholds (55% and 72% of Member States, 65% of the population)."
+        )
+        return a
 
     # ---------------------------------------------------------------- dossiers
     def classify(self, p: Procedure) -> dict:
@@ -1046,6 +1089,22 @@ class Builder:
             "stall": None,
             "application": None,
         }  # fmt: skip
+
+    def derived_next_step(self, det: dict) -> dict:
+        """Next step for in-force acts when the status module gives none (basis 'derived')."""
+        ns = det["next_step"]
+        if det["stage"] != "in_force" or (ns.get("basis") != "unknown" and ns.get("text") not in UNKNOWN_STEPS):
+            return ns
+        app = det.get("application") or {}
+        apply_dates = [d for d in app.get("application_dates", []) if d > self.today]
+        deadlines = [d for d in app.get("transposition_deadlines", []) if d > self.today]
+        if deadlines and (not apply_dates or deadlines[0] <= apply_dates[0]):
+            text = f"Member States must transpose the directive by {_long_date(deadlines[0])}."
+        elif apply_dates:
+            text = f"Further provisions apply from {_long_date(apply_dates[0])}."
+        else:
+            text = "The legislative procedure is complete; the act applies."
+        return {"text": text, "institution": None, "basis": "derived"}
 
     def application_info(self, acts: list[LegalAct]) -> dict | None:
         if not acts:
@@ -1270,6 +1329,7 @@ class Builder:
                 })  # fmt: skip
             sources = [_src(p.source)] + [_src(a.source) for a in acts]
             sources += [_src(t.source) for t in self.train_of.get(pid, [])]
+            sources = _dedupe_sources(sources)
             det = {
                 **summ,
                 "editorial": editorial,
@@ -1289,20 +1349,34 @@ class Builder:
             }
             if det["application"] is None:
                 det["application"] = self.application_info(acts)
+            det["next_step"] = self.derived_next_step(det)
             self.dossier_detail[pid] = det
         # officially established relations between dossiers (act amends/repeals another dossier's act)
-        rels = (("amends", "amends"), ("amended_by", "is amended by"), ("repeals", "repeals"),
-                ("repealed_by", "is repealed by"))  # fmt: skip
+        rels = (("amends", "Amends"), ("repeals", "Repeals"), ("repealed_by", "Repealed by"))
         for pid, det in self.dossier_detail.items():
             related: dict[str, dict] = {}
             for a in self.acts_of.get(pid, []):
+                # one item per amending act: its dossier when known, else the act itself (id = CELEX)
+                for c in sorted(a.amended_by):
+                    others = sorted(o for o in self.act_dossiers.get(c, ()) if o != pid)
+                    if others:
+                        for other in others:
+                            related.setdefault(f"amended_by:{other}", {
+                                "id": other, "title": _truncate(self.dossier_summary[other]["title"], 160), "relation": "Amended by",
+                            })  # fmt: skip
+                    elif c not in self.act_dossiers:
+                        related.setdefault(f"amended_by:{c}", {
+                            "id": c, "title": f"Act {c} (EUR-Lex)", "relation": "Amended by",
+                        })  # fmt: skip
                 for attr, label in rels:
                     for c in getattr(a, attr):
                         for other in sorted(self.act_dossiers.get(c, ())):
-                            if other != pid and other not in related:
-                                related[other] = {"id": other, "title": self.dossier_summary[other]["title"],
-                                                  "relation": label}  # fmt: skip
-            det["related"] = [related[k] for k in sorted(related)]
+                            if other != pid:
+                                related.setdefault(f"{attr}:{other}", {
+                                    "id": other, "title": _truncate(self.dossier_summary[other]["title"], 160), "relation": label,
+                                })  # fmt: skip
+            order = {"Amended by": 0, "Repealed by": 1, "Amends": 2, "Repeals": 3}
+            det["related"] = sorted(related.values(), key=lambda r: (order.get(r["relation"], 9), r["id"]))
         index = sorted(
             self.dossier_summary.values(), key=lambda d: (d["last_event"] or "", d["id"]), reverse=True
         )

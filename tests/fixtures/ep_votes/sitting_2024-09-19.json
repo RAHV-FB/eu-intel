@@ -1,0 +1,152 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2024-09-19/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: ; others keep their first 3 ids (published counts unchanged).",
+ "decisions": {
+  "data": [
+   {
+    "activity_date": "2024-09-19",
+    "activity_id": "MTG-PL-2024-09-19-DEC-169607",
+    "activity_label": {
+     "en": "§ 14",
+     "fr": "§ 14"
+    },
+    "activity_order": "27.0",
+    "comment": {
+     "en": "sep/EV",
+     "fr": "vs/VE"
+    },
+    "decisionAboutId": "§",
+    "decisionAboutId_Lang": {
+     "en": "§",
+     "fr": "§"
+    },
+    "decisionAboutId_XMLLiteral": "<am><symbol href=\"https://xx.xx.xx/§\"/></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "headingLabel": {
+     "en": "Joint motion for a resolution RC-B10-0023/2024\n(PPE, PfE, ECR)",
+     "fr": "Proposition de résolution commune RC-B10-0023/2024 \n(PPE, PfE, ECR)"
+    },
+    "id": "eli/dl/event/MTG-PL-2024-09-19-DEC-169607",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-09-19-VOT-ITM-960008"
+    ],
+    "notation_votingId": "169607",
+    "number_of_attendees": 608,
+    "number_of_votes_abstention": 10,
+    "number_of_votes_against": 299,
+    "number_of_votes_favor": 299,
+    "referenceText": {
+     "en": "§ 14",
+     "fr": "§ 14"
+    },
+    "responsible_organization_label": {
+     "en": "original text"
+    },
+    "type": "Vote",
+    "was_motivated_by": [
+     "eli/dl/event/MTG-PL-2024-09-19-VOT-ITM-960008-SEPARATE-3"
+    ]
+   }
+  ]
+ },
+ "sitting": "MTG-PL-2024-09-19",
+ "vote_results": {
+  "data": [
+   {
+    "activity_date": "2024-09-19",
+    "activity_id": "MTG-PL-2024-09-19-VOT-ITM-960008",
+    "activity_label": {
+     "en": "Situation in Venezuela",
+     "fr": "La situation au Venezuela",
+     "mul": "La situation au Venezuela - Situation in Venezuela - Die Lage in Venezuela"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/B-10-2024-0027",
+     "eli/dl/doc/B-10-2024-0025",
+     "eli/dl/doc/B-10-2024-0023",
+     "eli/dl/doc/B-10-2024-0037",
+     "eli/dl/doc/B-10-2024-0034",
+     "eli/dl/doc/B-10-2024-0030",
+     "eli/dl/doc/B-10-2024-0035"
+    ],
+    "comment": {
+     "en": "<remarkFreeTexts order=\"3\"><title>Miscellaneous</title><remarkFreeText><translation>Amendment 1 had been withdrawn and Amendment 5 had been cancelled.</translation></remarkFreeText></remarkFreeTexts>",
+     "fr": "<remarkFreeTexts order=\"3\"><title>Divers</title><remarkFreeText><translation>L'amendement 1 a été retiré et l'amendement 5 a été annulé.</translation></remarkFreeText></remarkFreeTexts>"
+    },
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169612",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169677",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169598",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169603",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169599",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169490",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169483",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169602",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169479",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169592",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169619",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169482",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169613",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169623",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169622",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169491",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169605",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169492",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169485",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169493",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169594",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169494",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169595",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169615",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169616",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169607",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169487",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169610",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169606",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169495",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169596",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169486",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169496",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169597",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169477",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169600",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169590",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169591",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169618",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169589",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169609",
+     "eli/dl/event/MTG-PL-2024-09-19-DEC-169621"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-09-19-OJ-ITM-V-42"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-09-19-VOT-ITM-960008",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-09-19-VOT-ITM-960008"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-09-19"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-09-19-VOT-ITM-960008"
+      ],
+      "id": "eli/dl/proc/2024-2810"
+     }
+    ],
+    "notation_dlvId": "960008",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2024-09-19-VOT-ITM-006"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Situation in Venezuela</title><label>Motions for resolutions: RC-B10-0023/2024, B10-0023/2024, B10-0025/2024, B10-0027/2024, B10-0030/2024, B10-0034/2024, B10-0035/2024, B10-0037/2024</label></structuredLabel>",
+     "fr": "<structuredLabel><title>La situation au Venezuela</title><label>Propositions de résolution: RC-B10-0023/2024, B10-0023/2024, B10-0025/2024, B10-0027/2024, B10-0030/2024, B10-0034/2024, B10-0035/2024, B10-0037/2024</label></structuredLabel>"
+    },
+    "type": "Activity"
+   }
+  ]
+ }
+}

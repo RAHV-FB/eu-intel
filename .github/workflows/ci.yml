@@ -53,7 +53,11 @@ jobs:
           cache: npm
 
       - name: Install Python dependencies
-        run: python -m pip install -e '.[dev]'
+        # poppler-utils lets the Council voting-sheet parser tests run instead of being skipped.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          python -m pip install -e '.[dev]'
 
       - name: Install Node dependencies
         run: npm ci

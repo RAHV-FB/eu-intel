@@ -254,6 +254,9 @@ class CouncilVote(Model):
     procedure_refs: list[str] = Field(default_factory=list)  # "2021/0106(COD)" if officially given
     council_doc: str | None = None  # e.g. "PE-CONS 24/24"
     configuration: str | None = None  # e.g. "General Affairs Council"
+    stage: str | None = None  # e.g. "Adoption of the legislative act", "Council position at first reading" (verbatim)
+    meeting: str | None = None  # meeting reference as published, e.g. "3999th meeting of the Council"
+    written_procedure: bool | None = None  # adopted by written procedure rather than at a meeting
     voting_rule: Literal["qmv", "unanimity", "simple_majority", "unknown"]
     act_type: str | None = None
     outcome: Literal["adopted", "not_adopted", "unknown"]

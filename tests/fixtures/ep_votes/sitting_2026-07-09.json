@@ -1,0 +1,216 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2026-07-09/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: ; others keep their first 3 ids (published counts unchanged).",
+ "decisions": {
+  "data": [
+   {
+    "activity_date": "2026-07-09",
+    "activity_id": "MTG-PL-2026-07-09-DEC-195783",
+    "activity_label": {
+     "en": "C10-0178/2026 – Article 3, § 1, point a – Am 26 CP1= 31 CP1= 4 CP1=",
+     "fr": "C10-0178/2026 - Article 3, § 1, point a - Am 26 PC1 = 31 PC1 = 4 PC1 =",
+     "mul": "C10-0178/2026 - Article 3, § 1, point a - Am 26 PC1 = 31 PC1 = 4 PC1 ="
+    },
+    "activity_order": "11.0",
+    "activity_start_date": "2026-07-09T13:24:23+02:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decisionAboutId": "26 PC1 =\n31 PC1 =\n4 PC1 =",
+    "decisionAboutId_Lang": {
+     "en": "26 CP1=\n31 CP1=\n4 CP1=",
+     "fr": "26 PC1 =\n31 PC1 =\n4 PC1 ="
+    },
+    "decisionAboutId_XMLLiteral": "<am><equal_reference><reference><number>26</number></reference><reference><symbol href=\"https://xx.xx.xx/PC\"/><text>1</text></reference><reference><symbol href=\"https://xx.xx.xx/=\"/><symbol href=\"https://xx.xx.xx/BR\"/></reference><reference><number>31</number></reference><reference><symbol href=\"https://xx.xx.xx/PC\"/><text>1</text></reference><reference><symbol href=\"https://xx.xx.xx/=\"/><symbol href=\"https://xx.xx.xx/BR\"/></reference><reference><number>4</number></reference><reference><symbol href=\"https://xx.xx.xx/PC\"/><text>1</text></reference><reference><symbol href=\"https://xx.xx.xx/=\"/></reference></equal_reference></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/REJECTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/256855",
+     "person/257108",
+     "person/256907"
+    ],
+    "had_voter_against": [
+     "person/197648",
+     "person/188096",
+     "person/28223"
+    ],
+    "had_voter_favor": [
+     "person/197690",
+     "person/197448",
+     "person/4746"
+    ],
+    "had_voter_intended_abstention": [
+     "person/260724"
+    ],
+    "had_voter_intended_against": [
+     "person/96812"
+    ],
+    "had_voter_intended_favor": [
+     "person/197782"
+    ],
+    "headingLabel": {
+     "en": "Draft legislative act ",
+     "fr": "Projet d'acte législatif "
+    },
+    "id": "eli/dl/event/MTG-PL-2026-07-09-DEC-195783",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2026-07-09-VOT-ITM-993015"
+    ],
+    "notation_votingId": "195783",
+    "number_of_attendees": 600,
+    "number_of_votes_abstention": 18,
+    "number_of_votes_against": 237,
+    "number_of_votes_favor": 345,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2026-07-09-RCV-ITM-010"
+    ],
+    "referenceText": {
+     "en": "Article 3, § 1, point a",
+     "fr": "Article 3, § 1, point a"
+    },
+    "responsible_organization_label": {
+     "en": "PfE\nRenew\nVerts/ALE",
+     "fr": "PfE\nRenew\nVerts/ALE"
+    },
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2026-07-09",
+    "activity_id": "MTG-PL-2026-07-09-DEC-195775",
+    "activity_label": {
+     "en": "C10-0178/2026 – Proposal for rejection – Am 1= 2= 7=",
+     "fr": "C10-0178/2026 - Proposition de rejet - Am 1 = 2 = 7 =",
+     "mul": "C10-0178/2026 - Proposition de rejet - Am 1 = 2 = 7 ="
+    },
+    "activity_order": "2.0",
+    "activity_start_date": "2026-07-09T13:21:39+02:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decisionAboutId": "1 =\n2 =\n7 =",
+    "decisionAboutId_Lang": {
+     "en": "1=\n2=\n7=",
+     "fr": "1 =\n2 =\n7 ="
+    },
+    "decisionAboutId_XMLLiteral": "<am><equal_reference><reference><number>1</number></reference><reference><symbol href=\"https://xx.xx.xx/=\"/><symbol href=\"https://xx.xx.xx/BR\"/></reference><reference><number>2</number></reference><reference><symbol href=\"https://xx.xx.xx/=\"/><symbol href=\"https://xx.xx.xx/BR\"/></reference><reference><number>7</number></reference><reference><symbol href=\"https://xx.xx.xx/=\"/></reference></equal_reference></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/REJECTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/257033",
+     "person/256906",
+     "person/204418"
+    ],
+    "had_voter_against": [
+     "person/237465",
+     "person/257068",
+     "person/256999"
+    ],
+    "had_voter_favor": [
+     "person/257101",
+     "person/239260",
+     "person/257139"
+    ],
+    "had_voter_intended_against": [
+     "person/197421",
+     "person/197718"
+    ],
+    "had_voter_intended_favor": [
+     "person/257115",
+     "person/257019",
+     "person/197440"
+    ],
+    "headingLabel": {
+     "en": "Proposal to reject the Council position",
+     "fr": "Proposition de rejet de la position du Conseil"
+    },
+    "id": "eli/dl/event/MTG-PL-2026-07-09-DEC-195775",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2026-07-09-VOT-ITM-993015"
+    ],
+    "notation_votingId": "195775",
+    "number_of_attendees": 607,
+    "number_of_votes_abstention": 17,
+    "number_of_votes_against": 276,
+    "number_of_votes_favor": 314,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2026-07-09-RCV-ITM-002"
+    ],
+    "referenceText": {
+     "en": "Proposal for rejection",
+     "fr": "Proposition de rejet"
+    },
+    "responsible_organization_label": {
+     "en": "The Left\nVerts/ALE\nESN",
+     "fr": "The Left\nVerts/ALE\nESN"
+    },
+    "type": "Vote"
+   }
+  ]
+ },
+ "sitting": "MTG-PL-2026-07-09",
+ "vote_results": {
+  "data": [
+   {
+    "activity_date": "2026-07-09",
+    "activity_id": "MTG-PL-2026-07-09-VOT-ITM-993015",
+    "activity_label": {
+     "en": "Temporary derogation from the ePrivacy directive ***II",
+     "fr": "Dérogation temporaire à la directive vie privée et communications électroniques ***II",
+     "mul": "Dérogation temporaire à la directive vie privée et communications électroniques - Temporary derogation from the ePrivacy directive"
+    },
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195789",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195791",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195807",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195785",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195779",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195783",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195797",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195780",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195792",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195800",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195775",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195799",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195786",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195798",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195790",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195777",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195781",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195795",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195793",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195801",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195776",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195788",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195787",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195784",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195778",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195782",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195796",
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195794"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2026-07-09-VOT-ITM-993015",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2026-07-09-VOT-ITM-993015"
+      ],
+      "id": "eli/dl/event/MTG-PL-2026-07-09"
+     }
+    ],
+    "notation_dlvId": "993015",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2026-07-09-VOT-ITM-004"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Temporary derogation from the ePrivacy directive ***II</title><label>(11261/1/2026 – C10-0178/2026 – 2025/0429(COD)) (Majority of Parliament’s component Members required to amend or reject the Council position)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Dérogation temporaire à la directive vie privée et communications électroniques ***II</title><label>Recommandation pour la deuxième lecture (11261/1/2026 - C10-0178/2026 – 2025/0429(COD)) (Majorité des députés qui composent le Parlement requise pour modifier ou rejeter la position du Conseil)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   }
+  ]
+ }
+}

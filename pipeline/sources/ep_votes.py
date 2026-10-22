@@ -82,21 +82,19 @@ BALLOT_KINDS: frozenset[str] = frozenset({"final", "resolution", "motion"})
 
 # ============================================================================================ fetching
 class _Pacer:
-    """Keeps each worker under MIN_GAP_S between network requests; cache hits are not slowed down."""
+    """Starts a worker's network requests at least MIN_GAP_S apart; cache hits are not slowed down."""
 
     def __init__(self, gap_s: float):
         self.gap_s = gap_s
         self._local = threading.local()
 
     def get(self, http: Http, url: str, **kw: Any) -> bytes:
-        last = getattr(self._local, "last", 0.0)
-        wait = self.gap_s - (time.monotonic() - last)
         t0 = time.monotonic()
         body = http.get(url, **kw)
         if time.monotonic() - t0 > 0.05:  # went to the network (cache hits return in ~1 ms)
+            wait = self.gap_s - (time.monotonic() - t0)
             if wait > 0:
                 time.sleep(wait)
-            self._local.last = time.monotonic()
         return body
 
 
@@ -432,43 +430,42 @@ def classify(s: Signals) -> VoteKind:
 
 
 # ========================================================================================= majority rule
-def majority_rule(kind: str, item: VoteItem | None, proc_types: list[str]) -> str:
+def majority_rule(kind: str, title: str | None, symbol: str | None, proc_types: list[str]) -> str:
     """Majority required by the Treaties for this vote, or "unknown" when it is not established.
 
-    TFEU Art. 231: "Save as otherwise provided in the Treaties, the European Parliament shall act by a majority
-    of the votes cast" (abstentions are not votes cast: CJEU C-650/18). Exceptions in the Treaties:
-      - Art. 294(7)(b),(c) TFEU: second reading — rejection of / amendments to the Council position:
-        majority of component Members. Art. 294(13): third reading — majority of the votes cast.
-      - Art. 290(2) TFEU: objection to (or revocation of) a delegated act: majority of component Members;
-        Decision 1999/468/EC Art. 5a(3)(b),(4)(e): opposition under the regulatory procedure with scrutiny: idem.
+    `title` is the vote item title, `symbol` its procedure symbol ("***II"), `proc_types` the types of the
+    linked procedures. TFEU Art. 231: "Save as otherwise provided in the Treaties, the European Parliament
+    shall act by a majority of the votes cast" (abstentions are not votes cast: CJEU C-650/18). Exceptions:
+      - Art. 294(7)(b),(c) TFEU: second reading ("***II", used only for the ordinary legislative procedure) —
+        rejection of / amendments to the Council position: majority of component Members.
+        Art. 294(13): third reading ("***III") — majority of the votes cast.
+      - Art. 290(2) TFEU: objection to a delegated act (DEA): majority of component Members; likewise
+        Decision 1999/468/EC Art. 5a(3)(b), (4)(e) for the regulatory procedure with scrutiny (RPS).
       - Art. 234 TFEU (censure) and Art. 354 TFEU (Art. 7 TEU): two-thirds of the votes cast representing a
         majority of the component Members ("two_thirds_cast" = both conditions).
-      - Art. 225 TFEU (request to the Commission), Art. 223(1), Art. 312(2) (MFF consent), Art. 314 (budget),
-        Art. 49 TEU (accession consent), Art. 232 (Rules of Procedure): majority of component Members or
-        mixed rules. Procedure types that may carry one of these (INL, APP, NLE, BUD, REG, ...) stay "unknown".
+      - Art. 225 (INL requests), 223(1), 312(2) (MFF consent), 314 (budget), Art. 49 TEU (accession consent),
+        Art. 232 (Rules of Procedure, REG): component Members or mixed rules. Procedure types that may carry
+        one of these (INL, APP, NLE, BUD, REG, ...) stay "unknown". (REG is mixed in the data: amendments to
+        the Rules need a majority of component Members, amendments to other parts of the decision do not.)
     """
-    title = (item.title if item else "") or ""
     types = set(proc_types)
-    if re.search(r"motion of censure|motion de censure", title, re.I) and kind == "motion":
+    if kind == "motion" and re.search(r"motion of censure|motion de censure", title or "", re.I):
         return "two_thirds_cast"
     if kind == "procedural":
         return "votes_cast"  # no Treaty exception covers referral, urgency, agenda or adjournment decisions
-    if not types or len(types) > 1:
+    if symbol == "***II" and types <= {"COD"}:
+        return "component_members" if kind in ("amendment", "motion") else "unknown"
+    if len(types) != 1:
         return "unknown"
     (ptype,) = types
-    symbol = item.symbol if item else None
     if ptype == "COD":
-        if symbol == "***II":
-            return "component_members" if kind in ("amendment", "motion") else "unknown"
-        if symbol in ("***I", "***III"):
-            return "votes_cast"  # Art. 294(3) (no special majority) and Art. 294(13)
-        return "unknown"
-    if ptype in ("DEA", "RPS"):
+        return "votes_cast" if symbol in ("***I", "***III") else "unknown"  # Art. 294(3), 294(13)
+    if ptype in OBJECTION_TYPES:
         return "component_members" if kind == "motion" else "unknown"
     if ptype in ("CNS", "INI", "RSP", "DEC", "IMM"):
         # consultation, own-initiative and topical resolutions, discharge, immunity: no Treaty exception
-        # (a motion of censure is handled above; objections to implementing acts under Art. 291 TFEU /
-        # Regulation (EU) No 182/2011 Art. 11 carry no special majority)
+        # (censure is handled above; objections to implementing acts under Art. 291 TFEU / Regulation (EU)
+        # No 182/2011 Art. 11 carry no special majority)
         return "votes_cast"
     return "unknown"
 
@@ -601,6 +598,29 @@ def resolve_procs(
     return [], ""
 
 
+def doc_symbol_index(sittings: list[Sitting]) -> dict[str, set[str]]:
+    """Document id -> procedure symbols ("***II") of the vote items based on it, in any sitting.
+
+    Some vote items omit the symbol from their title on one day but carry it on another (e.g. the 2020
+    Mobility Package second readings, A9-0114..0116/2020)."""
+    out: dict[str, set[str]] = {}
+    for s in sittings:
+        for it in s.items.values():
+            if it.symbol:
+                for doc in it.docs:
+                    out.setdefault(doc, set()).add(it.symbol)
+    return out
+
+
+def symbol_of(d: Draft, doc_symbols: dict[str, set[str]] | None) -> str | None:
+    """Procedure symbol of the vote's item, else the single symbol of the items based on its documents."""
+    symbols = {it.symbol for it in d.items if it.symbol}
+    if not symbols and doc_symbols:
+        docs = [doc for it in d.items for doc in it.docs] + d.candidate_docs
+        symbols = {sym for doc in docs for sym in doc_symbols.get(doc, ())}
+    return symbols.pop() if len(symbols) == 1 else None
+
+
 def needs_doc_lookup(d: Draft, docs_procs: dict[str, set[str]], ref_to_id: dict[str, str]) -> list[str]:
     """Plenary documents to look up when neither a vote item nor the label gives a procedure."""
     if any(it.procs for it in d.items) or any(r in ref_to_id for r in d.label_procs):
@@ -627,6 +647,7 @@ def build_records(
     procs: list[str],
     proc_labels: dict[str, str],
     retrieved: str,
+    doc_symbols: dict[str, set[str]] | None = None,
 ) -> tuple[EpVote, EpBallots | None]:
     dec, s = d.dec, d.sitting
     refs = [proc_labels[p] if p in proc_labels else p for p in procs]
@@ -668,7 +689,9 @@ def build_records(
         n_against=_int(dec.get("number_of_votes_against")),
         n_abstain=_int(dec.get("number_of_votes_abstention")),
         attendees=_int(dec.get("number_of_attendees")),
-        majority_rule=majority_rule(kind, item, proc_types),
+        majority_rule=majority_rule(
+            kind, item.title if item else None, symbol_of(d, doc_symbols), proc_types
+        ),
         committee=_committee(dec.get("responsible_organization_label")),
         has_ballots=keep_ballots,
         source=source_ref(s, event_id, rollcall, retrieved),
@@ -762,6 +785,7 @@ def assemble(
     """Offline: raw sittings + procedure references + document links -> EpVote / EpBallots records."""
     ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
     docs_procs = doc_index(data)
+    doc_symbols = doc_symbol_index(data)
     votes: dict[str, EpVote] = {}
     ballots: list[EpBallots] = []
     how: Counter[str] = Counter()
@@ -773,7 +797,7 @@ def assemble(
                 continue
             d = draft(dec, s)
             procs, via = resolve_procs(d, docs_procs, doc_links, ref_to_id)
-            vote, b = build_records(d, procs, proc_labels, retrieved)
+            vote, b = build_records(d, procs, proc_labels, retrieved, doc_symbols)
             if vote.id in votes:
                 duplicates += 1
                 continue

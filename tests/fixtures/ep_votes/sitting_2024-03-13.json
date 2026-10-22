@@ -1,0 +1,1936 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2024-03-13/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: 166051; others keep their first 3 ids (published counts unchanged).",
+ "decisions": {
+  "data": [
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166377",
+    "activity_label": {
+     "en": "A9-0042/2024 – Adrián Vázquez Lázara – Recital 29 – Am 102",
+     "fr": "A9-0042/2024 - Adrián Vázquez Lázara - Considérant 29 - Am 102",
+     "mul": "A9-0042/2024 - Adrián Vázquez Lázara - Considérant 29 - Am 102"
+    },
+    "activity_order": "14.0",
+    "activity_start_date": "2024-03-13T12:21:26+01:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decided_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0042-AM-102"
+    ],
+    "decisionAboutId": "102",
+    "decisionAboutId_XMLLiteral": "<am><reference><number>102</number></reference></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/REJECTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197443",
+     "person/125109",
+     "person/197935"
+    ],
+    "had_voter_against": [
+     "person/198096",
+     "person/226260",
+     "person/197632"
+    ],
+    "had_voter_favor": [
+     "person/28346",
+     "person/197870",
+     "person/96952"
+    ],
+    "had_voter_intended_abstention": [
+     "person/197432"
+    ],
+    "had_voter_intended_favor": [
+     "person/124708"
+    ],
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166377",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941749"
+    ],
+    "notation_votingId": "166377",
+    "number_of_attendees": 621,
+    "number_of_votes_abstention": 8,
+    "number_of_votes_against": 351,
+    "number_of_votes_favor": 262,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-RCV-ITM-015"
+    ],
+    "referenceText": {
+     "en": "Recital 29",
+     "fr": "Considérant 29"
+    },
+    "responsible_organization_label": {
+     "en": "INTA",
+     "fr": "INTA"
+    },
+    "type": "Vote",
+    "was_motivated_by": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941749-RCV-1"
+    ]
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166044",
+    "activity_label": {
+     "en": "Article 5, § 1, after point 15",
+     "fr": "Article 5, § 1, après le point 15"
+    },
+    "activity_order": "4.0",
+    "decided_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0065-AM-295"
+    ],
+    "decisionAboutId": "295",
+    "decisionAboutId_XMLLiteral": "<am><reference><number>295</number></reference></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_HAND",
+    "decision_outcome": "def/ep-statuses/REJECTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166044",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941758"
+    ],
+    "notation_votingId": "166044",
+    "referenceText": {
+     "en": "Article 5, § 1, after point 15",
+     "fr": "Article 5, § 1, après le point 15"
+    },
+    "responsible_organization_label": {
+     "en": "ECR",
+     "fr": "ECR"
+    },
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166341",
+    "activity_label": {
+     "en": "Amendments by the committee responsible – separate votes",
+     "fr": "Amendements de la commission compétente - votes séparés"
+    },
+    "activity_order": "6.0",
+    "comment": {
+     "en": "sep",
+     "fr": "vs"
+    },
+    "decided_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0044-AM-176"
+    ],
+    "decisionAboutId": "176",
+    "decisionAboutId_XMLLiteral": "<am><reference><number>176</number></reference></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_HAND",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166341",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941866"
+    ],
+    "notation_votingId": "166341",
+    "referenceText": {
+     "en": "Amendments by the committee responsible – separate votes",
+     "fr": "Amendements de la commission compétente - votes séparés"
+    },
+    "responsible_organization_label": {
+     "en": "committee",
+     "fr": "commission"
+    },
+    "type": "Vote",
+    "was_motivated_by": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941866-SEPARATE-1"
+    ]
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166493",
+    "activity_label": {
+     "en": "A9-0068/2024 – Victor Negrescu – § 46/2",
+     "fr": "A9-0068/2024 - Victor Negrescu - § 46/2",
+     "mul": "A9-0068/2024 - Victor Negrescu - § 46/2"
+    },
+    "activity_order": "46.0",
+    "activity_start_date": "2024-03-13T17:41:30+01:00",
+    "comment": {
+     "en": "2/RCV",
+     "fr": "2/AN"
+    },
+    "decided_on_a_realization_of": [
+     "eli/dl/doc/MTG-PL-2024-03-13-VOT-ITM-941746-SPLIT-1-2"
+    ],
+    "decisionAboutId": "§",
+    "decisionAboutId_XMLLiteral": "<am><symbol href=\"https://xx.xx.xx/§\"/></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197767",
+     "person/197556",
+     "person/197763"
+    ],
+    "had_voter_against": [
+     "person/197564",
+     "person/189525",
+     "person/96756"
+    ],
+    "had_voter_favor": [
+     "person/197422",
+     "person/197772",
+     "person/28229"
+    ],
+    "had_voter_intended_against": [
+     "person/124696"
+    ],
+    "had_voter_intended_favor": [
+     "person/197557",
+     "person/125021"
+    ],
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166493",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941746"
+    ],
+    "notation_votingId": "166493",
+    "number_of_attendees": 572,
+    "number_of_votes_abstention": 24,
+    "number_of_votes_against": 161,
+    "number_of_votes_favor": 387,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-RCV-ITM-117"
+    ],
+    "referenceText": {
+     "en": "§ 46",
+     "fr": "§ 46"
+    },
+    "responsible_organization_label": {
+     "hu": "eredeti szöveg",
+     "pl": "pierwotny tekst",
+     "sk": "pôvodný text",
+     "sv": "originaltexten"
+    },
+    "type": "Vote",
+    "was_motivated_by": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941746-SPLIT-1"
+    ]
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166487",
+    "activity_label": {
+     "en": "A9-0068/2024 – Victor Negrescu – After § 42 – Am 40",
+     "fr": "A9-0068/2024 - Victor Negrescu - Après le § 42 - Am 40",
+     "mul": "A9-0068/2024 - Victor Negrescu - Après le § 42 - Am 40"
+    },
+    "activity_order": "40.0",
+    "activity_start_date": "2024-03-13T17:39:58+01:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decided_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0068-AM-40"
+    ],
+    "decisionAboutId": "40",
+    "decisionAboutId_XMLLiteral": "<am><reference><number>40</number></reference></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197491",
+     "person/182995",
+     "person/197628"
+    ],
+    "had_voter_against": [
+     "person/209896",
+     "person/30482",
+     "person/124837"
+    ],
+    "had_voter_favor": [
+     "person/129164",
+     "person/124831",
+     "person/197607"
+    ],
+    "had_voter_intended_against": [
+     "person/28340"
+    ],
+    "had_voter_intended_favor": [
+     "person/236051",
+     "person/124738",
+     "person/204421"
+    ],
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166487",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941746"
+    ],
+    "notation_votingId": "166487",
+    "number_of_attendees": 574,
+    "number_of_votes_abstention": 31,
+    "number_of_votes_against": 271,
+    "number_of_votes_favor": 272,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-RCV-ITM-112"
+    ],
+    "referenceText": {
+     "en": "After § 42",
+     "fr": "Après le § 42"
+    },
+    "responsible_organization_label": {
+     "en": "Members",
+     "fr": "députés"
+    },
+    "type": "Vote",
+    "was_motivated_by": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941746-RCV-1"
+    ]
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166145",
+    "activity_label": {
+     "en": "A9-0050/2024 – Dragoş Pîslaru – Motion for a resolution (text as a whole)",
+     "fr": "A9-0050/2024 - Dragoş Pîslaru - Proposition de résolution (ensemble du texte)",
+     "mul": "A9-0050/2024 - Dragoş Pîslaru - Proposition de résolution (ensemble du texte)"
+    },
+    "activity_order": "54.0",
+    "activity_start_date": "2024-03-13T17:30:50+01:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/REJECTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/23868",
+     "person/124834",
+     "person/37312"
+    ],
+    "had_voter_against": [
+     "person/197763",
+     "person/197829",
+     "person/197711"
+    ],
+    "had_voter_favor": [
+     "person/125020",
+     "person/197618",
+     "person/197577"
+    ],
+    "had_voter_intended_abstention": [
+     "person/197720"
+    ],
+    "had_voter_intended_favor": [
+     "person/197585"
+    ],
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166145",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941834"
+    ],
+    "notation_votingId": "166145",
+    "number_of_attendees": 576,
+    "number_of_votes_abstention": 58,
+    "number_of_votes_against": 262,
+    "number_of_votes_favor": 256,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-RCV-ITM-087"
+    ],
+    "referenceText": {
+     "en": "Motion for a resolution (as a whole)",
+     "fr": "Proposition de résolution (ensemble du texte)"
+    },
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166172",
+    "activity_label": {
+     "en": "A9-0140/2023 – Javier Moreno Sánchez – Provisional agreement – Am 117",
+     "fr": "A9-0140/2023 - Javier Moreno Sánchez - Accord provisoire - Am 117",
+     "mul": "Procédure de demande unique en vue de la délivrance d'un permis unique autorisant les ressortissants de pays tiers à résider et à travailler sur le territoire d'un État membre et socle commun de droits pour les travailleurs issus de pays tiers qui résident légalement dans un État membre (refonte) - A single application procedure for a single permit for third-country nationals to reside and work in the territory of a Member State and on a common set of rights for third-country workers legally residing in a Member State (recast) - Ein einheitliches Verfahren zur Beantragung einer kombinierten Erlaubnis für Drittstaatsangehörige, sich im Hoheitsgebiet eines Mitgliedstaats aufzuhalten und zu arbeiten, sowie über ein gemeinsames Bündel von Rechten für Drittstaatsarbeitnehmer, die sich rechtmäßig in einem Mitgliedstaat aufhalten (Neufassung) - A9-0140/2023 - Javier Moreno Sánchez - Accord provisoire - Am 117"
+    },
+    "activity_order": "1.0",
+    "activity_start_date": "2024-03-13T12:34:04+01:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decided_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0140-AM-117"
+    ],
+    "decisionAboutId": "117",
+    "decisionAboutId_XMLLiteral": "<am><reference><number>117</number></reference></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197537",
+     "person/4746",
+     "person/197528"
+    ],
+    "had_voter_against": [
+     "person/197482",
+     "person/185771",
+     "person/124715"
+    ],
+    "had_voter_favor": [
+     "person/96752",
+     "person/98582",
+     "person/240478"
+    ],
+    "had_voter_intended_favor": [
+     "person/204733"
+    ],
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166172",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941843"
+    ],
+    "notation_votingId": "166172",
+    "number_of_attendees": 614,
+    "number_of_votes_abstention": 27,
+    "number_of_votes_against": 122,
+    "number_of_votes_favor": 465,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-RCV-ITM-023"
+    ],
+    "referenceText": {
+     "en": "Provisional agreement",
+     "fr": "Accord provisoire"
+    },
+    "responsible_organization_label": {
+     "en": "committee",
+     "fr": "commission"
+    },
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166530",
+    "activity_label": {
+     "en": "B9-0163/2024",
+     "fr": "B9-0163/2024"
+    },
+    "activity_order": "17.0",
+    "decision_method": "def/ep-decision-methods/VOTE_HAND",
+    "decision_outcome": "def/ep-statuses/LAPSED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "headingLabel": {
+     "en": "Other motions for resolutions",
+     "fr": "Autres propositions de résolution"
+    },
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166530",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-942382"
+    ],
+    "notation_votingId": "166530",
+    "referenceText": {
+     "en": "B9-0163/2024",
+     "fr": "B9-0163/2024"
+    },
+    "responsible_organization_label": {
+     "en": "Verts/ALE",
+     "fr": "Verts/ALE"
+    },
+    "type": "Decision"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166656",
+    "activity_order": "17.0",
+    "decision_method": "def/ep-decision-methods/VOTE_HAND",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "headingLabel": {
+     "en": "Draft legislative act",
+     "fr": "Projet d'acte législatif"
+    },
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166656",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-942380"
+    ],
+    "notation_votingId": "166656",
+    "referenceText": {
+     "en": "Request for referral back (Rule 59(4))",
+     "fr": "Demande de renvoi (article 59, paragraphe 4, du règlement)"
+    },
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166382",
+    "activity_label": {
+     "en": "A9-0264/2023 – Sabine Verheyen – Request to vote on the amendments to the draft legislative act",
+     "fr": "A9-0264/2023 - Sabine Verheyen - Demande de mettre aux voix les amendements au projet d'acte législatif",
+     "mul": "Législation européenne sur la liberté des médias - European Media Freedom Act - Europäisches Medienfreiheitsgesetz - A9-0264/2023 - Sabine Verheyen - Demande de mettre aux voix les amendements au projet d'acte législatif"
+    },
+    "activity_order": "2.0",
+    "activity_start_date": "2024-03-13T12:13:30+01:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/REJECTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197764",
+     "person/197430",
+     "person/197773"
+    ],
+    "had_voter_against": [
+     "person/197572",
+     "person/229839",
+     "person/23788"
+    ],
+    "had_voter_favor": [
+     "person/125093",
+     "person/197567",
+     "person/124760"
+    ],
+    "had_voter_intended_abstention": [
+     "person/112747",
+     "person/112748"
+    ],
+    "had_voter_intended_against": [
+     "person/130833",
+     "person/197701",
+     "person/2323"
+    ],
+    "had_voter_intended_favor": [
+     "person/96852",
+     "person/197468"
+    ],
+    "headingLabel": {
+     "en": "Request to vote on the amendments instead of the provisional agreement",
+     "fr": "Demande de mise aux voix des amendements au lieu de l'accord provisoire"
+    },
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166382",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941745"
+    ],
+    "notation_votingId": "166382",
+    "number_of_attendees": 609,
+    "number_of_votes_abstention": 18,
+    "number_of_votes_against": 535,
+    "number_of_votes_favor": 56,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-RCV-ITM-001"
+    ],
+    "referenceText": {
+     "en": "Request to vote on the amendments to the draft legislative act",
+     "fr": "Demande de mettre aux voix les amendements au projet d'acte législatif"
+    },
+    "responsible_organization_label": {
+     "en": "The Left",
+     "fr": "The Left"
+    },
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166051",
+    "activity_label": {
+     "en": "A9-0188/2023 – Brando Benifei, Dragoş Tudorache – Provisional agreement – Am 808",
+     "fr": "A9-0188/2023 - Brando Benifei, Dragoş Tudorache - Accord provisoire - Am 808",
+     "mul": "Législation sur l’intelligence artificielle - Artificial Intelligence Act - Gesetz über künstliche Intelligenz - A9-0188/2023 - Brando Benifei, Dragoş Tudorache - Accord provisoire - Am 808"
+    },
+    "activity_order": "2.0",
+    "activity_start_date": "2024-03-13T12:14:17+01:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decided_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0188-AM-808"
+    ],
+    "decisionAboutId": "808",
+    "decisionAboutId_XMLLiteral": "<am><reference><number>808</number></reference></am>",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197481",
+     "person/197444",
+     "person/198096",
+     "person/197537",
+     "person/197430",
+     "person/197405",
+     "person/124780",
+     "person/197795",
+     "person/197488",
+     "person/197469",
+     "person/197482",
+     "person/251268",
+     "person/197467",
+     "person/124760",
+     "person/197480",
+     "person/197475",
+     "person/197829",
+     "person/197390",
+     "person/239258",
+     "person/128483",
+     "person/124785",
+     "person/197427",
+     "person/125106",
+     "person/197786",
+     "person/96713",
+     "person/197935",
+     "person/197764",
+     "person/197516",
+     "person/132191",
+     "person/197483",
+     "person/124833",
+     "person/124777",
+     "person/197432",
+     "person/28586",
+     "person/204414",
+     "person/197445",
+     "person/4289",
+     "person/197619",
+     "person/28619",
+     "person/124700",
+     "person/197552",
+     "person/23712",
+     "person/197763",
+     "person/197831",
+     "person/120478",
+     "person/197489",
+     "person/96646",
+     "person/197443",
+     "person/205452"
+    ],
+    "had_voter_against": [
+     "person/23699",
+     "person/251249",
+     "person/123562",
+     "person/96820",
+     "person/88715",
+     "person/197400",
+     "person/204443",
+     "person/30482",
+     "person/238639",
+     "person/131507",
+     "person/250572",
+     "person/125093",
+     "person/236053",
+     "person/197549",
+     "person/218349",
+     "person/187917",
+     "person/197546",
+     "person/197655",
+     "person/197529",
+     "person/197731",
+     "person/202351",
+     "person/197533",
+     "person/190517",
+     "person/96852",
+     "person/124985",
+     "person/197776",
+     "person/221463",
+     "person/197512",
+     "person/197574",
+     "person/197431",
+     "person/136236",
+     "person/214839",
+     "person/125025",
+     "person/197754",
+     "person/197556",
+     "person/197827",
+     "person/197709",
+     "person/197767",
+     "person/197817",
+     "person/197527",
+     "person/197785",
+     "person/202352",
+     "person/197734",
+     "person/197539",
+     "person/124834",
+     "person/1917"
+    ],
+    "had_voter_favor": [
+     "person/197448",
+     "person/1892",
+     "person/28226",
+     "person/96739",
+     "person/124934",
+     "person/197870",
+     "person/96780",
+     "person/229839",
+     "person/103381",
+     "person/197802",
+     "person/197606",
+     "person/197849",
+     "person/197582",
+     "person/197518",
+     "person/182995",
+     "person/197576",
+     "person/96868",
+     "person/124837",
+     "person/202036",
+     "person/239973",
+     "person/236052",
+     "person/197395",
+     "person/130256",
+     "person/197425",
+     "person/2341",
+     "person/125237",
+     "person/197787",
+     "person/197844",
+     "person/197742",
+     "person/124844",
+     "person/197691",
+     "person/197559",
+     "person/197418",
+     "person/39725",
+     "person/197647",
+     "person/129164",
+     "person/124973",
+     "person/94649",
+     "person/125012",
+     "person/251874",
+     "person/197419",
+     "person/197392",
+     "person/197440",
+     "person/197466",
+     "person/204416",
+     "person/124586",
+     "person/204400",
+     "person/197721",
+     "person/190774",
+     "person/96725",
+     "person/197722",
+     "person/125005",
+     "person/125043",
+     "person/28429",
+     "person/197784",
+     "person/236050",
+     "person/124715",
+     "person/197841",
+     "person/209140",
+     "person/197778",
+     "person/96772",
+     "person/197510",
+     "person/124873",
+     "person/124867",
+     "person/124710",
+     "person/197618",
+     "person/197808",
+     "person/125214",
+     "person/197567",
+     "person/124808",
+     "person/197541",
+     "person/197631",
+     "person/197668",
+     "person/197624",
+     "person/197551",
+     "person/189525",
+     "person/197588",
+     "person/245858",
+     "person/124988",
+     "person/96991",
+     "person/125670",
+     "person/197404",
+     "person/197495",
+     "person/96833",
+     "person/124771",
+     "person/28347",
+     "person/204334",
+     "person/124856",
+     "person/230085",
+     "person/124701",
+     "person/124738",
+     "person/197740",
+     "person/135511",
+     "person/247709",
+     "person/249603",
+     "person/245018",
+     "person/197505",
+     "person/197697",
+     "person/23868",
+     "person/840",
+     "person/197452",
+     "person/197478",
+     "person/4246",
+     "person/204733",
+     "person/197770",
+     "person/208722",
+     "person/107212",
+     "person/96933",
+     "person/124875",
+     "person/28288",
+     "person/2323",
+     "person/197654",
+     "person/197610",
+     "person/197800",
+     "person/197826",
+     "person/125128",
+     "person/250538",
+     "person/124692",
+     "person/112747",
+     "person/131580",
+     "person/197677",
+     "person/197522",
+     "person/124996",
+     "person/197515",
+     "person/197580",
+     "person/197553",
+     "person/237465",
+     "person/23768",
+     "person/197502",
+     "person/249284",
+     "person/197422",
+     "person/197538",
+     "person/204449",
+     "person/189065",
+     "person/197460",
+     "person/122978",
+     "person/124722",
+     "person/193292",
+     "person/197423",
+     "person/124821",
+     "person/28617",
+     "person/197616",
+     "person/197636",
+     "person/28340",
+     "person/197806",
+     "person/35016",
+     "person/126644",
+     "person/197791",
+     "person/197470",
+     "person/197586",
+     "person/197579",
+     "person/197402",
+     "person/197493",
+     "person/190713",
+     "person/124929",
+     "person/204332",
+     "person/197449",
+     "person/204420",
+     "person/197835",
+     "person/125067",
+     "person/197782",
+     "person/198490",
+     "person/124713",
+     "person/197695",
+     "person/197662",
+     "person/209896",
+     "person/2054",
+     "person/197607",
+     "person/1927",
+     "person/197530",
+     "person/197838",
+     "person/124812",
+     "person/124850",
+     "person/197672",
+     "person/250918",
+     "person/24505",
+     "person/197719",
+     "person/197788",
+     "person/185619",
+     "person/197845",
+     "person/197818",
+     "person/185341",
+     "person/197571",
+     "person/197472",
+     "person/197572",
+     "person/96811",
+     "person/72779",
+     "person/197441",
+     "person/197545",
+     "person/197628",
+     "person/197680",
+     "person/202073",
+     "person/197498",
+     "person/197408",
+     "person/226260",
+     "person/125038",
+     "person/96837",
+     "person/239262",
+     "person/233862",
+     "person/124704",
+     "person/197711",
+     "person/197398",
+     "person/125001",
+     "person/125065",
+     "person/29579",
+     "person/197780",
+     "person/183916",
+     "person/197773",
+     "person/38511",
+     "person/197500",
+     "person/197536",
+     "person/5729",
+     "person/124835",
+     "person/124936",
+     "person/197810",
+     "person/37312",
+     "person/197894",
+     "person/99283",
+     "person/28298",
+     "person/38595",
+     "person/197804",
+     "person/24942",
+     "person/96668",
+     "person/197702",
+     "person/96808",
+     "person/197563",
+     "person/125706",
+     "person/249826",
+     "person/124739",
+     "person/197637",
+     "person/197519",
+     "person/197584",
+     "person/197557",
+     "person/197577",
+     "person/97968",
+     "person/198063",
+     "person/197506",
+     "person/239256",
+     "person/197645",
+     "person/24922",
+     "person/204346",
+     "person/197426",
+     "person/197491",
+     "person/197464",
+     "person/96711",
+     "person/96775",
+     "person/124734",
+     "person/197728",
+     "person/23781",
+     "person/197801",
+     "person/112748",
+     "person/127096",
+     "person/183793",
+     "person/1909",
+     "person/204418",
+     "person/124891",
+     "person/213330",
+     "person/197461",
+     "person/28269",
+     "person/118949",
+     "person/96653",
+     "person/124806",
+     "person/197779",
+     "person/124992",
+     "person/197511",
+     "person/197528",
+     "person/197792",
+     "person/197595",
+     "person/197839",
+     "person/112611",
+     "person/24594",
+     "person/198176",
+     "person/96796",
+     "person/197534",
+     "person/197455",
+     "person/197435",
+     "person/250237",
+     "person/247737",
+     "person/197632",
+     "person/197720",
+     "person/96761",
+     "person/125021",
+     "person/197657",
+     "person/4344",
+     "person/197412",
+     "person/197438",
+     "person/125068",
+     "person/125042",
+     "person/197663",
+     "person/96734",
+     "person/96899",
+     "person/96681",
+     "person/244571",
+     "person/132366",
+     "person/197698",
+     "person/197824",
+     "person/96787",
+     "person/125063",
+     "person/197771",
+     "person/96998",
+     "person/197520",
+     "person/197540",
+     "person/197513",
+     "person/197566",
+     "person/197794",
+     "person/197473",
+     "person/124708",
+     "person/228604",
+     "person/240478",
+     "person/28390",
+     "person/96812",
+     "person/124693",
+     "person/124781",
+     "person/197634",
+     "person/204335",
+     "person/197777",
+     "person/197503",
+     "person/249285",
+     "person/190518",
+     "person/197504",
+     "person/243912",
+     "person/197453",
+     "person/197446",
+     "person/96891",
+     "person/197447",
+     "person/197743",
+     "person/247735",
+     "person/197690",
+     "person/197587",
+     "person/28219",
+     "person/185974",
+     "person/88882",
+     "person/234344",
+     "person/197648",
+     "person/197611",
+     "person/197863",
+     "person/96936",
+     "person/96752",
+     "person/204421",
+     "person/28266",
+     "person/197836",
+     "person/96779",
+     "person/197769",
+     "person/124836",
+     "person/239972",
+     "person/197670",
+     "person/236051",
+     "person/197842",
+     "person/199941",
+     "person/197525",
+     "person/1992",
+     "person/58789",
+     "person/114268",
+     "person/197843",
+     "person/197889",
+     "person/197531",
+     "person/38420",
+     "person/4746",
+     "person/197417",
+     "person/124831",
+     "person/33997",
+     "person/86793",
+     "person/197401",
+     "person/197465",
+     "person/197589",
+     "person/98341",
+     "person/124735",
+     "person/197626",
+     "person/198329",
+     "person/125004",
+     "person/197458",
+     "person/197641",
+     "person/197687",
+     "person/197459",
+     "person/199996",
+     "person/237779",
+     "person/239260",
+     "person/124799",
+     "person/124766",
+     "person/96771",
+     "person/96791",
+     "person/96648",
+     "person/129073",
+     "person/197717",
+     "person/125045",
+     "person/124866",
+     "person/124822",
+     "person/4267",
+     "person/197682",
+     "person/33982",
+     "person/125046",
+     "person/188945",
+     "person/112744",
+     "person/204413",
+     "person/28122",
+     "person/197667",
+     "person/197623",
+     "person/197550",
+     "person/229519",
+     "person/22858",
+     "person/197403",
+     "person/197429",
+     "person/197781",
+     "person/124712",
+     "person/197848",
+     "person/28346",
+     "person/204333",
+     "person/197523",
+     "person/124802",
+     "person/197543",
+     "person/197581",
+     "person/190464",
+     "person/97236",
+     "person/125109",
+     "person/212855",
+     "person/197517",
+     "person/197544",
+     "person/197591",
+     "person/197798",
+     "person/96867",
+     "person/197451",
+     "person/96880",
+     "person/253008",
+     "person/98582",
+     "person/28223",
+     "person/197638",
+     "person/197652",
+     "person/185771",
+     "person/125104",
+     "person/197507",
+     "person/197646",
+     "person/197391",
+     "person/247122",
+     "person/28229",
+     "person/28294",
+     "person/23788",
+     "person/96750",
+     "person/96776",
+     "person/249443",
+     "person/197514",
+     "person/28161",
+     "person/124884",
+     "person/124877",
+     "person/218347",
+     "person/197783",
+     "person/197694",
+     "person/197820",
+     "person/124714",
+     "person/96709",
+     "person/197840",
+     "person/28297",
+     "person/197679",
+     "person/130100",
+     "person/197635",
+     "person/197608",
+     "person/237320",
+     "person/204419",
+     "person/204368",
+     "person/96756",
+     "person/198183",
+     "person/197462",
+     "person/197578",
+     "person/239255",
+     "person/197463",
+     "person/250235",
+     "person/124807",
+     "person/40599",
+     "person/197846",
+     "person/197738",
+     "person/96952",
+     "person/124861",
+     "person/96885",
+     "person/28353",
+     "person/28399",
+     "person/5392",
+     "person/209091",
+     "person/197658",
+     "person/197837",
+     "person/5565",
+     "person/125023",
+     "person/96747",
+     "person/124696",
+     "person/238674",
+     "person/197671",
+     "person/197718",
+     "person/96932",
+     "person/96978",
+     "person/197564",
+     "person/197526",
+     "person/197665",
+     "person/197621",
+     "person/197433",
+     "person/101585",
+     "person/239257",
+     "person/124726",
+     "person/197832",
+     "person/243979",
+     "person/96830",
+     "person/124852",
+     "person/192634",
+     "person/27714",
+     "person/197501",
+     "person/106936",
+     "person/125020",
+     "person/202112",
+     "person/197627",
+     "person/34578",
+     "person/197413",
+     "person/197406",
+     "person/197497",
+     "person/204336",
+     "person/28400",
+     "person/95074",
+     "person/124747",
+     "person/253043",
+     "person/197650",
+     "person/197547",
+     "person/190519",
+     "person/197585",
+     "person/237224",
+     "person/197756",
+     "person/197772",
+     "person/206158"
+    ],
+    "had_voter_intended_abstention": [
+     "person/96780"
+    ],
+    "had_voter_intended_against": [
+     "person/204733"
+    ],
+    "headingLabel": {
+     "en": "Provisional agreement",
+     "fr": "Accord provisoire"
+    },
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166051",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941757"
+    ],
+    "notation_votingId": "166051",
+    "number_of_attendees": 618,
+    "number_of_votes_abstention": 49,
+    "number_of_votes_against": 46,
+    "number_of_votes_favor": 523,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-RCV-ITM-003"
+    ],
+    "referenceText": {
+     "en": "Provisional agreement",
+     "fr": "Accord provisoire"
+    },
+    "responsible_organization_label": {
+     "en": "committee",
+     "fr": "commission"
+    },
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166566",
+    "activity_label": {
+     "en": "RC-B9-0163/2024 – Motion for a resolution (text as a whole)",
+     "fr": "RC-B9-0163/2024 - Proposition de résolution (ensemble du texte)",
+     "mul": "RC-B9-0163/2024 - Proposition de résolution (ensemble du texte)"
+    },
+    "activity_order": "15.0",
+    "activity_start_date": "2024-03-13T17:46:51+01:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/125001",
+     "person/197488",
+     "person/198176"
+    ],
+    "had_voter_against": [
+     "person/23699",
+     "person/125093",
+     "person/197764"
+    ],
+    "had_voter_favor": [
+     "person/96739",
+     "person/197506",
+     "person/96833"
+    ],
+    "headingLabel": {
+     "en": "Joint motion for a resolution RC-B9-0163/2024\n(PPE, S&D, Renew, Verts/ALE, ECR)",
+     "fr": "Proposition de résolution commune RC-B9-0163/2024 \n(PPE, S&D, Renew, Verts/ALE, ECR)"
+    },
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166566",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-942382"
+    ],
+    "notation_votingId": "166566",
+    "number_of_attendees": 540,
+    "number_of_votes_abstention": 32,
+    "number_of_votes_against": 4,
+    "number_of_votes_favor": 504,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-RCV-ITM-133"
+    ],
+    "referenceText": {
+     "en": "Motion for a resolution (as a whole)",
+     "fr": "Proposition de résolution (ensemble du texte)"
+    },
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-DEC-166202",
+    "activity_label": {
+     "en": "A9-0042/2024 – Adrián Vázquez Lázara – Commission proposal",
+     "fr": "A9-0042/2024 - Adrián Vázquez Lázara - Proposition de la Commission",
+     "mul": "A9-0042/2024 - Adrián Vázquez Lázara - Proposition de la Commission"
+    },
+    "activity_order": "16.0",
+    "activity_start_date": "2024-03-13T12:21:46+01:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197655",
+     "person/197767",
+     "person/197935"
+    ],
+    "had_voter_against": [
+     "person/197763",
+     "person/125025",
+     "person/197787"
+    ],
+    "had_voter_favor": [
+     "person/197667",
+     "person/197636",
+     "person/202073"
+    ],
+    "had_voter_intended_abstention": [
+     "person/124708"
+    ],
+    "had_voter_intended_against": [
+     "person/204733"
+    ],
+    "id": "eli/dl/event/MTG-PL-2024-03-13-DEC-166202",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941749"
+    ],
+    "notation_votingId": "166202",
+    "number_of_attendees": 625,
+    "number_of_votes_abstention": 20,
+    "number_of_votes_against": 121,
+    "number_of_votes_favor": 484,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-RCV-ITM-017"
+    ],
+    "referenceText": {
+     "en": "Commission proposal",
+     "fr": "Proposition de la Commission"
+    },
+    "type": "Vote"
+   }
+  ]
+ },
+ "sitting": "MTG-PL-2024-03-13",
+ "vote_results": {
+  "data": [
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-942380",
+    "activity_label": {
+     "en": "Temporary trade-liberalisation measures supplementing trade concessions applicable to Ukrainian products under the EU/Euratom/Ukraine Association Agreement ***I",
+     "fr": "Mesures de libéralisation temporaire des échanges en complément des concessions commerciales applicables aux produits ukrainiens au titre de l'accord d’association UE/Euratom/Ukraine ***I",
+     "mul": "Mesures de libéralisation temporaire des échanges en complément des concessions commerciales applicables aux produits ukrainiens au titre de l'accord d’association UE/Euratom/Ukraine - Temporary trade-liberalisation measures supplementing trade concessions applicable to Ukrainian products under the EU/Euratom/Ukraine Association Agreement - Vorübergehende Maßnahmen zur Liberalisierung des Handels in Ergänzung der Handelszugeständnisse für ukrainische Waren im Rahmen des Assoziierungsabkommens zwischen der EU, Euratom und der Ukraine"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0077"
+    ],
+    "comment": {
+     "en": "<remarkFreeTexts order=\"1\"><title>Miscellaneous</title><remarkFreeText><translation>AM 10 had been cancelled and replaced by AM 25.</translation></remarkFreeText></remarkFreeTexts>",
+     "fr": "<remarkFreeTexts order=\"1\"><title>Divers</title><remarkFreeText><translation>L'amendement 10 a été annulé et remplacé par l'amendement 25.</translation></remarkFreeText></remarkFreeTexts>"
+    },
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166571",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166568",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166551",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166569",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166577",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166574",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166572",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166656",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166567",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166575",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166570",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166573",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166550",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166576",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166548"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-129"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-942380",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-942380"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-942380"
+      ],
+      "id": "eli/dl/proc/2024-0028"
+     }
+    ],
+    "notation_dlvId": "942380",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-018"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Temporary trade-liberalisation measures supplementing trade concessions applicable to Ukrainian products under the EU/Euratom/Ukraine Association Agreement ***I</title><label>Report: Sandra Kalniete (A9-0077/2024)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Mesures de libéralisation temporaire des échanges en complément des concessions commerciales applicables aux produits ukrainiens au titre de l'accord d’association UE/Euratom/Ukraine ***I</title><label>Rapport: Sandra Kalniete (A9-0077/2024)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-941834",
+    "activity_label": {
+     "en": "European Semester for economic policy coordination: employment and social priorities for 2024",
+     "fr": "Semestre européen pour la coordination des politiques économiques: priorités sociales et en matière d’emploi pour 2024",
+     "mul": "Semestre européen pour la coordination des politiques économiques: priorités sociales et en matière d’emploi pour 2024 - European Semester for economic policy coordination: employment and social priorities for 2024 - Europäisches Semester für die wirtschaftspolitische Koordinierung: Beschäftigungs- und sozialpolitische Prioritäten für 2024"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0050"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166439",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166450",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166414",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166453",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166433",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166440",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166420",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166142",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166445",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166432",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166409",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166143",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166435",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166415",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166447",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166427",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166448",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166441",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166421",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166442",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166454",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166423",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166437",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166417",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166424",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166429",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166436",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166455",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166430",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166410",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166145",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166413",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166425",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166412",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166451",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166426",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166406",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166418",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166444",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166408",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166456"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-20"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941834",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941834"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941834"
+      ],
+      "id": "eli/dl/proc/2023-2116"
+     }
+    ],
+    "notation_dlvId": "941834",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-021"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>European Semester for economic policy coordination: employment and social priorities for 2024</title><label>Report: Dragoş Pîslaru (A9-0050/2024)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Semestre européen pour la coordination des politiques économiques: priorités sociales et en matière d’emploi pour 2024</title><label>Rapport: Dragoş Pîslaru (A9-0050/2024)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-941758",
+    "activity_label": {
+     "en": "Establishing the Union Customs Code and the European Union Customs Authority, and repealing Regulation (EU) No 952/2013 ***I",
+     "fr": "Établissement du code des douanes de l'Union et de l'Autorité douanière de l'Union européenne, et abrogation du règlement (UE) n° 952/2013 ***I",
+     "mul": "Établissement du code des douanes de l'Union et de l'Autorité douanière de l'Union européenne, et abrogation du règlement (UE) n° 952/2013 - Establishing the Union Customs Code and the European Union Customs Authority, and repealing Regulation (EU) No 952/2013 - Festlegung des Zollkodex der Union und Einrichtung der Zollbehörde der Europäischen Union sowie Aufhebung der Verordnung (EU) Nr. 952/2013"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0065"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166404",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166403",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166047",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166044",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166043",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166401",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166405",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166049",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166402",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166046",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166045",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166042"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-18"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941758",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941758"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941758"
+      ],
+      "id": "eli/dl/proc/2023-0156"
+     }
+    ],
+    "notation_dlvId": "941758",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-015"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Establishing the Union Customs Code and the European Union Customs Authority, and repealing Regulation (EU) No 952/2013 ***I</title><label>Report: Deirdre Clune (A9-0065/2024)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Établissement du code des douanes de l'Union et de l'Autorité douanière de l'Union européenne, et abrogation du règlement (UE) n° 952/2013 ***I</title><label>Rapport: Deirdre Clune (A9-0065/2024)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-941843",
+    "activity_label": {
+     "en": "A single application procedure for a single permit for third-country nationals to reside and work in the territory of a Member State and a common set of rights for third-country workers legally residing in a Member State (recast) ***I",
+     "fr": "Procédure de demande unique en vue de la délivrance d'un permis unique autorisant les ressortissants de pays tiers à résider et à travailler sur le territoire d'un État membre et établissement d'un socle commun de droits pour les travailleurs issus de pays tiers qui résident légalement dans un État membre (refonte) ***I",
+     "mul": "Procédure de demande unique en vue de la délivrance d'un permis unique autorisant les ressortissants de pays tiers à résider et à travailler sur le territoire d'un État membre et socle commun de droits pour les travailleurs issus de pays tiers qui résident légalement dans un État membre (refonte) - A single application procedure for a single permit for third-country nationals to reside and work in the territory of a Member State and on a common set of rights for third-country workers legally residing in a Member State (recast) - Ein einheitliches Verfahren zur Beantragung einer kombinierten Erlaubnis für Drittstaatsangehörige, sich im Hoheitsgebiet eines Mitgliedstaats aufzuhalten und zu arbeiten, sowie über ein gemeinsames Bündel von Rechten für Drittstaatsarbeitnehmer, die sich rechtmäßig in einem Mitgliedstaat aufhalten (Neufassung)"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0140"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166172"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-62"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941843",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941843"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941843"
+      ],
+      "id": "eli/dl/proc/2022-0131"
+     }
+    ],
+    "notation_dlvId": "941843",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-010"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>A single application procedure for a single permit for third-country nationals to reside and work in the territory of a Member State and a common set of rights for third-country workers legally residing in a Member State (recast) ***I</title><label>Report: Javier Moreno Sánchez (A9-0140/2023)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Procédure de demande unique en vue de la délivrance d'un permis unique autorisant les ressortissants de pays tiers à résider et à travailler sur le territoire d'un État membre et établissement d'un socle commun de droits pour les travailleurs issus de pays tiers qui résident légalement dans un État membre (refonte) ***I</title><label>Rapport: Javier Moreno Sánchez (A9-0140/2023)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-941745",
+    "activity_label": {
+     "en": "European Media Freedom Act ***I",
+     "fr": "Législation européenne sur la liberté des médias ***I",
+     "mul": "Législation européenne sur la liberté des médias  - European Media Freedom Act - Europäisches Medienfreiheitsgesetz"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0264"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166187",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166190",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166385",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166384",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166185",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166383",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166183",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166382"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-38"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941745",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941745"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941745"
+      ],
+      "id": "eli/dl/proc/2022-0277"
+     }
+    ],
+    "notation_dlvId": "941745",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-001"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>European Media Freedom Act ***I</title><label>Report: Sabine Verheyen (A9-0264/2023)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Législation européenne sur la liberté des médias  ***I</title><label>Rapport: Sabine Verheyen (A9-0264/2023)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-941866",
+    "activity_label": {
+     "en": "Safety of toys and repealing Directive 2009/48/EC ***I",
+     "fr": "Sécurité des jouets et abrogation de la directive 2009/48/CE ***I",
+     "mul": "Sécurité des jouets et abrogation de la directive 2009/48/CE - Safety of toys and repealing Directive 2009/48/EC - Sicherheit von Spielzeug und Aufhebung der Richtlinie 2009/48/EG"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0044"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166160",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166338",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166169",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166168",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166156",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166171",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166349",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166348",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166346",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166336",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166167",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166165",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166350",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166164",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166151",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166152",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166345",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166159",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166344",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166342",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166163",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166170",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166353",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166148",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166347",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166341",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166155",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166340",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166162",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166339",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166150",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166158",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166343",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166157",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166149",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166352",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166337",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166166",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166351",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166154",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166153",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166161"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-79"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941866",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941866"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941866"
+      ],
+      "id": "eli/dl/proc/2023-0290"
+     }
+    ],
+    "notation_dlvId": "941866",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-008"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Safety of toys and repealing Directive 2009/48/EC ***I</title><label>Report: Marion Walsmann (A9-0044/2024)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Sécurité des jouets et abrogation de la directive 2009/48/CE ***I</title><label>Rapport: Marion Walsmann (A9-0044/2024)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-941746",
+    "activity_label": {
+     "en": "Guidelines for the 2025 Budget – Section III",
+     "fr": "Orientations pour le budget 2025 – Section III",
+     "mul": "Orientations pour le budget 2025 – Section III - Guidelines for the 2025 Budget - Section III - Leitlinien für den Haushaltsplan 2025 – Einzelplan III"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0068"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166492",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166103",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166477",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166476",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166494",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166109",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166467",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166486",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166495",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166485",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166130",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166462",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166461",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166471",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166478",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166487",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166488",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166480",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166470",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166457",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166464",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166090",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166482",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166468",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166111",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166459",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166497",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166496",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166131",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166091",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166473",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166472",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166489",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166481",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166458",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166466",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166465",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166475",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166493",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166469",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166479",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166498",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166096",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166490",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166093",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166092",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166474",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166484",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166483",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166098"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-60"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941746",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941746"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941746"
+      ],
+      "id": "eli/dl/proc/2023-2220"
+     }
+    ],
+    "notation_dlvId": "941746",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-022"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Guidelines for the 2025 Budget – Section III</title><label>Report: Victor Negrescu (A9-0068/2024)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Orientations pour le budget 2025 – Section III</title><label>Rapport: Victor Negrescu (A9-0068/2024)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-941749",
+    "activity_label": {
+     "en": "Compulsory licensing for crisis management and amending Regulation (EC) 816/2006 ***I",
+     "fr": "Octroi de licences obligatoires pour la gestion de crise et modification du règlement (CE) nº 816/2006 ***I",
+     "mul": "Octroi de licences obligatoires pour la gestion de crise et modification du règlement (CE) nº 816/2016 - Compulsory licensing for crisis management and amending Regulation (EC) 816/2006 - Zwangslizenzen für das Krisenmanagement sowie Änderung der Verordnung (EG) Nr. 816/2006"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2024-0042"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166373",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166367",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166374",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166371",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166368",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166193",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166369",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166376",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166375",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166378",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166372",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166202",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166377",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166370",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166365"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-72"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941749",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941749"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941749"
+      ],
+      "id": "eli/dl/proc/2023-0129"
+     }
+    ],
+    "notation_dlvId": "941749",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-007"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Compulsory licensing for crisis management and amending Regulation (EC) 816/2006 ***I</title><label>Report: Adrián Vázquez Lázara (A9-0042/2024)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Octroi de licences obligatoires pour la gestion de crise et modification du règlement (CE) nº 816/2006 ***I</title><label>Rapport: Adrián Vázquez Lázara (A9-0042/2024)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-942382",
+    "activity_label": {
+     "en": "Closer ties between the EU and Armenia and the need for a peace agreement between Azerbaijan and Armenia",
+     "fr": "Liens plus étroits entre l'UE et l'Arménie et nécessité d'un accord de paix entre l'Azerbaïdjan et l'Arménie",
+     "mul": "Liens plus étroits entre l'UE et l'Arménie et nécessité d'un accord de paix entre l'Azerbaïdjan et l'Arménie - Closer ties between the EU and Armenia and the need for a peace agreement between Azerbaijan and Armenia - Engere Beziehungen zwischen der EU und Armenien und die Notwendigkeit eines Friedensabkommens zwischen Aserbaidschan und Armenien"
+    },
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166559",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166532",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166535",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166564",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166565",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166556",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166525",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166533",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166566",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166530",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166558",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166534",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166563",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166560",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166555",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166561",
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166531"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-115"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-942382",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-942382"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     }
+    ],
+    "notation_dlvId": "942382",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-023"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Closer ties between the EU and Armenia and the need for a peace agreement between Azerbaijan and Armenia</title><label>Motions for resolutions: RC-B9-0163/2024, B9-0163/2024, B9-0164/2024, B9-0165/2024, B9-0166/2024, B9-0167/2024, B9-0168/2024</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Liens plus étroits entre l'UE et l'Arménie et nécessité d'un accord de paix entre l'Azerbaïdjan et l'Arménie</title><label>Propositions de résolution: RC-B9-0163/2024, B9-0163/2024, B9-0164/2024, B9-0165/2024, B9-0166/2024, B9-0167/2024, B9-0168/2024</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2024-03-13",
+    "activity_id": "MTG-PL-2024-03-13-VOT-ITM-941757",
+    "activity_label": {
+     "en": "Artificial Intelligence Act ***I",
+     "fr": "Législation sur l’intelligence artificielle ***I",
+     "mul": "Législation sur l’intelligence artificielle - Artificial Intelligence Act  - Gesetz über künstliche Intelligenz"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0188"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-03-13-DEC-166051"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-102"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941757",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941757"
+      ],
+      "id": "eli/dl/event/MTG-PL-2024-03-13"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941757"
+      ],
+      "id": "eli/dl/proc/2021-0106"
+     }
+    ],
+    "notation_dlvId": "941757",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-002"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Artificial Intelligence Act ***I</title><label>Report: Brando Benifei, Dragoş Tudorache (A9-0188/2023)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Législation sur l’intelligence artificielle ***I</title><label>Rapport: Brando Benifei, Dragoş Tudorache (A9-0188/2023)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   }
+  ]
+ }
+}

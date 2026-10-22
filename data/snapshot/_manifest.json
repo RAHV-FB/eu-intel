@@ -1,4 +1,15 @@
 {
+ "council": {
+  "attempted_at": "2026-10-22T17:58:46Z",
+  "fetched_at": "2026-10-22T17:58:50Z",
+  "note": "720 Council voting results since 2019-01-01 from GSC 'Voting result' notes (Cellar list + data.consilium.europa.eu PDFs); 717 with per-country positions read from the annexed voting sheet; rules {'qmv': 672, 'unanimity': 43, 'unknown': 5}. 3 notes with problems, e.g. ST-7080-2024: ST-7080-2024-INIT: p2: slot (390, row 13) unreadable: colour [0, 0, 0], grey 0; ST-7085-2020: ST-7085-2020-INIT: several voting sheets in one note; ST-7859-2019: ST-7859-2019-INIT: p2: legend (yes/no/abstain icons) not found. The Council's open-data datasets were discontinued (2025) and its web voting-results pages are bot-protected.",
+  "records": {
+   "votes": 720,
+   "votes_with_positions": 717
+  },
+  "source": "council",
+  "status": "ok"
+ },
  "ep_people": {
   "attempted_at": "2026-10-22T17:28:07Z",
   "fetched_at": "2026-10-22T17:28:15Z",

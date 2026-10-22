@@ -1,0 +1,115 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2025-07-10/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: ; others keep their first 3 ids (published counts unchanged).",
+ "decisions": {
+  "data": [
+   {
+    "activity_date": "2025-07-10",
+    "activity_id": "MTG-PL-2025-07-10-DEC-178149",
+    "activity_label": {
+     "en": "B10-0319/2025 – Motion for a resolution",
+     "fr": "B10-0319/2025 - Proposition de résolution",
+     "mul": "B10-0319/2025 - Proposition de résolution"
+    },
+    "activity_order": "2.0",
+    "activity_start_date": "2025-07-10T13:03:19+02:00",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/REJECTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/2268",
+     "person/204332",
+     "person/257092"
+    ],
+    "had_voter_against": [
+     "person/256839",
+     "person/256983",
+     "person/257137"
+    ],
+    "had_voter_favor": [
+     "person/256942",
+     "person/256895",
+     "person/257055"
+    ],
+    "had_voter_intended_abstention": [
+     "person/96933"
+    ],
+    "had_voter_intended_favor": [
+     "person/257262"
+    ],
+    "headingLabel": {
+     "en": "Motion of censure B10-0319/2025",
+     "fr": "Motion de censure B10-0319/2025"
+    },
+    "id": "eli/dl/event/MTG-PL-2025-07-10-DEC-178149",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2025-07-10-VOT-ITM-965783"
+    ],
+    "notation_votingId": "178149",
+    "number_of_attendees": 553,
+    "number_of_votes_abstention": 18,
+    "number_of_votes_against": 360,
+    "number_of_votes_favor": 175,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2025-07-10-RCV-ITM-001"
+    ],
+    "referenceText": {
+     "en": "Motion for a resolution",
+     "fr": "Proposition de résolution"
+    },
+    "type": "Vote"
+   }
+  ]
+ },
+ "sitting": "MTG-PL-2025-07-10",
+ "vote_results": {
+  "data": [
+   {
+    "activity_date": "2025-07-10",
+    "activity_id": "MTG-PL-2025-07-10-VOT-ITM-965783",
+    "activity_label": {
+     "en": "Motion of censure on the Commission",
+     "fr": "Motion de censure visant la Commission",
+     "mul": "Motion de censure visant la Commission - Motion of censure on the Commission - Misstrauensantrag gegen die Kommission"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/B-10-2025-0319"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2025-07-10-DEC-178149"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2025-07-10-OJ-ITM-V-89"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2025-07-10-VOT-ITM-965783",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2025-07-10-VOT-ITM-965783"
+      ],
+      "id": "eli/dl/event/MTG-PL-2025-07-10"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2025-07-10-VOT-ITM-965783"
+      ],
+      "id": "eli/dl/proc/2025-2140"
+     }
+    ],
+    "notation_dlvId": "965783",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2025-07-10-VOT-ITM-001"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Motion of censure on the Commission</title><label>Motion for a resolution: B10-0319/2025 (Majority of Parliament’s component Members and 2/3 of votes cast required)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Motion de censure visant la Commission</title><label>Proposition de résolution: B10-0319/2025 (Majorité des deux tiers des suffrages exprimés, représentant la majorité des membres qui composent le Parlement, requise)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   }
+  ]
+ }
+}
