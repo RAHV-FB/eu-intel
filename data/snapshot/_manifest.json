@@ -1,0 +1,23 @@
+{
+ "ep_people": {
+  "attempted_at": "2026-10-22T17:28:07Z",
+  "fetched_at": "2026-10-22T17:28:15Z",
+  "note": "MEPs per term {9: 875, 10: 746}, active 719; orgs {'group': 18, 'party': 528, 'committee': 83}",
+  "records": {
+   "meps": 1280,
+   "orgs": 629
+  },
+  "source": "ep_people",
+  "status": "ok"
+ },
+ "eurlex": {
+  "attempted_at": "2026-10-22T17:26:43Z",
+  "fetched_at": "2026-10-22T17:27:23Z",
+  "note": "1252 acts in scope (COD/CNS/APP procedures, date >= 2014-01-01); 0 featured; 1252 with procedure reference",
+  "records": {
+   "acts": 1252
+  },
+  "source": "eurlex",
+  "status": "ok"
+ }
+}

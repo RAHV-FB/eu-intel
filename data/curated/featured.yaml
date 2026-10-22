@@ -1,0 +1,686 @@
+# Curated editorial layer for major EU legislative dossiers.
+#
+# Rules (see docs/EDITORIAL.md):
+# - `id` is the EP Open Data process id; `reference` the interinstitutional procedure reference.
+#   Every id below was checked against https://data.europarl.europa.eu/api/v2/procedures/<id>.
+# - `celex` lists the final act(s) adopted under the procedure, as linked in Cellar
+#   (dossier -> act via cdm:work_part_of_dossier / cdm:resource_legal_adopts_resource_legal),
+#   or [] when no act has been adopted. Status, dates and next steps are NOT stored here:
+#   they are computed from the snapshot data.
+# - `what` / `why` are plain, neutral descriptions of the legal content and its concrete effects,
+#   written from the sources listed for each entry. Proposals are described as proposals.
+# - `featured: true` marks the homepage selection (5-6 items); `feature_order` orders it.
+#
+# Last full review: 2026-10-22.
+
+# ----------------------------------------------------------------------------- Technology & AI
+
+- id: "2021-0106"
+  reference: "2021/0106(COD)"
+  celex: ["32024R1689"]
+  short_title: "Artificial Intelligence Act"
+  what: >-
+    Sets EU-wide rules for artificial intelligence according to risk: it prohibits certain AI practices
+    (such as social scoring), sets requirements for high-risk AI systems, imposes transparency duties on
+    some AI systems such as chatbots and deepfakes, and sets obligations for providers of general-purpose
+    AI models.
+  why: >-
+    Companies that develop or use AI in areas such as recruitment, credit scoring, education, law
+    enforcement or critical infrastructure must meet requirements on risk management, data quality,
+    documentation and human oversight; national authorities and the Commission's AI Office enforce the
+    rules and can impose fines.
+  aliases: ["AI Act", "EU AI Act", "Artificial Intelligence Act", "AI regulation"]
+  topics: ["tech"]
+  featured: true
+  feature_order: 1
+  sources:
+    - {label: "Regulation (EU) 2024/1689 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"}
+    - {label: "European Commission – AI Act", url: "https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai"}
+    - {label: "Legislative Observatory – 2021/0106(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0106(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2025-0359"
+  reference: "2025/0359(COD)"
+  celex: ["32026R1744"]
+  short_title: "Digital Omnibus on AI"
+  what: >-
+    Amends the AI Act to change how and when it applies: it replaces the original start date of the
+    rules for high-risk AI systems with later fixed dates, adds a prohibition on AI practices that
+    generate non-consensual intimate or sexual content or child sexual abuse material, and adjusts
+    registration, documentation and supervision rules.
+  why: >-
+    Providers of high-risk AI systems get more time before the high-risk requirements apply, AI-enabled
+    machinery is handled under the Machinery Regulation instead of directly under the AI Act's
+    high-risk regime, and the Commission's AI Office receives stronger supervisory powers.
+  aliases: ["AI omnibus", "Digital Omnibus on AI", "Omnibus VII"]
+  topics: ["tech"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2026/1744 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/1744/oj"}
+    - {label: "Legislative Train – Digital Omnibus on AI", url: "https://www.europarl.europa.eu/legislative-train/package-digital-package/file-digital-omnibus-on-ai"}
+    - {label: "Council press release, 29 June 2026", url: "https://www.consilium.europa.eu/en/press/press-releases/2026/06/29/artificial-intelligence-council-gives-final-green-light-to-simplify-and-streamline-rules/"}
+  reviewed: "2026-10-22"
+
+- id: "2020-0361"
+  reference: "2020/0361(COD)"
+  celex: ["32022R2065"]
+  short_title: "Digital Services Act"
+  what: >-
+    Sets obligations for online intermediaries and platforms on dealing with illegal content, on
+    transparency of content moderation and online advertising, and on protecting users; very large online
+    platforms and search engines must also assess and reduce systemic risks.
+  why: >-
+    Users can report illegal content and challenge moderation decisions; platforms may not show
+    targeted advertising based on profiling to minors or using sensitive data; the Commission
+    supervises the largest platforms and can fine them up to 6% of worldwide annual turnover.
+  aliases: ["DSA", "Digital Services Act"]
+  topics: ["tech", "rights"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2022/2065 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"}
+    - {label: "Legislative Observatory – 2020/0361(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2020/0361(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2020-0374"
+  reference: "2020/0374(COD)"
+  celex: ["32022R1925"]
+  short_title: "Digital Markets Act"
+  what: >-
+    Lets the Commission designate large digital platforms as "gatekeepers" and sets lists of practices
+    they must follow or must not engage in, such as not ranking their own services more favourably and
+    allowing users to uninstall pre-installed apps.
+  why: >-
+    Designated gatekeepers must give business users and consumers more choice, for example by allowing
+    alternative app stores and offering choice screens; the Commission can fine non-compliance up to 10%
+    of worldwide turnover, or 20% for repeated infringements.
+  aliases: ["DMA", "Digital Markets Act", "gatekeeper regulation"]
+  topics: ["tech", "economy"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2022/1925 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2022/1925/oj"}
+    - {label: "Legislative Observatory – 2020/0374(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2020/0374(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2012-0011"
+  reference: "2012/0011(COD)"
+  celex: ["32016R0679"]
+  short_title: "General Data Protection Regulation"
+  what: >-
+    Sets the EU rules for processing personal data: the legal grounds on which data may be processed,
+    the rights of individuals, the obligations of organisations that handle data, and supervision by
+    national data protection authorities.
+  why: >-
+    People can ask organisations to give access to, correct or delete their personal data and can
+    complain to a data protection authority; organisations must have a legal basis for processing,
+    report certain data breaches and can be fined up to EUR 20 million or 4% of worldwide annual
+    turnover.
+  aliases: ["GDPR", "General Data Protection Regulation", "data protection regulation"]
+  topics: ["tech", "rights"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2016/679 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2016/679/oj"}
+    - {label: "Legislative Observatory – 2012/0011(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2012/0011(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2025-0360"
+  reference: "2025/0360(COD)"
+  celex: []
+  short_title: "Digital Omnibus (data, privacy and cybersecurity rules)"
+  what: >-
+    Proposal would amend the GDPR, the ePrivacy Directive, the Data Act and the NIS2 and Critical
+    Entities Resilience directives, and repeal several acts including the Data Governance Act and the
+    Platform-to-Business Regulation, folding parts of them into the Data Act.
+  why: >-
+    If adopted, it would change obligations for organisations that process personal data, including
+    how the definition of personal data is applied and how consent for cookies and similar device
+    access is asked for (with rules moved from the ePrivacy Directive into the GDPR).
+  aliases: ["Digital Omnibus", "digital simplification package", "GDPR reform"]
+  topics: ["tech", "rights"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Commission proposal COM(2025) 837 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52025PC0837"}
+    - {label: "European Commission – Digital Package FAQ", url: "https://digital-strategy.ec.europa.eu/en/faqs/digital-package"}
+    - {label: "Legislative Observatory – 2025/0360(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0360(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2022-0303"
+  reference: "2022/0303(COD)"
+  celex: []
+  short_title: "AI Liability Directive"
+  what: >-
+    Proposal would set common rules for claims for damage caused by AI systems under national
+    non-contractual (fault-based) liability law, including the disclosure of evidence about high-risk
+    AI systems and a rebuttable presumption of a causal link.
+  why: >-
+    If adopted, people harmed by an AI system would find it easier to obtain evidence and prove their
+    compensation claims in national courts; claims would still be brought under national liability
+    law.
+  aliases: ["AI Liability Directive", "AILD", "AI liability"]
+  topics: ["tech", "rights"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Commission proposal COM(2022) 496 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52022PC0496"}
+    - {label: "Legislative Observatory – 2022/0303(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0303(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2022-0277"
+  reference: "2022/0277(COD)"
+  celex: ["32024R1083"]
+  short_title: "European Media Freedom Act"
+  what: >-
+    Sets common rules to protect the independence and pluralism of media: it restricts the use of
+    spyware and other coercive measures against journalists and their sources, requires transparency of
+    media ownership and of state advertising, and creates a European Board for Media Services.
+  why: >-
+    Media outlets must disclose who owns them; public service media must be independently governed and
+    adequately funded; very large online platforms must follow a specific procedure before removing
+    content from recognised media service providers.
+  aliases: ["EMFA", "European Media Freedom Act", "media freedom act"]
+  topics: ["rights", "tech"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2024/1083 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1083/oj"}
+    - {label: "Legislative Observatory – 2022/0277(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0277(COD)"}
+  reviewed: "2026-10-22"
+
+# ------------------------------------------------------------------------- Migration & Borders
+
+- id: "2020-0279"
+  reference: "2020/0279(COD)"
+  celex: ["32024R1351"]
+  short_title: "Asylum and Migration Management Regulation"
+  what: >-
+    Replaces the Dublin III Regulation: it sets the criteria for deciding which Member State is
+    responsible for examining an asylum application and creates a solidarity mechanism through which
+    other Member States support those under migratory pressure.
+  why: >-
+    It determines in which country an asylum seeker's application is examined, and requires every
+    Member State to contribute to an annual solidarity pool, choosing between relocating applicants,
+    financial contributions or other support measures.
+  aliases: ["AMMR", "Asylum and Migration Management Regulation", "Dublin reform", "Migration Pact"]
+  topics: ["migration"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2024/1351 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1351/oj"}
+    - {label: "Legislative Observatory – 2020/0279(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2020/0279(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2016-0224"
+  reference: "2016/0224(COD)"
+  # Cellar links two acts to this procedure: the Asylum Procedure Regulation (2024/1348) and the
+  # regulation establishing a return border procedure (2024/1349), which was split from it.
+  celex: ["32024R1348", "32024R1349"]
+  short_title: "Asylum Procedure Regulation"
+  what: >-
+    Replaces the Asylum Procedures Directive with a directly applicable regulation setting one common
+    procedure for applying for and examining international protection, including a border procedure that
+    is mandatory for certain categories of applicants and time limits for decisions.
+  why: >-
+    Applicants who come from countries with low asylum recognition rates, who are considered a security
+    risk or who have misled the authorities can be examined in an accelerated border procedure; the same
+    procedural guarantees and deadlines apply in all Member States.
+  aliases: ["APR", "Asylum Procedure Regulation", "asylum procedures", "Migration Pact"]
+  topics: ["migration"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2024/1348 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1348/oj"}
+    - {label: "Regulation (EU) 2024/1349 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1349/oj"}
+    - {label: "Legislative Observatory – 2016/0224(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2016/0224(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2025-0059"
+  reference: "2025/0059(COD)"
+  celex: ["32026R2280"]
+  short_title: "Return Regulation"
+  what: >-
+    Replaces the 2008 Return Directive with a directly applicable regulation on returning non-EU
+    nationals who have no right to stay in the EU: it introduces a European Return Order to help other
+    Member States recognise return decisions and allows returns to "return hubs" in non-EU countries
+    under agreements with those countries.
+  why: >-
+    People subject to a return decision face obligations to cooperate, with consequences for not doing
+    so, and those considered a security risk can receive longer or indefinite entry bans; return hubs
+    may only be set up with countries that respect international human rights standards and the
+    principle of non-refoulement.
+  aliases: ["Return Regulation", "returns regulation", "return hubs", "deportation rules", "European Return Order"]
+  topics: ["migration"]
+  featured: true
+  feature_order: 2
+  sources:
+    - {label: "Regulation (EU) 2026/2280 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/2280/oj"}
+    - {label: "Council press release, 1 October 2026", url: "https://www.consilium.europa.eu/en/press/press-releases/2026/10/01/council-adopts-new-rules-on-return-for-those-with-no-right-to-stay-in-the-eu/"}
+    - {label: "Legislative Observatory – 2025/0059(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0059(COD)"}
+  reviewed: "2026-10-22"
+
+# ------------------------------------------------------------------------ Environment & Energy
+
+- id: "2025-0524"
+  reference: "2025/0524(COD)"
+  celex: ["32026R0667"]
+  short_title: "2040 climate target (European Climate Law amendment)"
+  what: >-
+    Amends the European Climate Law to add a binding EU target for 2040: a 90% reduction of net
+    greenhouse gas emissions compared with 1990, of which up to 5 percentage points may be met with
+    high-quality international carbon credits from 2036.
+  why: >-
+    The 2040 target frames future EU climate legislation for industry, energy, transport, buildings and
+    agriculture; the same act postpones the start of the new emissions trading system for buildings and
+    road transport (ETS2) by one year.
+  aliases: ["2040 climate target", "2040 target", "Climate Law amendment", "90% target"]
+  topics: ["environment"]
+  featured: true
+  feature_order: 5
+  sources:
+    - {label: "Regulation (EU) 2026/667 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/667/oj"}
+    - {label: "Council press release, 5 March 2026", url: "https://www.consilium.europa.eu/en/press/press-releases/2026/03/05/2040-climate-target-council-gives-final-green-light/"}
+    - {label: "Legislative Train – 2040 climate target", url: "https://www.europarl.europa.eu/legislative-train/theme-sustaining-our-quality-of-life-food-security-water-and-nature/file-2040-climate-target"}
+  reviewed: "2026-10-22"
+
+- id: "2022-0195"
+  reference: "2022/0195(COD)"
+  celex: ["32024R1991"]
+  short_title: "Nature Restoration Regulation"
+  what: >-
+    Requires Member States to put in place restoration measures covering at least 20% of the EU's land
+    and sea areas by 2030 and all ecosystems in need of restoration by 2050, set out in national
+    restoration plans.
+  why: >-
+    Member States must take measures to restore habitats such as wetlands, rivers, forests, farmland and
+    urban green spaces and to reverse the decline of pollinators; the obligations are on Member States,
+    which choose the measures in their national plans.
+  aliases: ["Nature Restoration Law", "NRL", "nature restoration"]
+  topics: ["environment", "agriculture"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2024/1991 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1991/oj"}
+    - {label: "Legislative Observatory – 2022/0195(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0195(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2021-0366"
+  reference: "2021/0366(COD)"
+  celex: ["32023R1115"]
+  short_title: "EU Deforestation Regulation"
+  what: >-
+    Prohibits placing on the EU market, or exporting, cattle, cocoa, coffee, oil palm, rubber, soya and
+    wood, and products made from them, unless they are deforestation-free, were produced legally and are
+    covered by a due diligence statement.
+  why: >-
+    Companies placing these products on the EU market must collect the geolocation of the land where
+    the commodities were produced and check that it was not deforested after 31 December 2020; the
+    Commission classifies countries by risk level, which determines the share of operators that
+    national authorities must check.
+  aliases: ["EUDR", "Deforestation Regulation", "deforestation law", "deforestation-free products"]
+  topics: ["environment", "agriculture", "economy"]
+  featured: true
+  feature_order: 4
+  sources:
+    - {label: "Regulation (EU) 2023/1115 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2023/1115/oj"}
+    - {label: "Legislative Observatory – 2021/0366(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0366(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2024-0249"
+  reference: "2024/0249(COD)"
+  celex: ["32024R3234"]
+  short_title: "Deforestation Regulation – first postponement"
+  what: >-
+    Amends the Deforestation Regulation to postpone its application by 12 months, with a later date
+    for micro and small enterprises.
+  why: >-
+    Companies, non-EU producing countries and national authorities were given an additional year to
+    prepare for the due diligence and traceability obligations.
+  aliases: ["EUDR delay", "EUDR postponement", "deforestation law delay"]
+  topics: ["environment", "agriculture"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2024/3234 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/3234/oj"}
+    - {label: "Council press release, 18 December 2024", url: "https://www.consilium.europa.eu/en/press/press-releases/2024/12/18/eu-deforestation-law-council-formally-adopts-its-one-year-postponement/"}
+  reviewed: "2026-10-22"
+
+- id: "2025-0329"
+  reference: "2025/0329(COD)"
+  celex: ["32025R2650"]
+  short_title: "Deforestation Regulation – targeted revision and second postponement"
+  what: >-
+    Amends the Deforestation Regulation to postpone its application by a further year (with six more
+    months for micro and small operators) and to simplify obligations: the due diligence statement is
+    submitted by the operator that first places a product on the EU market, not by downstream operators
+    and traders; certain printed products are removed from its scope.
+  why: >-
+    Fewer companies in a supply chain have to file their own due diligence statements, and all
+    operators have more time before the obligations apply; the Commission must report on the
+    regulation's impact and administrative burden.
+  aliases: ["EUDR revision", "EUDR simplification", "EUDR delay"]
+  topics: ["environment", "agriculture"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2025/2650 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/2650/oj"}
+    - {label: "Legislative Train – Targeted amendments to the EUDR", url: "https://www.europarl.europa.eu/legislative-train/theme-a-european-green-deal/file-targeted-amendments-to-the-eu-deforestation-regulation-(eudr)"}
+    - {label: "Council press release, 18 December 2025", url: "https://www.consilium.europa.eu/en/press/press-releases/2025/12/18/deforestation-council-signs-off-targeted-revision-to-simplify-and-postpone-the-regulation/"}
+  reviewed: "2026-10-22"
+
+- id: "2021-0214"
+  reference: "2021/0214(COD)"
+  celex: ["32023R0956"]
+  short_title: "Carbon Border Adjustment Mechanism"
+  what: >-
+    Puts a carbon price on imports of cement, iron and steel, aluminium, fertilisers, electricity and
+    hydrogen, corresponding to the carbon price paid by EU producers under the EU Emissions Trading
+    System.
+  why: >-
+    Importers of these goods must report the greenhouse gas emissions embedded in them and buy CBAM
+    certificates to cover those emissions, so that imported and EU-made goods face a comparable carbon
+    cost.
+  aliases: ["CBAM", "carbon border tax", "carbon border adjustment mechanism"]
+  topics: ["environment", "economy"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2023/956 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2023/956/oj"}
+    - {label: "Legislative Observatory – 2021/0214(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0214(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2022-0396"
+  reference: "2022/0396(COD)"
+  celex: ["32025R0040"]
+  short_title: "Packaging and Packaging Waste Regulation"
+  what: >-
+    Replaces the Packaging Directive with a regulation that sets requirements for all packaging placed
+    on the EU market, including recyclability, minimum recycled content for plastic packaging, limits on
+    empty space, restrictions on certain single-use packaging formats and targets for reuse and for
+    reducing packaging waste.
+  why: >-
+    Producers and retailers must adapt the packaging they use; Member States must cut packaging waste
+    per person and set up deposit-return systems for single-use plastic bottles and metal drink cans,
+    with some exemptions.
+  aliases: ["PPWR", "Packaging Regulation", "packaging waste"]
+  topics: ["environment", "health"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2025/40 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/40/oj"}
+    - {label: "Legislative Observatory – 2022/0396(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0396(COD)"}
+  reviewed: "2026-10-22"
+
+# ----------------------------------------------------------------------------- Economy & Trade
+
+- id: "2021-0104"
+  reference: "2021/0104(COD)"
+  celex: ["32022L2464"]
+  short_title: "Corporate Sustainability Reporting Directive"
+  what: >-
+    Requires companies in its scope to publish information on environmental, social and governance
+    matters in their management report, following European Sustainability Reporting Standards and
+    subject to external assurance.
+  why: >-
+    Investors and the public get comparable information on companies' sustainability risks and impacts;
+    companies in scope must collect the data, report it and have it checked by an auditor.
+  aliases: ["CSRD", "Corporate Sustainability Reporting Directive", "sustainability reporting", "ESG reporting"]
+  topics: ["economy", "environment"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Directive (EU) 2022/2464 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2022/2464/oj"}
+    - {label: "Legislative Observatory – 2021/0104(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0104(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2022-0051"
+  reference: "2022/0051(COD)"
+  celex: ["32024L1760"]
+  short_title: "Corporate Sustainability Due Diligence Directive"
+  what: >-
+    Requires large companies to identify, prevent, mitigate and bring to an end adverse impacts on human
+    rights and the environment in their own operations, their subsidiaries and their chains of
+    activities.
+  why: >-
+    Companies in scope must carry out due diligence on their business partners and in their own
+    operations, and national supervisory authorities can investigate and fine them for failures.
+  aliases: ["CSDDD", "CS3D", "Corporate Sustainability Due Diligence Directive", "supply chain law", "due diligence directive"]
+  topics: ["economy", "rights", "environment"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Directive (EU) 2024/1760 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2024/1760/oj"}
+    - {label: "Legislative Observatory – 2022/0051(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0051(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2025-0045"
+  reference: "2025/0045(COD)"
+  celex: ["32026L0470"]
+  short_title: "Omnibus I – sustainability reporting and due diligence simplification"
+  what: >-
+    Amends the CSRD and the CSDDD to narrow their scope: sustainability reporting is required only from
+    companies with more than 1,000 employees and over EUR 450 million net turnover, and due diligence only
+    from companies with more than 5,000 employees and over EUR 1.5 billion net turnover.
+  why: >-
+    Most companies previously covered no longer have to report or carry out due diligence under these
+    directives; companies with fewer than 1,000 employees do not have to give their larger business
+    partners information beyond the voluntary reporting standard, and the obligation to adopt climate
+    transition plans is removed.
+  aliases: ["Omnibus I", "sustainability omnibus", "CSRD omnibus", "CSDDD omnibus", "simplification omnibus"]
+  topics: ["economy", "environment"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Directive (EU) 2026/470 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2026/470/oj"}
+    - {label: "European Parliament press release, 16 December 2025", url: "https://www.europarl.europa.eu/news/en/press-room/20251211IPR32164/simplified-sustainability-reporting-and-due-diligence-rules-for-businesses"}
+    - {label: "Legislative Train – Omnibus I", url: "https://www.europarl.europa.eu/legislative-train/package-simplification-business/file-first-omnibus-package-on-sustainability-proposal-amending-csrd-and-csddd"}
+  reviewed: "2026-10-22"
+
+- id: "2023-0079"
+  reference: "2023/0079(COD)"
+  celex: ["32024R1252"]
+  short_title: "Critical Raw Materials Act"
+  what: >-
+    Sets EU benchmarks for supplying strategic raw materials (10% of annual EU consumption extracted,
+    40% processed and 25% recycled in the EU, and no more than 65% from a single non-EU country) and
+    creates faster permitting and support for projects recognised as strategic.
+  why: >-
+    Mining, processing and recycling projects selected as strategic get shorter permitting deadlines and
+    help with financing; large companies that manufacture strategic technologies must assess risks in
+    their raw material supply chains.
+  aliases: ["CRMA", "Critical Raw Materials Act", "critical minerals"]
+  topics: ["economy", "environment"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2024/1252 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1252/oj"}
+    - {label: "Legislative Observatory – 2023/0079(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2023/0079(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2023-0212"
+  reference: "2023/0212(COD)"
+  celex: []
+  short_title: "Digital euro"
+  what: >-
+    Proposal would establish the digital euro as a digital form of central bank money issued by the
+    European Central Bank, with legal tender status, alongside euro banknotes and coins.
+  why: >-
+    If adopted, people and businesses in the euro area could hold digital euros, subject to holding
+    limits, and pay with them online and offline through banks and other payment service providers,
+    with basic services free of charge for individuals; merchants that accept digital payments would
+    generally have to accept it.
+  aliases: ["digital euro", "e-euro", "central bank digital currency", "CBDC"]
+  topics: ["economy"]
+  featured: true
+  feature_order: 6
+  sources:
+    - {label: "Commission proposal COM(2023) 369 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52023PC0369"}
+    - {label: "Legislative Observatory – 2023/0212(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2023/0212(COD)"}
+  reviewed: "2026-10-22"
+
+# ----------------------------------------------------------------------------------- Transport
+
+- id: "2025-0420"
+  reference: "2025/0420(COD)"
+  celex: []
+  short_title: "CO2 standards for new cars and vans (2025 revision)"
+  what: >-
+    Proposal would amend the CO2 emission standards for new cars and vans: the 2035 target would become a
+    90% reduction instead of 100%, with the remaining emissions to be compensated through credits for
+    EU-made low-carbon steel or sustainable fuels; it would also replace the car labelling directive.
+  why: >-
+    If adopted, carmakers could continue to sell some plug-in hybrid, range-extender and combustion-engine
+    vehicles after 2035, provided the remaining emissions are offset as set out in the regulation.
+  aliases: ["2035 combustion engine ban", "car CO2 standards", "CO2 cars", "automotive package"]
+  topics: ["transport", "environment"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Commission proposal COM(2025) 995 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52025PC0995"}
+    - {label: "Legislative Train – CO2 standards for light-duty vehicles", url: "https://www.europarl.europa.eu/legislative-train/package-automotive-package/file-co2-emission-standards-for-new-light-duty-vehicles-and-labelling"}
+    - {label: "European Commission – Cars and vans", url: "https://climate.ec.europa.eu/areas-action/transport-decarbonisation/road-transport/cars-and-vans_en"}
+  reviewed: "2026-10-22"
+
+# ------------------------------------------------------------------------- Health & Consumers
+
+- id: "2022-0140"
+  reference: "2022/0140(COD)"
+  celex: ["32025R0327"]
+  short_title: "European Health Data Space"
+  what: >-
+    Creates a European Health Data Space: it gives people electronic access to their health data, such
+    as patient summaries, prescriptions, medical images and lab results, across the EU, and sets rules
+    for reusing health data for research, innovation and policy-making.
+  why: >-
+    Patients can access their electronic health records and share them with health professionals,
+    including in other Member States; researchers and public bodies can request access to health data
+    through national health data access bodies, and people can opt out of this secondary use.
+  aliases: ["EHDS", "European Health Data Space", "health data"]
+  topics: ["health", "tech"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2025/327 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/327/oj"}
+    - {label: "Legislative Observatory – 2022/0140(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0140(COD)"}
+  reviewed: "2026-10-22"
+
+# ---------------------------------------------------------------- Employment & Social Policy
+
+- id: "2021-0414"
+  reference: "2021/0414(COD)"
+  celex: ["32024L2831"]
+  short_title: "Platform Work Directive"
+  what: >-
+    Introduces a legal presumption of employment for people working through digital labour platforms
+    when facts indicate control and direction, and sets EU rules on algorithmic management of platform
+    workers.
+  why: >-
+    People working through apps, such as ride-hailing or delivery platforms, can more easily have their
+    employment status correctly determined; platforms must inform workers about automated monitoring
+    and decision-making and ensure human review of significant decisions such as account suspensions.
+  aliases: ["Platform Work Directive", "gig economy directive", "platform workers"]
+  topics: ["social", "tech"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Directive (EU) 2024/2831 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2024/2831/oj"}
+    - {label: "Legislative Observatory – 2021/0414(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0414(COD)"}
+  reviewed: "2026-10-22"
+
+# ----------------------------------------------------------------- Security & Defence / Rights
+
+- id: "2022-0155"
+  reference: "2022/0155(COD)"
+  celex: []
+  short_title: "Regulation to prevent and combat child sexual abuse online"
+  what: >-
+    Proposal would require providers of hosting and interpersonal communication services to assess and
+    reduce the risk of their services being used for child sexual abuse, would allow authorities to
+    issue orders to detect, report and remove such material, and would set up an EU Centre on Child
+    Sexual Abuse.
+  why: >-
+    If adopted, messaging, email and hosting services could be required to scan for and report child
+    sexual abuse material; whether and how detection orders apply, including to end-to-end encrypted
+    services, is where the Parliament's and the Council's negotiating positions differ.
+  # "chat control": common name used by critics of the proposal, including in European Parliament
+  # written questions (e.g. E-000489/2023, E-003690/2025) and in German Bundestag hearing documents
+  # (https://www.bundestag.de/resource/blob/949082/Stellungnahme-Reda-ENG.pdf). The Commission rejects
+  # the label. It is used here as a search alias only, never as a display title.
+  aliases: ["CSA Regulation", "CSAR", "child sexual abuse regulation", "CSAM regulation", "chat control"]
+  topics: ["security", "rights", "tech"]
+  featured: true
+  feature_order: 3
+  sources:
+    - {label: "Commission proposal COM(2022) 209 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52022PC0209"}
+    - {label: "Legislative Train – Combating child sexual abuse online", url: "https://www.europarl.europa.eu/legislative-train/theme-promoting-our-european-way-of-life/file-combating-child-sexual-abuse-online"}
+    - {label: "Legislative Observatory – 2022/0155(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0155(COD)"}
+  reviewed: "2026-10-22"
+
+- id: "2024-0061"
+  reference: "2024/0061(COD)"
+  celex: ["32025R2643"]
+  short_title: "European Defence Industry Programme"
+  what: >-
+    Establishes the European Defence Industry Programme, which provides EUR 1.5 billion in grants from the
+    EU budget for 2025-2027 to strengthen Europe's defence industry, including a Ukraine Support
+    Instrument, and sets measures to secure the supply of defence products.
+  why: >-
+    Defence companies in the EU, and for the Ukraine Support Instrument in Ukraine, can receive EU funding
+    for joint procurement, production capacity and supply chains, provided components from outside the
+    EU and associated countries do not exceed 35% of the cost of the end product.
+  aliases: ["EDIP", "European Defence Industry Programme", "defence industry programme"]
+  topics: ["security", "economy"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2025/2643 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/2643/oj"}
+    - {label: "Council press release, 8 December 2025", url: "https://www.consilium.europa.eu/en/press/press-releases/2025/12/08/european-defence-industry-programme-council-gives-final-approval/"}
+    - {label: "Legislative Observatory – 2024/0061(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2024/0061(COD)"}
+  reviewed: "2026-10-22"
+
+# -------------------------------------------------------------------------- Agriculture & Food
+
+- id: "2023-0226"
+  reference: "2023/0226(COD)"
+  celex: ["32026R1388"]
+  short_title: "New genomic techniques (NGT) plants"
+  what: >-
+    Sets rules for plants obtained by targeted mutagenesis and cisgenesis: plants comparable to
+    conventionally bred plants ("category 1") are exempted from GMO authorisation requirements, while
+    other NGT plants ("category 2") remain subject to GMO rules.
+  why: >-
+    Category 1 NGT food and feed will not carry GMO labels, but seeds and other plant reproductive
+    material will be labelled; NGT plants may not be used in organic production, and developers must
+    publish information on related patents.
+  aliases: ["NGT", "new genomic techniques", "gene editing", "gene-edited crops", "new GMOs"]
+  topics: ["agriculture", "health"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Regulation (EU) 2026/1388 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/1388/oj"}
+    - {label: "European Commission – EU legislation on NGT plants", url: "https://food.ec.europa.eu/plants/new-genomic-techniques/legislation-plants_en"}
+    - {label: "Legislative Train – Plants produced by certain NGTs", url: "https://www.europarl.europa.eu/legislative-train/theme-sustaining-our-quality-of-life-food-security-water-and-nature/file-plants-produced-by-certain-new-genomic-techniques"}
+  reviewed: "2026-10-22"
+
+- id: "2022-0196"
+  reference: "2022/0196(COD)"
+  celex: []
+  short_title: "Sustainable Use of Plant Protection Products Regulation"
+  what: >-
+    Proposal would set legally binding EU and national targets to reduce the use and risk of chemical
+    pesticides, restrict their use in sensitive areas and make integrated pest management mandatory for
+    professional users.
+  why: >-
+    If adopted, farmers and other professional users would have to keep records, give priority to
+    non-chemical methods and follow crop-specific rules, while Member States would have to meet
+    reduction targets.
+  aliases: ["SUR", "pesticides regulation", "pesticide reduction"]
+  topics: ["agriculture", "environment", "health"]
+  featured: false
+  feature_order: null
+  sources:
+    - {label: "Commission proposal COM(2022) 305 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52022PC0305"}
+    - {label: "Legislative Observatory – 2022/0196(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0196(COD)"}
+  reviewed: "2026-10-22"

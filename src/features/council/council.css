@@ -1,0 +1,156 @@
+/* Council of the EU vote card. */
+.cvote {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.cvote__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.cvote__eyebrow {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--blue-muted);
+}
+
+.cvote__title {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: var(--lh-snug);
+}
+
+.cvote__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-6);
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.cvote__facts dt {
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: var(--fw-semibold);
+}
+
+.cvote__facts dd {
+  margin: 0;
+  font-weight: var(--fw-medium);
+}
+
+.cvote__outcome--adopted {
+  color: var(--st-done);
+}
+.cvote__outcome--not_adopted {
+  color: var(--st-critical);
+}
+.cvote__outcome--unknown {
+  color: var(--text-2);
+}
+
+.cvote__unit {
+  margin: calc(-1 * var(--sp-2)) 0 0;
+}
+
+.cvote__positions {
+  display: grid;
+  gap: var(--sp-3) var(--sp-5);
+}
+
+@media (min-width: 40rem) {
+  .cvote__positions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.cvote__pos-title {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.cvote__swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.cvote__swatch--for {
+  background: var(--vote-for);
+}
+.cvote__swatch--against {
+  background: var(--vote-against);
+}
+.cvote__swatch--abstain {
+  background: var(--vote-abstain);
+}
+.cvote__swatch--not_participating,
+.cvote__swatch--missing {
+  background: transparent;
+  border: 1.5px dashed var(--text-3);
+}
+
+.cvote__states {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--sp-1);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.cvote__states li:not(:last-child)::after {
+  content: ',';
+}
+
+.cvote__sub {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  margin: 0 0 var(--sp-2);
+  color: var(--text);
+}
+
+.cvote__assessment,
+.cvote__statements {
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--blue-paler);
+  border-radius: var(--radius);
+  font-size: var(--fs-sm);
+}
+
+.cvote__statements {
+  background: var(--surface-sunk);
+}
+
+.cvote__assessment ul,
+.cvote__statements ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.cvote__note {
+  color: var(--text-2);
+}
+
+.cvote__foot {
+  margin-top: calc(-1 * var(--sp-1));
+}

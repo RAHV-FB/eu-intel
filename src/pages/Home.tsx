@@ -1,10 +1,140 @@
-import { PageHeader } from '../components/ui';
+import { Link } from 'react-router-dom';
+import type { HomeData, Meta, Topic } from '../types/data';
+import { useData } from '../lib/data';
+import { formatDateTime, formatNumber } from '../lib/format';
+import { SearchBox } from '../components/SearchBox';
+import { ErrorState, Loading } from '../components/ui';
+import { FeaturedCard } from '../features/home/FeaturedCard';
+import { HomeLists } from '../features/home/HomeLists';
+import { TopicGrid } from '../features/home/TopicGrid';
+import { useDocumentTitle } from '../features/legislation/labels';
+import '../features/home/home.css';
 
-// Placeholder — implemented by the frontend workstream.
+const EXAMPLES = ['AI Act', 'Migration', 'GDPR', 'Spain', 'EPP', 'Agriculture', 'Digital markets', 'Climate'];
+
 export default function Home() {
+  useDocumentTitle(null);
+  const home = useData<HomeData>('home.json');
+  const meta = useData<Meta>('meta.json');
+  // home.json carries topics; fall back to topics.json if it ever comes without them.
+  const needTopics = !!home.data && !home.data.topics?.length;
+  const topicsFallback = useData<Topic[]>(needTopics ? 'topics.json' : null);
+  const topics = home.data?.topics?.length ? home.data.topics : (topicsFallback.data ?? []);
+  const topicLabel = (slug: string) => topics.find((t) => t.slug === slug)?.label ?? slug;
+
+  const lists = home.data?.lists ?? [];
+  const featured = home.data?.featured ?? [];
+
   return (
-    <div className="container page">
-      <PageHeader title="Home" lead="Under construction." />
+    <div className="home">
+      <section className="hero" aria-labelledby="hero-title">
+        <div className="container">
+          <h1 id="hero-title" className="hero__title">
+            European legislation, made clear.
+          </h1>
+          <p className="hero__lead">
+            What the EU is deciding, where each law stands, who voted for it and what happens next — in plain
+            language, with every fact linked to the official record.
+          </p>
+          <div className="hero__search">
+            <SearchBox placeholder="Search a law, topic, MEP, party or country…" />
+          </div>
+          <div className="hero__examples">
+            <span className="hero__try" id="try-label">
+              Try
+            </span>
+            <ul aria-labelledby="try-label">
+              {EXAMPLES.map((q) => (
+                <li key={q}>
+                  <Link className="chip" to={`/search?q=${encodeURIComponent(q)}`}>
+                    {q}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <Freshness meta={meta.data} />
+        </div>
+      </section>
+
+      <div className="container">
+        {home.loading && <Loading label="Loading the latest legislative data…" />}
+        {home.error && <ErrorState error={home.error} title="The legislative data could not be loaded" />}
+
+        {featured.length > 0 && (
+          <section className="section home__featured" aria-labelledby="featured-title">
+            <div className="section-head">
+              <div>
+                <p className="section-kicker">Editorial selection</p>
+                <h2 id="featured-title">Selected major legislation</h2>
+              </div>
+              <p className="section-head__note">
+                Chosen by our editors for public interest, not ranked.{' '}
+                <Link to="/about#selection">How we select</Link>. Status and dates come from official records.
+              </p>
+            </div>
+            <div className="features">
+              {featured.slice(0, 6).map((f) => (
+                <FeaturedCard key={f.dossier.id} item={f} topicLabel={topicLabel} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {lists.length > 0 && (
+          <section className="section" aria-labelledby="lists-title">
+            <div className="section-head">
+              <div>
+                <p className="section-kicker">From the official records</p>
+                <h2 id="lists-title">What’s moving</h2>
+              </div>
+              <p className="section-head__note">
+                Generated automatically from Parliament, Council and EUR-Lex data. Each item links to its source.
+              </p>
+            </div>
+            <HomeLists lists={lists} />
+          </section>
+        )}
+
+        {topics.length > 0 && (
+          <section className="section" aria-labelledby="topics-title">
+            <div className="section-head">
+              <div>
+                <h2 id="topics-title">Explore by topic</h2>
+              </div>
+              <p className="section-head__note">
+                Each topic page is a shareable, filterable list — bookmark it to track a policy area.
+              </p>
+            </div>
+            <TopicGrid topics={topics} />
+          </section>
+        )}
+
+        <section className="section home__guide" aria-labelledby="guide-title">
+          <h2 id="guide-title">New to how EU laws are made?</h2>
+          <p>
+            The European Commission proposes, the European Parliament and the Council of the EU amend and decide, and
+            Member States apply the result. Our short guide explains each step and the words you’ll meet on this site.
+          </p>
+          <Link to="/how-the-eu-works" className="btn">
+            Read the guide (5 minutes)
+          </Link>
+        </section>
+      </div>
     </div>
+  );
+}
+
+function Freshness({ meta }: { meta: Meta | undefined }) {
+  if (!meta) return null;
+  const c = meta.counts;
+  return (
+    <p className="hero__fresh">
+      <span className="hero__fresh-dot" aria-hidden="true" />
+      Data refreshed {formatDateTime(meta.snapshot_at ?? meta.built_at)}
+      {c?.dossiers ? <> · {formatNumber(c.dossiers)} legislative files</> : null}
+      {c?.ep_votes ? <> · {formatNumber(c.ep_votes)} Parliament votes</> : null} ·{' '}
+      <Link to="/about#coverage">What’s covered</Link>
+    </p>
   );
 }
