@@ -169,6 +169,24 @@ def fetch_procedure_labels(http: Http) -> dict[str, str]:
     return out
 
 
+PROC_BATCH = 50
+
+
+def fetch_procedures_by_id(http: Http, ids: list[str]) -> dict[str, str]:
+    """Process id -> reference via /procedures/{id,id,...} (batches of PROC_BATCH ids).
+
+    Needed because offset pagination of the /procedures list is not stable: pages repeat some records and
+    never return others (RSP: 6677 rows, 5790 distinct ids), so the list misses ~5% of procedures.
+    """
+    out: dict[str, str] = {}
+    ids = sorted(set(ids))
+    for i in range(0, len(ids), PROC_BATCH):
+        for r in _get_data(http, f"/procedures/{','.join(ids[i : i + PROC_BATCH])}"):
+            if r.get("process_id") and isinstance(r.get("label"), str):
+                out[r["process_id"]] = r["label"]
+    return out
+
+
 LOOKUP_SERIES = ("A-", "B-", "RC-")  # plenary documents; C-documents are not served (404)
 
 
@@ -250,6 +268,12 @@ TIMESTAMP_RE = re.compile(r"\s+\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}(?:\.\d+)?\s*$
 DOC_REF_RE = re.compile(r"\b(RC-B|A|B|C)(\d{1,2})-(\d{4})/(\d{4})\b")
 PROC_REF_RE = re.compile(r"\b(\d{4})/(\d{4})\(([A-Z]{3})\)")
 SYMBOL_RE = re.compile(r"(\*{1,3})(I{1,3})?\s*$")
+
+
+def ref_to_process_id(ref: str) -> str:
+    """'2021/0106(COD)' -> '2021-0106' (the EP process id)."""
+    m = PROC_REF_RE.fullmatch(ref)
+    return f"{m.group(1)}-{m.group(2)}" if m else ref
 
 
 def doc_ref_to_id(ref: str) -> str | None:
@@ -587,7 +611,9 @@ def resolve_procs(
     procs = sorted({p for it in d.items for p in it.procs})
     if procs:
         return procs, "item"
-    found = sorted({ref_to_id[r] for r in d.label_procs if r in ref_to_id})
+    # a reference written in the label, "2020/0060(COD)", is the process id "2020-0060" (validated later:
+    # build_records drops ids that the EP does not know)
+    found = sorted({ref_to_id.get(r) or ref_to_process_id(r) for r in d.label_procs})
     if found:
         return found, "label"
     for doc in d.candidate_docs:
@@ -627,7 +653,7 @@ def symbol_of(d: Draft, doc_symbols: dict[str, set[str]] | None) -> str | None:
 
 def needs_doc_lookup(d: Draft, docs_procs: dict[str, set[str]], ref_to_id: dict[str, str]) -> list[str]:
     """Plenary documents to look up when neither a vote item nor the label gives a procedure."""
-    if any(it.procs for it in d.items) or any(r in ref_to_id for r in d.label_procs):
+    if any(it.procs for it in d.items) or d.label_procs:
         return []
     if any(doc in docs_procs for doc in d.candidate_docs):
         return []
@@ -780,6 +806,19 @@ def plan_lookups(data: list[Sitting], proc_labels: dict[str, str]) -> list[str]:
     )
 
 
+def linked_process_ids(
+    data: list[Sitting], proc_labels: dict[str, str], doc_links: dict[str, tuple[list[str], list[str]]]
+) -> set[str]:
+    ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
+    docs_procs = doc_index(data)
+    return {
+        p
+        for s in data
+        for dec in s.decisions
+        for p in resolve_procs(draft(dec, s), docs_procs, doc_links, ref_to_id)[0]
+    }
+
+
 def assemble(
     data: list[Sitting],
     proc_labels: dict[str, str],
@@ -833,6 +872,10 @@ def fetch(http: Http) -> SourceStatus:
         doc_links = dict(
             zip(lookups, ex.map(lambda doc: fetch_document_links(http, doc), lookups), strict=True)
         )
+    missing = sorted(linked_process_ids(data, proc_labels, doc_links) - set(proc_labels))
+    if missing:
+        log.info("%d linked procedures missing from the /procedures list; fetching them by id", len(missing))
+        proc_labels = {**proc_labels, **fetch_procedures_by_id(http, missing)}
     res = assemble(data, proc_labels, doc_links, now_iso())
     if not res.votes:
         raise RuntimeError("no votes parsed")
