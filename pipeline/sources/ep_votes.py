@@ -65,6 +65,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from lxml import etree
+
 from pipeline.http import EP_API, Http, HttpError
 from pipeline.models.entities import EpBallots, EpVote, SourceRef, SourceStatus, VoteKind
 from pipeline.snapshot import fetch_deadline, now_iso, read_records, read_state, write_records, write_state
@@ -82,7 +84,7 @@ PROCESS_TYPES = (
     "ACI APP AVC BUD CNS COD DEC NLE SYN BUI COS DEA DCE IMM INI INL INS REG RPS RSO RSP GBD".split()
 )
 # Roll-call votes on a whole text keep their individual ballots (all roll-calls would be ~150 MB).
-BALLOT_KINDS: frozenset[str] = frozenset({"final", "resolution", "motion"})
+BALLOT_KINDS: frozenset[str] = frozenset({"final", "mandate", "resolution", "motion"})
 
 
 # ============================================================================================ fetching
@@ -178,18 +180,12 @@ PROC_BATCH = 50
 
 
 def fetch_procedures_by_id(http: Http, ids: list[str]) -> dict[str, str]:
-    """Process id -> reference via /procedures/{id,id,...} (batches of PROC_BATCH ids).
+    """Process id -> reference for ids the /procedures list never returned (see fetch_procedures).
 
     Needed because offset pagination of the /procedures list is not stable: pages repeat some records and
     never return others (RSP: 6677 rows, 5790 distinct ids), so the list misses ~5% of procedures.
     """
-    out: dict[str, str] = {}
-    ids = sorted(set(ids))
-    for i in range(0, len(ids), PROC_BATCH):
-        for r in _get_data(http, f"/procedures/{','.join(ids[i : i + PROC_BATCH])}"):
-            if r.get("process_id") and isinstance(r.get("label"), str):
-                out[r["process_id"]] = r["label"]
-    return out
+    return fetch_procedures(http, ids)[0]
 
 
 LOOKUP_SERIES = ("A-", "B-", "RC-")  # plenary documents; C-documents are not served (404)
@@ -214,6 +210,125 @@ def fetch_document_links(http: Http, doc_id: str) -> tuple[list[str], list[str]]
         ]
         derived += [_suffix(d) or d for d in _ids(r.get("is_derivative_of"))]
     return sorted(set(procs)), sorted(set(derived))
+
+
+# ------------------------------------------------------------------ minutes ("Results of votes", PV-…-VOT)
+# Before 2024-01-15 the API publishes roll-call votes without their outcome. The sitting's official minutes
+# annex "Results of votes" (PV-9-2019-10-24-VOT, XML on data.europarl.europa.eu) lists every vote with its
+# result (+ adopted, — rejected, ↓ lapsed) and, for electronic votes, the counts. A decision takes the
+# outcome of the minutes row with the same (for, against, abstention) counts in the same sitting, within the
+# block or heading of the decision's document when its label names one; ambiguous matches stay unknown.
+MINUTES_SYMBOLS = {"+": "adopted", "-": "rejected", "—": "rejected", "–": "rejected", "↓": "lapsed"}
+
+
+@dataclass(frozen=True)
+class MinutesRow:
+    item: str  # Vote.Result number in the minutes ("6.")
+    counts: tuple[int, int, int]
+    outcome: str | None
+    docs: frozenset[str]  # document ids of the block title/description and the current heading row
+    symbol: str | None = None  # procedure symbol of the block title ("Artificial Intelligence Act ***I")
+
+
+def parse_minutes(xml: bytes) -> list[MinutesRow]:
+    """Rows with counts from a pre-2024 "Results of votes" XML (PV-VOT.xsd)."""
+    root = etree.fromstring(xml, parser=etree.XMLParser(resolve_entities=False, no_network=True))
+    out: list[MinutesRow] = []
+    for block in root.iter("Vote.Result"):
+        texts = [block.findtext("Vote.Result.Text.Title") or ""]
+        desc = block.find("Vote.Result.Description.Text")
+        if desc is not None:
+            texts.append("".join(desc.itertext()))
+        block_docs = _doc_ids(" ".join(texts))
+        m = SYMBOL_RE.search(texts[0].strip())
+        block_symbol = m.group(0).replace(" ", "") if m else None
+        heading: frozenset[str] = frozenset()
+        for tr in block.iter("TR"):
+            tds = tr.findall("TD")
+            total_for = tr.find(".//Vote.Result.Table.TotalVote.For")
+            if total_for is None:
+                if len(tds) == 1 or any(td.get("COLSPAN") for td in tds):
+                    found = _doc_ids(" ".join("".join(td.itertext()) for td in tds))
+                    heading = found or heading
+                continue
+            against = tr.find(".//Vote.Result.Table.TotalVote.Against")
+            abstain = tr.find(".//Vote.Result.Table.TotalVote.Abstention")
+            try:
+                counts = (
+                    int(total_for.text or ""),
+                    int(against.text) if against is not None and against.text else 0,
+                    int(abstain.text) if abstain is not None and abstain.text else 0,
+                )
+            except ValueError:
+                continue
+            symbols = [c for c in ("".join(td.itertext()).strip() for td in tds) if c in MINUTES_SYMBOLS]
+            outcome = MINUTES_SYMBOLS[symbols[-1]] if symbols else None
+            out.append(
+                MinutesRow(block.get("Number") or "", counts, outcome, block_docs | heading, block_symbol)
+            )
+    return out
+
+
+def _doc_ids(text: str) -> frozenset[str]:
+    return frozenset(d for m in DOC_REF_RE.finditer(text) if (d := doc_ref_to_id(m.group(0))))
+
+
+def fetch_minutes(http: Http, sitting: dict) -> list[MinutesRow]:
+    """Parsed "Results of votes" minutes of a pre-2024 sitting ([] when not published)."""
+    base = f"PV-{sitting['term']}-{sitting['date']}-VOT"
+    url = f"https://data.europarl.europa.eu/distribution/doc/{base}-FNL_en.xml"
+    try:
+        body = _PACER.get(http, url, ok_statuses=(200, 404))
+        if not body.lstrip().startswith(b"<?xml") and not body.lstrip().startswith(b"<documents"):
+            body = b""
+            for r in _get_data(http, f"/documents/{base}"):  # file name differs: ask the metadata
+                for e in r.get("is_realized_by", []):
+                    for m in e.get("is_embodied_by", []) if str(e.get("id", "")).endswith("/en") else []:
+                        if str(m.get("format", "")).endswith("/XML") and m.get("is_exemplified_by"):
+                            body = _PACER.get(
+                                http, f"https://data.europarl.europa.eu/{m['is_exemplified_by']}"
+                            )
+        return parse_minutes(body) if body else []
+    except (HttpError, etree.XMLSyntaxError) as e:
+        log.warning("minutes %s: %s", base, e)
+        return []
+
+
+REFERRAL_EVENT = "def/ep-activities/PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+
+
+def parse_procedures(rows: list[dict]) -> tuple[dict[str, str], dict[str, list[str]]]:
+    """(process id -> reference, process id -> dates of plenary referrals back for negotiations)."""
+    refs: dict[str, str] = {}
+    referrals: dict[str, list[str]] = {}
+    for r in rows:
+        pid = r.get("process_id")
+        if not pid:
+            continue
+        if isinstance(r.get("label"), str):
+            refs[pid] = r["label"]
+        events = [e for e in r.get("consists_of", []) if isinstance(e, dict)]
+        referrals[pid] = sorted(
+            {
+                e["activity_date"]
+                for e in events
+                if e.get("had_activity_type") == REFERRAL_EVENT and e.get("activity_date")
+            }
+        )
+    return refs, referrals
+
+
+def fetch_procedures(http: Http, ids: Iterable[str]) -> tuple[dict[str, str], dict[str, list[str]]]:
+    """parse_procedures() of /procedures/{id,id,...} (PROC_BATCH ids per request).
+
+    The referral is a procedure event (e.g. "2021-0106-DEC-REFBAK-2023-06-14",
+    PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS) on the day of the vote.
+    """
+    ids = sorted(set(ids))
+    rows: list[dict] = []
+    for i in range(0, len(ids), PROC_BATCH):
+        rows += _get_data(http, f"/procedures/{','.join(ids[i : i + PROC_BATCH])}")
+    return parse_procedures(rows)
 
 
 # ============================================================================================= parsing
@@ -516,15 +631,18 @@ class Sitting:
     decisions: list[dict]
     items: dict[str, VoteItem]
     doc_items: dict[str, list[VoteItem]] = field(default_factory=dict)  # document id -> vote items
+    minutes: list[MinutesRow] = field(default_factory=list)  # pre-2024 "Results of votes" rows
 
     @classmethod
-    def build(cls, s: dict, decisions: list[dict], items: list[dict]) -> Sitting:
+    def build(
+        cls, s: dict, decisions: list[dict], items: list[dict], minutes: list[MinutesRow] | None = None
+    ) -> Sitting:
         idx = index_items(items)
         doc_items: dict[str, list[VoteItem]] = {}
         for it in idx.values():
             for d in it.docs:
                 doc_items.setdefault(d, []).append(it)
-        return cls(s["id"], s["date"], s["term"], decisions, idx, doc_items)
+        return cls(s["id"], s["date"], s["term"], decisions, idx, doc_items, list(minutes or []))
 
     @property
     def rich(self) -> bool:
@@ -687,13 +805,73 @@ def source_ref(sitting: Sitting, event_id: str, rollcall: bool, retrieved: str) 
     )
 
 
+_REFERRAL_BACK = re.compile(r"referr?al|refer(red)? back|renvoi|rule 59\(4\)|rule 60\(4\)", re.I)
+
+
+@dataclass
+class Context:
+    """Cross-decision facts used while building one vote."""
+
+    doc_symbols: dict[str, set[str]] = field(default_factory=dict)
+    referrals: dict[str, list[str]] = field(default_factory=dict)  # process id -> referral-back dates
+    referral_items: set[str] = field(default_factory=set)  # vote items with an adopted referral back
+
+
+def referral_items(sitting: Sitting) -> set[str]:
+    """Vote items in which Parliament adopted a referral back to committee (published outcome)."""
+    out: set[str] = set()
+    for dec in sitting.decisions:
+        ref = _text(dec.get("referenceText")) or _text(dec.get("activity_label")) or ""
+        if _suffix(dec.get("decision_outcome")) == "ADOPTED" and _REFERRAL_BACK.search(ref):
+            out |= {i for i in (_suffix(x) for x in _ids(dec.get("inverse_consists_of"))) if i}
+    return out
+
+
+def minutes_rows(d: Draft, counts: tuple[int | None, int | None, int | None]) -> list[MinutesRow]:
+    """Minutes rows with the decision's counts (narrowed to its document's block when several match)."""
+    if not d.sitting.minutes or counts[0] is None or counts[1] is None:
+        return []
+    key = (counts[0], counts[1], counts[2] or 0)
+    rows = [r for r in d.sitting.minutes if r.counts == key]
+    if d.label_docs and len(rows) > 1:
+        rows = [r for r in rows if r.docs & set(d.label_docs)]
+    return rows
+
+
+def minutes_outcome(d: Draft, counts: tuple[int | None, int | None, int | None]) -> str | None:
+    """Outcome of the decision in the sitting's minutes (see MINUTES_SYMBOLS), or None if not unique."""
+    outcomes = {r.outcome for r in minutes_rows(d, counts)}
+    return outcomes.pop() if len(outcomes) == 1 and None not in outcomes else None
+
+
+def minutes_symbol(d: Draft, counts: tuple[int | None, int | None, int | None]) -> str | None:
+    symbols = {r.symbol for r in minutes_rows(d, counts)}
+    return symbols.pop() if len(symbols) == 1 else None
+
+
+def resolve_outcome(
+    dec: dict, d: Draft, rule: str, counts: tuple[int | None, int | None, int | None]
+) -> tuple[str, str | None]:
+    """(outcome, outcome_basis): published > minutes > derived from counts (votes_cast, no tie) > unknown."""
+    published = OUTCOMES.get(_suffix(dec.get("decision_outcome")) or "")
+    if published:
+        return published, "published"
+    if minutes := minutes_outcome(d, counts):
+        return minutes, "minutes"
+    n_for, n_against, _ = counts
+    if rule == "votes_cast" and n_for is not None and n_against is not None and n_for != n_against:
+        return ("adopted" if n_for > n_against else "rejected"), "derived"
+    return "unknown", None
+
+
 def build_records(
     d: Draft,
     procs: list[str],
     proc_labels: dict[str, str],
     retrieved: str,
-    doc_symbols: dict[str, set[str]] | None = None,
+    ctx: Context | None = None,
 ) -> tuple[EpVote, EpBallots | None]:
+    ctx = ctx or Context()
     dec, s = d.dec, d.sitting
     refs = [proc_labels[p] if p in proc_labels else p for p in procs]
     refs = sorted({r for r in refs if PROC_REF_RE.fullmatch(r)})
@@ -710,6 +888,20 @@ def build_records(
         proc_types=proc_types,
     )
     kind = classify(sig)
+    day = dec.get("activity_date") or s.date
+    if kind == "final" and (
+        any(it.id in ctx.referral_items for it in d.items)
+        or any(day in ctx.referrals.get(p, ()) for p in procs)
+    ):
+        kind = "mandate"  # followed by a referral back to committee for interinstitutional negotiations
+    counts = tuple(
+        _int(dec.get(k))
+        for k in ("number_of_votes_favor", "number_of_votes_against", "number_of_votes_abstention")
+    )
+    symbol = symbol_of(d, ctx.doc_symbols) or minutes_symbol(d, counts)
+    rule = majority_rule(kind, item.title if item else None, symbol, proc_types)
+
+    outcome, basis = resolve_outcome(dec, d, rule, counts)
     method = _suffix(dec.get("decision_method"))
     favor, against, abstain = (
         _person_ids(dec.get(k)) for k in ("had_voter_favor", "had_voter_against", "had_voter_abstention")
@@ -721,22 +913,21 @@ def build_records(
     vote = EpVote(
         id=vid,
         event_id=event_id,
-        date=dec.get("activity_date") or s.date,
+        date=day,
         term=s.term,
         title=d.title,
         reference_text=d.ref if s.rich else None,
         doc_ids=d.docs,
         procedure_refs=refs,
         kind=kind,
-        outcome=OUTCOMES.get(_suffix(dec.get("decision_outcome")) or "", "unknown"),
+        outcome=outcome,
+        outcome_basis=basis,
         method=method,
-        n_for=_int(dec.get("number_of_votes_favor")),
-        n_against=_int(dec.get("number_of_votes_against")),
-        n_abstain=_int(dec.get("number_of_votes_abstention")),
+        n_for=counts[0],
+        n_against=counts[1],
+        n_abstain=counts[2],
         attendees=_int(dec.get("number_of_attendees")),
-        majority_rule=majority_rule(
-            kind, item.title if item else None, symbol_of(d, doc_symbols), proc_types
-        ),
+        majority_rule=rule,
         committee=_committee(dec.get("responsible_organization_label")),
         has_ballots=keep_ballots,
         source=source_ref(s, event_id, rollcall, retrieved),
@@ -775,7 +966,8 @@ def ballot_issues(vote: EpVote, b: EpBallots) -> list[str]:
 def _fetch_sittings(http: Http, sittings: list[dict], today: str) -> list[Sitting]:
     def one(s: dict) -> Sitting:
         decisions, items = fetch_sitting(http, s, today)
-        return Sitting.build(s, decisions, items)
+        minutes = fetch_minutes(http, s) if decisions and s["date"] < RICH_FORMAT_FROM else []
+        return Sitting.build(s, decisions, items, minutes)
 
     out: dict[str, Sitting] = {}
     pending = list(sittings)
@@ -847,23 +1039,29 @@ def assemble(
     doc_links: dict[str, tuple[list[str], list[str]]],
     retrieved: str,
     known_docs: DocIndex | None = None,
+    referrals: dict[str, list[str]] | None = None,
 ) -> Result:
-    """Offline: raw sittings + procedure references + document links -> EpVote / EpBallots records."""
+    """Offline: raw sittings + procedure references + document links -> EpVote / EpBallots records.
+
+    `referrals`: process id -> dates on which Parliament referred it back for negotiations (fetch_procedures).
+    """
     ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
     idx = item_doc_index(data, known_docs)
-    docs_procs, doc_symbols = _docs_procs(idx), _doc_symbols(idx)
+    docs_procs = _docs_procs(idx)
+    ctx = Context(doc_symbols=_doc_symbols(idx), referrals=referrals or {})
     votes: dict[str, EpVote] = {}
     ballots: list[EpBallots] = []
     how: Counter[str] = Counter()
     issues: dict[str, list[str]] = {}
     duplicates = 0
     for s in data:
+        ctx.referral_items = referral_items(s)
         for dec in s.decisions:
             if not dec.get("notation_votingId"):
                 continue
             d = draft(dec, s)
             procs, via = resolve_procs(d, docs_procs, doc_links, ref_to_id)
-            vote, b = build_records(d, procs, proc_labels, retrieved, doc_symbols)
+            vote, b = build_records(d, procs, proc_labels, retrieved, ctx)
             if vote.id in votes:
                 duplicates += 1
                 continue
@@ -956,12 +1154,19 @@ def _fetch_chunk(
     missing = sorted(linked_process_ids(data, proc_refs, links, known_docs) - set(proc_refs))
     proc_refs.update(fetch_procedures_by_id(http, missing))
     res = assemble(data, proc_refs, links, now_iso(), known_docs)
+    # final votes followed by a referral back to committee are negotiating mandates (procedure events)
+    finals = sorted({ref_to_process_id(r) for v in res.votes if v.kind == "final" for r in v.procedure_refs})
+    refs, referrals = fetch_procedures(http, finals)
+    proc_refs.update(refs)
+    if any(referrals.values()):
+        res = assemble(data, proc_refs, links, now_iso(), known_docs, referrals)
     known_docs.update(item_doc_index(data, known_docs))
     stats: Counter[str] = Counter(
         sittings=len(chunk),
         votes=len(res.votes),
         lookups=len(lookups),
         proc_by_id=len(missing),
+        procedures=len(finals),
         issues=len(res.issues),
     )
     return res, stats

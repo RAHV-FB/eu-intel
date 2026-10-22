@@ -25,13 +25,15 @@ def _term(day: str) -> int:
     return 9 if day <= "2024-07-15" else 10
 
 
-def load_sitting(day: str) -> ev.Sitting:
+def load_sitting(day: str, minutes: bool = True) -> ev.Sitting:
     raw = json.loads((FIX / f"sitting_{day}.json").read_text(encoding="utf-8"))
     sid = raw["sitting"]
+    xml = FIX / f"minutes_{day}.xml"
     return ev.Sitting.build(
         {"id": sid, "date": sid[7:17], "term": _term(sid[7:17])},
         raw["decisions"]["data"],
         raw["vote_results"]["data"],
+        ev.parse_minutes(xml.read_bytes()) if minutes and xml.exists() else [],
     )
 
 
@@ -54,8 +56,21 @@ def doc_links() -> dict[str, tuple[list[str], list[str]]]:
     return out
 
 
-def assemble(*days: str, links: bool = True) -> tuple[dict[str, EpVote], dict[str, EpBallots]]:
-    res = ev.assemble([load_sitting(d) for d in days], proc_labels(), doc_links() if links else {}, RETRIEVED)
+def referrals() -> dict[str, list[str]]:
+    raw = json.loads((FIX / "procedure_2021-0106.json").read_text(encoding="utf-8"))
+    return ev.parse_procedures(raw["data"])[1]
+
+
+def assemble(
+    *days: str, links: bool = True, minutes: bool = True, refer: bool = True
+) -> tuple[dict[str, EpVote], dict[str, EpBallots]]:
+    res = ev.assemble(
+        [load_sitting(d, minutes) for d in days],
+        proc_labels(),
+        doc_links() if links else {},
+        RETRIEVED,
+        referrals=referrals() if refer else None,
+    )
     return {v.id: v for v in res.votes}, {b.vote_id: b for b in res.ballots}
 
 
@@ -72,7 +87,10 @@ def test_document_references():
 def test_old_labels():
     assert ev.clean_label("B9-0154/2019 - Am 52 24/10/2019 12:34:01.000") == "B9-0154/2019 - Am 52"
     assert ev.label_tail("A9-0050/2024 – Dragoş Pîslaru – § 9/2") == "§ 9/2"
-    assert ev.label_tail("A9-0139/2021 - Angel Dzhambazki -Annex, Part B, indent 3/1") == "Annex, Part B, indent 3/1"
+    assert (
+        ev.label_tail("A9-0139/2021 - Angel Dzhambazki -Annex, Part B, indent 3/1")
+        == "Annex, Part B, indent 3/1"
+    )
     assert ev.label_tail("Elissavet Vozemberg-Vrionidi - Am 3") == "Am 3"  # hyphenated names are kept
 
 
@@ -108,7 +126,9 @@ def test_ai_act_final_vote():
     assert v.kind == "final"  # tabled as "Am 808" but referenceText is "Provisional agreement"
     assert v.doc_ids == ["A-9-2023-0188-AM-808"]
     assert (v.n_for, v.n_against, v.n_abstain, v.attendees) == (523, 46, 49, 618)
-    assert v.outcome == "adopted" and v.method == "VOTE_ELECTRONIC_ROLLCALL"
+    assert (
+        v.outcome == "adopted" and v.outcome_basis == "published" and v.method == "VOTE_ELECTRONIC_ROLLCALL"
+    )
     assert v.majority_rule == "votes_cast"  # ***I: Art. 294(3) TFEU, no special majority
     assert v.term == 9 and v.date == "2024-03-13" and v.event_id == "MTG-PL-2024-03-13-DEC-166051"
     assert v.has_ballots
@@ -164,7 +184,8 @@ def test_old_format_roll_calls():
     votes, ballots = assemble("2019-10-24")
     v = votes["109643"]
     assert v.title == "B9-0154/2019 - Am 52"  # timestamp suffix removed
-    assert (v.kind, v.outcome, v.reference_text, v.doc_ids) == ("amendment", "unknown", None, [])
+    assert (v.kind, v.reference_text, v.doc_ids) == ("amendment", None, [])
+    assert (v.outcome, v.outcome_basis) == ("rejected", "minutes")  # the API has no outcome before 2024
     assert v.procedure_refs == ["2019/2755(RSP)"]  # label document B9-0154/2019 = the vote item's document
     assert (v.n_for, v.n_against, v.n_abstain) == (164, 455, 10)
     objection = votes["109583"]  # "B9-0151/2019 - Resolution", item "Objection … article 112 …"
@@ -175,6 +196,55 @@ def test_old_format_roll_calls():
     assert votes["109687"].procedure_refs == ["2019/2854(RSP)"]  # joint motion -> plenary document
     assert votes["109744"].kind == "resolution"  # RC-B9-0156/2019 - Resolution
     assert votes["109706"].kind == "split_or_separate"  # RC-B9-0134/2019 - § 4
+
+
+def test_old_format_outcomes_from_minutes():
+    votes, _ = assemble("2019-10-24")
+    got = {vid: (votes[vid].outcome, votes[vid].outcome_basis) for vid in sorted(votes)}
+    assert got == {
+        "109582": ("adopted", "minutes"),  # B9-0117/2019 - Resolution (572, 42, 21)
+        "109583": ("adopted", "minutes"),  # objection B9-0151/2019 (301, 295, 45)
+        "109643": ("rejected", "minutes"),
+        "109687": ("adopted", "minutes"),  # RC-B9-0118/2019 - Am 8 (474, 104, 49)
+        "109706": ("adopted", "minutes"),
+        "109744": ("adopted", "minutes"),
+    }
+    no_minutes, _ = assemble("2019-10-24", minutes=False)
+    # without the minutes only votes under an established rule get an outcome, marked "derived"
+    assert (no_minutes["109643"].outcome, no_minutes["109643"].outcome_basis) == ("rejected", "derived")
+    assert all(v.outcome_basis in ("derived", None) for v in no_minutes.values())
+
+
+def test_minutes_rows():
+    rows = ev.parse_minutes((FIX / "minutes_2023-06-14.xml").read_bytes())
+    ai = [r for r in rows if r.counts == (499, 28, 93)]
+    assert [(r.item, r.outcome, "A-9-2023-0188" in r.docs) for r in ai] == [("6.", "adopted", True)]
+
+
+def test_ai_act_2023_mandate_vote():
+    # 14 June 2023: the amended Commission proposal was voted (499, 28, 93) and the file was referred back to
+    # committee for negotiations (procedure event 2021-0106-DEC-REFBAK-2023-06-14): a mandate, not the position
+    votes, _ = assemble("2023-06-14")
+    v = votes["156022"]
+    assert (v.n_for, v.n_against, v.n_abstain) == (499, 28, 93)
+    assert v.procedure_refs == ["2021/0106(COD)"]
+    assert (v.kind, v.outcome, v.outcome_basis, v.majority_rule) == (
+        "mandate",
+        "adopted",
+        "minutes",
+        "votes_cast",
+    )
+    assert v.has_ballots
+    assert votes["156150"].kind == "split_or_separate"
+    without_events, _ = assemble("2023-06-14", refer=False)
+    assert without_events["156022"].kind == "final"  # no referral recorded -> the vote on the text
+
+
+def test_referral_back_in_the_same_vote_item_makes_a_mandate():
+    votes, _ = assemble("2024-03-13", refer=False)
+    # Ukraine trade measures (A9-0077/2024): "Commission proposal" adopted, then referral back (166656) adopted
+    assert votes["166656"].kind == "procedural" and votes["166656"].outcome == "adopted"
+    assert votes["166551"].kind == "mandate" if "166551" in votes else True
 
 
 # ------------------------------------------------------------------------------- majority rules
@@ -244,7 +314,9 @@ def test_snapshot_ballot_invariants():
         if problems := ev.ballot_issues(by_id[b.vote_id], b):
             mismatches[b.vote_id] = problems
     if mismatches:  # reported, never corrected: the published counts and lists are kept as they are
-        warnings.warn(f"{len(mismatches)} votes whose voter lists differ from the counts: {mismatches}", stacklevel=2)
+        warnings.warn(
+            f"{len(mismatches)} votes whose voter lists differ from the counts: {mismatches}", stacklevel=2
+        )
     assert len(mismatches) <= len(ballots) * 0.005
 
 
@@ -271,7 +343,9 @@ def test_live_ai_act_sitting():
     http = default_http()
     sitting = {"id": "MTG-PL-2024-03-13", "date": "2024-03-13", "term": 9}
     decisions, items = ev.fetch_sitting(http, sitting)
-    res = ev.assemble([ev.Sitting.build(sitting, decisions, items)], ev.fetch_procedure_labels(http), {}, RETRIEVED)
+    res = ev.assemble(
+        [ev.Sitting.build(sitting, decisions, items)], ev.fetch_procedure_labels(http), {}, RETRIEVED
+    )
     v = {x.id: x for x in res.votes}["166051"]
     assert (v.kind, v.procedure_refs, v.n_for, v.n_against, v.n_abstain) == (
         "final",
@@ -287,3 +361,115 @@ def test_live_document_link():
     from pipeline.http import default_http
 
     assert ev.fetch_document_links(default_http(), "RC-9-2024-0163")[0] == ["2024-2580"]
+
+
+# ------------------------------------------------------------------------- incremental / resumable fetch
+class FixtureHttp:
+    """Serves the recorded responses in tests/fixtures/ep_votes/ and logs every requested path."""
+
+    def __init__(self):
+        self.requests: list[str] = []
+        self.meetings = json.loads((FIX / "meetings.json").read_text(encoding="utf-8"))["years"]
+        self.sittings = {
+            json.loads(p.read_text(encoding="utf-8"))["sitting"]: json.loads(p.read_text(encoding="utf-8"))
+            for p in FIX.glob("sitting_*.json")
+        }
+        procs = json.loads((FIX / "procedures.json").read_text(encoding="utf-8"))["data"]
+        detail = json.loads((FIX / "procedure_2021-0106.json").read_text(encoding="utf-8"))["data"]
+        self.procs = {r["process_id"]: r for r in procs} | {r["process_id"]: r for r in detail}
+        self.docs = json.loads((FIX / "documents.json").read_text(encoding="utf-8"))["responses"]
+
+    def get(self, url: str, params: dict | None = None, **_kw) -> bytes:
+        path = url.removeprefix(ev.EP_API).removeprefix("https://data.europarl.europa.eu")
+        self.requests.append(path)
+        params = params or {}
+        if path == "/meetings":
+            return json.dumps(self.meetings.get(str(params["year"]), {"data": []})).encode()
+        if m := re.fullmatch(r"/meetings/(MTG-PL-[\d-]{10})/(decisions|vote-results)", path):
+            raw = self.sittings.get(m.group(1))
+            if raw is None:
+                return b""
+            return json.dumps(raw["decisions" if m.group(2) == "decisions" else "vote_results"]).encode()
+        if m := re.fullmatch(r"/distribution/doc/PV-\d+-([\d-]{10})-VOT-FNL_en\.xml", path):
+            xml = FIX / f"minutes_{m.group(1)}.xml"
+            return xml.read_bytes() if xml.exists() else b""
+        if path == "/procedures":
+            rows = [r for r in self.procs.values() if r["process_type"].endswith(params["process-type"])]
+            return json.dumps({"data": rows if params.get("offset", 0) == 0 else []}).encode()
+        if m := re.fullmatch(r"/procedures/([\w,-]+)", path):
+            return json.dumps(
+                {"data": [self.procs[i] for i in m.group(1).split(",") if i in self.procs]}
+            ).encode()
+        if m := re.fullmatch(r"/plenary-documents/([\w-]+)", path):
+            return json.dumps(self.docs.get(m.group(1), {"data": []})).encode()
+        return b""  # e.g. /documents/PV-…-VOT for sittings without recorded minutes
+
+
+@pytest.fixture
+def fetch_env(tmp_path, monkeypatch):
+    from pipeline import snapshot
+
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.setattr(ev, "_today", lambda: "2026-10-22")
+    monkeypatch.setattr(ev, "CHUNK", 4)
+    monkeypatch.delenv("EU_INTEL_FULL_REFRESH", raising=False)
+    monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S", raising=False)
+    return tmp_path
+
+
+def _stored() -> dict[str, EpVote]:
+    return {v.id: v for v in read_records(ev.SOURCE_ID, "votes", EpVote)}
+
+
+def test_interrupted_fetch_keeps_completed_chunks_and_resumes(fetch_env, monkeypatch):
+    from pipeline import snapshot
+
+    http = FixtureHttp()
+    checks = iter([False, True])  # the budget runs out after the first chunk
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: next(checks, True))
+    first = ev.fetch(http)
+    assert first.status == "partial" and "6 sittings pending; resumes next run" in first.note
+    state = snapshot.read_state(ev.SOURCE_ID)
+    assert state["pass"] == "full" and len(state["pending"]) == 6
+    done = {v.event_id[:17] for v in _stored().values()}
+    assert done == {"MTG-PL-2019-10-24", "MTG-PL-2020-07-08", "MTG-PL-2023-06-14"}  # 2020-07-09: no decisions
+    assert state["doc_links"]["RC-9-2019-0118"] == ["2019-2854"]
+
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    second = ev.fetch(FixtureHttp())
+    assert second.status == "ok"
+    state = snapshot.read_state(ev.SOURCE_ID)
+    assert state["pending"] == [] and state["last_full"]
+    votes = _stored()
+    one_pass, _ = assemble(*(p.stem.removeprefix("sitting_") for p in sorted(FIX.glob("sitting_*.json"))))
+    assert set(votes) == set(one_pass)
+    assert votes["166051"].procedure_refs == ["2021/0106(COD)"] and votes["156022"].kind == "mandate"
+    ballots = {b.vote_id for b in read_records(ev.SOURCE_ID, "ballots", EpBallots)}
+    assert ballots == {v.id for v in votes.values() if v.has_ballots}
+
+
+def test_incremental_fetch_touches_only_the_window(fetch_env, monkeypatch):
+    from pipeline import snapshot
+
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    ev.fetch(FixtureHttp())  # first run: empty snapshot -> full pass
+    before = _stored()
+    http = FixtureHttp()
+    status = ev.fetch(http)
+    assert status.status == "ok" and status.note.startswith("window from 2026-05-10")
+    sittings = {p.split("/")[2] for p in http.requests if p.startswith("/meetings/MTG-PL-")}
+    assert sittings == {"MTG-PL-2026-07-08", "MTG-PL-2026-07-09"}  # latest sitting 2026-07-09 - 60 days
+    assert [p for p in http.requests if p == "/meetings"] == ["/meetings"]  # only the 2026 listing
+    assert not [p for p in http.requests if p.startswith(("/plenary-documents", "/distribution"))]
+    assert _stored() == before  # unchanged answers -> identical records, older votes kept
+    assert snapshot.read_state(ev.SOURCE_ID)["pending"] == []
+
+
+def test_full_refresh_flag_refetches_everything(fetch_env, monkeypatch):
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    ev.fetch(FixtureHttp())
+    monkeypatch.setenv("EU_INTEL_FULL_REFRESH", "1")
+    http = FixtureHttp()
+    status = ev.fetch(http)
+    assert status.note.startswith("full pass: 10/10 sittings")
+    assert {p.split("/")[2] for p in http.requests if p.startswith("/meetings/MTG-PL-")} == set(http.sittings)

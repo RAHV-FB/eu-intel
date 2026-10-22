@@ -1,0 +1,124 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2023-06-14/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: ; others keep their first 3 ids (published counts unchanged).",
+ "decisions": {
+  "data": [
+   {
+    "activity_date": "2023-06-14",
+    "activity_id": "MTG-PL-2023-06-14-DEC-156022",
+    "activity_label": {
+     "en": "A9-0188/2023 – Brando Benifei, Dragoş Tudorache – Commission proposal",
+     "fr": "A9-0188/2023 - Brando Benifei, Dragoş Tudorache - Proposition de la Commission",
+     "mul": "A9-0188/2023 - Brando Benifei, Dragoş Tudorache - Proposition de la Commission"
+    },
+    "activity_start_date": "2023-06-14T13:41:57+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/38511",
+     "person/197534",
+     "person/226260"
+    ],
+    "had_voter_against": [
+     "person/197405",
+     "person/197406",
+     "person/197935"
+    ],
+    "had_voter_favor": [
+     "person/197395",
+     "person/197429",
+     "person/197403"
+    ],
+    "had_voter_intended_favor": [
+     "person/197721",
+     "person/125042",
+     "person/204400"
+    ],
+    "id": "eli/dl/event/MTG-PL-2023-06-14-DEC-156022",
+    "notation_votingId": "156022",
+    "number_of_votes_abstention": 93,
+    "number_of_votes_against": 28,
+    "number_of_votes_favor": 499,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2023-06-14-RCV-ITM-034"
+    ],
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2023-06-14",
+    "activity_id": "MTG-PL-2023-06-14-DEC-156150",
+    "activity_label": {
+     "en": "A9-0188/2023 – Brando Benifei, Dragoş Tudorache – Article 5, § 1, point c, point i",
+     "fr": "A9-0188/2023 - Brando Benifei, Dragoş Tudorache - Article 5, § 1, point c, point i",
+     "mul": "A9-0188/2023 - Brando Benifei, Dragoş Tudorache - Article 5, § 1, point c, point i"
+    },
+    "activity_start_date": "2023-06-14T13:35:00+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/198176",
+     "person/238639",
+     "person/197483"
+    ],
+    "had_voter_against": [
+     "person/197776",
+     "person/124738",
+     "person/239260"
+    ],
+    "had_voter_favor": [
+     "person/96709",
+     "person/197671",
+     "person/124802"
+    ],
+    "id": "eli/dl/event/MTG-PL-2023-06-14-DEC-156150",
+    "notation_votingId": "156150",
+    "number_of_votes_abstention": 18,
+    "number_of_votes_against": 53,
+    "number_of_votes_favor": 547,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2023-06-14-RCV-ITM-012"
+    ],
+    "type": "Vote"
+   }
+  ]
+ },
+ "sitting": "MTG-PL-2023-06-14",
+ "vote_results": {
+  "data": [
+   {
+    "activity_date": "2023-06-14",
+    "activity_id": "MTG-PL-2023-06-14-VOT-ITM-939243",
+    "activity_label": {
+     "fr": "Législation sur l’intelligence artificielle"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0188"
+    ],
+    "eli-dl:executed": "https://data.europarl.europa.eu/eli/dl/event/MTG-PL-2023-06-14-OJ-ITM-V-58",
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2023-06-14-VOT-ITM-939243",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2023-06-14-VOT-ITM-939243"
+      ],
+      "id": "eli/dl/event/MTG-PL-2023-06-14"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2023-06-14-VOT-ITM-939243"
+      ],
+      "id": "eli/dl/proc/2021-0106"
+     }
+    ],
+    "notation_dlvId": "939243",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2023-06-14-VOT-ITM-006"
+    ],
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Législation sur l’intelligence artificielle</title><label>Rapport: Brando Benifei, Dragoş Tudorache (A9-0188/2023)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   }
+  ]
+ }
+}

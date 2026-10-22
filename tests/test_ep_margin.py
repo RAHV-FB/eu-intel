@@ -46,7 +46,9 @@ def test_one_vote_majority(votes):
 
 
 def test_budget_guidelines_rule_unknown(votes):
-    v = votes["166487"]  # 272 for, 271 against in budget guidelines (BUI): not a type with an established rule
+    v = votes[
+        "166487"
+    ]  # 272 for, 271 against in budget guidelines (BUI): not a type with an established rule
     assert v.majority_rule == "unknown" and margin(v) is None
 
 
@@ -55,7 +57,12 @@ def test_motion_of_censure_needs_component_members(votes):
     assert margin(v) is None  # the number of component Members is required
     m = margin(v, statutory_seats(v.date))
     # two-thirds of 535 votes cast = 357; majority of 720 Members = 361 -> 361 needed
-    assert (m.rule, m.threshold, m.distance, m.label) == ("two_thirds_cast", 361, -186, "Fell 186 votes short")
+    assert (m.rule, m.threshold, m.distance, m.label) == (
+        "two_thirds_cast",
+        361,
+        -186,
+        "Fell 186 votes short",
+    )
 
 
 def test_second_reading_amendment(votes):

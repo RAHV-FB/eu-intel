@@ -166,6 +166,9 @@ VoteKind = Literal[
     "resolution",  # non-legislative resolution (whole text)
     "motion",  # e.g. motion to reject, motion of censure, objection
     "procedural",  # e.g. referral back to committee, request for urgent procedure
+    # vote on the (amended) proposal as a whole after which Parliament referred the matter back to committee
+    # for interinstitutional negotiations (Rule 59(4)): its negotiating mandate, not its position
+    "mandate",
     "other",
 ]
 
@@ -183,6 +186,10 @@ class EpVote(Model):
     procedure_refs: list[str] = Field(default_factory=list)  # linked only via official doc/procedure ids
     kind: VoteKind
     outcome: Literal["adopted", "rejected", "lapsed", "unknown"]
+    # How `outcome` was established: "published" = decision_outcome of the API decision;
+    # "minutes" = the sitting's official "Results of votes" minutes (PV-…-VOT), matched by document and
+    # counts; "derived" = from the counts under an established majority_rule (votes_cast only, never a tie).
+    outcome_basis: Literal["published", "minutes", "derived"] | None = None
     method: str | None = None  # e.g. "VOTE_ELECTRONIC_ROLLCALL", "SHOW_OF_HANDS"
     n_for: int | None = None
     n_against: int | None = None
