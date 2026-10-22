@@ -244,7 +244,7 @@ def test_snapshot_ballot_invariants():
         if problems := ev.ballot_issues(by_id[b.vote_id], b):
             mismatches[b.vote_id] = problems
     if mismatches:  # reported, never corrected: the published counts and lists are kept as they are
-        warnings.warn(f"{len(mismatches)} votes whose voter lists differ from the counts: {mismatches}")
+        warnings.warn(f"{len(mismatches)} votes whose voter lists differ from the counts: {mismatches}", stacklevel=2)
     assert len(mismatches) <= len(ballots) * 0.005
 
 

@@ -9,6 +9,7 @@ Fixtures in tests/fixtures/ep_procedures/:
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -214,22 +215,27 @@ def test_second_reading_gdpr():
 
 # ---------------------------------------------------------------- fetch orchestration
 class FakeHttp:
-    """Serves the captured fixtures in place of the network."""
+    """Serves the captured fixtures in place of the network and counts requests."""
 
     def __init__(self):
-        self.calls: list[str] = []
+        self.detail_calls: list[str] = []
+        self.oeil_calls: list[str] = []
 
     def get(self, url, params=None, **kw):
-        self.calls.append(url)
         if url == m.OEIL_FILE:
             pid = m.normalize_proc_id(params["reference"])
+            self.oeil_calls.append(pid)
             path = FIX / f"oeil_{pid}.html"
             if not path.exists():
                 raise m.HttpError(url, 404, "not in fixtures")
             return path.read_bytes()
         if url.startswith(f"{m.EP_API}/procedures/"):
             pid = url.rsplit("/", 1)[1]
-            return (FIX / f"ep_{pid}.json").read_bytes()
+            self.detail_calls.append(pid)
+            path = FIX / f"ep_{pid}.json"
+            if not path.exists():
+                raise m.HttpError(url, 404, "not in fixtures")
+            return path.read_bytes()
         raise m.HttpError(url, 404, "not in fixtures")
 
     def get_json(self, url, params=None, **kw):
@@ -242,30 +248,116 @@ class FakeHttp:
         return json.loads(self.get(url, params=params))
 
 
-def test_fetch_end_to_end_offline(monkeypatch):
-    written = {}
+@pytest.fixture
+def snapshot_dir(tmp_path, monkeypatch):
+    """Isolated data/snapshot with the real eurlex fixture acts; fixed 'today'; no env overrides."""
+    import pipeline.snapshot as snap
 
-    def fake_write(source, name, records, key=None):
-        recs = sorted(records, key=key) if key else list(records)
-        written[(source, name)] = recs
-        return Path("/dev/null")
-
-    monkeypatch.setattr(m, "write_records", fake_write)
+    monkeypatch.setattr(snap, "SNAPSHOT", tmp_path)
+    (tmp_path / "eurlex").mkdir()
+    (tmp_path / "eurlex" / "acts.json").write_text((FIX / "eurlex_acts.json").read_text(), encoding="utf-8")
     monkeypatch.setattr(m, "featured_ids", lambda: ["2012-0011"])
-    monkeypatch.setattr(m, "read_records", lambda *a, **k: [])
+    monkeypatch.setattr(m, "_today", lambda: date(2026, 10, 22))
     monkeypatch.setattr(m, "EP_API_GAP_S", 0.0)
     monkeypatch.setattr(m, "OEIL_GAP_S", 0.0)
-    status = m.fetch(FakeHttp())
-    recs = written[("ep_procedures", "procedures")]
-    ids = [r.id for r in recs]
-    assert ids == sorted(ids)
-    # every COD fixture with reference year >= 2014, plus the featured GDPR file (2012)
-    expected = {
-        p.stem[3:] for p in FIX.glob("ep_2*.json") if ep_proc(p.stem[3:])["process_type"].endswith("COD")
-    }
-    assert set(ids) == {i for i in expected if int(i[:4]) >= 2014} | {"2012-0011"}
+    for var in ("EU_INTEL_FULL_REFRESH", "EU_INTEL_FETCH_BUDGET_S"):
+        monkeypatch.delenv(var, raising=False)
+    return tmp_path
+
+
+def in_scope() -> set[str]:
+    """COD fixtures with reference year >= 2014 (ep_list_COD.json) + the featured GDPR file."""
+    listed = {x["process_id"] for x in json.loads((FIX / "ep_list_COD.json").read_text())["data"]}
+    return {i for i in listed if int(i[:4]) >= 2014} | {"2012-0011"}
+
+
+def snapshot_ids(root: Path) -> list[str]:
+    return [r["id"] for r in json.loads((root / "ep_procedures" / "procedures.json").read_text())]
+
+
+def test_fetch_full_run_from_empty_snapshot(snapshot_dir):
+    http = FakeHttp()
+    status = m.fetch(http)
     assert status.status == "ok", status.note
-    assert status.records["procedures"] == len(recs)
+    ids = snapshot_ids(snapshot_dir)
+    assert ids == sorted(ids) and set(ids) == in_scope()
+    assert sorted(http.detail_calls) == sorted(in_scope())
+    state = json.loads((snapshot_dir / "ep_procedures" / "_state.json").read_text())
+    assert state["pending"] == [] and state["last_complete"]
+    assert status.records["procedures"] == len(ids) and status.records["pending"] == 0
+
+
+def test_incremental_run_skips_terminal_procedures(snapshot_dir):
+    m.fetch(FakeHttp())
+    before = (snapshot_dir / "ep_procedures" / "procedures.json").read_text().splitlines()
+    http = FakeHttp()
+    status = m.fetch(http)
+    assert status.status == "ok", status.note
+    fetched = set(http.detail_calls)
+    # terminal (in force / withdrawn) and without an event in the last 120 days: reused as is
+    skipped = {"2021-0106", "2021-0104", "2022-0051", "2017-0003", "2022-0196"}
+    assert fetched == in_scope() - skipped
+    assert "2012-0011" in fetched  # featured: always refreshed
+    assert {"2024-0098", "2025-0059"} <= fetched  # terminal but with recent events (Oct 2026)
+    assert {"2023-0448", "2023-0126", "2018-0329"} <= fetched  # open files
+    after = (snapshot_dir / "ep_procedures" / "procedures.json").read_text().splitlines()
+    unchanged = [line for line in before if any(f'"id":"{i}"' in line for i in skipped)]
+    assert len(unchanged) == len(skipped) and all(line in after for line in unchanged)
+    assert status.records["fetched_this_run"] == len(fetched)
+
+
+def test_full_refresh_env_fetches_everything(snapshot_dir, monkeypatch):
+    m.fetch(FakeHttp())
+    monkeypatch.setenv("EU_INTEL_FULL_REFRESH", "1")
+    http = FakeHttp()
+    m.fetch(http)
+    assert set(http.detail_calls) == in_scope()
+
+
+def test_resume_after_interruption(snapshot_dir, monkeypatch):
+    monkeypatch.setattr(m, "CHUNK_SIZE", 3)
+    monkeypatch.setenv("EU_INTEL_FULL_REFRESH", "1")
+    real_chunk = m._fetch_chunk
+    calls = {"n": 0}
+
+    def crashing_chunk(run, ids):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise RuntimeError("simulated interruption (e.g. CI timeout)")
+        return real_chunk(run, ids)
+
+    monkeypatch.setattr(m, "_fetch_chunk", crashing_chunk)
+    with pytest.raises(RuntimeError):
+        m.fetch(FakeHttp())
+    order = sorted(in_scope(), reverse=True)  # fetch order: newest first
+    assert set(snapshot_ids(snapshot_dir)) == set(order[:6])  # chunks 1-2 are kept
+    state = json.loads((snapshot_dir / "ep_procedures" / "_state.json").read_text())
+    assert state["mode"] == "full" and state["pending"] == order[6:]
+
+    monkeypatch.setattr(m, "_fetch_chunk", real_chunk)
+    monkeypatch.delenv("EU_INTEL_FULL_REFRESH")
+    http = FakeHttp()
+    status = m.fetch(http)
+    assert status.status == "ok", status.note
+    assert set(snapshot_ids(snapshot_dir)) == in_scope()
+    assert http.detail_calls[: len(order) - 6] and set(order[6:]) <= set(http.detail_calls)
+    first_chunk = set(http.detail_calls[:3])
+    assert first_chunk <= set(order[6:])  # pending ids are continued first
+    state = json.loads((snapshot_dir / "ep_procedures" / "_state.json").read_text())
+    assert state["pending"] == [] and state["last_mode"] == "full"
+
+
+def test_time_budget_stops_after_a_chunk_and_resumes(snapshot_dir, monkeypatch):
+    monkeypatch.setattr(m, "CHUNK_SIZE", 4)
+    monkeypatch.setenv("EU_INTEL_FETCH_BUDGET_S", "0")
+    status = m.fetch(FakeHttp())
+    n = len(in_scope())
+    assert status.status == "partial"
+    assert f"{n - 4} pending; resumes next run" in status.note
+    assert len(snapshot_ids(snapshot_dir)) == 4
+    monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S")
+    assert m.fetch(FakeHttp()).status == "ok"
+    assert set(snapshot_ids(snapshot_dir)) == in_scope()
 
 
 # ---------------------------------------------------------------- live

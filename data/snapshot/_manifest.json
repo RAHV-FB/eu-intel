@@ -21,6 +21,33 @@
   "source": "ep_people",
   "status": "ok"
  },
+ "ep_procedures": {
+  "attempted_at": "2026-10-22T17:54:46Z",
+  "fetched_at": "2026-10-22T18:27:42Z",
+  "note": "Scope: COD, CNS, APP with reference year >= 2014 (API totals all years: {'COD': 2968, 'CNS': 2664, 'APP': 58}) + 30 featured. OEIL enrichment for 1329/1332. Failures: 0 EP API, 0 build, 3 OEIL. 2026/0324(COD): 404 https://oeil.europarl.europa.eu/oeil/en/procedure-file: {\"timestamp\":\"2026-10-22T17:54:53.736+00:00\",\"status\":404,\"e; 2023/0077(COD): 404 https://oeil.europarl.europa.eu/oeil/en/procedure-file: {\"timestamp\":\"2026-10-22T18:03:19.737+00:00\",\"status\":404,\"e; 2016/0224(COD): 404 https://oeil.europarl.europa.eu/oeil/en/procedure-file: {\"timestamp\":\"2026-10-22T18:21:48.533+00:00\",\"status\":404,\"e",
+  "records": {
+   "events": 14715,
+   "procedures": 1332,
+   "type_APP": 39,
+   "type_CNS": 161,
+   "type_COD": 1132,
+   "with_oeil": 1329
+  },
+  "source": "ep_procedures",
+  "status": "ok"
+ },
+ "ep_votes": {
+  "attempted_at": "2026-10-22T18:05:38Z",
+  "fetched_at": "2026-10-22T18:24:53Z",
+  "note": "397 sittings (359 with votes), 35465 votes (26267 roll-call, 2725 with ballots), 30837 linked to procedures (via {'document': 5655, 'item': 27725, 'label': 26, 'none': 2059}); kinds {'amendment': 21019, 'final': 1365, 'motion': 171, 'other': 32, 'procedural': 513, 'resolution': 2513, 'split_or_separate': 9852}; 586 document lookups; 0 votes whose voter lists differ from the counts; 1155s",
+  "records": {
+   "ballots": 2725,
+   "sittings": 397,
+   "votes": 35465
+  },
+  "source": "ep_votes",
+  "status": "ok"
+ },
  "eurlex": {
   "attempted_at": "2026-10-22T17:35:28Z",
   "fetched_at": "2026-10-22T17:35:34Z",

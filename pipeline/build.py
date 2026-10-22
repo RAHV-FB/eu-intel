@@ -437,7 +437,7 @@ def _vote_index_entry(v: dict) -> dict:
     """Compact EpVoteSummary for votes/index.json (full record in votes/<id>.json)."""
     out = {k: x for k, x in v.items() if not (k in ("dossier_id", "dossier_ref", "margin") and x is None)}
     src = v.get("source") or {}
-    out["source"] = {k: src[k] for k in ("institution", "url", "identifier") if src.get(k)}
+    out["source"] = {k: src[k] for k in ("institution", "url") if src.get(k)}
     return out
 
 

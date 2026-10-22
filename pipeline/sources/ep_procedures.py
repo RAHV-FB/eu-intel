@@ -38,12 +38,15 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import threading
 import time
+from collections import Counter
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import yaml
@@ -56,6 +59,7 @@ from pipeline.models.entities import (
     Event,
     EventKind,
     Institution,
+    LegalAct,
     Mep,
     Procedure,
     Rapporteur,
@@ -63,7 +67,15 @@ from pipeline.models.entities import (
     SourceStatus,
     Subject,
 )
-from pipeline.snapshot import CURATED, now_iso, read_records, write_records
+from pipeline.snapshot import (
+    CURATED,
+    fetch_deadline,
+    now_iso,
+    read_records,
+    read_state,
+    upsert_records,
+    write_state,
+)
 
 log = logging.getLogger("pipeline.sources.ep_procedures")
 
@@ -79,7 +91,10 @@ MAX_WORKERS = 4  # team rule: at most 4 concurrent threads
 EP_API_GAP_S = 0.75  # EP API allows 500 requests / 5 min; stay well below (~400) as hosts are shared
 OEIL_GAP_S = 0.5
 FALLBACK_TERMS = (7, 8, 9, 10)  # parliamentary terms covering procedures from 2009 onwards
-MAX_FAILURE_RATIO = 0.2  # above this, do not overwrite the previous snapshot
+CHUNK_SIZE = 100  # procedures per checkpoint (snapshot upsert + _state.json)
+RECENT_DAYS = 120  # incremental mode re-fetches files with an event in this window
+# Lifecycle stages (pipeline.analysis.status) after which a file is not re-fetched incrementally.
+TERMINAL_STAGES = {"adopted", "published", "in_force", "withdrawn", "rejected", "lapsed"}
 
 # --------------------------------------------------------------------------------------
 # EP activity types -> EventKind + deterministic plain-English title.
@@ -1083,47 +1098,62 @@ def featured_ids() -> list[str]:
     return out
 
 
-def mep_name_resolver(http: Http, people: Iterable[tuple[str, int | None]]) -> Callable[[str], str | None]:
+class MepNames:
     """EP person id -> display name. Prefers the ep_people snapshot; for persons it lacks, the
     EP API MEP list of the parliamentary term(s) in which they took part (givenName +
-    familyName as published). `people` = (person id, term) pairs from the participations."""
-    names: dict[str, str] = {}
-    try:
-        for m in read_records("ep_people", "meps", Mep):
-            names[m.id] = m.name
-    except Exception as e:  # noqa: BLE001 - snapshot of another source may be absent/invalid
-        log.info("ep_people snapshot not usable (%s); using EP API MEP lists", e)
-    missing = {(pid, t) for pid, t in people if pid not in names}
-    # persons known only from OEIL (no term given): look them up in all terms since 2009
-    terms = {t for _, t in missing if t is not None} | (
-        set(FALLBACK_TERMS) if any(t is None for _, t in missing) else set()
-    )
-    for term in sorted(terms):
+    familyName as published). Term lists are downloaded at most once per run."""
+
+    def __init__(self, http: Http):
+        self.http = http
+        self.names: dict[str, str] = {}
+        self.fetched_terms: set[int] = set()
         try:
-            offset = 0
-            while True:
-                d = http.get_json(
-                    f"{EP_API}/meps",
-                    params={
-                        "parliamentary-term": term,
-                        "format": "application/ld+json",
-                        "offset": offset,
-                        "limit": 1000,
-                    },
-                )
-                items = as_list(d.get("data"))
-                for x in items:
-                    if not isinstance(x, dict) or not x.get("identifier"):
-                        continue
-                    given, family = x.get("givenName"), x.get("familyName")
-                    name = f"{given} {family}".strip() if given and family else x.get("label")
-                    if name:
-                        names.setdefault(str(x["identifier"]), name)
-                offset += len(items)
-                if len(items) < 1000:
-                    break
-        except HttpError as e:
-            log.warning("MEP list for term %s unavailable: %s", term, e)
+            for m in read_records("ep_people", "meps", Mep):
+                self.names[m.id] = m.name
+        except Exception as e:  # noqa: BLE001 - snapshot of another source may be absent/invalid
+            log.info("ep_people snapshot not usable (%s); using EP API MEP lists", e)
+
+    def ensure(self, people: Iterable[tuple[str, int | None]]) -> None:
+        """`people` = (person id, term or None) pairs; None = known only from OEIL (any term)."""
+        missing = {(pid, t) for pid, t in people if pid not in self.names}
+        terms = {t for _, t in missing if t is not None} | (
+            set(FALLBACK_TERMS) if any(t is None for _, t in missing) else set()
+        )
+        for term in sorted(terms - self.fetched_terms):
+            self.fetched_terms.add(term)
+            try:
+                offset = 0
+                while True:
+                    d = self.http.get_json(
+                        f"{EP_API}/meps",
+                        params={
+                            "parliamentary-term": term,
+                            "format": "application/ld+json",
+                            "offset": offset,
+                            "limit": 1000,
+                        },
+                    )
+                    items = as_list(d.get("data"))
+                    for x in items:
+                        if not isinstance(x, dict) or not x.get("identifier"):
+                            continue
+                        given, family = x.get("givenName"), x.get("familyName")
+                        name = f"{given} {family}".strip() if given and family else x.get("label")
+                        if name:
+                            self.names.setdefault(str(x["identifier"]), name)
+                    offset += len(items)
+                    if len(items) < 1000:
+                        break
+            except HttpError as e:
+                log.warning("MEP list for term %s unavailable: %s", term, e)
+
+    def get(self, mep_id: str) -> str | None:
+        return self.names.get(mep_id)
+
+
+def mep_name_resolver(http: Http, people: Iterable[tuple[str, int | None]]) -> Callable[[str], str | None]:
+    names = MepNames(http)
+    names.ensure(people)
     return names.get
 
 
@@ -1140,9 +1170,150 @@ def _people_from(procs: Iterable[dict[str, Any]]) -> set[tuple[str, int | None]]
     return out
 
 
+# ====================================================================== incremental fetch
+def _today() -> date:  # monkeypatched in tests
+    return datetime.now(UTC).date()
+
+
+def needs_refresh(
+    rec: Procedure, acts: list[LegalAct], today: date, recent_days: int = RECENT_DAYS
+) -> str | None:
+    """Why an existing snapshot record must be re-fetched in incremental mode (None = reuse it)."""
+    from pipeline.analysis.status import classify  # local import: analysis depends on models only
+
+    if rec.stage_raw is None:
+        return "no OEIL data"
+    cutoff = (today - timedelta(days=recent_days)).isoformat()
+    if any(e.date >= cutoff for e in rec.events):
+        return "recent event"
+    stage = classify(rec, acts, [], today).stage
+    if stage not in TERMINAL_STAGES:
+        return f"open ({stage})"
+    return None
+
+
+def select_ids(
+    wanted: dict[str, str],
+    existing: dict[str, Procedure],
+    featured: list[str],
+    acts_by_ref: dict[str, list[LegalAct]],
+    today: date,
+    full: bool,
+) -> tuple[list[str], Counter[str]]:
+    """Ids to fetch this run (newest first) and the reasons, for the manifest note."""
+    reasons: Counter[str] = Counter()
+    out: list[str] = []
+    for pid in sorted(wanted, reverse=True):
+        if full:
+            why: str | None = "full refresh"
+        elif pid not in existing:
+            why = "new"
+        elif pid in featured:
+            why = "featured"
+        else:
+            rec = existing[pid]
+            why = needs_refresh(rec, acts_by_ref.get(rec.reference, []), today)
+            why = why.split(" (")[0] if why else None
+        if why:
+            reasons[why] += 1
+            out.append(pid)
+    return out, reasons
+
+
+class _Run:
+    """State shared by the chunks of one fetch run."""
+
+    def __init__(self, http: Http, wanted: dict[str, str], committees: dict[str, str]):
+        self.http = http
+        self.wanted = wanted
+        self.ep_pacer, self.oeil_pacer = _Pacer(EP_API_GAP_S), _Pacer(OEIL_GAP_S)
+        self.names = MepNames(http)
+        self.committees = committees  # code -> name, grows with every OEIL page seen
+        self.errors: dict[str, str] = {}  # transient/unexpected failures (stay pending)
+        self.not_found: list[str] = []  # listed by the API but GET /procedures/{id} answers 404
+        self.oeil_errors: list[str] = []
+        self.build_errors: list[str] = []
+        self.requests = 0
+        self.lock = threading.Lock()
+
+
+def _fetch_one(run: _Run, pid: str) -> tuple[dict[str, Any], str, OeilInfo | None] | None:
+    try:
+        with run.lock:
+            run.requests += 1
+        body = run.ep_pacer.call(lambda: run.http.get(f"{EP_API}/procedures/{pid}", params=JSONLD))
+        data = json.loads(body)
+        procs = [p for p in as_list(data.get("data")) if isinstance(p, dict) and p.get("process_id")]
+        if not procs:
+            raise ValueError("empty response")
+        proc = procs[0]
+    except HttpError as e:
+        with run.lock:
+            if e.status == 404:
+                run.not_found.append(pid)
+            else:
+                run.errors[pid] = str(e)[:120]
+        return None
+    except Exception as e:  # noqa: BLE001
+        with run.lock:
+            run.errors[pid] = str(e)[:120]
+        return None
+    retrieved = now_iso()
+    reference = proc.get("label") or run.wanted.get(pid) or pid
+    info: OeilInfo | None = None
+    try:
+        with run.lock:
+            run.requests += 1
+        page = run.oeil_pacer.call(lambda: run.http.get(OEIL_FILE, params={"reference": reference}))
+        info = parse_oeil(page)
+    except Exception as e:  # noqa: BLE001 - keep the EP API record without OEIL enrichment
+        with run.lock:
+            run.oeil_errors.append(f"{reference}: {str(e)[:120]}")
+    with run.lock:
+        run.errors.pop(pid, None)
+    return proc, retrieved, info
+
+
+def _fetch_chunk(run: _Run, ids: list[str]) -> list[Procedure]:
+    """Fetch and build one chunk. Failed ids are left in run.errors (they stay pending)."""
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
+        got = dict(zip(ids, ex.map(lambda i: _fetch_one(run, i), ids), strict=True))
+    for pid in [i for i in ids if got[i] is None and i in run.errors]:  # one retry (e.g. HTTP 429 burst)
+        got[pid] = _fetch_one(run, pid)
+    fetched = [(pid, r) for pid, r in got.items() if r is not None]
+    people = _people_from(proc for _, (proc, _, _) in fetched)
+    for _, (_, _, info) in fetched:
+        if info:
+            people |= {(i, None) for pl in info.players for i in pl.rapporteurs + pl.shadows}
+            for code, name in info.committee_names.items():
+                run.committees.setdefault(code, name)
+    run.names.ensure(people)
+    out: list[Procedure] = []
+    for pid, (proc, retrieved, info) in fetched:
+        try:
+            out.append(build_procedure(proc, retrieved, info, run.names.get, run.committees))
+        except Exception as e:  # noqa: BLE001
+            run.build_errors.append(f"{pid}: {e!r}"[:160])
+    return out
+
+
 def fetch(http: Http) -> SourceStatus:
+    """Incremental, chunked and resumable; the committed snapshot is the checkpoint.
+
+    - Default (incremental): list ids (3 cheap requests), then fetch only ids that are new, open
+      (status not terminal), had an event in the last RECENT_DAYS days, lack OEIL data, or are
+      featured; all other records are reused unchanged from the snapshot.
+    - EU_INTEL_FULL_REFRESH=1: fetch every id in scope.
+    - Work is done in chunks of CHUNK_SIZE; after each chunk the records are upserted into the
+      snapshot and data/snapshot/ep_procedures/_state.json lists the ids still pending. A new
+      run continues pending ids first. No new chunk starts after fetch_deadline()
+      (EU_INTEL_FETCH_BUDGET_S); the run then reports "partial".
+    """
     attempted = now_iso()
-    ep_pacer, oeil_pacer = _Pacer(EP_API_GAP_S), _Pacer(OEIL_GAP_S)
+    deadline = fetch_deadline()
+    today = _today()
+    state = read_state(SOURCE_ID)
+    full = os.environ.get("EU_INTEL_FULL_REFRESH") == "1"
 
     wanted: dict[str, str] = {}  # pid -> reference (label)
     by_type: dict[str, int] = {}
@@ -1155,113 +1326,101 @@ def fetch(http: Http) -> SourceStatus:
     featured = featured_ids()
     for pid in featured:
         wanted.setdefault(pid, "")
-    ids = sorted(wanted, reverse=True)  # newest first: if interrupted, recent files are done
-    log.info("ep_procedures: %d procedures in scope (%d featured)", len(ids), len(featured))
 
-    raw: dict[str, tuple[dict[str, Any], str]] = {}
-    oeil: dict[str, OeilInfo | None] = {}
-    errors: dict[str, str] = {}  # transient/unexpected failures (retried once)
-    not_found: list[str] = []  # listed by the API but GET /procedures/{id} answers 404
-    oeil_errors: list[str] = []
-    lock = threading.Lock()
+    existing = {p.id: p for p in read_records(SOURCE_ID, "procedures", Procedure)}
+    acts_by_ref: dict[str, list[LegalAct]] = {}
+    try:
+        for a in read_records("eurlex", "acts", LegalAct):
+            for ref in a.procedure_refs:
+                acts_by_ref.setdefault(ref, []).append(a)
+    except Exception as e:  # noqa: BLE001 - optional input for the terminal-state check
+        log.info("eurlex snapshot not usable (%s)", e)
 
-    def work(pid: str) -> None:
-        try:
-            body = ep_pacer.call(lambda: http.get(f"{EP_API}/procedures/{pid}", params=JSONLD))
-            data = json.loads(body)
-            procs = [p for p in as_list(data.get("data")) if isinstance(p, dict) and p.get("process_id")]
-            if not procs:
-                raise ValueError("empty response")
-            proc = procs[0]
-        except HttpError as e:
-            with lock:
-                if e.status == 404:
-                    not_found.append(pid)
-                else:
-                    errors[pid] = str(e)[:120]
-            return
-        except Exception as e:  # noqa: BLE001
-            with lock:
-                errors[pid] = str(e)[:120]
-            return
-        with lock:
-            errors.pop(pid, None)
-        retrieved = now_iso()
-        reference = proc.get("label") or wanted.get(pid) or pid
-        info: OeilInfo | None = None
-        try:
-            page = oeil_pacer.call(lambda: http.get(OEIL_FILE, params={"reference": reference}))
-            info = parse_oeil(page)
-        except Exception as e:  # noqa: BLE001
-            with lock:
-                oeil_errors.append(f"{reference}: {str(e)[:120]}")
-        with lock:
-            raw[pid] = (proc, retrieved)
-            oeil[pid] = info
-            n = len(raw)
-        if n % 100 == 0:
-            log.info("ep_procedures: %d/%d fetched", n, len(ids))
+    # Ids left over by an interrupted run come first (an interrupted full refresh stays "full").
+    resumed = [i for i in state.get("pending", []) if i in wanted]
+    mode = "full" if full or (resumed and state.get("mode") == "full") else "incremental"
+    selected, reasons = select_ids(wanted, existing, featured, acts_by_ref, today, full)
+    todo = list(dict.fromkeys(resumed + selected))
+    if resumed:
+        reasons["resumed"] += len(resumed)
+    log.info(
+        "ep_procedures: %d in scope, %d in snapshot, %d to fetch (%s, %s)",
+        len(wanted),
+        len(existing),
+        len(todo),
+        mode,
+        dict(reasons),
+    )
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
-        list(ex.map(work, ids))
-    if errors:  # one sequential retry pass (e.g. after HTTP 429 bursts caused by shared use)
-        log.info("ep_procedures: retrying %d failed procedures", len(errors))
-        for pid in sorted(errors):
-            work(pid)
+    committees = {c.code: c.name for p in existing.values() for c in p.committees if c.name}
+    run = _Run(http, wanted, committees)
+    started_at = state.get("started_at") if resumed else attempted
+    done: list[str] = []
+    stopped_early = False
+    for i in range(0, len(todo), CHUNK_SIZE):
+        # at least one chunk per run (progress even with a tiny budget), then respect the budget
+        if i and deadline is not None and time.monotonic() > deadline:
+            stopped_early = True
+            break
+        chunk = todo[i : i + CHUNK_SIZE]
+        records = _fetch_chunk(run, chunk)
+        if records:
+            upsert_records(SOURCE_ID, "procedures", Procedure, records, id_of=lambda r: r.id)
+        done += [pid for pid in chunk if pid not in run.errors]
+        pending = [pid for pid in todo if pid not in done]
+        write_state(SOURCE_ID, {"mode": mode, "pending": pending, "started_at": started_at})
+        log.info("ep_procedures: %d/%d fetched (%d requests)", len(done), len(todo), run.requests)
+    pending = [pid for pid in todo if pid not in done]
+    write_state(
+        SOURCE_ID,
+        {"mode": mode, "pending": pending, "started_at": started_at}
+        if pending
+        else {"mode": None, "pending": [], "started_at": None, "last_complete": now_iso(), "last_mode": mode},
+    )
 
-    if not raw or len(errors) > MAX_FAILURE_RATIO * len(ids):
+    final = read_records(SOURCE_ID, "procedures", Procedure)
+    if todo and not done and not stopped_early:
         return SourceStatus(
             source=SOURCE_ID,
             status="failed",
             attempted_at=attempted,
-            note=f"{len(errors)}/{len(ids)} procedure requests failed; snapshot not updated. "
-            + "; ".join(f"{k}: {v}" for k, v in sorted(errors.items())[:5]),
+            note=f"0/{len(todo)} procedures fetched; snapshot unchanged; {len(pending)} pending. "
+            + "; ".join(f"{k}: {v}" for k, v in sorted(run.errors.items())[:5]),
         )
-
-    people = _people_from(p for p, _ in raw.values())
-    people |= {
-        (i, None)
-        for info in oeil.values()
-        if info
-        for pl in info.players
-        for i in pl.rapporteurs + pl.shadows
-    }
-    names = mep_name_resolver(http, people)
-    # Committee code -> name, across all OEIL pages (closed files often omit key players).
-    all_committees: dict[str, str] = {}
-    for pid in sorted(oeil, reverse=True):  # newest first: current committee names win
-        for code, name in (oeil[pid].committee_names if oeil[pid] else {}).items():
-            all_committees.setdefault(code, name)
-    records: list[Procedure] = []
-    build_errors: list[str] = []
-    for pid, (proc, retrieved) in raw.items():
-        try:
-            records.append(build_procedure(proc, retrieved, oeil.get(pid), names, all_committees))
-        except Exception as e:  # noqa: BLE001
-            build_errors.append(f"{pid}: {e!r}"[:160])
-    write_records(SOURCE_ID, "procedures", records, key=lambda r: r.id)
-
-    counts: dict[str, int] = {"procedures": len(records)}
-    for r in records:
+    counts: dict[str, int] = {"procedures": len(final)}
+    for r in final:
         counts[f"type_{r.type}"] = counts.get(f"type_{r.type}", 0) + 1
-    counts["with_oeil"] = sum(1 for r in records if r.stage_raw is not None)
-    counts["events"] = sum(len(r.events) for r in records)
-    problems = [f"{k}: {v}" for k, v in sorted(errors.items())] + build_errors
+    counts["with_oeil"] = sum(1 for r in final if r.stage_raw is not None)
+    counts["events"] = sum(len(r.events) for r in final)
+    counts["fetched_this_run"] = len(done)
+    counts["requests_this_run"] = run.requests + len(PROCEDURE_TYPES) + len(run.names.fetched_terms)
+    counts["pending"] = len(pending)
     note = (
         f"Scope: {', '.join(PROCEDURE_TYPES)} with reference year >= {MIN_YEAR} "
-        f"(API totals all years: {by_type}) + {len(featured)} featured. "
-        f"OEIL enrichment for {counts['with_oeil']}/{len(records)}."
+        f"(API totals all years: {by_type}) + {len(featured)} featured. Mode {mode}: fetched "
+        f"{len(done)} ({dict(reasons)}), reused {len(final) - len(done)} from the snapshot. "
+        f"OEIL enrichment for {counts['with_oeil']}/{len(final)}."
     )
-    if not_found:
-        note += f" {len(not_found)} listed procedures answer 404 at /procedures/{{id}}: {', '.join(sorted(not_found)[:10])}."
-    if problems or oeil_errors:
-        note += (
-            f" Failures: {len(errors)} EP API, {len(build_errors)} build, {len(oeil_errors)} OEIL. "
-            + "; ".join((problems + oeil_errors)[:5])
+    if pending:
+        note += f" {len(pending)} pending; resumes next run" + (
+            " (time budget reached)." if stopped_early else "."
         )
+    if run.not_found:
+        note += (
+            f" {len(run.not_found)} listed procedures answer 404 at /procedures/{{id}}: "
+            + ", ".join(sorted(run.not_found)[:10])
+            + "."
+        )
+    problems = [f"{k}: {v}" for k, v in sorted(run.errors.items())] + run.build_errors
+    if problems or run.oeil_errors:
+        note += (
+            f" Failures: {len(run.errors)} EP API, {len(run.build_errors)} build, {len(run.oeil_errors)} OEIL. "
+            + "; ".join((problems + run.oeil_errors)[:5])
+        )
+    partial = bool(pending or problems or len(run.oeil_errors) > 0.02 * max(len(done), 1))
     return SourceStatus(
         source=SOURCE_ID,
-        status="partial" if problems or len(oeil_errors) > 0.02 * len(ids) else "ok",
+        status="partial" if partial else "ok",
         fetched_at=now_iso(),
         attempted_at=attempted,
         records=counts,

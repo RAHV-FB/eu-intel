@@ -63,7 +63,7 @@ REGISTER_NOTE = "Council of the EU – Voting result {num}"
 RENDER_DPI = 100
 MAX_WORKERS = 4
 # Bump when parsing changes: every note is then re-processed on the next fetch.
-PARSER_VERSION = "2026-10-22.4"
+PARSER_VERSION = "2026-10-22.5"
 
 # Protocol order of the GSC voting sheet (Member States by their name in their own language).
 LEFT_COLUMN = ["BE", "BG", "CZ", "DK", "DE", "EE", "IE", "GR", "ES", "FR", "HR", "IT", "CY", "LV"]
@@ -572,6 +572,9 @@ def _parse_subject(meta: NoteMeta) -> None:
                 if depth == 0:
                     meta.configuration = rest[1:i].strip() or None
                     break
+            else:  # unbalanced parentheses in the source: keep the text up to the date, verbatim
+                end = date.start() if date else len(rest)
+                meta.configuration = rest[1:end].strip(" ,") or None
         elif date:
             meta.configuration = rest[: date.start()].strip(" ,") or None
         cut = meeting.start()
