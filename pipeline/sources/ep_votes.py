@@ -237,8 +237,14 @@ def _text(v: Any, langs: tuple[str, ...] = ("en", "mul", "fr")) -> str | None:
     return None
 
 
-def _en_only(v: Any) -> str | None:
-    return _text(v, ("en",)) if isinstance(v, dict) and v.get("en") else None
+def _committee(v: Any) -> str | None:
+    """Committee code from responsible_organization_label, the "Author" column of the voting list.
+
+    That column also names political groups ("The Left", "PPE"), "Members", "original text" or the generic
+    "committee"; only a single EP committee code ("INTA", "ENVI") is kept.
+    """
+    text = _text(v, ("en",)) if isinstance(v, dict) and v.get("en") else None
+    return text if text and re.fullmatch(r"[A-Z]{4}", text) else None
 
 
 TIMESTAMP_RE = re.compile(r"\s+\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}(?:\.\d+)?\s*$")
@@ -657,7 +663,7 @@ def build_records(
         n_abstain=_int(dec.get("number_of_votes_abstention")),
         attendees=_int(dec.get("number_of_attendees")),
         majority_rule=majority_rule(kind, item, proc_types),
-        committee=_en_only(dec.get("responsible_organization_label")),
+        committee=_committee(dec.get("responsible_organization_label")),
         has_ballots=keep_ballots,
         source=source_ref(s, event_id, rollcall, retrieved),
     )

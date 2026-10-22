@@ -446,7 +446,8 @@ class NoteMeta:
 
 
 BULLETS = "•‒–-=■▪►●·"
-PROC_RE = re.compile(r"\b((?:19|20)\d{2})/(\d{4})\s*\(\s*([A-Z]{3})\s*\)")
+# "2021/0106 (COD)"; split procedures are written "2016/0224/A(COD)" (EP format "2016/0224A(COD)").
+PROC_RE = re.compile(r"\b((?:19|20)\d{2})/(\d{4})(?:/?([A-Z]))?\s*\(\s*([A-Z]{3})\s*\)")
 
 
 def _iso(day: int, month: str, year: int) -> str | None:
@@ -486,8 +487,8 @@ def parse_note(page1: str) -> NoteMeta:
             for nxt in lines[i : i + 6]:
                 if re.match(r"\s*(NOTE|VOTE)\b", nxt.strip()) or re.search(r"\bVOTE \d+", nxt):
                     break
-                for y, n, t in PROC_RE.findall(nxt):
-                    ref = f"{y}/{n}({t})"
+                for y, n, part, t in PROC_RE.findall(nxt):
+                    ref = f"{y}/{n}{part}({t})"
                     if ref not in meta.procedure_refs:
                         meta.procedure_refs.append(ref)
             break
@@ -676,6 +677,19 @@ def parse_document(v: DocVersion, pdf: bytes) -> Parsed:
     return Parsed(v, pages, meta, sheet, err)
 
 
+def _merge_meta(metas: list[NoteMeta]) -> NoteMeta:
+    """Field by field, the latest version (REV/COR) that states a value wins; corrigenda often restate
+    only part of the note (e.g. a corrected interinstitutional file number or subject)."""
+    out = NoteMeta()
+    for name in NoteMeta.__dataclass_fields__:
+        for m in reversed(metas):
+            value = getattr(m, name)
+            if value:
+                setattr(out, name, value)
+                break
+    return out
+
+
 def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | None, str | None]:
     """Combine the versions of one note (INIT/REV/COR) into a CouncilVote. Returns (vote, problem)."""
     nullified = {s for p in parsed for s in p.meta.nullified}
@@ -683,12 +697,7 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
     if not valid:
         return None, "all versions declared null and void"
     meta_src = valid[-1]
-    # A corrigendum without its own subject block keeps the earlier metadata.
-    meta = (
-        meta_src.meta
-        if meta_src.meta.title
-        else next((p.meta for p in reversed(valid) if p.meta.title), meta_src.meta)
-    )
+    meta = _merge_meta([p.meta for p in valid])
     with_sheet = [p for p in valid if p.sheet is not None]
     sheet_src = with_sheet[-1] if with_sheet else None
 

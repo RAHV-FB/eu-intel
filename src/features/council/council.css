@@ -157,3 +157,18 @@
 .cvote__assessment > p {
   margin: 0;
 }
+.cvote__assessment .meta {
+  color: var(--text-2);
+}
+/* WCAG 2.2 target size: each country link is at least 24px tall, with spacing between items */
+.cvote__states {
+  gap: 0 var(--sp-2);
+}
+.cvote__states li {
+  line-height: 24px;
+}
+.cvote__states a {
+  display: inline-block;
+  min-height: 24px;
+  min-width: 24px;
+}

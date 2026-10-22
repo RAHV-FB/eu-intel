@@ -22,6 +22,15 @@ Sources (both official European Parliament publications):
    ``SourceRef(institution="OEIL")``. If an OEIL page cannot be fetched or parsed, the
    record is kept with EP API data only (stage_raw/subjects/com_refs/celex_refs empty).
 
+Event normalization (deterministic, nothing invented):
+- one Event per EP activity, kind/title from ACTIVITY_MAP (unknown types -> "other");
+- PLENARY_VOTE / PLENARY_VOTE_RESULTS records of a sitting are folded (with their minutes,
+  verbatim and vote-result documents) into that day's plenary decision event, if any;
+- amendment tablings (committee or plenary) are grouped per day into one event;
+- OEIL key events listed in OEIL_EVENT_MAP are added (Commission proposal and withdrawal,
+  Council positions/adoption, ...) unless the EP API already has an event of the same kind and
+  institution on the same day.
+
 Output: data/snapshot/ep_procedures/procedures.json (list[Procedure], sorted by id).
 """
 
@@ -678,7 +687,10 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
 
 
 # ====================================================================== building records
-def _src(institution: Institution, url: str, label: str, identifier: str, retrieved_at: str) -> SourceRef:
+def _src(
+    institution: Institution, url: str, label: str | None, identifier: str, retrieved_at: str
+) -> SourceRef:
+    # Event-level sources carry no label (the procedure record has one): keeps the snapshot small.
     return SourceRef(
         institution=institution, url=url, label=label, identifier=identifier, retrieved_at=retrieved_at
     )
@@ -753,8 +765,8 @@ def build_events(
                 docs=_dedupe_docs(docs),
                 source=_src(
                     "EP",
-                    f"{EP_API}/procedures/{pid}/events/{e['activity_id']}?format=application/ld+json",
-                    f"EP Open Data API – event {e['activity_id']}",
+                    f"{EP_API}/events/{e['activity_id']}",  # JSON-LD is the API's default format
+                    None,
                     e["activity_id"],
                     retrieved_at,
                 ),
@@ -783,7 +795,7 @@ def build_events(
                 source=_src(
                     "EP",
                     api_procedure_url(pid),
-                    f"EP Open Data API – procedure {reference}",
+                    None,
                     first,
                     retrieved_at,
                 ),
@@ -831,7 +843,7 @@ def build_events(
                     source=_src(
                         "OEIL",
                         oeil_url(reference),
-                        f"Legislative Observatory – {reference}",
+                        "Legislative Observatory (OEIL) key events",
                         reference,
                         retrieved_at,
                     ),

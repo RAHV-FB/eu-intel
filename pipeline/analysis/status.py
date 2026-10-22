@@ -12,7 +12,9 @@ Principles (each one is covered by tests/test_status.py):
 - A Commission withdrawal is not a rejection by Parliament; under the consultation procedure
   (CNS) a negative Parliament opinion does not end the procedure.
 - Inactivity is reported as a number of days without a recorded update. A file is only
-  described as stalled/blocked with an official label (Legislative Train) and its URL.
+  described as blocked with the Legislative Train's "Blocked" label (verbatim, with its URL and
+  update date), and only while the procedure's own stage is still active. Train statuses never
+  override recorded EP / EUR-Lex facts (adoption, publication, withdrawal).
 - Dates are only taken from the inputs; nothing in the future is invented.
 """
 
@@ -41,7 +43,6 @@ Stage = Literal[
 Basis = Literal["source", "derived"]
 StepBasis = Literal["source", "derived", "unknown"]
 
-LEGISLATIVE_TYPES = {"COD", "CNS", "APP", "SYN", "AVC"}
 TERMINAL: set[str] = {"published", "in_force", "withdrawn", "rejected", "lapsed"}
 # Stages in which the co-legislators still have to act (Train "Blocked" may be shown).
 ACTIVE_STAGES: set[str] = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
@@ -76,8 +77,6 @@ LAPSED_OR_WITHDRAWN = "Procedure lapsed or withdrawn"
 # Legislative Train statuses that are an official "stalled" assessment. The Train glossary
 # defines "Blocked" as no progress over at least the previous nine months.
 TRAIN_STALL_STATUSES = ("blocked",)
-
-FIRST_READING_POSITION_CODES = {"PLENARY_ADOPT_POSITION", "PLENARY_AMEND_PROPOSAL", "PLENARY_DECISION"}
 
 
 class _M(BaseModel):
