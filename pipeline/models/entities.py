@@ -318,6 +318,7 @@ class TrainFile(Model):
     url: str
     title: str
     status: str  # exactly as published by the Legislative Train
+    blocking_institution: str | None = None  # institution the Train names as blocking, verbatim, if any
     procedure_refs: list[str] = Field(default_factory=list)
     theme: str | None = None
     last_updated: str | None = None
