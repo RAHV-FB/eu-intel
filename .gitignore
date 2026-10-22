@@ -10,3 +10,4 @@ __pycache__/
 public/data/
 coverage/
 .DS_Store
+*.tsbuildinfo
