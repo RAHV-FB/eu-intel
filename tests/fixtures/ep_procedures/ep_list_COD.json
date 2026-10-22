@@ -64,6 +64,13 @@
    "label": "2017/0003(COD)"
   },
   {
+   "id": "eli/dl/proc/2025-0059",
+   "type": "Process",
+   "process_id": "2025-0059",
+   "process_type": "COD",
+   "label": "2025/0059(COD)"
+  },
+  {
    "id": "eli/dl/proc/2022-0196",
    "type": "Process",
    "process_id": "2022-0196",
@@ -113,6 +120,9 @@
    },
    {
     "id": "eli/dl/proc/2017-0003"
+   },
+   {
+    "id": "eli/dl/proc/2025-0059"
    },
    {
     "id": "eli/dl/proc/2022-0196"

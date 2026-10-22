@@ -289,3 +289,18 @@
   letter-spacing: inherit;
   font-weight: inherit;
 }
+
+.hide-sm {
+  display: block;
+}
+.scroll-hint {
+  display: none;
+}
+@media (max-width: 40rem) {
+  .hide-sm {
+    display: none;
+  }
+  .scroll-hint {
+    display: inline;
+  }
+}

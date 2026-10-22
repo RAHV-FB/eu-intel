@@ -44,7 +44,7 @@ export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown
   return (
     <div className="table-wrap table-card">
       <table className="table">
-        <caption>Recorded votes of MEPs by political group (membership on the day of the vote). Select a column heading to sort.</caption>
+        <caption className="visually-hidden">Recorded votes of MEPs by political group (membership on the day of the vote). Select a column heading to sort.</caption>
         <thead>
           <tr>
             <SortTh k="group" sort={sort} onSort={toggle}>
@@ -74,7 +74,7 @@ export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown
             <tr key={r.group}>
               <th scope="row">
                 <Link to={`/people/groups/${encodeURIComponent(r.group)}`}>{r.group_code}</Link>
-                {groupNames?.get(r.group) && <span className="meta" style={{ display: 'block', fontWeight: 400 }}>{groupNames.get(r.group)}</span>}
+                {groupNames?.get(r.group) && <span className="meta hide-sm" style={{ fontWeight: 400 }}>{groupNames.get(r.group)}</span>}
               </th>
               <td className="num">{formatNumber(r.for)}</td>
               <td className="num">{formatNumber(r.against)}</td>
@@ -115,7 +115,7 @@ export function CountryBreakdownTable({ rows }: { rows: CountryBreakdown[] }) {
   return (
     <div className="table-wrap table-card">
       <table className="table">
-        <caption>Recorded votes of MEPs by the country they represent. Select a column heading to sort.</caption>
+        <caption className="visually-hidden">Recorded votes of MEPs by the country they represent. Select a column heading to sort.</caption>
         <thead>
           <tr>
             <SortTh k="country" sort={sort} onSort={toggle}>

@@ -272,7 +272,9 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
         <div className="dz-sub">
           <h3>Sources</h3>
           <ul className="dz-list dz-sources">
-            {d.sources.map((s, i) => (
+            {d.sources
+              .filter((s, i, all) => all.findIndex((o) => o.url === s.url && o.identifier === s.identifier && o.label === s.label) === i)
+              .map((s, i) => (
               <li key={`${s.url}-${i}`}>
                 <ExtLink href={s.url}>{s.label || institutionLabel(s.institution)}</ExtLink>
                 <span className="meta">

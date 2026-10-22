@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
 
 from pipeline.analysis.status import DossierStatus, classify
-from pipeline.models.entities import LegalAct, Procedure, SourceRef, TrainFile
+from pipeline.models.entities import LegalAct, Procedure, TrainFile
 from pipeline.sources import ep_procedures as src
 
 FIX = Path(__file__).parent / "fixtures" / "ep_procedures"
@@ -25,6 +25,10 @@ RETRIEVED = "2026-10-22T12:00:00Z"
 
 ACTS = [
     LegalAct.model_validate(a) for a in json.loads((FIX / "eurlex_acts.json").read_text(encoding="utf-8"))
+]
+# Real Legislative Train records (train snapshot) linked to the fixture procedures
+TRAIN = [
+    TrainFile.model_validate(t) for t in json.loads((FIX / "train_files.json").read_text(encoding="utf-8"))
 ]
 
 
@@ -185,38 +189,79 @@ def test_consent_procedure():
 
 
 # ============================================================ inactivity vs officially blocked
+def train_for(p: Procedure) -> list[TrainFile]:
+    return [t for t in TRAIN if p.reference in t.procedure_refs]
+
+
 def test_inactivity_is_not_blocked():
-    s = status("2023-0448")
+    p = proc("2023-0448")  # animal transport: long without recorded steps; Train says "Tabled"
+    assert [t.status for t in train_for(p)] == ["Tabled"]
+    s = classify(p, acts_for(p), train_for(p), TODAY)
     assert s.stage == "proposed"
-    last = max(e.date for e in proc("2023-0448").events)
+    last = max(e.date for e in p.events)
     assert s.stall.last_event_date == last
     assert s.stall.days_since_last_event == (TODAY - date.fromisoformat(last)).days
-    assert s.stall.official_label is None and s.stall.official_source_url is None
+    assert s.stall.days_since_last_event > 270  # long inactivity ...
+    assert s.stall.official_label is None  # ... but no official "Blocked" assessment
+    assert s.stall.official_source_url is None and s.stall.official_text is None
     assert s.stall.text.startswith("No recorded procedural update in")
     assert "block" not in all_text(s).lower()
 
 
-def test_blocked_only_with_official_label():
-    p = proc("2023-0448")
-    src_ref = SourceRef(
-        institution="LegislativeTrain",
-        url="https://www.europarl.europa.eu/legislative-train/",
-        retrieved_at=RETRIEVED,
-    )
-    tabled = TrainFile(
-        url="https://www.europarl.europa.eu/legislative-train/x",
-        title=p.title,
-        status="Tabled",
-        procedure_refs=[p.reference],
-        source=src_ref,
-    )
-    s = classify(p, [], [tabled], TODAY)
-    assert s.stall.official_label is None  # a non-"Blocked" Train status is not a stall assessment
-    blocked = tabled.model_copy(update={"status": "Blocked"})
-    s = classify(p, [], [blocked], TODAY)
-    assert s.stall.official_label == "Blocked"
-    assert s.stall.official_source_url == blocked.url
-    assert s.stage == "proposed"  # a Train label never changes the procedural stage
+def test_blocked_only_with_official_train_label():
+    p = proc("2023-0320")  # HOT (CNS): the Train classifies it "Blocked", naming the Council
+    train = train_for(p)
+    assert [(t.status, t.blocking_institution) for t in train] == [("Blocked", "COUNCIL")]
+    s = classify(p, acts_for(p), train, TODAY)
+    assert s.stage == "parliament_position"  # a Train label never changes the procedural stage
+    assert s.stall.official_label == "Blocked"  # verbatim
+    assert s.stall.official_source_url == train[0].url
+    assert s.stall.official_label_date == train[0].last_updated
+    assert s.stall.official_text.startswith("Classified as \u201cBlocked\u201d by the EP Legislative Train")
+    assert "COUNCIL" in s.stall.official_text  # named only because the Train names it
+    assert s.stall.text.startswith("No recorded procedural update in")  # own text stays neutral
+    without = classify(p, acts_for(p), [], TODAY)
+    assert without.stall.official_label is None
+    assert "block" not in all_text(without).lower()
+
+
+def test_train_label_not_used_before_its_update_date():
+    p = proc("2023-0320")
+    train = train_for(p)
+    s = classify(p, acts_for(p), train, date.fromisoformat(train[0].last_updated) - timedelta(days=1))
+    assert s.stall.official_label is None
+
+
+def test_blocked_label_never_overrides_recorded_adoption():
+    # A Train "Blocked" record passed for a dossier whose own recorded stage is no longer active
+    # (e.g. a stale Train snapshot) must not be shown.
+    blocked = train_for(proc("2023-0320"))[0]
+    for pid in ("2024-0098", "2021-0106", "2017-0003"):  # signed / in force / withdrawn
+        s = classify(proc(pid), acts_for(proc(pid)), [blocked], TODAY)
+        assert s.stage in ("adopted", "in_force", "withdrawn")
+        assert s.stall is None or s.stall.official_label is None, pid
+
+
+def test_lagging_train_status_does_not_override_facts():
+    # The Train still says "Close to adoption" for the Return Regulation, in force since 15 Oct 2026
+    p = proc("2025-0059")
+    assert [t.status for t in train_for(p)] == ["Close to adoption"]
+    s = classify(p, acts_for(p), train_for(p), TODAY)
+    assert s.stage == "in_force" and s.since == "2026-10-15"
+    # ... and for a file signed on 21 Oct 2026
+    p = proc("2024-0098")
+    assert [t.status for t in train_for(p)] == ["Close to adoption"]
+    assert classify(p, acts_for(p), train_for(p), TODAY).label == "Signed, awaiting publication"
+
+
+def test_train_withdrawn_is_not_a_recorded_withdrawal():
+    # The Train lists the 2018 Return Directive recast as "Withdrawn"; neither the EP nor OEIL
+    # records a withdrawal, so the recorded procedural stage is kept.
+    p = proc("2018-0329")
+    assert [t.status for t in train_for(p)] == ["Withdrawn"]
+    s = classify(p, [], train_for(p), TODAY)
+    assert s.stage == "proposed"
+    assert classify(proc("2017-0003"), [], train_for(proc("2017-0003")), TODAY).stage == "withdrawn"
 
 
 # ============================================================ act linkage

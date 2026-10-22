@@ -55,27 +55,31 @@ DEFAULT_SITE_URL = "https://rahv-fb.github.io/eu-intel/"
 
 # ------------------------------------------------------------------------------------------ sources
 # Reuse / licence statements shown on the About page. Keep them factual and short.
+# Verified 2026-10-22: the EP legal notice (https://www.europarl.europa.eu/legal-notice/en/) authorises
+# reuse provided the source is acknowledged; data.europa.eu lists the EP open datasets under the
+# "European Commission reuse notice". (No CC BY claim is made because none was confirmed.)
+EP_LICENCE = (
+    "© European Union – Source: European Parliament. Reuse is authorised provided the source is "
+    "acknowledged (European Parliament legal notice)."
+)
 SOURCES: dict[str, dict[str, str]] = {
     "ep_people": {
         "name": "European Parliament – MEPs, political groups and national parties",
         "institution": "EP",
         "url": "https://data.europarl.europa.eu/en/developer-corner/opendata-api",
-        "licence": "European Parliament open data, reusable with attribution (© European Union, source: "
-        "European Parliament; CC BY 4.0).",
+        "licence": EP_LICENCE,
     },
     "ep_procedures": {
         "name": "European Parliament – legislative procedures (Legislative Observatory data)",
         "institution": "EP",
         "url": "https://data.europarl.europa.eu/en/developer-corner/opendata-api",
-        "licence": "European Parliament open data, reusable with attribution (© European Union, source: "
-        "European Parliament; CC BY 4.0).",
+        "licence": EP_LICENCE,
     },
     "ep_votes": {
         "name": "European Parliament – plenary votes and roll-call results",
         "institution": "EP",
         "url": "https://data.europarl.europa.eu/en/developer-corner/opendata-api",
-        "licence": "European Parliament open data, reusable with attribution (© European Union, source: "
-        "European Parliament; CC BY 4.0).",
+        "licence": EP_LICENCE,
     },
     "eurlex": {
         "name": "EUR-Lex / Publications Office (Cellar) – adopted legal acts and their dates",

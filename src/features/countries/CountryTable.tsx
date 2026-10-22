@@ -69,11 +69,16 @@ export function CountryTable({
   const implCols = inds.length + 1;
 
   return (
+    <>
+    <p className="note" style={{ marginBottom: 'var(--sp-2)' }}>
+      Three separate kinds of information — representation in Parliament, participation in Council votes, and implementation of EU law.
+      They are not combined into a score. Select a column heading to sort.<span className="scroll-hint"> Scroll sideways to see all columns.</span>
+    </p>
     <div className="table-wrap table-card">
       <table className="table ctable">
-        <caption>
-          Three separate kinds of information — representation in Parliament, participation in Council votes, and implementation of EU
-          law. They are not combined into a score. Select a column heading to sort.
+        <caption className="visually-hidden">
+          Countries compared: representation in Parliament, Council of the EU votes, and implementation of EU law. Select a column heading
+          to sort.
         </caption>
         <colgroup>
           <col />
@@ -174,5 +179,6 @@ export function CountryTable({
         </tbody>
       </table>
     </div>
+    </>
   );
 }

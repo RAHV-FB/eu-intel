@@ -60,6 +60,25 @@
   "blocking_institution": null,
   "last_updated": "2026-09-20",
   "procedure_refs": [
+   "2025/0059(COD)"
+  ],
+  "source": {
+   "identifier": "new-common-approach-on-returns",
+   "institution": "LegislativeTrain",
+   "label": "Legislative Train Schedule – Proposal for a Regulation of the European Parliament and of the Council establishing a common system for the return of third-country nationals staying illegally in the Union",
+   "published": "2026-09-20",
+   "retrieved_at": "2026-10-22T17:53:02Z",
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-a-new-era-for-european-defence-and-security/file-new-common-approach-on-returns"
+  },
+  "status": "Close to adoption",
+  "theme": "A new era for European Defence and Security",
+  "title": "Proposal for a Regulation of the European Parliament and of the Council establishing a common system for the return of third-country nationals staying illegally in the Union",
+  "url": "https://www.europarl.europa.eu/legislative-train/theme-a-new-era-for-european-defence-and-security/file-new-common-approach-on-returns"
+ },
+ {
+  "blocking_institution": null,
+  "last_updated": "2026-09-20",
+  "procedure_refs": [
    "2018/0329(COD)"
   ],
   "source": {

@@ -13,6 +13,8 @@ export function loadData<T>(path: string): Promise<T> {
     p = fetch(DATA_BASE + path, { credentials: 'omit' }).then(async (r) => {
       if (r.status === 404) throw new NotFoundError(path);
       if (!r.ok) throw new Error(`Could not load ${path} (HTTP ${r.status})`);
+      // Dev/preview servers answer unknown paths with the SPA's index.html (200): treat as not found.
+      if (!(r.headers.get('content-type') ?? '').includes('json')) throw new NotFoundError(path);
       return (await r.json()) as T;
     });
     p.catch(() => cache.delete(path)); // allow retry after failure
