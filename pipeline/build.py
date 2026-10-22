@@ -2016,7 +2016,9 @@ def build_search_docs(b: Builder) -> list[dict]:
 
 # ------------------------------------------------------------------------------------------- feeds/out
 def write_output(files: dict[str, Any], extra: dict[str, str], out: Path = OUT) -> None:
-    tmp = out.with_name(out.name + ".tmp")
+    """Write into a private temp dir, then swap it in (old dir renamed away first, deleted last), so
+    readers and concurrent builds see either the old or the new tree, never a half-written one."""
+    tmp = out.with_name(f"{out.name}.tmp-{os.getpid()}")
     if tmp.exists():
         shutil.rmtree(tmp)
     tmp.mkdir(parents=True)
@@ -2026,9 +2028,12 @@ def write_output(files: dict[str, Any], extra: dict[str, str], out: Path = OUT) 
         p = tmp / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text, encoding="utf-8")
+    old = out.with_name(f"{out.name}.old-{os.getpid()}")
     if out.exists():
-        shutil.rmtree(out)
+        out.rename(old)
     tmp.rename(out)
+    if old.exists():
+        shutil.rmtree(old, ignore_errors=True)
 
 
 def build(
