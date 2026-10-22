@@ -552,11 +552,15 @@ def draft(dec: dict, sitting: Sitting) -> Draft:
         if not items:  # old format: the voted document is the vote item's document
             for d in label_docs:
                 items += [it for it in sitting.doc_items.get(d, []) if it not in items]
+    # Without an activity label (e.g. immunity decisions), join the vote item title and the referenceText,
+    # both as published: "Request for waiver of the immunity of … – Proposal for a decision".
+    item_title = items[0].title if len(items) == 1 else None
     title = (
         label
+        or (f"{item_title} – {ref}" if item_title and ref else None)
         or ref
         or heading
-        or (items[0].title if items else None)
+        or item_title
         or f"Vote {dec.get('notation_votingId')}"
     )
     return Draft(dec, sitting, title, ref, heading, docs, items, list(dict.fromkeys(label_docs)), label_procs)
