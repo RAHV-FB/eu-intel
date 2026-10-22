@@ -1,0 +1,12 @@
+.venv/
+node_modules/
+dist/
+.cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.tmp
+public/data/
+coverage/
+.DS_Store

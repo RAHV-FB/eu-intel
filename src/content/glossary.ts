@@ -1,0 +1,107 @@
+/**
+ * Short, accurate explanations shown inline via <Term id="...">.
+ * Keep each `short` to 1–2 sentences. `href` points to the relevant section of /how-the-eu-works.
+ * OWNER: How-the-EU-works workstream may extend/refine these; keep ids stable.
+ */
+export interface GlossaryEntry {
+  term: string;
+  short: string;
+  href?: string;
+}
+
+export const GLOSSARY: Record<string, GlossaryEntry> = {
+  commission: {
+    term: 'European Commission',
+    short: 'The EU’s executive. It proposes almost all EU laws and checks that Member States apply them.',
+    href: '/how-the-eu-works#commission',
+  },
+  parliament: {
+    term: 'European Parliament',
+    short: 'Directly elected by EU citizens. It amends and votes on EU laws together with the Council.',
+    href: '/how-the-eu-works#parliament',
+  },
+  council: {
+    term: 'Council of the EU',
+    short:
+      'Government ministers from each Member State. It negotiates and adopts EU laws with Parliament. Not the same as the European Council.',
+    href: '/how-the-eu-works#council',
+  },
+  'european-council': {
+    term: 'European Council',
+    short: 'The heads of state or government of the Member States. It sets political priorities but does not pass laws.',
+    href: '/how-the-eu-works#european-council',
+  },
+  olp: {
+    term: 'Ordinary legislative procedure',
+    short:
+      'The standard way EU laws are made: the Commission proposes, and Parliament and the Council must both agree on the same text.',
+    href: '/how-the-eu-works#olp',
+  },
+  trilogue: {
+    term: 'Interinstitutional negotiations',
+    short:
+      'Informal talks between Parliament, the Council and the Commission to agree a compromise text. Any deal must still be formally adopted.',
+    href: '/how-the-eu-works#olp',
+  },
+  'provisional-agreement': {
+    term: 'Provisional agreement',
+    short: 'A compromise reached in negotiations. It is not yet law: Parliament and the Council must still formally adopt it.',
+    href: '/how-the-eu-works#olp',
+  },
+  regulation: {
+    term: 'Regulation',
+    short: 'An EU law that applies directly in every Member State, without national laws to transpose it.',
+    href: '/how-the-eu-works#instruments',
+  },
+  directive: {
+    term: 'Directive',
+    short: 'An EU law that sets goals each Member State must achieve by adopting its own national measures by a deadline.',
+    href: '/how-the-eu-works#instruments',
+  },
+  transposition: {
+    term: 'Transposition',
+    short: 'Turning a directive into national law. Countries must notify the Commission of the measures they adopt.',
+    href: '/how-the-eu-works#implementation',
+  },
+  infringement: {
+    term: 'Infringement procedure',
+    short:
+      'A formal case the Commission can open when it considers a Member State is not applying EU law. An open case is not a court ruling.',
+    href: '/how-the-eu-works#infringements',
+  },
+  qmv: {
+    term: 'Qualified majority',
+    short:
+      'The Council’s usual voting rule: at least 55% of Member States (15 of 27) representing at least 65% of the EU population.',
+    href: '/how-the-eu-works#council-voting',
+  },
+  unanimity: {
+    term: 'Unanimity',
+    short: 'All participating Member States must agree. A single “no” vote blocks the decision; abstaining does not.',
+    href: '/how-the-eu-works#council-voting',
+  },
+  'roll-call': {
+    term: 'Roll-call vote',
+    short: 'A plenary vote where each MEP’s individual choice is recorded and published.',
+    href: '/how-the-eu-works#parliament-voting',
+  },
+  'political-group': {
+    term: 'Political group',
+    short:
+      'MEPs sit in groups by political affiliation, not by nationality. Each group brings together national parties from several countries.',
+    href: '/how-the-eu-works#parliament',
+  },
+  'entry-into-force': {
+    term: 'Entry into force',
+    short: 'The date a law legally exists. Its rules may start to apply later, sometimes in phases.',
+    href: '/how-the-eu-works#instruments',
+  },
+  celex: {
+    term: 'CELEX number',
+    short: 'The unique document number EUR-Lex uses for each EU legal act, e.g. 32024R1689 for the AI Act.',
+  },
+  'procedure-reference': {
+    term: 'Procedure reference',
+    short: 'The identifier Parliament uses for a legislative file, e.g. 2021/0106(COD): year, number, and procedure type.',
+  },
+};

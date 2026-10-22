@@ -1,0 +1,108 @@
+/*
+ * Design tokens — EU Legislative Intelligence
+ * EU blue = identity & navigation; gold = sparing accent; surfaces mostly white/lightly tinted.
+ * Semantic colors (status, votes) never carry meaning alone: always pair with text/icon.
+ * Vote palette validated (dataviz validator, light surface): for/abstain/against adjacent CVD ΔE ≥ 11.
+ */
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --eu-blue: #003399;
+  --eu-blue-hover: #00267a;
+  --eu-gold: #ffcc00;
+  --eu-gold-warm: #ffd617;
+  --navy: #102449;
+  --blue-muted: #5572a6;
+  --blue-pale: #edf3fc;
+  --blue-paler: #f5f8fd;
+
+  /* Surfaces & lines */
+  --bg: #fafbfd;
+  --surface: #ffffff;
+  --surface-sunk: #f3f5f9;
+  --border: #e4e9f0;
+  --border-strong: #cbd3df;
+
+  /* Text */
+  --text: #17243a;
+  --text-2: #4f5e73; /* secondary: 6.6:1 on white */
+  --text-3: #66758a; /* muted metadata: 4.7:1 on white — minimum for body-size text */
+  --link: #003399;
+  --focus: #1a56db;
+
+  /* Status (lifecycle) — used as dot/stripe beside a text label */
+  --st-progress: #2a63c9;
+  --st-progress-bg: #eaf1fd;
+  --st-agreement: #6250d6;
+  --st-agreement-bg: #f0eefc;
+  --st-done: #1d7a3e;
+  --st-done-bg: #e8f5ec;
+  --st-inactive: #66758a;
+  --st-inactive-bg: #eff1f4;
+  --st-alert: #b4441f;
+  --st-alert-bg: #fdf0ea;
+  --st-critical: #b42828;
+  --st-critical-bg: #fcecec;
+
+  /* Votes (diverging: for ↔ against, neutral abstain) */
+  --vote-for: #2a78d6;
+  --vote-abstain: #a3a29c;
+  --vote-against: #e34948;
+  --vote-none: #e7e9ee;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Times New Roman', serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --fs-xs: 0.8125rem; /* 13px — technical refs only */
+  --fs-sm: 0.875rem; /* 14px — metadata */
+  --fs-base: 1rem; /* 16px */
+  --fs-md: 1.125rem; /* 18px — lead text */
+  --fs-lg: 1.375rem; /* 22px — section titles */
+  --fs-xl: 1.75rem; /* 28px — page titles (mobile) */
+  --fs-2xl: 2.25rem; /* 36px — page titles */
+  --fs-3xl: 2.875rem; /* 46px — homepage hero */
+
+  --lh-tight: 1.2;
+  --lh-snug: 1.35;
+  --lh-body: 1.55;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Spacing scale (4px base) */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+
+  /* Shape & depth */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow-sm: 0 1px 2px rgba(16, 36, 73, 0.06);
+  --shadow: 0 2px 8px rgba(16, 36, 73, 0.08);
+
+  /* Layout */
+  --container: 72rem; /* 1152px */
+  --container-narrow: 46rem;
+  --gutter: 1rem;
+  --header-h: 3.75rem;
+
+  --tap: 44px; /* min touch target */
+  --t-fast: 120ms ease-out;
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --gutter: 1.5rem;
+  }
+}
