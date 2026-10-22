@@ -122,7 +122,7 @@ def test_ai_act_final_vote():
 EXPECTED_2024_03_13 = {
     "166377": ("amendment", "rejected", ["2023/0129(COD)"]),  # A9-0042/2024 – Recital 29 – Am 102, RCV
     "166044": ("amendment", "rejected", ["2023/0156(COD)"]),  # show of hands, AM-295
-    "166493": ("split_or_separate", "adopted", ["2023/2220(BUD)"]),  # § 46/2 (SPLIT document, about "§")
+    "166493": ("split_or_separate", "adopted", ["2023/2220(BUI)"]),  # § 46/2 (SPLIT document, about "§")
     "166341": ("amendment", "adopted", ["2023/0290(COD)"]),  # committee amendments – separate votes
     "166202": ("final", "adopted", ["2023/0129(COD)"]),  # "Commission proposal"
     "166145": ("resolution", "rejected", ["2023/2116(INI)"]),  # motion for a resolution (text as a whole)
@@ -131,7 +131,7 @@ EXPECTED_2024_03_13 = {
     "166382": ("procedural", "rejected", ["2022/0277(COD)"]),  # vote on amendments instead of agreement
     "166530": ("resolution", "lapsed", ["2024/2580(RSP)"]),  # B9-0163/2024 ("other motions"), lapsed
     "166172": ("final", "adopted", ["2022/0131(COD)"]),  # provisional agreement tabled as Am 117
-    "166487": ("amendment", "adopted", ["2023/2220(BUD)"]),  # 272 for, 271 against
+    "166487": ("amendment", "adopted", ["2023/2220(BUI)"]),  # 272 for, 271 against
 }
 
 

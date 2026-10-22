@@ -45,8 +45,8 @@ def test_one_vote_majority(votes):
     assert m.label == "Passed with exactly the required majority"
 
 
-def test_budget_procedure_rule_unknown(votes):
-    v = votes["166487"]  # 272 for, 271 against in a BUD procedure: Art. 314 TFEU mixes majorities
+def test_budget_guidelines_rule_unknown(votes):
+    v = votes["166487"]  # 272 for, 271 against in budget guidelines (BUI): not a type with an established rule
     assert v.majority_rule == "unknown" and margin(v) is None
 
 

@@ -63,7 +63,7 @@ REGISTER_NOTE = "Council of the EU – Voting result {num}"
 RENDER_DPI = 100
 MAX_WORKERS = 4
 # Bump when parsing changes: every note is then re-processed on the next fetch.
-PARSER_VERSION = "2026-10-22.2"
+PARSER_VERSION = "2026-10-22.3"
 
 # Protocol order of the GSC voting sheet (Member States by their name in their own language).
 LEFT_COLUMN = ["BE", "BG", "CZ", "DK", "DE", "EE", "IE", "GR", "ES", "FR", "HR", "IT", "CY", "LV"]
@@ -446,6 +446,7 @@ class NoteMeta:
     configuration: str | None = None
     meeting_dates: list[str] = field(default_factory=list)  # ISO
     written_procedure_date: str | None = None
+    written_procedure: bool = False  # subject says "Outcome of the written procedure completed on ..."
     council_doc: str | None = None
     # Versions declared void by this note, e.g. ["INIT"] from "... INIT should be considered null and void".
     nullified: list[str] = field(default_factory=list)
@@ -458,6 +459,9 @@ PROC_RE = re.compile(r"\b((?:19|20)\d{2})/(\d{4})(?:/?([A-Z]))?\s*\(\s*([A-Z]{3}
 
 def _iso(day: int, month: str, year: int) -> str | None:
     m = MONTHS.get(month.lower())
+    if not m and len(month) >= 3:  # tolerate typos in the source, e.g. "Decmber" (unique 3-letter prefix)
+        hits = {v for k, v in MONTHS.items() if k[:3] == month[:3].lower()}
+        m = hits.pop() if len(hits) == 1 else None
     if not m:
         return None
     try:
@@ -539,7 +543,7 @@ def parse_note(page1: str) -> NoteMeta:
 def _parse_subject(meta: NoteMeta) -> None:
     s = re.sub(r"^Voting results?\b\s*[-–‒:]?\s*", "", meta.subject, flags=re.I)
     meeting = re.search(
-        r"(\d{3,5}\s*(?:st|nd|rd|th)\s+meeting\s+of\s+the\s+COUNCIL\s+OF\s+THE\s+EUROPEAN\s+UNION)\s*\((.+)\)\s*,?\s*(.*)$",
+        r"(\d{3,5}\s*(?:st|nd|rd|th)\s+meeting\s+of\s+the\s+COUNCIL\s+OF\s+THE\s+EUROPEAN\s+UNION)(.*)$",
         s,
         re.I,
     )
@@ -549,16 +553,24 @@ def _parse_subject(meta: NoteMeta) -> None:
         meta.meeting = re.sub(
             r"\s+", " ", meeting.group(1)
         )  # verbatim, e.g. "4024th meeting of the COUNCIL ..."
-        meta.configuration = meeting.group(2).strip() or None
-        meta.meeting_dates = parse_dates(meeting.group(3))
+        rest = meeting.group(2)
+        # "(Configuration), 21 May 2024, Brussels" / "Configuration Council 22 and 23 May 2023, Brussels"
+        date = re.search(r"\d{1,2}(?:\s*(?:-|–|and)\s*\d{1,2})?\s+[A-Za-z]+\s+\d{4}(?!.*\d{4})", rest)
+        if date:
+            meta.meeting_dates = parse_dates(date.group(0))
+            config = rest[: date.start()].strip(" ,")
+            if config.startswith("(") and config.endswith(")"):
+                config = config[1:-1]
+            meta.configuration = config.strip() or None
         cut = meeting.start()
     if written:
+        meta.written_procedure = True
         d = parse_dates(written.group(1))
         meta.written_procedure_date = d[0] if d else None
         cut = written.start() if cut is None else min(cut, written.start())
     head = s[:cut].strip(" -–‒=■") if cut is not None else s
     step = None
-    for m in re.finditer(r"\b(Adoption|Approval)\s+of\b", head):
+    for m in re.finditer(r"\b(Adoption|Approval)\b", head):
         step = m
     if step and step.start() > 0:
         meta.title = head[: step.start()].strip(" -–‒=■,")
@@ -756,10 +768,10 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
         title=title,
         procedure_refs=meta.procedure_refs,
         council_doc=meta.council_doc,
-        configuration=None if meta.written_procedure_date else meta.configuration,
+        configuration=None if meta.written_procedure else meta.configuration,
         stage=meta.step,
-        meeting=None if meta.written_procedure_date else meta.meeting,
-        written_procedure=True if meta.written_procedure_date else (False if meta.meeting else None),
+        meeting=None if meta.written_procedure else meta.meeting,
+        written_procedure=True if meta.written_procedure else (False if meta.meeting else None),
         voting_rule=rule,  # type: ignore[arg-type]
         act_type=_act_type(title),
         outcome=outcome,  # type: ignore[arg-type]

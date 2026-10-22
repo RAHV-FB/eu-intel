@@ -4,14 +4,17 @@ Produces data/snapshot/ep_votes/votes.json (list[EpVote]) for every recorded ple
 10th terms (sittings from 2019-07-02 to today) and ballots.json (list[EpBallots]) with the individual
 positions of roll-call votes on whole texts (kind final / resolution / motion; see BALLOT_KINDS).
 
-Requests (about 2 per sitting plus ~30 for procedure references; paced for the API's limit of 500
-requests / 5 min per endpoint, which is shared with the other EP sources):
+Requests (paced for the API's limit of 500 requests / 5 min per endpoint, shared with the other EP sources;
+~800 for the sittings, ~30 for the procedure list, ~600 document and ~10 procedure fallbacks; all cached
+by pipeline.http except sittings of the last FRESH_DAYS days):
     /meetings?year=Y                         plenary sittings (PLENARY_SITTING, with parliamentary_term)
     /meetings/{sitting}/decisions            every decision of the sitting (all pages in one response;
                                              `limit`/`offset` are ignored by this endpoint)
     /meetings/{sitting}/vote-results         vote items ("PLENARY_VOTE_RESULTS", one per agenda item)
     /procedures?process-type=T               process id -> official reference "2021/0106(COD)"
-    /plenary-documents/{doc}                 fallback only: document -> procedure that created it
+    /procedures/{id,id,...}                  references of linked procedures the paginated list never
+                                             returned (its offset paging repeats some rows, skips others)
+    /plenary-documents/{doc}?language=en     fallback: document -> procedure that created it
 
 Source facts relied on (checked against the live API; see tests/test_ep_votes.py and fixtures):
 - Two record formats. From 2024-01-15 every decision (show of hands, electronic, roll-call) is published
@@ -350,7 +353,8 @@ _PROCEDURAL = re.compile(
     r"(referr?al|refer(red)? back|renvoi|request for urgen|urgent procedure|urgency procedure|agenda\b|ordre du "
     r"jour|adjourn|procedural motion|interinstitutional negotiations|request to vote on the amendments|"
     r"request \(rule|demande du groupe|requests? (from|by) (the )?\S+ groups?|group request|postpone|"
-    r"inadmissib|(request|proposal) (for|to vote on) (the )?amendments|urgent decision|demande des groupes)",
+    r"inadmissib|(request|proposal) (for|to vote on) (the )?amendments|urgent decision|demande des groupes|"
+    r"decision by the \S+ committee)",
     re.I,
 )
 # Old labels that are procedural by their opening words ("Wednesday's agenda – …", "Request for urgent …")
@@ -362,7 +366,8 @@ _PROCEDURAL_LABEL = re.compile(
 _REJECTION = re.compile(r"(reject|rejet|motion of censure|motion de censure)", re.I)
 _PART = re.compile(
     r"^((after|before) )?(§|recital|citation|visa|article|annex|point|paragraph|title|heading|subheading|"
-    r"sous-titre|chapter|part|section|considérant|line|table|indent|(directive|regulation) (\(\w+\) )?(no )?\d)"
+    r"sous-titre|chapter|part|section|considérant|line|table|indent|(directive|regulation) (\(\w+\) )?(no )?\d|"
+    r"recommendation \d)"
     r"(?![a-z])",
     re.I,
 )
@@ -541,7 +546,8 @@ class Draft:
 
     dec: dict
     sitting: Sitting
-    title: str
+    title: str  # the label, or a fallback built from published texts (see draft())
+    label: str | None  # English (else French) activity label without the old-format timestamp
     ref: str | None
     heading: str | None
     docs: list[str]
@@ -587,7 +593,9 @@ def draft(dec: dict, sitting: Sitting) -> Draft:
         or item_title
         or f"Vote {dec.get('notation_votingId')}"
     )
-    return Draft(dec, sitting, title, ref, heading, docs, items, list(dict.fromkeys(label_docs)), label_procs)
+    return Draft(
+        dec, sitting, title, label, ref, heading, docs, items, list(dict.fromkeys(label_docs)), label_procs
+    )
 
 
 def doc_index(sittings: list[Sitting]) -> dict[str, set[str]]:
@@ -686,7 +694,7 @@ def build_records(
     item = d.items[0] if len({it.id for it in d.items}) == 1 else None
     sig = Signals(
         ref=d.ref,
-        label=d.title,
+        label=d.label,
         heading=d.heading,
         comment=_text(dec.get("comment")),
         docs=d.docs,
