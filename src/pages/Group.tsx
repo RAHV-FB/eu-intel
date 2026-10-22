@@ -69,6 +69,7 @@ export default function Group() {
   if (isMissing(error)) return <NotFound what="political group" />;
   if (error || !g) return <div className="container page"><ErrorState error={error} title="This group could not be loaded" /></div>;
 
+  const isNi = g.id === 'ni';
   const totalMembers = countryRows.reduce((n, r) => n + r.members, 0) || g.members;
   const maxCountry = Math.max(1, ...countryRows.map((r) => r.members));
 
@@ -79,9 +80,13 @@ export default function Group() {
       </p>
       <PageHeader
         eyebrow={
-          <>
-            <Term id="political-group">Political group</Term> in the European Parliament
-          </>
+          isNi ? (
+            <>MEPs who belong to no political group</>
+          ) : (
+            <>
+              <Term id="political-group">Political group</Term> in the European Parliament
+            </>
+          )
         }
         title={g.name}
         lead={
@@ -108,8 +113,10 @@ export default function Group() {
         </div>
       </dl>
       <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
-        A political group brings together MEPs from national parties in several countries. Figures on this page come from Parliament’s
-        membership records.
+        {isNi
+          ? 'Non-attached members are MEPs who have not joined any political group. They are listed together here for convenience; they do not form a group and do not act together.'
+          : 'A political group brings together MEPs from national parties in several countries.'}{' '}
+        Figures on this page come from Parliament’s membership records.
       </p>
 
       <div className="grid grid--2 section">
@@ -249,10 +256,14 @@ export default function Group() {
                     <SortTh k="recorded" sort={vs.sort} onSort={vs.toggle} num>
                       Recorded
                     </SortTh>
-                    <th scope="col">Group majority</th>
-                    <SortTh k="cohesion" sort={vs.sort} onSort={vs.toggle}>
-                      Cohesion
-                    </SortTh>
+                    {!isNi && (
+                      <>
+                        <th scope="col">Group majority</th>
+                        <SortTh k="cohesion" sort={vs.sort} onSort={vs.toggle}>
+                          Cohesion
+                        </SortTh>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -267,8 +278,12 @@ export default function Group() {
                       <td className="num">{formatNumber(r.counts.against)}</td>
                       <td className="num">{formatNumber(r.counts.abstain)}</td>
                       <td className="num">{formatNumber(r.counts.for + r.counts.against + r.counts.abstain)}</td>
-                      <td>{r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>}</td>
-                      <td>{r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>}</td>
+                      {!isNi && (
+                        <>
+                          <td>{r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>}</td>
+                          <td>{r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>}</td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>

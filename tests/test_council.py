@@ -208,3 +208,15 @@ def test_live_ai_act_voting_result():
     vote, problem = C.build_vote([parsed], "now")
     assert problem is None and vote.date == "2024-05-21" and vote.procedure_refs == ["2021/0106(COD)"]
     assert vote.voting_rule == "qmv" and vote.outcome == "adopted" and set(vote.positions.values()) == {"for"}
+
+
+def test_split_procedure_reference_in_ep_format():
+    page = "       Interinstitutional File:\n         2016/0224/A(COD)\n\n                      VOTE 63\n"
+    assert C.parse_note(page).procedure_refs == ["2016/0224A(COD)"]
+
+
+def test_merge_meta_latest_non_empty_wins():
+    init = C.NoteMeta(title="t", council_doc="PE-CONS 65/24", procedure_refs=["2023/0237(COD)"])
+    cor = C.NoteMeta(title="t corrected", procedure_refs=["2023/0238(COD)"])
+    m = C._merge_meta([init, cor])
+    assert (m.title, m.council_doc, m.procedure_refs) == ("t corrected", "PE-CONS 65/24", ["2023/0238(COD)"])

@@ -314,20 +314,21 @@ _FINAL = re.compile(
     r"procédure d.approbation|proposition de la commi\w+|proposition de (règlement|directive|décision)|"
     r"propositions? de décisions?|proposals? for (a )?decisions?|motion for a decision|decision( to refuse "
     r"discharge)?|election of the commission|proposal from the commission|nomination|appointment|"
+    r"draft proposal for a council|extension of (the )?term of office|"
     r"(final vote|vote final))(?![a-z])",
     re.I,
 )
 _RESOLUTION = re.compile(
     r"^((vote: )?(joint |alternative )?(motion|proposal|proposition) for (a )?resolution|motion for resolution|"
     r"(vote: )?(proposition de |projet de )?résolution|(vote: )?resolution|(draft |proposal for a |projet de )?"
-    r"(recommendation|recommandation)|text as a whole|as a whole|texte dans son ensemble)(?![a-z])",
+    r"(recommendation|recommandation)(?! \d)|text as a whole|as a whole|texte dans son ensemble)(?![a-z])",
     re.I,
 )
 _PROCEDURAL = re.compile(
     r"(referr?al|refer(red)? back|renvoi|request for urgen|urgent procedure|urgency procedure|agenda\b|ordre du "
     r"jour|adjourn|procedural motion|interinstitutional negotiations|request to vote on the amendments|"
     r"request \(rule|demande du groupe|requests? (from|by) (the )?\S+ groups?|group request|postpone|"
-    r"inadmissib|request for (the )?amendments|urgent decision)",
+    r"inadmissib|(request|proposal) (for|to vote on) (the )?amendments|urgent decision|demande des groupes)",
     re.I,
 )
 # Old labels that are procedural by their opening words ("Wednesday's agenda – …", "Request for urgent …")
@@ -351,6 +352,7 @@ _WHOLE_DOC = re.compile(
 )  # "B10-0441/2026": another motion as a whole
 # Procedure types whose "motion for a resolution" is the legislative resolution (the EP's position)
 LEGISLATIVE_TYPES = frozenset({"COD", "CNS", "APP", "SYN", "AVC"})
+OBJECTION_TYPES = frozenset({"DEA", "RPS"})
 
 
 @dataclass
@@ -383,7 +385,11 @@ def classify(s: Signals) -> VoteKind:
     is_split_doc = any("-SPLIT-" in d for d in s.docs)
     whole_marker = bool(_FINAL.match(ref) or _RESOLUTION.match(ref))
     legislative = bool(set(s.proc_types) & LEGISLATIVE_TYPES) and not set(s.proc_types) - LEGISLATIVE_TYPES
-    is_objection = bool(re.search(r"\bobjection\b", f"{item} {heading}", re.I))
+    # objections to delegated acts (DEA) / under the regulatory procedure with scrutiny (RPS); the whole-text
+    # vote of those procedures is always the objection
+    is_objection = bool(re.search(r"\bobjection\b", f"{item} {heading}", re.I)) or (
+        bool(s.proc_types) and set(s.proc_types) <= OBJECTION_TYPES
+    )
 
     # 1. procedural decisions (referral back, urgency, agenda, adjournment, negotiation mandates)
     if _PROCEDURAL.search(ref) or _PROCEDURAL.search(heading) or _PROCEDURAL_LABEL.match(label):

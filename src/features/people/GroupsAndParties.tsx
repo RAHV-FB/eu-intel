@@ -29,8 +29,9 @@ export function GroupsOverview({ groups }: { groups: GroupSummary[] }) {
     <section aria-labelledby="groups-h">
       <h2 id="groups-h">Political groups in the current Parliament</h2>
       <p className="section-intro">
-        {formatNumber(current.length)} groups with {formatNumber(total)} current members in our dataset. MEPs who do not join a group sit
-        as non-attached members.
+        {formatNumber(current.filter((g) => g.id !== 'ni').length)} political groups
+        {current.some((g) => g.id === 'ni') ? ' and the non-attached members (NI), who belong to no group' : ''} — {formatNumber(total)}{' '}
+        current MEPs in total in our dataset.
       </p>
       {current.length === 0 ? (
         <EmptyState title="No current group data available" />

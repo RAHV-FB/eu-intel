@@ -83,8 +83,16 @@ export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown
               <td>
                 <MiniBar c={r} />
               </td>
-              <td>{r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>}</td>
-              <td>{r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>}</td>
+              {r.group === 'ni' ? (
+                <td colSpan={2} className="muted">
+                  Not a group: non-attached MEPs do not act together
+                </td>
+              ) : (
+                <>
+                  <td>{r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>}</td>
+                  <td>{r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>}</td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>
