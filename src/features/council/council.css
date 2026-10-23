@@ -28,6 +28,25 @@
   line-height: var(--lh-snug);
 }
 
+.cvote__voteon {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.cvote__voteon-label {
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: var(--fw-semibold);
+}
+
+.cvote__voteon strong {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}
+
 .cvote__facts {
   display: flex;
   flex-wrap: wrap;

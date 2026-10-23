@@ -113,7 +113,11 @@ def test_dossier_linking_by_identifier_only(out: Path):
     # EUR-Lex-only dossier: built from the act record, no invented EP events
     d9 = load(out, "dossiers/2099-0009.json")
     assert d9["ref"] == "2099/0009(COD)" and d9["celex"] == ["32099L0009"]
-    assert all(e["institution"] == "EUR-Lex" for e in d9["timeline"])
+    # no EP events; the only Council event is the Council's own voting result (C2)
+    assert {e["institution"] for e in d9["timeline"]} == {"EUR-Lex", "Council"}
+    assert [e["source"]["url"] for e in d9["timeline"] if e["institution"] == "Council"] == [
+        "https://example.invalid/C2"
+    ]
     # cleaned official title when not curated; instrument kept separately
     assert idx["2099-0003"]["title"] == "Test thingamajigs"
     assert idx["2099-0003"]["instrument"] == "directive"
@@ -443,6 +447,63 @@ def test_council_votes(out: Path):
     pl = load(out, "countries/PL.json")
     assert pl["council_positions"]["abstain"] == 1
     assert pl["council_votes"][0]["pos"] == "abstain" and pl["council_votes"][0]["dossier_id"] == "2099-0001"
+
+
+def test_council_population_share_is_of_participating_states(out: Path):
+    c2 = next(cv for cv in load(out, "council/index.json") if cv["id"] == "C2")  # Denmark not participating
+    a = c2["assessment"]
+    assert (a["states_participating"], a["states_not_participating"]) == (26, 1)
+    assert a["population_for_pct"] == 100.0  # 26 of 26 participating states: 100% of THEIR population
+    assert a["legal_basis"] is None and a["blocking_minority_min_states"] is None  # proposal origin not recorded
+    c1 = next(cv for cv in load(out, "council/index.json") if cv["id"] == "C1")
+    assert c1["assessment"]["legal_basis"] == "TEU Art. 16(4)" and c1["assessment"]["blocking_minority_min_states"] == 4
+
+
+def _edit_snapshot(base: Path, rel: str, fn) -> None:
+    p = base / "snapshot" / rel
+    recs = json.loads(p.read_text(encoding="utf-8"))
+    fn(recs)
+    p.write_text(json.dumps(recs, ensure_ascii=False), encoding="utf-8")
+
+
+def test_council_votes_date_the_council_steps_in_the_timeline(tmp_path: Path):
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    src = {"institution": "OEIL", "url": "https://example.invalid/oeil", "label": "Legislative Observatory (OEIL) key events",
+           "retrieved_at": "2099-01-01T00:00:00Z"}  # fmt: skip
+
+    def council(recs):
+        recs[0]["vote_on"] = "act"
+        recs.append({**recs[0], "id": "C3", "date": "2024-06-01", "vote_on": "first_reading_position",
+                     "written_procedure": True, "stage": "Adoption of the Council's position at first reading",
+                     "source": {**recs[0]["source"], "url": "https://example.invalid/C3", "identifier": "C3"}})  # fmt: skip
+
+    def oeil(recs):
+        p = next(r for r in recs if r["id"] == "2099-0001")
+        p["events"] += [
+            {"id": "oeil-pos", "date": "2024-06-10", "kind": "council_position", "institution": "Council",
+             "title": "Council adopted its first-reading position", "docs": [], "source": src},
+            {"id": "oeil-adopt", "date": "2024-11-07", "kind": "council_adoption", "institution": "Council",
+             "title": "Council adopted the act after Parliament's first reading", "docs": [], "source": src},
+        ]  # fmt: skip
+
+    _edit_snapshot(tmp_path, "council/votes.json", council)
+    _edit_snapshot(tmp_path, "ep_procedures/procedures.json", oeil)
+    o = tmp_path / "public"
+    build(out=o, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state", today=TODAY)
+    tl = [e for e in load(o, "dossiers/2099-0001.json")["timeline"] if e["institution"] == "Council"]
+    assert [(e["date"], e["kind"], e["title"], e["key"]) for e in tl] == [
+        ("2024-06-01", "council_position", "Council adopted its position at first reading (written procedure)", True),
+        # OEIL's "Council position published" is the publication date, not the Council's vote
+        ("2024-06-10", "council_position", "Council's first-reading position published", False),
+        ("2024-11-05", "council_adoption", "Council adopted the act", True),
+        # OEIL's own adoption date (2024-11-07) is replaced by the Council's voting result
+    ]
+    assert tl[0]["source"]["url"] == "https://example.invalid/C3"
+    assert tl[2]["detail"] == "25 Member States in favour, 1 against, 1 abstained"
+    pl = load(o, "countries/PL.json")
+    assert {v["vote_id"]: v["vote_on"] for v in pl["council_votes"]} == {
+        "C1": "act", "C2": None, "C3": "first_reading_position"
+    }  # fmt: skip
 
 
 def test_opt_out_countries_are_not_bound_rather_than_missing_measures(out: Path):

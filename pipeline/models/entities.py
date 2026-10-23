@@ -266,6 +266,7 @@ class Organization(Model):
 
 
 CouncilPosition = Literal["for", "against", "abstain", "not_participating"]
+CouncilVoteOn = Literal["act", "first_reading_position", "other"]
 
 
 class CouncilVote(Model):
@@ -277,13 +278,21 @@ class CouncilVote(Model):
     procedure_refs: list[str] = Field(default_factory=list)  # "2021/0106(COD)" if officially given
     council_doc: str | None = None  # e.g. "PE-CONS 24/24"
     configuration: str | None = None  # e.g. "General Affairs Council"
-    stage: str | None = None  # e.g. "Adoption of the legislative act", "Council position at first reading" (verbatim)
+    # Item(s) voted on as listed in the note's subject, "; "-separated, e.g. "Adoption of the legislative act",
+    # "Adoption of the Council's position at first reading and of the statement of the Council's reasons"
+    stage: str | None = None
+    # What was voted on, normalised from the subject (see pipeline.sources.council.vote_subject):
+    # the act itself, the Council's first-reading position (the act is NOT adopted by that vote), or other.
+    vote_on: CouncilVoteOn | None = None
     meeting: str | None = None  # meeting reference as published, e.g. "3999th meeting of the Council"
     written_procedure: bool | None = None  # adopted by written procedure rather than at a meeting
     voting_rule: Literal["qmv", "unanimity", "simple_majority", "unknown"]
     act_type: str | None = None
     outcome: Literal["adopted", "not_adopted", "unknown"]
     positions: dict[str, CouncilPosition] = Field(default_factory=dict)  # ISO2 -> position
+    # Only when `positions` is empty: why the positions could not be read from the published voting sheet
+    # (plain language, specific). The Council does publish them; this records our reading failure.
+    positions_note: str | None = None
     statements: list[str] = Field(default_factory=list)  # titles/refs of statements, as published
     source: SourceRef
 

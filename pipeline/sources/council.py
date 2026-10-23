@@ -27,6 +27,17 @@ How the annex is read (deterministic, fail-closed; no OCR, no guessing)
   the short "Abstentions do not prevent unanimity being reached". Otherwise rule = "unknown".
 - The "Final result" arrow (green/red) gives the outcome; it is cross-checked against the arithmetic of
   pipeline.analysis.council_qmv on the read positions. On disagreement positions are dropped.
+- When positions cannot be taken from a sheet (a slot is unreadable, or a note holds several sheets and we
+  cannot tell which one records the vote), the voting rule and final result are still kept if every sheet
+  read agrees on them, positions stay empty and `positions_note` says precisely what could not be read.
+  The Council does publish every Member State's vote; an empty record is our reading failure, not the
+  source's.
+
+What was voted on (`stage`, `vote_on`): the subject lists the act's title followed by the item(s) voted on
+("Adoption of the legislative act", "Adoption of the Council's position at first reading and of the
+statement of the Council's reasons", "Approval of the joint text", ...). A vote on the Council's first-reading
+position does not adopt the act: under the ordinary legislative procedure the act is adopted only when
+Parliament approves that position at second reading (Art. 294(7) TFEU).
 
 Opt-outs: the sheet marks Denmark/Ireland (etc.) as "Not participating" (blank weighting, grey icon);
 this is kept as "not_participating", distinct from "abstain".
@@ -51,7 +62,15 @@ from pydantic import Field
 
 from pipeline.analysis.council_qmv import assess
 from pipeline.http import Http, HttpError
-from pipeline.models.entities import CouncilPosition, CouncilVote, Model, SourceRef, SourceStatus
+from pipeline.models.countries import FORMER_MEMBER_STATES, MEMBER_STATES
+from pipeline.models.entities import (
+    CouncilPosition,
+    CouncilVote,
+    CouncilVoteOn,
+    Model,
+    SourceRef,
+    SourceStatus,
+)
 from pipeline.snapshot import now_iso, read_records, write_records
 
 log = logging.getLogger("pipeline.sources.council")
@@ -63,12 +82,13 @@ REGISTER_NOTE = "Council of the EU – Voting result {num}"
 RENDER_DPI = 100
 MAX_WORKERS = 4
 # Bump when parsing changes: every note is then re-processed on the next fetch.
-PARSER_VERSION = "2026-10-22.5"
+PARSER_VERSION = "2026-10-23.1"
 
 # Protocol order of the GSC voting sheet (Member States by their name in their own language).
 LEFT_COLUMN = ["BE", "BG", "CZ", "DK", "DE", "EE", "IE", "GR", "ES", "FR", "HR", "IT", "CY", "LV"]
 RIGHT_COLUMN = ["LT", "LU", "HU", "MT", "NL", "AT", "PL", "PT", "RO", "SI", "SK", "FI", "SE"]
 UK_LEFT_DATE = "2020-02-01"  # first day without the UK in the Council
+MEMBER_STATE_NAMES = {**MEMBER_STATES, **FORMER_MEMBER_STATES}
 
 # Voting-result notes created by the Council, English title starting "Voting result".
 SPARQL_VOTING_RESULTS = """
@@ -254,7 +274,16 @@ class Sheet:
 
 
 class SheetError(ValueError):
-    pass
+    """The sheet cannot be read in full. `partial` is set when the template, grid, final result and voting
+    rule were recognised but some Member State slots were not: its `left`/`right` hold "" for those slots
+    and `unreadable` lists them as (column, row)."""
+
+    def __init__(
+        self, message: str, partial: Sheet | None = None, unreadable: list[tuple[str, int]] | None = None
+    ):
+        super().__init__(message)
+        self.partial = partial
+        self.unreadable = unreadable or []
 
 
 def analyse_sheet(img: Raster) -> Sheet:
@@ -288,9 +317,10 @@ def analyse_sheet(img: Raster) -> Sheet:
     grid = sorted(clusters[:2], key=lambda cl: cl[0][0])
     xl = statistics.median(c[0] for c in grid[0])
     xr = statistics.median(c[0] for c in grid[1])
-    # Legend of the summary table: yes/no/abstain icons stacked vertically, left of the grid.
+    # Legend of the summary table: yes/no/abstain icons stacked vertically, left of the grid. In the 2019
+    # template the "abstain" icon is a yellow ring around a disc (fill ratio about 0.48 at 100 dpi).
     left_of_grid = sorted(
-        (c[:4] for c in squares if c[0] < xl - s and 0.6 * s <= c[2] <= 1.4 * s and c[4] >= 0.5),
+        (c[:4] for c in squares if c[0] < xl - s and 0.6 * s <= c[2] <= 1.4 * s and c[4] >= 0.4),
         key=lambda c: c[1],
     )
     legend = []
@@ -347,10 +377,59 @@ def analyse_sheet(img: Raster) -> Sheet:
         raise SheetError(f"grid header anchor ambiguous: {shifts}")
     row0 = y0 - shifts[0] * p
 
+    # Final result: one large green/red square to the right of the left vote column.
+    finals = [b for b in big if b[0] > xl and b[3] in (GREEN, RED) and b[1] < row0]
+    outcome = "unknown"
+    if len(finals) == 1:
+        outcome = "adopted" if finals[0][3] == GREEN else "not_adopted"
+
+    # Voting rule signal 1: population percentages present in the summary table (QMV only).
+    span = xr - xl
+    pop_pixels = 0
+    for y in range(int(legend[0][1] - 0.4 * s), int(legend[2][1] + 0.4 * s) + 1):
+        for x in range(int(xl + 0.08 * span), int(xl + 0.35 * span) + 1):
+            if _is_text(*px(x, y)):
+                pop_pixels += 1
+    # Signal 2: width of the first footnote text line below the grid (a full-width QMV explanation vs
+    # "* Abstentions do not prevent unanimity being reached"). Thin rules (separators) are ignored;
+    # some published sheets are cropped and have no footnote. A single sparse pixel row inside a line
+    # (thin italic glyphs at this resolution) does not end the line.
+    xa, xb = int(legend[0][0] - s), int(xr + s)
+    y_start = int(row0 + 13.6 * p)
+    foot: float | None = None
+    run: list[list[int]] = []
+    gap = 0
+    for y in range(y_start, min(img.h, y_start + int(3 * p))):
+        xs = [x for x in range(xa, xb) if _is_text(*px(x, y))]
+        if len(xs) >= 2:
+            run.append(xs)
+            gap = 0
+        elif run:
+            gap += 1
+            if gap == 1:
+                continue
+            if len(run) >= 4:
+                foot = (max(max(r) for r in run) - min(min(r) for r in run)) / (xb - xa)
+                break
+            run, gap = [], 0
+    rule = "unknown"
+    if pop_pixels >= 8 and (foot is None or foot >= 0.75):
+        rule = "qmv"
+    elif pop_pixels == 0 and foot is not None and foot <= 0.6:
+        rule = "unanimity"
+    diagnostics: dict[str, object] = {
+        "icon": s,
+        "pitch": round(p, 2),
+        "pop_pixels": pop_pixels,
+        "footnote_width": foot,
+    }
+
     hw, inner = int(0.4 * s), int(0.3 * s)
     area, inner_area = (2 * hw + 1) ** 2, (2 * inner + 1) ** 2
+    unreadable: list[tuple[str, int]] = []
+    details: list[str] = []
 
-    def slot(xc: float, k: int) -> str:
+    def slot(xc: float, k: int, column: str) -> str:
         yc = row0 + k * p
         cnt = [0, 0, 0, 0]
         grey = 0
@@ -367,58 +446,22 @@ def analyse_sheet(img: Raster) -> Sheet:
             return ICON_POSITION[best]
         if sum(cnt[1:]) <= 0.05 * area and grey >= 0.05 * inner_area:
             return "grey"
-        raise SheetError(f"slot ({xc:.0f}, row {k}) unreadable: colour {cnt[1:]}, grey {grey}")
+        unreadable.append((column, k))
+        details.append(f"slot ({xc:.0f}, row {k}) unreadable: colour {cnt[1:]}, grey {grey}")
+        return ""
 
-    left = [slot(xl, k) for k in range(14)]
-    right = [slot(xr, k) for k in range(14)]
+    left = [slot(xl, k, "left") for k in range(14)]
+    right = [slot(xr, k, "right") for k in range(14)]
     # Every icon detected in a vote column must sit on a slot classified with the same colour.
     for col, cl in ((left, grid[0]), (right, grid[1])):
         for _xc, yc, _w, k in cl:
             row = round((yc - row0) / p)
             if not 0 <= row <= 13 or abs(yc - (row0 + row * p)) > 0.3 * s or col[row] != ICON_POSITION[k]:
                 raise SheetError("detected icons inconsistent with the slot grid")
-
-    # Final result: one large green/red square to the right of the left vote column.
-    finals = [b for b in big if b[0] > xl and b[3] in (GREEN, RED) and b[1] < row0]
-    outcome = "unknown"
-    if len(finals) == 1:
-        outcome = "adopted" if finals[0][3] == GREEN else "not_adopted"
-
-    # Voting rule signal 1: population percentages present in the summary table (QMV only).
-    span = xr - xl
-    pop_pixels = 0
-    for y in range(int(legend[0][1] - 0.4 * s), int(legend[2][1] + 0.4 * s) + 1):
-        for x in range(int(xl + 0.08 * span), int(xl + 0.35 * span) + 1):
-            if _is_text(*px(x, y)):
-                pop_pixels += 1
-    # Signal 2: width of the first footnote text line below the grid (a full-width QMV explanation vs
-    # "* Abstentions do not prevent unanimity being reached"). Thin rules (separators) are ignored;
-    # some published sheets are cropped and have no footnote.
-    xa, xb = int(legend[0][0] - s), int(xr + s)
-    y_start = int(row0 + 13.6 * p)
-    foot: float | None = None
-    run: list[list[int]] = []
-    for y in range(y_start, min(img.h, y_start + int(3 * p))):
-        xs = [x for x in range(xa, xb) if _is_text(*px(x, y))]
-        if len(xs) >= 2:
-            run.append(xs)
-        elif run:
-            if len(run) >= 4:
-                foot = (max(max(r) for r in run) - min(min(r) for r in run)) / (xb - xa)
-                break
-            run = []
-    rule = "unknown"
-    if pop_pixels >= 8 and (foot is None or foot >= 0.75):
-        rule = "qmv"
-    elif pop_pixels == 0 and foot is not None and foot <= 0.6:
-        rule = "unanimity"
-    return Sheet(
-        left=left,
-        right=right,
-        outcome=outcome,
-        rule=rule,
-        diagnostics={"icon": s, "pitch": round(p, 2), "pop_pixels": pop_pixels, "footnote_width": foot},
-    )
+    sheet = Sheet(left=left, right=right, outcome=outcome, rule=rule, diagnostics=diagnostics)
+    if unreadable:
+        raise SheetError("; ".join(details), partial=sheet, unreadable=unreadable)
+    return sheet
 
 
 def sheet_positions(sheet: Sheet, vote_date: str) -> dict[str, CouncilPosition]:
@@ -546,6 +589,26 @@ def parse_note(page1: str) -> NoteMeta:
     return meta
 
 
+# What the Council voted on: each item of the subject after the act's title starts with one of these words
+# ("Adoption of the legislative act", "Approval of the joint statement", "Agreement in principle", ...).
+STEP_RE = re.compile(
+    r"\b(?:Adoption|Approval|Non-approval|Consent|Agreement\s+in\s+principle|Request\s+for|Derogation"
+    r"|Decision\s+to\s+derogate)\b"
+)
+
+
+def _steps(text: str) -> list[str]:
+    """Split the step part of a subject into its items, e.g. "Adoption of the legislative act, and Approval
+    of the joint statements" -> ["Adoption of the legislative act", "Approval of the joint statements"]."""
+    starts = [m.start() for m in STEP_RE.finditer(text)]
+    out: list[str] = []
+    for a, b in zip(starts, starts[1:] + [len(text)], strict=False):
+        item = re.sub(r"[\s,;]+(?:and)?$", "", text[a:b].strip(" -–‒=■,;")).strip(" -–‒=■,;")
+        if item:
+            out.append(item)
+    return out
+
+
 def _parse_subject(meta: NoteMeta) -> None:
     s = re.sub(r"^Voting results?\b\s*[-–‒:]?\s*", "", meta.subject, flags=re.I)
     meeting = re.search(
@@ -554,6 +617,13 @@ def _parse_subject(meta: NoteMeta) -> None:
         re.I,
     )
     written = re.search(r"Outcome\s+of\s+the\s+written\s+procedure\s+completed\s+on\s+(.+?)\s*$", s, re.I)
+    # Items listed after the written-procedure line, e.g. "... completed on 16 March 2021 = Adoption of the
+    # Council's position at first reading and of the statement of the Council's reasons".
+    after_written: list[str] = []
+    if written:
+        d = DATE_RE.search(written.group(1))
+        if d:
+            after_written = _steps(written.group(1)[d.end() :])
     cut = None
     if meeting:
         meta.meeting = re.sub(
@@ -584,14 +654,15 @@ def _parse_subject(meta: NoteMeta) -> None:
         meta.written_procedure_date = d[0] if d else None
         cut = written.start() if cut is None else min(cut, written.start())
     head = s[:cut].strip(" -–‒=■") if cut is not None else s
-    step = None
-    for m in re.finditer(r"\b(Adoption|Approval)\b", head):
-        step = m
-    if step and step.start() > 0:
-        meta.title = head[: step.start()].strip(" -–‒=■,")
-        meta.step = head[step.start() :].strip(" -–‒=■,")
+    # The title ends where the first item voted on begins; every later item is part of the step.
+    first = STEP_RE.search(head)
+    steps = after_written
+    if first and first.start() > 0:
+        meta.title = head[: first.start()].strip(" -–‒=■,")
+        steps = _steps(head[first.start() :]) + after_written
     else:
         meta.title = head or None
+    meta.step = "; ".join(steps) or None
 
 
 def parse_statements(pages: list[str]) -> list[str]:
@@ -686,30 +757,96 @@ class Parsed:
     version: DocVersion
     pages: list[str]
     meta: NoteMeta
-    sheet: Sheet | None
+    sheet: Sheet | None  # the note's voting sheet, when exactly one was read in full
     sheet_error: str | None
+    # Every sheet read in full, by page number (more than one: several votes recorded in one note).
+    sheets: list[tuple[int, Sheet]] = field(default_factory=list)
+    # Sheets whose grid, final result and voting rule were read but some Member State slots were not.
+    partial: list[tuple[int, SheetError]] = field(default_factory=list)
+    # Pages that looked like a voting sheet but whose layout was not recognised.
+    unrecognised: list[int] = field(default_factory=list)
 
 
 def parse_document(v: DocVersion, pdf: bytes) -> Parsed:
     pages = pdf_text_pages(pdf)
     meta = parse_note(pages[0] if pages else "")
-    sheets: list[Sheet] = []
+    sheets: list[tuple[int, Sheet]] = []
+    partial: list[tuple[int, SheetError]] = []
+    unrecognised: list[int] = []
     errors: list[str] = []
     for i, text in enumerate(pages[1:6], start=2):
         body = re.sub(r"\s+", " ", text).strip()
         if len(body) > 300:  # a text page (statements etc.), not the image annex
             continue
         try:
-            sheets.append(analyse_sheet(render_page(pdf, i)))
+            sheets.append((i, analyse_sheet(render_page(pdf, i))))
         except SheetError as e:
             errors.append(f"p{i}: {e}")
+            if e.partial is not None:
+                partial.append((i, e))
+            else:
+                unrecognised.append(i)
     sheet = None
     err = "; ".join(errors) or ("no voting sheet" if not sheets else None)
     if len(sheets) == 1:
-        sheet, err = sheets[0], None
+        sheet, err = sheets[0][1], None
     elif len(sheets) > 1:
         err = "several voting sheets in one note"
-    return Parsed(v, pages, meta, sheet, err)
+    return Parsed(v, pages, meta, sheet, err, sheets, partial, unrecognised)
+
+
+def slot_country(column: str, row: int, vote_date: str) -> str | None:
+    """Member State of a voting-sheet slot on `vote_date` (None: the empty 28th slot after the UK left)."""
+    if column == "left":
+        return LEFT_COLUMN[row]
+    if row < len(RIGHT_COLUMN):
+        return RIGHT_COLUMN[row]
+    return "GB" if vote_date < UK_LEFT_DATE else None
+
+
+def _names(codes: list[str]) -> str:
+    names = [MEMBER_STATE_NAMES.get(c, c) for c in codes]
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def _pages(nums: list[int]) -> str:
+    return ("page " if len(nums) == 1 else "pages ") + _names([str(n) for n in nums])
+
+
+def _sheet_fallback(p: Parsed, vote_date: str) -> tuple[str, str, str]:
+    """Voting rule, outcome and a plain-language reason for missing positions when a note has no single
+    fully read voting sheet. Rule and outcome are kept only where every sheet that could be read agrees on
+    them (this vote is one of them); individual positions are never taken from such notes."""
+    candidates = [s for _, s in p.sheets] + [e.partial for _, e in p.partial if e.partial is not None]
+    rules = {s.rule for s in candidates}
+    outcomes = {s.outcome for s in candidates}
+    rule = rules.pop() if len(rules) == 1 else "unknown"
+    outcome = outcomes.pop() if len(outcomes) == 1 else "unknown"
+    if p.unrecognised:  # an unread sheet could disagree with the others
+        rule, outcome = "unknown", "unknown"
+    shown = "so no individual positions are shown for this vote."
+    if len(p.sheets) > 1:
+        pages = _pages([n for n, _ in p.sheets])
+        note = (
+            f"The voting-result document contains {len(p.sheets)} voting sheets ({pages}) and we could not "
+            f"establish automatically which of them records this vote, {shown}"
+        )
+    elif p.partial:
+        page, err = p.partial[0]
+        states = [c for col, row in err.unreadable if (c := slot_country(col, row, vote_date))]
+        if len(states) == 1:
+            what = f"{_names(states)}'s vote"
+        else:
+            what = f"the votes of {_names(states)}" if states else "every Member State's vote"
+        note = f"We could not read {what} from the published voting sheet ({_pages([page])}), {shown}"
+    elif p.unrecognised:
+        note = (
+            f"We could not read the published voting sheet ({_pages(p.unrecognised)}) automatically because "
+            f"its layout was not recognised, {shown}"
+        )
+    else:
+        note = f"We found no voting sheet in the published voting-result document, {shown}"
+    return rule, outcome, note
 
 
 def _merge_meta(metas: list[NoteMeta]) -> NoteMeta:
@@ -750,7 +887,9 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
 
     problem = None
     positions: dict[str, CouncilPosition] = {}
+    positions_note: str | None = None
     rule, outcome = "unknown", "unknown"
+    fallback_src: Parsed | None = None
     if sheet_src is not None and sheet_src.sheet is not None:
         sheet = sheet_src.sheet
         rule, outcome = sheet.rule, sheet.outcome
@@ -758,6 +897,10 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
             positions = sheet_positions(sheet, vote_date)
         except SheetError as e:
             problem = f"{sheet_src.version.doc_id}: {e}"
+            positions_note = (
+                "The layout of the published voting sheet does not match the Council's membership on that date, "
+                "so no individual positions are shown for this vote."
+            )
         if positions and rule != "unknown" and outcome != "unknown":
             year = int(vote_date[:4])
             checks = [assess(positions, rule, ocp, year=year) for ocp in (True, False)]
@@ -765,12 +908,19 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
             if None not in verdicts and (outcome == "adopted") not in verdicts:
                 problem = f"{sheet_src.version.doc_id}: read positions contradict the published final result"
                 positions = {}
+                positions_note = (
+                    "The positions we read from the published voting sheet do not agree with its final result, "
+                    "so no individual positions are shown for this vote."
+                )
     else:
         problem = (
             "; ".join(f"{p.version.doc_id}: {p.sheet_error}" for p in valid if p.sheet_error) or "no sheet"
         )
+        with_sheets = [p for p in valid if p.sheets or p.partial or p.unrecognised]
+        fallback_src = with_sheets[-1] if with_sheets else None
+        rule, outcome, positions_note = _sheet_fallback(fallback_src or valid[-1], vote_date)
 
-    src = sheet_src or meta_src
+    src = sheet_src or fallback_src or meta_src
     statements: list[str] = []
     for p in valid:
         for s in parse_statements(p.pages):
@@ -785,12 +935,14 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
         council_doc=meta.council_doc,
         configuration=None if meta.written_procedure else meta.configuration,
         stage=meta.step,
+        vote_on=vote_subject(title, meta.step),
         meeting=None if meta.written_procedure else meta.meeting,
         written_procedure=True if meta.written_procedure else (False if meta.meeting else None),
         voting_rule=rule,  # type: ignore[arg-type]
         act_type=_act_type(title),
         outcome=outcome,  # type: ignore[arg-type]
         positions=positions,
+        positions_note=positions_note if not positions else None,
         statements=statements,
         source=SourceRef(
             institution="Council",
@@ -809,6 +961,41 @@ def st_number(v: DocVersion) -> str:
     _, num, year, *rest = v.doc_id.split("-")
     suffix = " ".join(rest)
     return f"ST {num}/{year[2:]}" + ("" if suffix == "INIT" else f" {suffix}")
+
+
+COUNCIL_FIRST_READING_POSITION_RE = re.compile(
+    r"Adoption\s+of\s+(?:the\s+|a\s+)?(?:Council(?:'s|’s)?\s+(?:first[\s-]+reading\s+)?position|position\s+of\s+the\s+Council)"
+    r".*\bfirst[\s-]+reading\b|Adoption\s+of\s+the\s+Council(?:'s|’s)?\s+first[\s-]+reading\s+position",
+    re.I,
+)
+ACT_ADOPTION_RE = re.compile(r"Adoption\s+of\s+(?:the\s+|a\s+)?legi\w*\s+act\b", re.I)
+
+
+def vote_subject(title: str | None, step: str | None) -> CouncilVoteOn | None:
+    """What the Council voted on, from the note's subject (title and the items listed after it).
+
+    "first_reading_position": adoption of the Council's position at first reading (ordinary legislative
+    procedure, Art. 294(5) TFEU), with or without its statement of reasons; the act is NOT adopted by this
+    vote. "act": adoption of the act itself ("Adoption of the legislative act", or a bare "Adoption" of a
+    regulation, directive or decision). "other": any other item (budget procedure, approval of a joint text,
+    statement or letter, agreement in principle, consent, ...). None: the subject names no item.
+    """
+    t = title or ""
+    items = [i.strip() for i in (step or "").split(";") if i.strip()]
+    if re.match(r"\s*Position\s+of\s+the\s+Council\s+at\s+first\s+reading\b", t, re.I) or any(
+        COUNCIL_FIRST_READING_POSITION_RE.match(i) for i in items
+    ):
+        return "first_reading_position"
+    if not items:
+        return None
+    act = _act_type(t)
+    if act is None and re.search(r"\bbudget\b", t, re.I):
+        return "other"  # annual / amending budget procedure (Art. 314 TFEU), not an act's adoption
+    if any(ACT_ADOPTION_RE.match(i) for i in items):
+        return "act"
+    if "Adoption" in items and act in ("regulation", "directive", "decision"):
+        return "act"
+    return "other"
 
 
 def _act_type(title: str) -> str | None:
@@ -857,6 +1044,83 @@ class _Result:
     reused: bool = False
 
 
+def process_note(
+    http: Http,
+    base: str,
+    versions: list[DocVersion],
+    prev: CouncilNoteState | None,
+    prev_vote: CouncilVote | None,
+    retrieved: str,
+    *,
+    force: bool = False,
+) -> _Result:
+    """Read one note (all its versions) unless its Cellar metadata and the parser are unchanged since it was
+    last processed (`force` re-reads it regardless)."""
+    fp = note_fingerprint(versions)
+    if not force and prev and prev.fingerprint == fp and (prev.vote_id is None or prev_vote is not None):
+        return _Result(base, prev_vote, prev.problem, prev, reused=True)
+    parsed = []
+    for v in versions:
+        try:
+            pdf = http.get(DOC_URL.format(doc=v.doc_id))
+        except HttpError as e:
+            if e.status == 404:  # withdrawn version (e.g. declared null and void)
+                log.warning("council: %s not in the register (404)", v.doc_id)
+                continue
+            # Transient: keep the previous record (if any) and retry next run.
+            return _Result(base, prev_vote, f"download failed ({e.status}); previous record kept", None)
+        try:
+            parsed.append(parse_document(v, pdf))
+        except (subprocess.SubprocessError, ValueError) as e:
+            log.warning("council: %s unreadable: %s", v.doc_id, e)
+    state = CouncilNoteState(id=base, fingerprint=fp, versions=[v.doc_id for v in versions])
+    if not parsed:
+        state.problem = "no version could be downloaded/read"
+        return _Result(base, None, state.problem, state)
+    try:
+        vote, problem = build_vote(parsed, retrieved)
+    except ValueError as e:  # pydantic validation etc.
+        state.problem = f"invalid record: {e}"
+        return _Result(base, None, state.problem, state)
+    state.vote_id, state.problem = (vote.id if vote else None), problem
+    return _Result(base, vote, problem, state)
+
+
+def reprocess(http: Http, bases: list[str]) -> dict[str, str | None]:
+    """Re-read only the given notes now and replace their records in the snapshot (votes.json, notes.json);
+    every other note is left exactly as it is. For targeted corrections after a parser change, without a
+    full fetch. Notes that fail transiently keep their previous records. Returns {note: problem}."""
+    groups = list_versions(http)
+    unknown = [b for b in bases if b not in groups]
+    if unknown:
+        raise ValueError(f"not in the Cellar listing: {', '.join(unknown)}")
+    states = {st.id: st for st in read_records(SOURCE_ID, "notes", CouncilNoteState)}
+    votes = {v.id: v for v in read_records(SOURCE_ID, "votes", CouncilVote)}
+    retrieved = now_iso()
+
+    def work(base: str) -> _Result:
+        prev = states.get(base)
+        prev_vote = votes.get(prev.vote_id) if prev and prev.vote_id else None
+        return process_note(http, base, groups[base], prev, prev_vote, retrieved, force=True)
+
+    out: dict[str, str | None] = {}
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
+        results = list(ex.map(work, bases))
+    for r in results:
+        out[r.base] = r.problem
+        if r.state is None:  # transient failure: keep the previous records
+            continue
+        prev = states.get(r.base)
+        if prev and prev.vote_id:
+            votes.pop(prev.vote_id, None)
+        if r.vote is not None:
+            votes[r.vote.id] = r.vote
+        states[r.base] = r.state
+    write_records(SOURCE_ID, "votes", votes.values(), key=lambda r: (r.date, r.id))  # type: ignore[attr-defined]
+    write_records(SOURCE_ID, "notes", states.values(), key=lambda r: r.id)  # type: ignore[attr-defined]
+    return out
+
+
 def fetch(http: Http) -> SourceStatus:
     attempted = now_iso()
     if not poppler_available():
@@ -881,37 +1145,9 @@ def fetch(http: Http) -> SourceStatus:
     retrieved = now_iso()
 
     def work(base: str) -> _Result:
-        versions = groups[base]
-        fp = note_fingerprint(versions)
         prev = prev_states.get(base)
         prev_vote = prev_votes.get(prev.vote_id) if prev and prev.vote_id else None
-        if prev and prev.fingerprint == fp and (prev.vote_id is None or prev_vote is not None):
-            return _Result(base, prev_vote, prev.problem, prev, reused=True)
-        parsed = []
-        for v in versions:
-            try:
-                pdf = http.get(DOC_URL.format(doc=v.doc_id))
-            except HttpError as e:
-                if e.status == 404:  # withdrawn version (e.g. declared null and void)
-                    log.warning("council: %s not in the register (404)", v.doc_id)
-                    continue
-                # Transient: keep the previous record (if any) and retry next run.
-                return _Result(base, prev_vote, f"download failed ({e.status}); previous record kept", None)
-            try:
-                parsed.append(parse_document(v, pdf))
-            except (subprocess.SubprocessError, ValueError) as e:
-                log.warning("council: %s unreadable: %s", v.doc_id, e)
-        state = CouncilNoteState(id=base, fingerprint=fp, versions=[v.doc_id for v in versions])
-        if not parsed:
-            state.problem = "no version could be downloaded/read"
-            return _Result(base, None, state.problem, state)
-        try:
-            vote, problem = build_vote(parsed, retrieved)
-        except ValueError as e:  # pydantic validation etc.
-            state.problem = f"invalid record: {e}"
-            return _Result(base, None, state.problem, state)
-        state.vote_id, state.problem = (vote.id if vote else None), problem
-        return _Result(base, vote, problem, state)
+        return process_note(http, base, groups[base], prev, prev_vote, retrieved)
 
     votes: list[CouncilVote] = []
     states: list[CouncilNoteState] = []

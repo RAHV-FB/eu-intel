@@ -480,6 +480,45 @@ def _valid_on(start: str | None, end: str | None, d: str) -> bool:
     return (start is None or start <= d) and (end is None or d <= end)
 
 
+# Title ep_procedures gives the OEIL key event "Council position published" (see `timeline`).
+OEIL_POSITION_PUBLISHED = "Council adopted its first-reading position"
+
+
+def council_vote_event(cv: dict) -> dict:
+    """Timeline event for a Council vote, dated and sourced by the Council's voting-result document."""
+    on, outcome = cv.get("vote_on"), cv["outcome"]
+    kind = "other"
+    if on == "first_reading_position":
+        kind = "council_position"
+        title = {
+            "adopted": "Council adopted its position at first reading",
+            "not_adopted": "Council did not adopt a position at first reading",
+        }.get(outcome, "Council voted on its position at first reading")
+    elif on == "act":
+        kind = "council_adoption" if outcome == "adopted" else "other"
+        title = {
+            "adopted": "Council adopted the act",
+            "not_adopted": "Council did not adopt the act",
+        }.get(outcome, "Council voted on adopting the act")
+    elif cv.get("stage"):
+        title = f"Council vote: {cv['stage']}"
+    else:
+        title = "Council vote (the voting-result document does not name the item voted on)"
+    if cv.get("written_procedure"):
+        title += " (written procedure)"
+    detail = None
+    if cv["positions"]:
+        n = Counter(cv["positions"].values())
+        detail = f"{n['for']} Member States in favour, {n['against']} against, {n['abstain']} abstained"
+        if n["not_participating"]:
+            detail += f", {n['not_participating']} not taking part"
+    return {
+        "id": f"council-{cv['id']}", "date": cv["date"], "kind": kind, "title": title, "detail": detail,
+        "institution": "Council", "state": "done", "key": kind != "other", "docs": [], "source": cv["source"],
+        "vote_id": None,
+    }  # fmt: skip
+
+
 def council_assessment(a: dict | None) -> dict | None:
     """pipeline.analysis.council_qmv.CouncilAssessment -> CouncilAssessment in src/types/data.ts."""
     if not a:
@@ -500,6 +539,11 @@ def council_assessment(a: dict | None) -> dict | None:
         "states_against": a.get("states_against"),
         "states_abstain": a.get("states_abstain"),
         "states_not_participating": a.get("states_not_participating"),
+        # Member States taking part; thresholds and population shares are computed over these only.
+        "states_participating": a.get("participating"),
+        # Minimum size of a blocking minority under the applicable rule (4 under TEU Art. 16(4); computed
+        # under TFEU Art. 238(3)(a)); None where no such clause applies or the legal basis is not established.
+        "blocking_minority_min_states": a.get("blocking_minority_min_states"),
     }
 
 
@@ -1073,9 +1117,10 @@ class Builder:
             rec = {
                 "id": cv.id, "date": cv.date, "title": cv.title, "dossier_id": did,
                 "dossier_ref": p.reference if p else None, "configuration": cv.configuration,
-                "stage": getattr(cv, "stage", None), "meeting": getattr(cv, "meeting", None),
-                "written_procedure": getattr(cv, "written_procedure", None), "council_doc": cv.council_doc,
+                "stage": cv.stage, "vote_on": cv.vote_on, "meeting": cv.meeting,
+                "written_procedure": cv.written_procedure, "council_doc": cv.council_doc,
                 "voting_rule": cv.voting_rule, "outcome": cv.outcome, "positions": dict(sorted(cv.positions.items())),
+                "positions_note": cv.positions_note if not cv.positions else None,
                 "assessment": assessment, "statements": cv.statements, "source": _src(cv.source),
             }  # fmt: skip
             self.council_public.append(rec)
@@ -1103,6 +1148,7 @@ class Builder:
         ):
             return None
         a["legal_basis"] = None
+        a["blocking_minority_min_states"] = None
         a["note"] = (a["note"] + " " if a["note"] else "") + (
             "Whether the Council acted on a Commission proposal is not recorded in our data; the result is the "
             "same under both qualified-majority thresholds (55% and 72% of Member States, 65% of the population)."
@@ -1224,6 +1270,11 @@ class Builder:
         for v in votes:
             if v.id in self.indexed_vote_ids:
                 votes_by_date[v.date].append(v)
+        # The Council's own voting results date its votes; the Legislative Observatory's Council steps are
+        # aligned with them so the timeline and the Council vote cards cannot disagree.
+        cvotes = [cv for cv in self.council_of.get(p.id, []) if cv["date"] <= self.today]
+        position_dates = {cv["date"] for cv in cvotes if cv.get("vote_on") == "first_reading_position"}
+        act_adopted = any(cv.get("vote_on") == "act" and cv["outcome"] == "adopted" for cv in cvotes)
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
         seen_ev: set[tuple[str, str, str]] = set()
@@ -1234,6 +1285,15 @@ class Builder:
             if (kind, e.date, e.title) in seen_ev:  # same step recorded by two EP sources (API and OEIL)
                 continue
             seen_ev.add((kind, e.date, e.title))
+            title, key = e.title, kind in KEY_KINDS
+            if e.institution == "Council" and kind == "council_position" and title == OEIL_POSITION_PUBLISHED:
+                # OEIL key event "Council position published": the date the position was published, which
+                # is not the date of the Council's vote adopting it.
+                if e.date in position_dates:
+                    continue  # same day as the vote, which is listed from the Council's voting result
+                title, key = "Council's first-reading position published", key and not position_dates
+            elif e.institution == "Council" and kind == "council_adoption" and act_adopted:
+                continue  # the Council's voting result on the act (added below) dates this step
             vote_id = None
             if kind in VOTE_EVENT_KINDS and votes_by_date.get(e.date):
                 docs = {d.id for d in e.docs}
@@ -1243,11 +1303,12 @@ class Builder:
                 pick = finals or by_doc or (cands if len(cands) == 1 else [])
                 vote_id = pick[0].id if pick else None
             out.append({
-                "id": e.id, "date": e.date, "kind": kind, "title": e.title, "detail": e.detail,
-                "institution": e.institution, "state": "done", "key": kind in KEY_KINDS,
+                "id": e.id, "date": e.date, "kind": kind, "title": title, "detail": e.detail,
+                "institution": e.institution, "state": "done", "key": key,
                 "docs": [d.model_dump(mode="json") for d in e.docs], "source": _src(e.source), "vote_id": vote_id,
             })  # fmt: skip
             seen.add((kind, e.date))
+        out.extend(council_vote_event(cv) for cv in cvotes)
         for a in acts:
             src = _src(a.source)
             label = f"{a.act_type.capitalize()} {a.celex}" if a.act_type != "other" else f"Act {a.celex}"
@@ -1694,7 +1755,7 @@ class Builder:
                 if pos:
                     cpos[pos] += 1
                     cvotes.append({"vote_id": cv["id"], "date": cv["date"], "title": cv["title"], "pos": pos,
-                                   "dossier_id": cv["dossier_id"]})  # fmt: skip
+                                   "dossier_id": cv["dossier_id"], "vote_on": cv["vote_on"]})  # fmt: skip
             indicators = [
                 {"indicator": i.indicator, "label": i.label, "value": i.value, "unit": i.unit, "period": i.period,
                  "definition": i.definition, "source": _src(i.source)}
