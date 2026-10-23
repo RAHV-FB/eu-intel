@@ -68,6 +68,7 @@ jobs:
       - name: Build site data (public/data)
         env:
           # Absolute links in the Atom feeds: the Pages URL, so a custom domain is used once it is set.
+          # (The feed and entry ids do not depend on it: pipeline/analysis/feeds.py TAG_BASE.)
           SITE_URL: ${{ steps.pages.outputs.base_url }}/
         run: python -m pipeline build
 
