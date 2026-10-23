@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { ActivityItem, ISODate, TimelineEvent } from '../../../types/data';
 import { EmptyState, ExtLink, SourceLink, institutionLabel } from '../../../components/ui';
-import { formatDate, formatDateTime, safeUrl } from '../../../lib/format';
+import { eventOn, formatDate, formatDateTime, safeUrl } from '../../../lib/format';
 
 const INSTITUTION_SHORT: Record<string, string> = {
   EP: 'Parliament',
@@ -16,8 +16,10 @@ const INSTITUTION_SHORT: Record<string, string> = {
   CJEU: 'Court of Justice',
 };
 
-function EventItem({ e, today }: { e: TimelineEvent; today: ISODate }) {
-  const scheduled = e.date > today; // the visitor's date: a date the build had ahead may have passed since
+function EventItem({ e: recorded, today }: { e: TimelineEvent; today: ISODate }) {
+  // the visitor's date: a date the build had ahead may have passed since (state and title as the build would give)
+  const e = eventOn(recorded, today);
+  const scheduled = e.state === 'scheduled';
   const docs = e.docs ?? [];
   // Avoid repeating the same official link twice (document link and source often coincide).
   const sourceIsDoc = !!e.source && docs.some((doc) => doc.url && doc.url === e.source?.url);

@@ -434,6 +434,21 @@ def test_amld6_next_step_names_the_general_deadline_not_a_derogation():
     assert "has passed: the Member States it binds were required" not in text
 
 
+def test_a_transposition_deadline_has_passed_only_once_its_day_is_over():
+    # Directive (EU) 2024/1640, Art. 78(1): "... necessary to comply with this Directive by 10 July 2027", and
+    # "with Articles 11, 12, 13 and 15 by 10 July 2026 and with Article18 by 10 July 2029": on the day itself the
+    # measures are still due, not overdue (the build said "has passed" on that day)
+    on_day = _directive_step("32024L1640", date(2027, 7, 10))
+    assert on_day.startswith("EU countries must transpose the directive into national law by 10 July 2027.")
+    assert "later transposition deadline for specific provisions: 10 July 2029" in on_day
+    after = _directive_step("32024L1640", date(2027, 7, 11))
+    assert after.startswith("The transposition deadline (10 July 2027) has passed")
+    earlier = _directive_step("32024L1640", date(2026, 7, 10))
+    assert "earlier transposition deadlines for specific provisions: 10 July 2025 (passed) and 10 July 2026." in earlier
+    assert "10 July 2029" in _directive_step("32024L1640", date(2029, 7, 10))
+    assert "10 July 2029" not in _directive_step("32024L1640", date(2029, 7, 11))
+
+
 def test_driving_licences_next_step():
     # Directive (EU) 2025/2205, Art. 29: adopt by 26 November 2028, apply from 26 November 2029; Art. 9(2)(j), (k)
     # by 26 November 2027

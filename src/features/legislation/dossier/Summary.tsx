@@ -1,19 +1,20 @@
 import type { ApplicationInfo, DossierDetail, ISODate, NamedAct, TimelineEvent, TranspositionDateInfo } from '../../../types/data';
 import { Link } from 'react-router-dom';
 import { BasisNote, ExtLink, SourceLink, StatusBadge, Term, institutionLabel } from '../../../components/ui';
-import { asOfToday, formatDate } from '../../../lib/format';
+import { asOfToday, eventOn, formatDate } from '../../../lib/format';
 import { ADOPTED_STAGES, dossierPath, institutionSuffix } from '../labels';
 import { SplitLinks, splitParts } from './Split';
 
 /**
  * Most recent recorded (done) event on or before today; not a date an act records for after its validity ended.
+ * A step the build had scheduled counts once its date has passed, with the title the build gives it then.
  * Of several steps on that day, the key one (the milestone "Where is it now?" names), else the last listed: the
  * sources give no order within a day, so a document tabled that day is not shown as following the decision.
  */
 export function latestDone(timeline: TimelineEvent[], today: ISODate): TimelineEvent | null {
   let latest: TimelineEvent | null = null;
   for (let i = timeline.length - 1; i >= 0; i--) {
-    const e = timeline[i];
+    const e = eventOn(timeline[i], today);
     if (e.state !== 'done' || e.date > today || e.after_end_of_validity) continue;
     if (latest && e.date !== latest.date) break;
     if (!latest) latest = e;
@@ -181,9 +182,9 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
   );
 }
 
-/** First legally fixed date still ahead (application, transposition deadline…). */
+/** First legally fixed date still ahead (application, transposition deadline…; a deadline on its day). */
 export function nextScheduled(timeline: TimelineEvent[], today: ISODate): TimelineEvent | null {
-  return timeline.find((e) => e.date > today) ?? null;
+  return timeline.map((e) => eventOn(e, today)).find((e) => e.state === 'scheduled' && e.date >= today) ?? null;
 }
 
 /**
@@ -222,6 +223,8 @@ export function NextStep({ d, today }: { d: DossierDetail; today: ISODate }) {
 export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISODate }) {
   const ed = d.editorial;
   const latest = latestDone(d.timeline, today);
+  // a status recorded when the data was built can state a date that has passed since (the label stays as recorded)
+  const explanation = asOfToday(d.status.explanation, today);
   const adopted = ADOPTED_STAGES.has(d.stage);
   const amendedBy = d.related.filter((r) => r.relation === 'Amended by');
   const amendedLinks = amendedBy.slice(0, 3).map((r, i) => (
@@ -292,8 +295,11 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
           <dd>
             <StatusBadge stage={d.status.stage} label={d.status.label} blocked={d.officially_blocked} />
             <p className="dz-fact__text">
-              <ExplanationText text={d.status.explanation} acts={d.status.named_acts} /> <BasisNote basis={d.status.basis} />
+              <ExplanationText text={explanation} acts={d.status.named_acts} /> <BasisNote basis={d.status.basis} />
             </p>
+            {explanation !== d.status.explanation && (
+              <p className="meta">Status as recorded at the last data refresh, before the date above had passed.</p>
+            )}
             {d.status.since && <p className="meta">Since {formatDate(d.status.since)}</p>}
             {splitParts(d).length > 0 && (
               <p className="meta">

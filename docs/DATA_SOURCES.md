@@ -281,7 +281,13 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   CSDDD, by 26 Jul 2028), else the amending directive's deadline only when it records a single one; an amending
   directive with several deadlines and no such check is named without dates. An amending directive that also
   repeals the directive names the repeal instead (AMLD4: Directive (EU) 2024/1640 repeals it with effect from
-  10 Jul 2027).
+  10 Jul 2027). A transposition deadline has passed only once its day is over: measures are due "by" it
+  (Product Liability Directive (EU) 2024/2853, Art. 22(1): "... necessary to comply with this Directive by
+  9 December 2026"), so the next step says it has passed from the next day; an entry into force or a date from
+  which provisions apply has come on its day. The site restates these dates on the visitor's date by the same
+  rules (`src/lib/format.ts`). A build run on a deadline's day still counts it as passed in `pipeline/build.py`:
+  in the timeline (state "done", title "(passed)"), which the dossier page restates on the visitor's date, in
+  "Coming up", which then lacks it, and for an amending directive's deadline, which the next step then leaves out.
 - Withdrawals and replacements: Cellar procedure events WDW_byCOM / RPL_byCOM (`procedure_notices.json`, 272
   since 2014). OEIL often never records them (CCTB/CCCTB, Return Directive recast, standard-essential patents).
   A notice is ignored when the procedure went on to adopt the act (a later Council adoption, signature or
