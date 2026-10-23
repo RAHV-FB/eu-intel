@@ -432,6 +432,8 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
 
 
 ADOPTION_STEPS = ("council_adoption", "signature", "publication")
+# Parliament's decision on the Council's position at second reading, as timelines title it (ep_procedures)
+SECOND_READING_TITLE = re.compile(r"Parliament (?:approved|amended|rejected) the Council's position at second reading")
 
 
 def dossier_contradictions(d: dict) -> list[str]:
@@ -454,6 +456,16 @@ def dossier_contradictions(d: dict) -> list[str]:
     signed = [e["date"] for e in d.get("timeline", []) if e.get("kind") == "signature"]
     if signed and adoptions and min(signed) < max(adoptions):
         out.append(f"signed on {min(signed)}, before the Council's adoption step of {max(adoptions)}")
+    if d.get("type") == "COD" and len(d.get("celex") or []) <= 1:
+        # the act of an ordinary procedure is adopted once (2014/0174(COD): OEIL's 13 July and 6 October 2015 for one
+        # "decision of the Council of 18 September 2015"), and not by the Council before Parliament's second reading,
+        # which is on the Council's first-reading position (2018/0202(COD): OEIL 21 April 2021, second reading 27 April)
+        if len(adoptions) > 1:
+            out.append(f"Council adoption steps on {len(adoptions)} days: {', '.join(sorted(adoptions))}")
+        second = [e["date"] for e in d.get("timeline", []) if SECOND_READING_TITLE.fullmatch(e.get("title") or "")]
+        early = sorted(day for day in adoptions if second and day < min(second))
+        if early:
+            out.append(f"Council adoption step of {early[0]}, before Parliament's second reading of {min(second)}")
     return out
 
 

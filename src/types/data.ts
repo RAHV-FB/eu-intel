@@ -687,6 +687,8 @@ export interface CountryDetail extends CountrySummary {
     deadline?: ISODate | null;
     measures: number; // notified measures in the dataset
     status: TranspositionStatus;
+    // not_required only: the directive's provision and its condition, "Art. 33(4): for as long as no rail system …"
+    status_note?: string | null;
   }[];
   infringements: InfringementInfo[];
 }
@@ -729,8 +731,9 @@ export interface DossierImplementation {
   participation_unknown?: string[]; // DK/IE: neither the recitals nor a Council vote say whether they are bound
   act?: string; // the directive's number, e.g. "Council Directive (EU) 2015/121"
   infringements_from?: ISODate | null; // set when cases closed before this date are not in the data (deadline earlier)
-  // the directive's own exemption from transposition, quoted; countries: the rows marked not_required
-  exemption?: { provision: string; quote: string; countries?: string[] | null } | null;
+  // the directive's own exemption from transposition, quoted; countries: the rows marked not_required; named: countries
+  // it exempts from some provisions only (Directive (EU) 2016/797, Art. 57(5)), whose rows are not marked
+  exemption?: { provision: string; quote: string; countries?: string[] | null; named?: string[] | null } | null;
 }
 
 // ---------------------------------------------------------------- home & activity

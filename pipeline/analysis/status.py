@@ -1090,16 +1090,25 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
             further = [x for x in specific if general and x > general and x > t]
             start = application_start(dr, tr) if dr else None
             applies = [x.date for x in tr if x.kind == "application" and x.date > t and (not start or x.date > start)]
+            # a directive binds the Member States to which it is addressed (Art. 288 TFEU): not those it is not
+            # addressed to (Directive (EU) 2016/1629, Art. 40), nor Denmark or Ireland where a Treaty opt-out applies
+            # (Protocols 21 and 22). Its own text can still give some of them more time or exempt them from
+            # transposing it (Directive (EU) 2016/798, Art. 33(2), (2a) and (4)): stated as checked against the text
+            exceptions = dr.transposition_checked.exceptions if dr and dr.transposition_checked else None
+            unless = ", except as its text provides" if exceptions else ""
             if general and general > t:
-                parts.append(f"EU countries must transpose the directive into national law by {_fmt(general)}.")
+                parts.append(
+                    f"The Member States bound by the directive must transpose it into national law by "
+                    f"{_fmt(general)}{unless}."
+                )
+                parts += [exceptions] if exceptions else []
                 basis = "source"
             elif general:
                 parts.append(
-                    # a directive binds only the Member States to which it is addressed (Art. 288 TFEU), and its
-                    # text can exempt some (Directive (EU) 2016/798, Art. 33(4): Cyprus and Malta)
-                    f"The transposition deadline ({_fmt(general)}) has passed: the Member States it binds were "
-                    "required to adopt national measures by then."
+                    f"The transposition deadline ({_fmt(general)}) has passed: the Member States bound by the "
+                    f"directive were required to adopt national measures by then{unless}."
                 )
+                parts += [exceptions] if exceptions else []
                 basis = "source"
             elif "(codification)" in act.title.lower():
                 parts.append(
@@ -1406,12 +1415,13 @@ def classify(
         if reported:
             # The Train is not a record of adoption (it lags or leads OEIL); it only stops us from
             # asserting that a decision is still pending.
-            if s.label in UNRECORDED_COUNCIL_DECISION and ptype in ("CNS", "APP"):
+            unrecorded = s.label in UNRECORDED_COUNCIL_DECISION and ptype in ("CNS", "APP")
+            if unrecorded:
                 # 2025/0806(CNS): the Council's decision is not in the official records we hold, not pending
-                s.explanation = UNRECORDED_COUNCIL_DECISION[s.label]
+                s.explanation = f"{UNRECORDED_COUNCIL_DECISION[s.label]} {_no_final_act(proc)}"
             s.explanation += (
                 f" The EP Legislative Train reports this file as “{reported.status}” (information updated as of "
-                f"{_fmt(reported.last_updated)}), but no final act is linked in our data."
+                f"{_fmt(reported.last_updated)})" + ("." if unrecorded else ", but no final act is linked in our data.")
             )
             next_step = NextStep(
                 text="Not determined: the EP Legislative Train reports the file as adopted, but the official "
@@ -1468,6 +1478,22 @@ UNRECORDED_COUNCIL_DECISION = {
     "Parliament voted on consent": "Parliament has taken its decision on consent. The Council can adopt the act only if "
     "Parliament has given its consent; the official sources in our data do not record the Council's decision.",
 }
+
+
+def _no_final_act(proc: Procedure) -> str:
+    """What the official records we hold say of a file's final act when none is linked. 2025/0806(CNS): Council
+    Regulation (EU) 2026/415 cites the documents of this file (ECB Recommendation ECB/2025/17, Commission Opinion
+    C(2025)7526, "Opinion of 26 November 2025" of Parliament), but no official record links the two: Cellar records
+    no procedure for the act, OEIL still gives "Awaiting final decision" and lists no final act, and the EP's
+    procedure record lists none. The site does not link them either."""
+    oeil = (
+        f"The Legislative Observatory gives the file's stage as “{proc.stage_raw}” and lists no final act, and no"
+        if proc.stage_raw and not proc.celex_refs
+        else "No"
+    )
+    return f"{oeil} act in our EUR-Lex data is recorded as adopted under this procedure."
+
+
 # A consultation or consent file with no recorded step for this long: a pending Council decision is no
 # longer a safe assumption (e.g. agreements whose legal basis has since been replaced).
 STALE_DECISION_DAYS = 3 * 365

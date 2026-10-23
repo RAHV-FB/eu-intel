@@ -204,6 +204,36 @@ def test_public_timeline_with_two_council_adoptions_or_a_signature_before_one(tm
     assert dossier_contradictions(early) == []
 
 
+def test_public_timeline_of_an_ordinary_procedure_adopting_its_act_twice_or_before_the_second_reading():
+    # as published before the fix: 2014-0174 (OEIL's "Act adopted by Council after Parliament's 1st reading" on
+    # 13 July 2015 next to the one moved to 18 September 2015, the act's date), 2018-0202 (the same OEIL step on
+    # 21 April 2021, before Parliament approved the Council's position at second reading on 27 April 2021)
+    from pipeline.validate import dossier_contradictions
+
+    adopted = "Council adopted the act after Parliament's first reading"
+    twice = {"id": "2014-0174", "type": "COD", "celex": ["32015R1843"],
+             "timeline": [{"kind": "council_adoption", "date": "2015-07-13", "title": adopted},
+                          {"kind": "council_adoption", "date": "2015-09-18", "title": adopted}]}  # fmt: skip
+    assert dossier_contradictions(twice) == ["Council adoption steps on 2 days: 2015-07-13, 2015-09-18"]
+    early = {"id": "2018-0202", "type": "COD", "celex": ["32021R0691"],
+             "timeline": [{"kind": "council_position", "date": "2021-04-19", "title": "Council adopted its position at "
+                           "first reading (written procedure)"},
+                          {"kind": "council_adoption", "date": "2021-04-21", "title": adopted},
+                          {"kind": "ep_position", "date": "2021-04-27",
+                           "title": "Parliament approved the Council's position at second reading"}]}  # fmt: skip
+    assert dossier_contradictions(early) == [
+        "Council adoption step of 2021-04-21, before Parliament's second reading of 2021-04-27"
+    ]
+    # Parliament's second-reading amendments, then the Council's approval of them (Art. 294(9) TFEU): one adoption
+    early["timeline"][1:] = [{"kind": "ep_position", "date": "2021-04-27",
+                              "title": "Parliament amended the Council's position at second reading"},
+                             {"kind": "council_adoption", "date": "2021-05-20",
+                              "title": "Council approved Parliament's second-reading position"}]  # fmt: skip
+    assert dossier_contradictions(early) == []
+    # a consultation file's Council acts are not checked this way (2013/0400(CNS) adopted two directives)
+    assert dossier_contradictions({**twice, "type": "CNS"}) == []
+
+
 def test_public_vote_margin_must_agree_with_an_established_outcome(tmp_path: Path):
     # as published before the guard in build.py ep_vote_summary, 1,102 index entries with no established outcome
     # carried a margin label; a margin's sign or label can also disagree with the outcome (ids are illustrative)

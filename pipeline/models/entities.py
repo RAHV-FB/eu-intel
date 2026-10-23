@@ -201,6 +201,9 @@ class CheckedTransposition(Model):
     applies_from: str | None = None  # the general date from which the national measures apply
     # recorded dates that are neither a deadline nor a firm application date (e.g. conditional or optional)
     other: list[str] = Field(default_factory=list)
+    # what the directive's own text provides for some Member States beside the general deadline (an extension of the
+    # transposition period, an exemption), in plain words naming each provision
+    exceptions: str | None = None
 
 
 class ValidityNote(Model):

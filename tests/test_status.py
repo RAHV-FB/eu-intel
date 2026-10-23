@@ -118,7 +118,7 @@ def test_directive_gets_transposition_next_step():
     assert "transposition deadline (6 July 2024) has passed" in s.next_step.text
     early = status("2021-0104", date(2023, 3, 1))
     assert early.stage == "in_force"
-    assert "must transpose the directive into national law by 6 July 2024" in early.next_step.text
+    assert "must transpose it into national law by 6 July 2024" in early.next_step.text
     assert early.application.future is True
 
 
@@ -428,17 +428,17 @@ def _directive_step(celex: str, today: date = TODAY) -> str:
 def test_amld6_next_step_names_the_general_deadline_not_a_derogation():
     # Directive (EU) 2024/1640, Art. 78(1): 10 July 2027 in general; 2025, 2026 and 2029 for specific articles
     text = _directive_step("32024L1640")
-    assert text.startswith("EU countries must transpose the directive into national law by 10 July 2027.")
+    assert text.startswith("The Member States bound by the directive must transpose it into national law by 10 July 2027.")
     assert "earlier transposition deadlines for specific provisions, which have passed: 10 July 2025 and 10 July 2026" in text
     assert "later transposition deadline for specific provisions: 10 July 2029" in text
-    assert "has passed: the Member States it binds were required" not in text
+    assert "has passed: the Member States bound by the directive were required" not in text
 
 
 def test_driving_licences_next_step():
     # Directive (EU) 2025/2205, Art. 29: adopt by 26 November 2028, apply from 26 November 2029; Art. 9(2)(j), (k)
     # by 26 November 2027
     text = _directive_step("32025L2205")
-    assert "must transpose the directive into national law by 26 November 2028." in text
+    assert "must transpose it into national law by 26 November 2028." in text
     assert "The national measures are to apply from 26 November 2029." in text
     assert "an earlier transposition deadline for specific provisions: 26 November 2027" in text
 
@@ -770,10 +770,13 @@ def test_council_decision_reported_by_the_train_is_not_presented_as_pending():
     p = rec("2025-0806")
     s = classify(p, [], [tf], TODAY)
     assert (s.stage, s.label, s.since) == ("parliament_position", "Parliament gave its opinion", "2025-11-26")
-    assert s.explanation.startswith(
+    # what the official records say, precisely: OEIL's stage and no final act, none recorded by EUR-Lex either
+    assert s.explanation == (
         "Parliament has delivered its opinion. Under the consultation procedure the Council takes the final decision; "
-        "the official sources in our data do not record it. The EP Legislative Train reports this file as “Adopted / "
-        "Completed”"
+        "the official sources in our data do not record it. The Legislative Observatory gives the file's stage as "
+        "“Awaiting final decision” and lists no final act, and no act in our EUR-Lex data is recorded as adopted under "
+        "this procedure. The EP Legislative Train reports this file as “Adopted / Completed” (information updated as "
+        "of 20 September 2026)."
     )
     assert s.next_step.basis == "unknown"
     # without the Train's report the decision is still to come
