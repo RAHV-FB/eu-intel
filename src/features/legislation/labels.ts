@@ -92,6 +92,7 @@ export const TRANSPOSITION_LABEL: Record<TranspositionStatus, string> = {
   deadline_not_reached: 'Deadline not yet reached',
   no_deadline: 'No transposition deadline recorded',
   not_participating: 'Not bound (did not take part in adoption)',
+  not_required: 'Not required by the directive',
   unavailable: 'Data unavailable',
 };
 

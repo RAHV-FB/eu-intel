@@ -13,6 +13,7 @@ const T_ORDER: TranspositionStatus[] = [
   'deadline_not_reached',
   'no_deadline',
   'not_participating',
+  'not_required',
   'unavailable',
 ];
 
@@ -286,7 +287,8 @@ export function InfringementNote() {
     <p className="callout">
       An <Term id="infringement">infringement case</Term> is opened by the European Commission when it considers that a Member State may
       not be applying EU law correctly. <strong>An open case is not a court ruling</strong>: most cases are closed before reaching the
-      Court of Justice. Stages are shown exactly as the Commission publishes them.
+      Court of Justice. Stages are shown exactly as the Commission publishes them. The list holds all open cases and all cases with
+      a Commission decision since 1 January 2019; cases closed before then are not included.
     </p>
   );
 }

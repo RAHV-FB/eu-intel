@@ -199,6 +199,42 @@ def test_entry_into_force_pending():
 
 
 DATNOT = "{DATNOT|http://publications.europa.eu/resource/authority/fd_335/DATNOT}"
+FD335 = "http://publications.europa.eu/resource/authority/fd_335/"
+
+
+def test_provisions_applying_from_the_entry_into_force_are_kept():
+    """DMA 32022R1925 (Cellar rows, 2026-10-23): EV and MA with comment MA/PART on 2022-11-01; Art. 54: "Article 3(6)
+    and (7) and Articles 40, 46, 47, 48, 49 and 50 shall apply from 1 November 2022"."""
+    f = E.Facts()
+    f.props.update({"celex": {"32022R1925"}, "eif": {"2022-11-01", "2023-05-02", "2023-06-25"}})
+    f.titles.add("Regulation (EU) 2022/1925 of the European Parliament and of the Council of 14 September 2022")
+    art = f"{{V|{FD335}V}} {{ART|{FD335}ART}} 54"
+    rows = [
+        {"d": "2022-11-01", "type": f"{{EV|{FD335}EV}}", "comment": f"{{DATPUB|{FD335}DATPUB}} +20 {art}"},
+        {"d": "2022-11-01", "type": f"{{MA|{FD335}MA}}", "comment": f"{{MA/PART|{FD335}MA%2FPART}} {art}"},
+        {"d": "2023-05-02", "type": f"{{MA|{FD335}MA}}", "comment": art},
+        {"d": "2023-06-25", "type": f"{{MA|{FD335}MA}}", "comment": f"{{MA/PART|{FD335}MA%2FPART}} {art}"},
+    ]
+    E.add_eif_types({"w": f}, [{"w": "w", **r} for r in rows])
+    act = E.build_act("w", f, RETRIEVED)
+    assert act is not None and act.entry_into_force == "2022-11-01"
+    assert act.other_application_dates == ["2023-05-02", "2023-06-25"]  # the entry into force is not a later date
+    assert act.partial_application_dates == ["2023-06-25"] and act.partial_on_entry_into_force
+
+
+def test_partial_repeals_are_kept_apart():
+    """Decision 2014/335/EU, Euratom (Cellar rows, 2026-10-23): repealed by 32020D2053 with role fd_375 AP (Decision
+    2020/2053, Art. 11(1): "Subject to paragraph 2, Decision 2014/335/EU, Euratom is repealed")."""
+    f = E.Facts()
+    ap = "{AP|http://publications.europa.eu/resource/authority/fd_375/AP}"
+    E.add_relations({"w": f}, [
+        {"w": "w", "rel": "repealed_by", "celex": "32020D2053", "ax": "ax1", "role": ap},
+        {"w": "w", "rel": "repeals", "celex": "31970D0243", "ax": "ax2", "role": ap},
+        {"w": "w", "rel": "repealed_by", "celex": "32099D0001", "ax": "ax3"},  # an unannotated (whole) repeal
+    ])  # fmt: skip
+    assert E._whole_repeals(f, "repealed_by") == {"32099D0001"}
+    assert E._partial_repeals(f, "repealed_by") == {"32020D2053"}
+    assert E._partial_repeals(f, "repeals") == {"31970D0243"}
 
 
 def test_effect_on_notification_is_not_a_pending_entry_into_force():

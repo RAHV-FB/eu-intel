@@ -318,14 +318,19 @@ export default function Legislation() {
                   className="select lx-select"
                   value={state.instrument ?? ''}
                   onChange={(e) => update({ instrument: e.target.value || null })}
+                  aria-describedby={`${ids}-instrument-d`}
                 >
                   <option value="">Any type of act</option>
-                  {INSTRUMENTS.map((i) => (
+                  {INSTRUMENTS.filter((i) => (facets.instrument.get(i) ?? 0) > 0 || state.instrument === i).map((i) => (
                     <option key={i} value={i}>
                       {INSTRUMENT_LABEL[i]} ({formatNumber(facets.instrument.get(i) ?? 0)})
                     </option>
                   ))}
                 </select>
+                <span className="meta" id={`${ids}-instrument-d`}>
+                  The adopted act’s type; for files not adopted, the type of act proposed, as Parliament’s Legislative
+                  Observatory records it.
+                </span>
               </div>
               <div className="lx-field">
                 <label htmlFor={`${ids}-year`}>Year proposed</label>

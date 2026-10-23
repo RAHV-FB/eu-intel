@@ -550,6 +550,9 @@ PAST_TITLES = {
 }
 # status.py's in-force explanation for an act with later application dates; reworded for checked dates
 EURLEX_LATER_DATES = "EUR-Lex records later dates from which (parts of) the act apply."
+# The infringement register is read for open cases and cases with a decision since this date
+# (pipeline/sources/implementation.py INFRINGEMENTS_SINCE_YEAR): earlier closed cases are not in the data
+INFRINGEMENTS_FROM = "2019-01-01"
 INDEX_OFFICIAL_TITLE_MAX = 140  # dossiers/index.json only; full titles are in dossiers/<id>.json
 INDEX_TITLE_MAX = 180
 VOTE_LABEL_TITLE_MAX = 200  # a vote titled by Parliament's raw label; the full label stays in `title`
@@ -1136,6 +1139,14 @@ def instrument_from_title(title: str) -> str | None:
     return m.group(1).lower() if m and m.group(1) else None
 
 
+def proposed_instrument(p: Procedure) -> str | None:
+    """The type of act proposed, as the OEIL procedure file records it ("Legislative instrument"). Checked on
+    2026-10-23: it names the same type as the English title of the Commission proposal in Cellar for all 257 files
+    without a linked act that have both (e.g. 2023/0085(COD), COM(2023) 166 "Proposal for a DIRECTIVE ...")."""
+    v = (p.instrument or "").strip().lower()
+    return v if v in ("regulation", "directive", "decision", "recommendation") else None
+
+
 def clean_title(title: str) -> str:
     """Strip legal boilerplate when the remainder is still a meaningful noun phrase."""
     t = re.sub(r"\s+", " ", (title or "").strip()).rstrip(".")
@@ -1260,6 +1271,7 @@ def apply_act_dates(a: LegalAct, e: dict | None) -> LegalAct:
         items = [x for x in e["application"] if x["date"] != eif]
         upd["other_application_dates"] = sorted({x["date"] for x in items})
         upd["partial_application_dates"] = sorted({x["date"] for x in items if x.get("partial")})
+        upd["partial_on_entry_into_force"] = False  # a checked date on that day names its provisions instead
     return a.model_copy(update=upd)
 
 
@@ -1335,8 +1347,32 @@ def load_transposition_checks(curated: Path = CURATED) -> dict[str, dict]:
         if not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates):
             log.warning("curated transposition.yaml: entry %s has a malformed date; ignored", e["celex"])
             continue
+        if e.get("amends") is not None and not _amends_ok(e["amends"]):
+            log.warning("curated transposition.yaml: entry %s has a malformed amends list; ignored", e["celex"])
+            e = {k: v for k, v in e.items() if k != "amends"}
+        ex = e.get("exemption")
+        if ex is not None and not (
+            isinstance(ex, dict) and all(isinstance(ex.get(k), str) and ex[k] for k in ("provision", "quote"))
+            and isinstance(ex.get("countries") or [], list) and set(ex.get("countries") or []) <= set(MEMBER_STATES)
+        ):  # fmt: skip
+            log.warning("curated transposition.yaml: entry %s has a malformed exemption; ignored", e["celex"])
+            e = {k: v for k, v in e.items() if k != "exemption"}
         out[e["celex"]] = e
     return out
+
+
+def _amends_ok(items: Any) -> bool:
+    """transposition.yaml `amends`: [{celex, provision, deadline, further: [{date, provisions}]}]."""
+    def dated(x: Any, *keys: str) -> bool:
+        return isinstance(x, dict) and all(isinstance(x.get(k), str) and x[k] for k in keys) and bool(
+            ISO_DATE_RE.match(x.get("deadline") or x.get("date") or ""))  # fmt: skip
+
+    return isinstance(items, list) and all(
+        dated(x, "celex", "provision", "deadline")
+        and isinstance(x.get("further") or [], list)
+        and all(dated(f, "date", "provisions") for f in x.get("further") or [])
+        for x in items
+    )
 
 
 def apply_transposition_checks(a: LegalAct, e: dict | None) -> LegalAct:
@@ -2345,7 +2381,8 @@ class Builder:
         p = self.council_dated(p)
         if fn is not None:
             try:
-                st = fn(p, acts, train, date.fromisoformat(self.today), others=self.act)  # others: to name acts
+                st = fn(p, acts, train, date.fromisoformat(self.today), others=self.act,  # others: to name acts
+                        votes=self.votes_of.get(p.id, []))  # fmt: skip
                 return self._status_dict(_as_dict(st))
             except Exception as e:  # noqa: BLE001 - never let one dossier break the build
                 log.warning("classify failed for %s: %r", p.id, e)
@@ -2420,10 +2457,12 @@ class Builder:
         return {"text": text, "institution": None, "basis": "derived"}
 
     def amending_deadlines(self, det: dict, acts: list[LegalAct]) -> dict:
-        """A directive's next step, followed by the transposition deadlines still ahead of the directives that
-        have since amended it (CSRD, Directive (EU) 2022/2464: amending Directive (EU) 2026/470, Art. 5(1), is to
-        be transposed by 19 March 2027). Which of an amending directive's deadlines covers the changes to this
-        one is in its text; only its own deadlines are named."""
+        """A directive's next step, followed by what the directives that have since amended it still require. Which
+        of an amending directive's deadlines covers the changes to this one is in its text (data/curated/
+        transposition.yaml `amends`): Directive (EU) 2026/470, Art. 5(1), sets 19 March 2027 for its Articles 1 to 3
+        and 26 July 2028 for Article 4, which amends the CSDDD. Without that, an amending directive's deadline is
+        named only when it records a single one. An amending directive that also repeals this one names the repeal
+        (Directive (EU) 2024/1640, Art. 77: "Directive (EU) 2015/849 is repealed with effect from 10 July 2027")."""
         ns = det["next_step"]
         a = next((x for x in acts if x.act_type == "directive"), None)
         if a is None or det.get("instrument") != "directive" or det["stage"] not in ("published", "in_force"):
@@ -2438,19 +2477,34 @@ class Builder:
                 continue
             if any(x.celex == c for x in acts):
                 continue
-            tr = classify_transposition(m)
-            general = next((x.date for x in tr if x.kind == "deadline" and x.date > self.today), None)
-            specific = [x.date for x in tr if x.kind == "further_deadline" and x.date > self.today]
-            ds = [_long_date(d) for d in specific]
-            dates = ", ".join(ds[:-1]) + " and " + ds[-1] if len(ds) > 1 else "".join(ds)
-            if general:
-                extra = f" (specific provisions by {dates})" if specific else ""
-                notes.append((general, f"{act_label(m)}, which amends this directive, must be transposed by "
-                                       f"{_long_date(general)}{extra}."))  # fmt: skip
-            elif specific:
-                what = "deadlines" if len(specific) > 1 else "deadline"
-                notes.append((specific[0], f"{act_label(m)}, which amends this directive, has a transposition "
-                                           f"{what} for specific provisions still ahead: {dates}."))  # fmt: skip
+            label = act_label(m)
+            if c in a.repealed_by or a.celex in m.repeals:
+                end = _add_days(a.end_of_validity, 1) if a.end_of_validity else None  # the day after its last day
+                if end and end > self.today:
+                    notes.append((end, f"{label} repeals this directive with effect from {_long_date(end)}."))
+                continue
+            recorded = [x.date for x in classify_transposition(m) if x.kind in ("deadline", "further_deadline")]
+            cur = next((x for x in self.transposition_checks.get(c, {}).get("amends") or [] if x["celex"] == a.celex),
+                       None)  # fmt: skip
+            if cur and {cur["deadline"], *(f["date"] for f in cur.get("further") or [])} <= set(m.transposition_deadlines):
+                dated = [(cur["deadline"], None)] + [(f["date"], f["provisions"]) for f in cur.get("further") or []]
+                ahead = [(d, what) for d, what in dated if d > self.today]
+                if not ahead:
+                    continue
+                (first, what), rest = ahead[0], ahead[1:]
+                text = f"{label} amends this directive ({cur['provision']}); " + (
+                    f"{what} must be transposed by {_long_date(first)}" if what
+                    else f"Member States must transpose the amendments by {_long_date(first)}"
+                )  # fmt: skip
+                extra = "; ".join(f"{w} by {_long_date(d)}" for d, w in rest)
+                notes.append((first, text + (f" ({extra})" if extra else "") + "."))
+            elif len(recorded) == 1 and recorded[0] > self.today:
+                notes.append((recorded[0], f"{label}, which amends this directive, must be transposed by "
+                                           f"{_long_date(recorded[0])}."))  # fmt: skip
+            elif len(recorded) > 1 and any(d > self.today for d in recorded):
+                # nothing establishes which of its deadlines concerns the changes to this directive
+                notes.append((min(d for d in recorded if d > self.today), f"{label} also amends this directive; its "
+                              "transposition deadlines differ by provision, as its text sets them."))  # fmt: skip
         if not notes:
             return ns
         return {**ns, "text": " ".join([ns["text"], *(n for _, n in sorted(notes))])}
@@ -2472,6 +2526,10 @@ class Builder:
             "entry_into_force_pending": pending,
             "application_dates": app,
             "partial_application_dates": sorted({d for a in acts for d in a.partial_application_dates}),
+            # EUR-Lex also marks the entry-into-force date as one from which some provisions apply
+            "partial_on_entry_into_force": bool(eif) and any(
+                a.partial_on_entry_into_force for a in acts if a.entry_into_force == eif[0]
+            ),
             # dates checked against the act's text (data/curated/act_dates.yaml), with the provisions
             "application_detail": [
                 {"date": x["date"], "partial": bool(x.get("partial")), "provisions": _squash(x.get("provisions")) or None}
@@ -2725,10 +2783,14 @@ class Builder:
             "transposition_deadlines": a.transposition_deadlines if a.act_type == "directive" else [],
             "in_force": a.in_force, "end_of_validity": a.end_of_validity, "eurlex_url": a.eurlex_url,
             "amends": a.amends, "amended_by": a.amended_by, "repeals": a.repeals, "repealed_by": a.repealed_by,
+            **({"partly_repeals": a.partly_repeals} if a.partly_repeals else {}),  # partial repeals, when recorded
+            **({"partly_repealed_by": a.partly_repealed_by} if a.partly_repealed_by else {}),
             "court_rulings": [ruling_summary(r) for r in getattr(a, "court_rulings", [])],
         }  # fmt: skip
 
     def transposition_status(self, celex: str, country: str, deadline: str | None) -> str:
+        if country in (((self.transposition_checks.get(celex) or {}).get("exemption") or {}).get("countries") or []):
+            return "not_required"  # the directive itself does not require it (Directive (EU) 2016/798, Art. 33(4))
         if celex not in self.measure_celexes:
             return "unavailable"
         if self.measures_by.get((celex, country)):
@@ -2748,11 +2810,12 @@ class Builder:
             "latest_decision_date": ic.latest_decision_date, "status": ic.status, "source": _src(ic.source),
         }  # fmt: skip
 
-    def implementation(self, acts: list[LegalAct]) -> dict | None:
-        dirs = [a for a in acts if a.act_type == "directive"]
-        if not dirs:
-            return None
-        a = dirs[0]
+    def implementations(self, acts: list[LegalAct]) -> list[dict]:
+        """One table per directive of the file, in the order of its acts: 2013/0400(CNS) adopted Council Directive
+        2014/86/EU and Council Directive (EU) 2015/121, each with its own national measures."""
+        return [self.implementation_table(a) for a in acts if a.act_type == "directive"]
+
+    def implementation_table(self, a: LegalAct) -> dict:
         deadline = general_deadline(a)
         countries = []
         for c in sorted(MEMBER_STATES):
@@ -2771,12 +2834,20 @@ class Builder:
         note = "Counts are national measures notified to the Commission and listed by EUR-Lex."
         if a.celex not in self.measure_celexes:
             note = "National transposition data for this directive is not available in this release. " + note
+        older = bool(deadline and deadline < INFRINGEMENTS_FROM)
+        if older:  # cases can start only after the deadline: those closed before 2019 are not in the register data
+            note += (f" Infringement cases: open cases and cases with a Commission decision since "
+                     f"{_long_date(INFRINGEMENTS_FROM)}; cases closed before then are not included.")  # fmt: skip
+        exemption = (self.transposition_checks.get(a.celex) or {}).get("exemption")
         return {
-            "celex": a.celex, "deadline": deadline, "countries": countries,
+            "celex": a.celex, "act": act_label(a), "deadline": deadline, "countries": countries,
             "nim_url": f"https://eur-lex.europa.eu/legal-content/EN/NIM/?uri=CELEX:{a.celex}",
             "source": _src(a.source), "note": note,
             # Denmark/Ireland without measures where neither the recitals nor a Council vote say whether they are bound
             "participation_unknown": [c for c in ("DK", "IE") if not self.participation_recorded(a.celex, c)],
+            **({"infringements_from": INFRINGEMENTS_FROM} if older else {}),
+            # the directive's own exemption from transposition (data/curated/transposition.yaml), quoted
+            **({"exemption": {k: exemption.get(k) for k in ("provision", "quote", "countries")}} if exemption else {}),
         }  # fmt: skip
 
     def with_recorded_events(self, p: Procedure) -> Procedure:
@@ -3035,6 +3106,7 @@ class Builder:
             self.notices_by_ref[norm_ref(n.reference)].append(n)
         relevant = _lazy("pipeline.analysis.status", "relevant_acts")
         self.dossier_acts: dict[str, list[LegalAct]] = {}
+        self.proposed_type: set[str] = set()  # files whose type of act is the one proposed (no typed act linked)
         for pid in self.dossier_ids:
             p = self.proc[pid] = self.with_recorded_events(self.proc[pid])
             acts = self.acts_of.get(pid, [])
@@ -3052,6 +3124,10 @@ class Builder:
                 if a.act_type != "other":
                     instrument = a.act_type
                     break
+            else:  # no adopted act of a known type: the type of act proposed
+                instrument = proposed_instrument(p)
+                if instrument:
+                    self.proposed_type.add(pid)
             instrument = instrument or instrument_from_title(p.title)
             adopted, published = self.adoption_dates(p, acts)
             fut = sorted(
@@ -3121,6 +3197,7 @@ class Builder:
             sources += [psrc] + [_src(a.source) for a in acts]
             sources += [_src(t.source) for t in self.train_of.get(pid, [])]
             sources = _dedupe_sources(sources)
+            tables = self.implementations(acts)  # national implementation, one table per directive
             det = {
                 **summ,
                 "known_as": self.known_as(p, acts),
@@ -3131,7 +3208,8 @@ class Builder:
                 "ep_votes": [self.vote_summary[v.id] for v in votes if v.id in self.vote_summary],
                 "council_votes": self.council_of.get(pid, []),
                 **({"council_votes_in_parts": self.council_in_parts[pid]} if pid in self.council_in_parts else {}),
-                "implementation": self.implementation(acts),
+                "implementation": tables[0] if tables else None,
+                **({"implementation_more": tables[1:]} if len(tables) > 1 else {}),
                 "committees": [{"code": c.code, "name": c.name, "role": c.role} for c in p.committees],
                 "rapporteurs": rapps,
                 "documents": [d.model_dump(mode="json") for d in p.documents],
@@ -3157,15 +3235,19 @@ class Builder:
             det["next_step"] = self.amending_deadlines(det, acts)
             self.dossier_detail[pid] = det
         # officially established relations between dossiers (act amends/repeals another dossier's act)
-        rels = (("amends", "Amends"), ("repeals", "Repeals"), ("repealed_by", "Repealed by"))
+        rels = (("amends", "Amends"), ("repeals", "Repeals"), ("repealed_by", "Repealed by"),
+                ("partly_repeals", "Partly repeals"), ("partly_repealed_by", "Partly repealed by"))  # fmt: skip
         # the inverse of a recorded "amends"/"repeals" is the same official fact
         inv_amended: dict[str, set[str]] = defaultdict(set)
         inv_repealed: dict[str, set[str]] = defaultdict(set)
+        inv_partly: dict[str, set[str]] = defaultdict(set)
         for a in self.s.acts:
             for c in a.amends:
                 inv_amended[c].add(a.celex)
             for c in a.repeals:
                 inv_repealed[c].add(a.celex)
+            for c in a.partly_repeals:
+                inv_partly[c].add(a.celex)
         # an act belongs to the dossiers whose own record supports it (see status.relevant_acts)
         self.act_dossiers = defaultdict(set)
         for pid, acts in self.dossier_acts.items():
@@ -3223,7 +3305,7 @@ class Builder:
                             "id": c, "title": self.related_act_title(c, None), "relation": "Amended by",
                         })  # fmt: skip
                 for attr, label in rels:
-                    extra = inv_repealed.get(a.celex, set()) if attr == "repealed_by" else set()
+                    extra = {"repealed_by": inv_repealed, "partly_repealed_by": inv_partly}.get(attr, {}).get(a.celex, set())
                     for c in sorted(set(getattr(a, attr)) | extra):
                         for other in sorted(self.act_dossiers.get(c, ())):
                             if other != pid:
@@ -3252,8 +3334,10 @@ class Builder:
                 "Split from": 0,
                 "Amended by": 1,
                 "Repealed by": 2,
+                "Partly repealed by": 2,
                 "Amends": 3,
                 "Repeals": 4,
+                "Partly repeals": 4,
             }
             det["related"] = sorted(related.values(), key=lambda r: (order.get(r["relation"], 9), r["id"]))
             dates_set = [
@@ -3463,8 +3547,11 @@ class Builder:
             for a in directives:
                 deadline = general_deadline(a)
                 ds = sorted(self.act_dossiers.get(a.celex, ()))
+                title = self.dossier_summary[ds[0]]["title"] if len(ds) == 1 else a.title
+                if len(ds) == 1 and sum(x.act_type == "directive" for x in self.dossier_acts.get(ds[0], [])) > 1:
+                    title = f"{act_label(a)}: {title}"  # one of the file's directives (2013/0400(CNS) has two)
                 trans.append({
-                    "celex": a.celex, "title": self.dossier_summary[ds[0]]["title"] if len(ds) == 1 else a.title,
+                    "celex": a.celex, "title": title,
                     "dossier_id": ds[0] if len(ds) == 1 else None, "deadline": deadline,
                     "measures": len(self.measures_by.get((a.celex, code), [])),
                     "status": self.transposition_status(a.celex, code, deadline),
@@ -3593,7 +3680,8 @@ class Builder:
             key=lambda d: (d["adopted"], d["id"]), reverse=True,
         )[:12]  # fmt: skip
         recently_adopted = [{"dossier_id": d["id"], "title": d["title"], "subtitle": d["status_label"],
-                             "date": d["adopted"], "badge": d["instrument"]} for d in adopted]  # fmt: skip
+                             "date": d["adopted"],  # the act's type; not the proposed one, which it can differ from
+                             "badge": None if d["id"] in self.proposed_type else d["instrument"]} for d in adopted]  # fmt: skip
         debate = sorted(
             (d for d in summ.values() if d["stage"] in ACTIVE_STAGES and d["type"] in LEGISLATIVE_TYPES
              and d["last_event"] and _days_between(d["last_event"], today) <= 120),
@@ -3944,8 +4032,10 @@ class Builder:
             notes.append("National transposition measures: not available in this release.")
         if s.infringements:
             notes.append(f"Infringements: {len(s.infringements):,} cases from the European Commission's infringement "
-                         "decisions register, shown separately from transposition data. A case is linked to a "
-                         "directive only when the register names it as the legal basis.")  # fmt: skip
+                         "decisions register, shown separately from transposition data: all open cases and all cases "
+                         f"with a Commission decision since {_long_date(INFRINGEMENTS_FROM)}; cases closed before then "
+                         "are not included. A case is linked to a directive only when the register names it as the "
+                         "legal basis.")  # fmt: skip
         else:
             notes.append("Infringement cases: not available in this release.")
         if not s.indicators:

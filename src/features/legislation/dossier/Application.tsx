@@ -14,6 +14,7 @@ const STATUS_ORDER: TranspositionStatus[] = [
   'deadline_not_reached',
   'no_deadline',
   'not_participating',
+  'not_required',
   'unavailable',
 ];
 
@@ -104,7 +105,10 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
                 <td role="cell">
                   <StackLabel>Cases</StackLabel>
                   {c.infringements.length === 0 ? (
-                    <span className="meta">None in the dataset</span>
+                    <span className="meta">
+                      None in the dataset
+                      {impl.infringements_from && ` (cases closed before ${impl.infringements_from.slice(0, 4)} not included)`}
+                    </span>
                   ) : (
                     <ul className="tp-inf">
                       {c.infringements.map((inf) => (
@@ -141,6 +145,15 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
           national measures were due.
         </p>
       )}
+      {impl.exemption && (
+        <p className="meta tp-optout">
+          {impl.exemption.countries?.length
+            ? '“Not required by the directive” follows the directive’s own text'
+            : 'The directive provides a derogation from transposition'}{' '}
+          ({impl.exemption.provision}): “{impl.exemption.quote}”
+          {!impl.exemption.countries?.length && ' It names no country, so “No measures found” may reflect it.'}
+        </p>
+      )}
       {impl.countries.some((c) => c.status === 'not_participating') && (
         <p className="meta tp-optout">
           “Not bound” means that the directive itself (in its recitals) or the Council’s official voting result records
@@ -152,11 +165,48 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
   );
 }
 
+/** A directive's national measures: the table, what its statuses mean, and the EUR-Lex links. */
+function NationalTable({ d, impl, celex }: { d: DossierDetail; impl: DossierImplementation | null | undefined; celex?: string }) {
+  const nim = impl?.celex ?? celex;
+  return impl && impl.countries.length > 0 ? (
+    <>
+      <ImplementationTable impl={impl} />
+      <p className="dz-caveat">
+        “Measures notified” means that at least one national measure was notified to the Commission; it does{' '}
+        <strong>not</strong> show that transposition is complete or correct, and the Commission may still have a case
+        open. “No measures found in the available dataset” is <strong>not</strong> proof that a country has failed to act: the
+        dataset can be incomplete, existing national law may already meet the directive’s requirements, and some directives
+        exempt certain Member States from transposing them or are not addressed to all of them. Whether a country has
+        breached EU law is for the Commission to pursue (<Term id="infringement">infringement cases</Term>) and,
+        ultimately, for the Court of Justice to decide. {impl.note}
+        {earlierNotified(d, impl) &&
+          ' Some notification dates are earlier than the directive: EUR-Lex can list, for a new directive, national measures notified for an earlier act.'}
+      </p>
+      <p className="meta">
+        <ExtLink href={impl.nim_url}>National transposition measures on EUR-Lex</ExtLink> · <SourceLink source={impl.source} />
+      </p>
+    </>
+  ) : (
+    <p className="dz-none">
+      <strong>{TRANSPOSITION_LABEL.unavailable}.</strong> National implementation data for this directive is not in our
+      dataset.
+      {nim && safeUrl(NIM_URL(nim)) && (
+        <>
+          {' '}
+          You can check the <ExtLink href={NIM_URL(nim)}>national transposition measures on EUR-Lex</ExtLink>.
+        </>
+      )}
+    </p>
+  );
+}
+
 /** How the law reaches each Member State: transposition for directives; direct application for regulations. */
 export function NationalApplication({ d, today }: { d: DossierDetail; today: ISODate }) {
   const instrument: LegalInstrument | null = d.instrument ?? d.acts[0]?.act_type ?? null;
   const adopted = ADOPTED_STAGES.has(d.stage);
   const impl = d.implementation;
+  // one table per directive of the file (2013/0400(CNS) adopted two)
+  const tables = [impl, ...(d.implementation_more ?? [])].filter((t): t is DossierImplementation => !!t);
   const celex = impl?.celex ?? d.acts.find((a) => a.act_type === 'directive')?.celex ?? d.celex[0];
   const tr = transpositionDates(d.application);
   const general: ISODate | null = impl?.deadline ?? tr.find((x) => x.kind === 'deadline')?.date ?? null;
@@ -223,7 +273,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
           A <Term id="directive">directive</Term> sets goals that each Member State must reach through its own national law.
           Governments notify the Commission of the measures they adopt (<Term id="transposition">transposition</Term>).
         </p>
-        {general && (
+        {general && tables.length <= 1 && (
           <p className="dz-deadline">
             Transposition deadline:{' '}
             <strong>
@@ -233,41 +283,31 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
             {endedNote(general)}
           </p>
         )}
-        {further.length > 0 && <p className="meta">Deadline{further.length > 1 ? 's' : ''} for specific provisions: {dateList(further)}</p>}
-        {applies.length > 0 && (
+        {tables.length <= 1 && further.length > 0 && <p className="meta">Deadline{further.length > 1 ? 's' : ''} for specific provisions: {dateList(further)}</p>}
+        {tables.length <= 1 && applies.length > 0 && (
           <p className="meta">
             Application date{applies.length > 1 ? 's' : ''} for the national measures: {dateList(applies)}
           </p>
         )}
-        {other.length > 0 && <p className="meta">Other date{other.length > 1 ? 's' : ''} recorded by EUR-Lex: {dateList(other)}</p>}
-        {impl && impl.countries.length > 0 ? (
-          <>
-            <ImplementationTable impl={impl} />
-            <p className="dz-caveat">
-              “Measures notified” means that at least one national measure was notified to the Commission; it does{' '}
-              <strong>not</strong> show that transposition is complete or correct, and the Commission may still have a case
-              open. “No measures found in the available dataset” is <strong>not</strong> proof that a country has failed to act: the
-              dataset can be incomplete, and existing national law may already meet the directive’s requirements. Whether a country has
-              breached EU law is for the Commission to pursue (<Term id="infringement">infringement cases</Term>) and,
-              ultimately, for the Court of Justice to decide. {impl.note}
-              {earlierNotified(d, impl) &&
-                ' Some notification dates are earlier than the directive: EUR-Lex can list, for a new directive, national measures notified for an earlier act.'}
-            </p>
-            <p className="meta">
-              <ExtLink href={impl.nim_url}>National transposition measures on EUR-Lex</ExtLink> · <SourceLink source={impl.source} />
-            </p>
-          </>
+        {tables.length <= 1 && other.length > 0 && <p className="meta">Other date{other.length > 1 ? 's' : ''} recorded by EUR-Lex: {dateList(other)}</p>}
+        {tables.length > 1 ? (
+          tables.map((t) => (
+            <div key={t.celex} className="dz-sub" id={`national-${t.celex}`}>
+              <h3>{t.act ?? t.celex}</h3>
+              {t.deadline && (
+                <p className="dz-deadline">
+                  Transposition deadline:{' '}
+                  <strong>
+                    <time dateTime={t.deadline}>{formatDate(t.deadline, true)}</time>
+                  </strong>
+                  {t.deadline > today && <span className="dz-upcoming">upcoming</span>}
+                </p>
+              )}
+              <NationalTable d={d} impl={t} />
+            </div>
+          ))
         ) : (
-          <p className="dz-none">
-            <strong>{TRANSPOSITION_LABEL.unavailable}.</strong> National implementation data for this directive is not in our
-            dataset.
-            {celex && safeUrl(NIM_URL(celex)) && (
-              <>
-                {' '}
-                You can check the <ExtLink href={NIM_URL(celex)}>national transposition measures on EUR-Lex</ExtLink>.
-              </>
-            )}
-          </p>
+          <NationalTable d={d} impl={impl} celex={celex} />
         )}
       </>
     );

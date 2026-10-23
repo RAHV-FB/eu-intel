@@ -6,7 +6,7 @@ pipeline runs in CI without credentials). Details are refined from each ingestio
 | Source | Interface | Reachable | Used for | Notes |
 | --- | --- | --- | --- | --- |
 | EP Open Data API v2 `data.europarl.europa.eu/api/v2` | JSON-LD REST | ✅ | MEPs, groups, national parties, committees, procedures + events, plenary decisions **with individual roll-call ballots** | Anonymous; paginated (`offset`/`limit`); stable ELI-style ids (`eli/dl/proc/2021-0106`, `person/197443`) |
-| EP Legislative Observatory (OEIL) | HTML | ✅ | Status label, subjects, COM references, Commission/Council key events, final-act CELEX | One procedure-file page per procedure, ≥1 s apart; fills what the EP API does not carry |
+| EP Legislative Observatory (OEIL) | HTML | ✅ | Status label, subjects, COM references, Commission/Council key events, final-act CELEX, type of act proposed | One procedure-file page per procedure, ≥1 s apart; fills what the EP API does not carry |
 | EP Legislative Train Schedule | HTML | ✅ | Official status of major files incl. "blocked" monitoring | No API; controlled crawl of theme + file pages |
 | EP `doceo` documents (RCV XML/PDF) | HTML/XML | ⚠️ 202 bot challenge | — | Roll-calls come from the API instead |
 | Cellar SPARQL `publications.europa.eu/webapi/rdf/sparql` | SPARQL 1.1 | ✅ | Legal acts (CELEX, ELI, dates incl. phased entry-into-force/application, procedure links, amendments), national implementing measures | Batched queries; CDM ontology |
@@ -168,7 +168,10 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   value tagged EV (else PE) of `resource_legal_date_entry-into-force` — the property mixes EV/PE/MA dates, and in
   166 acts the earliest value is not the entry into force. Other dates are kept as "further application dates"
   without claiming which provisions they concern, except that dates marked MA/PART or PE/PART (in the type or in
-  the `comment_on_date` annotation) are shown as "some provisions apply from". A value of `1001-01-01` (comment
+  the `comment_on_date` annotation) are shown as "some provisions apply from"; so is the entry-into-force date
+  when Cellar marks it that way too (`partial_on_entry_into_force`, 78 acts: DMA, Art. 54, "Article 3(6) and (7)
+  and Articles 40, 46, 47, 48, 49 and 50 shall apply from 1 November 2022", its entry into force), in the "When it
+  applies" box and the in-force status. A value of `1001-01-01` (comment
   DATNOT, "date of notification") only says that the date is not recorded; its date type says what kind of date
   it is. Type EV (entry into force) with a comment pointing to an article of the act ("V ART 2.2"): the act enters
   into force on a condition it sets, not yet recorded as met. The Electoral Act amendments (2018/994, 2026/1296)
@@ -181,7 +184,9 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   is about non-legislative acts, and these are legislative acts.
 - End of validity: the `comment_on_date` annotation on each `resource_legal_date_end-of-validity` value (fd_330
   codes: A/PAR repealed by, AI/PAR implicitly repealed by, R/PAR replaced by, FIN/VAL/PART partial end of
-  validity, with the acts it names) is kept as `validity_notes`. A no-longer-in-force act names the repealing act
+  validity, with the acts it names) is kept as `validity_notes`. The end of validity is the act's last day of validity
+  (Directive 95/46/EC: 24 May 2018, repealed by the GDPR with effect from 25 May 2018): an act is "No longer in
+  force" from the day after, which is the date its status gives. A no-longer-in-force act names the repealing act
   (by its number, linked to its file or to EUR-Lex): the whole-act repeal link, else the act in that annotation.
   When the repealing act's official title says "(codification)" or "(recast)" and it is later than the act, the
   status says that the rules continue in it. An end of validity earlier than the act itself (Regulation 1377/2014:
@@ -207,8 +212,13 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   application date before the general deadline in a paragraph that sets no deadline (VAT in the digital age,
   Art. 6(1): Member States "may apply ... from 14 April 2025"), or one the curated file marks. A directive with no
   transposition date (e.g. a codification) is described as such, never as one EU countries must transpose. The
-  next step of a directive also names the transposition deadlines still ahead of the directives that have since
-  amended it (CSRD: Directive (EU) 2026/470 by 19 Mar 2027).
+  next step of a directive also names what the directives that have since amended it still require: the deadline
+  that covers their changes to it, as their transposition article sets it (`amends` in the curated file;
+  Directive (EU) 2026/470, Art. 5(1): Article 3, which amends the CSRD, by 19 Mar 2027; Article 4, which amends the
+  CSDDD, by 26 Jul 2028), else the amending directive's deadline only when it records a single one; an amending
+  directive with several deadlines and no such check is named without dates. An amending directive that also
+  repeals the directive names the repeal instead (AMLD4: Directive (EU) 2024/1640 repeals it with effect from
+  10 Jul 2027).
 - Withdrawals and replacements: Cellar procedure events WDW_byCOM / RPL_byCOM (`procedure_notices.json`, 272
   since 2014). OEIL often never records them (CCTB/CCCTB, Return Directive recast, standard-essential patents).
   A notice is ignored when the procedure went on to adopt the act (a later Council adoption, signature or
@@ -221,7 +231,12 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   `data/curated/act_dates.yaml`, each date citing the article that sets it (DSA Art. 93, AI Act Art. 113 as
   amended by Regulation 2026/1744, Return Regulation Art. 50, and three acts whose entry into force is tied to
   another act's: Regulation 2021/768 Art. 9, Decision 2015/457 Art. 3(2), Regulation 608/2014 Art. 9, where
-  Cellar gives the application date or the other act's date). A date set by an amending act cites that act in
+  Cellar gives the application date or the other act's date). Dates a corrigendum set, which the text as first
+  published does not give, cite the corrigendum (AMMR, Regulation (EU) 2024/1351, Art. 85: "It shall apply from
+  1 July 2026" as published, 12 June 2026 after the corrigendum OJ L, 2025/90929; also Regulations (EU) 2024/1347,
+  2024/1359, 2024/1252 and 2022/2560); corrigenda are otherwise not read. An entry with a reason only explains
+  recorded dates (Directives (EU) 2016/797 and 2016/798: 31 October 2020, the optional extension added by Directive
+  (EU) 2020/700). A date set by an amending act cites that act in
   the timeline, and the amending act's page lists the dates it set (`dates_set_for`); the status sentence says
   that the act's text, not EUR-Lex, sets the later dates. A checked date on the entry-into-force day is named in
   the entry-into-force event. The snapshot keeps the source values; `validate` warns about application dates a
@@ -239,10 +254,16 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   directives from 1999, e.g. "Regulation 2026/2102"), followed by its file's short title when it has one; an
   act this file amends or repeals, or that repeals it, by its file's title too, unless that is an "Amending …"
   title.
-- Known gaps: 352 acts without signature date, 24 directives without transposition date, only explicit whole-act
-  repeals as repeal links (an implicit repeal is used only from the end-of-validity annotation), partial ends of
-  validity are described only for decisions that take effect on notification, acts whose procedure is only in
-  free text are unlinked.
+- Partial repeals: a repeal link that every Cellar annotation limits to a provision or marks as partial (role
+  AP) is kept apart (`partly_repeals`, `partly_repealed_by`: 19 links on 13 acts, e.g. Decision 2014/335/EU,
+  Euratom, partly repealed by Decision (EU, Euratom) 2020/2053, whose Art. 11(1) reads "Subject to paragraph 2,
+  Decision 2014/335/EU, Euratom is repealed"). It is listed with the act and in the related files ("Partly
+  repealed by", "Partly repeals"), and an in-force act's status names it; it never makes an act "no longer in
+  force", which follows EUR-Lex's in-force flag and end of validity.
+- Known gaps: 352 acts without signature date, 24 directives without transposition date, implicit repeals are
+  used only from the end-of-validity annotation, partial ends of validity are described only for decisions that
+  take effect on notification, acts whose procedure is only in free text are unlinked. The timeline does not list
+  partial repeals.
 
 ### Procedure steps as shown (`build.py` `procedure_event`, `proposal_date`, `adoption_dates`)
 - Who acted is read from the documents: OEIL lists a consent file's Commission proposal as a "Preparatory
@@ -258,7 +279,10 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   plenary decision in a file that has a later one (2013/0255(APP), 2013/0361(APP)) are interim resolutions, not
   its consent. Statutes adopted by Parliament with the Council's consent (Articles 223(2) and 228(4) TFEU,
   `status.PARLIAMENT_ADOPTS`, or an act titled "of the European Parliament of …") show the Council's consent and
-  Parliament's adoption. Consultation and consent files show no readings.
+  Parliament's adoption. Consultation and consent files show no readings. The status of a consent file says
+  "Parliament gave its consent" (or "Consent refused by Parliament") when the final votes linked to the file on
+  the day of Parliament's decision have that officially recorded outcome (decision or minutes): 2025/0313(APP),
+  vote 197472 of 6 October 2026, adopted 462-121-75. Otherwise it says only that Parliament voted on consent.
 - Parliament's decision at a sitting that the EP API records as amendments (`PLENARY_AMEND`, OEIL "Decision by
   Parliament") is, in a consultation file, Parliament's opinion ("Parliament delivered its opinion", 2018/0173(CNS):
   T8-0415/2018 "Approves the Commission proposal as amended") and, in a consent file, its decision on consent: a
@@ -281,7 +305,14 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   differ from their text (by up to six weeks: 2015/0283(COD), OEIL 18 April 2017, "decision of the Council of
   29 May 2017"). Acts dated from OEIL whose date Cellar confirms (341) were not read.
 - Negotiations: "Negotiations with the Council" runs from the first recorded trilogue after Parliament's
-  mandate; mandate decisions (not their announcement in plenary) are key timeline steps and activity items. A
+  mandate; mandate decisions (not their announcement in plenary) are key timeline steps and activity items.
+  Parliament holds a mandate from its own decision (a referral back to committee for negotiations, a plenary
+  vote, or its confirmation of a committee's decision) or from the announcement in plenary of a committee's
+  decision. A committee's decision before Parliament's first reading that is not yet announced (OEIL "Committee
+  decision to open interinstitutional negotiations with report adopted in committee", 2025/0255(COD)) is shown
+  as "Committee decided to negotiate with the Council", and a decision Parliament rejected (2025/0045(COD),
+  22 October 2025) as "Parliament rejected the committee's decision to negotiate"; neither is a mandate, so the
+  file stays at the proposal stage. A
   first-reading vote followed by a referral back to committee in the same vote item (a "mandate" vote) is
   shown as "Parliament voted amendments to the proposal" and a mandate, also when the EP API already records
   a first-reading position and OEIL has not recorded the referral (2025/0393(COD)).
@@ -308,6 +339,14 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   the Council's, signature, publication, the act's dates), not by record id.
 - Rejection by Parliament: a final vote officially recorded as rejected, or an adopted motion to reject the
   proposal (2023/0413(COD), vote 179804), unless OEIL shows the file past Parliament's first reading.
+- Type of act (`instrument`): the type of the file's adopted act; for a file without a linked act of a known type,
+  the type of act proposed as the OEIL procedure file records it ("Legislative instrument"), else as the procedure
+  title names it. On 23 October 2026 OEIL's entry named the same type as the English title of the Commission
+  proposal in Cellar for all 257 files without a linked act that have both (2023/0085(COD): "Directive";
+  COM(2023) 166, "Proposal for a DIRECTIVE OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL on substantiation and
+  communication of explicit environmental claims"). The adopted act can differ (2016/0284(COD) was proposed as a
+  regulation and became Directive (EU) 2019/789). The dossier page marks a proposed type "(as proposed)", and the
+  explorer's filter says how the type is read.
 - OEIL has no procedure file for split parents (e.g. 2016/0224(COD)) or for 2020/3521(COD); those pages carry no
   OEIL link (`oeil_url` null). Regulation 2015/2422 (2011/0901(COD) in EUR-Lex) links OEIL's 2011/0901B(COD).
 - Timeline sources: a step whose source is an EP Open Data API record (`/api/v2/events/…`, `/procedures/…`:
@@ -339,7 +378,22 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
 - Infringements: the Commission register's JSON API
   (`POST https://ec.europa.eu/implementing-eu-law/search-infringement-decisions/api/infringements`): all open cases
   plus all cases with a decision since 2019 — 7,195 cases, 2,006 open, 1,067 open non-communication cases. Stage is
-  the register's latest decision type, verbatim. An act is linked only when the register names it.
+  the register's latest decision type, verbatim. An act is linked only when the register names it. Cases closed
+  before 2019 are not in the data: closed non-communication cases of directives with a deadline before 2019 are
+  missing (32014L0051: 20 of the register's 30 cases, closed in 2017–18). The coverage note, the About page and the
+  country pages say so, and a directive's table whose deadline is before 2019 (`infringements_from`, 87 files)
+  repeats it in its note and in each "None in the dataset" cell.
+- One table per directive: a file that adopted several directives has a table for each, with its own heading,
+  deadline and counts (`implementation` for the first, `implementation_more` for the others; 2013/0400(CNS):
+  Directive 2014/86/EU and Directive (EU) 2015/121, whose Irish and Swedish measures concern the second only).
+  Country pages name each directive's number in its row.
+- Exemptions written into a directive (`exemption` in `data/curated/transposition.yaml`, quoted): the countries a
+  provision exempts from the whole directive show "Not required by the directive" (`not_required`) instead of "No
+  measures found": Directive (EU) 2016/798, Art. 33(4), Cyprus and Malta "for as long as no rail system is
+  established within their territories"; Directive (EU) 2016/1629, Art. 40, addressed to all Member States except
+  eleven. A derogation that names no country (Directive (EU) 2017/2397, Art. 39(4), which Directive (EU) 2021/1233
+  applies) or covers some articles only (Directive (EU) 2016/797, Art. 57(5)) is quoted under the table. The next
+  step after a passed deadline speaks of "the Member States it binds" (Art. 288 TFEU).
 - Country indicators (Single Market Scoreboard): **unavailable** — host returns a CloudFront 403 to scripts;
   data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed.
 
@@ -436,6 +490,12 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   verbatim. "Blocked" is the Train's own classification (no progress by a co-legislator for at least nine
   months); 35 Blocked files name the blocking institution(s). The Train updates monthly and can lag recorded
   facts, so EP/EUR-Lex records take precedence.
+- Procedure discovery: the EP API's paged procedure list omits some files, so `ep_procedures` also requests the
+  in-scope procedures that EUR-Lex acts, EP votes and (since October 2026) Legislative Train files name. The
+  snapshot predates the Train's addition: the next refresh requests 7 files the Train names and the snapshot
+  lacks (2017/0398(COD), 2018/0073(CNS) digital services tax, 2018/0226(COD), 2018/0245(CNS), 2018/0302(COD),
+  2019/0197(COD), 2022/0430(CNS)). Files that only Cellar's own procedure list names (2018/0802(CNS)) are still
+  not discovered.
 
 ### Licences
 - EP open data: CC BY 4.0 (stated by the EP Open Data Portal).

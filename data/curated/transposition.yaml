@@ -23,6 +23,16 @@
 #   provision     the provision setting the general deadline
 #   quote         that provision, verbatim (long lists of articles shortened with [...])
 #   note          optional; what the act's other recorded dates are
+#   exemption     optional: the directive's own provision exempting Member States from transposing it, quoted:
+#                 {provision, quote, countries} (countries: only when the provision names them and exempts them from the
+#                 whole directive; their rows show "Not required by the directive"); without countries (a condition, or
+#                 some articles only) the provision is quoted on the page
+#   amends        optional, for an amending directive: which of its deadlines covers its changes to each directive it
+#                 amends, as its transposition article sets them: [{celex, provision (its article making the
+#                 changes), deadline, further: [{date, provisions}] (later deadlines for some of those changes)}];
+#                 every date must be one EUR-Lex records for the amending directive. The amended directive's next
+#                 step names only these deadlines (Directive (EU) 2026/470, Art. 5(1): Articles 1 to 3 by 19 March
+#                 2027, Article 4, which amends Directive (EU) 2024/1760, by 26 July 2028)
 #   source        {label, url} the text checked (Cellar, English)
 #   reviewed      date of the check
 #
@@ -61,6 +71,66 @@
   source: {label: "Directive (EU) 2015/2436, Article 54", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32015L2436"}
   reviewed: "2026-10-23"
 
+- celex: "32016L0797"  # Railway Interoperability Directive
+  deadline: "2019-06-16"
+  other: ["2020-10-31"]
+  provision: "Art. 57(1)"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with Articles 1 and 2, Article 7(1) to (4) and (6), [...] Article 54 and Annexes I, II, III and IV by 16 June
+    2019.
+  note: >-
+    31 October 2020: Article 57(2a), inserted by Directive (EU) 2020/700: Member States that had extended the
+    transposition period by one year under Article 57(2) "may further extend it until 31 October 2020" and apply
+    their measures from that date. An optional extension of the whole period, not a deadline for specific
+    provisions.
+  source: {label: "Directive (EU) 2016/797, Article 57; Directive (EU) 2020/700, Article 1", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016L0797"}
+  reviewed: "2026-10-23"
+  exemption:
+    provision: "Art. 57(5)"
+    quote: >-
+      The obligation to transpose and implement Article 13, Article 14(1) to (8), (11) and (12), Article 15(1) to
+      (9), Article 16(1), Articles 19 to 26, Articles 45, 46 and 47, Article 49(1) to (4) and Article 54 of this
+      Directive shall not apply to Cyprus and Malta for as long as no rail system is established within their
+      territories.
+
+- celex: "32016L0798"  # Railway Safety Directive
+  deadline: "2019-06-16"
+  other: ["2020-10-31"]
+  provision: "Art. 33(1)"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with Articles 2, 3, 4, Articles 8 to 11, [...] Article 26(3) and Annexes II and III by 16 June 2019.
+  note: >-
+    31 October 2020: Article 33(2a), inserted by Directive (EU) 2020/700: Member States that had extended the
+    transposition period by one year under Article 33(2) "may further extend it until 31 October 2020" and apply
+    their measures from that date. An optional extension of the whole period, not a deadline for specific
+    provisions.
+  source: {label: "Directive (EU) 2016/798, Article 33; Directive (EU) 2020/700, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016L0798"}
+  reviewed: "2026-10-23"
+  exemption:
+    countries: ["CY", "MT"]
+    provision: "Art. 33(4), first subparagraph"
+    quote: >-
+      The obligation to transpose and implement this Directive shall not apply to Cyprus and Malta for as long as
+      no rail system is established within their territories.
+
+- celex: "32016L1629"  # Technical requirements for inland waterway vessels
+  deadline: "2018-10-07"
+  provision: "Art. 37(1), first subparagraph"
+  quote: >-
+    Without prejudice to Article 40, Member States shall bring into force the laws, regulations and administrative
+    provisions necessary to comply with this Directive, at the latest by 7 October 2018 and which shall apply from
+    this date.
+  exemption:
+    countries: ["DK", "EE", "IE", "GR", "ES", "CY", "LV", "MT", "PT", "SI", "FI"]
+    provision: "Art. 40"
+    quote: >-
+      This Directive is addressed to the Member States except Denmark, Estonia, Ireland, Greece, Spain, Cyprus,
+      Latvia, Malta, Portugal, Slovenia and Finland.
+  source: {label: "Directive (EU) 2016/1629, Articles 37 and 40", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016L1629"}
+  reviewed: "2026-10-23"
+
 - celex: "32016L2284"  # National emission ceilings
   deadline: "2018-07-01"
   provision: "Art. 20(1), first subparagraph"
@@ -69,6 +139,20 @@
     with this Directive by 1 July 2018.
   note: "15 February 2017: Article 10(2) only (second subparagraph)."
   source: {label: "Directive (EU) 2016/2284, Article 20", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016L2284"}
+  reviewed: "2026-10-23"
+
+- celex: "32017L2397"  # Professional qualifications in inland navigation
+  deadline: "2022-01-17"
+  provision: "Art. 39(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 17 January 2022.
+  exemption:
+    provision: "Art. 39(4)"
+    quote: >-
+      By way of derogation from paragraph 1 of this Article, a Member State shall not be obliged to transpose this
+      Directive as long as inland waterway navigation is not technically possible on its territory.
+  source: {label: "Directive (EU) 2017/2397, Article 39", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32017L2397"}
   reviewed: "2026-10-23"
 
 - celex: "32017L2455"  # VAT for e-commerce
@@ -155,6 +239,20 @@
   source: {label: "Directive (EU) 2019/1023, Article 34", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L1023"}
   reviewed: "2026-10-23"
 
+- celex: "32021L1233"  # Recognition of third-country inland navigation qualifications
+  deadline: "2022-01-17"
+  provision: "Art. 2(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 17 January 2022.
+  exemption:
+    provision: "Art. 2(1), third subparagraph, applying Article 39(4) of Directive (EU) 2017/2397"
+    quote: >-
+      The derogation laid down in Article 39(4) of Directive (EU) 2017/2397 shall apply to this Directive, mutatis
+      mutandis.
+  source: {label: "Directive (EU) 2021/1233, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32021L1233"}
+  reviewed: "2026-10-23"
+
 - celex: "32023L0959"  # EU Emissions Trading System (2023 amendments)
   deadline: "2023-12-31"
   provision: "Art. 3(1), first subparagraph"
@@ -233,6 +331,9 @@
     10 July 2029.
   source: {label: "Directive (EU) 2024/1640, Article 78", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1640"}
   reviewed: "2026-10-23"
+  amends:
+    - {celex: "32015L0849", provision: "Article 74", deadline: "2025-07-10"}
+    - {celex: "32019L1937", provision: "Article 75", deadline: "2027-07-10"}
 
 - celex: "32024L1654"  # Access to bank account registers
   deadline: "2027-07-10"
@@ -243,6 +344,11 @@
   note: "10 July 2029: Article 1, points (4) and (5) (second subparagraph)."
   source: {label: "Directive (EU) 2024/1654, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1654"}
   reviewed: "2026-10-23"
+  amends:
+    - celex: "32019L1153"
+      provision: "Article 1"
+      deadline: "2027-07-10"
+      further: [{date: "2029-07-10", provisions: "those in Article 1, points (4) and (5),"}]
 
 - celex: "32024L1711"  # Electricity market design
   deadline: "2025-01-17"
@@ -252,6 +358,26 @@
     with this Directive by 17 January 2025.
   note: "17 July 2026: Article 2, points (2) and (5) (second subparagraph)."
   source: {label: "Directive (EU) 2024/1711, Article 3", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1711"}
+  reviewed: "2026-10-23"
+
+- celex: "32025L0025"  # Digital tools and processes in company law
+  deadline: "2027-07-31"
+  applies_from: "2028-07-31"
+  provision: "Art. 4(1) and (2)"
+  quote: >-
+    Member States shall adopt and publish, by 31 July 2027, the laws, regulations and administrative provisions
+    necessary to comply with this Directive. [...] Member States shall apply the measures referred to in paragraph 1
+    from 31 July 2028.
+  note: >-
+    1 August 2028: Article 19(2), point (i), and Article 19b of Directive (EU) 2017/1132, applied from 1 August 2029
+    (Art. 4(3)).
+  amends:
+    - {celex: "32009L0102", provision: "Article 1", deadline: "2027-07-31"}
+    - celex: "32017L1132"
+      provision: "Article 2"
+      deadline: "2027-07-31"
+      further: [{date: "2028-08-01", provisions: "Article 19(2), point (i), and Article 19b of this directive"}]
+  source: {label: "Directive (EU) 2025/25, Article 4", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L0025"}
   reviewed: "2026-10-23"
 
 - celex: "32025L2205"  # Driving licences
@@ -268,6 +394,8 @@
     application date as well.
   source: {label: "Directive (EU) 2025/2205, Article 29", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L2205"}
   reviewed: "2026-10-23"
+  amends:
+    - {celex: "32022L2561", provision: "Article 27", deadline: "2028-11-26"}
 
 - celex: "32026L0470"  # Omnibus I (sustainability reporting and due diligence)
   deadline: "2027-03-19"
@@ -278,6 +406,11 @@
   note: "26 July 2028: Article 4, which amends Directive (EU) 2024/1760 (second subparagraph)."
   source: {label: "Directive (EU) 2026/470, Article 5", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L0470"}
   reviewed: "2026-10-23"
+  amends:
+    - {celex: "32006L0043", provision: "Article 1", deadline: "2027-03-19"}
+    - {celex: "32013L0034", provision: "Article 2", deadline: "2027-03-19"}
+    - {celex: "32022L2464", provision: "Article 3", deadline: "2027-03-19"}
+    - {celex: "32024L1760", provision: "Article 4", deadline: "2028-07-26"}
 
 - celex: "32026L0799"  # Harmonisation of insolvency law
   deadline: "2029-01-22"
@@ -300,6 +433,8 @@
   note: "1 June 2029: the obligations under Article 20(5) and Article 21 (second subparagraph)."
   source: {label: "Directive (EU) 2026/1021, Article 37", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L1021"}
   reviewed: "2026-10-23"
+  amends:
+    - {celex: "32017L1371", provision: "Article 36", deadline: "2028-06-01"}
 
 - celex: "32026L1472"  # Victims' rights
   deadline: "2028-07-02"

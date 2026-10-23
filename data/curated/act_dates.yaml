@@ -1,4 +1,6 @@
-# Corrections to the dates EUR-Lex (Cellar) records for an act, checked against the act's own text.
+# Corrections to the dates EUR-Lex (Cellar) records for an act, checked against the act's own text; also dates
+# that a corrigendum set (EUR-Lex records the corrected date, which the text as first published does not give: the
+# date cites the corrigendum), and recorded dates whose meaning the text explains (an entry with a reason only).
 #
 # Cellar's date metadata is usually right, but a few values are wrong (e.g. a wrong year) and Cellar
 # does not always update a base act's dates after an amending act changes them. Each entry replaces,
@@ -142,4 +144,99 @@
   sources:
     - {label: "Regulation (EU, Euratom) No 608/2014, Article 9", url: "https://eur-lex.europa.eu/eli/reg/2014/608/oj"}
     - {label: "Decision 2014/335/EU, Euratom, Article 11", url: "https://eur-lex.europa.eu/eli/dec/2014/335/oj"}
+  reviewed: "2026-10-23"
+
+# Dates set by a corrigendum: EUR-Lex records the corrected date, which the text as first published does not give.
+# The corrected dates cite the corrigendum (source 1).
+
+- celex: "32022R2560"  # Foreign Subsidies Regulation
+  reason: >-
+    Article 54 as published gives 11 January 2023, 12 July 2023, 12 October 2023 and 12 January 2024. The
+    corrigendum of 17 September 2024 (OJ L, 2024/90559) moved each date to the following day, the dates EUR-Lex
+    records.
+  application:
+    - {date: "2023-01-12", partial: true, provisions: "Articles 47 and 48 (Art. 54(3), as corrected)", source: 1}
+    - {date: "2023-07-13", partial: false, provisions: "The Regulation in general (Art. 54(2), as corrected)", source: 1}
+    - {date: "2023-10-13", partial: true, provisions: "Articles 21 and 29 (Art. 54(4), as corrected)", source: 1}
+    - {date: "2024-01-13", partial: true, provisions: "Article 14(5), (6) and (7) (Art. 54(3), as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2022/2560, Article 54", url: "https://eur-lex.europa.eu/eli/reg/2022/2560/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2022/2560, OJ L, 2024/90559, 17.9.2024", url: "http://data.europa.eu/eli/reg/2022/2560/corrigendum/2024-09-17/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32024R1252"  # Critical Raw Materials Act
+  reason: >-
+    Article 49(2) as published says that Articles 40 and 41 apply from 24 May 2028. The corrigendum of 3 June 2024
+    (OJ L, 2024/90330) changed the date to 24 May 2029, the date EUR-Lex records.
+  application:
+    - {date: "2029-05-24", partial: true, provisions: "Articles 40 and 41 (Art. 49(2), as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2024/1252, Article 49", url: "https://eur-lex.europa.eu/eli/reg/2024/1252/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2024/1252, OJ L, 2024/90330, 3.6.2024", url: "http://data.europa.eu/eli/reg/2024/1252/corrigendum/2024-06-03/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32024R1347"  # Qualification Regulation
+  reason: >-
+    Article 42 as published says "This Regulation shall apply from 1 July 2026." The corrigendum of 25 November
+    2025 (OJ L, 2025/90926, point 2) changed the date to 12 June 2026, the date EUR-Lex records.
+  application:
+    - {date: "2026-06-12", partial: false, provisions: "The Regulation (Art. 42, second paragraph, as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2024/1347, Article 42", url: "https://eur-lex.europa.eu/eli/reg/2024/1347/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2024/1347, OJ L, 2025/90926, 25.11.2025", url: "http://data.europa.eu/eli/reg/2024/1347/corrigendum/2025-11-25/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32024R1351"  # Asylum and Migration Management Regulation
+  reason: >-
+    Article 85 as published says "It shall apply from 1 July 2026." The corrigendum of 25 November 2025 (OJ L,
+    2025/90929, point 10) changed the date to 12 June 2026, the date EUR-Lex records. The provisions its third
+    paragraph lists apply from the Regulation's entry into force.
+  application:
+    - date: "2024-06-11"
+      partial: true
+      provisions: >-
+        Articles 7 to 15, Article 22(1), fourth subparagraph, Article 23(7), Article 25(6) and (7), Article 34(3)
+        and (4), Article 39(3), second subparagraph, Article 40(4), Article 40(8), second subparagraph, Article
+        41(5), Article 46(1), fifth subparagraph, Article 46(4), Article 48(4), Article 50(1), second subparagraph,
+        Article 50(5), Article 52(4), Articles 56 and 57, Article 64(3), Article 67(14) and Articles 78 and 84
+        (Art. 85, third paragraph)
+    - {date: "2026-06-12", partial: false, provisions: "The Regulation in general (Art. 85, second paragraph, as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2024/1351, Article 85", url: "https://eur-lex.europa.eu/eli/reg/2024/1351/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2024/1351, OJ L, 2025/90929, 25.11.2025", url: "http://data.europa.eu/eli/reg/2024/1351/corrigendum/2025-11-25/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32024R1359"  # Crisis and Force Majeure Regulation
+  reason: >-
+    Article 20 as published says "It shall apply from 1 July 2026." The corrigendum of 25 November 2025 (OJ L,
+    2025/90921, point 10) changed the date to 12 June 2026, the date EUR-Lex records.
+  application:
+    - {date: "2026-06-12", partial: false, provisions: "The Regulation (Art. 20, second paragraph, as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2024/1359, Article 20", url: "https://eur-lex.europa.eu/eli/reg/2024/1359/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2024/1359, OJ L, 2025/90921, 25.11.2025", url: "http://data.europa.eu/eli/reg/2024/1359/corrigendum/2025-11-20/oj"}
+  reviewed: "2026-10-23"
+
+# Transposition dates explained, none changed: the reason is shown with the act's dates.
+
+- celex: "32016L0797"  # Railway Interoperability Directive
+  reason: >-
+    Article 57(1) sets 16 June 2019. Article 57(2) let Member States extend that period by one year, and seventeen
+    did so, to 16 June 2020. Directive (EU) 2020/700 added Article 57(2a): those Member States could extend it
+    again, until 31 October 2020, and apply their measures from that date. 31 October 2020 is that optional
+    extension, not a deadline for specific provisions.
+  sources:
+    - {label: "Directive (EU) 2016/797 (OJ L 138, 26.5.2016)", url: "https://eur-lex.europa.eu/eli/dir/2016/797/oj"}
+    - {label: "Directive (EU) 2020/700, Article 1 and recitals 2 and 6", url: "https://eur-lex.europa.eu/eli/dir/2020/700/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32016L0798"  # Railway Safety Directive
+  reason: >-
+    Article 33(1) sets 16 June 2019. Article 33(2) let Member States extend that period by one year, and seventeen
+    did so, to 16 June 2020. Directive (EU) 2020/700 added Article 33(2a): those Member States could extend it
+    again, until 31 October 2020, and apply their measures from that date. 31 October 2020 is that optional
+    extension, not a deadline for specific provisions.
+  sources:
+    - {label: "Directive (EU) 2016/798 (OJ L 138, 26.5.2016)", url: "https://eur-lex.europa.eu/eli/dir/2016/798/oj"}
+    - {label: "Directive (EU) 2020/700, Article 2 and recitals 2 and 6", url: "https://eur-lex.europa.eu/eli/dir/2020/700/oj"}
   reviewed: "2026-10-23"

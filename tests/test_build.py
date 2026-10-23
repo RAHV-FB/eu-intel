@@ -1534,8 +1534,9 @@ def test_transposition_dates_without_an_established_role_stay_off_the_timeline(t
 
 
 def test_next_step_names_the_deadlines_of_amending_directives():
-    # CSRD (Directive (EU) 2022/2464) is amended by Directive (EU) 2026/470, whose Art. 5(1) requires its Articles 1
-    # to 3 (Article 3 amends the CSRD) to be transposed by 19 March 2027 and Article 4 by 26 July 2028 (real records)
+    # Only the deadline that covers the changes to this directive (data/curated/transposition.yaml `amends`, real
+    # records). Directive (EU) 2026/470, Art. 5(1): "comply with Articles 1, 2 and 3 by 19 March 2027" (Article 3
+    # amends the CSRD) and "comply with Article 4 by 26 July 2028" (Article 4 amends the CSDDD)
     from types import SimpleNamespace
 
     from pipeline.build import Builder, apply_transposition_checks, load_transposition_checks
@@ -1547,19 +1548,41 @@ def test_next_step_names_the_deadlines_of_amending_directives():
     passed = "The transposition deadline (6 July 2024) has passed."
     det = {"stage": "in_force", "instrument": "directive", "next_step": {"text": passed, "basis": "source"}}
 
-    def step(celex: str, today: str = TODAY) -> str:
-        return Builder.amending_deadlines(SimpleNamespace(act=acts, today=today), det, [acts[celex]])["text"]  # type: ignore[arg-type]
+    def step(celex: str, today: str = TODAY, tr_checks: dict = checks) -> str:
+        me = SimpleNamespace(act=acts, today=today, transposition_checks=tr_checks)
+        return Builder.amending_deadlines(me, det, [acts[celex]])["text"]  # type: ignore[arg-type]
 
     assert step("32022L2464") == (
-        f"{passed} Directive (EU) 2026/470, which amends this directive, must be transposed by 19 March 2027 "
-        "(specific provisions by 26 July 2028)."
+        f"{passed} Directive (EU) 2026/470 amends this directive (Article 3); Member States must transpose the "
+        "amendments by 19 March 2027."
     )
-    # a codification amended by the driving licences directive (Art. 29: 26 November 2028; Art. 9(2)(j), (k) by 2027)
+    assert step("32024L1760") == (
+        f"{passed} Directive (EU) 2026/470 amends this directive (Article 4); Member States must transpose the "
+        "amendments by 26 July 2028."
+    )
+    assert step("32022L2464", today="2027-03-19") == passed  # the deadline for its Article 3 has passed
+    # Directive (EU) 2025/2205, Art. 29: 26 November 2028; 26 November 2027 is for its own Art. 9(2)(j), (k) only
     assert step("32022L2561") == (
-        f"{passed} Directive (EU) 2025/2205, which amends this directive, must be transposed by 26 November 2028 "
-        "(specific provisions by 26 November 2027)."
+        f"{passed} Directive (EU) 2025/2205 amends this directive (Article 27); Member States must transpose the "
+        "amendments by 26 November 2028."
     )
-    assert step("32022L2464", today="2028-08-01") == passed  # the amending directive's deadlines have passed
+    # Directive (EU) 2024/1654, Art. 2(1): 10 July 2027, and 10 July 2029 for Article 1, points (4) and (5)
+    assert step("32019L1153") == (
+        f"{passed} Directive (EU) 2024/1654 amends this directive (Article 1); Member States must transpose the "
+        "amendments by 10 July 2027 (those in Article 1, points (4) and (5), by 10 July 2029)."
+    )
+    # Directive (EU) 2024/1640 amends AMLD4 (Art. 74, by 10 July 2025) and repeals it (Art. 77: "Directive (EU)
+    # 2015/849 is repealed with effect from 10 July 2027"; Cellar: validity ends 9 July 2027)
+    assert step("32015L0849") == f"{passed} Directive (EU) 2024/1640 repeals this directive with effect from 10 July 2027."
+    assert step("32019L1937").endswith(
+        "Directive (EU) 2024/1640 amends this directive (Article 75); Member States must transpose the amendments by "
+        "10 July 2027. Directive (EU) 2024/1760, which amends this directive, must be transposed by 26 July 2028."
+    )
+    # without the check of the amending directive's text, its several deadlines are not attached to this directive
+    assert step("32022L2561", tr_checks={}) == (
+        f"{passed} Directive (EU) 2025/2205 also amends this directive; its transposition deadlines differ by "
+        "provision, as its text sets them."
+    )
 
 
 def test_dates_after_the_end_of_validity_are_marked():
