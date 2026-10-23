@@ -56,7 +56,7 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
               <th scope="col" className="num">
                 Measures notified
               </th>
-              <th scope="col">Latest measure</th>
+              <th scope="col">Latest notification</th>
               <th scope="col">
                 <Term id="infringement">Infringement cases</Term>
               </th>
@@ -70,9 +70,12 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
                 </th>
                 <td>
                   <StatusMark s={c.status} />
+                  {c.infringements.some((i) => i.status === 'open' && i.non_communication) && (
+                    <span className="tp-case meta">Commission case open for incomplete notification</span>
+                  )}
                 </td>
                 <td className="num">{formatNumber(c.measures)}</td>
-                <td>{c.latest_measure_date ? formatDate(c.latest_measure_date) : <span className="meta">—</span>}</td>
+                <td>{c.latest_notification ? formatDate(c.latest_notification) : <span className="meta">—</span>}</td>
                 <td>
                   {c.infringements.length === 0 ? (
                     <span className="meta">None in the dataset</span>
@@ -112,8 +115,9 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
       )}
       {impl.countries.some((c) => c.status === 'not_participating') && (
         <p className="meta tp-optout">
-          “Not bound” means the Council’s official voting result records the country as not participating in the
-          adoption of this act, under its opt-out from this area of EU law.
+          “Not bound” means that the directive itself (in its recitals) or the Council’s official voting result records
+          the country as not taking part in its adoption, under its opt-out from this area of EU law (Protocols 21 and 22
+          to the Treaties).
         </p>
       )}
     </>
@@ -186,7 +190,9 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
           <>
             <ImplementationTable impl={impl} />
             <p className="dz-caveat">
-              “No measures found in the available dataset” is <strong>not</strong> proof that a country has failed to act: the
+              “Measures notified” means that at least one national measure was notified to the Commission; it does{' '}
+              <strong>not</strong> show that transposition is complete or correct, and the Commission may still have a case
+              open. “No measures found in the available dataset” is <strong>not</strong> proof that a country has failed to act: the
               dataset can be incomplete, and existing national law may already meet the directive’s requirements. Whether a country has
               breached EU law is for the Commission to pursue and, ultimately, for the Court of Justice to decide. {impl.note}
             </p>

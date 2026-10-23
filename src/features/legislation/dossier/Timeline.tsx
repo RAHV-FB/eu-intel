@@ -62,7 +62,19 @@ function EventItem({ e, today }: { e: TimelineEvent; today: ISODate }) {
   );
 }
 
-export function Timeline({ events, changes, today }: { events: TimelineEvent[]; changes: ActivityItem[]; today: ISODate }) {
+export function Timeline({
+  events,
+  changes,
+  today,
+  eurlexOnly,
+  oeilUrl,
+}: {
+  events: TimelineEvent[];
+  changes: ActivityItem[];
+  today: ISODate;
+  eurlexOnly?: boolean;
+  oeilUrl?: string | null;
+}) {
   const [all, setAll] = useState(false);
   const listId = useId();
   const keyEvents = events.filter((e) => e.key || e.state === 'scheduled');
@@ -77,6 +89,18 @@ export function Timeline({ events, changes, today }: { events: TimelineEvent[]; 
         {hasToggle && !all ? 'Showing key milestones. ' : ''}
         Not every law goes through every step: many are agreed at Parliament’s first reading, some never reach a vote.
       </p>
+      {eurlexOnly && (
+        <p className="dz-caveat" role="note">
+          <strong>The procedure’s earlier steps are not in our dataset.</strong> This page is built from the act’s EUR-Lex
+          record only, so the proposal, Parliament’s votes and the Council’s steps are not shown here.
+          {oeilUrl && (
+            <>
+              {' '}
+              See the <ExtLink href={oeilUrl}>procedure file in Parliament’s Legislative Observatory</ExtLink>.
+            </>
+          )}
+        </p>
+      )}
       {events.length === 0 ? (
         <EmptyState title="No dated steps are recorded for this file." />
       ) : (

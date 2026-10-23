@@ -158,6 +158,18 @@ class ProcedureNotice(Model):
     source: SourceRef
 
 
+class DirectiveOptOut(Model):
+    """Which Member States a directive's own recitals declare not bound by it (Protocols 21 and 22:
+    Denmark, Ireland), read from the EUR-Lex text (pipeline/sources/optouts.py)."""
+
+    celex: str
+    status: Literal["ok", "unavailable"]  # unavailable: the text could not be fetched (retried next run)
+    not_bound: list[str] = Field(default_factory=list)  # "DK", "IE"
+    quotes: list[str] = Field(default_factory=list)  # the recital sentences, verbatim (whitespace normalized)
+    url: str
+    source: SourceRef
+
+
 class TranspositionDate(Model):
     """One `directive_date_transposition` value with Cellar's annotation of what it is."""
 

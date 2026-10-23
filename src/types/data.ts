@@ -108,7 +108,7 @@ export type LifecycleStage =
   | 'parliament_position' // Parliament adopted its position; Council has not concluded
   | 'negotiations' // interinstitutional negotiations under way
   | 'provisional_agreement' // provisional agreement reached; awaiting formal adoption
-  | 'adopted' // formally adopted (signed); not yet published
+  | 'adopted' // formally adopted; not yet published
   | 'published' // published in the Official Journal; not yet in force
   | 'in_force' // in force (some provisions may apply later)
   | 'no_longer_in_force' // repealed, expired or otherwise no longer in force according to EUR-Lex
@@ -134,7 +134,8 @@ export interface DossierSummary {
   status_label: string; // "Approved by Parliament", "In force", ...
   started?: ISODate | null; // proposal date
   last_event?: ISODate | null;
-  adopted?: ISODate | null; // formal adoption (signature) date of the final act; publication date if that's all we have
+  adopted?: ISODate | null; // adoption: Council adoption / Parliament's second-reading approval, else the act's own date (never publication)
+  published?: ISODate | null; // publication of the final act in the Official Journal
   next_date?: ISODate | null; // earliest legally fixed future date (application / transposition deadline), if any
   instrument?: LegalInstrument | null; // final act type if adopted, or proposed instrument if known
   celex: string[];
@@ -283,6 +284,7 @@ export interface DossierDetail extends DossierSummary {
   documents: DocRef[];
   related: { id: string; title: string; relation: string }[]; // only officially established relations
   oeil_url: string;
+  eurlex_only?: boolean; // built from the EUR-Lex act alone: the procedure's own steps are not in our data
   sources: SourceRef[];
   changes: ActivityItem[]; // verified changes detected between snapshots for this dossier
 }
@@ -540,7 +542,7 @@ export interface DossierImplementation {
     country: string;
     measures: number;
     status: TranspositionStatus;
-    latest_measure_date?: ISODate | null;
+    latest_notification?: ISODate | null; // latest date a measure was notified to the Commission
     infringements: InfringementInfo[];
   }[];
   nim_url: string; // EUR-Lex national transposition page

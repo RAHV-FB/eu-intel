@@ -37,7 +37,11 @@ DEFAULT_CACHE = ROOT / ".cache" / "http"
 
 # Minimum seconds between requests per host (per process). The EP Open Data API documents a cap of
 # 500 requests per 5 minutes (~1.67/s); stay below it.
-HOST_MIN_INTERVAL: dict[str, float] = {"data.europarl.europa.eu": 0.65, "www.europarl.europa.eu": 1.0}
+HOST_MIN_INTERVAL: dict[str, float] = {
+    "data.europarl.europa.eu": 0.65,
+    "www.europarl.europa.eu": 1.0,
+    "publications.europa.eu": 0.5,
+}
 
 
 class HttpError(RuntimeError):

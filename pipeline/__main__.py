@@ -30,6 +30,7 @@ SOURCES: dict[str, str] = {
     "eurlex": "pipeline.sources.eurlex",
     "council": "pipeline.sources.council",
     "implementation": "pipeline.sources.implementation",
+    "optouts": "pipeline.sources.optouts",
     "train": "pipeline.sources.legislative_train",
 }
 

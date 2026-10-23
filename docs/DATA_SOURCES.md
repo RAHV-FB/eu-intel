@@ -6,11 +6,12 @@ pipeline runs in CI without credentials). Details are refined from each ingestio
 | Source | Interface | Reachable | Used for | Notes |
 | --- | --- | --- | --- | --- |
 | EP Open Data API v2 `data.europarl.europa.eu/api/v2` | JSON-LD REST | ✅ | MEPs, groups, national parties, committees, procedures + events, plenary decisions **with individual roll-call ballots** | Anonymous; paginated (`offset`/`limit`); stable ELI-style ids (`eli/dl/proc/2021-0106`, `person/197443`) |
-| EP Legislative Observatory (OEIL) | HTML | ✅ | Human links to procedure files | Not scraped: the EP API carries the same procedure data |
+| EP Legislative Observatory (OEIL) | HTML | ✅ | Status label, subjects, COM references, Commission/Council key events, final-act CELEX | One procedure-file page per procedure, ≥1 s apart; fills what the EP API does not carry |
 | EP Legislative Train Schedule | HTML | ✅ | Official status of major files incl. "blocked" monitoring | No API; controlled crawl of theme + file pages |
 | EP `doceo` documents (RCV XML/PDF) | HTML/XML | ⚠️ 202 bot challenge | — | Roll-calls come from the API instead |
 | Cellar SPARQL `publications.europa.eu/webapi/rdf/sparql` | SPARQL 1.1 | ✅ | Legal acts (CELEX, ELI, dates incl. phased entry-into-force/application, procedure links, amendments), national implementing measures | Batched queries; CDM ontology |
 | EUR-Lex website | HTML | ⚠️ 202 bot challenge | Human links only | Not scraped |
+| Act texts (Cellar content negotiation `publications.europa.eu/resource/celex/{CELEX}`) | XHTML | ✅ | Directives' opt-out recitals (Protocols 21/22) | Each directive read once |
 | Council voting results (consilium.europa.eu pages) | HTML | ❌ 403 "Browser check" | — | Not used; see Council section |
 | Council "voting result" documents (ST notes) | Cellar SPARQL + PDF at data.consilium.europa.eu | ✅ | Member State positions, voting rule, outcome | Annex table is an image; parsed deterministically, fail-closed |
 | Single Market Scoreboard | HTML/JSON | ❌ 403 | Transposition deficit indicators | Alternatives investigated by the implementation module |
@@ -55,16 +56,31 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   is recorded by EP as a per-country party. Portraits not used.
 
 ### EUR-Lex / Cellar (`eurlex`) — ok
-- 1,248 legislative acts 2014+ (808 regulations, 302 directives, 138 decisions), all linked to a procedure
-  (1,106 COD, 111 CNS, 34 APP). Non-legislative (NLE, ~2,490) and budgetary acts are out of scope for v1.
+- 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 22 final acts that OEIL
+  records for procedures in the EP snapshot but Cellar does not link to them (e.g. Regulation 2019/816,
+  2017/0144(COD)): 1,270 acts. Non-legislative (NLE, ~2,490) and budgetary acts are out of scope for v1.
 - Procedure link: dossier with `procedure_code_interinstitutional_reference_procedure` via
   `dossier_produces_resource_legal`, `resource_legal_produced_by_dossier`, or the adopted proposal's
   `work_part_of_dossier`. References whose type contradicts the dossier's own type are not linked.
 - Dates: OJ publication (`official-journal-act_date_publication`, else the OJ issue date); entry into force is the
   value tagged EV (else PE) of `resource_legal_date_entry-into-force` — the property mixes EV/PE/MA dates, and in
   166 acts the earliest value is not the entry into force. Other dates are kept as "further application dates"
-  without claiming which provisions they concern. Placeholder `1001-01-01` dropped. Transposition:
-  `directive_date_transposition`.
+  without claiming which provisions they concern, except that dates marked MA/PART or PE/PART (in the type or in
+  the `comment_on_date` annotation) are shown as "some provisions apply from". An entry-into-force value of
+  `1001-01-01` (comment DATNOT, date of notification) means the act has not yet taken effect, e.g. the Electoral
+  Act amendments awaiting approval by every Member State: shown as "Published, not yet in force", never as "no
+  longer in force".
+- Transposition: `directive_date_transposition` holds deadlines and application dates under one property. Each
+  value's `comment_on_date` label (ADOPTION = adopt and publish by, APPLICATION = apply from, AU+TARD = at the
+  latest, with the article) is kept: the general deadline is the earliest date that is not an application-only
+  date, later adopt-by dates are "further deadlines for specific provisions", and apply-from dates are never shown
+  as deadlines (Consumer Credit Directive: deadline 20 Nov 2025, application 20 Nov 2026).
+- Withdrawals and replacements: Cellar procedure events WDW_byCOM / RPL_byCOM (`procedure_notices.json`, 350
+  since 2014). OEIL often never records them (CCTB/CCCTB, Return Directive recast, standard-essential patents).
+- Corrections: where Cellar's date metadata is wrong or was not updated after an amendment, the build applies
+  `data/curated/act_dates.yaml`, each date citing the article that sets it (DSA Art. 93, AI Act Art. 113 as
+  amended by Regulation 2026/1744, Return Regulation Art. 50). The snapshot keeps the source values;
+  `validate` warns about application dates a year or more before the act.
 - Known gaps: 352 acts without signature date, 24 directives without transposition date, only explicit whole-act
   repeals, acts whose procedure is only in free text are unlinked.
 
@@ -80,6 +96,14 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   the register's latest decision type, verbatim. An act is linked only when the register names it.
 - Country indicators (Single Market Scoreboard): **unavailable** — host returns a CloudFront 403 to scripts;
   data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed.
+
+### Opt-outs in directives' recitals (`optouts`) — ok
+- Denmark (Protocol No 22) and Ireland (Protocol No 21) are not bound by most justice and home affairs measures
+  unless they opt in; each directive says so in its recitals in standard wording ("… is not taking part in the
+  adoption of this Directive and is not bound by it"). The source reads the English text of every directive in
+  the EUR-Lex snapshot once and records the countries and the sentences quoted. Implementation tables then show
+  "Not bound" instead of "No measures found" for those countries. The Council's voting results give the same
+  fact for votes since 2019.
 
 ### Council of the EU (`council`) — ok
 - The Council's voting-results web pages are behind a browser check (403), and the data.europa.eu dataset

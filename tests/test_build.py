@@ -106,7 +106,9 @@ def test_dossier_linking_by_identifier_only(out: Path):
     assert d1["celex"] == ["32099R0001"]
     assert d1["featured"] is True and d1["topics"] == ["tech"]
     assert d1["type_label"] == "Ordinary legislative procedure"
-    assert d1["adopted"] == "2024-11-20" and d1["next_date"] == "2027-01-01"
+    # adopted when the Council adopted it (5 Nov), not at signature (20 Nov) or publication
+    assert d1["adopted"] == "2024-11-05" and d1["next_date"] == "2027-01-01"
+    assert d1["published"] == "2024-12-01"
     assert [v["id"] for v in d1["ep_votes"]] == ["V1"]  # amendments are not indexed
     assert [c["id"] for c in d1["council_votes"]] == ["C1"]
     assert d1["has_ep_votes"] and d1["has_council_votes"]

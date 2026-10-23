@@ -1,4 +1,5 @@
-"""European Parliament legislative procedures (COD / CNS / APP, reference year >= 2014).
+"""European Parliament legislative procedures (COD / CNS / APP, reference year >= 2014, plus older
+procedures that produced an act in the EUR-Lex snapshot).
 
 Sources (both official European Parliament publications):
 
@@ -1250,10 +1251,12 @@ def select_ids(
     return out, reasons
 
 
-def in_scope_ref(ref: str) -> str | None:
-    """'2016/0224A(COD)' -> '2016-0224A' if the reference is in scope (type, year), else None."""
+def in_scope_ref(ref: str, any_year: bool = False) -> str | None:
+    """'2016/0224A(COD)' -> '2016-0224A' if the reference is in scope (type, year), else None.
+    any_year: the procedure of an act in the EUR-Lex snapshot (acts since 2014, whatever the year the
+    procedure started, e.g. 2013/0025(COD) -> Directive 2015/849)."""
     m = PROC_REF_RE.match(ref.strip())
-    if not m or m[3] not in PROCEDURE_TYPES or int(m[1]) < MIN_YEAR:
+    if not m or m[3] not in PROCEDURE_TYPES or (int(m[1]) < MIN_YEAR and not any_year):
         return None
     return f"{m[1]}-{m[2]}"
 
@@ -1278,7 +1281,7 @@ def discover_refs() -> dict[str, tuple[str, str]]:
             continue
         for r in records:
             for ref in r.procedure_refs:
-                pid = in_scope_ref(ref)
+                pid = in_scope_ref(ref, any_year=source == "eurlex")
                 if pid:
                     out.setdefault(pid, (ref, source))
     return out

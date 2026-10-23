@@ -136,6 +136,12 @@ export default function Dossier() {
                   <dd>{formatDate(d.adopted)}</dd>
                 </div>
               )}
+              {d.published && (
+                <div>
+                  <dt>Published in the Official Journal</dt>
+                  <dd>{formatDate(d.published)}</dd>
+                </div>
+              )}
               {d.last_event && (
                 <div>
                   <dt>Latest recorded step</dt>
@@ -196,7 +202,7 @@ export default function Dossier() {
 
         <div className="dz-main">
           {active && <WhereIsIt d={d} today={today} />}
-          <Timeline events={d.timeline} changes={d.changes ?? []} today={today} />
+          <Timeline events={d.timeline} changes={d.changes ?? []} today={today} eurlexOnly={d.eurlex_only} oeilUrl={d.oeil_url} />
           <ParliamentVotes votes={d.ep_votes} />
           <CouncilVotes votes={d.council_votes} meta={meta} />
           <NationalApplication d={d} today={today} />

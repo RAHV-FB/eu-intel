@@ -958,7 +958,12 @@
 }
 
 .tp--measures_notified::before {
-  background: var(--st-done);
+  background: var(--text-3);
+}
+
+.tp-case {
+  display: block;
+  margin-top: var(--sp-1);
 }
 
 .tp--none_found::before {

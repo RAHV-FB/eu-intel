@@ -36,6 +36,7 @@ from pipeline.models.countries import MEMBER_STATES
 from pipeline.models.entities import (
     CouncilVote,
     CountryIndicator,
+    DirectiveOptOut,
     DocRef,
     EpBallots,
     EpVote,
@@ -451,7 +452,7 @@ def _truncate(text: str, n: int) -> str:
     return cut + "…"
 
 
-_OPTIONAL_SUMMARY = ("short", "started", "last_event", "adopted", "next_date", "instrument")
+_OPTIONAL_SUMMARY = ("short", "started", "last_event", "adopted", "published", "next_date", "instrument")
 
 
 def _index_entry(d: dict) -> dict:
@@ -668,6 +669,7 @@ class Snapshot:
         self.has_coverage_file = self.file_exists("implementation", "coverage")
         self.train = _load("train", "files", TrainFile, i, root)
         self.notices = _load("eurlex", "procedure_notices", ProcedureNotice, i, root)
+        self.optouts = _load("optouts", "directives", DirectiveOptOut, i, root)
 
     def _manifest(self) -> dict[str, SourceStatus]:
         if self.root == SNAPSHOT:
@@ -726,6 +728,7 @@ class Builder:
             self.mep_groups[m.id] = sorted(g, key=lambda t: (t[0] or "", t[1] or "9999"))
             self.mep_parties[m.id] = sorted(p, key=lambda t: (t[0] or "", t[1] or "9999"))
         self.ballots = {b.vote_id: b for b in s.ballots}
+        self.optouts = {o.celex: o for o in s.optouts if o.status == "ok"}
         self.train_by_ref: dict[str, list[TrainFile]] = defaultdict(list)
         for t in s.train:
             for r in t.procedure_refs:
@@ -762,8 +765,12 @@ class Builder:
             a.celex: [norm_ref(r) for r in a.procedure_refs] for a in s.acts
         }
 
-    def not_participating(self, celex: str, country: str) -> CouncilVote | None:
-        """The Council vote recording that `country` did not take part in adopting this act, if any."""
+    def not_participating(self, celex: str, country: str) -> CouncilVote | DirectiveOptOut | None:
+        """The record showing that `country` did not take part in adopting this act and is not bound by it:
+        the directive's own recitals (Protocols 21 / 22), else the Council's voting result; None if neither."""
+        oo = self.optouts.get(celex)
+        if oo and country in oo.not_bound:
+            return oo
         for ref in self.act_refs.get(celex, []):
             countries, cv = self.not_participating_by_ref.get(ref, (set(), None))
             if country in countries:
@@ -1479,10 +1486,12 @@ class Builder:
         countries = []
         for c in sorted(MEMBER_STATES):
             ms = self.measures_by.get((a.celex, c), [])
-            dates = sorted(m.date for m in ms if m.date)
+            # date of notification to the Commission (the national journal date of a notified act may be
+            # decades older than the directive, e.g. a civil code)
+            dates = sorted(m.notified for m in ms if m.notified)
             countries.append({
                 "country": c, "measures": len(ms), "status": self.transposition_status(a.celex, c, deadline),
-                "latest_measure_date": dates[-1] if dates else None,
+                "latest_notification": dates[-1] if dates else None,
                 "infringements": [self.infr_info(i, a.celex) for i in self.infr_by_celex.get(a.celex, [])
                                   if i.country == c],
             })  # fmt: skip
@@ -1577,6 +1586,33 @@ class Builder:
             return e
         return e.model_copy(update={"title": title, "institution": inst})
 
+    def adoption_dates(self, p: Procedure, acts: list[LegalAct]) -> tuple[str | None, str | None]:
+        """(adopted, published). The act is adopted when the Council adopts it or approves Parliament's
+        position (Art. 294 TFEU), or when Parliament approves the Council's position at second reading;
+        signature and publication come later. Without such a recorded step, the act's own date (EUR-Lex
+        date of the document: its adoption or, for acts of Parliament and Council, signature date), then a
+        recorded signature. Never the publication date."""
+        t = self.today
+        steps = [e.date for e in p.events if e.date <= t and (
+            e.kind == EventKind.council_adoption or (e.raw_type or "").endswith("PLENARY_APPROVE_COUNCIL_POSITION"))]  # fmt: skip
+        docs = sorted(a.date_document for a in acts if a.date_document and a.date_document <= t)
+        sigs = sorted(e.date for e in p.events if e.kind == EventKind.signature and e.date <= t)
+        adopted = max(steps) if steps else docs[0] if docs else sigs[0] if sigs else None
+        pubs = sorted(a.date_publication for a in acts if a.date_publication and a.date_publication <= t)
+        pubs = pubs or sorted(e.date for e in p.events if e.kind == EventKind.publication and e.date <= t)
+        return adopted, pubs[0] if pubs else None
+
+    @staticmethod
+    def proposal_date(p: Procedure) -> str | None:
+        """Date of the proposal: the first recorded proposal (Commission, or Council text submitted to
+        Parliament), else the date of a COM document of the procedure. Not the first event of another
+        kind (a referral or committee step is not the proposal)."""
+        props = sorted(e.date for e in p.events if e.kind == EventKind.proposal)
+        if props:
+            return props[0]
+        coms = sorted(d.date for d in p.documents if d.id.startswith("COM(") and d.date)
+        return coms[0] if coms else None
+
     def build_dossiers(self) -> None:
         self.dossier_summary: dict[str, dict] = {}
         self.dossier_detail: dict[str, dict] = {}
@@ -1603,11 +1639,7 @@ class Builder:
                     instrument = a.act_type
                     break
             instrument = instrument or instrument_from_title(p.title)
-            sigs = sorted(a.date_signature for a in acts if a.date_signature)
-            pubs = sorted(a.date_publication for a in acts if a.date_publication)
-            adopted = sigs[0] if sigs else (pubs[0] if pubs else None)
-            if adopted and adopted > self.today:
-                adopted = None
+            adopted, published = self.adoption_dates(p, acts)
             fut = sorted(
                 d
                 for a in acts
@@ -1633,9 +1665,10 @@ class Builder:
                 "topics": self.topics_for(p),
                 "stage": st["status"].get("stage", "unknown"),
                 "status_label": st["status"].get("label") or STAGE_LABELS.get(st["status"].get("stage"), ""),
-                "started": p.started,
+                "started": self.proposal_date(p),
                 "last_event": done[-1]["date"] if done else None,
                 "adopted": adopted,
+                "published": published,
                 "next_date": fut[0] if fut else None,
                 "instrument": instrument,
                 "celex": sorted({a.celex for a in acts}),
@@ -1689,6 +1722,8 @@ class Builder:
                 "documents": [d.model_dump(mode="json") for d in p.documents],
                 "related": [],
                 "oeil_url": p.oeil_url,
+                # built from the EUR-Lex act alone: the procedure's own steps are not in our data
+                "eurlex_only": pid in self.stub_ids,
                 "sources": [x for x in sources if x],
                 "changes": [],
             }
@@ -2045,9 +2080,9 @@ class Builder:
 
     # ---------------------------------------------------------------- home
     def latest_event(self, pid: str) -> dict | None:
-        done = [e for e in self.dossier_detail[pid]["timeline"] if e["state"] == "done"]
-        key = [e for e in done if e["key"]]
-        return (key or done or [None])[-1]
+        """The latest recorded step, as the dossier page shows it ("Latest verified development")."""
+        done = [e for e in self.dossier_detail[pid]["timeline"] if e["state"] == "done" and e["date"] <= self.today]
+        return done[-1] if done else None
 
     def build_home(self) -> None:
         featured = []
@@ -2153,7 +2188,8 @@ class Builder:
         upcoming.sort(key=lambda x: (x["date"], not summ[x["dossier_id"]]["featured"], x["dossier_id"]))
         lists = [
             {"id": "recently_adopted", "title": "Recently adopted",
-             "description": "Laws formally adopted (signed or published in the Official Journal), newest first.",
+             "description": "Laws formally adopted, newest first, by date of adoption (by the Council, or by "
+                            "Parliament at second reading; otherwise the date of the act).",
              "items": recently_adopted},
             {"id": "under_debate", "title": "Under discussion",
              "description": "Legislative files with a recorded procedural step in the last 120 days that are not yet adopted.",

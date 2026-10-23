@@ -117,8 +117,8 @@
   top: 0.05em;
 }
 .tstatus--measures_notified .tstatus__icon {
-  background: var(--st-done);
-  border-color: var(--st-done);
+  background: var(--text-3);
+  border-color: var(--text-3);
 }
 .tstatus--deadline_not_reached .tstatus__icon {
   border-color: var(--st-progress);

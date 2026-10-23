@@ -22,21 +22,21 @@
   "status": "ok"
  },
  "ep_procedures": {
-  "attempted_at": "2026-10-23T00:40:15Z",
-  "fetched_at": "2026-10-23T00:40:25Z",
-  "note": "Scope: COD, CNS, APP with reference year >= 2014: 1331 ids from the paged list (API totals all years, with repeats: {'COD': 2968, 'CNS': 2664, 'APP': 58}) + 15 more referenced by other snapshots ({'eurlex': 15}) + 30 featured. Mode incremental: fetched 264 ({'open': 88, 'recent event': 144, 'no OEIL data': 3, 'featured': 30, 'new': 1}), reused 1070 from the snapshot. OEIL enrichment for 1332/1334. 13 ids skipped (no usable EP record; split/merged ones are retried on full refresh, others every run): 2016-0282 (404; split procedure, parts: 2016-0282A, 2016-0282B); 2016-0357 (404; split procedure, parts: 2016-0357A, 2016-0357B); 2016-0360 (404; split procedure, parts: 2016-0360A, 2016-0360B); 2016-0400 (404; split procedure, parts: 2016-0400A, 2016-0400B); 2018-0063 (404; split procedure, parts: 2018-0063A, 2018-0063B); 2018-0152 (404; split procedure, parts: 2018-0152A, 2018-0152B); 2018-0330 (404; split procedure, parts: 2018-0330A, 2018-0330B); 2018-0900 (EP record 2018-0900 merges several procedures (labels: 2018/0900(COD), 2018/0900(NLE))); 2019-0001 (404; split procedure, parts: 2019-0001A, 2019-0001B); 2020-3521 (404 at /procedures/{id}); 2021-0211 (no English title for 2021/0211(COD) in the EP record or OEIL; split procedure, parts: 2021-0211A, 2021-0211B); 2022-0132 (no English title for 2022/0132(COD) in the EP record or OEIL; split procedure, parts: 2022-0132A, 2022-0132B); 2026-0324 (no English title for 2026/0324(COD) in the EP record or OEIL). No OEIL procedure file (404) for: 2016/0224(COD), 2023/0077(COD), 2026/0324(COD).",
+  "attempted_at": "2026-10-23T02:38:43Z",
+  "fetched_at": "2026-10-23T02:44:23Z",
+  "note": "Scope: COD, CNS, APP with reference year >= 2014: 1331 ids from the paged list (API totals all years, with repeats: {'COD': 2968, 'CNS': 2664, 'APP': 58}) + 247 more referenced by other snapshots ({'eurlex': 247}) + 30 featured. Mode incremental: fetched 582 ({'open': 176, 'recent event': 144, 'new': 233, 'featured': 30, 'no OEIL data': 2}), reused 982 from the snapshot. OEIL enrichment for 1562/1564. 14 ids skipped (no usable EP record; split/merged ones are retried on full refresh, others every run): 2011-0901 (404 at /procedures/{id}); 2016-0282 (404; split procedure, parts: 2016-0282A, 2016-0282B); 2016-0357 (404; split procedure, parts: 2016-0357A, 2016-0357B); 2016-0360 (404; split procedure, parts: 2016-0360A, 2016-0360B); 2016-0400 (404; split procedure, parts: 2016-0400A, 2016-0400B); 2018-0063 (404; split procedure, parts: 2018-0063A, 2018-0063B); 2018-0152 (404; split procedure, parts: 2018-0152A, 2018-0152B); 2018-0330 (404; split procedure, parts: 2018-0330A, 2018-0330B); 2018-0900 (EP record 2018-0900 merges several procedures (labels: 2018/0900(COD), 2018/0900(NLE))); 2019-0001 (404; split procedure, parts: 2019-0001A, 2019-0001B); 2020-3521 (404 at /procedures/{id}); 2021-0211 (no English title for 2021/0211(COD) in the EP record or OEIL; split procedure, parts: 2021-0211A, 2021-0211B); 2022-0132 (no English title for 2022/0132(COD) in the EP record or OEIL; split procedure, parts: 2022-0132A, 2022-0132B); 2026-0324 (no English title for 2026/0324(COD) in the EP record or OEIL). No OEIL procedure file (404) for: 2016/0224(COD), 2023/0077(COD), 2026/0324(COD).",
   "records": {
-   "events": 14736,
-   "fetched_this_run": 264,
+   "events": 17226,
+   "fetched_this_run": 582,
    "pending": 0,
-   "procedures": 1334,
-   "requests_this_run": 538,
-   "type_APP": 39,
-   "type_CNS": 163,
-   "type_COD": 1131,
-   "type_NLE": 1,
-   "unavailable": 13,
-   "with_oeil": 1332
+   "procedures": 1564,
+   "requests_this_run": 1175,
+   "type_APP": 46,
+   "type_CNS": 175,
+   "type_COD": 1338,
+   "type_NLE": 5,
+   "unavailable": 14,
+   "with_oeil": 1562
   },
   "source": "ep_procedures",
   "status": "ok"
@@ -74,6 +74,19 @@
   },
   "source": "implementation",
   "status": "partial"
+ },
+ "optouts": {
+  "attempted_at": "2026-10-23T02:43:15Z",
+  "fetched_at": "2026-10-23T02:48:03Z",
+  "note": "303 of 303 directives read (303 this run, 0 unavailable); recitals declare Denmark not bound by 35 and Ireland by 18; 303 records",
+  "records": {
+   "directives_read": 303,
+   "not_bound_DK": 35,
+   "not_bound_IE": 18,
+   "pending": 0
+  },
+  "source": "optouts",
+  "status": "ok"
  },
  "train": {
   "attempted_at": "2026-10-22T17:52:55Z",

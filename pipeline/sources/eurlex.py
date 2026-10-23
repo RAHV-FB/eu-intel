@@ -995,6 +995,16 @@ def fetch(http: Any) -> SourceStatus:
         raise RuntimeError("eurlex: no acts could be built")
     if len(dropped) > MAX_FAILED_SHARE * len(works):
         raise RuntimeError(f"eurlex: {len(dropped)} of {len(works)} acts could not be fetched/built")
+    # A work that could not be fetched this time keeps its previous record: dropping it would change the
+    # status of its dossier (e.g. "In force" -> "Published") on a transient failure.
+    previous = {a.celex: a for a in read_records(SOURCE_ID, "acts", LegalAct)}
+    celex_of = {**{w: c for w, c in scope.items()}, **{w: c for c, w in featured_works.items()},
+                **{w: c for c, w in linked_works.items()}}  # fmt: skip
+    have = {a.celex for a in acts}
+    kept = [previous[c] for w in sorted(dropped) if (c := celex_of.get(w)) in previous and c not in have]
+    acts += kept
+    if previous and len(acts) < (1 - MAX_FAILED_SHARE) * len(previous):
+        raise RuntimeError(f"eurlex: {len(acts)} acts against {len(previous)} in the snapshot; not overwriting")
 
     write_records(SOURCE_ID, "acts", acts, key=lambda a: a.celex)  # type: ignore[attr-defined]
     try:  # withdrawals / replacements recorded on procedures; on failure the previous file is kept
@@ -1013,7 +1023,7 @@ def fetch(http: Any) -> SourceStatus:
         notices_note,
     ]
     if dropped:
-        notes.append(f"{len(dropped)} dropped (fetch/parse failures)")
+        notes.append(f"{len(dropped)} not fetched or built this run ({len(kept)} kept from the previous snapshot)")
     if missing_featured:
         notes.append(f"featured not found: {', '.join(missing_featured)}")
     return SourceStatus(
