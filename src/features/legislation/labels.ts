@@ -30,7 +30,10 @@ export const STAGE_LABEL: Record<LifecycleStage, string> = {
   withdrawn: 'Withdrawn',
   rejected: 'Rejected',
   lapsed: 'Lapsed',
-  unknown: 'Status not determinable',
+  // files with no stage of their own (each row's badge says which): a proposal split into separate files, a report of
+  // Parliament (not a legislative act), a procedure completed whose final act is not linked, or one whose stage the
+  // records do not show (pipeline/build.py classify, pipeline/analysis/status.py)
+  unknown: 'Other (split files, Parliament reports, final act or stage not recorded)',
 };
 
 export const STAGE_ORDER: LifecycleStage[] = [
@@ -123,8 +126,14 @@ export function isMissing(e: unknown): boolean {
   return e instanceof NotFoundError || e instanceof SyntaxError;
 }
 
-/** Institution label to append after an event title, or '' when the title already names it. */
-export function institutionSuffix(title: string, institution: string): string {
+/** Steps whose date the act itself sets (entry into force, application, transposition dates): EUR-Lex records them,
+ * it does not take them, so no institution is named after their title. */
+const ACT_DATED_KINDS: ReadonlySet<string> = new Set(['entry_into_force', 'application', 'transposition_deadline', 'transposition_application']);
+
+/** Institution label to append after an event title, or '' when the title already names it or the step is dated in
+ * the act (`kind`). */
+export function institutionSuffix(title: string, institution: string, kind?: string): string {
+  if (kind && ACT_DATED_KINDS.has(kind)) return '';
   const label = institutionLabel(institution);
   const t = title.toLowerCase();
   const named = institution === 'EP and Council' ? t.includes('parliament and council') : false;

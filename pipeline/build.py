@@ -867,6 +867,21 @@ def short_names(title: str) -> list[str]:
     return out
 
 
+# a drafting placeholder in a procedure title: "Extending Directive [XXXX] to ...", "Regulation (EU) No XXX/2011",
+# "Directive (EU) .../...", "Regulation (EU) [...]"
+TITLE_PLACEHOLDER_RE = re.compile(r"\[(?:X+|…|\.\.\.)\]|\bX{3,}\b|\.\.\./\.\.\.")
+TITLE_NUMBER_RE = re.compile(r"\b\d{1,4}/\d{1,4}\b")  # an act cited by its number: "2014/41", "1316/2013"
+
+
+def title_misfit(title: str, act_title: str) -> bool:
+    """A procedure's title that does not describe the act it adopted: it has a drafting placeholder, or it cites acts
+    (by number) that the act's official title does not. Directive (EU) 2023/2843 amends Directive 2011/99/EU and no
+    Framework Decision 2002/465/JHA; its procedure's title (2021/0395(COD), the proposal's) says the reverse."""
+    if TITLE_PLACEHOLDER_RE.search(title or ""):
+        return True
+    return bool(set(TITLE_NUMBER_RE.findall(title or "")) - set(TITLE_NUMBER_RE.findall(act_title or "")))
+
+
 PARLIAMENT_REPORT_RE = re.compile(r"(\d{4}-\d{4})([RM])")
 EP_TEXT_RE = re.compile(r"T\d{1,2}-\d{4}/\d{4}")  # a text adopted by Parliament, as OEIL cites it: T9-0129/2022
 # Legislative proposals that OEIL lists under another institution than the Commission (documentation gateway)
@@ -916,14 +931,26 @@ ACT_NUMBER_RE = re.compile(
 )
 
 
+# an older act's number before its title: "2014/335/EU, Euratom: Council Decision of 26 May 2014 ..."
+LEGACY_ACT_NUMBER_RE = re.compile(
+    r"^(\d{4}/\d{1,4}/(?:EU|EC|EEC|CFSP|JHA)(?:, Euratom)?): "
+    r"((?:Council |Commission )?(?:Implementing |Delegated )?(?:Regulation|Directive|Decision))\b"
+)
+
+
 def act_label(a: LegalAct) -> str:
     """'Regulation (EU) 2026/1744' from the act's official title, else its CELEX id. Cellar records a few titles
     without the space after the act type ('Directive2014/63/EU of the European Parliament ...', 'Regulation(EU)
-    2022/870 ...'): the number is read with it."""
+    2022/870 ...'): the number is read with it; one with a Greek capital Epsilon in '(\u0395U)' (32024D2829); and
+    older ones begin with the number ('2014/335/EU, Euratom: Council Decision ...' -> 'Council Decision 2014/335/EU,
+    Euratom')."""
     title = re.sub(r"^((?:Council |Commission )?(?:Implementing |Delegated )?(?:Regulation|Directive|Decision))(?=[\d(])",
-                   r"\1 ", a.title or "")  # fmt: skip
+                   r"\1 ", (a.title or "").replace("(\u0395U)", "(EU)"))  # fmt: skip
     m = ACT_NUMBER_RE.match(title)
-    return m.group(1) if m else a.celex
+    if m:
+        return m.group(1)
+    m = LEGACY_ACT_NUMBER_RE.match(title)
+    return f"{m.group(2)} {m.group(1)}" if m else a.celex
 
 
 CELEX_ACT_RE = re.compile(r"^3(\d{4})([RLD])(\d{4})$")
@@ -1582,7 +1609,46 @@ def apply_act_dates(a: LegalAct, e: dict | None) -> LegalAct:
         upd["other_application_dates"] = sorted({x["date"] for x in items})
         upd["partial_application_dates"] = sorted({x["date"] for x in items if x.get("partial")})
         upd["partial_on_entry_into_force"] = False  # a checked date on that day names its provisions instead
+        upd["application_unrecorded"] = []  # the checked dates are the act's dates, incl. one EUR-Lex lacks
     return a.model_copy(update=upd)
+
+
+CELEX_RE = re.compile(r"^3\d{4}[A-Z]{1,2}\d{4}$")
+
+
+def load_act_relations(curated: Path = CURATED) -> list[dict]:
+    """Checked corrections of the amendment links EUR-Lex records (data/curated/act_relations.yaml); an entry
+    without the three CELEX ids or its evidence is skipped."""
+    raw = _load_yaml("act_relations.yaml", curated) or []
+    out = []
+    for e in raw if isinstance(raw, list) else []:
+        ids = isinstance(e, dict) and all(isinstance(e.get(k), str) and CELEX_RE.match(e[k]) for k in ("act", "replace", "with"))
+        if ids and isinstance(e.get("evidence"), str) and e["evidence"].strip():
+            out.append(e)
+        else:
+            log.warning("curated act_relations.yaml: malformed entry %r; ignored", e)
+    return out
+
+
+def apply_act_relations(acts: list[LegalAct], fixes: list[dict]) -> list[LegalAct]:
+    """The acts with each curated link in place of Cellar's, in both directions (see load_act_relations): only while
+    Cellar still links the act to `replace` (validate.py reports an entry that no longer matches)."""
+    by_celex = {a.celex: a for a in acts}
+    live = [f for f in fixes if f["act"] in by_celex and f["replace"] in by_celex[f["act"]].amends]
+    out = []
+    for a in acts:
+        amends, amended_by = set(a.amends), set(a.amended_by)
+        for f in live:
+            if a.celex == f["act"]:
+                amends = (amends - {f["replace"]}) | {f["with"]}
+            if a.celex == f["with"]:
+                amended_by.add(f["act"])
+            if a.celex == f["replace"]:
+                amended_by.discard(f["act"])
+        if (sorted(amends), sorted(amended_by)) != (a.amends, a.amended_by):
+            a = a.model_copy(update={"amends": sorted(amends), "amended_by": sorted(amended_by)})
+        out.append(a)
+    return out
 
 
 def act_date_source(e: dict, d: str) -> dict | None:
@@ -1679,6 +1745,11 @@ def load_transposition_checks(curated: Path = CURATED) -> dict[str, dict]:
         if not isinstance(e.get("exceptions") or "", str):
             log.warning("curated transposition.yaml: entry %s has malformed exceptions; ignored", e["celex"])
             e = {k: v for k, v in e.items() if k != "exceptions"}
+        if e.get("application_exceptions") and not (isinstance(e["application_exceptions"], str) and e.get("applies_from")):
+            # they qualify the general date from which the national measures apply, which the entry must name
+            log.warning("curated transposition.yaml: entry %s has application_exceptions without applies_from; ignored",
+                        e["celex"])  # fmt: skip
+            e = {k: v for k, v in e.items() if k != "application_exceptions"}
         out[e["celex"]] = e
     return out
 
@@ -1708,8 +1779,23 @@ def apply_transposition_checks(a: LegalAct, e: dict | None) -> LegalAct:
     chk = entities.CheckedTransposition(
         deadline=e["deadline"], applies_from=e.get("applies_from"), other=list(e.get("other") or []),
         exceptions=_squash(e.get("exceptions")) or None,
+        application_exceptions=_squash(e.get("application_exceptions")) or None,
     )
     return a.model_copy(update={"transposition_checked": chk})
+
+
+def load_denmark_schengen(curated: Path = CURATED) -> dict[str, dict]:
+    """Denmark's decisions under Article 4 of Protocol No 22 on directives building upon the Schengen acquis
+    (data/curated/denmark_schengen.yaml), by CELEX. An entry without its decision, date or document is skipped."""
+    raw = _load_yaml("denmark_schengen.yaml", curated) or []
+    out: dict[str, dict] = {}
+    for e in raw if isinstance(raw, list) else []:
+        ok = isinstance(e, dict) and isinstance(e.get("celex"), str) and e.get("decision") in ("implement", "not_implement")
+        if ok and ISO_DATE_RE.match(str(e.get("notified") or "")) and all(isinstance(e.get(k), str) for k in ("document", "url")):
+            out[e["celex"]] = e
+        else:
+            log.warning("curated denmark_schengen.yaml: malformed entry %r; ignored", e)
+    return out
 
 
 def load_council_dates(curated: Path = CURATED) -> dict[str, dict]:
@@ -1835,6 +1921,9 @@ class Builder:
         self.today = today or _today()
         self.state_dir = state
         self.featured_cur, self.topics_cur, self.alias_rules = load_curated(curated)
+        self.act_relations = load_act_relations(curated)
+        if self.act_relations:  # amendment links checked against the amending act's text
+            snap.acts = apply_act_relations(snap.acts, self.act_relations)
         self.act_dates = load_act_dates(curated)
         if self.act_dates:
             snap.acts = [apply_act_dates(a, self.act_dates.get(a.celex)) for a in snap.acts]
@@ -1844,6 +1933,7 @@ class Builder:
             snap.acts = [apply_transposition_checks(a, self.transposition_checks.get(a.celex)) for a in snap.acts]
         self.council_dates = load_council_dates(curated)
         self.unlinked_acts = load_unlinked_acts(curated)
+        self.denmark_schengen = load_denmark_schengen(curated)
         self.files: dict[str, Any] = {}
         self._index()
 
@@ -2149,6 +2239,15 @@ class Builder:
             t = self.train_by_ref.get(norm_ref(p.reference))
             if t:
                 self.train_of[pid] = sorted(t, key=lambda x: x.url)
+        # a Train page on one part of a split proposal, which records the proposal's reference ("New alignment of
+        # regulatory procedure with scrutiny (RPS) measures - 2016/0400B(COD)", procedure 2016/0400(COD)), is that
+        # part's, not the proposal's
+        for parent, children in self.split_children.items():
+            for t in self.train_of.get(parent, []):
+                part = next((c for c in children if self.proc[c].reference in t.title), None)
+                if part:
+                    self.train_of[parent] = [x for x in self.train_of[parent] if x is not t]
+                    self.train_of[part] = sorted([*self.train_of.get(part, []), t], key=lambda x: x.url)
 
     def vote_dossiers(self, v: EpVote) -> list[str]:
         out = {p.id for r in v.procedure_refs if (p := self.resolve_ref(r))}
@@ -2172,12 +2271,21 @@ class Builder:
         ]  # fmt: skip
 
     # ---------------------------------------------------------------- titles/topics
+    def adopted_title(self, p: Procedure) -> str | None:
+        """The official title of the file's one adopted act (EUR-Lex), where the procedure's own title does not
+        describe it (title_misfit): e.g. "Extending Directive [XXXX] to ..." for Directive (EU) 2024/2842."""
+        acts = self.acts_of.get(p.id, [])
+        if len(acts) != 1 or self.act_dossiers.get(acts[0].celex) != {p.id}:
+            return None
+        return acts[0].title if title_misfit(p.title, acts[0].title) else None
+
     def dossier_title(self, p: Procedure) -> str:
         cur = self.curated_of.get(p.id)
         if cur and cur.get("short_title"):
             return str(cur["short_title"])
-        names = short_names(p.title)
-        return names[0] if names else clean_title(p.title)
+        title = self.adopted_title(p) or p.title
+        names = short_names(title)
+        return names[0] if names else clean_title(title)
 
     def related_act_title(self, celex: str, pid: str | None, topic: bool = False) -> str:
         """A related act by its number ('Directive (EU) 2025/794'), followed by its file's short title when it
@@ -3208,7 +3316,10 @@ class Builder:
         out.extend(council_vote_event(cv) for cv in cvotes)
         for a in acts:
             src = _src(a.source)
-            label = f"{a.act_type.capitalize()} {a.celex}" if a.act_type != "other" else f"Act {a.celex}"
+            # the act by its number ("Directive (EU) 2019/884"), as its title gives it: tells a file's acts apart
+            label = act_label(a)
+            if label == a.celex:
+                label = celex_act_label(a.celex) or f"{a.act_type.capitalize()} (CELEX {a.celex})"
             # (kind, date, title, title once the date has passed)
             synth: list[tuple[str, str, str, str | None]] = []
             # only an act of Parliament and the Council is signed by both Presidents; a Council act is signed
@@ -3237,16 +3348,22 @@ class Builder:
                 else:
                     synth.append(("entry_into_force", a.entry_into_force, "Enters into force", None))
             for d in a.other_application_dates:
+                # "Further" only after an earlier application date (PPWR, Regulation (EU) 2025/40, Art. 71: "It shall
+                # apply from 12 August 2026", the first date from which any of it applies)
+                earlier = (any(x < d for x in a.other_application_dates) or a.partial_on_entry_into_force
+                           or bool(a.entry_into_force and provisions.get(a.entry_into_force)))  # fmt: skip
                 if provisions.get(d):
                     synth.append(("application", d, f"Starts to apply: {provisions[d]}",
                                   f"Started to apply: {provisions[d]}"))  # fmt: skip
                 elif d in a.partial_application_dates:
                     synth.append(("application", d, "Some provisions start to apply (date recorded by EUR-Lex)",
                                   "Some provisions started to apply (date recorded by EUR-Lex)"))  # fmt: skip
+                elif earlier:
+                    synth.append(("application", d, "Further provisions start to apply (date recorded by EUR-Lex)",
+                                  "Further provisions started to apply (date recorded by EUR-Lex)"))  # fmt: skip
                 else:
-                    synth.append(
-                        ("application", d, "Further provisions start to apply (date recorded by EUR-Lex)", None)
-                    )
+                    synth.append(("application", d, "Rules start to apply (date recorded by EUR-Lex)",
+                                  "Rules started to apply (date recorded by EUR-Lex)"))  # fmt: skip
             # a date whose role the data do not establish ("other") is not a legal milestone: it stays off the
             # timeline (and so off "Latest verified development" and "Coming up")
             tr = classify_transposition(a)
@@ -3272,9 +3389,16 @@ class Builder:
                     title = past_title or PAST_TITLES.get(kind, title)
                 doc = {"id": a.celex, "label": a.oj_ref or a.celex, "kind": "act", "date": a.date_document,
                        "url": a.eurlex_url}  # fmt: skip
+                source = src
                 if kind in ("entry_into_force", "application", "transposition_deadline", "transposition_application"):
                     if cite := act_date_source(cur, d):  # corrected date: cite the text it was checked against
                         doc |= {"label": _squash(cite.get("label")), "url": cite.get("url")}
+                        # the date is that text's, not EUR-Lex's record of the act (Regulation (EU) 2022/2065, Art.
+                        # 93(2): 17 February 2024, where EUR-Lex records 17 February 2022)
+                        checked = f" (checked {_long_date(cur['reviewed'])})" if cur.get("reviewed") else ""
+                        source = {"institution": "EUR-Lex", "url": cite.get("url"),
+                                  "label": f"{_squash(cite.get('label'))}{checked}",
+                                  "identifier": cite.get("celex") or a.celex, "retrieved_at": None, "published": None}  # fmt: skip
                     elif a.amended_by:  # Cellar's current record, which may reflect later amendments
                         doc["label"] = f"EUR-Lex record, CELEX {a.celex}"
                 detail, chk = label, a.transposition_checked
@@ -3282,6 +3406,8 @@ class Builder:
                     x.date == d and x.kind == "deadline" for x in tr
                 ):  # not every Member State had this deadline (Directive (EU) 2016/798, Art. 33(2), (2a) and (4))
                     detail = f"{label}. Exceptions in its text: {chk.exceptions}"
+                elif kind == "transposition_application" and chk and chk.application_exceptions and d == chk.applies_from:
+                    detail = f"{label}. {chk.application_exceptions}"  # a later date for some measures (CSDDD Art. 37(1))
                 if kind == "publication" and ep_pubs and len(act_pubs) == 1:  # the EP's record gives another day
                     detail = (f"{label}. The European Parliament's procedure record gives "
                               f"{' and '.join(_long_date(x) for x in sorted(ep_pubs))} for its publication.")  # fmt: skip
@@ -3289,7 +3415,7 @@ class Builder:
                     "id": f"act-{a.celex}-{kind}-{d}", "date": d, "kind": kind, "title": title, "detail": detail,
                     "institution": "EP and Council" if kind == "signature" else "EUR-Lex",
                     "state": "scheduled" if future else "done",
-                    "key": True, "docs": [doc], "source": src, "vote_id": None,
+                    "key": True, "docs": [doc], "source": source, "vote_id": None,
                 })  # fmt: skip
             for c in a.amended_by:  # later legislative acts amending this one (when in the snapshot)
                 m = self.act.get(c)
@@ -3438,8 +3564,12 @@ class Builder:
             # decades older than the directive, e.g. a civil code)
             dates = sorted(m.notified for m in ms if m.notified)
             oo = self.optouts.get(a.celex)
+            status = self.transposition_status(a.celex, c, deadline)
+            schengen = self.schengen_note(a.celex, c) if status == "not_participating" else None
             countries.append({
-                "country": c, "measures": len(ms), "status": self.transposition_status(a.celex, c, deadline),
+                "country": c, "measures": len(ms), "status": status,
+                # Denmark and a directive building upon the Schengen acquis (Protocol No 22, Art. 4)
+                **({"status_note": schengen[0], "status_note_url": schengen[1]} if schengen else {}),
                 "latest_notification": dates[-1] if dates else None,
                 "opted_in": oo.opted_in.get(c) if oo else None,
                 "infringements": [self.infr_info(i, a.celex) for i in self.infr_by_celex.get(a.celex, [])
@@ -3465,6 +3595,24 @@ class Builder:
             **({"exemption": {k: exemption.get(k) for k in ("provision", "quote", "countries", "named")}}
                if exemption else {}),
         }  # fmt: skip
+
+    def schengen_note(self, celex: str, country: str) -> tuple[str, str | None] | None:
+        """For Denmark, not bound by a directive that builds upon the Schengen acquis: that it decides under Article 4
+        of Protocol No 22 whether to implement it in its national law, or its decision, as notified to the Council
+        (data/curated/denmark_schengen.yaml), with the notification's URL. Directive (EU) 2023/977, recital 40; Denmark
+        notified on 9 November 2023 that it had decided to implement it (ST 15298/23)."""
+        oo = self.optouts.get(celex)
+        e = self.denmark_schengen.get(celex)
+        if country != "DK" or not oo or "DK" not in oo.schengen_art4:
+            return None
+        if not e:
+            return ("It builds upon the Schengen acquis: under Article 4 of Protocol No 22, Denmark decides whether to "
+                    "implement it in its national law.", None)  # fmt: skip
+        when = f"as it notified the Council on {_long_date(e['notified'])} ({e['document']})"
+        if e["decision"] == "implement":
+            return (f"Denmark decided to implement it in its national law under Article 4 of Protocol No 22, {when}: an "
+                    "obligation under international law, not under EU law.", e["url"])  # fmt: skip
+        return f"Denmark decided not to implement it in its national law under Article 4 of Protocol No 22, {when}.", e["url"]
 
     def not_required_note(self, celex: str) -> str | None:
         """What a country row marked not_required rests on: "Art. 33(4): for as long as no rail system is established
@@ -3828,7 +3976,8 @@ class Builder:
                 "title": self.dossier_title(p),
                 # a split parent known only from EUR-Lex has no title of its own in the sources (its name says
                 # what it was split into): none is shown as its official title
-                "official_title": None if pid in self.stub_ids and self.split_children.get(pid) else p.title,
+                "official_title": None if pid in self.stub_ids and self.split_children.get(pid)
+                else self.adopted_title(p) or p.title,
                 "short": (cur or {}).get("what") or None,
                 "topics": self.topics_for(p),
                 "stage": st["status"].get("stage", "unknown"),
@@ -3872,7 +4021,18 @@ class Builder:
                                 "label": f"Legislative Observatory (OEIL) – procedure file {p.reference}"})  # fmt: skip
                 if "data.europarl.europa.eu" in (psrc.get("url") or ""):
                     psrc = {**psrc, "label": f"Machine-readable data (EP Open Data API) – procedure {p.reference}"}
-            sources += [psrc] + [_src(a.source) for a in acts]
+            if self.split_children.get(pid):
+                # a proposal split into separate files: their procedure files, not the EUR-Lex record of one part's act
+                # that a parent known only from EUR-Lex was built from (2016/0400(COD): Regulation (EU) 2019/1243, the
+                # act of 2016/0400A(COD))
+                if pid not in self.stub_ids:
+                    sources.append(psrc)
+                sources += [{**_src(self.proc[c].source), "institution": "OEIL", "url": url,
+                             "label": f"Legislative Observatory (OEIL) – procedure file {self.proc[c].reference} "
+                                      "(separate file)"}
+                            for c in self.split_children[pid] if (url := self.oeil_link(c))]  # fmt: skip
+            else:
+                sources += [psrc] + [_src(a.source) for a in acts]
             sources += [_src(t.source) for t in self.train_of.get(pid, [])]
             sources = _dedupe_sources(sources)
             tables = self.implementations(acts)  # national implementation, one table per directive
@@ -4292,6 +4452,7 @@ class Builder:
                 if len(ds) == 1 and sum(x.act_type == "directive" for x in self.dossier_acts.get(ds[0], [])) > 1:
                     title = f"{act_label(a)}: {title}"  # one of the file's directives (2013/0400(CNS) has two)
                 status = self.transposition_status(a.celex, code, deadline)
+                schengen = self.schengen_note(a.celex, code) if status == "not_participating" else None
                 trans.append({
                     "celex": a.celex, "title": title,
                     "act": act_names[a.celex][0], "names": act_names[a.celex][1],
@@ -4300,6 +4461,8 @@ class Builder:
                     "status": status,
                     # the exemption and its condition (Directive (EU) 2016/798, Art. 33(4)), not the bare label
                     **({"status_note": self.not_required_note(a.celex)} if status == "not_required" else {}),
+                    # Denmark and a directive building upon the Schengen acquis (Protocol No 22, Art. 4)
+                    **({"status_note": schengen[0], "status_note_url": schengen[1]} if schengen else {}),
                 })  # fmt: skip
             self.files[f"countries/{code}.json"] = {
                 **summ,

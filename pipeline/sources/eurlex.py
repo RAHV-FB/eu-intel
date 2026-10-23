@@ -43,6 +43,17 @@ Source facts relied on (checked against the live endpoint, see tests/test_eurlex
   An entry-into-force date that is also marked MA/PART or PE/PART sets partial_on_entry_into_force (DMA
   32022R1925, Art. 54: some provisions apply from its entry into force on 1 November 2022).
 - 1001-01-01 (unknown/undetermined) and 9999-12-31 (open-ended) are Cellar placeholder dates.
+- An application value (type MA, or MA/PART in the type or the comment) of 1001-01-01 next to a real entry-into-force
+  date: the act applies, in general or for some provisions, from a date it does not state, e.g. "from the date
+  determined by the Commission in accordance with Article 88" (ETIAS, 32018R1240: MA 1001-01-01 "V ART 96"), or six
+  months after a Commission notice (Clinical Trials Regulation, 32014R0536: "V ART 99"). Kept as
+  application_unrecorded (partial or not, with the article(s) the comment refers to); one act can have both
+  (32019D0654: MA "V ART 2.1" and MA/PART "V ART 2.2"). Cellar does not replace the placeholder once the date is set
+  (32014R0536 still has it; it applies from 31 January 2022).
+- The comment on the EV date often gives Cellar's rule for it: "DATPUB +20 V ART 15" (the twentieth day following
+  publication, see Article 15), kept as entry_into_force_after_publication (20). The date does not always follow
+  it: 32017D1324 is recorded as 2017-08-08, publication (18.7.2017) + 20 days being 2017-08-07, as its Article 15
+  provides; and the comment can be wrong instead (32019R0503: "+20", where Art. 8(1) says "the day following").
 - Publication: acts in the act-by-act OJ (from Oct 2023) carry `official-journal-act_*`
   properties on the work; older acts link to an OJ issue via
   `resource_legal_published_in_official-journal` (number, collection, publication date).
@@ -118,6 +129,7 @@ from pipeline.models.entities import (
     SourceStatus,
     Subject,
     TranspositionDate,
+    UnrecordedApplication,
     ValidityNote,
 )
 from pipeline.snapshot import CURATED, fetch_deadline, now_iso, past, read_records, write_records, write_state
@@ -182,6 +194,7 @@ OTHER_ACT_LOCATION_RE = re.compile(r"^\s*\d{5}[A-Z]{1,2}\d{4}\b")
 # EIF annotation types (fd_335 authority codes) -> role
 EIF_TYPES = ("EV",)  # entry into force
 EFFECT_TYPES = ("PE",)  # date of effect (decisions addressed to Member States: on notification)
+APPLICATION_TYPES = ("MA", "MA/PART", "APPLICATION")  # (partial) application
 
 # Literal / IRI properties fetched for every work (predicate local name -> facts key)
 PROPS = {
@@ -502,6 +515,8 @@ class Facts:
     oj_issues: dict[str, dict[str, str]] = field(default_factory=dict)
     eif_types: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     eif_notes: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))  # raw comment_on_date
+    # (type code, raw comment or "") of each annotation on the placeholder 1001-01-01
+    unknown_eif: set[tuple[str, str]] = field(default_factory=set)
     validity_notes: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))  # end of validity
     # transposition date -> comment_on_date annotations (raw "{CODE|iri} ... {ART|iri} 48.1")
     transposition_notes: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
@@ -548,6 +563,8 @@ def add_eif_types(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
             facts[r["w"]].eif_types[d].add(_annotation_code(r["type"]))
             if r.get("comment"):
                 facts[r["w"]].eif_notes[d].add(r["comment"])
+            if d == UNKNOWN_DATE:
+                facts[r["w"]].unknown_eif.add((_annotation_code(r["type"]), r.get("comment") or ""))
             # partial application is sometimes only in the comment: type MA, comment "{MA/PART|...} ..."
             for code in ANNOTATION_CODE_RE.findall(r.get("comment") or ""):
                 if code.endswith("/PART"):
@@ -782,6 +799,44 @@ def unrecorded_entry_into_force(f: Facts, eif: str | None) -> tuple[bool, list[s
     return True, sorted(articles), False
 
 
+# the articles a comment refers to: "{V|…} {ART|…} 123.3(d) {ET|…} 123.3(e)" -> 123.3(d), 123.3(e); not another act
+# ("{ART|…} 2 {ET|…} 32017R2226": Article 2, and the act 32017R2226)
+COMMENT_ARTICLES_RE = re.compile(r"\{ART\|[^{}]*\}\s*([0-9][0-9A-Za-z.()]*)((?:\s*\{ET\|[^{}]*\}\s*[0-9][0-9A-Za-z.()]*)*)")
+COMMENT_MORE_RE = re.compile(r"\{ET\|[^{}]*\}\s*([0-9][0-9A-Za-z.()]*)")
+CELEX_ID_RE = re.compile(r"^[1-4]\d{4}[A-Z]{1,2}\d{4}$")
+
+
+def _comment_articles(comment: str) -> list[str]:
+    out = []
+    for m in COMMENT_ARTICLES_RE.finditer(comment):
+        out += [m[1], *COMMENT_MORE_RE.findall(m[2])]
+    return [a.rstrip(".") for a in out if not CELEX_ID_RE.match(a)]
+
+
+def unrecorded_application(f: Facts) -> list[UnrecordedApplication]:
+    """The application dates (MA, MA/PART, APPLICATION) Cellar gives as 1001-01-01, at most one for the act in
+    general and one for some provisions; partial when MA/PART is in the type or the comment (see the module
+    docstring)."""
+    out: dict[bool, set[str]] = {}
+    for code, comment in f.unknown_eif:
+        if code not in APPLICATION_TYPES:
+            continue
+        partial = code.endswith("/PART") or any(c.endswith("/PART") for c in ANNOTATION_CODE_RE.findall(comment))
+        out.setdefault(partial, set()).update(_comment_articles(comment))
+    return [UnrecordedApplication(partial=p, articles=sorted(out[p])) for p in sorted(out)]
+
+
+DATPUB_RE = re.compile(r"^\s*\{DATPUB\|[^{}]*\}\s*\+?\s*(\d+)\b")
+
+
+def entry_into_force_after_publication(f: Facts, eif: str | None) -> int | None:
+    """N of Cellar's comment "DATPUB +N" on the EV entry-into-force date (N days after publication), if any."""
+    if not eif or not f.eif_types.get(eif, set()) & set(EIF_TYPES):
+        return None
+    days = {int(m[1]) for c in f.eif_notes.get(eif, set()) if (m := DATPUB_RE.match(c))}
+    return days.pop() if len(days) == 1 else None
+
+
 NOTE_CELEX_RE = re.compile(r"(?<![\w/])([1-4]\d{4}[A-Z]{1,2}\d{4})(?!\w)")
 
 
@@ -871,6 +926,8 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         entry_into_force_pending=eif_pending,
         entry_into_force_articles=eif_articles,
         effect_on_notification=on_notification,
+        entry_into_force_after_publication=entry_into_force_after_publication(f, eif),
+        application_unrecorded=unrecorded_application(f),
         other_application_dates=other_dates,
         partial_application_dates=partial,
         partial_on_entry_into_force=partial_on_entry_into_force(f, eif),

@@ -36,12 +36,26 @@ test.describe('act validity', () => {
   });
 
   test('says when EUR-Lex records no date for the other provisions', async ({ page }) => {
-    // Regulation (EU) 2025/12, Art. 46: from "two years from the date on which the router starts operations"
+    // Regulation (EU) 2025/12, Art. 46: from "two years from the date on which the router starts operations"; Cellar
+    // gives that date (MA, "V ART 46") and the one of Art. 46(b) (MA/PART) as 1001-01-01
     await open(page, 'legislation/2022-0424/');
     const when = page.locator('.dz-when');
-    await expect(when).toContainText('Some provisions apply from');
-    await expect(when.locator('div', { hasText: 'Other provisions apply from' })).toContainText('Not recorded: EUR-Lex gives no date.');
-    await expect(status(page)).toContainText('and no date from which the other provisions apply.');
+    await expect(when.locator('div', { hasText: 'Rules apply from' })).toContainText(
+      'Not recorded: EUR-Lex gives no date (it refers to Art. 46).',
+    );
+    await expect(when.locator('div', { hasText: 'Some provisions apply from' })).toContainText(
+      'EUR-Lex gives no date for some provisions (it refers to Art. 46(b)).',
+    );
+    await expect(status(page)).toContainText('EUR-Lex records no date from which the act in general applies (it refers to Art. 46)');
+  });
+
+  test('never reads an application date EUR-Lex gives as not recorded as applying now', async ({ page }) => {
+    // ETIAS, Regulation (EU) 2018/1240, Art. 96: "This Regulation shall apply from the date determined by the Commission"
+    await open(page, 'legislation/2016-0357A/');
+    await expect(page.locator('.dz-when').locator('div', { hasText: 'Rules apply from' })).toContainText(
+      'Not recorded: EUR-Lex gives no date (it refers to Art. 96).',
+    );
+    await expect(page.locator('.dz-facts')).toContainText('EUR-Lex records no date from which this regulation in general applies');
   });
 });
 

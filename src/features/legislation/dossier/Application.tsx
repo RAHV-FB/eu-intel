@@ -95,6 +95,18 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
                         )
                       </span>
                     )}
+                    {/* Denmark and a directive building upon the Schengen acquis (Protocol No 22, Art. 4) */}
+                    {c.status_note && (
+                      <span className="tp-case meta">
+                        {c.status_note}
+                        {c.status_note_url && (
+                          <>
+                            {' '}
+                            <ExtLink href={c.status_note_url}>Notification</ExtLink>
+                          </>
+                        )}
+                      </span>
+                    )}
                     {c.infringements.some((i) => i.status === 'open' && i.non_communication) && (
                       <span className="tp-case meta">Commission case open for incomplete notification</span>
                     )}
@@ -168,6 +180,8 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
           “Not bound” means that the directive itself (in its recitals) or the Council’s official voting result records
           the country as not taking part in its adoption, under its opt-out from this area of EU law (Protocols 21 and 22
           to the Treaties).
+          {impl.countries.some((c) => c.status === 'not_participating' && c.status_note) &&
+            ' For a measure building upon the Schengen acquis, Denmark decides whether to implement it in its national law (Protocol No 22, Article 4); its row says so.'}
         </p>
       )}
     </>
@@ -228,7 +242,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
   // dates EUR-Lex records for after the act's validity ended (e.g. a deadline after a repeal)
   const ended = new Set(d.application?.after_end_of_validity ?? []);
   const endedNote = (x: ISODate) => ended.has(x) && <span className="meta"> (a date after the directive’s validity ended)</span>;
-  const dateList = (xs: { date: ISODate; articles: string[] }[]) =>
+  const dateList = (xs: { date: ISODate; articles: string[]; exceptions?: string | null }[]) =>
     xs.map((x, i) => (
       <span key={x.date}>
         {i > 0 && ', '}
@@ -236,6 +250,8 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
         {x.articles.length > 0 && <span className="meta"> ({x.articles.join(', ')})</span>}
         {x.date > today && <span className="dz-upcoming">upcoming</span>}
         {endedNote(x.date)}
+        {/* what the directive's text provides beside this application date (CSDDD, Art. 37(1): Article 16 later) */}
+        {x.exceptions && <span className="meta">. {x.exceptions}</span>}
       </span>
     ));
 

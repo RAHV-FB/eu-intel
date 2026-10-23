@@ -120,6 +120,36 @@ def test_entry_into_force_before_the_act_is_a_warning(tmp_path: Path):
     assert len(w) == 1 and "before its publication (2024-12-01)" in w[0]
 
 
+def test_dates_and_links_that_cellars_own_record_contradicts_are_warnings(tmp_path: Path):
+    """PRIMA, Decision (EU) 2017/1324: Cellar's rule "DATPUB +20" and its date (8 August 2017, publication 18.7.2017)
+    disagree. ETIAS, Regulation (EU) 2018/1240: the date from which it applies in general is "1001-01-01" ("V ART 96").
+    AI Act: linked to Implementing Regulation (EU) No 90/2014 (32014R0090) though its title cites Directive
+    2014/90/EU. Each is reported until checked (data/curated/act_dates.yaml, act_relations.yaml)."""
+    clean = check(FIX, today=TODAY).warnings
+    assert not clean["entry-into-force-rule"] and not clean["application-not-recorded"] and not clean["amends-link-type"]
+    snap = _copy(tmp_path)
+
+    def edit(r):
+        r[0].update(entry_into_force_after_publication=20)  # published 2024-12-01, in force 2024-12-21: agrees
+        r[1].update(entry_into_force_after_publication=20, date_publication="2023-02-01", entry_into_force="2023-02-22")
+        r[0].update(in_force=True, application_unrecorded=[{"partial": False, "articles": ["96"]}])
+        r[2].update(in_force=True, application_unrecorded=[{"partial": True, "articles": ["120.2"]}])  # some only
+        r[0].update(title=r[0]["title"] + " amending Directive 2014/90/EU", amends=["32014R0090"])
+
+    _edit(snap / "eurlex" / "acts.json", edit)
+    w = check(snap, today=TODAY).warnings
+    assert w["entry-into-force-rule"] == [
+        "32099L0003: enters into force 2023-02-22, but EUR-Lex's rule (publication 2023-02-01 + 20 days) gives "
+        "2023-02-21; check the act's text"
+    ]
+    assert w["application-not-recorded"] == [
+        "32099R0001: EUR-Lex records no date from which it applies in general (it refers to Art. 96); check the act's text"
+    ]
+    assert w["amends-link-type"] == [
+        "32099R0001: EUR-Lex links it as amending 32014R0090, but its title cites Directive 2014/90, not a regulation"
+    ]
+
+
 def test_errors_are_attributed_to_their_source(tmp_path: Path):
     from pipeline.validate import validate_by_source
 

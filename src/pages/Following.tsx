@@ -127,8 +127,8 @@ function Item({
           {latest ? (
             <>
               Latest: <time dateTime={latest.date}>{formatDate(latest.date)}</time> — {latest.title}
-              {institutionSuffix(latest.title, latest.institution) && (
-                <span className="meta"> ({institutionSuffix(latest.title, latest.institution)})</span>
+              {institutionSuffix(latest.title, latest.institution, latest.kind) && (
+                <span className="meta"> ({institutionSuffix(latest.title, latest.institution, latest.kind)})</span>
               )}
             </>
           ) : (

@@ -30,9 +30,18 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from pipeline.analysis.transposition import application_start, article_label
+from pipeline.analysis.transposition import Dated, application_start, article_label
 from pipeline.analysis.transposition import classify as classify_transposition
-from pipeline.models.entities import EpVote, Event, EventKind, Institution, LegalAct, Procedure, TrainFile
+from pipeline.models.entities import (
+    EpVote,
+    Event,
+    EventKind,
+    Institution,
+    LegalAct,
+    Procedure,
+    TrainFile,
+    UnrecordedApplication,
+)
 
 Stage = Literal[
     "proposed",
@@ -119,6 +128,8 @@ class TranspositionDateInfo(_M):
     # records whose role the data do not establish (e.g. an optional "may apply" date)
     kind: Literal["deadline", "further_deadline", "application", "other"]
     articles: list[str] = Field(default_factory=list)  # article setting the date, e.g. "Art. 48(1)"
+    # the general application date's exceptions in the directive's text, checked (transposition.yaml)
+    exceptions: str | None = None
 
 
 class Application(_M):
@@ -129,6 +140,9 @@ class Application(_M):
     application_dates: list[str] = Field(default_factory=list)
     partial_application_dates: list[str] = Field(default_factory=list)  # only some provisions apply from
     partial_on_entry_into_force: bool = False  # EUR-Lex marks the entry-into-force date as such a date too
+    # EUR-Lex gives the date from which the act in general, or some provisions, apply as not recorded (1001-01-01),
+    # with the article(s) it refers to ("Art. 96"): at most one of each kind, from the first act that has it
+    application_unrecorded: list[UnrecordedApplication] = Field(default_factory=list)
     transposition_deadlines: list[str] = Field(default_factory=list)  # directives: deadlines only
     transposition: list[TranspositionDateInfo] = Field(default_factory=list)  # directives: every date
     future: bool = False  # any of the above dates is after `today`
@@ -276,6 +290,7 @@ def application_of(acts: list[LegalAct], today: date) -> Application | None:
         application_dates=app,
         partial_application_dates=sorted({d for a in acts for d in a.partial_application_dates if d in app}),
         partial_on_entry_into_force=any(a.partial_on_entry_into_force for a in acts if eif and a.entry_into_force == eif),
+        application_unrecorded=unrecorded_of(acts),
         transposition_deadlines=[x.date for x in tr if x.kind in ("deadline", "further_deadline")],
         transposition=tr,
         future=future,
@@ -283,12 +298,33 @@ def application_of(acts: list[LegalAct], today: date) -> Application | None:
     )
 
 
+def unrecorded_of(acts: list[LegalAct]) -> list[UnrecordedApplication]:
+    """The application dates EUR-Lex gives as not recorded (1001-01-01), for the act in general and for some
+    provisions: of each kind, the first act's, with its articles labelled ("96" -> "Art. 96")."""
+    out = []
+    for partial in (False, True):
+        x = next((u for a in acts for u in a.application_unrecorded if u.partial == partial), None)
+        if x:
+            out.append(UnrecordedApplication(partial=partial, articles=[article_label(r) for r in x.articles]))
+    return out
+
+
+def application_exceptions(acts: list[LegalAct], x: Dated) -> str | None:
+    """What the text of the first directive among the acts provides beside its general application date x (a
+    classified transposition date), checked against the text (data/curated/transposition.yaml)."""
+    dr = next((a for a in acts if a.act_type == "directive" and a.transposition_deadlines), None)
+    chk = dr.transposition_checked if dr else None
+    ok = chk and x.kind == "application" and x.date == chk.applies_from
+    return chk.application_exceptions if ok else None
+
+
 def transposition_info(acts: list[LegalAct]) -> list[TranspositionDateInfo]:
     """Classified transposition dates of the first directive among the acts (see transposition.py)."""
     for a in acts:
         if a.act_type == "directive" and a.transposition_deadlines:
             return [
-                TranspositionDateInfo(date=x.date, kind=x.kind, articles=[article_label(r) for r in x.articles])
+                TranspositionDateInfo(date=x.date, kind=x.kind, articles=[article_label(r) for r in x.articles],
+                                      exceptions=application_exceptions(acts, x))  # fmt: skip
                 for x in classify_transposition(a)
             ]
     return []
@@ -504,6 +540,26 @@ def entry_into_force_condition(act: LegalAct) -> str | None:
     )
 
 
+def unrecorded_application_text(act: LegalAct) -> str:
+    """What EUR-Lex records of an act whose application date it gives as not recorded (1001-01-01): never that it
+    applies from its entry into force. ETIAS, Regulation (EU) 2018/1240, Art. 96: "This Regulation shall apply from
+    the date determined by the Commission in accordance with Article 88"; Cellar refers to that article."""
+    refers = {
+        x.partial: f" (it refers to {', '.join(article_label(r) for r in x.articles)})" if x.articles else ""
+        for x in act.application_unrecorded
+    }
+    if False in refers and True in refers:
+        return (
+            f"EUR-Lex records no date from which the act in general applies{refers[False]}, nor one from which "
+            f"some of its provisions apply{refers[True]}."
+        )
+    if False in refers:
+        return f"EUR-Lex records no date from which the act in general applies{refers[False]}."
+    if True in refers:
+        return f"EUR-Lex records no date from which some of its provisions apply{refers[True]}."
+    return ""
+
+
 def _acts_stage(
     proc: Procedure,
     acts: list[LegalAct],
@@ -562,9 +618,8 @@ def _acts_stage(
             text = f"The act has been in force since {_fmt(eif)}." if eif else "The act is in force."
             if eif and act.partial_on_entry_into_force:  # Cellar marks that date MA/PART too (DMA, Art. 54)
                 text += " EUR-Lex records that some provisions apply from that date" + (
-                    "." if any(a.other_application_dates for a in acts)
-                    # and no date for the others (Regulation (EU) 2025/12, Art. 46: they apply from "the date two
-                    # years from the date on which the router starts operations, as determined by the Commission")
+                    "." if any(a.other_application_dates for a in acts) or act.application_unrecorded
+                    # and no date for the others
                     else ", and no date from which the other provisions apply."
                 )
             later = [d for a in acts for d in a.other_application_dates if d and eif and d > eif]
@@ -573,6 +628,11 @@ def _acts_stage(
                     " Entry into force is not the same as application: EUR-Lex records later dates from "
                     "which (parts of) the act apply."
                 )
+            # a date the act leaves to a later decision, notice or event, which EUR-Lex does not record (Regulation
+            # (EU) 2025/12, Art. 46: from "the date two years from the date on which the router starts operations,
+            # as determined by the Commission")
+            if unrecorded := unrecorded_application_text(act):
+                text += " " + unrecorded
             # an end of validity still ahead, and the act that repeals it (32015L0849: validity ends on
             # 9 July 2027, repealed by Directive (EU) 2024/1640)
             refs = [_ref(c, others) for c in act.repealed_by]
@@ -1232,6 +1292,11 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 parts.append(
                     f"The national measures {'are' if start > t else 'were'} to apply from {_fmt(start)}{latest}."
                 )
+                # a later date for some measures (Directive (EU) 2024/1760, Art. 37(1), as replaced by Directive (EU)
+                # 2026/470: the measures for Article 16 apply for financial years starting on or after 1 January 2030)
+                chk = dr.transposition_checked if dr else None
+                if chk and chk.application_exceptions and chk.applies_from == start:
+                    parts.append(chk.application_exceptions)
             if earlier and general and general >= t:
                 past = [x for x in earlier if x < t]
                 plural = len(earlier) > 1
@@ -1260,9 +1325,15 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 )
             return NextStep(text=" ".join(parts), institution=None, basis=basis)
         if act.act_type == "regulation":
-            parts.append(
-                "The regulation applies directly in all EU countries; no national transposition is needed."
-            )
+            if any(not x.partial for x in act.application_unrecorded):  # no date from which it applies in general
+                parts.append(
+                    "A regulation applies directly in all EU countries; no national transposition is needed. "
+                    + unrecorded_application_text(act).replace("the act in general", "this regulation in general")
+                )
+            else:
+                parts.append(
+                    "The regulation applies directly in all EU countries; no national transposition is needed."
+                )
             pending = [d for d in (app.application_dates if app else []) if d > t]
             if pending:
                 parts.append(

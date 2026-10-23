@@ -100,8 +100,8 @@ export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
             {milestone ? (
               <>
                 <time dateTime={milestone.date}>{formatDate(milestone.date, true)}</time> — {milestone.title}
-                {institutionSuffix(milestone.title, milestone.institution) && (
-                  <span className="meta"> ({institutionSuffix(milestone.title, milestone.institution)})</span>
+                {institutionSuffix(milestone.title, milestone.institution, milestone.kind) && (
+                  <span className="meta"> ({institutionSuffix(milestone.title, milestone.institution, milestone.kind)})</span>
                 )}
               </>
             ) : (

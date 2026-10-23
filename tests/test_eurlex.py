@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -200,6 +201,62 @@ def test_entry_into_force_pending():
 
 DATNOT = "{DATNOT|http://publications.europa.eu/resource/authority/fd_335/DATNOT}"
 FD335 = "http://publications.europa.eu/resource/authority/fd_335/"
+
+
+def test_application_dates_given_as_not_recorded_are_kept():
+    """Cellar rows of 2026-10-23. ETIAS 32018R1240: MA 1001-01-01 "V ART 96" next to EV 2018-10-09 (Art. 96: "This
+    Regulation shall apply from the date determined by the Commission in accordance with Article 88"). 32019D0654: one
+    MA value for Art. 2(1) and one marked MA/PART for Art. 2(2). EPPO 32017R1939: MA/PART "V ART 120.2" (Art. 120(2):
+    tasks "on a date to be determined by a decision of the Commission"). 32017R2225: "V ART 2 ET 32017R2226" names
+    another act, not an article."""
+    art = f"{{V|{FD335}V}} {{ART|{FD335}ART}}"
+    part = f"{{MA/PART|{FD335}MA%2FPART}}"
+    rows = {
+        "etias": [
+            {"d": "2018-10-09", "type": f"{{EV|{FD335}EV}}", "comment": f"{{DATPUB|{FD335}DATPUB}} +20 {art} 96"},
+            {"d": "2018-10-09", "type": f"{{MA|{FD335}MA}}", "comment": f"{art} 96"},
+            {"d": "2021-08-03", "type": f"{{MA|{FD335}MA}}", "comment": f"{part} {art} 96 {{ET|{FD335}ET}} 32021R1152"},
+            {"d": "1001-01-01", "type": f"{{MA|{FD335}MA}}", "comment": f"{art} 96"},
+        ],
+        "eib": [
+            {"d": "2019-05-15", "type": f"{{EV|{FD335}EV}}", "comment": f"{{DATPUB|{FD335}DATPUB}} +20"},
+            {"d": "1001-01-01", "type": f"{{MA|{FD335}MA}}", "comment": f"{part} {art} 2.2"},
+            {"d": "1001-01-01", "type": f"{{MA|{FD335}MA}}", "comment": f"{art} 2.1"},
+        ],
+        "eppo": [
+            {"d": "2017-11-20", "type": f"{{EV|{FD335}EV}}", "comment": f"{{DATPUB|{FD335}DATPUB}} +20 {art} 120.1"},
+            {"d": "1001-01-01", "type": f"{{MA|{FD335}MA}}", "comment": f"{part} {art} 120.2"},
+        ],
+        "ees": [{"d": "1001-01-01", "type": f"{{MA|{FD335}MA}}", "comment": f"{art} 2 {{ET|{FD335}ET}} 32017R2226"}],
+    }
+    facts = {w: E.Facts() for w in rows}
+    E.add_eif_types(facts, [{"w": w, **r} for w, rs in rows.items() for r in rs])
+    got = {w: [(x.partial, x.articles) for x in E.unrecorded_application(f)] for w, f in facts.items()}
+    assert got == {"etias": [(False, ["96"])], "eib": [(False, ["2.1"]), (True, ["2.2"])],
+                   "eppo": [(True, ["120.2"])], "ees": [(False, ["2"])]}  # fmt: skip
+    # the placeholder is not an application date, and the entry into force is still the EV date
+    eif, other = E.split_eif([r["d"] for r in rows["etias"]], facts["etias"].eif_types)
+    assert (eif, other) == ("2018-10-09", ["2021-08-03"])
+    # an entry into force that is itself unrecorded is not an application date (Electoral Act, 32018D0994)
+    f = E.Facts()
+    E.add_eif_types({"w": f}, [{"w": "w", "d": "1001-01-01", "type": f"{{EV|{FD335}EV}}", "comment": f"{DATNOT} {art} 2.2"}])
+    assert E.unrecorded_application(f) == []
+
+
+def test_entry_into_force_rule_is_read_from_the_comment():
+    """Cellar rows of 2026-10-23: PRIMA 32017D1324, EV 2017-08-08 "DATPUB +20 V ART 15" (published 18.7.2017, so its
+    own rule gives 2017-08-07, as Art. 15 does); 32017R2092 "DATPUB 3" (no plus sign); 32019D0654 "DATPUB +20"."""
+    art = f"{{V|{FD335}V}} {{ART|{FD335}ART}}"
+    rows = {
+        "prima": {"d": "2017-08-08", "type": f"{{EV|{FD335}EV}}", "comment": f"{{DATPUB|{FD335}DATPUB}} +20 {art} 15"},
+        "three": {"d": "2017-11-20", "type": f"{{EV|{FD335}EV}}", "comment": f"{{DATPUB|{FD335}DATPUB}} 3 {art} 2"},
+        "none": {"d": "2019-06-06", "type": f"{{EV|{FD335}EV}}", "comment": f"{{DATPUB|{FD335}DATPUB}} {art} 13"},
+    }
+    facts = {w: E.Facts() for w in rows}
+    E.add_eif_types(facts, [{"w": w, **r} for w, r in rows.items()])
+    got = {w: E.entry_into_force_after_publication(f, rows[w]["d"]) for w, f in facts.items()}
+    assert got == {"prima": 20, "three": 3, "none": None}
+    assert E.entry_into_force_after_publication(facts["prima"], None) is None
 
 
 def test_provisions_applying_from_the_entry_into_force_are_kept():
@@ -520,6 +577,20 @@ def test_snapshot_unrecorded_entry_into_force():
             assert ISO.match(n.date) and n.date not in E.PLACEHOLDER_DATES, a.celex
     by = {a.celex: a for a in SNAPSHOT}
     assert by["32020D0853"].effect_on_notification and by["32018D0994"].entry_into_force_pending
+    # application dates given as not recorded (re-derived from Cellar's answers of the last fetch): at most one of each
+    # kind, only next to a recorded entry into force
+    for a in SNAPSHOT:
+        kinds = [x.partial for x in a.application_unrecorded]
+        assert kinds == sorted(set(kinds)) and (not kinds or a.entry_into_force), a.celex
+    assert [(x.partial, x.articles) for x in by["32014R0536"].application_unrecorded] == [(False, ["99"])]
+    assert [(x.partial, x.articles) for x in by["32017R1939"].application_unrecorded] == [(True, ["120.2"])]
+    assert sum(1 for a in SNAPSHOT if a.application_unrecorded) == 67
+    # Cellar's rule for the entry into force, and the one act whose recorded date breaks it (PRIMA, Art. 15)
+    assert by["32017D1324"].entry_into_force_after_publication == 20
+    assert [a.celex for a in SNAPSHOT if a.entry_into_force_after_publication is not None and a.date_publication
+            and a.entry_into_force != (date.fromisoformat(a.date_publication)
+                                       + timedelta(days=a.entry_into_force_after_publication)).isoformat()] == [
+        "32017D1324", "32019R0503"]  # fmt: skip
 
 
 @needs_snapshot

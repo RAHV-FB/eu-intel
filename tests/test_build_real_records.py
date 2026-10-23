@@ -512,7 +512,7 @@ def test_a_joint_debate_names_the_other_files_and_keeps_this_files_documents():
     # their registered texts; OEIL's 2023/0112(COD) shows "Debate in Parliament" with none of the others
     ps = procs("2023-0111", "2023-0112", "2023-0115")
     me = SimpleNamespace(indexed_vote_ids=set(), council_of={}, today="2026-10-23", procedures=list(ps.values()), proc=ps,
-                         curated_of={})  # fmt: skip
+                         curated_of={}, adopted_title=lambda p: None)  # fmt: skip
     me.dossier_title = lambda p: Builder.dossier_title(me, p)  # type: ignore[arg-type]
     Builder.index_file_documents(me)  # type: ignore[arg-type]
     tl = Builder.joint_debates(me, ps["2023-0112"], Builder.timeline(me, ps["2023-0112"], [], []))  # type: ignore[arg-type]
@@ -1455,7 +1455,8 @@ def test_next_step_after_the_deadline_states_the_directives_own_exceptions():
     tl = Builder.timeline(me, p["2013-0016"], [rail], [])  # type: ignore[arg-type]
     dl = [x for x in tl if x["kind"] == "transposition_deadline"]
     assert [(x["date"], x["title"]) for x in dl] == [("2019-06-16", "Deadline for Member States to transpose the directive (passed)")]
-    assert dl[0]["detail"].startswith("Directive 32016L0798. Exceptions in its text: Member States that extended")
+    # the act by its number, not "Directive 32016L0798" (its CELEX id)
+    assert dl[0]["detail"].startswith("Directive (EU) 2016/798. Exceptions in its text: Member States that extended")
 
 
 def test_next_step_before_the_deadline_speaks_of_the_member_states_bound():
@@ -1564,9 +1565,13 @@ def test_partial_application_on_entry_into_force_without_other_dates_says_so():
     a = acts("32025R0012")
     s = classify(procs("2022-0424")["2022-0424"], [a["32025R0012"]], [], date(2026, 10, 23), others=a)
     assert s.stage == "in_force" and a["32025R0012"].other_application_dates == []
-    assert ("EUR-Lex records that some provisions apply from that date, and no date from which the other provisions "
-            "apply.") in s.explanation  # fmt: skip
+    # Cellar gives the general date (MA 1001-01-01 "V ART 46") and that of Art. 46(b) (MA/PART) as not recorded
+    assert ("EUR-Lex records that some provisions apply from that date. EUR-Lex records no date from which the act in "
+            "general applies (it refers to Art. 46), nor one from which some of its provisions apply (it refers to "
+            "Art. 46(b)).") in s.explanation  # fmt: skip
     assert s.application.partial_on_entry_into_force and s.application.application_dates == []
+    assert [(x.partial, x.articles) for x in s.application.application_unrecorded] == [
+        (False, ["Art. 46"]), (True, ["Art. 46(b)"])]  # fmt: skip
 
 
 def test_dates_set_by_a_corrigendum_cite_it():
@@ -1769,3 +1774,185 @@ def test_council_position_by_written_procedure_is_dated_by_cellar():
     cv = council("ST-7360-2020", "ST-7236-2020", "ST-7237-2020")
     assert [(cv[k].date, cv[k].written_procedure) for k in ("ST-7360-2020", "ST-7236-2020", "ST-7237-2020")] == [
         ("2020-04-15", True), ("2020-04-07", True), ("2020-04-07", True)]  # fmt: skip
+
+
+# ------------------------------------------------------------------- application dates EUR-Lex gives as not recorded
+def test_application_date_given_as_not_recorded_is_never_read_as_applying_from_entry_into_force():
+    # ETIAS, Regulation (EU) 2018/1240, Art. 96: "This Regulation shall apply from the date determined by the Commission
+    # in accordance with Article 88, with the exception of Articles 6, 11, 12 ... which shall apply from 9 October 2018";
+    # Cellar: MA 1001-01-01 "V ART 96". The page said only "Some provisions apply from 3 Aug 2021" and that the
+    # regulation "applies directly in all EU countries".
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+
+    a = acts("32018R1240", "32018R1241")
+    s = classify(procs("2016-0357A")["2016-0357A"], list(a.values()), [], date(2026, 10, 23), others=a)
+    assert s.stage == "in_force"
+    assert "EUR-Lex records no date from which the act in general applies (it refers to Art. 96)." in s.explanation
+    assert s.next_step.text.startswith(
+        "A regulation applies directly in all EU countries; no national transposition is needed. EUR-Lex records no date "
+        "from which this regulation in general applies (it refers to Art. 96)."
+    )
+    assert [(x.partial, x.articles) for x in s.application.application_unrecorded] == [(False, ["Art. 96"])]
+
+
+def test_a_date_set_since_by_the_decision_the_act_refers_to_replaces_not_recorded():
+    # Clinical Trials Regulation, Art. 99: it "shall apply as from six months after the publication of the notice
+    # referred to in Article 82(3)"; Commission Decision (EU) 2021/1240 (OJ L 275, 31.7.2021): 31 January 2022. EPPO,
+    # Art. 120(2): tasks from a date the Commission sets; Implementing Decision (EU) 2021/856, Art. 1: 1 June 2021
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import act_date_source, apply_act_dates, load_act_dates
+
+    cur = load_act_dates()
+    ctr = apply_act_dates(acts("32014R0536")["32014R0536"], cur["32014R0536"])
+    assert ctr.application_unrecorded == [] and ctr.other_application_dates == ["2022-01-31"]
+    assert act_date_source(cur["32014R0536"], "2022-01-31")["url"].endswith("CELEX:32021D1240")
+    s = classify(procs("2012-0192")["2012-0192"], [ctr], [], date(2026, 10, 23))
+    assert "no date" not in s.explanation and s.next_step.text.startswith("The regulation applies directly")
+    eppo = apply_act_dates(acts("32017R1939")["32017R1939"], cur["32017R1939"])
+    assert eppo.application_unrecorded == [] and eppo.partial_application_dates == ["2021-06-01"]
+
+
+def test_regulations_that_did_not_apply_under_their_own_condition_say_so():
+    # Regulation (EU) 2019/503, Art. 8(3): it "shall not apply if a withdrawal agreement concluded with the United
+    # Kingdom in accordance with Article 50(2) of the Treaty on European Union has entered into force by" the day
+    # following that on which the Treaties cease to apply to the United Kingdom; the Withdrawal Agreement entered into
+    # force on 1 February 2020 (EUR-Lex, CELEX 12020W/TXT)
+    from pipeline.build import load_act_dates
+
+    cur = load_act_dates()
+    brexit = [c for c, e in cur.items() if any("12020W/TXT" in (s.get("url") or "") for s in e.get("sources") or [])]
+    assert len(brexit) == 15 and "32019R0503" in brexit
+    for c in brexit:
+        assert "did not apply" in cur[c]["reason"] and not cur[c].get("application"), c
+        assert any(not x.partial for x in acts(c)[c].application_unrecorded), c  # EUR-Lex gives no date
+
+
+def test_entry_into_force_on_the_twentieth_day_after_publication_is_not_a_day_late():
+    # PRIMA, Decision (EU) 2017/1324, Art. 15: "This Decision shall enter into force on the twentieth day following that
+    # of its publication in the Official Journal of the European Union" (OJ L 185, 18.7.2017): 7 August 2017; Cellar
+    # records 2017-08-08 with its own rule "DATPUB +20"
+    from datetime import date, timedelta
+
+    from pipeline.build import apply_act_dates, load_act_dates
+
+    a = acts("32017D1324")["32017D1324"]
+    rule = (date.fromisoformat(a.date_publication) + timedelta(days=a.entry_into_force_after_publication)).isoformat()
+    assert (a.entry_into_force, rule) == ("2017-08-08", "2017-08-07")
+    assert apply_act_dates(a, load_act_dates()["32017D1324"]).entry_into_force == "2017-08-07"
+
+
+# ------------------------------------------------------------------- the timeline of an act
+def test_act_steps_name_the_act_and_the_first_application_date_is_not_further():
+    # PPWR, Regulation (EU) 2025/40, Art. 71: "It shall apply from 12 August 2026. However, Article 67(5) shall apply
+    # from 12 February 2029." Nothing applied before 12 August 2026; the steps named it "Regulation 32025R0040".
+    me = stand_in(today="2026-10-23")
+    a = acts("32025R0040")["32025R0040"]
+    tl = Builder.timeline(me, procs("2022-0396")["2022-0396"], [a], [])  # type: ignore[arg-type]
+    app = {x["date"]: x["title"] for x in tl if x["kind"] == "application"}
+    assert app == {"2026-08-12": "Rules started to apply (date recorded by EUR-Lex)",
+                   "2029-02-12": "Some provisions start to apply (date recorded by EUR-Lex)"}  # fmt: skip
+    assert {x["detail"] for x in tl if x["id"].startswith("act-")} == {"Regulation (EU) 2025/40"}
+
+
+def test_a_date_checked_against_the_text_cites_that_text_as_its_source():
+    # DSA, Regulation (EU) 2022/2065, Art. 93(2): 17 February 2024 (EUR-Lex records 17 February 2022); the step's
+    # source said "EUR-Lex / Cellar – CELEX 32022R2065", the record that lacks the date
+    from pipeline.build import apply_act_dates, load_act_dates
+
+    cur = load_act_dates()
+    me = stand_in(today="2026-10-23", act_dates=cur)
+    a = apply_act_dates(acts("32022R2065")["32022R2065"], cur["32022R2065"])
+    tl = Builder.timeline(me, procs("2020-0361")["2020-0361"], [a], [])  # type: ignore[arg-type]
+    step = next(x for x in tl if x["kind"] == "application" and x["date"] == "2024-02-17")
+    assert step["source"]["url"] == step["docs"][0]["url"] == "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"
+    assert step["source"]["label"] == "Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)"
+
+
+def test_older_act_titles_that_begin_with_the_number_give_the_number():
+    a = acts("32014D0335", "32014D0899", "32024D2829")
+    assert [act_label(x) for x in a.values()] == [
+        "Council Decision 2014/335/EU, Euratom", "Council Decision 2014/899/EU", "Decision (EU) 2024/2829"]  # fmt: skip
+
+
+# ------------------------------------------------------------------- titles and links of the adopted act
+def test_a_procedure_title_that_does_not_describe_the_adopted_act_gives_way_to_the_acts():
+    # 2023/0393(COD): "Extending Directive [XXXX] to third country nationals ..."; Directive (EU) 2024/2842 extends
+    # Directive (EU) 2024/2841. 2021/0395(COD) names Framework Decision 2002/465/JHA, which Directive (EU) 2023/2843
+    # does not amend, and not Directive 2011/99/EU, which it does (Art. 10).
+    from pipeline.build import title_misfit
+
+    p, a = procs("2023-0393", "2021-0395", "2016-0002"), acts("32024L2842", "32023L2843", "32019L0884")
+    pairs = {"2023-0393": "32024L2842", "2021-0395": "32023L2843", "2016-0002": "32019L0884"}
+    assert {pid: title_misfit(p[pid].title, a[c].title) for pid, c in pairs.items()} == {
+        "2023-0393": True, "2021-0395": True, "2016-0002": False}  # fmt: skip
+    me = SimpleNamespace(curated_of={}, acts_of={pid: [a[c]] for pid, c in pairs.items()},
+                         act_dossiers={c: {pid} for pid, c in pairs.items()})  # fmt: skip
+    me.adopted_title = lambda q: Builder.adopted_title(me, q)  # type: ignore[arg-type]
+    assert Builder.dossier_title(me, p["2023-0393"]) == (  # type: ignore[arg-type]
+        "Extending Directive (EU) 2024/2841 to third-country nationals legally residing in a Member State")
+    assert Builder.dossier_title(me, p["2021-0395"]).startswith("Amending Directives 2011/99/EU and 2014/41/EU")  # type: ignore[arg-type]
+    assert Builder.adopted_title(me, p["2016-0002"]) is None  # type: ignore[arg-type]
+
+
+def test_an_amendment_link_to_the_wrong_act_is_corrected_both_ways():
+    # Regulation (EU) 2024/1689 (AI Act), Art. 105: "In Article 8 of Directive 2014/90/EU, the following paragraph is
+    # added"; Cellar links it to Implementing Regulation (EU) No 90/2014 (32014R0090) instead
+    from pipeline.build import apply_act_relations, load_act_relations
+    from pipeline.validate import cited_acts
+
+    a = acts("32024R1689", "32014L0090")
+    assert "32014R0090" in a["32024R1689"].amends and cited_acts(a["32024R1689"].title)[(2014, 90)] == {"Directive"}
+    fixed = {x.celex: x for x in apply_act_relations(list(a.values()), load_act_relations())}
+    assert "32014L0090" in fixed["32024R1689"].amends and "32014R0090" not in fixed["32024R1689"].amends
+    assert fixed["32014L0090"].amended_by == ["32021L1206", "32024R1689"]
+    # a correction Cellar no longer needs is not applied
+    stale = [{"act": "32024R1689", "replace": "32014R0091", "with": "32014L0090", "evidence": "x"}]
+    assert apply_act_relations(list(a.values()), stale) == list(a.values())
+
+
+# ------------------------------------------------------------------- national measures
+def test_denmark_row_states_its_decision_on_a_directive_building_upon_the_schengen_acquis():
+    # Directive (EU) 2023/977, recital 40: Denmark is not bound, and decides under Protocol No 22, Art. 4, whether to
+    # implement it; ST 15298/23: "Denmark hereby gives notice that it has decided to implement the above measure in
+    # accordance with Article 4 of the Protocol". The row showed only "Not bound" next to a non-communication case.
+    from pipeline.build import load_denmark_schengen
+    from pipeline.models.entities import DirectiveOptOut
+
+    oo = {k: DirectiveOptOut.model_validate(v) for k, v in records("optouts/directives.json", {"32023L0977"}, "celex").items()}
+    assert oo["32023L0977"].schengen_art4 == ["DK"] and oo["32023L0977"].quotes[-1].startswith("Given that this Directive")
+    me = _impl_builder(_measures("32023L0977"))
+    me.optouts, me.denmark_schengen = oo, load_denmark_schengen()
+    me.schengen_note = lambda c, k: Builder.schengen_note(me, c, k)  # type: ignore[arg-type]
+    row = next(r for r in Builder.implementation_table(me, acts("32023L0977")["32023L0977"])["countries"]  # type: ignore[arg-type]
+               if r["country"] == "DK")
+    assert row["status"] == "not_participating"
+    assert row["status_note"] == (
+        "Denmark decided to implement it in its national law under Article 4 of Protocol No 22, as it notified the "
+        "Council on 9 November 2023 (ST 15298/23): an obligation under international law, not under EU law.")
+    assert row["status_note_url"] == "https://data.consilium.europa.eu/doc/document/ST-15298-2023-INIT/en/pdf"
+    me.denmark_schengen = {}
+    assert Builder.schengen_note(me, "32023L0977", "DK")[0].startswith("It builds upon the Schengen acquis")  # type: ignore[arg-type,index]
+    assert Builder.schengen_note(me, "32023L0977", "IE") is None  # type: ignore[arg-type]
+
+
+def test_next_step_gives_the_later_date_the_text_sets_for_some_national_measures():
+    # CSDDD, Directive (EU) 2024/1760, Art. 37(1) as replaced by Directive (EU) 2026/470, Art. 4, point (22): "They
+    # shall apply those measures from 26 July 2029 with the exception of the measures necessary to comply with Article
+    # 16, which Member States shall apply for financial years starting on or after 1 January 2030."
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import apply_transposition_checks, load_transposition_checks
+
+    a = apply_transposition_checks(acts("32024L1760")["32024L1760"], load_transposition_checks()["32024L1760"])
+    s = classify(procs("2022-0051")["2022-0051"], [a], [], date(2026, 10, 23))
+    assert ("The national measures are to apply from 26 July 2029. The measures necessary to comply with Article 16 "
+            "(reporting on these matters in an annual statement) are to apply for financial years starting on or after "
+            "1 January 2030 (Art. 37(1), as replaced by Directive (EU) 2026/470, Art. 4, point (22)).") in s.next_step.text
+    assert "except as its text provides" not in s.next_step.text  # the transposition deadline has no exception
+    app = next(x for x in s.application.transposition if x.kind == "application")
+    assert app.date == "2029-07-26" and "Article 16" in (app.exceptions or "")

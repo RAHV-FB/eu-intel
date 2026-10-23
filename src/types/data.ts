@@ -208,6 +208,9 @@ export interface ApplicationInfo {
   application_dates: ISODate[]; // further dates recorded by EUR-Lex for (parts of) the act
   partial_application_dates?: ISODate[]; // those of application_dates from which only some provisions apply
   partial_on_entry_into_force?: boolean; // EUR-Lex also marks the entry-into-force date as one from which some provisions apply
+  // EUR-Lex gives the date from which the act in general (partial false), or some provisions, apply as not recorded; the
+  // articles it refers to ("Art. 99"). At most one of each kind.
+  application_unrecorded?: { partial: boolean; articles: string[] }[];
   application_detail?: { date: ISODate; partial: boolean; provisions?: string | null }[]; // checked against the act's text
   dates_note?: { reason: string; sources: { label: string; url: string }[]; reviewed?: ISODate | null } | null; // why dates were corrected
   transposition_deadlines: ISODate[]; // directives only: deadlines to transpose (general and further), not application or other dates
@@ -225,6 +228,7 @@ export interface TranspositionDateInfo {
   // whose role the data do not establish (e.g. an optional "may apply" date), never shown as a deadline
   kind: 'deadline' | 'further_deadline' | 'application' | 'other';
   articles: string[]; // "Art. 48(1)"
+  exceptions?: string | null; // the general application date: what the text provides beside it (checked), one sentence
 }
 
 export type EventKind =
@@ -731,8 +735,10 @@ export interface CountryDetail extends CountrySummary {
     deadline?: ISODate | null;
     measures: number; // notified measures in the dataset
     status: TranspositionStatus;
-    // not_required only: the directive's provision and its condition, "Art. 33(4): for as long as no rail system …"
+    // not_required: the directive's provision and its condition, "Art. 33(4): for as long as no rail system …";
+    // not_participating (Denmark, a directive building upon the Schengen acquis): Protocol No 22, Art. 4, and its decision
     status_note?: string | null;
+    status_note_url?: string | null; // Denmark's notification of that decision to the Council
   }[];
   infringements: InfringementInfo[];
 }
@@ -767,6 +773,9 @@ export interface DossierImplementation {
     status: TranspositionStatus;
     latest_notification?: ISODate | null; // latest date a measure was notified to the Commission
     opted_in?: string | null; // CELEX of the Commission decision confirming the country took part after adoption
+    // not_participating (Denmark, a directive building upon the Schengen acquis): Protocol No 22, Art. 4, and its decision
+    status_note?: string | null;
+    status_note_url?: string | null; // Denmark's notification of that decision to the Council
     infringements: InfringementInfo[];
   }[];
   nim_url: string; // EUR-Lex national transposition page

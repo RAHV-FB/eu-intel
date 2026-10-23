@@ -5,6 +5,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { CoverageScope, DossierDetail, Meta, TimelineEvent } from '../../../types/data';
+import { institutionSuffix } from '../labels';
 import { latestDone } from './Summary';
 import { noCouncilVoteNote } from './Votes';
 import { currentStepKey } from './WhereIsIt';
@@ -161,6 +162,103 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     expect(step.joint_with!.map((j) => [j.ref, j.report?.label])).toEqual([
       ['2023/0111(COD)', 'A10-0067/2026'],
       ['2023/0115(COD)', 'A10-0065/2026'],
+    ]);
+  });
+});
+
+describe('steps dated in the act', () => {
+  it('names no institution after them: EUR-Lex records them, the act sets them', () => {
+    expect(institutionSuffix('Entered into force', 'EUR-Lex', 'entry_into_force')).toBe('');
+    expect(institutionSuffix('Started to apply: The Regulation in general (Art. 93(2))', 'EUR-Lex', 'application')).toBe('');
+    expect(institutionSuffix('Published in the Official Journal of the EU', 'EUR-Lex', 'publication')).toBe('EUR-Lex');
+  });
+});
+
+describe.skipIf(!built)('application dates, act names and sources on the built data', () => {
+  const ids = built ? readdirSync(new URL('dossiers/', DATA)).filter((f) => f !== 'index.json').map((f) => f.replace(/\.json$/, '')) : [];
+  const all = ids.map((id) => read<DossierDetail>(`dossiers/${id}.json`));
+  const byId = (id: string) => all.find((d) => d.id === id)!;
+
+  it('never presents an application date EUR-Lex gives as not recorded as applying from the entry into force (ETIAS, VIS)', () => {
+    // Regulation (EU) 2018/1240, Art. 96: "This Regulation shall apply from the date determined by the Commission"
+    const etias = byId('2016-0357A');
+    expect(etias.application?.application_unrecorded).toEqual([{ partial: false, articles: ['Art. 96'] }]);
+    expect(etias.status.explanation).toContain('EUR-Lex records no date from which the act in general applies (it refers to Art. 96).');
+    expect(etias.next_step.text).not.toMatch(/^The regulation applies directly/);
+    const vis = byId('2018-0152A');
+    expect(vis.next_step.text).toContain('EUR-Lex records no date from which this regulation in general applies.');
+    for (const d of all)
+      if (d.application?.application_unrecorded?.some((x) => !x.partial) && d.instrument === 'regulation' && d.stage === 'in_force')
+        expect(d.next_step.text, d.id).not.toMatch(/^The regulation applies directly/);
+  });
+
+  it('gives the dates set since by the decision the act refers to (Clinical Trials Regulation, EPPO, PRIMA)', () => {
+    const ctr = byId('2012-0192');
+    expect(ctr.application?.application_detail).toEqual([{ date: '2022-01-31', partial: false, provisions: 'The Regulation (Art. 99, second paragraph)' }]);
+    expect(byId('2013-0255').application?.application_dates).toEqual(['2021-06-01']);
+    expect(byId('2016-0325').status.since).toBe('2017-08-07'); // Decision (EU) 2017/1324, Art. 15: twentieth day after 18.7.2017
+  });
+
+  it('cites a checked date’s text as its source, never EUR-Lex’s record that lacks it (DSA, Return Regulation)', () => {
+    const dated = new Set(['entry_into_force', 'application', 'transposition_deadline', 'transposition_application']);
+    let n = 0;
+    for (const d of all)
+      for (const e of d.timeline)
+        if (dated.has(e.kind) && e.source?.label?.includes('(checked ')) {
+          n++;
+          expect(e.source.url, `${d.id} ${e.id}`).toBe(e.docs?.[0]?.url);
+          expect(e.source.label, `${d.id} ${e.id}`).not.toContain('Cellar');
+        }
+    expect(n).toBeGreaterThan(20);
+    const dsa = byId('2020-0361').timeline.find((e) => e.kind === 'application' && e.date === '2024-02-17')!;
+    expect(dsa.source?.label).toBe('Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)');
+  });
+
+  it('names an act by its number in its steps, never by a type word and its CELEX id', () => {
+    for (const d of all) for (const e of d.timeline) expect(e.detail ?? '', `${d.id} ${e.id}`).not.toMatch(/^(?:Regulation|Directive|Decision|Act) 3\d{4}[A-Z]\d{4}/);
+    expect(byId('2016-0002').timeline.find((e) => e.kind === 'entry_into_force')?.detail).toBe('Directive (EU) 2019/884');
+  });
+
+  it('calls the first date from which any of an act applies "Rules", not "Further provisions" (PPWR)', () => {
+    // Regulation (EU) 2025/40, Art. 71: "It shall apply from 12 August 2026. However, Article 67(5) shall apply from 12 February 2029."
+    expect(byId('2022-0396').timeline.find((e) => e.kind === 'application' && e.date === '2026-08-12')?.title).toBe(
+      'Rules started to apply (date recorded by EUR-Lex)',
+    );
+    // Regulation (EU) 2026/1388, Art. 38: some provisions apply from its entry into force, so 17 July 2028 is further
+    expect(byId('2023-0226').timeline.find((e) => e.kind === 'application' && e.date === '2028-07-17')?.title).toBe(
+      'Further provisions start to apply (date recorded by EUR-Lex)',
+    );
+  });
+
+  it('titles a file after its adopted act where the procedure’s title is a placeholder or names other acts', () => {
+    const placeholder = /\[(?:X+|…|\.\.\.)\]|\bX{3,}\b|\.\.\.\/\.\.\./;
+    for (const d of all) if (d.acts.length) expect(`${d.title} ${d.official_title ?? ''}`, d.id).not.toMatch(placeholder);
+    expect(byId('2023-0393').title).toBe('Extending Directive (EU) 2024/2841 to third-country nationals legally residing in a Member State');
+    expect(byId('2021-0395').official_title).not.toContain('2002/465');
+    const dk = read<{ transposition: { celex: string; title: string; status: string; status_note?: string | null }[] }>('countries/DK.json');
+    const row = (c: string) => dk.transposition.find((t) => t.celex === c)!;
+    expect(row('32024L2842').title).not.toMatch(placeholder);
+    expect(row('32023L2843').title).toContain('2011/99/EU');
+    // Directive (EU) 2023/977 builds upon the Schengen acquis: Denmark decided to implement it (ST 15298/23)
+    expect(row('32023L0977').status_note).toContain('Denmark decided to implement it in its national law under Article 4 of Protocol No 22');
+  });
+
+  it('links the AI Act to Directive 2014/90/EU, which its Art. 105 amends, not to Implementing Regulation No 90/2014', () => {
+    const ai = byId('2021-0106');
+    expect(ai.acts[0].amends).toContain('32014L0090');
+    expect(ai.acts[0].amends).not.toContain('32014R0090');
+    expect(byId('2012-0358').related.filter((r) => r.relation === 'Amended by').map((r) => r.id)).toContain('2021-0106');
+  });
+
+  it('cites a split proposal’s parts on its page, not the EUR-Lex record of one part’s act', () => {
+    const parents = all.filter((d) => d.related.some((r) => r.relation === 'Split into'));
+    for (const d of parents) {
+      expect(d.sources.filter((s) => s.institution === 'EUR-Lex'), d.id).toEqual([]);
+      for (const s of d.sources) expect(s.label ?? '', d.id).not.toMatch(/\d{4}\/\d{4}[A-Z]\(COD\)$/);
+    }
+    expect(byId('2016-0400').sources.map((s) => s.label)).toEqual([
+      'Legislative Observatory (OEIL) – procedure file 2016/0400A(COD) (separate file)',
+      'Legislative Observatory (OEIL) – procedure file 2016/0400B(COD) (separate file)',
     ]);
   });
 });

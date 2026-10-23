@@ -7,6 +7,13 @@ Articles 1 and 2 of Protocol No 22 ..., Denmark is not taking part in the adopti
 is not bound by it or subject to its application." The Council's voting results record the same fact
 only for votes since 2019, and Cellar has no property for it.
 
+A directive that builds upon the Schengen acquis adds, after Denmark's recital, that Denmark decides under Article 4
+of Protocol No 22 whether to implement it in its national law (Directive (EU) 2023/977, recital 40: "Given that this
+Directive builds upon the Schengen acquis, Denmark shall, in accordance with Article 4 of that Protocol, decide within
+a period of six months after the Council has decided on this Directive whether it will implement it in its national
+law."). That sentence is quoted too, and the directive records Denmark under `schengen_art4`. Denmark's decision, a
+notification to the Council, is not in Cellar's metadata (data/curated/denmark_schengen.yaml records those checked).
+
 Ireland may still take part after adoption (Protocol No 21, Article 4): the Commission then confirms its
 participation in a decision, e.g. Commission Decision (EU) 2024/2087, Article 1: "The participation of
 Ireland in Directive (EU) 2024/1346 is confirmed." Such decisions are found by their title in Cellar and
@@ -46,7 +53,7 @@ SOURCE_ID = "optouts"
 CELEX_URL = "https://publications.europa.eu/resource/celex/{celex}"
 EURLEX_URL = "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:{celex}"
 COUNTRIES = {"Denmark": "DK", "Ireland": "IE"}
-PARSER_VERSION = 2
+PARSER_VERSION = 3
 # "... , Denmark is not taking part in the adoption of this Directive and is not bound by it ...", also
 # "... and is therefore not bound by it" (Directive 2014/57/EU, recital 31) and "..., and are not bound by or
 # subject to its application" (Directive 2014/66/EU, recital 47)
@@ -55,6 +62,14 @@ NOT_BOUND_RE = re.compile(
     r"(?:therefore )?not bound by (?:it|or subject to)",
     re.IGNORECASE,
 )
+# "Given that this Directive builds upon the Schengen acquis, Denmark shall, in accordance with Article 4 of that
+# Protocol, decide within a period of six months after the Council has decided on this Directive whether it will
+# implement it in its national law."
+SCHENGEN_ART4_RE = re.compile(
+    r"[^.;]*\bbuilds? (?:up)?on the Schengen acquis\s*,\s*Denmark shall\s*,\s*in accordance with Article 4 of "
+    r"(?:that|the said) Protocol\s*,\s*decide\b[^.]*\bwhether it will implement it in its national law\s*\.",
+    re.IGNORECASE,
+)  # the text can have a space before a comma, where a footnote or an element ends ("Schengen acquis , Denmark")
 # "Commission Decision (EU) 2024/2087 of 31 July 2024 confirming the participation of Ireland in Directive (EU)
 # 2024/1346 of the European Parliament ..."; older titles number the directive "2013/33/EU"
 OPT_IN_RE = re.compile(
@@ -85,6 +100,13 @@ def not_bound(text: str) -> tuple[list[str], list[str]]:
             start = max(m.group(1).rfind(". "), 0)
             quotes.append((m.group(1)[start:] + m.group(0)[len(m.group(1)) :]).strip(" .") + ".")
     return sorted(countries), quotes
+
+
+def schengen_art4(text: str) -> str | None:
+    """The recital sentence saying that Denmark decides under Article 4 of Protocol No 22 whether to implement the
+    directive, which builds upon the Schengen acquis; None if the text has none."""
+    m = SCHENGEN_ART4_RE.search(text)
+    return re.sub(r"\s+([,.])", r"\1", m.group(0)).strip() if m else None
 
 
 def opt_ins_query() -> str:
@@ -151,8 +173,11 @@ def fetch(http: Any) -> SourceStatus:
                 out.append(DirectiveOptOut(celex=celex, status="unavailable", url=url, source=src))
             continue
         countries, quotes = not_bound(text)
+        schengen = schengen_art4(text) if "DK" in countries else None
+        if schengen:
+            quotes = [*quotes, schengen]
         out.append(DirectiveOptOut(celex=celex, status="ok", not_bound=countries, quotes=quotes, url=url, source=src,
-                                   parser=PARSER_VERSION))  # fmt: skip
+                                   schengen_art4=["DK"] if schengen else [], parser=PARSER_VERSION))  # fmt: skip
     read_now = sum(1 for r in out if r.status == "ok")
 
     def stored(celex: str) -> dict[str, str]:
