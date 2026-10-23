@@ -214,6 +214,15 @@ class ValidityNote(Model):
     acts: list[str] = Field(default_factory=list)  # CELEX ids of the acts the comment names
 
 
+class RepealDate(Model):
+    """`ann:start_of_validity` on an OWL axiom of a repeal link to the act: the date from which the repeal takes
+    effect, as Cellar records it."""
+
+    celex: str  # the repealing act
+    date: str
+    partial: bool = False  # the axiom names a modified location or has role AP (some provisions only)
+
+
 class LegalAct(Model):
     """An act in the EU legal corpus (EUR-Lex / Cellar)."""
 
@@ -259,6 +268,9 @@ class LegalAct(Model):
     # partial repeals: repeal links that every Cellar annotation limits to a provision or marks as partial (role AP)
     partly_repeals: list[str] = Field(default_factory=list)
     partly_repealed_by: list[str] = Field(default_factory=list)
+    # the dates from which the repeals (repealed_by, partly_repealed_by) take effect; a whole repeal with later dates
+    # for some provisions is a repeal in stages (32014L0061: Regulation (EU) 2024/1309, Art. 18)
+    repeal_dates: list[RepealDate] = Field(default_factory=list)
     court_rulings: list[CourtRuling] = Field(default_factory=list)  # annulment / invalidity, by date
     eurlex_url: str
     source: SourceRef

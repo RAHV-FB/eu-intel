@@ -917,12 +917,83 @@ def test_partial_repeal_and_partial_application_on_entry_into_force_are_stated()
     a = acts("32014D0335", "32020D2053", "32022R1925")
     p = procs("2011-0183", "2020-0374")
     s = classify(p["2011-0183"], [a["32014D0335"]], [], date(2026, 10, 23), others=a)
-    assert s.stage == "in_force" and "partly repealed by Council Decision (EU, Euratom) 2020/2053." in s.explanation
+    # the date Cellar records for the repeal: Decision 2020/2053 "shall apply from 1 January 2021" (Art. 12)
+    assert s.stage == "in_force" and (
+        "partly repealed by Council Decision (EU, Euratom) 2020/2053 with effect from 1 January 2021." in s.explanation
+    )
     assert [r.celex for r in s.named_acts] == ["32020D2053"]
     s = classify(p["2020-0374"], [a["32022R1925"]], [], date(2026, 10, 23), others=a)
     assert "EUR-Lex records that some provisions apply from that date." in s.explanation
     assert s.application.entry_into_force == "2022-11-01" and s.application.partial_on_entry_into_force
     assert "2022-11-01" not in s.application.application_dates
+
+
+def test_no_longer_in_force_dates_from_the_repeal_cellar_records():
+    # Cellar's start_of_validity on the repeal link (LegalAct.repeal_dates) counts where it is recorded.
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+
+    today = date(2026, 10, 23)
+    a = acts("32014R0543", "32015R2219", "32014R0252", "32015R0754", "32014L0061", "32024R1309", "32014R0517",
+             "32024R0573", "32017L0853", "32021L0555", "32015L0849", "32024L1640")  # fmt: skip
+    p = procs("2013-0812", "2011-0445", "2013-0080", "2012-0305", "2015-0269", "2013-0025")
+
+    def st(pid: str, celex: str):
+        return classify(p[pid], [a[celex]], [], today, others=a)
+
+    # Regulation 543/2014 (CEPOL): end of validity and repeal both 2016-07-01; Regulation (EU) 2015/2219, Art. 40(1):
+    # Decision 2005/681/JHA, as amended by Regulation (EU) No 543/2014, "is hereby replaced ... with effect from
+    # 1 July 2016" - not 2 July
+    s = st("2013-0812", "32014R0543")
+    assert (s.stage, s.since) == ("no_longer_in_force", "2016-07-01")
+    assert s.explanation == (
+        "The act was adopted and published. EUR-Lex gives 1 July 2016 as the end of its validity and records it as "
+        "repealed by Regulation (EU) 2015/2219 with effect from 1 July 2016."
+    )
+    # Regulation 252/2014: repealed by the codification 2015/754 (Art. 11) on its entry into force, 8 June 2015
+    # (Art. 12: twentieth day after publication in OJ L 123, 19.5.2015); Cellar: both dates 2015-06-08
+    s = st("2011-0445", "32014R0252")
+    assert s.since == "2015-06-08" and "repealed by Regulation (EU) 2015/754 with effect from 8 June 2015." in s.explanation
+    assert "is a codification: the rules continue in it" in s.explanation
+    # Directive 2014/61/EU, repealed in stages by Regulation (EU) 2024/1309: Art. 18(1) as corrected, "with effect
+    # from 12 November 2025"; Art. 18(2) keeps provisions "in force until" 12 February and 12 May 2026, the dates
+    # from which the replacing provisions apply (Art. 19(3)): no single day is asserted
+    s = st("2013-0080", "32014L0061")
+    assert (s.stage, s.since) == ("no_longer_in_force", None)
+    assert s.explanation == (
+        "The act was adopted and published. EUR-Lex records it as repealed by Regulation (EU) 2024/1309 with effect "
+        "from 12 November 2025, except for some provisions, whose repeal it records with effect from later dates. "
+        "EUR-Lex gives 12 May 2026 as the end of the act's validity."
+    )
+    # Regulation 517/2014 (F-gases): Regulation (EU) 2024/573, Art. 35(1) "is repealed", (2) Article 12 "shall
+    # continue to apply until 31 December 2024"
+    s = st("2012-0305", "32014R0517")
+    assert s.since is None and "Regulation (EU) 2024/573 with effect from 11 March 2024, except for some" in s.explanation
+    # the usual case: the repeal takes effect the day after the last day of validity (Directive (EU) 2021/555)
+    s = st("2015-0269", "32017L0853")
+    assert s.since == "2021-04-26" and "its validity ended on 25 April 2021." in s.explanation
+    # a repeal still ahead: AMLD4, end of validity 9 July 2027
+    s = st("2013-0025", "32015L0849")
+    assert s.stage == "in_force" and "and that Directive (EU) 2024/1640 repeals it with effect from 10 July 2027." in (
+        s.explanation
+    )
+
+
+def test_partial_application_on_entry_into_force_without_other_dates_says_so():
+    # Regulation (EU) 2025/12 (API data, 2022/0424(COD)): EUR-Lex marks the entry into force as the date of some
+    # provisions and records no other date; Art. 46: "It shall apply from the date two years from the date on which
+    # the router starts operations, as determined by the Commission", with exceptions from the entry into force
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+
+    a = acts("32025R0012")
+    s = classify(procs("2022-0424")["2022-0424"], [a["32025R0012"]], [], date(2026, 10, 23), others=a)
+    assert s.stage == "in_force" and a["32025R0012"].other_application_dates == []
+    assert ("EUR-Lex records that some provisions apply from that date, and no date from which the other provisions "
+            "apply.") in s.explanation  # fmt: skip
+    assert s.application.partial_on_entry_into_force and s.application.application_dates == []
 
 
 def test_dates_set_by_a_corrigendum_cite_it():

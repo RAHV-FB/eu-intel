@@ -202,8 +202,11 @@ function NationalTable({ d, impl, celex }: { d: DossierDetail; impl: DossierImpl
 
 /** How the law reaches each Member State: transposition for directives; direct application for regulations. */
 export function NationalApplication({ d, today }: { d: DossierDetail; today: ISODate }) {
-  const instrument: LegalInstrument | null = d.instrument ?? d.acts[0]?.act_type ?? null;
+  const typed: LegalInstrument | null = d.instrument ?? d.acts[0]?.act_type ?? null;
   const adopted = ADOPTED_STAGES.has(d.stage);
+  // an adopted file is described by the type of a linked act, not by the type proposed (OEIL), which the adopted act's
+  // can differ from (COM(2023) 596, a proposed decision, became Directive (EU) 2024/1306)
+  const instrument = adopted && !d.acts.some((a) => a.act_type === typed) ? null : typed;
   const impl = d.implementation;
   // one table per directive of the file (2013/0400(CNS) adopted two)
   const tables = [impl, ...(d.implementation_more ?? [])].filter((t): t is DossierImplementation => !!t);
@@ -244,17 +247,21 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
   } else if (!adopted) {
     body = ACTIVE_STAGES.has(d.stage) ? (
       <p className="dz-none">
-        This file is not law yet, so nothing applies in the Member States. Once adopted,{' '}
+        This file is not law yet, so nothing applies in the Member States.{' '}
+        {/* the type proposed, which can change before adoption (COM(2018) 277, a proposed regulation, became
+            Directive (EU) 2021/1187) */}
         {instrument === 'directive' ? (
           <>
-            as a <Term id="directive">directive</Term> it would have to be turned into national law by a deadline.
+            It was proposed as a <Term id="directive">directive</Term>: if adopted in that form, it would have to be
+            turned into national law by a deadline.
           </>
         ) : instrument === 'regulation' ? (
           <>
-            as a <Term id="regulation">regulation</Term> it would apply directly in every Member State.
+            It was proposed as a <Term id="regulation">regulation</Term>: if adopted in that form, it would apply
+            directly in every Member State.
           </>
         ) : (
-          <>its legal form determines how it applies nationally.</>
+          <>Once adopted, its legal form determines how it applies nationally.</>
         )}
       </p>
     ) : splitParts(d).length > 0 ? (
@@ -357,7 +364,10 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
     body = (
       <>
         <p className="dz-none">
-          Our sources do not record how this act applies in the Member States.
+          {typed && typed !== 'other' && !d.acts.length
+            ? 'No adopted act is linked to this file in our sources yet, so this page cannot show how it applies in the ' +
+              `Member States. It was proposed as a ${typed}; the adopted act’s type can differ from the one proposed.`
+            : 'Our sources do not record how this act applies in the Member States.'}
           {d.application ? ' The dates recorded by EUR-Lex are shown under “When it applies” above.' : ''}
         </p>
       </>

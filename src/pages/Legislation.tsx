@@ -128,12 +128,15 @@ export default function Legislation() {
     const stageRows = applyFilters(matched, preds, 'stage');
     const stage = countBy(stageRows, (d) => d.stage);
     const type = countBy(applyFilters(matched, preds, 'type'), (d) => d.type);
-    const instrument = countBy(applyFilters(matched, preds, 'instrument'), (d) => d.instrument ?? null);
+    const instrumentRows = applyFilters(matched, preds, 'instrument');
+    const instrument = countBy(instrumentRows, (d) => d.instrument ?? null);
+    // of those, files typed by the act proposed: no act linked (the row's "(as proposed)")
+    const proposedType = countBy(instrumentRows.filter((d) => !d.celex.length), (d) => d.instrument ?? null);
     const year = countBy(applyFilters(matched, preds, 'year'), (d) => dossierYear(d));
     const blocked = applyFilters(matched, preds, 'blocked').filter((d) => d.officially_blocked).length;
     const groups: Record<string, number> = {};
     for (const [g, def] of Object.entries(STAGE_GROUPS)) groups[g] = def.stages.reduce((n, s) => n + (stage.get(s) ?? 0), 0);
-    return { topic, stage, groups, type, instrument, year, blocked };
+    return { topic, stage, groups, type, instrument, proposedType, year, blocked };
   }, [matched, preds]);
 
   const typeLabels = useMemo(() => {
@@ -328,13 +331,15 @@ export default function Legislation() {
                   <option value="">Any type of act</option>
                   {INSTRUMENTS.filter((i) => (facets.instrument.get(i) ?? 0) > 0 || state.instrument === i).map((i) => (
                     <option key={i} value={i}>
-                      {INSTRUMENT_LABEL[i]} ({formatNumber(facets.instrument.get(i) ?? 0)})
+                      {`${INSTRUMENT_LABEL[i]} (${formatNumber(facets.instrument.get(i) ?? 0)}` +
+                        (facets.proposedType.get(i) ? `, of which ${formatNumber(facets.proposedType.get(i) ?? 0)} as proposed` : '') +
+                        ')'}
                     </option>
                   ))}
                 </select>
                 <span className="meta" id={`${ids}-instrument-d`}>
-                  The adopted act’s type; for files not adopted, the type of act proposed, as Parliament’s Legislative
-                  Observatory records it.
+                  The type of the adopted act linked from EUR-Lex; for files without one (proposals, and acts adopted but not
+                  yet published or linked), the type of act proposed, as Parliament’s Legislative Observatory records it.
                 </span>
               </div>
               <div className="lx-field">

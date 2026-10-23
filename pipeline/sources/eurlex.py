@@ -75,6 +75,13 @@ Source facts relied on (checked against the live endpoint, see tests/test_eurlex
   point of Regulation 1882/2003) are left out too.
   A modified location that starts with a CELEX id ("32017R0625 {AR} 165 {PO} 16") names the
   provision of another act that changed the link, so it does not make the repeal partial.
+- The date from which a repeal takes effect is the `annotation:start_of_validity` of the link's axioms, kept as
+  repeal_dates (by repealing act; partial for an axiom limited to a provision or with role AP). It is usually the
+  day after the end of validity (89 of the 93 acts no longer in force that carry it on a repeal or implicit-repeal
+  link, 2026-10-23), but not always: for 32014R0543 both are 2016-07-01 (Regulation (EU) 2015/2219, Art. 40(1):
+  "with effect from 1 July 2016").
+  A repeal in stages has later dates for some provisions (32014L0061: 2025-11-12, and 2026-02-13 / 2026-05-13 on
+  the axioms of the provisions that Regulation (EU) 2024/1309, Art. 18(2), keeps in force).
 - date_document / date_signature: the date in the official English title ("... of 29 January
   2020") prevails over `work_date_document` / `resource_legal_date_signature` when they differ
   (Cellar has 2019-01-29 for 32020R0127); jointly signed acts are dated by their signature.
@@ -106,6 +113,7 @@ from pipeline.models.entities import (
     CourtRuling,
     LegalAct,
     ProcedureNotice,
+    RepealDate,
     SourceRef,
     SourceStatus,
     Subject,
@@ -437,14 +445,15 @@ def subjects_query(works: list[str]) -> str:
 
 def relations_query(works: list[str]) -> str:
     """Amend/repeal links in both directions. For repeal links also the link's OWL axioms: whether
-    each names a modified location (article, annex point...) and its role (fd_375 A = repeal,
-    AP = partial repeal)."""
+    each names a modified location (article, annex point...), its role (fd_375 A = repeal,
+    AP = partial repeal) and the date from which it takes effect (start_of_validity)."""
     rep = "cdm:resource_legal_repeals_resource_legal"
     axiom = """OPTIONAL {{ ?ax owl:annotatedSource {s} ; owl:annotatedProperty {p} ; owl:annotatedTarget {o} .
-      OPTIONAL {{ ?ax ann:reference_to_modified_location ?loc }} OPTIONAL {{ ?ax ann:role2 ?role }} }}"""
+      OPTIONAL {{ ?ax ann:reference_to_modified_location ?loc }} OPTIONAL {{ ?ax ann:role2 ?role }}
+      OPTIONAL {{ ?ax ann:start_of_validity ?sov }} }}"""
     return (
         PREFIXES
-        + f"""SELECT DISTINCT ?w ?rel ?celex ?ax ?loc ?role WHERE {{ {_values(works)}
+        + f"""SELECT DISTINCT ?w ?rel ?celex ?ax ?loc ?role ?sov WHERE {{ {_values(works)}
   {{ ?w cdm:resource_legal_amends_resource_legal ?x BIND("amends" AS ?rel) }}
   UNION {{ ?x cdm:resource_legal_amends_resource_legal ?w BIND("amended_by" AS ?rel) }}
   UNION {{ ?w {rep} ?x BIND("repeals" AS ?rel) {axiom.format(s="?w", p=rep, o="?x")} }}
@@ -501,6 +510,8 @@ class Facts:
     relations: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     # (rel, celex) -> {axiom id -> (names a modified location, role codes)} for repeal links
     repeal_axioms: dict[tuple[str, str], dict[str, tuple[bool, set[str]]]] = field(default_factory=dict)
+    # (rel, celex) -> {axiom id -> start_of_validity dates} for repeal links
+    repeal_starts: dict[tuple[str, str], dict[str, set[str]]] = field(default_factory=dict)
     # (judgment CELEX, effect) -> field -> values, merged over the judgment's Cellar works
     rulings: dict[tuple[str, str], dict[str, set[str]]] = field(default_factory=dict)
 
@@ -600,6 +611,8 @@ def add_relations(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
             if r.get("role"):
                 roles = roles | {_annotation_code(r["role"])}
             axioms[r["ax"]] = (located or _target_location(r.get("loc")), roles)
+            if d := _date(r.get("sov")):
+                f.repeal_starts.setdefault((r["rel"], r["celex"]), defaultdict(set))[r["ax"]].add(d)
 
 
 def _target_location(loc: str | None) -> bool:
@@ -795,6 +808,20 @@ def _partial_repeals(f: Facts, rel: str) -> set[str]:
     return {c for (r, c), axioms in f.repeal_axioms.items() if r == rel and not whole_repeal(axioms)}
 
 
+def repeal_dates(f: Facts, own: str) -> list[RepealDate]:
+    """The start_of_validity dates on the repeal links to the act (whole and partial), by repealing act; partial
+    for an axiom that names a modified location or has role AP (as in whole_repeal)."""
+    out: set[tuple[str, str, bool]] = set()
+    for (rel, celex), starts in f.repeal_starts.items():
+        if rel != "repealed_by" or not LINKED_CELEX_RE.match(celex) or celex == own:
+            continue
+        axioms = f.repeal_axioms.get((rel, celex), {})
+        for ax, dates in starts.items():
+            located, roles = axioms.get(ax, (False, set()))
+            out |= {(celex, d, located or "AP" in roles) for d in dates - PLACEHOLDER_DATES}
+    return [RepealDate(celex=c, date=d, partial=p) for c, d, p in sorted(out)]
+
+
 def partial_on_entry_into_force(f: Facts, eif: str | None) -> bool:
     """Cellar also marks the entry-into-force date MA/PART or PE/PART (in the type or the comment)."""
     return bool(eif) and any(c.endswith("/PART") for c in f.eif_types.get(eif or "", ()))
@@ -860,6 +887,7 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         repealed_by=_linked(_whole_repeals(f, "repealed_by"), celex),
         partly_repeals=_linked(_partial_repeals(f, "repeals"), celex),
         partly_repealed_by=_linked(_partial_repeals(f, "repealed_by"), celex),
+        repeal_dates=repeal_dates(f, celex),
         court_rulings=_court_rulings(f),
         eurlex_url=url,
         source=SourceRef(
