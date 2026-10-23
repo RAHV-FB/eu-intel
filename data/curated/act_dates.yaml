@@ -146,6 +146,21 @@
     - {label: "Decision 2014/335/EU, Euratom, Article 11", url: "https://eur-lex.europa.eu/eli/dec/2014/335/oj"}
   reviewed: "2026-10-23"
 
+- celex: "32014D0335"  # Own resources decision 2014 (2011/0183(CNS)), partly repealed
+  reason: >-
+    Under Article 11 the Decision enters into force on the first day of the month following receipt of the last
+    Member State's notification of its approval (1 October 2016, as EUR-Lex records) and applies from 1 January
+    2014. Council Decision (EU, Euratom) 2020/2053, which applies from 1 January 2021 (its Article 12), repeals it
+    "subject to paragraph 2" (its Article 11(1)): Articles 2, 4 and 5 continue to apply to the calculation and
+    adjustment of the revenue from the VAT-based own resource, to the calculation of the correction of budgetary
+    imbalances granted to the United Kingdom in the years 1995 to 2020 and to the calculation of the financing of
+    the corrections granted to the United Kingdom by other Member States (its Article 11(2)). EUR-Lex records the
+    Decision as partly repealed and still in force.
+  sources:
+    - {label: "Decision 2014/335/EU, Euratom, Article 11", url: "https://eur-lex.europa.eu/eli/dec/2014/335/oj"}
+    - {label: "Decision (EU, Euratom) 2020/2053, Articles 11 and 12", url: "https://eur-lex.europa.eu/eli/dec/2020/2053/oj"}
+  reviewed: "2026-10-23"
+
 # Dates set by a corrigendum: EUR-Lex records the corrected date, which the text as first published does not give.
 # The corrected dates cite the corrigendum (source 1).
 

@@ -107,6 +107,10 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
     const onEif = app.partial_on_entry_into_force && app.entry_into_force ? [{ date: app.entry_into_force, note: 'On entry into force' }] : [];
     if (general.length) rows.push({ label: general.length > 1 ? 'Rules apply (in phases) from' : 'Rules apply from', items: plain(general) });
     if (partial.length || onEif.length) rows.push({ label: 'Some provisions apply from', items: [...onEif, ...plain(partial)] });
+    // EUR-Lex records the entry into force for some provisions and no date for the others (Regulation (EU) 2025/12,
+    // Art. 46: from two years after the router starts operations, as the Commission determines)
+    if (onEif.length && !app.application_dates.length)
+      rows.push({ label: 'Other provisions apply from', items: [], text: 'Not recorded: EUR-Lex gives no date.' });
   }
   const tr = transpositionDates(app);
   const general = tr.filter((x) => x.kind === 'deadline');

@@ -3427,8 +3427,12 @@ class Builder:
             det["next_step"] = self.amending_deadlines(det, acts)
             self.dossier_detail[pid] = det
         # officially established relations between dossiers (act amends/repeals another dossier's act)
+        # a partial repeal is EUR-Lex's classification of the link, which the repealing act's text need not state
+        # (Decision (EU) 2024/867, Art. 6: Decision (EU) 2020/1531 "remains applicable to the extent referred to in
+        # Article 5(2)")
         rels = (("amends", "Amends"), ("repeals", "Repeals"), ("repealed_by", "Repealed by"),
-                ("partly_repeals", "Partly repeals"), ("partly_repealed_by", "Partly repealed by"))  # fmt: skip
+                ("partly_repeals", "Partly repeals (EUR-Lex)"),
+                ("partly_repealed_by", "Partly repealed by (EUR-Lex)"))  # fmt: skip
         # the inverse of a recorded "amends"/"repeals" is the same official fact
         inv_amended: dict[str, set[str]] = defaultdict(set)
         inv_repealed: dict[str, set[str]] = defaultdict(set)
@@ -3536,10 +3540,10 @@ class Builder:
                 "Split from": 0,
                 "Amended by": 1,
                 "Repealed by": 2,
-                "Partly repealed by": 2,
+                "Partly repealed by (EUR-Lex)": 2,
                 "Amends": 3,
                 "Repeals": 4,
-                "Partly repeals": 4,
+                "Partly repeals (EUR-Lex)": 4,
             }
             det["related"] = sorted(related.values(), key=lambda r: (order.get(r["relation"], 9), r["id"]))
             dates_set = [

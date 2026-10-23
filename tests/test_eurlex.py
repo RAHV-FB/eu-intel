@@ -237,6 +237,38 @@ def test_partial_repeals_are_kept_apart():
     assert E._partial_repeals(f, "repeals") == {"31970D0243"}
 
 
+def test_repeal_dates_are_the_start_of_validity_of_the_repeal_links():
+    """Cellar rows of 2026-10-23 (ann:start_of_validity on the repeal axioms). 32014R0543: repealed and replaced by
+    Regulation (EU) 2015/2219 from 2016-07-01, its end of validity too (Art. 40(1): "with effect from 1 July 2016").
+    32014L0061 (in part): repealed by Regulation (EU) 2024/1309 from 2025-11-12; the axioms of the provisions its
+    Art. 18(2) keeps in force carry later dates. 32014D0335: partly repealed by Decision 2020/2053 from 2021-01-01."""
+    fd370 = "http://publications.europa.eu/resource/authority/fd_370/"
+    ap = "{AP|http://publications.europa.eu/resource/authority/fd_375/AP}"
+    facts = {w: E.Facts() for w in ("cepol", "bcrd", "own")}
+    E.add_relations(facts, [
+        {"w": "cepol", "rel": "repealed_by", "celex": "32015R2219", "ax": "a1", "sov": "2016-07-01",
+         "role": "{R|http://publications.europa.eu/resource/authority/fd_375/R}"},
+        {"w": "bcrd", "rel": "repealed_by", "celex": "32024R1309", "ax": "b1", "sov": "2025-11-12"},
+        {"w": "bcrd", "rel": "repealed_by", "celex": "32024R1309", "ax": "b2", "sov": "2026-05-13", "role": ap,
+         "loc": f"{{PA|{fd370}PA}} 3"},
+        {"w": "bcrd", "rel": "repealed_by", "celex": "32024R1309", "ax": "b3", "sov": "2026-02-13", "role": ap,
+         "loc": f"{{PA|{fd370}PA}} 4"},
+        {"w": "bcrd", "rel": "repealed_by", "celex": "32024R1309", "ax": "b4", "sov": "2026-05-13", "role": ap,
+         "loc": f"{{FR|{fd370}FR}} 1"},
+        {"w": "own", "rel": "repealed_by", "celex": "32020D2053", "ax": "c1", "sov": "2021-01-01", "role": ap},
+        {"w": "own", "rel": "repeals", "celex": "31970D0243", "ax": "c2", "sov": "2014-01-01", "role": ap},
+    ])  # fmt: skip
+    dates = {w: [(d.celex, d.date, d.partial) for d in E.repeal_dates(f, "x")] for w, f in facts.items()}
+    assert dates == {
+        "cepol": [("32015R2219", "2016-07-01", False)],
+        "bcrd": [("32024R1309", "2025-11-12", False), ("32024R1309", "2026-02-13", True),
+                 ("32024R1309", "2026-05-13", True)],
+        "own": [("32020D2053", "2021-01-01", True)],  # only the links to the act itself
+    }  # fmt: skip
+    assert E._whole_repeals(facts["bcrd"], "repealed_by") == {"32024R1309"}  # a whole repeal, in stages
+    assert "?sov" in E.relations_query(["w"]) and "ann:start_of_validity ?sov" in E.relations_query(["w"])
+
+
 def test_effect_on_notification_is_not_a_pending_entry_into_force():
     """Decision 2020/853 ("addressed to the Federal Republic of Germany", Art. 3): Cellar gives its date of
     effect (PE) as 1001-01-01 with comment DATNOT and no EV value; it takes effect on notification."""

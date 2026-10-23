@@ -55,8 +55,10 @@ function ActBlock({ a }: { a: LegalActSummary }) {
     ['Amended by', a.amended_by],
     ['Repeals', a.repeals],
     ['Repealed by', a.repealed_by],
-    ['Partly repeals', a.partly_repeals ?? []],
-    ['Partly repealed by', a.partly_repealed_by ?? []],
+    // EUR-Lex's classification of the link: the repealing act's text need not use the word (Decision (EU) 2024/867,
+    // Art. 6: Decision (EU) 2020/1531 "remains applicable to the extent referred to in Article 5(2)")
+    ['Partly repeals (EUR-Lex)', a.partly_repeals ?? []],
+    ['Partly repealed by (EUR-Lex)', a.partly_repealed_by ?? []],
   ];
   return (
     <div className="dz-act">

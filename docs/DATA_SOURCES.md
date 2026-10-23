@@ -233,7 +233,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   the `comment_on_date` annotation) are shown as "some provisions apply from"; so is the entry-into-force date
   when Cellar marks it that way too (`partial_on_entry_into_force`, 78 acts: DMA, Art. 54, "Article 3(6) and (7)
   and Articles 40, 46, 47, 48, 49 and 50 shall apply from 1 November 2022", its entry into force), in the "When it
-  applies" box and the in-force status. A value of `1001-01-01` (comment
+  applies" box and the in-force status. When EUR-Lex records no other date for such an act (6 acts, e.g. Regulation
+  (EU) 2025/12, whose Art. 46 ties the rest to "the date two years from the date on which the router starts
+  operations, as determined by the Commission"), both say that EUR-Lex records no date for the other provisions.
+  A value of `1001-01-01` (comment
   DATNOT, "date of notification") only says that the date is not recorded; its date type says what kind of date
   it is. Type EV (entry into force) with a comment pointing to an article of the act ("V ART 2.2"): the act enters
   into force on a condition it sets, not yet recorded as met. The Electoral Act amendments (2018/994, 2026/1296)
@@ -246,16 +249,30 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   is about non-legislative acts, and these are legislative acts.
 - End of validity: the `comment_on_date` annotation on each `resource_legal_date_end-of-validity` value (fd_330
   codes: A/PAR repealed by, AI/PAR implicitly repealed by, R/PAR replaced by, FIN/VAL/PART partial end of
-  validity, with the acts it names) is kept as `validity_notes`. The end of validity is the act's last day of validity
-  (Directive 95/46/EC: 24 May 2018, repealed by the GDPR with effect from 25 May 2018): an act is "No longer in
-  force" from the day after, which is the date its status gives. A no-longer-in-force act names the repealing act
+  validity, with the acts it names) is kept as `validity_notes`. The end of validity is usually the act's last day of
+  validity (Directive 95/46/EC: 24 May 2018, repealed by the GDPR with effect from 25 May 2018): an act is "No longer
+  in force" from the day after, which is the date its status gives. The date from which a repeal takes effect is the
+  `start_of_validity` annotation on the repeal link (`repeal_dates`, 60 acts; whole or `partial`); where Cellar
+  records it, the status gives that date. In 89 of the 93 no-longer-in-force acts with such a date (repeal or
+  implicit-repeal links, checked live on 23 October 2026) it is the day after the end of validity; for Regulations
+  543/2014 and 252/2014 it is the end of validity itself (Regulation (EU) 2015/2219, Art. 40(1): "with effect from
+  1 July 2016"; the codification 2015/754 repeals Regulation 774/94 with its amendments, 252/2014 among them,
+  Art. 11 and Annex I, from its entry into force on 8 June 2015), and the status says "EUR-Lex gives 1 July 2016 as
+  the end of its validity and records it as repealed by Regulation (EU) 2015/2219 with effect from 1 July 2016". A
+  repeal in stages, with later dates on the axioms of some provisions (Directive 2014/61/EU: repealed by Regulation
+  (EU) 2024/1309 with effect from 12 November 2025, Art. 18(2) keeping some provisions "in force until" 12 February
+  and 12 May 2026; Regulation 517/2014 and Regulation (EU) 2024/573, Art. 35), gives the repeal's date and the end
+  of validity and no "since" date: the texts do not settle the day.
+  Only the repeal links are read (implicit-repeal links are not fetched; their dates matched the day after in all
+  48 acts). A no-longer-in-force act names the repealing act
   (by its number, linked to its file or to EUR-Lex): the whole-act repeal link, else the act in that annotation.
   When the repealing act's official title says "(codification)" or "(recast)" and it is later than the act, the
   status says that the rules continue in it. An end of validity earlier than the act itself (Regulation 1377/2014:
   31 December 2013, "Implicitly repealed by" the own-resources recast 609/2014) is stated as such, not as a plain
   end date. Dates the act records for after its end of validity are marked and are not its latest development
   (Regulation 2024/2822: validity ended 30 June 2026, some provisions recorded to apply from 1 July 2026). An
-  in-force act with an end of validity still ahead says so, with the repealing act if one is recorded.
+  in-force act with an end of validity still ahead says so, with the repealing act and the date from which it repeals
+  the act if those are recorded (AMLD4: Directive (EU) 2024/1640, with effect from 10 July 2027).
 - Transposition: `directive_date_transposition` holds deadlines and application dates under one property. Each
   value's `comment_on_date` label (ADOPTION = adopt and publish by, APPLICATION = apply from, AU+TARD = at the
   latest, with the article) is kept (`pipeline/analysis/transposition.py`). Apply-from dates are never shown as
@@ -319,9 +336,15 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Partial repeals: a repeal link that every Cellar annotation limits to a provision or marks as partial (role
   AP) is kept apart (`partly_repeals`, `partly_repealed_by`: 19 links on 13 acts, e.g. Decision 2014/335/EU,
   Euratom, partly repealed by Decision (EU, Euratom) 2020/2053, whose Art. 11(1) reads "Subject to paragraph 2,
-  Decision 2014/335/EU, Euratom is repealed"). It is listed with the act and in the related files ("Partly
-  repealed by", "Partly repeals"), and an in-force act's status names it; it never makes an act "no longer in
-  force", which follows EUR-Lex's in-force flag and end of validity.
+  Decision 2014/335/EU, Euratom is repealed"). It is listed with the act and in the related files as EUR-Lex's
+  classification ("Partly repealed by (EUR-Lex)", "Partly repeals (EUR-Lex)"): the repealing act's text need not
+  use the word (Decision (EU) 2024/867 has no repeal article; its Art. 6 reads "Decision (EU) 2020/1531 remains
+  applicable to the extent referred to in Article 5(2)"). An in-force act's status names it, with the date from
+  which Cellar records it (`repeal_dates`: Decision 2014/335/EU, Euratom, with effect from 1 January 2021, the date
+  from which Decision 2020/2053 applies, Art. 12); what remains of Decision 2014/335/EU, Euratom (Art. 11(2) of
+  Decision 2020/2053: Articles 2, 4 and 5, for the calculation of revenue and of the United Kingdom correction for
+  earlier years) is a checked note in `data/curated/act_dates.yaml`. A partial repeal never makes an act "no
+  longer in force", which follows EUR-Lex's in-force flag and end of validity.
 - Known gaps (snapshot of 23 October 2026): 372 of 1,269 acts without signature date, 24 of 303 directives without
   transposition date, implicit repeals are used only from the end-of-validity annotation, partial ends of validity
   are described only for decisions that take effect on notification, acts whose procedure is only in free text are
@@ -408,7 +431,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   COM(2023) 166, "Proposal for a DIRECTIVE OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL on substantiation and
   communication of explicit environmental claims"). The adopted act can differ (2016/0284(COD) was proposed as a
   regulation and became Directive (EU) 2019/789). The dossier page marks a proposed type "(as proposed)", and the
-  explorer's filter says how the type is read.
+  explorer's filter says how the type is read and how many files of each type are counted by the type proposed.
+  "How it applies in the Member States" describes an adopted file by the type of a linked act only: a file signed
+  or adopted with no act linked yet (11 on 23 October 2026) says so and names the type proposed, and a file still
+  being decided says what the proposed type would mean "if adopted in that form".
 - OEIL has no procedure file for split parents (e.g. 2016/0224(COD)) or for 2020/3521(COD); those pages carry no
   OEIL link (`oeil_url` null). Regulation 2015/2422 (2011/0901(COD) in EUR-Lex) links OEIL's 2011/0901B(COD).
 - Timeline sources: a step whose source is an EP Open Data API record (`/api/v2/events/…`, `/procedures/…`:

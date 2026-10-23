@@ -418,13 +418,43 @@ def _day_after(d: str) -> str:
     return (date.fromisoformat(d) + timedelta(days=1)).isoformat()
 
 
+def _repeal_dates(act: LegalAct, refs: list[ActRef], partial: bool) -> list[str]:
+    """The dates from which Cellar records the repeals by these acts as taking effect (start_of_validity on the
+    repeal links): of the whole act, or (partial) of some provisions only."""
+    named = {r.celex for r in refs}
+    return sorted({d.date for d in act.repeal_dates if d.celex in named and d.partial == partial})
+
+
+def _with_effect(act: LegalAct, refs: list[ActRef], partial: bool) -> str:
+    """The acts' labels, each with the date from which Cellar records its repeal as taking effect, where it does."""
+    dated = [(r.label, _repeal_dates(act, [r], partial)) for r in refs]
+    if len(dated) == 1:
+        return dated[0][0] + (f" with effect from {_join_dates(dated[0][1])}" if dated[0][1] else "")
+    return _join_celex([label + (f" (with effect from {_join_dates(ds)})" if ds else "") for label, ds in dated])
+
+
 def _no_longer_in_force(act: LegalAct, others: Mapping[str, LegalAct]) -> _S:
-    """Cellar's end of validity is the act's last day of validity (Directive 95/46/EC: 24 May 2018, repealed by the
-    GDPR with effect from 25 May 2018); the act is no longer in force from the day after."""
+    """Cellar's end of validity is usually the act's last day of validity (Directive 95/46/EC: 24 May 2018, repealed
+    by the GDPR with effect from 25 May 2018); the act is no longer in force from the day after. Where Cellar records
+    the date from which the repeal takes effect (start_of_validity on the repeal link), that date counts: it can be the
+    end of validity itself (32014R0543: both 1 July 2016; Regulation (EU) 2015/2219, Art. 40(1), "with effect from
+    1 July 2016"). A repeal in stages, with later dates for some provisions, gets no single date: the texts do not
+    settle the day (32014L0061: repealed by Regulation (EU) 2024/1309 with effect from 12 November 2025; its Art. 18(2)
+    keeps some provisions "in force until" the dates from which its replacing provisions apply, the last 12 May 2026,
+    which Cellar gives as the end of validity, with 13 May 2026 for the repeal of those provisions)."""
     eov = act.end_of_validity
     how, refs = _ended_by(act, others)
     by = f" EUR-Lex records it as {how} by {_labels(refs)}" if refs else ""
-    if eov and _retroactive_end(act):
+    start = next(reversed(_repeal_dates(act, refs, False)), None)
+    since = _day_after(eov) if eov else None
+    if eov and start and any(d > start for d in _repeal_dates(act, refs, True)):
+        text = (
+            f"The act was adopted and published. EUR-Lex records it as {how} by {_labels(refs)} with effect from "
+            f"{_fmt(start)}, except for some provisions, whose repeal it records with effect from later dates. EUR-Lex "
+            f"gives {_fmt(eov)} as the end of the act's validity."
+        )
+        start = since = None
+    elif eov and _retroactive_end(act):
         which = (
             f"which is dated {_fmt(act.date_document)}"
             if act.date_document
@@ -435,7 +465,13 @@ def _no_longer_in_force(act: LegalAct, others: Mapping[str, LegalAct]) -> _S:
             f"earlier than the act itself, {which}."
         )
         text += (
-            f"{by}, with effect from {_fmt(_day_after(eov))}." if refs else " EUR-Lex records no reason for the earlier date."
+            f"{by}, with effect from {_fmt(start or _day_after(eov))}." if refs
+            else " EUR-Lex records no reason for the earlier date."
+        )
+    elif eov and start and start != since:
+        text = (
+            f"The act was adopted and published. EUR-Lex gives {_fmt(eov)} as the end of its validity and records it "
+            f"as {how} by {_labels(refs)} with effect from {_fmt(start)}."
         )
     elif eov:
         text = f"The act was adopted and published, but its validity ended on {_fmt(eov)}." + (by + "." if by else "")
@@ -443,7 +479,8 @@ def _no_longer_in_force(act: LegalAct, others: Mapping[str, LegalAct]) -> _S:
         text = "The act was adopted and published, but EUR-Lex records it as no longer in force." + (
             by + "." if by else ""
         )
-    since = _day_after(eov) if eov else None
+    if start:  # the repeal's own date, unless the validity ended before it
+        since = min(start, since) if since else start
     s = _S("no_longer_in_force", "No longer in force", text + _rules_continue(act, refs, others), since, "source")
     s.named_acts = refs
     return s
@@ -524,7 +561,12 @@ def _acts_stage(
             basis: Basis = "source" if act.in_force is True else "derived"
             text = f"The act has been in force since {_fmt(eif)}." if eif else "The act is in force."
             if eif and act.partial_on_entry_into_force:  # Cellar marks that date MA/PART too (DMA, Art. 54)
-                text += " EUR-Lex records that some provisions apply from that date."
+                text += " EUR-Lex records that some provisions apply from that date" + (
+                    "." if any(a.other_application_dates for a in acts)
+                    # and no date for the others (Regulation (EU) 2025/12, Art. 46: they apply from "the date two
+                    # years from the date on which the router starts operations, as determined by the Commission")
+                    else ", and no date from which the other provisions apply."
+                )
             later = [d for a in acts for d in a.other_application_dates if d and eif and d > eif]
             if later:
                 text += (
@@ -536,15 +578,16 @@ def _acts_stage(
             refs = [_ref(c, others) for c in act.repealed_by]
             if act.end_of_validity:
                 text += f" EUR-Lex records that its validity ends on {_fmt(act.end_of_validity)}" + (
-                    f" and that {_labels(refs)} repeals it." if refs else "."
-                )
+                    f" and that {_labels(refs)} repeals it" if refs else ""
+                ) + (f" with effect from {_join_dates(ds)}." if (ds := _repeal_dates(act, refs, False)) else ".")
             elif refs:
                 text += f" EUR-Lex also records it as repealed by {_labels(refs)}."
             # repeals that Cellar limits to some provisions or marks as partial (32014D0335: Decision (EU, Euratom)
-            # 2020/2053, Art. 11(1), "Subject to paragraph 2, Decision 2014/335/EU, Euratom is repealed")
+            # 2020/2053, Art. 11(1), "Subject to paragraph 2, Decision 2014/335/EU, Euratom is repealed"; Cellar
+            # records the repeal from 1 January 2021, the date from which that decision applies, Art. 12)
             partly = [_ref(c, others) for c in act.partly_repealed_by]
             if partly:
-                text += f" EUR-Lex records it as partly repealed by {_labels(partly)}."
+                text += f" EUR-Lex records it as partly repealed by {_with_effect(act, partly, True)}."
             s = _S("in_force", "In force", text, eif or pub_date, basis)
             s.named_acts = refs + partly
             return s
