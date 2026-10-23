@@ -468,6 +468,36 @@ def test_fetch_changed_note_with_transient_error_keeps_previous_and_retries(tmp_
     assert snapshot.read_records("council", "notes", C.CouncilNoteState) == []  # retried next run
 
 
+def test_fetch_after_deadline_defers_changed_notes_and_keeps_them_linked(tmp_path, monkeypatch):
+    import time
+
+    from pipeline.models.entities import CouncilVote
+
+    snapshot, ai_rows, prev = _seed(tmp_path, monkeypatch, lambda versions: "stale-fingerprint")
+    monkeypatch.setenv("EU_INTEL_FETCH_DEADLINE", str(time.time() - 1))
+    http = FakeHttp(ai_rows)  # any download would fail the test
+    st = C.fetch(http)
+    assert http.gets == [] and st.status == "partial" and "time budget reached" in st.note
+    assert snapshot.read_records("council", "votes", CouncilVote) == [prev]
+    (state,) = snapshot.read_records("council", "notes", C.CouncilNoteState)
+    assert state.vote_id == prev.id and state.fingerprint == C.DEFERRED_FINGERPRINT  # re-read next run
+    # the next run, still failing to download, keeps the vote (it is still linked to its note)
+    monkeypatch.delenv("EU_INTEL_FETCH_DEADLINE")
+    from pipeline.http import HttpError
+
+    st = C.fetch(FakeHttp(ai_rows, error=HttpError("u", 503, "unavailable")))
+    assert snapshot.read_records("council", "votes", CouncilVote) == [prev]
+
+
+def test_fetch_after_deadline_still_reuses_unchanged_notes(tmp_path, monkeypatch):
+    import time
+
+    snapshot, ai_rows, prev = _seed(tmp_path, monkeypatch, C.note_fingerprint)
+    monkeypatch.setenv("EU_INTEL_FETCH_DEADLINE", str(time.time() - 1))
+    st = C.fetch(FakeHttp(ai_rows))
+    assert st.status == "ok" and st.records["votes"] == 1
+
+
 def test_fetch_refuses_truncated_listing(tmp_path, monkeypatch):
     snapshot, _ai_rows, _prev = _seed(tmp_path, monkeypatch, C.note_fingerprint)
     st = C.fetch(FakeHttp([]))

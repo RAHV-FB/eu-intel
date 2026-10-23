@@ -277,6 +277,114 @@ def test_failed_directive_keeps_previous_records_and_coverage(tmp_path, monkeypa
     assert sum(1 for m in measures if m.directive_celex == FAILING) == 2
 
 
+# ------------------------------------------------------------------- failures and time limits
+@pytest.fixture
+def imp_dir(tmp_path, monkeypatch):
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.setattr(imp, "FEATURED_YAML", tmp_path / "none.yaml")
+    for var in ("EU_INTEL_FETCH_BUDGET_S", "EU_INTEL_FETCH_DEADLINE"):
+        monkeypatch.delenv(var, raising=False)
+    return tmp_path
+
+
+class ExportDown(FakeHttp):
+    """The register's .xlsx export fails for every slice (search still works)."""
+
+    def request(self, method: str, url: str, **kw):
+        if url.endswith("/export"):
+            raise HttpError(url, 502, "Bad gateway")
+        return super().request(method, url, **kw)
+
+
+def _cases() -> dict[str, InfringementCase]:
+    return {c.id: c for c in snapshot.read_records(imp.SOURCE_ID, "infringements", InfringementCase)}
+
+
+def test_failed_export_slice_keeps_the_stored_legal_basis(imp_dir):
+    imp.fetch(FakeHttp())  # type: ignore[arg-type]
+    before = _cases()
+    assert before["INFR(2021)0330"].legal_basis == ["32019L0790"]
+    st = imp.fetch(ExportDown())  # type: ignore[arg-type]
+    after = _cases()
+    assert after["INFR(2021)0330"].legal_basis == ["32019L0790"]
+    assert after["INFR(2021)0330"].celex == "32019L0790"
+    assert {k: v.legal_basis for k, v in after.items()} == {k: v.legal_basis for k, v in before.items()}
+    assert st.status == "partial" and "keep their stored legal basis" in (st.note or "")
+
+
+def test_failed_export_without_stored_record_leaves_legal_basis_empty(imp_dir):
+    imp.fetch(ExportDown())  # type: ignore[arg-type]
+    assert all(c.legal_basis == [] and c.celex is None for c in _cases().values())
+
+
+def test_truncated_case_search_does_not_shrink_the_file(imp_dir):
+    snapshot.update_manifest(imp.fetch(FakeHttp()))  # type: ignore[arg-type]
+    before = (imp_dir / imp.SOURCE_ID / "infringements.json").read_text()
+
+    class Truncated(FakeHttp):
+        def request(self, method: str, url: str, **kw):
+            body = kw.get("json_body") or {}
+            if url.endswith("/infringements") and body.get("size") != 1:
+                recs = cases_fixture()[:3] if body["page"] == 0 else []
+                return json.dumps({"totalRows": 3, "records": recs}).encode()
+            return super().request(method, url, **kw)
+
+    st = imp.fetch(Truncated())  # type: ignore[arg-type]
+    assert (imp_dir / imp.SOURCE_ID / "infringements.json").read_text() == before
+    assert "infringements not updated" in (st.note or "")
+    assert st.records["infringements"] == 6  # the kept file's count
+
+
+def test_truncated_directive_list_does_not_shrink_measures(imp_dir):
+    imp.fetch(FakeHttp())  # type: ignore[arg-type]
+    before = (imp_dir / imp.SOURCE_ID / "coverage.json").read_text()
+
+    class FewDirectives(FakeHttp):
+        def sparql(self, query: str, **kw):
+            if "measure_national_implementing_implements_resource_legal" in query:
+                return super().sparql(query, **kw)
+            return [{"celex": NIS2}]
+
+    with pytest.raises(imp.ShrinkGuard):
+        imp.fetch_measures(FewDirectives())  # type: ignore[arg-type]
+    st = imp.fetch(FewDirectives())  # type: ignore[arg-type]
+    assert "measures not updated" in (st.note or "")
+    assert (imp_dir / imp.SOURCE_ID / "coverage.json").read_text() == before
+
+
+def test_deadline_defers_directive_queries(imp_dir):
+    import time
+
+    imp.fetch(FakeHttp())  # type: ignore[arg-type]
+    before = snapshot.read_records(imp.SOURCE_ID, "measures", NationalMeasure)
+
+    class Counting(FakeHttp):
+        queries = 0
+
+        def sparql(self, query: str, **kw):
+            if "measure_national_implementing_implements_resource_legal" in query:
+                Counting.queries += 1
+            return super().sparql(query, **kw)
+
+    records, coverage, info = imp.fetch_measures(Counting(), deadline=time.monotonic() - 1)  # type: ignore[arg-type]
+    assert Counting.queries == 0 and info["deferred"] and not info["failed"]
+    assert {m.id for m in records} == {m.id for m in before}  # every stored record kept
+    assert {c.celex for c in coverage} == {NIS2, NO_MEASURES}
+
+
+def test_run_deadline_passed_keeps_everything(imp_dir, monkeypatch):
+    import time
+
+    imp.fetch(FakeHttp())  # type: ignore[arg-type]
+    snapshot.update_manifest(imp.fetch(FakeHttp()))  # type: ignore[arg-type]
+    files = {p.name: p.read_text() for p in (imp_dir / imp.SOURCE_ID).iterdir()}
+    monkeypatch.setenv("EU_INTEL_FETCH_DEADLINE", str(time.time() - 1))
+    st = imp.fetch(ExportDown())  # type: ignore[arg-type]
+    assert {p.name: p.read_text() for p in (imp_dir / imp.SOURCE_ID).iterdir()} == files
+    assert st.status == "partial" and "time budget reached" in (st.note or "")
+    assert st.records["measures"] == 11  # previous facts kept
+
+
 # ------------------------------------------------------------------------------- live checks
 @pytest.mark.network
 def test_live_nis2_measures():

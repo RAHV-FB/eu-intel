@@ -25,7 +25,8 @@ activity has been recorded in Council or Parliament for at least nine months; an
 initiative not tabled more than nine months after its announced date is also "Blocked".
 
 Crawl policy: only schedule index fragments, theme pages and file pages; sequential requests
-through the shared, throttled, caching ``Http`` client.
+through the shared, throttled, caching ``Http`` client. File pages are re-read incrementally and
+failures keep the stored records (see "crawling" below).
 
 The site's bot filter answers HTTP 202 (an empty JavaScript challenge) to user agents that are not
 in the common "product/version" browser or tool form, including the pipeline's default one. We
@@ -35,18 +36,29 @@ therefore send the same honest bot identification in the conventional crawler fo
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import os
 import re
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from datetime import UTC, date, datetime, timedelta
 from urllib.parse import urljoin
 
 import lxml.html
 
 from pipeline.http import USER_AGENT, Http, HttpError
 from pipeline.models.entities import SourceRef, SourceStatus, TrainFile
-from pipeline.snapshot import now_iso, write_records
+from pipeline.snapshot import (
+    fetch_deadline,
+    now_iso,
+    past,
+    read_records,
+    read_state,
+    write_records,
+    write_state,
+)
 
 log = logging.getLogger("pipeline.sources.legislative_train")
 
@@ -148,6 +160,30 @@ def parse_theme(html: str) -> list[tuple[str, str]]:
             continue
         seen.add(href)
         out.append((urljoin(BASE, href), (a.get("title") or _text(a)).strip()))
+    return out
+
+
+@dataclass
+class ThemeHint:
+    status: str | None  # the file's current status as shown on the theme page's timeline
+    recently_updated: bool  # the theme page marks the file "Recently updated carriage"
+
+
+def parse_theme_hints(html: str) -> dict[str, ThemeHint]:
+    """{absolute file URL: ThemeHint} for the files of a theme page's timetable. The timeline's last
+    carriage shows the current status (equal to the file page's status on all 71 files compared on
+    2026-10-22)."""
+    doc = lxml.html.fromstring(html)
+    out: dict[str, ThemeHint] = {}
+    for li in doc.xpath("//li[contains(concat(' ', normalize-space(@class), ' '), ' timetable ')]"):
+        links = [a for a in li.xpath(".//h3//a[@href]") if _FILE_HREF_RE.match(a.get("href", "").strip())]
+        if not links:
+            continue
+        notes = [_text(p) for p in li.xpath(".//p[contains(@class,'notification')]")]
+        last = notes[-1] if notes else ""
+        status = last.split(":", 1)[1].strip() if last.startswith("Status:") else None
+        recent = bool(li.xpath(".//h3//*[contains(@class,'icon-update')]"))
+        out.setdefault(urljoin(BASE, links[0].get("href").strip()), ThemeHint(status or None, recent))
     return out
 
 
@@ -258,70 +294,227 @@ def build_record(url: str, listed_title: str, page: FilePage, retrieved_at: str)
 
 
 # --------------------------------------------------------------------------------- crawling
+#
+# Incremental re-reading. On 2026-10-22 every file of the current Commission term carried the same
+# "Information updated as of" date (the site updates them in a monthly batch), while files of earlier terms
+# keep the date of their last update (e.g. 2019-11-20, 2024-12-15). A stored record is therefore reused
+# without reading its file page when all of these hold:
+# - the theme page shows the same status for it and does not mark it "Recently updated",
+# - its "Information updated as of" date is older than ACTIVE_DAYS,
+# - it is not in this week's share of the RECHECK_WEEKS rotation (each quiet file is re-read every
+#   RECHECK_WEEKS weeks anyway), and it was not left pending by the previous run.
+# EU_INTEL_FULL_REFRESH=1 re-reads every file page.
+#
+# Failure safety. A file page or theme page that cannot be read keeps the stored records (by URL, or by
+# file slug for a file that moved to another theme); a schedule page that cannot be read falls back to the
+# theme list of the previous run (_state.json). After fetch_deadline() no new page is requested; the files
+# not read are carried forward and listed as pending in _state.json, so the next run starts with them.
+# files.json is not written if it would lose more than MAX_SHRINK of its records.
+ACTIVE_DAYS = 90
+RECHECK_WEEKS = 4
+MAX_SHRINK = 0.05
+
+
+def _today() -> date:  # monkeypatched in tests
+    return datetime.now(UTC).date()
 
 
 def _get(http: Http, url: str) -> str:
     return http.get(url, headers=HEADERS).decode("utf-8", errors="replace")
 
 
+def recheck_slot(slug: str) -> int:
+    """The week (modulo RECHECK_WEEKS) in which a quiet file is re-read; stable across runs."""
+    return int(hashlib.sha256(slug.encode()).hexdigest()[:8], 16) % RECHECK_WEEKS
+
+
+def week_slot(today: date) -> int:
+    return (today.toordinal() // 7) % RECHECK_WEEKS  # weeks start on Mondays
+
+
+def needs_page(
+    url: str, old: TrainFile | None, hint: ThemeHint | None, today: date, full: bool = False
+) -> str | None:
+    """Why the file page must be read this run; None = the stored record is reused as it is."""
+    if full:
+        return "full refresh"
+    if old is None:
+        return "new"
+    if hint is None or hint.status is None:
+        return "no status on the theme page"
+    if hint.status != old.status:
+        return "status changed"
+    if hint.recently_updated:
+        return "recently updated"
+    if not old.last_updated or old.last_updated >= (today - timedelta(days=ACTIVE_DAYS)).isoformat():
+        return "active"
+    if recheck_slot(file_slug(url)) == week_slot(today):
+        return "periodic re-check"
+    return None
+
+
+@dataclass
+class Discovery:
+    files: dict[str, tuple[str, str]] = field(default_factory=dict)  # file slug -> (url, listed title)
+    hints: dict[str, ThemeHint] = field(default_factory=dict)  # url -> theme-page status
+    carried: dict[str, TrainFile] = field(default_factory=dict)  # url -> stored record (theme page unread)
+    themes: dict[str, list[str]] = field(default_factory=dict)  # Commission term -> theme slugs
+    notes: list[str] = field(default_factory=list)  # index mismatches (informational)
+    problems: list[str] = field(default_factory=list)  # pages that could not be read (run is partial)
+
+
 def discover_files(
-    http: Http, terms: Iterable[str] = COMMISSION_TERMS
-) -> tuple[dict[str, tuple[str, str]], list[str]]:
-    """Return ({file slug: (url, listed title)}, notes). Most recent term wins for duplicates."""
-    files: dict[str, tuple[str, str]] = {}
-    notes: list[str] = []
+    http: Http,
+    terms: Iterable[str] = COMMISSION_TERMS,
+    previous: dict[str, TrainFile] | None = None,
+    known_themes: dict[str, list[str]] | None = None,
+    deadline: float | None = None,
+) -> Discovery:
+    """Files listed on the theme pages of every term. Most recent term wins for duplicates."""
+    previous = previous or {}
+    known_themes = known_themes or {}
+    d = Discovery()
     for term in terms:
-        rows = parse_schedule(_get(http, f"{BASE}schedule?pov=EC_PRIORITIES&commission={term}&reload=false"))
-        if not rows:
-            raise RuntimeError(f"no themes found in Legislative Train schedule for {term}")
-        for row in rows:
-            listed = parse_theme(_get(http, BASE + row.slug))
-            expected = sum(row.counts.values()) if row.counts else None
+        try:
+            rows = parse_schedule(
+                _get(http, f"{BASE}schedule?pov=EC_PRIORITIES&commission={term}&reload=false")
+            )
+            if not rows:
+                raise RuntimeError(f"no themes found in Legislative Train schedule for {term}")
+            themes = [(r.slug, sum(r.counts.values()) if r.counts else None) for r in rows]
+        except Exception as e:  # noqa: BLE001 - HTTP error, WAF or empty page
+            stored = known_themes.get(term)
+            if not stored:
+                raise RuntimeError(f"Legislative Train schedule for {term} unavailable: {e}") from e
+            d.problems.append(
+                f"schedule {term} unavailable ({e}); used the {len(stored)} themes of the last run"
+            )
+            themes = [(slug, None) for slug in stored]
+        d.themes[term] = [slug for slug, _ in themes]
+        for slug, expected in themes:
+            try:
+                if past(deadline):
+                    raise RuntimeError("time budget reached")
+                html = _get(http, BASE + slug)
+                listed = parse_theme(html)
+                if not listed and expected != 0:
+                    raise RuntimeError("theme page lists no files")
+            except Exception as e:  # noqa: BLE001 - keep the theme's stored files
+                kept = {u: r for u, r in previous.items() if u.startswith(f"{BASE}{slug}/file-")}
+                d.problems.append(f"{slug}: {str(e)[:120]}; {len(kept)} stored files kept")
+                for u, r in sorted(kept.items()):
+                    if file_slug(u) not in d.files:
+                        d.files[file_slug(u)] = (u, r.title)
+                        d.carried[u] = r
+                continue
             if expected is not None and expected != len(listed):
-                notes.append(f"{row.slug}: schedule counts {expected} files, theme page lists {len(listed)}")
+                d.notes.append(f"{slug}: schedule counts {expected} files, theme page lists {len(listed)}")
+            d.hints.update(parse_theme_hints(html))
             for url, title in listed:
-                files.setdefault(file_slug(url), (url, title))
-        log.info("train %s: %d themes, %d unique files so far", term, len(rows), len(files))
-    return files, notes
+                d.files.setdefault(file_slug(url), (url, title))
+        log.info("train %s: %d themes, %d unique files so far", term, len(themes), len(d.files))
+    return d
 
 
 def fetch(http: Http) -> SourceStatus:
     attempted = now_iso()
-    files, notes = discover_files(http)
-    records: list[TrainFile] = []
+    deadline = fetch_deadline()
+    today = _today()
+    full = os.environ.get("EU_INTEL_FULL_REFRESH") == "1"
+    state = read_state(SOURCE_ID)
+    stored = read_records(SOURCE_ID, "files", TrainFile)
+    previous = {r.url: r for r in stored}
+    by_slug = {file_slug(r.url): r for r in stored}
+    disc = discover_files(
+        http, COMMISSION_TERMS, previous=previous, known_themes=state.get("themes"), deadline=deadline
+    )
+    pending_before = set(state.get("pending", []))
+
+    records: dict[str, TrainFile] = {}
     errors: list[str] = []
-    for i, (_slug, (url, listed_title)) in enumerate(sorted(files.items())):
+    pending: list[str] = []
+    reasons: Counter[str] = Counter()
+    reused = 0
+    # files left pending by the previous run first
+    order = sorted(disc.files.items(), key=lambda kv: (kv[1][0] not in pending_before, kv[0]))
+    for i, (slug, (url, listed_title)) in enumerate(order):
+        if url in disc.carried:
+            records[url] = disc.carried[url]
+            continue
+        old = previous.get(url) or by_slug.get(slug)
+        why = (
+            "pending"
+            if url in pending_before
+            else needs_page(url, previous.get(url), disc.hints.get(url), today, full)
+        )
+        if why is None and old is not None:
+            records[old.url] = old
+            reused += 1
+            continue
+        if past(deadline):
+            pending.append(url)
+            if old is not None:
+                records[old.url] = old
+            continue
         try:
             page = parse_file_page(_get(http, url))
-        except HttpError as e:
-            errors.append(f"{url}: HTTP {e.status}")
+            if not page.status:
+                raise ValueError("no status found")
+        except Exception as e:  # noqa: BLE001 - HTTP error, WAF or unreadable page: keep the stored record
+            errors.append(f"{url}: {f'HTTP {e.status}' if isinstance(e, HttpError) else str(e)[:80]}")
+            pending.append(url)
+            if old is not None:
+                records[old.url] = old
             continue
-        if not page.status:
-            errors.append(f"{url}: no status found")
-            continue
-        records.append(build_record(url, listed_title, page, now_iso()))
+        records[url] = build_record(url, listed_title, page, now_iso())
+        reasons[why or "new"] += 1
         if (i + 1) % 100 == 0:
-            log.info("train: %d/%d file pages", i + 1, len(files))
+            log.info("train: %d/%d files (%d pages read)", i + 1, len(order), sum(reasons.values()))
 
     if not records:
         raise RuntimeError(f"Legislative Train: no file pages parsed ({len(errors)} errors)")
+    if stored and len(records) < (1 - MAX_SHRINK) * len(stored):
+        return SourceStatus(
+            source=SOURCE_ID,
+            status="failed",
+            attempted_at=attempted,
+            note=(
+                f"only {len(records)} files found (previously {len(stored)}); snapshot kept. "
+                + "; ".join((disc.problems + errors)[:5])
+            )[:1000],
+        )
 
-    unknown = sorted({r.status for r in records} - STATUS_VOCABULARY)
-    counts = Counter(r.status for r in records)
-    write_records(SOURCE_ID, "files", records, key=lambda r: r.url)
+    out = list(records.values())
+    unknown = sorted({r.status for r in out} - STATUS_VOCABULARY)
+    counts = Counter(r.status for r in out)
+    write_records(SOURCE_ID, "files", out, key=lambda r: r.url)
+    write_state(SOURCE_ID, {"themes": disc.themes, "pending": sorted(pending)})
 
-    note_parts = ["statuses: " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))]
+    fetched = sum(reasons.values())
+    note_parts = [
+        "statuses: " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())),
+        f"{fetched} file pages read ({', '.join(f'{k} {v}' for k, v in sorted(reasons.items()))}), "
+        f"{reused} unchanged files reused, {len(disc.carried)} kept from unreadable theme pages",
+    ]
     if unknown:
         note_parts.append(f"statuses outside known vocabulary (stored as published): {unknown}")
     if errors:
-        note_parts.append(f"{len(errors)} file pages skipped, e.g. {errors[:3]}")
-    if notes:
-        note_parts.append("index mismatches: " + "; ".join(notes[:5]))
+        note_parts.append(f"{len(errors)} file pages unreadable (previous records kept), e.g. {errors[:3]}")
+    if pending:
+        note_parts.append(
+            f"{len(pending)} files pending; resumes next run"
+            + (" (time budget reached)" if past(deadline) else "")
+        )
+    if disc.problems:
+        note_parts.append("index pages unreadable: " + "; ".join(disc.problems[:5]))
+    if disc.notes:
+        note_parts.append("index mismatches: " + "; ".join(disc.notes[:5]))
+    partial = bool(errors or unknown or pending or disc.problems)
     return SourceStatus(
         source=SOURCE_ID,
-        status="partial" if (errors or unknown) else "ok",
+        status="partial" if partial else "ok",
         fetched_at=now_iso(),
         attempted_at=attempted,
-        records={"files": len(records)},
+        records={"files": len(out), "fetched_this_run": fetched, "reused": reused, "pending": len(pending)},
         note=" | ".join(note_parts)[:1000],
     )

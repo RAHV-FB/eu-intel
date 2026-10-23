@@ -242,22 +242,48 @@ def coverage_entry(celex: str, measures: int, retrieved_at: str) -> Implementati
     )
 
 
+MAX_SHRINK = 0.05  # a sub-source file is not rewritten if it would lose more than this share of records
+
+
+class NotStarted(RuntimeError):
+    """A sub-source was not started because the time budget was used up (its stored file is kept)."""
+
+
+class ShrinkGuard(RuntimeError):
+    """The new result is much smaller than the stored one (truncated answer?): keep the stored file."""
+
+
+def check_shrink(what: str, new: int, old: int) -> None:
+    if old and new < (1 - MAX_SHRINK) * old:
+        raise ShrinkGuard(f"{what}: {new} records now vs {old} stored; previous file kept")
+
+
 def fetch_measures(
-    http: Http,
+    http: Http, deadline: float | None = None
 ) -> tuple[list[NationalMeasure], list[ImplementationCoverage], dict[str, Any]]:
-    """Returns (records, coverage, info). Raises if the directive list cannot be obtained.
+    """Returns (records, coverage, info). Raises if the directive list cannot be obtained, or (ShrinkGuard)
+    if the result would lose more than MAX_SHRINK of the stored directives or measures.
 
     `coverage` lists every directive whose measures were successfully queried, including those
     with 0 measures ("No measures found in the available dataset"). A directive whose query fails
     keeps its previous records and coverage entry (if any); without a previous entry it is left out
     of coverage ("not covered"), so a transient error never turns into "no measures found".
+    After `deadline` (monotonic) no new query starts; the directives not queried are treated like
+    failed ones (previous records kept) and are queried again next run.
     """
     retrieved_at = snapshot.now_iso()
     scope = {r["celex"] for r in http.sparql(directives_query()) if is_directive_celex(r.get("celex"))}
     scope |= set(featured_directives())
     celexes = sorted(scope)
+    prev_measures = snapshot.read_records(SOURCE_ID, "measures", NationalMeasure)
+    prev_coverage = snapshot.read_records(SOURCE_ID, "coverage", ImplementationCoverage)
+    check_shrink("directives in scope", len(celexes), len(prev_coverage))
+    deferred: list[str] = []
 
     def one(celex: str) -> tuple[str, list[NationalMeasure] | None]:
+        if snapshot.past(deadline):
+            deferred.append(celex)
+            return celex, None
         try:
             return celex, parse_measure_rows(celex, http.sparql(measures_query(celex)), retrieved_at)
         except (HttpError, KeyError, ValueError) as e:
@@ -272,19 +298,15 @@ def fetch_measures(
     coverage = [coverage_entry(c, len(recs), retrieved_at) for c, recs in results if recs is not None]
     if failed:
         keep = set(failed)
-        records += [
-            m
-            for m in snapshot.read_records(SOURCE_ID, "measures", NationalMeasure)
-            if m.directive_celex in keep
-        ]
-        coverage += [
-            c for c in snapshot.read_records(SOURCE_ID, "coverage", ImplementationCoverage) if c.celex in keep
-        ]
+        records += [m for m in prev_measures if m.directive_celex in keep]
+        coverage += [c for c in prev_coverage if c.celex in keep]
+    check_shrink("measures", len(records), len(prev_measures))
     info = {
         "directives": len(celexes),
         "covered": len(coverage),
         "with_measures": len({m.directive_celex for m in records}),
-        "failed": failed,
+        "failed": [c for c in failed if c not in set(deferred)],
+        "deferred": sorted(deferred),
     }
     return records, coverage, info
 
@@ -509,8 +531,15 @@ def _export_filters(this_year: int) -> list[dict[str, Any]]:
     return slices
 
 
-def fetch_infringements(http: Http) -> tuple[list[InfringementCase], dict[str, Any]]:
-    """Returns (records, info). Raises if the case search fails (nothing is written then)."""
+def fetch_infringements(
+    http: Http, deadline: float | None = None
+) -> tuple[list[InfringementCase], dict[str, Any]]:
+    """Returns (records, info). Raises if the case search fails (nothing is written then), or (ShrinkGuard)
+    if it returns more than MAX_SHRINK fewer cases than stored.
+
+    A case without legal-basis data in this run (its export slice failed, or was not requested after
+    `deadline`) keeps the legal basis and CELEX of its stored record: a transient export failure never
+    turns into "no legal basis"."""
     retrieved_at = snapshot.now_iso()
     try:
         refdata = http.get_json(THEMIS_API + "/referencedata/loadAll", headers={"Accept": "application/json"})
@@ -530,27 +559,39 @@ def fetch_infringements(http: Http) -> tuple[list[InfringementCase], dict[str, A
 
     # Exports run one at a time: concurrent export requests were observed to return row sets that
     # did not match their filters. Each export is checked against the search's row count.
+    deferred_exports: list[str] = []
     for filters in _export_filters(datetime.now(UTC).year):
         label = ",".join(f"{k}={v}" for k, v in filters.items())
+        if snapshot.past(deadline):
+            deferred_exports.append(label)
+            continue
         part = _export_legal_basis_checked(http, filters)
         if part is None:
             failed_exports.append(label)
         else:
             legal_basis.update(part)
 
+    previous = {c.id: c for c in snapshot.read_records(SOURCE_ID, "infringements", InfringementCase)}
     records: list[InfringementCase] = []
-    skipped = 0
+    skipped = carried = 0
     for rec in raw.values():
         case = parse_case(rec, names, retrieved_at, legal_basis)
         if case is None:
             skipped += 1
-        else:
-            records.append(case)
+            continue
+        old = previous.get(case.id)
+        if case.id not in legal_basis and old is not None and old.legal_basis:
+            case = case.model_copy(update={"legal_basis": list(old.legal_basis), "celex": old.celex})
+            carried += 1
+        records.append(case)
+    check_shrink("infringement cases", len(records), len(previous))
     info = {
         "cases": len(records),
         "skipped": skipped,
         "without_legal_basis_data": sum(1 for c in records if c.id not in legal_basis),
+        "legal_basis_carried": carried,
         "failed_exports": failed_exports,
+        "deferred_exports": deferred_exports,
     }
     return records, info
 
@@ -571,12 +612,16 @@ def fetch_indicators(http: Http) -> tuple[list[CountryIndicator] | None, str]:
 # ---------------------------------------------------------------------------- entry point
 def fetch(http: Http) -> SourceStatus:
     attempted = snapshot.now_iso()
+    deadline = snapshot.fetch_deadline()
     notes: list[str] = []
     counts: dict[str, int] = {}
     ok_parts = 0
+    not_started = "not started (time budget reached); previous file kept, resumes next run"
 
     try:
-        measures, coverage, mi = fetch_measures(http)
+        if snapshot.past(deadline):
+            raise NotStarted(not_started)
+        measures, coverage, mi = fetch_measures(http, deadline)
         snapshot.write_records(
             SOURCE_ID, "measures", measures, key=lambda m: (m.directive_celex, m.country, m.date or "", m.id)
         )
@@ -589,23 +634,43 @@ def fetch(http: Http) -> SourceStatus:
         )
         if mi["failed"]:
             note += f"; {len(mi['failed'])} directive queries failed (previous records kept)"
-        else:
+        if mi["deferred"]:
+            note += (
+                f"; {len(mi['deferred'])} directives not queried (time budget reached; previous records kept)"
+            )
+        if not mi["failed"] and not mi["deferred"]:
             ok_parts += 1
         notes.append(note)
+    except NotStarted as e:
+        notes.append(f"measures: {e}")
+    except ShrinkGuard as e:
+        log.warning("measures sub-source not written: %s", e)
+        notes.append(f"measures not updated: {e}")
     except Exception as e:  # noqa: BLE001 - sub-source failure must not stop the others
         log.exception("measures sub-source failed")
         notes.append(f"measures failed: {e!r}"[:200])
 
     try:
-        cases, ci = fetch_infringements(http)
+        if snapshot.past(deadline):
+            raise NotStarted(not_started)
+        cases, ci = fetch_infringements(http, deadline)
         snapshot.write_records(SOURCE_ID, "infringements", cases, key=lambda c: c.id)
         counts["infringements"] = len(cases)
         note = f"infringements: {ci['cases']} cases"
-        if ci["failed_exports"]:
-            note += f"; legal-basis export failed for {len(ci['failed_exports'])} slices"
+        missing = len(ci["failed_exports"]) + len(ci["deferred_exports"])
+        if missing:
+            note += (
+                f"; legal-basis export failed or not requested for {missing} slices "
+                f"({ci['legal_basis_carried']} cases keep their stored legal basis)"
+            )
         else:
             ok_parts += 1
         notes.append(note)
+    except NotStarted as e:
+        notes.append(f"infringements: {e}")
+    except ShrinkGuard as e:
+        log.warning("infringements sub-source not written: %s", e)
+        notes.append(f"infringements not updated: {e}")
     except Exception as e:  # noqa: BLE001
         log.exception("infringements sub-source failed")
         notes.append(f"infringements failed: {e!r}"[:200])
@@ -623,12 +688,19 @@ def fetch(http: Http) -> SourceStatus:
         log.exception("indicators sub-source failed")
         notes.append(f"indicators failed: {e!r}"[:200])
 
+    if not counts and all(not_started in n for n in notes[:2]):
+        return snapshot.not_refreshed(SOURCE_ID, attempted, f"Not refreshed: {not_started}.")
     status = "ok" if ok_parts == 3 else ("partial" if counts else "failed")
+    records = dict(counts)
+    if counts:  # files kept from an earlier run keep their counts
+        prev = snapshot.read_manifest().get(SOURCE_ID)
+        for k, v in (prev.records if prev else {}).items():
+            records.setdefault(k, v)
     return SourceStatus(
         source=SOURCE_ID,
         status=status,
         fetched_at=snapshot.now_iso() if counts else None,
         attempted_at=attempted,
-        records=counts,
+        records=records,
         note="; ".join(notes),
     )
