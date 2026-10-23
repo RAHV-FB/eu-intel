@@ -318,6 +318,9 @@ def test_meta_sources_and_counts(out: Path):
     assert meta["counts"]["dossiers"] == 4 and meta["counts"]["ep_votes"] == 3
     assert meta["snapshot_at"] == "2099-01-01T00:00:00Z"
     assert any("Country indicators" in n for n in meta["coverage_notes"])
+    # no indicators in this release: the country pages' source does not name them
+    impl = next(s for s in meta["sources"] if s["id"] == "implementation")
+    assert impl["name"] == "European Commission / EUR-Lex – national transposition measures and infringements"
 
 
 def test_parliaments_reuse_terms_are_stated_as_it_gives_them():
