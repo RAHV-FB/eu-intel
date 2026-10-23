@@ -108,10 +108,13 @@ export function engineScores(engine: SearchEngine | null, q: string): Map<string
 
 // ------------------------------------------------------------------ filters
 
+/** `?topic=none`: files that no topic covers (no subject codes in Parliament's record). */
+export const NO_TOPIC = 'none';
+
 export function makePredicates(s: ExplorerState): Record<Facet, ((d: DossierSummary) => boolean) | null> {
   const stages = stagesFor(s.stage);
   return {
-    topic: s.topic ? (d) => d.topics.includes(s.topic!) : null,
+    topic: s.topic ? (s.topic === NO_TOPIC ? (d) => d.topics.length === 0 : (d) => d.topics.includes(s.topic!)) : null,
     stage: stages ? (d) => stages.has(d.stage) : null,
     type: s.type ? (d) => d.type === s.type : null,
     instrument: s.instrument ? (d) => d.instrument === s.instrument : null,

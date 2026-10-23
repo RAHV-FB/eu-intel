@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { HomeData, Meta, Topic } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDateTime, formatNumber } from '../lib/format';
+import { votesSince } from '../lib/scope';
 import { SearchBox } from '../components/SearchBox';
 import { ErrorState, Loading } from '../components/ui';
 import { FeaturedCard } from '../features/home/FeaturedCard';
@@ -34,7 +35,7 @@ export default function Home() {
             European legislation, made clear.
           </h1>
           <p className="home-hero__lead">
-            What the EU is deciding, where each law stands, who voted for it and what happens next — in plain
+            What the EU is deciding, where a law stands, who voted for it and what happens next — in plain
             language, with every fact linked to the official record.
           </p>
           <div className="home-hero__search">
@@ -104,7 +105,14 @@ export default function Home() {
                 <h2 id="topics-title">Explore by topic</h2>
               </div>
               <p className="lx-head__note">
-                Each topic page is a shareable, filterable list — bookmark it to track a policy area.
+                Each topic page is a shareable, filterable list. Topics follow Parliament’s subject codes
+                {meta.data?.scope?.dossiers_without_topic ? (
+                  <>
+                    ; <Link to="/legislation?topic=none">{formatNumber(meta.data.scope.dossiers_without_topic)} files</Link> have
+                    none and are in no topic
+                  </>
+                ) : null}
+                . <Link to="/about#methodology">How topics are assigned</Link>.
               </p>
             </div>
             <TopicGrid topics={topics} />
@@ -129,12 +137,14 @@ export default function Home() {
 function Freshness({ meta }: { meta: Meta | undefined }) {
   if (!meta) return null;
   const c = meta.counts;
+  const fromYear = meta.scope?.procedures_from_year;
+  const since = votesSince(meta.scope);
   return (
     <p className="home-hero__fresh">
       <span className="home-hero__fresh-dot" aria-hidden="true" />
       Data refreshed {formatDateTime(meta.snapshot_at ?? meta.built_at)}
-      {c?.dossiers ? <> · {formatNumber(c.dossiers)} legislative files</> : null}
-      {c?.ep_votes ? <> · {formatNumber(c.ep_votes)} Parliament votes</> : null} ·{' '}
+      {c?.dossiers ? <> · {formatNumber(c.dossiers)} legislative files{fromYear ? <> from {fromYear} onwards</> : null}</> : null}
+      {c?.ep_votes ? <> · {formatNumber(c.ep_votes)} Parliament votes{since ? <> since {since}</> : null}</> : null} ·{' '}
       <Link to="/about#coverage">What’s covered</Link>
     </p>
   );

@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { FeaturedItem } from '../../types/data';
-import { BasisNote, SourceLink, StatusBadge } from '../../components/ui';
+import { BasisNote, ExtLink, StatusBadge } from '../../components/ui';
 import { formatDate } from '../../lib/format';
-import { dossierPath } from '../legislation/labels';
+import { EURLEX_CELEX, dossierPath } from '../legislation/labels';
 
 /** One editorially selected file on the homepage: what it is, where it stands, what's next. */
 export function FeaturedCard({ item, topicLabel }: { item: FeaturedItem; topicLabel: (slug: string) => string }) {
@@ -47,12 +47,38 @@ export function FeaturedCard({ item, topicLabel }: { item: FeaturedItem; topicLa
         </div>
       </dl>
       <div className="fcard__foot">
-        <SourceLink source={item.source} />
+        <OfficialLinks item={item} />
         <Link to={dossierPath(d.id)} className="fcard__more">
           Full details<span className="visually-hidden"> on {d.title}</span> →
         </Link>
       </div>
     </article>
+  );
+}
+
+/**
+ * Human-readable official pages first (the procedure file and, once adopted, the law on EUR-Lex); the
+ * Parliament API record the data comes from is offered separately and labelled as machine-readable.
+ */
+function OfficialLinks({ item }: { item: FeaturedItem }) {
+  const celex = item.dossier.celex[0];
+  const api = item.source?.url;
+  return (
+    <span className="source">
+      Official records: {item.oeil_url && <ExtLink href={item.oeil_url}>Procedure file (Legislative Observatory)</ExtLink>}
+      {celex && (
+        <>
+          {item.oeil_url && ' · '}
+          <ExtLink href={EURLEX_CELEX(celex)}>Law on EUR-Lex</ExtLink>
+        </>
+      )}
+      {api && (
+        <>
+          {(item.oeil_url || celex) && ' · '}
+          <ExtLink href={api}>Machine-readable data (EP Open Data API)</ExtLink>
+        </>
+      )}
+    </span>
   );
 }
 

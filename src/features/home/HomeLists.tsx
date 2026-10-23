@@ -7,7 +7,7 @@ type HomeList = HomeData['lists'][number];
 
 /** Where each list leads for "see more" (filters on the explorer / votes pages). */
 const MORE: Partial<Record<HomeList['id'], { to: string; label: string }>> = {
-  recently_adopted: { to: '/legislation?stage=law&sort=adopted', label: 'All adopted legislation' },
+  recently_adopted: { to: '/legislation?stage=law&sort=adopted', label: 'Adopted legislation in our dataset' },
   under_debate: { to: '/legislation?stage=active&sort=updated', label: 'All files still being decided' },
   stalled: { to: '/legislation?blocked=1', label: 'Officially reported as blocked' },
   upcoming: { to: '/legislation?sort=deadline', label: 'All upcoming dates' },

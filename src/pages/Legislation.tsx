@@ -1,11 +1,13 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import type { DossierSummary, LegalInstrument, Topic } from '../types/data';
+import type { DossierSummary, LegalInstrument, Meta, Topic } from '../types/data';
 import { useData, DATA_BASE } from '../lib/data';
 import { formatNumber } from '../lib/format';
+import { legislationScope } from '../lib/scope';
 import { loadSearch, type SearchEngine } from '../lib/search';
 import { useWatchlist } from '../lib/watchlist';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../components/ui';
+import { useMediaQuery } from '../components/useMediaQuery';
 import {
   INSTRUMENT_LABEL,
   STAGE_GROUPS,
@@ -23,6 +25,7 @@ import {
   countBy,
   engineScores,
   makePredicates,
+  NO_TOPIC,
   queryTokens,
   readState,
   simpleScore,
@@ -36,20 +39,27 @@ import '../features/legislation/common.css';
 import '../features/legislation/legislation.css';
 
 const INSTRUMENTS: LegalInstrument[] = ['regulation', 'directive', 'decision', 'recommendation', 'other'];
+const NO_TOPIC_LABEL = 'No topic assigned';
 
 export default function Legislation() {
   const [params, setParams] = useSearchParams();
   const state = useMemo(() => readState(params), [params]);
   const index = useData<DossierSummary[]>('dossiers/index.json');
   const topicsData = useData<Topic[]>('topics.json');
+  const meta = useData<Meta>('meta.json');
   const topics = topicsData.data ?? [];
-  const topicLabel = (slug: string) => topics.find((t) => t.slug === slug)?.label ?? slug;
+  const topicLabel = (slug: string) => (slug === NO_TOPIC ? NO_TOPIC_LABEL : (topics.find((t) => t.slug === slug)?.label ?? slug));
   const watch = useWatchlist();
   const followed = useMemo(() => new Set(watch.map((w) => w.id)), [watch]);
   const today = todayISO();
 
+  const noTopic = state.topic === NO_TOPIC;
   const currentTopic = state.topic ? topics.find((t) => t.slug === state.topic) : undefined;
-  useDocumentTitle(currentTopic ? `${currentTopic.label} – Legislation` : 'Legislation');
+  useDocumentTitle(currentTopic ? `${currentTopic.label} – Legislation` : noTopic ? `${NO_TOPIC_LABEL} – Legislation` : 'Legislation');
+
+  // Phones: only the keyword box stays open, so the first results are near the top of the screen.
+  const narrow = useMediaQuery('(max-width: 39.99rem)');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // ---- URL updates
   const update = (patch: Partial<Record<keyof ExplorerState, string | null>>, opts: { keepShow?: boolean; replace?: boolean } = {}) => {
@@ -116,7 +126,7 @@ export default function Legislation() {
 
   // ---- facet counts (each facet counted with all *other* filters applied)
   const facets = useMemo(() => {
-    const topic = countBy(applyFilters(matched, preds, 'topic'), (d) => d.topics);
+    const topic = countBy(applyFilters(matched, preds, 'topic'), (d) => (d.topics.length ? d.topics : NO_TOPIC));
     const stageRows = applyFilters(matched, preds, 'stage');
     const stage = countBy(stageRows, (d) => d.stage);
     const type = countBy(applyFilters(matched, preds, 'type'), (d) => d.type);
@@ -140,6 +150,8 @@ export default function Legislation() {
 
   const advancedActive = !!(state.type || state.instrument || state.year || state.blocked);
   const anyFilter = !!(state.topic || state.stage || advancedActive || hasQuery);
+  const activeFilters = [state.topic, state.stage, state.type, state.instrument, state.year, state.blocked || null].filter(Boolean).length;
+  const scopeText = legislationScope(meta.data?.scope, true);
   const visible = sorted.slice(0, state.show);
 
   // "Show more": move keyboard focus to the first newly revealed result.
@@ -182,13 +194,27 @@ export default function Legislation() {
   return (
     <div className="container page lx">
       <PageHeader
-        eyebrow={currentTopic ? 'Topic' : 'Legislation'}
-        title={currentTopic ? currentTopic.label : 'Legislation'}
+        eyebrow={currentTopic || noTopic ? 'Topic' : 'Legislation'}
+        title={currentTopic ? currentTopic.label : noTopic ? 'Files without a topic' : 'Legislation'}
         lead={
-          currentTopic?.description ||
-          'Search and filter EU legislative files — from Commission proposals to laws in force. Status and dates come from the European Parliament’s Legislative Observatory and EUR-Lex.'
+          noTopic
+            ? 'Legislative files with no subject code in the European Parliament’s procedure record, so no topic covers them. Most are laws shown from their EUR-Lex record only.'
+            : currentTopic?.description ||
+              'Search and filter EU legislative files — from Commission proposals to laws in force. Status and dates come from the European Parliament’s Legislative Observatory and EUR-Lex.'
         }
-      />
+      >
+        {(scopeText || currentTopic) && (
+          <p className="meta lx-scope">
+            {currentTopic && (
+              <>
+                Topics follow Parliament’s subject codes, so files without them are not listed here (
+                <Link to={`/legislation?topic=${NO_TOPIC}`}>files without a topic</Link>).{' '}
+              </>
+            )}
+            {scopeText} <Link to="/about#coverage">What’s covered</Link>
+          </p>
+        )}
+      </PageHeader>
 
       <form className="lx-filters" role="search" aria-label="Filter legislation" onSubmit={(e) => e.preventDefault()}>
         <div className="lx-field lx-filters__q">
@@ -204,131 +230,150 @@ export default function Legislation() {
             onChange={(e) => setQInput(e.target.value)}
           />
         </div>
-        <div className="lx-field">
-          <label htmlFor={`${ids}-topic`}>Topic</label>
-          <select id={`${ids}-topic`} className="select lx-select" value={state.topic ?? ''} onChange={(e) => update({ topic: e.target.value || null })}>
-            <option value="">All topics</option>
-            {topics.map((t) => (
-              <option key={t.slug} value={t.slug}>
-                {t.label} ({formatNumber(facets.topic.get(t.slug) ?? 0)})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="lx-field">
-          <label htmlFor={`${ids}-stage`}>Status</label>
-          <select id={`${ids}-stage`} className="select lx-select" value={state.stage ?? ''} onChange={(e) => update({ stage: e.target.value || null })}>
-            <option value="">Any status</option>
-            <optgroup label="Broad status">
-              {Object.entries(STAGE_GROUPS).map(([k, g]) => (
-                <option key={k} value={k}>
-                  {g.label} ({formatNumber(facets.groups[k] ?? 0)})
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Exact stage">
-              {STAGE_ORDER.filter((s) => (facets.stage.get(s) ?? 0) > 0 || state.stage === s).map((s) => (
-                <option key={s} value={s}>
-                  {STAGE_LABEL[s]} ({formatNumber(facets.stage.get(s) ?? 0)})
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        </div>
-        <div className="lx-field">
-          <label htmlFor={`${ids}-sort`}>Sort by</label>
-          <select
-            id={`${ids}-sort`}
-            className="select lx-select"
-            value={state.sort}
-            onChange={(e) => update({ sort: e.target.value }, { keepShow: false })}
+        {narrow && (
+          <button
+            type="button"
+            className="btn lx-filters__toggle"
+            aria-expanded={filtersOpen}
+            aria-controls={`${ids}-rest`}
+            onClick={() => setFiltersOpen((o) => !o)}
           >
-            {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => {
-              if (k === 'relevance' && !hasQuery) return null;
-              if (k === 'deadline' && !hasNextDates) return null;
-              if (k === 'blocked' && !anyBlocked) return null;
-              return (
-                <option key={k} value={k}>
-                  {SORT_LABEL[k]}
-                  {k === 'adopted' && !hasAdopted ? ' (by latest step)' : ''}
+            {filtersOpen ? 'Hide filters and sorting' : 'Filters and sorting'}
+            {activeFilters > 0 && <span className="lx-more__count"> ({activeFilters} active)</span>}
+          </button>
+        )}
+        <div id={`${ids}-rest`} className="lx-filters__rest" hidden={narrow && !filtersOpen}>
+          <div className="lx-field">
+            <label htmlFor={`${ids}-topic`}>Topic</label>
+            <select id={`${ids}-topic`} className="select lx-select" value={state.topic ?? ''} onChange={(e) => update({ topic: e.target.value || null })}>
+              <option value="">All topics</option>
+              {topics.map((t) => (
+                <option key={t.slug} value={t.slug}>
+                  {t.label} ({formatNumber(facets.topic.get(t.slug) ?? 0)})
                 </option>
-              );
-            })}
-          </select>
-        </div>
-
-        <details className="lx-more" open={advancedActive || undefined}>
-          <summary>
-            More filters
-            {advancedActive && <span className="lx-more__count"> ({[state.type, state.instrument, state.year, state.blocked || null].filter(Boolean).length} active)</span>}
-          </summary>
-          <div className="lx-more__body">
-            <div className="lx-field">
-              <label htmlFor={`${ids}-type`}>Procedure type</label>
-              <select id={`${ids}-type`} className="select lx-select" value={state.type ?? ''} onChange={(e) => update({ type: e.target.value || null })}>
-                <option value="">Any procedure</option>
-                {typeLabels.map(([t, label]) => (
-                  <option key={t} value={t}>
-                    {label} ({formatNumber(facets.type.get(t) ?? 0)})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="lx-field">
-              <label htmlFor={`${ids}-instrument`}>Type of act</label>
-              <select
-                id={`${ids}-instrument`}
-                className="select lx-select"
-                value={state.instrument ?? ''}
-                onChange={(e) => update({ instrument: e.target.value || null })}
-              >
-                <option value="">Any type of act</option>
-                {INSTRUMENTS.map((i) => (
-                  <option key={i} value={i}>
-                    {INSTRUMENT_LABEL[i]} ({formatNumber(facets.instrument.get(i) ?? 0)})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="lx-field">
-              <label htmlFor={`${ids}-year`}>Year proposed</label>
-              <select id={`${ids}-year`} className="select lx-select" value={state.year ?? ''} onChange={(e) => update({ year: e.target.value || null })}>
-                <option value="">Any year</option>
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y} ({formatNumber(facets.year.get(y) ?? 0)})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="lx-field lx-field--check">
-              <span className="lx-field__label" id={`${ids}-blocked-l`}>
-                Official monitoring
-              </span>
-              {anyBlocked || state.blocked ? (
-                <>
-                  <label className="lx-check">
-                    <input
-                      type="checkbox"
-                      checked={state.blocked}
-                      onChange={(e) => update({ blocked: e.target.checked ? '1' : null })}
-                      aria-describedby={`${ids}-blocked-d`}
-                    />
-                    Only files officially reported as blocked ({formatNumber(facets.blocked)})
-                  </label>
-                  <span className="meta" id={`${ids}-blocked-d`}>
-                    As recorded by the European Parliament’s Legislative Train Schedule.
-                  </span>
-                </>
-              ) : (
-                <span className="meta">
-                  No file is officially reported as blocked in the current data (source: the European Parliament’s Legislative
-                  Train Schedule).
-                </span>
+              ))}
+              {(rows.some((d) => !d.topics.length) || noTopic) && (
+                <option value={NO_TOPIC}>
+                  {NO_TOPIC_LABEL} ({formatNumber(facets.topic.get(NO_TOPIC) ?? 0)})
+                </option>
               )}
-            </div>
+            </select>
           </div>
-        </details>
+          <div className="lx-field">
+            <label htmlFor={`${ids}-stage`}>Status</label>
+            <select id={`${ids}-stage`} className="select lx-select" value={state.stage ?? ''} onChange={(e) => update({ stage: e.target.value || null })}>
+              <option value="">Any status</option>
+              <optgroup label="Broad status">
+                {Object.entries(STAGE_GROUPS).map(([k, g]) => (
+                  <option key={k} value={k}>
+                    {g.label} ({formatNumber(facets.groups[k] ?? 0)})
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Exact stage">
+                {STAGE_ORDER.filter((s) => (facets.stage.get(s) ?? 0) > 0 || state.stage === s).map((s) => (
+                  <option key={s} value={s}>
+                    {STAGE_LABEL[s]} ({formatNumber(facets.stage.get(s) ?? 0)})
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+          <div className="lx-field">
+            <label htmlFor={`${ids}-sort`}>Sort by</label>
+            <select
+              id={`${ids}-sort`}
+              className="select lx-select"
+              value={state.sort}
+              onChange={(e) => update({ sort: e.target.value }, { keepShow: false })}
+            >
+              {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => {
+                if (k === 'relevance' && !hasQuery) return null;
+                if (k === 'deadline' && !hasNextDates) return null;
+                if (k === 'blocked' && !anyBlocked) return null;
+                return (
+                  <option key={k} value={k}>
+                    {SORT_LABEL[k]}
+                    {k === 'adopted' && !hasAdopted ? ' (by latest step)' : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+  
+          <details className="lx-more" open={advancedActive || undefined}>
+            <summary>
+              More filters
+              {advancedActive && <span className="lx-more__count"> ({[state.type, state.instrument, state.year, state.blocked || null].filter(Boolean).length} active)</span>}
+            </summary>
+            <div className="lx-more__body">
+              <div className="lx-field">
+                <label htmlFor={`${ids}-type`}>Procedure type</label>
+                <select id={`${ids}-type`} className="select lx-select" value={state.type ?? ''} onChange={(e) => update({ type: e.target.value || null })}>
+                  <option value="">Any procedure</option>
+                  {typeLabels.map(([t, label]) => (
+                    <option key={t} value={t}>
+                      {label} ({formatNumber(facets.type.get(t) ?? 0)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="lx-field">
+                <label htmlFor={`${ids}-instrument`}>Type of act</label>
+                <select
+                  id={`${ids}-instrument`}
+                  className="select lx-select"
+                  value={state.instrument ?? ''}
+                  onChange={(e) => update({ instrument: e.target.value || null })}
+                >
+                  <option value="">Any type of act</option>
+                  {INSTRUMENTS.map((i) => (
+                    <option key={i} value={i}>
+                      {INSTRUMENT_LABEL[i]} ({formatNumber(facets.instrument.get(i) ?? 0)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="lx-field">
+                <label htmlFor={`${ids}-year`}>Year proposed</label>
+                <select id={`${ids}-year`} className="select lx-select" value={state.year ?? ''} onChange={(e) => update({ year: e.target.value || null })}>
+                  <option value="">Any year</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y} ({formatNumber(facets.year.get(y) ?? 0)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="lx-field lx-field--check">
+                <span className="lx-field__label" id={`${ids}-blocked-l`}>
+                  Official monitoring
+                </span>
+                {anyBlocked || state.blocked ? (
+                  <>
+                    <label className="lx-check">
+                      <input
+                        type="checkbox"
+                        checked={state.blocked}
+                        onChange={(e) => update({ blocked: e.target.checked ? '1' : null })}
+                        aria-describedby={`${ids}-blocked-d`}
+                      />
+                      Only files officially reported as blocked ({formatNumber(facets.blocked)})
+                    </label>
+                    <span className="meta" id={`${ids}-blocked-d`}>
+                      As recorded by the European Parliament’s Legislative Train Schedule.
+                    </span>
+                  </>
+                ) : (
+                  <span className="meta">
+                    No file is officially reported as blocked in the current data (source: the European Parliament’s Legislative
+                    Train Schedule).
+                  </span>
+                )}
+              </div>
+            </div>
+          </details>
+        </div>
       </form>
 
       {index.loading && <Loading label="Loading legislative files…" />}
@@ -343,7 +388,7 @@ export default function Legislation() {
               {sorted.length > 0 && <span className="meta"> · sorted by {SORT_LABEL[state.sort].toLowerCase()}</span>}
             </p>
             <div className="lx-results-tools">
-              {state.topic && (
+              {state.topic && !noTopic && (
                 <a className="lx-linkbtn" href={`${DATA_BASE}feeds/${encodeURIComponent(state.topic)}.xml`}>
                   Atom feed for this topic
                 </a>

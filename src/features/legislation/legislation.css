@@ -30,6 +30,22 @@
   }
 }
 
+/* Topic, status, sort and "more filters": part of the grid, or behind a toggle on phones (Legislation.tsx). */
+.lx-filters__rest {
+  display: contents;
+}
+.lx-filters__rest[hidden] {
+  display: none;
+}
+.lx-filters__toggle {
+  justify-self: start;
+}
+
+.lx-scope {
+  max-width: 44rem;
+  margin: calc(-1 * var(--sp-2)) 0 0;
+}
+
 .lx-more {
   grid-column: 1 / -1;
   border-top: 1px solid var(--border);
