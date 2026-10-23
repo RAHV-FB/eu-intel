@@ -193,7 +193,7 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   transposition date (e.g. a codification) is described as such, never as one EU countries must transpose. The
   next step of a directive also names the transposition deadlines still ahead of the directives that have since
   amended it (CSRD: Directive (EU) 2026/470 by 19 Mar 2027).
-- Withdrawals and replacements: Cellar procedure events WDW_byCOM / RPL_byCOM (`procedure_notices.json`, 350
+- Withdrawals and replacements: Cellar procedure events WDW_byCOM / RPL_byCOM (`procedure_notices.json`, 272
   since 2014). OEIL often never records them (CCTB/CCCTB, Return Directive recast, standard-essential patents).
   A notice is ignored when the procedure went on to adopt the act (a later Council adoption, signature or
   publication, an OEIL "Procedure completed" stage or final act, or a linked act: 2010/0095(COD) has a notice
