@@ -644,6 +644,38 @@ def test_written_procedure_initiated_by_cm_is_dated_by_the_council_event():
     assert C.build_vote([C.Parsed(v, [page1], m, None, "no voting sheet")], "t")[0].date == "2021-03-17"
 
 
+def test_written_procedure_named_only_by_the_decision_to_use_it():
+    # ST 7360/20 (Taxonomy Regulation, Council position at first reading): no meeting and no "Outcome of the written
+    # procedure" line, but "date of decision to use the Written Procedure by Coreper, Part 2, 08.04.2020". It was read
+    # as neither, and dated by the note (16 April 2020); Cellar attaches it to ADP_R1_POS_byCONSIL of 15 April 2020,
+    # the date of Position (EU) No 8/2020 ("Adopted by the Council on 15 April 2020", CELEX 52020AG0008(01))
+    page1 = text("ST-7360-2020-INIT.page1.txt")
+    m = C.parse_note(page1)
+    assert m.written_procedure and m.written_procedure_date is None and m.meeting is None
+    assert m.procedure_refs == ["2018/0178(COD)"]
+    row = {"work": "w", "docid": "consil:ST_7360_2020_INIT", "date": "2020-04-16", "title": "‒ Voting result ‒ …",
+           "evdate": "2020-04-15", "evtype": "ADP_R1_POS_byCONSIL"}  # fmt: skip
+    (v,) = C._versions_from_rows([row])["ST-7360-2020"]
+    vote, _ = C.build_vote([C.Parsed(v, [page1], m, None, "no voting sheet")], "t")
+    assert (vote.date, vote.written_procedure, vote.meeting, vote.configuration) == ("2020-04-15", True, None, None)
+    assert vote.vote_on == "first_reading_position"
+    # a note naming its meeting is not a written procedure, whatever else it says (ST 10199/24)
+    assert C.parse_note(text("ST-10199-2024-INIT.page1.txt")).written_procedure is False
+
+
+def test_split_procedure_part_written_with_a_space():
+    # ST 9252/19 (CRR II, Regulation (EU) 2019/876): "Interinstitutional File: 2016/0360 A (COD)" was not read, so the
+    # vote was linked to no file; the other forms of a part are read as before
+    m = C.parse_note(text("ST-9252-2019-INIT.page1.txt"))
+    assert m.procedure_refs == ["2016/0360A(COD)"]
+    assert (m.council_doc, m.step, m.written_procedure) == ("PE-CONS 15/19", "Adoption of the legislative act", False)
+    assert m.meeting_dates == ["2019-05-14"]
+    found = {t: ["{}/{}{}({})".format(*x) for x in C.PROC_RE.findall(t)]
+             for t in ("2016/0360A (COD)", "2018/0152/B (COD)", "2021/0106 (COD)")}  # fmt: skip
+    assert found == {"2016/0360A (COD)": ["2016/0360A(COD)"], "2018/0152/B (COD)": ["2018/0152B(COD)"],
+                     "2021/0106 (COD)": ["2021/0106(COD)"]}  # fmt: skip
+
+
 def test_statements_include_explanations_by_a_state_and_draft_joint_statements():
     # ST 14020/20, Annex II (rule-of-law conditionality): five headed texts, the Commission's statement twice
     assert C.parse_statements(pages("ST-14020-2020-INIT.txt")) == [

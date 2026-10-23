@@ -82,7 +82,7 @@ REGISTER_NOTE = "Council of the EU – Voting result {num}"
 RENDER_DPI = 100
 MAX_WORKERS = 4
 # Bump when parsing changes: every note is then re-processed on the next fetch.
-PARSER_VERSION = "2026-10-23.2"
+PARSER_VERSION = "2026-10-23.3"
 
 # Protocol order of the GSC voting sheet (Member States by their name in their own language).
 LEFT_COLUMN = ["BE", "BG", "CZ", "DK", "DE", "EE", "IE", "GR", "ES", "FR", "HR", "IT", "CY", "LV"]
@@ -496,15 +496,18 @@ class NoteMeta:
     configuration: str | None = None
     meeting_dates: list[str] = field(default_factory=list)  # ISO
     written_procedure_date: str | None = None
-    written_procedure: bool = False  # subject says "Outcome of the written procedure completed on ..."
+    # subject says "Outcome of the written procedure completed on ...", or no meeting is named and the note gives
+    # the decision to use the written procedure
+    written_procedure: bool = False
     council_doc: str | None = None
     # Versions declared void by this note, e.g. ["INIT"] from "... INIT should be considered null and void".
     nullified: list[str] = field(default_factory=list)
 
 
 BULLETS = "•‒–-−=■▪►●·"
-# "2021/0106 (COD)"; split procedures are written "2016/0224/A(COD)" (EP format "2016/0224A(COD)").
-PROC_RE = re.compile(r"\b((?:19|20)\d{2})/(\d{4})(?:/?([A-Z]))?\s*\(\s*([A-Z]{3})\s*\)")
+# "2021/0106 (COD)"; split procedures are written "2016/0224/A(COD)" or "2016/0360 A (COD)" (ST 9252/19; EP format
+# "2016/0224A(COD)").
+PROC_RE = re.compile(r"\b((?:19|20)\d{2})/(\d{4})(?:\s*/?\s*([A-Z]))?\s*\(\s*([A-Z]{3})\s*\)")
 
 
 def _iso(day: int, month: str, year: int) -> str | None:
@@ -573,6 +576,13 @@ def parse_note(page1: str) -> NoteMeta:
         parts = [ln.strip().lstrip(BULLETS).strip() for ln in block if ln.strip()]
         meta.subject = re.sub(r"\s+", " ", " ".join(parts)).strip()
     _parse_subject(meta)
+    # a note that names no meeting but the date of the decision to use the written procedure, with no "Outcome of the
+    # written procedure" line ("date of decision to use the Written Procedure by Coreper, Part 1, 20.03.2020": ST
+    # 7236/20, 7237/20; ST 7360/20, Part 2, 08.04.2020) records a vote by written procedure
+    if not meta.written_procedure and not meta.meeting and re.search(
+        r"decision\s+to\s+use\s+the\s+written\s+procedure", page1, re.I
+    ):
+        meta.written_procedure = True
 
     # Reference documents: first PE-CONS, else first Council document number.
     ref_start = next((i for i, ln in enumerate(lines) if re.match(r"\s*Reference documents?\s*:", ln)), None)

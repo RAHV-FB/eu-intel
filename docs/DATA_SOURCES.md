@@ -666,8 +666,17 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   prints the wrong rule: see the corrections below.
 - A note on a written procedure "initiated by CM 2163/21" without a completion date (ST 7108/21, 8502/21) is dated
   by the Council event Cellar attaches it to (16 March and 7 September 2021), else by the note's own date.
+- `written_procedure`: true when the subject gives the outcome of a written procedure, and also when the note names
+  no meeting but gives the date of the decision to use the written procedure ("date of decision to use the Written
+  Procedure by Coreper, Part 1, 20.03.2020": ST 7236/20 and 7237/20; ST 7360/20, Part 2, 08.04.2020); false when a
+  meeting is named. Such a note is dated like the others above: ST 7360/20 (note of 16 April 2020) by its Cellar
+  event ADP_R1_POS_byCONSIL, 15 April 2020, the date of Position (EU) No 8/2020 ("Adopted by the Council on
+  15 April 2020", CELEX 52020AG0008(01)).
+- `procedure_refs`: the interinstitutional files on page 1, a split part also when written with a space or slash
+  before its letter ("2016/0360 A (COD)" in ST 9252/19, the adoption of Regulation (EU) 2019/876; "2016/0224/A(COD)").
 - 746 voting results 2019-01 → 2026-10 (747 Council votes listed and counted on the About page, with the curated
-  record CM-5860-2022); 744 with positions; rules: 702 QMV, 44 unanimity (as the sheets print them); 2 notes
+  record CM-5860-2022, 745 of them with positions, as the country pages count them; the About page's source card
+  and coverage note give these figures and how they divide); 744 with positions; rules: 702 QMV, 44 unanimity (as the sheets print them); 2 notes
   without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
   unreadable). `meta.json` (`sources[council].note`) gives the counts of each release. Verified against the
   rendered sheets: AI Act (ST 10199/24, 27 in favour), Copyright Directive 2019 (6 against, 3 abstentions),
@@ -693,7 +702,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Parser changes: `PARSER_VERSION` is part of each note's fingerprint (notes.json), so after a change the next
   fetch re-reads every note. On 23 October 2026 (parser 2026-10-23.2: the statement and reference-document rules
   above) every note was re-derived offline from the cached PDFs: 18 records changed (statements of 8 notes, the
-  reference document of 10) and the other 749 came out unchanged.
+  reference document of 10) and the other 749 came out unchanged. With parser 2026-10-23.3 (the written-procedure
+  and split-part rules above) 4 records changed (ST 9252/19 `procedure_refs`; ST 7236/20, 7237/20
+  `written_procedure`; ST 7360/20 `written_procedure` and `date`) and the other 763 came out unchanged.
 - Corrections (`data/curated/council_votes.yaml`): where the sheet prints "qualified majority" but the act's legal
   basis, cited in the act, requires unanimity (Article 19(1), 81(3) or 312(2) TFEU, quoted in `UNANIMITY_BASES`),
   the rule shown is unanimity, with `sheet_voting_rule` and a `voting_rule_note` saying what the sheet prints and
