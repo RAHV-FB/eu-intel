@@ -29,8 +29,9 @@ pipeline runs in CI without credentials). Details are refined from each ingestio
 
 ## Licences and attribution
 
-- European Parliament: "© European Union – Source: European Parliament"; reuse authorised provided the source is
-  acknowledged (European Parliament legal notice; details under "Licences" below).
+- European Parliament: "© European Union – Source: European Parliament"; CC BY 4.0 for the Open Data Portal's
+  datasets of MEPs, procedures and results of votes (2024 and 2025), the European Parliament legal notice for its
+  other data and web pages (details under "Licences" below).
 - EUR-Lex / Publications Office: reuse authorised under Commission Decision 2011/833/EU, with attribution.
 - Council and Commission websites: reuse authorised with acknowledgement of the source, unless stated otherwise.
 
@@ -586,15 +587,31 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 
 ### Licences
 - European Parliament (MEPs, procedures, votes, Legislative Train): "© European Union – Source: European
-  Parliament"; reuse authorised provided the source is acknowledged, as the site states. The European Parliament
-  legal notice (https://www.europarl.europa.eu/legal-notice/en/, read 2026-10-23): "the reuse ... of textual data
-  and multimedia items which are the property of the European Union ... is authorised ... provided that the
-  entire item is reproduced and the source is acknowledged. However, the reuse of certain data may be subject to
-  different conditions in some instances; in this case, the item concerned is accompanied by a mention of the
-  specific conditions". The EP Open Data Portal gives such a mention per dataset: "CC BY 4.0 - Attribution 4.0
-  International" for the MEP, procedure and vote-result datasets, "European Parliament's Legal Notice" for others
-  (e.g. the plenary session documents of sessions up to 9 November 2022). Both require the source to be
-  acknowledged.
+  Parliament", with the terms the Parliament gives for each kind of data (`build.SOURCES`, shown on the About page).
+  The European Parliament legal notice (https://www.europarl.europa.eu/legal-notice/en/, read 2026-10-23): "As a
+  general rule, the reuse (reproduction or use) of textual data and multimedia items which are the property of the
+  European Union ... is authorised, for personal use or for further non-commercial or commercial dissemination,
+  provided that the entire item is reproduced and the source is acknowledged. However, the reuse of certain data
+  may be subject to different conditions in some instances; in this case, the item concerned is accompanied by a
+  mention of the specific conditions relating to it. Any partial reproduction of data or multimedia items from this
+  website must also cite the URL link of the complete item or the web page from which it was sourced."
+  The EP Open Data Portal gives such a mention per dataset (`OdpDatasetService/DatasetsLight`, labels from
+  `OdpDatasetService/LabelSite/en`, read 2026-10-23): licence "CC BY 4.0 - Attribution 4.0 International"
+  (https://creativecommons.org/licenses/by/4.0/deed.en) for "Members of the European Parliament (MEPs)" (every
+  term, e.g. dataset 1886, term 10), "Corporate bodies of the European Parliament", "EU procedures involving the
+  European Parliament" (every year, e.g. 1909 and 1910, 2024 and 2025) and "Results of votes of the European
+  Parliament" (1980 and 1979, 2024 and 2025: no other year is listed); "European Parliament's Legal Notice" for
+  others (e.g. the plenary session documents of sessions up to 9 November 2022). CC BY 4.0, Section 3(a)(1): "If
+  You Share the Licensed Material (including in modified form), You must: retain ... identification of the
+  creator(s) ...; a copyright notice; a notice that refers to this Public License; ... a URI or hyperlink to the
+  Licensed Material to the extent reasonably practicable; indicate if You modified the Licensed Material ...; and
+  indicate the Licensed Material is licensed under this Public License, and include the text of, or the URI or
+  hyperlink to, this Public License." The site reads this data from the Open Data API rather than the datasets,
+  shows it adapted (selected, combined with other sources and reformatted, as the About page says) and links each
+  item it takes data from: a dossier its procedure file and Legislative Train page, a vote the minutes it comes
+  from. The Legislative Observatory, the Legislative Train and the minutes are Parliament web pages under the
+  legal notice; for the votes of years with no "Results of votes" dataset (2019–2023 and 2026) the About page
+  states the legal notice's terms, its general rule.
 - EUR-Lex / Cellar: reuse authorised with acknowledgement ("© European Union, https://eur-lex.europa.eu") under the
   EUR-Lex legal notice and Commission Decision 2011/833/EU. The live notice page is bot-protected for scripts and
   should be re-checked manually before any change of attribution text.

@@ -62,33 +62,48 @@ DEFAULT_SITE_URL = "https://rahv-fb.github.io/eu-intel/"
 
 # ------------------------------------------------------------------------------------------ sources
 # Reuse / licence statements shown on the About page. Keep them factual and short.
-# Verified 2026-10-23: the EP legal notice (https://www.europarl.europa.eu/legal-notice/en/) authorises
-# reuse "provided that the entire item is reproduced and the source is acknowledged", unless an item states
-# other conditions; the EP Open Data Portal labels some datasets "CC BY 4.0" (MEPs, procedures, vote results)
-# and others "European Parliament's Legal Notice". Both require acknowledging the source, which is what this
-# states; docs/DATA_SOURCES.md ("Licences") has the detail.
-EP_LICENCE = (
-    "© European Union – Source: European Parliament. Reuse is authorised provided the source is "
-    "acknowledged (European Parliament legal notice)."
+# Verified 2026-10-23 (docs/DATA_SOURCES.md, "Licences", quotes the texts):
+# - the EP Open Data Portal (data.europarl.europa.eu, OdpDatasetService/DatasetsLight and LabelSite/en) gives the
+#   licence "CC BY 4.0 - Attribution 4.0 International" to its datasets of MEPs (every term), of the EP's corporate
+#   bodies, of "EU procedures involving the European Parliament" (every year) and of "Results of votes" (2024 and
+#   2025, the only years it lists). CC BY 4.0, Section 3(a)(1), asks for the credit, a notice and URI of the
+#   licence, and an indication of changes;
+# - the EP legal notice (https://www.europarl.europa.eu/legal-notice/en/), the general rule for the EP's data and
+#   websites (Legislative Observatory, Legislative Train, plenary minutes): reuse "is authorised ... provided that
+#   the entire item is reproduced and the source is acknowledged", and "Any partial reproduction ... must also cite
+#   the URL link of the complete item or the web page from which it was sourced". Each page that shows such data
+#   links the item it comes from (procedure file, Train page, minutes of the vote).
+EP_CREDIT = "© European Union – Source: European Parliament."
+EP_CC_BY = "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
+EP_LEGAL_NOTICE = (
+    "the European Parliament legal notice authorises reuse provided that the entire item is reproduced and the "
+    "source is acknowledged; a partial reproduction must cite the URL of the complete item or of the web page it "
+    "comes from"
 )
+EP_ADAPTED = "Shown here adapted: selected, combined with other sources and reformatted."
 SOURCES: dict[str, dict[str, str]] = {
     "ep_people": {
         "name": "European Parliament – MEPs, political groups and national parties",
         "institution": "EP",
         "url": "https://data.europarl.europa.eu/en/developer-corner/opendata-api",
-        "licence": EP_LICENCE,
+        "licence": f"{EP_CREDIT} The EP Open Data Portal publishes its datasets of Members of the European "
+        f"Parliament and of the Parliament's bodies under {EP_CC_BY}. {EP_ADAPTED}",
     },
     "ep_procedures": {
         "name": "European Parliament – legislative procedures (Legislative Observatory data)",
         "institution": "EP",
         "url": "https://data.europarl.europa.eu/en/developer-corner/opendata-api",
-        "licence": EP_LICENCE,
+        "licence": f"{EP_CREDIT} The EP Open Data Portal publishes its datasets of EU procedures involving the "
+        f"European Parliament under {EP_CC_BY}. For the Legislative Observatory's procedure files, {EP_LEGAL_NOTICE} "
+        f"(each file here links its procedure file). {EP_ADAPTED}",
     },
     "ep_votes": {
         "name": "European Parliament – plenary votes and roll-call results",
         "institution": "EP",
         "url": "https://data.europarl.europa.eu/en/developer-corner/opendata-api",
-        "licence": EP_LICENCE,
+        "licence": f"{EP_CREDIT} The EP Open Data Portal publishes its datasets of results of votes (2024 and "
+        f"2025) under {EP_CC_BY}. For the other years, {EP_LEGAL_NOTICE} (each vote here links the minutes it "
+        f"comes from). {EP_ADAPTED}",
     },
     "eurlex": {
         "name": "EUR-Lex / Publications Office (Cellar) – adopted legal acts and their dates",
@@ -123,8 +138,9 @@ SOURCES: dict[str, dict[str, str]] = {
         "name": "European Parliament – Legislative Train Schedule",
         "institution": "LegislativeTrain",
         "url": "https://www.europarl.europa.eu/legislative-train/",
-        "licence": "© European Union, source: European Parliament. Reuse authorised with acknowledgement "
-        "of the source.",
+        "licence": f"{EP_CREDIT} Under the European Parliament legal notice, reuse is authorised provided that the "
+        "entire item is reproduced and the source is acknowledged; a partial reproduction must cite the URL of the "
+        "complete item or of the web page it comes from (each file here links its Legislative Train page).",
     },
 }
 

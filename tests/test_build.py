@@ -320,6 +320,26 @@ def test_meta_sources_and_counts(out: Path):
     assert any("Country indicators" in n for n in meta["coverage_notes"])
 
 
+def test_parliaments_reuse_terms_are_stated_as_it_gives_them():
+    """The About page said only "Reuse is authorised provided the source is acknowledged". The EP Open Data Portal
+    gives its MEP, procedure and vote-result datasets the licence CC BY 4.0, which also asks for the licence's URI and
+    an indication of changes; the EP legal notice, which covers the Parliament's web pages (Legislative Observatory,
+    Legislative Train, minutes), asks for the entire item or, for a partial reproduction, the URL of the item."""
+    from pipeline.build import SOURCES
+
+    for sid in ("ep_people", "ep_procedures", "ep_votes", "train"):
+        assert SOURCES[sid]["licence"].startswith("© European Union – Source: European Parliament. "), sid
+    for sid in ("ep_people", "ep_procedures", "ep_votes"):
+        lic = SOURCES[sid]["licence"]
+        assert "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)" in lic and "adapted" in lic, sid
+    for sid in ("ep_procedures", "ep_votes", "train"):
+        lic = SOURCES[sid]["licence"]
+        assert "provided that the entire item is reproduced and the source is acknowledged" in lic, sid
+        assert "a partial reproduction must cite the URL of the complete item or of the web page" in lic, sid
+    assert "CC BY" not in SOURCES["train"]["licence"]
+    assert "(2024 and 2025)" in SOURCES["ep_votes"]["licence"]  # the only years of "Results of votes" datasets
+
+
 def test_snapshot_time_comes_from_a_listed_source(tmp_path: Path):
     # "Data refreshed" must be traceable to a source on the About page: a manifest entry with no SOURCES entry
     # (here a later retrieval) does not set it, and every source of the real snapshot is listed
