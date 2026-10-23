@@ -197,6 +197,39 @@ test.describe('prerendered metadata (GitHub Pages semantics)', () => {
     expect(party.status).toBe(200);
     expect(party.html).toContain('<title>Party name not recorded (Croatia) – EU Legislative Intelligence</title>');
   });
+
+  test('one abstention is "1 abstention"', async ({ request }) => {
+    const vote = /<meta name="description" content="([^"]*)"/.exec((await get(request, 'votes/139917/')).html)?.[1];
+    expect(vote).toBe('European Parliament vote of 2022-02-16: 688 for, 6 against, 1 abstention.');
+  });
+});
+
+test.describe('what a vote decided', () => {
+  test('a motion of censure states both conditions; the vote bar says "1 abstention"', async ({ page }) => {
+    await open(page, 'votes/179569/');
+    await expect(page.locator('.margin-box')).toContainText(
+      'Votes in favour needed: 372. Both conditions must be met: two thirds of the 557 votes cast for or against (372; abstentions do not count) and a majority of the 719 Members in office on the day of the vote (360)',
+    );
+    await open(page, 'votes/139917/');
+    await expect(page.locator('.vote-summary [role="img"]')).toHaveAttribute('aria-label', 'Official result: 688 for, 1 abstention, 6 against');
+  });
+
+  test('a second-reading approval without a vote says so instead of "No roll-call vote is matched"', async ({ page }) => {
+    await open(page, 'legislation/2018-0198/');
+    const section = page.locator('#ep-votes');
+    await expect(section).toContainText('Parliament approved the Council’s position at second reading without a vote on the text');
+    await expect(section).toContainText('“Approval without vote”');
+    await expect(section).not.toContainText('No roll-call vote is matched');
+  });
+
+  test('on a phone, group votes on one file show what each vote was', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open(page, 'people/groups/s-d/');
+    // 22 Oct 2026, 2026/0325(COD): the negotiating mandate (199592) and the motion to reject the proposal (199567)
+    const row = (id: string) => page.locator('tr', { has: page.locator(`a[href$="/votes/${id}"]`) }).locator('.vote-row-meta');
+    await expect(row('199592')).toHaveText("Vote on Parliament's negotiating mandate · 2026/0325(COD)");
+    await expect(row('199567')).toHaveText('Vote on a motion to reject the Commission proposal · 2026/0325(COD)');
+  });
 });
 
 test('an MEP’s membership data links the EP Open Data API record', async ({ page }) => {

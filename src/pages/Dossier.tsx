@@ -235,7 +235,7 @@ function DossierPage({ id }: { id: string }) {
         <div className="dz-main">
           {active && <WhereIsIt d={d} today={today} />}
           <Timeline events={d.timeline} changes={d.changes ?? []} today={today} eurlexOnly={d.eurlex_only} oeilUrl={d.oeil_url} />
-          <ParliamentVotes votes={d.ep_votes} oeilUrl={d.oeil_url} split={splitParts(d)} />
+          <ParliamentVotes votes={d.ep_votes} oeilUrl={d.oeil_url} split={splitParts(d)} approval={d.ep_approval_without_vote} />
           <CouncilVotes votes={d.council_votes} meta={meta} split={splitParts(d)} />
           <NationalApplication d={d} today={today} />
           <DossierDetails d={d} />

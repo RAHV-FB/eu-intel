@@ -40,6 +40,25 @@ describe('vote keyword matching', () => {
     expect(match('nature restoration vote')?.approximate).toBeUndefined(); // a whole-word match of the file
   });
 
+  it('matches a year typed with a word against titles, not against procedure or document numbers: "discharge 2022"', () => {
+    // votes/index.json rows: 175675 on 2024/2022(DEC) (Discharge 2023) labelled "A10-0050/2025 – …"; 159015, Discharge 2021
+    const row = (id: string, title: string, display_title: string, procedure_ref: string) =>
+      ({ id, date: '2025-05-07', title, display_title, procedure_ref, dossier_id: null, topics: [] }) as unknown as EpVoteSummary;
+    const votes = [
+      row('175675', 'A10-0050/2025 – Cristian Terheş – Proposal for a decision', 'Discharge 2023: EU general budget – Court of Justice of the European Union — vote on discharge', '2024/2022(DEC)'),
+      row('159015', 'Discharge 2021: EU general budget – European Council and Council – A9-0274/2023 – Mikuláš Peksa – Motion for a resolution', 'Discharge 2021: EU general budget – European Council and Council — vote on the resolution', '2022/2083(DEC)'),
+      row('T-2022', 'A9-0122/2022 – Name Surname – Motion for a resolution', 'Discharge 2022: EU general budget – Commission — vote on the resolution', '2023/2130(DEC)'),
+    ]; // prettier-ignore
+    const h = voteHaystacks(votes);
+    const found = (q: string) => [...(matchVoteDetails(votes, h, q, null)?.ids ?? [])].sort();
+    expect(found('discharge 2022')).toEqual(['T-2022']); // a test-only row
+    expect(found('discharge 2025')).toEqual([]); // the year of the report A10-0050/2025 is not a word of the vote
+    expect(found('2024/2022(DEC)')).toEqual(['175675']); // whole references still match
+    expect(found('2024/2022')).toEqual(['175675']);
+    expect(found('A10-0050/2025')).toEqual(['175675']);
+    expect(found('175675')).toEqual(['175675']); // and the vote id
+  });
+
   it('lists votes on files matched only through a similar word last, and says so', () => {
     const m = match('Macron');
     expect([...(m?.ids ?? [])]).toEqual(['182479']);

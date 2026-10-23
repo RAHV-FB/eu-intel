@@ -274,6 +274,7 @@ VOTE_DETAIL_LABELS: dict[str, str] = {
     "grant_discharge": "Vote on a proposal to grant discharge",
     "postpone_discharge": "Vote on a proposal to postpone discharge",
     "refuse_discharge": "Vote on a proposal to refuse discharge",
+    "recommendation": "Vote on a recommendation of Parliament",
 }
 VOTE_DETAIL_PHRASE: dict[str, str] = {
     "reject_proposal": "motion to reject the Commission proposal",
@@ -285,6 +286,7 @@ VOTE_DETAIL_PHRASE: dict[str, str] = {
     "grant_discharge": "vote on a proposal to grant discharge",
     "postpone_discharge": "vote on a proposal to postpone discharge",
     "refuse_discharge": "vote on a proposal to refuse discharge",
+    "recommendation": "vote on the recommendation",
 }
 # What the official outcome means for these votes ("rejected" for a motion to reject is not a rejected law)
 VOTE_OUTCOME_NOTES: dict[tuple[str, str], str] = {
@@ -1068,7 +1070,8 @@ _DOC_NUMBER_DASH = re.compile(r"\b((?:RC-B|A|B|C)\d{1,2})[\u2010-\u2015\u2212](\
 def _vote_index_entry(v: dict) -> dict:
     """Compact EpVoteSummary for votes/index.json (full record in votes/<id>.json)."""
     optional = (
-        "dossier_id", "dossier_ref", "margin", "kind_detail", "outcome_note", "procedure_ref", "subject", "final_role"
+        "dossier_id", "dossier_ref", "margin", "kind_detail", "outcome_note", "procedure_ref", "subject", "final_role",
+        "distinction",
     )  # fmt: skip
     out = {k: x for k, x in v.items() if not (k in optional and x is None)}
     # session document numbers as officially written, with an ASCII hyphen ("A10–0049/2025" in vote 175067's label):
@@ -2109,6 +2112,23 @@ class Builder:
         out = {p.id for r in v.procedure_refs if (p := self.resolve_ref(r))}
         return sorted(out)
 
+    def parent_negotiation_votes(self, p: Procedure) -> list[EpVote]:
+        """For a split part: the votes of the file it was split from on the committee's decision to negotiate, held on
+        the day of the part's own confirmation of that decision (ENDORSE_NEGOTIATIONS_EVENT) on a report among the part's
+        documents. 2023/0077A(COD): confirmation of 14 Sep 2023, vote 158371 (366-186-18) on A9-0255/2023, which
+        Parliament's records file under 2023/0077(COD)."""
+        m = re.fullmatch(r"(\d{4}-\d{4})[A-Z]", p.id)
+        days = {e.date for e in p.events if e.raw_type == ENDORSE_NEGOTIATIONS_EVENT}
+        if not m or not days:
+            return []
+        docs = {d.id for d in p.documents} | {d.id for e in p.events for d in e.docs}
+        own = {v.id for v in self.votes_of.get(p.id, [])}
+        return [
+            v for v in self.votes_of.get(m.group(1), [])
+            if v.kind_detail == "negotiation_decision" and v.date in days and v.id not in own
+            and docs & (vote_label_doc_ids(v) | {x.split("-AM-")[0] for x in v.doc_ids})
+        ]  # fmt: skip
+
     # ---------------------------------------------------------------- titles/topics
     def dossier_title(self, p: Procedure) -> str:
         cur = self.curated_of.get(p.id)
@@ -2177,6 +2197,7 @@ class Builder:
         idx.sort(key=lambda v: (v.date, v.id), reverse=True)
         self.indexed_votes = idx
         self.indexed_vote_ids = {v.id for v in idx}
+        self.votes_from = idx[-1].date if idx else "9999"  # the first vote listed (meta scope "ep_votes_from")
         self.referred_back = referred_back(s.votes)
         self.component_cache: dict[str, int | None] = {}
         margin_fn = _lazy("pipeline.analysis.ep_margin", "margin")
@@ -2246,6 +2267,9 @@ class Builder:
                     }
                     if m["rule"] != "votes_cast" and isinstance(m.get("component_members"), int):
                         margin["component_members"] = m["component_members"]
+                    if m["rule"] == "two_thirds_cast" and isinstance(m.get("two_thirds_of_cast"), int):
+                        # both conditions of Art. 234 / 354 TFEU, so the page can state each (179569: 372 and 360)
+                        margin |= {k: m[k] for k in ("votes_cast", "two_thirds_of_cast", "majority_of_members")}
             except Exception as e:  # noqa: BLE001
                 log.debug("margin failed for %s: %r", v.id, e)
         refs = sorted(set(v.procedure_refs))
@@ -2364,6 +2388,8 @@ class Builder:
                         if key:
                             summ = self.vote_summary[v.id]
                             summ["display_title"] = f"{title} ({key})"
+                            # what tells it apart, also on its own: lists that cut long titles show it unclamped
+                            summ["distinction"] = key
                             if summ.get("display_title_parts"):
                                 summ["display_title_parts"].append([None, f" ({key})"])
                     break
@@ -3006,9 +3032,13 @@ class Builder:
             elif kind == "negotiation_mandate" and e.raw_type == ENDORSE_NEGOTIATIONS_EVENT:
                 negotiation.append(len(out))  # linked below, once every event of the day is linked
             if title == "Parliament voted on consent" and (consent := _lazy("pipeline.analysis.status", "_consent_outcome")):
-                # the officially recorded outcome, as the status gives it (2025/0313(APP): vote 197472, adopted)
+                # the officially recorded outcome, as the status gives it (2025/0313(APP): vote 197472, adopted); of the
+                # final vote linked to the step when there is one, also from another day (2018/0132(APP): decision of 25
+                # March 2021, vote 129442 of 24 March, consent given in the minutes)
+                lv = listed.get(vote_id or "")
+                linked = lv.outcome if lv and lv.kind == "final" and lv.outcome_basis in ("published", "minutes") else None
                 title = {"adopted": "Parliament gave its consent", "rejected": "Parliament did not give its consent"}.get(
-                    consent(votes, e.date) or "", title)  # fmt: skip
+                    (linked if lv else consent(votes, e.date)) or "", title)  # fmt: skip
             if (e.raw_type or "").endswith("PLENARY_AMEND_COUNCIL_POSITION"):
                 # also on a day without a listed vote (2013/0072(COD), 21 Jan 2026: only amendment votes)
                 detail = " ".join(x for x in (detail, second_reading_amendments(votes, e.date)) if x) or None
@@ -3046,6 +3076,13 @@ class Builder:
                 v for v in votes_by_date.get(day, []) if v.kind_detail == "negotiation_decision" and v.id not in linked
             ]
             out[i]["vote_id"] = pick[0].id if len(pick) == 1 else None
+            parent = self.vote_dossier_map.get(pick[0].id, []) if len(pick) == 1 else [p.id]
+            if p.id not in parent and len(parent) == 1 and not out[i]["detail"]:
+                # the vote of the file this part was split from (parent_negotiation_votes)
+                out[i]["detail"] = (
+                    f"Parliament's vote records file this vote under {self.proc[parent[0]].reference}, the procedure "
+                    "this file was split from."
+                )
         # the rejection derived from the vote (with_recorded_events, used for the status) repeats Parliament's own
         # decision that day once that decision is titled as the rejection it was (2022/0196: 22 Nov 2023)
         decided = {x["date"] for x in out if x["kind"] == "ep_position" and "rejected" in x["title"]}
@@ -3166,6 +3203,32 @@ class Builder:
         positions = {x["date"] for x in out if x["kind"] == "council_position"}
         out.sort(key=lambda x: (x["date"], x["state"] == "scheduled", *day_rank(x, positions), x["id"]))
         return out
+
+    def approval_without_vote(self, p: Procedure, tl: list[dict], votes: list[EpVote]) -> dict | None:
+        """Parliament's latest approval of the Council's position at second reading (PLENARY_APPROVE_COUNCIL_POSITION)
+        when the timeline links no vote to it: at second reading Parliament votes only on proposals to reject or amend the
+        Council's position, and when none of them is adopted the act is adopted in the wording of that position (Art.
+        294(7)(a) TFEU), so no vote on the text is held. With Parliament's record of the approval, "Approval without vote"
+        (EP API decisions from the 10th term: 176082, 2018/0198(COD), 6 May 2025), whether proposals to amend or reject
+        the position were voted on the file within DECISION_VOTE_DAYS of it (2017/0237(COD), 29 Apr 2021: 10 amendments),
+        and the date of the file's first-reading decision when it precedes the votes this site covers."""
+        linked = {x["id"] for x in tl if x["vote_id"]}
+        steps = [e for e in p.events if (e.raw_type or "").endswith("/PLENARY_APPROVE_COUNCIL_POSITION")
+                 and self.votes_from <= e.date <= self.today and e.id not in linked]  # fmt: skip
+        if not steps:
+            return None
+        e = max(steps, key=lambda x: (x.date, x.id))
+        lo, hi = DECISION_VOTE_DAYS
+        near = [v for v in votes if lo <= _days_between(e.date, v.date) <= hi and vote_held(v)]
+        record = next((v for v in near if (v.reference_text or "").casefold() == "approval without vote"), None)
+        first = min((x.date for x in p.events if x.kind == EventKind.ep_position and x.date < e.date), default=None)
+        return {
+            "date": e.date,
+            "record": _src(record.source) if record else None,
+            "amendments_voted": any(v.kind in ("amendment", "split_or_separate") for v in near),
+            "rejection_voted": any(v.kind_detail == "reject_council_position" for v in near),
+            "first_reading": first if first and first < self.votes_from else None,
+        }
 
     def act_summary(self, a: LegalAct) -> dict:
         return {
@@ -3547,7 +3610,9 @@ class Builder:
                 t = date.fromisoformat(self.today)
                 acts = relevant(p, acts, sorted((e for e in p.events if e.date <= self.today), key=lambda e: e.date), t)
             self.dossier_acts[pid] = acts
-            votes = sorted(self.votes_of.get(pid, []), key=lambda v: (v.date, v.id), reverse=True)
+            votes = sorted(
+                self.votes_of.get(pid, []) + self.parent_negotiation_votes(p), key=lambda v: (v.date, v.id), reverse=True
+            )
             st = self.classify(p)
             tl = mark_after_end_of_validity(self.timeline(p, acts, votes), acts)
             cur = self.curated_of.get(pid)
@@ -3641,6 +3706,7 @@ class Builder:
                 "timeline": tl,
                 "acts": [self.act_summary(a) for a in acts],
                 "ep_votes": [self.vote_summary[v.id] for v in votes if v.id in self.vote_summary],
+                "ep_approval_without_vote": self.approval_without_vote(p, tl, votes),
                 "council_votes": self.council_of.get(pid, []),
                 **({"council_votes_in_parts": self.council_in_parts[pid]} if pid in self.council_in_parts else {}),
                 "implementation": tables[0] if tables else None,

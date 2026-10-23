@@ -148,15 +148,47 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   when the one block with the vote's counts lists that one: the bluefin tuna vote of 28 Apr 2021 (130719),
   English label "A9-0149/2021" (an own-initiative report, 2020/2216(INI)), French label and minutes "A9-0149/2020"
   (2019/0272(COD)); likewise 125904 (16 Dec 2020, "A9-0621/2020" for A9-0261/2020). A number misprinted only in
-  the minutes leaves the label's (153312).
+  the minutes leaves the label's (153312). A label naming the consent whose counts the minutes record in the block of
+  the resolution accompanying it (the same title followed by "(Resolution)") is linked through that block: 115243,
+  17 Jun 2020, "A9-0012/2020 - João Ferreira - Single vote", 620-44-24 in the block "… Guinea-Bissau (2019-2024)
+  (Resolution)", "Report: João Ferreira (A9-0013/2020)", 2019/0090M(NLE).
+- English labels of another vote: an old-format English label naming a document whose minutes block has no row
+  with the decision's counts, neither the title nor the rapporteurs of the one block that has them, while that
+  block lists the documents of the French label, is replaced by the French label as published (title, documents,
+  kind). On 26 Mar 2020 the English labels of 112990 and 112991 are those of the urgency requests on C9-0083/2020
+  and C9-0084/2020; Parliament's French "Results of roll-call votes" (PV-9-2020-03-26-RCV_fr.xml) and the minutes
+  record them as "C9-0082/2020 - Am 1" (689-1-2, 18:30) and "C9-0082/2020 - Vote final" (686-0-2, 21:00) on the
+  allocation of slots at Community airports, 2020/0042(COD).
 - Kinds: a whole-text marker ("Single vote", or a mistaken "Commission proposal") on an own-initiative, topical
   or legislative-initiative procedure (INI, RSP, INL) without a legislative procedure symbol is the vote on the
   resolution, not a final vote on a law; a proposal for a decision stays a decision. A "Recommendation for a
   decision" to raise no objections to a delegated act or measure (Rule 111(6) of the Rules of Procedure, 9th
   term) has kind_detail `no_objection`: it is decided by a majority of the votes cast ("it shall be put to the
   vote"; only the objection itself needs a majority of component Members, Rule 111(5) and Art. 290(2) TFEU), and
-  its adoption makes any later objection inadmissible. A label opening "Objection pursuant to Rule …" makes the
-  whole-text vote an objection also without a vote item (157978, 12 Sep 2023, GM maize MON 87419).
+  its adoption makes any later objection inadmissible. A label or English subject opening "Objection pursuant to
+  Rule …" makes the whole-text vote an objection also without a vote item (157978, 12 Sep 2023, GM maize MON 87419;
+  113694, 13 May 2020, GM soybean, labelled "B9-0121/2020 - Resolution").
+  The whole text of an R/M file (Parliament's interim report, or the resolution accompanying a consent,
+  2019/0226M(NLE)) is the vote on the resolution also when labelled "Single vote" or "Consent procedure" (124727,
+  11 Nov 2020, minutes "Protocole (résolution)"); the consent itself is voted on the main file.
+  On a BUD file, the whole-text vote on a draft amending budget, on mobilising a special instrument (European
+  Globalisation Adjustment Fund, Solidarity Fund, Flexibility Instrument, Contingency Margin) or on a new draft
+  budget is Parliament's budget decision (kind `final`, final_role `budget`) whatever word the label uses
+  ("Single vote", "Resolution", "Motion for a resolution (as a whole)", "Proposal for a decision"): the resolution
+  approves the Council's position or the decision annexed to it (TA-10-2024-0049, 170632: "Approves the Council
+  position on Draft amending budget No 5/2024"; TA-9-2020-0385, 126342: "Approves the Council position on the
+  second draft general budget … for the financial year 2021"). The subject decides ("Draft amending budget …",
+  "Mobilisation of the …", "New general budget …"); Parliament's reading of the annual draft budget ("General budget
+  … – all sections", which amends the Council's position), its estimates and its budget guidelines stay resolutions.
+  A resolution is a recommendation of Parliament (kind_detail `recommendation`: to the Council, the Commission or
+  the High Representative under Rule 118 of the 9th-term Rules of Procedure, or of a committee of inquiry under
+  Rule 208(12)) where its record names the text so: the label or referenceText ("Draft recommendation", "Proposal
+  for a recommendation", "Projet de recommandation", "Recommandation"), the minutes Subject or heading
+  ("Recommendation (text as a whole)", "Draft recommendation B9-0260/2023"), or the subject of an own-initiative
+  report ("Recommendation to the Council …", "Recommendation on …"). Not a committee's "Recommendation for a
+  decision", nor a resolution on a Council Recommendation (126251; 170765, an RSP file). A vote whose label, minutes
+  and subject call the text only a motion for a resolution stays a resolution (143769, A9-0164/2022): the type of
+  the adopted text is not in our data.
 - Discharge: a final vote on a discharge report's proposal for a decision has kind_detail `grant_discharge`,
   `postpone_discharge` or `refuse_discharge` where Parliament's record says what was proposed: before 2024 the
   minutes heading above the row ("Proposal for a decision to postpone the discharge", "Decision to refuse
@@ -202,11 +234,22 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   records the vote on the text, which is then a key step shown by default (2021/0106(COD), 14 Jun 2023, vote
   156022); a step built from a vote that the procedure record does not show yet links that vote (2026/0325(COD),
   "Parliament voted to open negotiations with the Council", 199592). Parliament's confirmation of a committee's decision to negotiate links the vote on
-  that decision, if one was held. A second-reading approval links the motions to reject the Council's position that
+  that decision, if one was held; on a split part, also a vote of the file it was split from, held that day on a
+  report among the part's documents, which the part then lists with a note (2023/0077A(COD), 14 Sep 2023, 158371 on
+  A9-0255/2023, filed under 2023/0077(COD)). A second-reading approval links the motions to reject the Council's position that
   decided it; a decision amending the Council's position links none (its amendments decided it: 2025/0429(COD), 9 Jul
   2026, motion 195775 rejected) and names, on any day, the votes on amendments adopted by a majority of the
   component Members, counting votes, not amendments (one vote may cover "Am 1-243": 2013/0072(COD), 21 Jan 2026),
   since votes on amendments are not listed.
+- `ep_approval_without_vote` (dossiers, build): the file's latest second-reading approval of the Council's position
+  (since the first vote listed) to which no vote is linked. At second reading Parliament votes only on proposals to
+  reject or amend the Council's position; when none is adopted the act is adopted in the wording of that position
+  (Art. 294(7)(a) TFEU), so there is no vote on the text to show. It gives Parliament's record of that decision when
+  the EP API has one ("Approval without vote", 10th term: 176082, 2018/0198(COD), 6 May 2025), whether proposals to
+  amend (`amendments_voted`: 2017/0237(COD), 29 Apr 2021, ten amendments) or to reject (`rejection_voted`, by show
+  of hands) the position were voted on the file from one day before to two days after it, and the file's
+  first-reading decision when it precedes the votes covered (`first_reading`). The file's votes section says so in
+  place of "No roll-call vote is matched", or under the votes listed (a first-reading vote, 2023/0288(COD)).
 - Final votes (`final_role`, build): what a final vote decides, from the type of its one linked procedure (COD
   legislative, CNS consultation, APP consent, BUD budget, DEC discharge, RSO / REG / ACI Parliament's own
   decisions), else from the symbol ending its subject (`*` consultation, `***` consent, `***I`–`***III`
@@ -224,7 +267,11 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Margin (`analysis/ep_margin.py`, build): computed only for an adopted or rejected outcome under an established
   majority rule. Its label is about the majority that vote needed, "Majority reached: N votes more than needed" /
   "Majority not reached: N votes short", never about a law passing (a final vote can be a consultation opinion or
-  a position the Council has not yet agreed to). `python -m pipeline validate` fails a build in which a margin
+  a position the Council has not yet agreed to). Under the two-thirds rule (Art. 234 TFEU, censure: "a two-thirds
+  majority of the votes cast, representing a majority of the component Members") the margin also gives both
+  conditions (`votes_cast`, `two_thirds_of_cast`, `majority_of_members`), and the vote page states each: 179569
+  needed 372, two thirds of its 557 votes cast, more than the 360 that make a majority of the 719 Members in office.
+  `python -m pipeline validate` fails a build in which a margin
   stands next to another outcome or on the other side of the threshold. A vote is *close* when the distance is at
   most 5% of the votes cast for and against (`CLOSE_RELATIVE` in `build.py` and `src/features/votes/labels.ts`).
 - `outcome_basis` `derived` (calculated from the counts where they settle the result: under the votes-cast or
@@ -254,7 +301,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   rejected the Commission proposal" for an adopted one (179804), and likewise for the Council's position at second
   reading (195807). A discharge decision is "Parliament voted on a discharge decision: …". A consent milestone
   titled "Parliament voted on consent" says "Parliament gave its consent" (or "did not give …") when the final
-  vote linked to it records the outcome officially (published or in the minutes; 2025/0313(APP), vote 197472).
+  vote linked to it records the outcome officially (published or in the minutes; 2025/0313(APP), vote 197472), also
+  when that vote is dated another day (2018/0132(APP): vote 129442 of 24 Mar 2021, decision of 25 Mar).
   A Council vote is titled by its list title (`display_title`, below); an item with no page on the site links to
   its official document instead of the site root.
 - `subject` in `votes/index.json`: the vote's published subject (vote item or minutes block title, without its
@@ -264,7 +312,12 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - `title` in `votes/index.json`: Parliament's label with session document numbers written with an ASCII hyphen,
   as officially numbered (label "A10–0049/2025 – Gilles Boyer – …" of vote 175067), so the vote search finds the
   number as typed; the search also reads a number typed with another dash as the official one. `votes/<id>.json`
-  keeps the label as published.
+  keeps the label as published. Procedure references and session documents (the vote's own, or in its label) match
+  only as whole references ("2024/2022(DEC)", "2024/2022", "A10-0050/2025"), never by their year or serial number
+  as words: "discharge 2022" does not find 175675, Discharge 2023 on 2024/2022(DEC).
+- `distinction` in `votes/index.json`: what tells a vote apart from another of the same day with the same title, as
+  appended to `display_title` ("motion B10-0432/2026"); group and MEP vote tables, which cut long titles on phones,
+  show it with the kind of vote and the procedure reference on a line of its own.
 
 ### EUR-Lex / Cellar (`eurlex`) — ok
 - 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 21 final acts that OEIL
@@ -444,7 +497,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   "Parliament gave its consent" (or "Consent refused by Parliament") when the final votes linked to the file on
   the day of Parliament's decision have that officially recorded outcome (decision or minutes): 2025/0313(APP),
   vote 197472 of 6 October 2026, adopted 462-121-75. Otherwise it says only that Parliament voted on consent. The
-  timeline step of that day says the same ("Parliament gave its consent", "Parliament did not give its consent").
+  timeline step of that day says the same ("Parliament gave its consent", "Parliament did not give its consent"),
+  from the final vote linked to the step when there is one, also from another day (2018/0132(APP): vote 129442 of
+  24 March 2021 for the decision of 25 March); the status still reads the votes of the decision's day only.
 - Parliament's decision at a sitting that the EP API records as amendments (`PLENARY_AMEND`, OEIL "Decision by
   Parliament") is, in a consultation file, Parliament's opinion ("Parliament delivered its opinion", 2018/0173(CNS):
   T8-0415/2018 "Approves the Commission proposal as amended") and, in a consent file, its decision on consent: a
