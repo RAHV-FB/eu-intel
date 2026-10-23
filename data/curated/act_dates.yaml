@@ -10,10 +10,17 @@
 #   entry_into_force  optional; replaces Cellar's entry-into-force date
 #   application       optional; replaces Cellar's further application dates. Each item:
 #                       date, provisions (plain description with the article), partial (true when
-#                       only some provisions apply from that date)
+#                       only some provisions apply from that date), source (optional index into
+#                       sources of the text that sets the date, e.g. an amending act; default 0)
 #   reason            one or two sentences, shown on the page
-#   sources           [{label, url}] the official texts checked
+#   sources           [{label, url, celex}] the official texts checked; the entry-into-force date cites
+#                       the first. celex (optional) names an amending act: its page then points to the
+#                       dates it set for this act.
 #   reviewed          date of the last check
+#
+# `python -m pipeline validate` warns when Cellar's entry into force is before the act's adoption (or a
+# regulation's publication), often because Cellar copies the date of another act it is tied to. An entry
+# here, once the date is checked, also silences that warning for the act.
 #
 # Last full review: 2026-10-23.
 
@@ -50,6 +57,7 @@
     - date: "2026-07-27"
       partial: true
       provisions: "Articles 102 to 110 (Art. 113(3)(d), added by Regulation (EU) 2026/1744)"
+      source: 1
     - date: "2026-08-02"
       partial: false
       provisions: "The Regulation in general (Art. 113)"
@@ -58,19 +66,23 @@
       provisions: >-
         The prohibitions added to Art. 5(1), first subparagraph, points (ba) and (bb), and Art. 5(1a) and
         (1b) (Art. 113(3)(a) as amended by Regulation (EU) 2026/1744)
+      source: 1
     - date: "2027-12-02"
       partial: true
       provisions: >-
-        Chapter III Sections 1 to 3 for high-risk AI systems under Art. 6(2) and Annex III (Art. 113(3)(c)(i)
-        as amended)
+        Chapter III Sections 1 to 3, except Art. 6(5), for high-risk AI systems under Art. 6(2) and Annex III
+        (Art. 113(3)(c)(i) as amended)
+      source: 1
     - date: "2028-08-02"
       partial: true
       provisions: >-
-        Chapter III Sections 1 to 3 for high-risk AI systems under Art. 6(1) and Annex I (Art. 113(3)(c)(ii)
-        as amended)
+        Chapter III Sections 1 to 3, except Art. 6(5), for high-risk AI systems under Art. 6(1) and Annex I
+        (Art. 113(3)(c)(ii) as amended)
+      source: 1
   sources:
     - {label: "Regulation (EU) 2024/1689, Article 113", url: "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"}
-    - {label: "Regulation (EU) 2026/1744, Article 1, point (40)", url: "https://eur-lex.europa.eu/eli/reg/2026/1744/oj"}
+    - {label: "Regulation (EU) 2026/1744, Article 1, point (40)", url: "https://eur-lex.europa.eu/eli/reg/2026/1744/oj",
+       celex: "32026R1744"}
   reviewed: "2026-10-23"
 
 - celex: "32026R2280"  # Return Regulation
@@ -89,4 +101,45 @@
       provisions: "The remaining provisions (Art. 50(3))"
   sources:
     - {label: "Regulation (EU) 2026/2280, Article 50", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2280"}
+  reviewed: "2026-10-23"
+
+- celex: "32021R0768"  # Own resources implementing measures (2018/0132(APP))
+  reason: >-
+    EUR-Lex records entry into force on 1 January 2021, the date from which the Regulation applies. Article 9
+    ties its entry into force to that of Decision (EU, Euratom) 2020/2053, which EUR-Lex records as 1 June
+    2021; the Regulation applies retroactively from 1 January 2021.
+  entry_into_force: "2021-06-01"
+  application:
+    - date: "2021-01-01"
+      partial: false
+      provisions: "The Regulation in general, retroactively (Art. 9)"
+  sources:
+    - {label: "Regulation (EU, Euratom) 2021/768, Article 9", url: "https://eur-lex.europa.eu/eli/reg/2021/768/oj"}
+    - {label: "Decision (EU, Euratom) 2020/2053, Article 12", url: "https://eur-lex.europa.eu/eli/dec/2020/2053/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32015D0457"  # Repeal of the terrorism-prevention programme decision (2013/0281(APP))
+  reason: >-
+    EUR-Lex records entry into force on 21 May 2014, the day Regulation (EU) No 513/2014 entered into force.
+    As that Regulation entered into force before this Decision was published (20 March 2015), Article 3(2)
+    applies: entry into force on the day following publication, 21 March 2015.
+  entry_into_force: "2015-03-21"
+  sources:
+    - {label: "Decision (EU, Euratom) 2015/457, Article 3", url: "https://eur-lex.europa.eu/eli/dec/2015/457/oj"}
+    - {label: "Regulation (EU) No 513/2014, Article 16", url: "https://eur-lex.europa.eu/eli/reg/2014/513/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32014R0608"  # Own resources implementing measures 2014 (2011/0184(APP))
+  reason: >-
+    EUR-Lex records entry into force on 28 May 2014. Article 9 provides that the Regulation enters into force
+    on the day Decision 2014/335/EU, Euratom enters into force, which EUR-Lex records as 1 October 2016, and
+    that it applies from 1 January 2014.
+  entry_into_force: "2016-10-01"
+  application:
+    - date: "2014-01-01"
+      partial: false
+      provisions: "The Regulation in general, retroactively (Art. 9)"
+  sources:
+    - {label: "Regulation (EU, Euratom) No 608/2014, Article 9", url: "https://eur-lex.europa.eu/eli/reg/2014/608/oj"}
+    - {label: "Decision 2014/335/EU, Euratom, Article 11", url: "https://eur-lex.europa.eu/eli/dec/2014/335/oj"}
   reviewed: "2026-10-23"

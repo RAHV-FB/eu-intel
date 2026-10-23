@@ -83,6 +83,25 @@ def test_act_procedure_mismatch_warning(tmp_path: Path):
     assert rep.errors == []
 
 
+def test_entry_into_force_before_the_act_is_a_warning(tmp_path: Path):
+    """Cellar dates Regulation 2021/768's entry into force 1 January 2021 (its application date), before its
+    adoption on 30 April 2021; a Council decision or directive taking effect on adoption stays quiet."""
+    assert not check(FIX, today=TODAY).warnings["entry-into-force-before-act"]
+    snap = _copy(tmp_path)
+
+    def dates(r):
+        r[0].update(entry_into_force="2024-01-01")  # regulation adopted 2024-11-20
+        r[1].update(entry_into_force="2023-01-15")  # directive: in force on the day of its adoption
+        r[2].update(entry_into_force="2025-03-05")  # directive: before publication, after adoption
+
+    _edit(snap / "eurlex" / "acts.json", dates)
+    w = check(snap, today=TODAY).warnings["entry-into-force-before-act"]
+    assert len(w) == 1 and w[0].startswith("32099R0001: enters into force 2024-01-01, before the act")
+    _edit(snap / "eurlex" / "acts.json", lambda r: r[0].update(entry_into_force="2024-11-25"))  # published 12-01
+    w = check(snap, today=TODAY).warnings["entry-into-force-before-act"]
+    assert len(w) == 1 and "before its publication (2024-12-01)" in w[0]
+
+
 def test_errors_are_attributed_to_their_source(tmp_path: Path):
     from pipeline.validate import validate_by_source
 

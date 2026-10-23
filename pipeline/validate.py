@@ -296,6 +296,19 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
                 if d < f"{int(signed[:4]) - 1}{signed[4:]}":
                     rep.warn("application-before-act", f"{a.celex}: applies from {d}, a year or more before "
                              f"the act ({signed}); check the act's text")  # fmt: skip
+        # An act does not enter into force before it is adopted, and a regulation (published in the Official
+        # Journal) normally not before its publication; a decision or directive addressed to the Member States
+        # can take effect on adoption or notification, so those stay quiet. Cellar sometimes gives the date the
+        # act applies from instead, or that of another act its entry into force is tied to (Regulation
+        # 2021/768, Art. 9). Once checked, record the date in data/curated/act_dates.yaml.
+        eif = a.entry_into_force
+        if eif and a.celex not in act_dates and not a.entry_into_force_pending:
+            if a.date_document and eif < a.date_document:
+                rep.warn("entry-into-force-before-act", f"{a.celex}: enters into force {eif}, before the act "
+                         f"({a.date_document}); check the act's text")  # fmt: skip
+            elif a.act_type == "regulation" and a.date_publication and eif < a.date_publication:
+                rep.warn("entry-into-force-before-act", f"{a.celex}: regulation enters into force {eif}, before "
+                         f"its publication ({a.date_publication}); check the act's text")  # fmt: skip
         for r in a.procedure_refs:
             rm = REF_RE.match(r)
             if not rm:
