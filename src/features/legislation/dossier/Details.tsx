@@ -234,7 +234,11 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
               {d.related.map((r) => (
                 <li key={`${r.id}-${r.relation}`}>
                   <span className="meta">{r.relation}: </span>
-                  <Link to={dossierPath(r.id)}>{r.title}</Link>
+                  {/^\d{4}-\d{4}/.test(r.id) ? (
+                    <Link to={dossierPath(r.id)}>{r.title}</Link>
+                  ) : (
+                    <ExtLink href={EURLEX_CELEX(r.id)}>{r.title}</ExtLink>
+                  )}
                 </li>
               ))}
             </ul>

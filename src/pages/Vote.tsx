@@ -19,7 +19,9 @@ const OUTCOME_BASIS_TEXT: Record<string, string> = {
 
 export default function Vote() {
   const { id = '' } = useParams();
-  const { data: v, error, loading } = useData<EpVoteDetail>(`votes/${encodeURIComponent(id)}.json`);
+  // vote ids are EP voting ids (digits); anything else, e.g. /votes/index, is not a vote page
+  const validId = /^\d+$/.test(id);
+  const { data: v, error, loading } = useData<EpVoteDetail>(validId ? `votes/${encodeURIComponent(id)}.json` : null);
   const groupsState = useData<GroupSummary[]>('people/groups.json');
   useDocumentTitle(v ? v.display_title || v.title : 'Parliament vote');
 
@@ -30,6 +32,7 @@ export default function Vote() {
     return m;
   }, [groupsState.data, v]);
 
+  if (!validId || (v && !Array.isArray(v.ballots))) return <NotFound what="vote" />;
   if (loading) return <div className="container page"><Loading label="Loading vote…" /></div>;
   if (isMissing(error)) return <NotFound what="vote" />;
   if (error || !v) return <div className="container page"><ErrorState error={error} title="This vote could not be loaded" /></div>;

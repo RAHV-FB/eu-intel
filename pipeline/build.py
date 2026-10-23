@@ -1915,7 +1915,15 @@ class Builder:
                     "mep_id": r.mep_id, "name": r.name, "group": gslug, "country": m.country if m else None,
                     "role": r.role,
                 })  # fmt: skip
-            sources = [_src(p.source)] + [_src(a.source) for a in acts]
+            # the procedure record: the human-readable OEIL file first, the API's JSON-LD labelled as data
+            psrc = _src(p.source)
+            sources = []
+            if psrc and p.oeil_url and pid not in self.stub_ids:
+                sources.append({**psrc, "institution": "OEIL", "url": p.oeil_url,
+                                "label": f"Legislative Observatory (OEIL) – procedure file {p.reference}"})  # fmt: skip
+                if "data.europarl.europa.eu" in (psrc.get("url") or ""):
+                    psrc = {**psrc, "label": f"Machine-readable data (EP Open Data API) – procedure {p.reference}"}
+            sources += [psrc] + [_src(a.source) for a in acts]
             sources += [_src(t.source) for t in self.train_of.get(pid, [])]
             sources = _dedupe_sources(sources)
             det = {
