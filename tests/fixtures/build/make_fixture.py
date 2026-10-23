@@ -463,6 +463,7 @@ cur.mkdir(parents=True, exist_ok=True)
 """)
 (cur / "aliases.yaml").write_text("""# TEST ONLY alias rules
 - {terms: ["gizmo"], expands_to: ["test thingamajigs"]}
+- {procedure: "2099/0003(COD)", names: ["Thingamajig rules"]}
 """)
 (OUT / "README.txt").write_text(
     "TEST-ONLY fixture: invented records (fake ids such as 2099/0001(COD), CELEX 32099R0001, MEP T1,\n"

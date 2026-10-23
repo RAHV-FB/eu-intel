@@ -3,10 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { EpVoteSummary, Topic, VoteKind, VoteOutcome } from '../types/data';
 import { useData } from '../lib/data';
 import { formatNumber, plural } from '../lib/format';
+import { loadSearch, type SearchEngine } from '../lib/search';
 import { Disclosure, EmptyState, ErrorState, Loading, PageHeader, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, VoteKindGuide, VoteListItem } from '../features/votes/components';
 import { KIND_LABEL, OUTCOME_LABEL, isClose } from '../features/votes/labels';
+import { matchVotes, voteHaystacks } from '../features/votes/keyword';
 
 const PAGE = 50;
 const KIND_ORDER: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'amendment', 'split_or_separate', 'procedural', 'other'];
@@ -68,8 +70,17 @@ export default function Votes() {
     return (slug: string) => m.get(slug) ?? slug;
   }, [topicsState.data]);
 
+  // keyword search: whole words in the vote titles and references, or the search index's matches on the
+  // linked legislative file (its common names); the index is loaded only once there is a query
+  const [engine, setEngine] = useState<SearchEngine | null>(null);
+  const hasQuery = !!q.trim();
+  useEffect(() => {
+    if (hasQuery && !engine) loadSearch().then(setEngine, () => undefined);
+  }, [hasQuery, engine]);
+  const haystacks = useMemo(() => voteHaystacks(votes), [votes]);
+  const keywordHits = useMemo(() => matchVotes(votes, haystacks, q, engine), [votes, haystacks, q, engine]);
+
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
     const rows = votes.filter((v) => {
       if (year && !v.date.startsWith(year)) return false;
       if (kind && v.kind !== kind) return false;
@@ -78,10 +89,7 @@ export default function Votes() {
       if (dossier === 'linked' && !v.dossier_id) return false;
       if (dossier === 'unlinked' && v.dossier_id) return false;
       if (close && !isClose(v)) return false;
-      if (needle) {
-        const hay = `${v.display_title} ${v.title} ${v.dossier_ref ?? ''} ${v.procedure_ref ?? ''} ${v.id}`.toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
+      if (keywordHits && !keywordHits.has(v.id)) return false;
       return true;
     });
     const byDate = (a: EpVoteSummary, b: EpVoteSummary) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
@@ -95,7 +103,7 @@ export default function Votes() {
       });
     else rows.sort(byDate);
     return rows;
-  }, [votes, q, year, kind, outcome, topic, dossier, close, sort]);
+  }, [votes, keywordHits, year, kind, outcome, topic, dossier, close, sort]);
 
   const active = [q, year, kind, outcome, topic, dossier, close ? '1' : ''].some(Boolean);
 

@@ -16,6 +16,8 @@ interface Group {
   more?: (q: string) => { to: string; label: string };
 }
 
+// The search index covers legislation, people, groups, parties, countries, topics and guides. Parliament votes
+// are searched on /votes (linked from the results), where vote titles and the linked files' names are matched.
 const GROUPS: Group[] = [
   {
     id: 'legislation',
@@ -23,7 +25,6 @@ const GROUPS: Group[] = [
     kinds: ['dossier', 'act'],
     more: (q) => ({ to: `/legislation?q=${encodeURIComponent(q)}`, label: 'Filter these results in the legislation explorer' }),
   },
-  { id: 'votes', label: 'Parliament votes', kinds: ['vote'] },
   { id: 'people', label: 'People', kinds: ['mep'] },
   { id: 'groups', label: 'Groups & parties', kinds: ['group', 'party'] },
   { id: 'countries', label: 'Countries', kinds: ['country'] },
@@ -34,7 +35,11 @@ const GROUPS: Group[] = [
 const SUGGESTIONS = ['AI Act', 'GDPR', 'Migration', 'Spain', 'EPP', 'Agriculture', 'Digital markets', 'Climate'];
 const PER_GROUP = 8;
 
+/** What the date on a result means (search.json `d`: the latest recorded procedural step of a file). */
+const DATE_LABEL: Partial<Record<SearchKind, string>> = { dossier: 'Latest recorded step', act: 'Latest recorded step' };
+
 function ResultItem({ doc, showKind }: { doc: SearchDoc; showKind: boolean }) {
+  const dateLabel = DATE_LABEL[doc.k];
   return (
     <li className="sr-item">
       <Link to={doc.u} className="sr-item__title">
@@ -45,11 +50,20 @@ function ResultItem({ doc, showKind }: { doc: SearchDoc; showKind: boolean }) {
         {doc.s && <span>{doc.s}</span>}
         {doc.d && (
           <span>
+            {dateLabel && <>{dateLabel} </>}
             <time dateTime={doc.d}>{formatDate(doc.d)}</time>
           </span>
         )}
       </span>
     </li>
+  );
+}
+
+function VotesLink({ q }: { q: string }) {
+  return (
+    <p className="sr-votes">
+      Looking for a vote? <Link to={`/votes?q=${encodeURIComponent(q)}`}>Search Parliament votes for “{q}”</Link>
+    </p>
   );
 }
 
@@ -98,15 +112,20 @@ export default function Search() {
     loadSearch().then(setEngine, (e: Error) => setError(e));
   }, []);
 
-  const grouped = useMemo(() => {
-    if (!engine || !q.trim()) return [];
+  const { grouped, partialOnly } = useMemo(() => {
+    if (!engine || !q.trim()) return { grouped: [], partialOnly: false };
     let hits: SearchHit[] = [];
     try {
       hits = engine.search(q, { limit: 1000 });
     } catch {
       hits = [];
     }
-    return GROUPS.map((g) => ({ g, hits: hits.filter((h) => g.kinds.includes(h.doc.k)) })).filter((x) => x.hits.length > 0);
+    // sections in the order of their best match ("EPP" shows the group first, "Hungary" the country)
+    const rank = (k: SearchKind[]) => hits.findIndex((h) => k.includes(h.doc.k));
+    const groups = GROUPS.map((g) => ({ g, hits: hits.filter((h) => g.kinds.includes(h.doc.k)) }))
+      .filter((x) => x.hits.length > 0)
+      .sort((a, b) => rank(a.g.kinds) - rank(b.g.kinds));
+    return { grouped: groups, partialOnly: hits.length > 0 && hits.every((h) => h.partial) };
   }, [engine, q]);
   const total = grouped.reduce((n, x) => n + x.hits.length, 0);
 
@@ -124,7 +143,7 @@ export default function Search() {
         <h1>{q ? <>Results for “{q}”</> : 'Search'}</h1>
         <form className="sr-form" role="search" onSubmit={onSubmit}>
           <label htmlFor={inputId} className="visually-hidden">
-            Search legislation, votes, people, parties and countries
+            Search legislation, people, parties and countries
           </label>
           <input
             id={inputId}
@@ -150,6 +169,7 @@ export default function Search() {
           <p className="sr-summary" role="status">
             {formatNumber(total)} result{total === 1 ? '' : 's'}
             {total >= 1000 ? ' (showing the best 1,000)' : ''}
+            {partialOnly && <> · no whole-word matches for “{q}”, so these contain words that start with it</>}
           </p>
           <nav className="sr-jump" aria-label="Result groups">
             <ul className="lx-chips">
@@ -165,6 +185,7 @@ export default function Search() {
           {grouped.map(({ g, hits }) => (
             <GroupSection key={`${g.id}:${q}`} g={g} hits={hits} q={q} />
           ))}
+          <VotesLink q={q.trim()} />
         </>
       )}
 
@@ -178,12 +199,16 @@ export default function Search() {
           <p>
             Or <Link to="/legislation">browse all legislation by topic and status</Link>.
           </p>
+          <VotesLink q={q.trim()} />
         </EmptyState>
       )}
 
       {!q.trim() && (
         <div className="sr-start">
-          <p>Search across EU legislation, Parliament votes, MEPs, political groups, national parties and countries.</p>
+          <p>
+            Search across EU legislation, MEPs, political groups, national parties and countries. To find a Parliament vote, use
+            the <Link to="/votes">vote search</Link>.
+          </p>
           <Suggestions />
         </div>
       )}

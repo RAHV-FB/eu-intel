@@ -81,3 +81,43 @@
 - {terms: ["sur"], expands_to: ["sustainable use of plant protection products"]}
 - {terms: ["pesticides"], expands_to: ["plant protection products"]}
 - {terms: ["ema"], expands_to: ["european medicines agency"]}
+
+# ===================================================================== names of individual files
+# Entries {procedure, names} attach common names to ONE legislative file (by procedure reference).
+# A name is added only when an official source uses it for that file: the act's own title, the
+# Commission's or the European Parliament's own pages, or the EP Legislative Train. Each entry is
+# preceded by "# source:" lines citing those pages. No informal, partisan or evaluative nicknames.
+# (Short titles in an act's own Official Journal title and Legislative Train file names are added
+# automatically by pipeline/build.py; files with curated entries in featured.yaml keep those aliases.)
+
+# ------------------------------------------------------------------ repair of goods
+# source: https://commission.europa.eu/news-and-media/news/right-repair-new-consumer-rights-easy-and-attractive-repairs-2026-07-31_en ("Right to repair: New consumer rights for easy and attractive repairs")
+# source: https://www.europarl.europa.eu/legislative-train/theme-a-european-green-deal/file-right-to-repair ("a proposal to introduce a new 'right to repair' for consumers")
+- {procedure: "2023/0083(COD)", names: ["Right to repair"]}
+
+# ------------------------------------------------------------- pharmaceutical package
+# source: https://www.europarl.europa.eu/news/en/press-room/20240408IPR20308/parliament-adopts-its-position-on-eu-pharmaceutical-reform ("the Commission put forward a 'pharmaceutical package'")
+# source: https://www.europarl.europa.eu/legislative-train/theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness/file-revision-of-the-pharmaceutical-legislation ("The package includes a proposal for a new directive (2023/0132(COD)) and a proposal for a new regulation (2023/0131(COD))")
+# source: https://health.ec.europa.eu/medicinal-products/legal-framework-governing-medicinal-products-human-use-eu/reform-eu-pharmaceutical-legislation_en ("Reform of EU pharmaceutical legislation"; "Commission proposal for the Pharmaceutical Regulation" / "... for the Pharmaceutical Directive")
+- {procedure: "2023/0131(COD)", names: ["pharmaceutical package", "Pharmaceutical Regulation", "Reform of EU pharmaceutical legislation"]}
+- {procedure: "2023/0132(COD)", names: ["pharmaceutical package", "Pharmaceutical Directive", "Reform of EU pharmaceutical legislation"]}
+
+# ------------------------------------------------------ Pact on Migration and Asylum (ten acts of 2024)
+# source: https://www.europarl.europa.eu/news/en/press-room/20240408IPR20290 ("MEPs approve the new Migration and Asylum Pact": the ten legislative texts adopted on 10 April 2024)
+# source: https://home-affairs.ec.europa.eu/policies/migration-and-asylum/pact-migration-and-asylum/questions-and-answers-pact-migration-and-asylum_en (Commission: "Pact on Migration and Asylum" and the names of its legal acts)
+- {procedure: "2020/0278(COD)", names: ["Pact on Migration and Asylum", "Screening Regulation"]}
+- {procedure: "2021/0046(COD)", names: ["Pact on Migration and Asylum"]}
+- {procedure: "2020/0279(COD)", names: ["Pact on Migration and Asylum"]}
+- {procedure: "2016/0224A(COD)", names: ["Pact on Migration and Asylum"]}
+- {procedure: "2016/0224B(COD)", names: ["Pact on Migration and Asylum", "Return Border Procedure Regulation"]}
+- {procedure: "2020/0277(COD)", names: ["Pact on Migration and Asylum", "Crisis and Force Majeure Regulation"]}
+- {procedure: "2016/0132(COD)", names: ["Pact on Migration and Asylum", "Eurodac Regulation"]}
+- {procedure: "2016/0222(COD)", names: ["Pact on Migration and Asylum", "Reception Conditions Directive"]}
+- {procedure: "2016/0223(COD)", names: ["Pact on Migration and Asylum", "Qualification Regulation"]}
+- {procedure: "2016/0225(COD)", names: ["Pact on Migration and Asylum", "Resettlement Framework Regulation"]}
+
+# ------------------------------------------------- CO2 standards for cars and vans (Regulation (EU) 2023/851)
+# source: https://www.europarl.europa.eu/topics/en/article/20221019STO44572/eu-ban-on-sale-of-new-petrol-and-diesel-cars-from-2035-explained ("EU ban on the sale of new petrol and diesel cars from 2035 explained")
+# source: https://www.europarl.europa.eu/thinktank/en/document/EPRS_BRI(2022)698920 ("CO2 emission standards for new cars and vans: 'Fit for 55' package")
+# source: https://www.europarl.europa.eu/news/en/press-room/20221024IPR45734/deal-confirms-zero-emissions-target-for-new-cars-and-vans-in-2035 ("Deal confirms zero-emissions target for new cars and vans in 2035")
+- {procedure: "2021/0197(COD)", names: ["EU ban on the sale of new petrol and diesel cars from 2035", "CO2 emission standards for new cars and vans", "zero-emissions target for new cars and vans in 2035"]}

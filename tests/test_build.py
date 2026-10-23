@@ -10,8 +10,12 @@ from pathlib import Path
 import pytest
 
 from pipeline.build import (
+    act_number,
+    act_short_name,
     build,
+    build_search_docs,
     clean_title,
+    ep_term_label,
     group_slug,
     instrument_from_title,
     short_names,
@@ -248,12 +252,69 @@ def test_search_docs(out: Path):
     d1 = by[("dossier", "2099-0001")]
     assert "2099/0001(COD)" in d1["x"] and "32099R0001" in d1["x"] and "COM(2099)1" in d1["x"]
     assert "TWA" in d1["a"]
+    assert "2099/1" in d1["x"].split()  # act number, as cited in the Official Journal
+    # short title in the act's own title: a name of the file (here already its title, so not repeated)
+    assert d1["t"] == "Test Widgets Act" and "Test Widgets Act" not in d1["a"].split(" | ")
     assert "gizmo" in by[("dossier", "2099-0003")]["x"]  # aliases.yaml rule embedded
+    assert "Thingamajig rules" in by[("dossier", "2099-0003")]["a"]  # aliases.yaml name of one file
+    assert "TEST gadgets" in by[("dossier", "2099-0002")]["a"]  # Legislative Train file name
     assert "Spanish" in by[("country", "ES")]["a"]
     assert "S&D" in by[("group", "s-d")]["a"]
     assert ("page", "council-voting") in by
     assert ("topic", "tech") in by
     assert all(d["u"].startswith("/") for d in docs)
+    assert not any(d["k"] == "vote" for d in docs)  # votes are searched on /votes, not in search.json
+
+
+def test_act_number():
+    assert act_number("32024R1689", "Regulation (EU) 2024/1689 of the European Parliament and of the Council") == "2024/1689"
+    assert act_number("32013R1316", "Regulation (EU) No 1316/2013 of the European Parliament") == "1316/2013"
+    assert act_number("32014L0024", "Directive 2014/24/EU of the European Parliament and of the Council") == "2014/24"
+    assert act_number("32014L0063", "Directive2014/63/EU of the European Parliament") == "2014/63"
+    assert act_number("32014D0335", "2014/335/EU, Euratom: Council Decision of 26 May 2014") == "2014/335"
+    assert act_number("32020D2053", "Council Decision (EU, Euratom) 2020/2053 of 14 December 2020") == "2020/2053"
+    assert act_number("32022R2065") == "2022/2065"  # one numbering for all acts from 2015
+    assert act_number("32013R1316") is None  # before 2015 the order differs by instrument
+
+
+def test_act_short_name():
+    t = ("Regulation (EU) 2024/2847 of the European Parliament and of the Council of 23 October 2024 on horizontal "
+         "cybersecurity requirements for products with digital elements and amending Regulations (EU) No 168/2013 "
+         "and (EU) 2019/1020 and Directive (EU) 2020/1828 (Cyber Resilience Act) (Text with EEA relevance)")  # fmt: skip
+    assert act_short_name(t) == "Cyber Resilience Act"
+    assert act_short_name("Regulation (EU) 2021/1119 of 30 June 2021 establishing ... (‘European Climate Law’)") == (
+        "European Climate Law"
+    )
+    # an amending act ends with the short title of the act it amends
+    visa = ("Regulation (EU) 2019/1155 of the European Parliament and of the Council of 20 June 2019 amending "
+            "Regulation (EC) No 810/2009 establishing a Community Code on Visas (Visa Code)")  # fmt: skip
+    assert act_short_name(visa) is None
+    assert act_short_name("Directive (EU) 2024/1799 of 13 June 2024 on common rules promoting the repair of goods") is None
+
+
+def test_search_docs_label_party_records_by_term():
+    # EP open data has one party record per term: same-name records say which term they cover
+    from types import SimpleNamespace as NS
+
+    def mep(org, term):
+        return NS(memberships=[NS(kind="party", org_id=org, term=term)])
+
+    party = {
+        "5369": {"label": "Alternative für Deutschland", "code": "AfD", "country": "DE", "members_active": 0},
+        "6802": {"label": "Alternative für Deutschland", "code": "AfD", "country": "DE", "members_active": 15},
+        "7000": {"label": "Solo Party", "code": None, "country": "DE", "members_active": 1},
+    }
+    b = NS(
+        dossier_summary={}, proc={}, curated_of={}, acts_of={}, train_of={}, alias_rules=[], mep_summary={},
+        group_summaries=[], party_summary=party, s=NS(meps=[mep("5369", 9), mep("6802", 10), mep("7000", 10)]),
+        topic_list=[], topics_cur={}, resolve_ref=lambda ref: None,
+    )  # fmt: skip
+    docs = {d["id"]: d for d in build_search_docs(b) if d["k"] == "party"}
+    assert docs["6802"]["s"] == "National party · Germany · 2024–2029 term"
+    assert docs["5369"]["s"] == "National party · Germany · 2019–2024 term"
+    assert docs["5369"]["w"] < docs["6802"]["w"]
+    assert docs["7000"]["s"] == "National party · Germany"
+    assert ep_term_label({9, 10}) == "2019–2024 and 2024–2029 terms"
 
 
 def test_feeds_are_valid_atom(out: Path):
@@ -574,21 +635,21 @@ def test_curated_act_dates_replace_cellar_dates(tmp_path: Path):
     assert load(o, "dossiers/2099-0003.json")["application"].get("application_detail") in (None, [])
 
 
-def test_act_number_from_title():
-    from pipeline.build import act_number
+def test_act_label_from_title():
+    from pipeline.build import act_label
     from pipeline.models.entities import LegalAct
 
     def a(title: str) -> LegalAct:
         return LegalAct(celex="32026R1744", act_type="regulation", title=title, eurlex_url="u",
                         source={"institution": "EUR-Lex", "url": "u", "retrieved_at": "2026-10-22T00:00:00Z"})  # fmt: skip
 
-    assert act_number(a("Regulation (EU) 2026/1744 of the European Parliament and of the Council of 8 July 2026")) == (
+    assert act_label(a("Regulation (EU) 2026/1744 of the European Parliament and of the Council of 8 July 2026")) == (
         "Regulation (EU) 2026/1744"
     )
-    assert act_number(a("Council Decision (EU, Euratom) 2018/994 of 13 July 2018 amending")) == (
+    assert act_label(a("Council Decision (EU, Euratom) 2018/994 of 13 July 2018 amending")) == (
         "Council Decision (EU, Euratom) 2018/994"
     )
-    assert act_number(a("Something else")) == "32026R1744"
+    assert act_label(a("Something else")) == "32026R1744"
 
 
 def test_procedure_event_titles_fit_the_procedure():

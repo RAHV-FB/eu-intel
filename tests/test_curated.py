@@ -236,7 +236,18 @@ def test_aliases_shape():
     aliases = load("aliases.yaml")
     assert aliases
     seen: set[str] = set()
+    procedures: set[str] = set()
     for entry in aliases:
+        if "procedure" in entry:
+            # names of one legislative file
+            assert set(entry) == {"procedure", "names"}
+            assert re.fullmatch(r"\d{4}/\d{4}[A-Z]?\([A-Z]{3}\)", entry["procedure"]), entry["procedure"]
+            assert entry["procedure"] not in procedures, f"duplicate entry for {entry['procedure']}"
+            procedures.add(entry["procedure"])
+            assert entry["names"], entry["procedure"]
+            assert all(isinstance(n, str) and n and n.strip() == n for n in entry["names"]), entry["procedure"]
+            assert len({n.lower() for n in entry["names"]}) == len(entry["names"]), entry["procedure"]
+            continue
         assert set(entry) == {"terms", "expands_to"}
         assert entry["terms"] and entry["expands_to"]
         for t in entry["terms"] + entry["expands_to"]:
@@ -244,6 +255,24 @@ def test_aliases_shape():
         for t in entry["terms"]:
             assert t not in seen, f"duplicate alias term {t!r}"
             seen.add(t)
+
+
+def test_file_names_cite_official_sources():
+    # Every {procedure, names} entry is preceded by "# source:" comments citing an official page
+    # (EUR-Lex, Commission, Parliament / Legislative Train) that uses the names for that file.
+    lines = (CURATED / "aliases.yaml").read_text(encoding="utf-8").splitlines()
+    entries = [i for i, line in enumerate(lines) if re.match(r"^- \{procedure:", line)]
+    assert entries
+    for i in entries:
+        j = i - 1
+        cited = []
+        while j >= 0 and (lines[j].startswith("# source:") or lines[j].startswith("- {procedure:")):
+            if lines[j].startswith("# source:"):
+                cited.append(lines[j])
+            j -= 1
+        assert cited, f"no source comment for: {lines[i]}"
+        for c in cited:
+            assert re.match(r"# source: https://[a-z0-9.-]*europa\.eu/", c), c
 
 
 # ----------------------------------------------------------------------------- live (opt-in)

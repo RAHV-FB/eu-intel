@@ -1,2 +1,3 @@
 # TEST ONLY alias rules
 - {terms: ["gizmo"], expands_to: ["test thingamajigs"]}
+- {procedure: "2099/0003(COD)", names: ["Thingamajig rules"]}
