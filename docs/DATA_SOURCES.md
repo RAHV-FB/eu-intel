@@ -231,9 +231,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - `outcome_basis` `derived` (calculated from the counts where they settle the result: under the votes-cast or
   component-Members rule that applies, or under every rule when none is known) is shown as such wherever the
   outcome is: vote pages, the /votes list, dossier vote cards and the home lists.
-- Home lists (`build_home`): *Close votes* are the most recent close final votes (no time window: one final vote
-  in the 12 months to October 2026 was close). *Rejected* holds final votes on a whole text that were rejected
-  and adopted motions to reject the proposal or the Council's position, each with the file's decision as its
+- Home lists (`build_home`): *Close votes* are the most recent close final votes (no time window: few final votes
+  are that close; in the snapshot of 23 October 2026, two in the preceding 12 months, 193557 and 181828).
+  *Rejected* holds final votes on a whole text that were rejected and adopted motions to reject the proposal or
+  the Council's position, each with the file's decision as its
   timeline words it and what followed (adopted later, withdrawn; a consultation opinion is not binding), then
   files recorded as rejected without such a vote. Rejected objections and motions of censure are not listed: they
   leave the Commission measure or the Commission in place. Neither list holds decisions on discharge (procedure
@@ -578,7 +579,7 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - The group shown is the one held in the role, never the MEP's current group: the MEP's group membership on
   `date`, else OEIL's printed group (PPE → EPP, Verts/ALE → Greens/EFA as for groups; groups before 2019 such as
   ALDE, EFDD or ENF are shown by their code without a group page). Left out when neither establishes it: 152
-  of the 12,375 entries (snapshot of 23 October 2026): 144 API entries dated before the group memberships we hold
+  of the 12,374 entries (snapshot of 23 October 2026): 144 API entries dated before the group memberships we hold
   (2 July 2019), and 8 whose API date is earlier than the MEP's first group membership (e.g. Johan Nissinen on
   2021/0379(COD), dated 9 December 2021, ECR member from 11 October 2022), so for them `date` is not the
   appointment in a group. Checked against the EP API's own `politicalGroup` on each participation (the cached
