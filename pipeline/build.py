@@ -1263,6 +1263,7 @@ class Builder:
         self._classify = fn
         acts = self.acts_of.get(p.id, [])
         train = self.train_of.get(p.id, [])
+        p = self.council_dated(p)
         if fn is not None:
             try:
                 return self._status_dict(_as_dict(fn(p, acts, train, date.fromisoformat(self.today))))
@@ -1673,6 +1674,19 @@ class Builder:
             return props[0]
         coms = sorted(d.date for d in p.documents if d.id.startswith("COM(") and d.date)
         return coms[0] if coms else None
+
+    def council_dated(self, p: Procedure) -> Procedure:
+        """For the status: OEIL's Council steps dated by the Council's own voting results (OEIL dates the
+        first-reading position by its publication, days after the vote), as the timeline shows them."""
+        cvotes = [cv for cv in self.council_of.get(p.id, []) if cv["date"] <= self.today and cv["outcome"] == "adopted"]
+        positions = sorted(cv["date"] for cv in cvotes if cv.get("vote_on") == "first_reading_position")
+        acts = sorted(cv["date"] for cv in cvotes if cv.get("vote_on") == "act")
+        events = []
+        for e in p.events:
+            dates = positions if e.kind == EventKind.council_position else acts if e.kind == EventKind.council_adoption else []
+            earlier = [d for d in dates if d <= e.date and (date.fromisoformat(e.date) - date.fromisoformat(d)).days <= 31]
+            events.append(e.model_copy(update={"date": earlier[-1]}) if earlier and e.institution == "Council" else e)
+        return p if events == p.events else p.model_copy(update={"events": events})
 
     def build_dossiers(self) -> None:
         self.dossier_summary: dict[str, dict] = {}

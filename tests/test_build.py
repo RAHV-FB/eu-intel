@@ -617,3 +617,22 @@ def test_procedure_event_titles_fit_the_procedure():
                              ["09425/2018"])) == ("Council text submitted to Parliament", "Council")  # fmt: skip
     assert t(proc("COD"), ev(EventKind.proposal, "Commission published its legislative proposal", "Commission",
                              ["COM(2021)0206"])) == ("Commission published its legislative proposal", "Commission")  # fmt: skip
+
+
+def test_council_steps_dated_by_the_council_voting_result():
+    """OEIL dates the Council's first-reading position by its publication; the status uses the vote date."""
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder
+    from pipeline.models.entities import Event, EventKind, Procedure, SourceRef
+
+    src = SourceRef(institution="OEIL", url="u", retrieved_at="2026-10-22T00:00:00Z")
+    pos = Event(id="e1", date="2026-10-01", kind=EventKind.council_position, institution="Council",
+                title="Council adopted its first-reading position", source=src)  # fmt: skip
+    p = Procedure(id="2023-0131", reference="2023/0131(COD)", type="COD", title="t", oeil_url="u", source=src,
+                  events=[pos])  # fmt: skip
+    me = SimpleNamespace(today="2026-10-22", council_of={"2023-0131": [
+        {"date": "2026-09-28", "outcome": "adopted", "vote_on": "first_reading_position"}]})  # fmt: skip
+    assert [e.date for e in Builder.council_dated(me, p).events] == ["2026-09-28"]  # type: ignore[arg-type]
+    me.council_of["2023-0131"][0]["date"] = "2025-01-01"  # too far apart: a different vote
+    assert Builder.council_dated(me, p).events[0].date == "2026-10-01"  # type: ignore[arg-type]
