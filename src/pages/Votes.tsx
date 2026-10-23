@@ -9,7 +9,7 @@ import { CollapsibleFilters } from '../components/CollapsibleFilters';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, VoteKindGuide, VoteListItem } from '../features/votes/components';
 import { KIND_LABEL, OUTCOME_LABEL, isClose } from '../features/votes/labels';
-import { matchVotes, voteHaystacks } from '../features/votes/keyword';
+import { matchVoteDetails, voteHaystacks } from '../features/votes/keyword';
 
 const PAGE = 50;
 const KIND_ORDER: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'amendment', 'split_or_separate', 'procedural', 'other'];
@@ -81,7 +81,8 @@ export default function Votes() {
     if (hasQuery && !engine) loadSearch().then(setEngine, () => undefined);
   }, [hasQuery, engine]);
   const haystacks = useMemo(() => voteHaystacks(votes), [votes]);
-  const keywordHits = useMemo(() => matchVotes(votes, haystacks, q, engine), [votes, haystacks, q, engine]);
+  const keywordMatch = useMemo(() => matchVoteDetails(votes, haystacks, q, engine), [votes, haystacks, q, engine]);
+  const keywordHits = keywordMatch?.ids ?? null;
 
   const filtered = useMemo(() => {
     const rows = votes.filter((v) => {
@@ -258,6 +259,12 @@ export default function Votes() {
           <div className="results-bar">
             <p className="results-bar__count" aria-live="polite">
               {filtered.length === votes.length ? plural(votes.length, 'vote') : `${formatNumber(filtered.length)} of ${plural(votes.length, 'vote')}`}
+              {keywordMatch?.partial && filtered.length > 0 && (
+                <>
+                  {' '}
+                  · no whole-word matches for “{q.trim()}”, so these have words in their titles that start with it
+                </>
+              )}
             </p>
             {active && (
               <button type="button" className="linkish" onClick={() => setParams(new URLSearchParams(), { replace: true })}>

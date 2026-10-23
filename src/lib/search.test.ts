@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SearchDoc } from '../types/data';
-import { createSearchEngine, hasWord, keywordTokens, normalize, singular, wordSet } from './search';
+import { createSearchEngine, familyStems, hasWord, keywordTokens, normalize, singular, wordSet } from './search';
 
 // TEST-ONLY index: a small hand-written sample shaped like pipeline/build.py output
 // (`a` = " | "-separated alternative names, `x` = keywords/identifiers). Not real site data.
@@ -74,7 +74,7 @@ const DOCS: SearchDoc[] = [
   },
   {
     id: '2012-0011', k: 'dossier', t: 'General Data Protection Regulation', s: '2012/0011(COD) · In force',
-    a: 'GDPR | data protection regulation', x: '2012/0011(COD) 2012/0011 32016R0679 gdpr',
+    a: 'GDPR | data protection regulation', x: '2012/0011(COD) 2012/0011 32016R0679 2016/679 gdpr',
     u: '/legislation/2012-0011', w: 3, d: '2018-05-25',
   },
   {
@@ -124,6 +124,61 @@ const DOCS: SearchDoc[] = [
     id: 'olp', k: 'page', t: 'How an EU law is made (ordinary legislative procedure)', s: 'How the EU works',
     a: 'ordinary legislative procedure | trilogue | trilogues | interinstitutional negotiations',
     u: '/how-the-eu-works#olp', w: 2,
+  },
+  {
+    id: '2018-0074', k: 'dossier', t: 'Multiannual plan for fish stocks in the Western Waters and adjacent waters',
+    s: '2018/0074(COD) · In force', x: '2018/0074(COD) 2018/0074', u: '/legislation/2018-0074', w: 1.2, d: '2019-03-20',
+  },
+  {
+    id: '2018-0193', k: 'dossier', t: 'Fisheries control', s: '2018/0193(COD) · In force', x: '2018/0193(COD) 2018/0193',
+    u: '/legislation/2018-0193', w: 1.2, d: '2024-01-09',
+  },
+  {
+    id: '2020-0359', k: 'dossier', t: 'Measures for a high common level of cybersecurity across the Union',
+    s: '2020/0359(COD) · In force', x: '2020/0359(COD) 2020/0359', u: '/legislation/2020-0359', w: 1.2, d: '2024-10-18',
+  },
+  {
+    id: '2016-0030', k: 'dossier', t: 'Measures to safeguard the security of gas supply', s: '2016/0030(COD) · In force',
+    x: '2016/0030(COD) 2016/0030', u: '/legislation/2016-0030', w: 1.2, d: '2017-11-01',
+  },
+  {
+    id: '2022-0272', k: 'dossier', t: 'Horizontal cybersecurity requirements for products with digital elements',
+    s: '2022/0272(COD) · In force', a: 'Cyber Resilience Act', x: '2022/0272(COD) 2022/0272',
+    u: '/legislation/2022-0272', w: 1.2, d: '2024-12-10',
+  },
+  {
+    id: '2023-0212', k: 'dossier', t: 'Digital euro', s: '2023/0212(COD) · Negotiations', x: '2023/0212(COD) 2023/0212',
+    u: '/legislation/2023-0212', w: 3, d: '2026-06-01',
+  },
+  {
+    id: '2013-0256', k: 'dossier', t: 'EU Agency for Criminal Justice Cooperation (Eurojust)', s: '2013/0256(COD) · In force',
+    x: '2013/0256(COD) 2013/0256', u: '/legislation/2013-0256', w: 1.2, d: '2018-12-11',
+  },
+  {
+    id: '2018-0196', k: 'dossier', t: 'Common provisions on the funds, and financial rules for those and for the Asylum and Migration Fund',
+    s: '2018/0196(COD) · In force', x: '2018/0196(COD) 2018/0196', u: '/legislation/2018-0196', w: 1.2, d: '2021-06-30',
+  },
+  {
+    id: '2012-0361', k: 'dossier', t: 'Occurrence reporting in civil aviation', s: '2012/0361(COD) · In force',
+    x: '2012/0361(COD) 2012/0361 32014R0376 376/2014', u: '/legislation/2012-0361', w: 1.2, d: '2018-08-22',
+  },
+  {
+    id: '2014-0064', k: 'dossier', t: 'Authorisation for Portugal to apply a reduced rate of excise duty in Madeira and the Azores',
+    s: '2014/0064(CNS) · No longer in force', x: '2014/0064(CNS) 2014/0064 32014D0376 376/2014', u: '/legislation/2014-0064',
+    w: 0.8, d: '2014-07-01',
+  },
+  {
+    id: '2025-0360', k: 'dossier', t: 'Digital Omnibus (data, privacy and cybersecurity rules)', s: '2025/0360(COD) · Proposed',
+    a: 'Digital Omnibus | GDPR reform | Amending Regulations (EU) 2016/679, (EU) 2018/1724 and Directive 2002/58/EC',
+    x: '2025/0360(COD) 2025/0360', u: '/legislation/2025-0360', w: 3, d: '2026-07-27',
+  },
+  { id: '256966', k: 'mep', t: 'Michael von der Schulenburg', s: 'MEP · Germany · NI', u: '/people/meps/256966', w: 1.5 },
+  { id: '96810', k: 'mep', t: 'Carlo Fidanza', s: 'MEP · Italy · ECR', u: '/people/meps/96810', w: 1.5 },
+  { id: '1892', k: 'mep', t: 'Carlos Coelho', s: 'Former MEP · Portugal · EPP', u: '/people/meps/1892', w: 0.7 },
+  { id: '256979', k: 'mep', t: 'Oliver Schenk', s: 'MEP · Germany · EPP', u: '/people/meps/256979', w: 1.5 },
+  {
+    id: '2011-0453', k: 'dossier', t: 'Imports of olive oil and other agricultural products from Turkey',
+    s: '2011/0453(COD) · In force', x: '2011/0453(COD) 2011/0453', u: '/legislation/2011-0453', w: 1.2, d: '2013-12-11',
   },
 ]; // prettier-ignore
 
@@ -310,5 +365,69 @@ describe('keyword helpers for list filters', () => {
     expect(hasWord(words, 'pagazaurtundua')).toBe(true);
     expect(hasWord(words, 'pagaz', true)).toBe(true);
     expect(keywordTokens('the AI Act')).toEqual(['ai', 'act']);
+  });
+});
+
+describe('word families', () => {
+  const all = (q: string) => engine.search(q, { limit: 100 });
+  it('finds longer words built on a query word below the whole-word matches, flagged as partial', () => {
+    const fish = all('fish');
+    expect(fish[0].doc.id).toBe('2018-0074'); // "fish stocks": whole word first
+    expect(fish[0].partial).toBeUndefined();
+    const fisheries = fish.find((h) => h.doc.id === '2018-0193'); // "Fisheries control"
+    expect(fisheries?.partial).toBe(true);
+    const cyber = all('cyber').map((h) => h.doc.id);
+    expect(cyber[0]).toBe('2022-0272'); // "Cyber Resilience Act"
+    expect(cyber).toContain('2020-0359'); // "cybersecurity"
+  });
+
+  it('matches other endings of a word: "farming" -> "farm", "children" -> "child"', () => {
+    expect(familyStems('farming')).toEqual(['farming', 'farm']);
+    expect(familyStems('fisheries')).toEqual(['fisheries', 'fish']);
+    expect(familyStems('children')).toEqual(['children', 'child']);
+    expect(familyStems('water')).toEqual(['water']); // "wat" is too short
+  });
+
+  it('keeps short words, abbreviations and names out of word families', () => {
+    expect(ids('ai', 20)).not.toContain('dossier:2020-0163'); // "AIEM"
+    expect(all('euro').map((h) => h.doc.id)).toEqual(['2023-0212']); // not "Eurojust"
+    expect(all('EPP').map((h) => h.doc.id)).toEqual(['epp']); // an abbreviation: not "EPPO"
+    expect(all('olive').map((h) => h.doc.id)).toEqual(['2011-0453']); // not Oliver Schenk
+  });
+});
+
+describe('generic words and synonyms', () => {
+  it('matches a generic word through its synonyms below the literal matches', () => {
+    const hits = engine.search('asylum rules', { limit: 10 }).map((h) => h.doc.id);
+    expect(hits[0]).toBe('2018-0196'); // "... financial rules for ... the Asylum and Migration Fund"
+    expect(hits).toContain('2016-0224'); // "Asylum procedure regulation"
+  });
+
+  it('keeps names whole: "rule of law" is not "rules" and "law"', () => {
+    expect(ids('rule of law', 20)).not.toContain('dossier:2025-0059');
+  });
+});
+
+describe('names', () => {
+  it('does not let name particles count as matched words', () => {
+    expect(ids('von der leyen')).toEqual([]);
+    expect(ids('von der Leyen')).toEqual([]);
+    expect(top('von der Schulenburg')).toBe('mep:256966');
+  });
+
+  it('does not treat first names as plurals', () => {
+    expect(ids('Carlos')).toEqual(['mep:1892']); // not Carlo Fidanza
+    expect(ids('Carlo')).toEqual(['mep:96810']);
+  });
+});
+
+describe('act citations', () => {
+  it('puts the act of the cited type first when two acts share a number', () => {
+    expect(ids('Council Decision No 376/2014/EU', 2)).toEqual(['dossier:2014-0064', 'dossier:2012-0361']);
+    expect(ids('Regulation (EU) No 376/2014', 2)).toEqual(['dossier:2012-0361', 'dossier:2014-0064']);
+  });
+
+  it('ranks the file that owns a number above files that cite it, also next to its name', () => {
+    expect(ids('GDPR 2016/679', 2)).toEqual(['dossier:2012-0011', 'dossier:2025-0360']);
   });
 });

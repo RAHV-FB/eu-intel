@@ -383,6 +383,8 @@ export interface EpVoteSummary {
   dossier_id?: string | null;
   dossier_ref?: string | null;
   procedure_ref?: string | null; // official procedure reference, also when the procedure is not a tracked file
+  // the published subject of the vote, only when display_title and title lack some of its words (keyword search)
+  subject?: string | null;
   topics: string[];
   margin?: VoteMargin | null; // null when the applicable threshold cannot be established
   has_ballots: boolean;

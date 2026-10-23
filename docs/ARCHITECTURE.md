@@ -63,7 +63,8 @@ the UI; every institutional fact on a page has a reachable origin.
 - `src/types/data.ts` is the **public data contract**. Pages lazy-load only the JSON they need:
   `home.json` for the homepage, `dossiers/index.json` for the explorer, `dossiers/<id>.json` per law, etc.
 - Search: `search.json` + an in-browser engine (`src/lib/search.ts`): accent/case folding, aliases, identifier
-  matching, prefix and bounded fuzzy matching, static boosts.
+  matching, prefix, word-family ("fish" -> "fisheries", ranked below whole words) and bounded fuzzy matching,
+  static boosts.
 - Design tokens in `src/styles/tokens.css`; shared primitives in `src/components/ui.tsx`.
 - Strict CSP meta (`default-src 'self'`), no third-party fonts/scripts, no cookies. The optional watchlist uses
   `localStorage` only after an explicit click.

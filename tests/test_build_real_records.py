@@ -16,14 +16,17 @@ from pipeline.build import (
     VOTE_DETAIL_LABELS,
     VOTE_OUTCOME_NOTES,
     Builder,
+    build_search_docs,
     commission_cod_proposal,
     english_procedural,
     rejection_title,
+    search_subject,
     subject_procedure,
+    unnamed_parties,
     vote_label_document,
     vote_subject,
 )
-from pipeline.models.entities import CouncilVote, EpVote, LegalAct, Procedure
+from pipeline.models.entities import CouncilVote, EpVote, LegalAct, Mep, Organization, Procedure
 
 SNAP = Path(__file__).resolve().parent.parent / "data" / "snapshot"
 pytestmark = pytest.mark.skipif(not (SNAP / "ep_procedures" / "procedures.json").exists(), reason="no snapshot")
@@ -57,6 +60,49 @@ def acts(*celex: str) -> dict[str, LegalAct]:
 
 def votes(*ids: str) -> dict[str, EpVote]:
     return {k: EpVote.model_validate(v) for k, v in records("ep_votes/votes.json", set(ids)).items()}
+
+
+def orgs(*ids: str) -> dict[str, Organization]:
+    return {k: Organization.model_validate(v) for k, v in records("ep_people/orgs.json", set(ids)).items()}
+
+
+def meps(*ids: str) -> dict[str, Mep]:
+    return {k: Mep.model_validate(v) for k, v in records("ep_people/meps.json", set(ids)).items()}
+
+
+# ------------------------------------------------------------------------------------ search documents
+def test_search_subtitles_name_the_country_and_tell_same_term_party_records_apart():
+    # Anthea McIntyre (111011) was elected in the United Kingdom (code GB, a former member state); Azione has three
+    # EP records, two of them within the 2019-2024 term (EP API temporal: 6103 2019-11-20 to 2022-11-08, 6478
+    # 2023-12-06 to 2024-07-15); corporate bodies 5500 and 5719 are labelled "-" in every language
+    o = orgs("5233", "5500", "5719", "6103", "6478", "6913")
+    m = meps("111011", "192634", "197438", "197581", "197617", "197618")
+    unnamed = unnamed_parties(list(o.values()))
+    assert unnamed == {"5500", "5719"}
+    party = {oid: {"label": x.label, "code": x.code, "country": x.country or "", "members_active": 0} for oid, x in o.items()}
+    mep = {"111011": {"id": "111011", "name": m["111011"].name, "active": False, "country": "GB", "group_code": "ECR"}}
+    b = SimpleNamespace(
+        dossier_summary={}, proc={}, curated_of={}, acts_of={}, train_of={}, alias_rules=[], mep_summary=mep,
+        group_summaries=[], party_summary=party, s=SimpleNamespace(meps=list(m.values())), topic_list=[],
+        topics_cur={}, resolve_ref=lambda ref: None, org=o, unnamed_parties=unnamed,
+    )  # fmt: skip
+    docs = {(d["k"], d["id"]): d["s"] for d in build_search_docs(b)}
+    assert docs[("mep", "111011")] == "Former MEP · United Kingdom · ECR"
+    assert docs[("party", "5233")] == "National party · United Kingdom"
+    assert docs[("party", "6103")] == "National party · Italy · 2019–2024 term · 20 November 2019 – 8 November 2022"
+    assert docs[("party", "6478")] == "National party · Italy · 2019–2024 term · 6 December 2023 – 15 July 2024"
+    assert docs[("party", "6913")] == "National party · Italy · 2024–2029 term"
+    assert ("party", "5500") not in docs and ("party", "5719") not in docs
+
+
+def test_vote_subject_is_kept_for_search_when_the_titles_lack_its_words():
+    # vote 195775 is titled after the act it amends; its published subject names the ePrivacy Directive
+    v = votes("195775")["195775"]
+    display = ("Amending Regulation (EU) 2021/1232 as regards the extension of its period of application — motion to "
+               "reject the Council's position (second reading)")  # fmt: skip
+    assert search_subject(v.subject, display, v.title) == "Temporary derogation from the ePrivacy directive"
+    assert search_subject(v.subject, "Temporary derogation from the ePrivacy Directive — motion", v.title) is None
+    assert search_subject(None, display) is None
 
 
 # ------------------------------------------------------------------------------- Council: split procedures
