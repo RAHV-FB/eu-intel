@@ -108,6 +108,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
       </form>
       <p className="results-bar__count" aria-live="polite" style={{ marginBottom: 'var(--sp-2)' }}>
         {formatNumber(filtered.length)} {filtered.length === 1 ? 'directive' : 'directives'}
+        {match.partial && filtered.length > 0 && <> · no whole-word matches for “{q.trim()}”, so these have words that start with it</>}
       </p>
       {filtered.length === 0 && hasQuery && (
         <p className="meta">
@@ -157,6 +158,9 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                     </span>
                     {match.citing.has(r.celex) && match.number && (
                       <span className="meta impl-dir__cites">Listed because its title cites {match.number}; it is not that directive.</span>
+                    )}
+                    {match.viaSearch.has(r.celex) && (
+                      <span className="meta impl-dir__cites">Listed because the site search finds its file for “{q.trim()}”.</span>
                     )}
                     {/* phones: the deadline and status columns are hidden and shown here */}
                     <span className="only-narrow impl-dir__more">

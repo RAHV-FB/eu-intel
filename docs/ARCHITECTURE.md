@@ -67,7 +67,8 @@ the UI; every institutional fact on a page has a reachable origin.
 - Search: `search.json` + an in-browser engine (`src/lib/search.ts`): accent/case folding, aliases, identifier
   matching, prefix, word-family ("fish" -> "fisheries", ranked below whole words) and bounded fuzzy matching
   (flagged `approximate` and ranked last; /search, the header suggestions, /legislation and /votes say so), static
-  boosts. A query that is an identifier matches only through identifiers and names citing it.
+  boosts. A query that is an identifier matches only through identifiers (a split part also typed without its
+  procedure type, "2016/0224A") and names citing it.
 - Design tokens in `src/styles/tokens.css`; shared primitives in `src/components/ui.tsx`.
 - Strict CSP meta (`default-src 'self'`), no third-party fonts/scripts, no cookies. The optional watchlist writes
   nothing to `localStorage` before the visitor's first "Follow" click (pages check for storage by reading only).

@@ -116,7 +116,11 @@ export default function Legislation() {
   const preds = useMemo(() => makePredicates(state), [state]);
   const filtered = useMemo(() => applyFilters(matched, preds), [matched, preds]);
   const relatedShown = useMemo(() => filtered.filter((d) => related.has(d.id)).length, [filtered, related]);
-  const approxShown = useMemo(() => filtered.filter((d) => approximate.has(d.id)), [filtered, approximate]);
+  // best match first, so that the summary names the similar words of the first of them
+  const approxShown = useMemo(
+    () => filtered.filter((d) => approximate.has(d.id)).sort((a, b) => (scores.get(b.id) ?? 0) - (scores.get(a.id) ?? 0)),
+    [filtered, approximate, scores],
+  );
   const similar = similarWords(approxShown.map((d) => approximate.get(d.id)))
     .map((w) => `“${w}”`)
     .join(', ');

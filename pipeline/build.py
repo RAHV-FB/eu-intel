@@ -894,8 +894,12 @@ ACT_NUMBER_RE = re.compile(
 
 
 def act_label(a: LegalAct) -> str:
-    """'Regulation (EU) 2026/1744' from the act's official title, else its CELEX id."""
-    m = ACT_NUMBER_RE.match(a.title or "")
+    """'Regulation (EU) 2026/1744' from the act's official title, else its CELEX id. Cellar records a few titles
+    without the space after the act type ('Directive2014/63/EU of the European Parliament ...', 'Regulation(EU)
+    2022/870 ...'): the number is read with it."""
+    title = re.sub(r"^((?:Council |Commission )?(?:Implementing |Delegated )?(?:Regulation|Directive|Decision))(?=[\d(])",
+                   r"\1 ", a.title or "")  # fmt: skip
+    m = ACT_NUMBER_RE.match(title)
     return m.group(1) if m else a.celex
 
 
@@ -4721,6 +4725,8 @@ def build_search_docs(b: Builder) -> list[dict]:
         ids += [n for c in d["celex"] if (n := act_number(c, title_of.get(c, "")))]
         for c in p.com_refs:
             ids += _com_variants(c)
+        # the types of the file's acts, from their EUR-Lex records ("whistleblower directive": Directive (EU) 2019/1937)
+        ids += sorted({a.act_type for a in acts if a.act_type in ("regulation", "directive", "decision")})
         doc = {
             "id": pid, "k": "dossier", "t": d["title"], "s": f"{d['ref']} · {d['status_label']}",
             "a": _join_alts(alts, d["title"]), "x": " ".join(dict.fromkeys(i for i in ids if i)),

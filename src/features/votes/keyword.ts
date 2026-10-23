@@ -21,9 +21,10 @@ import {
   type SearchEngine,
 } from '../../lib/search';
 
-// procedure references and act numbers ("2023/0134(COD)", "2016/0224A", "2023/2116", "376/2014"), session
-// documents ("A9-0050/2024"), as they read once normalised
-const REF_RE = /(?<![\w/-])(?:[abc]\d{1,2}-\d{4}\/\d{4}|\d{4}\/\d{1,4}[a-z]?(?:\s*\([a-z]{3}\))?|\d{1,4}\/\d{4})(?![\w/-])/g;
+// procedure references and act numbers ("2023/0134(COD)", "2016/0224A", also "2016/0224 A" as on the search page,
+// "2023/2116", "376/2014"), session documents ("A9-0050/2024"), as they read once normalised
+const REF_RE =
+  /(?<![\w/-])(?:[abc]\d{1,2}-\d{4}\/\d{4}|\d{4}\/\d{4}\s[a-z](?![\w/-])(?:\s*\([a-z]{3}\))?|\d{4}\/\d{1,4}[a-z]?(?:\s*\([a-z]{3}\))?|\d{1,4}\/\d{4})(?![\w/-])/g;
 const DOC_RE = /\b[ABC]\d{1,2}-\d{4}\/\d{4}\b/gi;
 // act numbers cited in a title: "Regulation (EU) 2016/679", "Regulation (EU) No 1316/2013"
 const TITLE_NUMBER_RE = /(?<![\w/-])\d{1,4}\/\d{1,4}(?![\w/-])/g;
@@ -134,8 +135,9 @@ export function matchVoteDetails(
   // the AI Act, on all but one word)
   const close = pass(false, only((id) => similar.has(id)));
   if (!close.size) return { ids: close, partial: false };
-  const linked = votes.filter((v) => close.has(v.id) && v.dossier_id).map((v) => similar.get(v.dossier_id!));
-  const alike = similarWords(linked);
+  // the files' similar words, best match first (`files` is in the search's order)
+  const linked = new Set(votes.filter((v) => close.has(v.id) && v.dossier_id).map((v) => v.dossier_id!));
+  const alike = similarWords([...files.keys()].filter((id) => linked.has(id)).map((id) => similar.get(id)));
   return { ids: close, partial: false, approximate: true, ...(alike.length ? { similar: alike } : {}) };
 }
 
