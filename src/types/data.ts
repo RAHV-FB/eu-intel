@@ -273,7 +273,15 @@ export interface DossierDetail extends DossierSummary {
 
 // ---------------------------------------------------------------- EP votes
 
-export type VoteKind = 'final' | 'amendment' | 'split_or_separate' | 'resolution' | 'motion' | 'procedural' | 'other';
+export type VoteKind =
+  | 'final'
+  | 'mandate' // Parliament's negotiating mandate: amended text referred back to committee for negotiations
+  | 'amendment'
+  | 'split_or_separate'
+  | 'resolution'
+  | 'motion'
+  | 'procedural'
+  | 'other';
 export type VoteOutcome = 'adopted' | 'rejected' | 'lapsed' | 'unknown';
 
 export interface VoteMargin {
@@ -293,6 +301,9 @@ export interface EpVoteSummary {
   kind: VoteKind;
   kind_label: string; // "Final vote on the text", "Amendment", ...
   outcome: VoteOutcome;
+  // how the outcome was established: EP open data decision, the sitting's official minutes, or calculated from
+  // the recorded counts under the applicable majority rule; null when unknown
+  outcome_basis?: 'published' | 'minutes' | 'derived' | null;
   for: number | null;
   against: number | null;
   abstain: number | null;

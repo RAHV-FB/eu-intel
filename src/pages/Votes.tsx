@@ -9,7 +9,7 @@ import { CloseVoteMethod, VoteKindGuide, VoteListItem } from '../features/votes/
 import { KIND_LABEL, OUTCOME_LABEL, isClose } from '../features/votes/labels';
 
 const PAGE = 50;
-const KIND_ORDER: VoteKind[] = ['final', 'resolution', 'motion', 'amendment', 'split_or_separate', 'procedural', 'other'];
+const KIND_ORDER: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'amendment', 'split_or_separate', 'procedural', 'other'];
 const OUTCOME_ORDER: VoteOutcome[] = ['adopted', 'rejected', 'lapsed', 'unknown'];
 type SortKey = 'newest' | 'oldest' | 'margin';
 

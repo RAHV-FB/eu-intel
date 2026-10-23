@@ -10,6 +10,13 @@ import { CloseVoteMethod, MarginText, OutcomeBadge } from '../features/votes/com
 import { BallotList, CountryBreakdownTable, GroupBreakdownTable } from '../features/votes/Breakdowns';
 import { KIND_EXPLAINER, KIND_LABEL, POSITION_LABEL } from '../features/votes/labels';
 
+const OUTCOME_BASIS_TEXT: Record<string, string> = {
+  published: 'Outcome as published in Parliament’s open data',
+  minutes: 'Outcome as recorded in the official minutes of the sitting',
+  derived: 'Outcome calculated from the recorded counts under the applicable majority rule',
+  none: 'Outcome not recorded in the available official sources',
+};
+
 export default function Vote() {
   const { id = '' } = useParams();
   const { data: v, error, loading } = useData<EpVoteDetail>(`votes/${encodeURIComponent(id)}.json`);
@@ -62,7 +69,7 @@ export default function Vote() {
             Result
           </h2>
           <OutcomeBadge outcome={v.outcome} />
-          <span className="meta">Official result recorded by Parliament</span>
+          <span className="meta">{OUTCOME_BASIS_TEXT[v.outcome_basis ?? 'none']}</span>
         </div>
         <VoteBar forCount={v.for} against={v.against} abstain={v.abstain} label="Official result" />
         <div className="margin-box">

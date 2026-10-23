@@ -16,6 +16,7 @@ export const OUTCOME_ICON: Record<VoteOutcome, string> = {
 
 export const KIND_LABEL: Record<VoteKind, string> = {
   final: 'Final vote',
+  mandate: 'Negotiating mandate',
   amendment: 'Amendment',
   split_or_separate: 'Split or separate vote',
   resolution: 'Resolution',
@@ -28,6 +29,8 @@ export const KIND_LABEL: Record<VoteKind, string> = {
 export const KIND_EXPLAINER: Record<VoteKind, string> = {
   final:
     'Parliament’s vote on a legislative text as a whole (for example its position, or its approval of a negotiated agreement). It decides Parliament’s stance on the law at that stage.',
+  mandate:
+    'Parliament’s vote on its amended version of a proposal, after which the file is referred back to committee to negotiate with the Council. It sets Parliament’s negotiating position; it is not the final vote on the law.',
   amendment:
     'A vote on a proposed change to part of a text. Amendments are voted before the text as a whole; a rejected amendment does not mean the law itself was rejected.',
   split_or_separate:

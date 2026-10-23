@@ -69,7 +69,7 @@ export function VoteListItem({ v, showDossier = true }: { v: EpVoteSummary; show
   );
 }
 
-const GUIDE_ORDER: VoteKind[] = ['final', 'amendment', 'split_or_separate', 'resolution', 'motion', 'procedural'];
+const GUIDE_ORDER: VoteKind[] = ['final', 'mandate', 'amendment', 'split_or_separate', 'resolution', 'motion', 'procedural'];
 
 export function VoteKindGuide() {
   return (

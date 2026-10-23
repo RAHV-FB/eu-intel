@@ -144,6 +144,7 @@ VOTE_KIND_LABELS: dict[str, str] = {
     "resolution": "Vote on a resolution",
     "motion": "Vote on a motion",
     "procedural": "Procedural vote",
+    "mandate": "Vote on Parliament's negotiating mandate",
     "other": "Other vote",
 }
 VOTE_KIND_PHRASE: dict[str, str] = {
@@ -153,6 +154,7 @@ VOTE_KIND_PHRASE: dict[str, str] = {
     "resolution": "vote on the resolution",
     "motion": "vote on a motion",
     "procedural": "procedural vote",
+    "mandate": "vote on Parliament's negotiating mandate (text referred back to committee for negotiations)",
     "other": "vote",
 }
 
@@ -346,7 +348,9 @@ def ruling_summary(r) -> dict:
     if r.effect == "annulment":
         outcome = f"annulled all or part of {', '.join(provs)}" if provs else "annulled the act or part of it"
     else:
-        outcome = f"declared all or part of {', '.join(provs)} invalid" if provs else "declared the act invalid"
+        outcome = (
+            f"declared all or part of {', '.join(provs)} invalid" if provs else "declared the act invalid"
+        )
     return {
         "case_number": r.case_number, "celex": r.celex, "date": r.date, "ecli": r.ecli,
         "effect": r.effect, "kind_label": kind, "provisions": provs, "url": r.url,
@@ -875,8 +879,8 @@ class Builder:
         idx = [
             v
             for v in s.votes
-            if (v.has_ballots and v.kind in ("final", "resolution", "motion"))
-            or (v.kind == "final" and self.vote_dossier_map.get(v.id))
+            if (v.has_ballots and v.kind in ("final", "mandate", "resolution", "motion"))
+            or (v.kind in ("final", "mandate") and self.vote_dossier_map.get(v.id))
         ]
         idx.sort(key=lambda v: (v.date, v.id), reverse=True)
         self.indexed_votes = idx
@@ -947,6 +951,7 @@ class Builder:
             "kind": v.kind,
             "kind_label": VOTE_KIND_LABELS.get(v.kind, "Vote"),
             "outcome": v.outcome,
+            "outcome_basis": getattr(v, "outcome_basis", None),
             "for": n_for,
             "against": n_against,
             "abstain": n_abs,
