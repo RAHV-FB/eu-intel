@@ -18,7 +18,10 @@
 # - On success, "Deploy to GitHub Pages" runs via its workflow_run trigger and publishes the new data.
 # - GitHub runs scheduled workflows on a best-effort basis (they can be delayed or skipped under load) and
 #   disables them in public repos after 60 days without repository activity. Re-enable from the Actions tab.
-# Manual run: Actions -> Data refresh -> Run workflow (optionally list specific sources).
+# - Scheduled runs are incremental: EP procedures, EP votes and the Legislative Train re-read only new, open
+#   or recently changed records and reuse the others (docs/DEPLOYMENT.md, "What a weekly run re-reads").
+# Manual run: Actions -> Data refresh -> Run workflow (optionally list specific sources; "Full refresh" re-reads
+# every stored record of those three sources).
 name: Data refresh
 
 on:
@@ -30,6 +33,11 @@ on:
         description: "Sources to fetch, space-separated (blank = all): ep_people ep_procedures ep_votes eurlex council implementation optouts train"
         required: false
         default: ""
+      full_refresh:
+        description: "Full refresh: re-read every stored record of ep_procedures, ep_votes and train, not only new and changing ones (best with those sources listed above; resumes over several runs)"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -84,6 +92,8 @@ jobs:
         timeout-minutes: 100
         env:
           SOURCES: ${{ inputs.sources }}
+          # "1" only on a manual run with "Full refresh" ticked (scheduled runs are incremental)
+          EU_INTEL_FULL_REFRESH: ${{ inputs.full_refresh && '1' || '' }}
         run: |
           if [[ ! "$SOURCES" =~ ^[a-z_\ ]*$ ]]; then
             echo "rc=2" >> "$GITHUB_OUTPUT"
