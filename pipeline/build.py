@@ -235,6 +235,12 @@ _DE_WORD = re.compile(
     r"\b(?:[Dd]er|[Dd]ie|[Dd]as|dem|den|und|für|über|zur|zum|von|vom|mit|im|zwischen|eines|einer|einem|"
     r"auf|bei|gegen|nach|sowie)\b"
 )
+# German titles without such a word ("Berichtspflichten", "Kritische Lage in Kuba", "Neue Strategie EU-Afrika"):
+# endings and words found in the third title of such labels, none of them English
+_DE_STEM = re.compile(
+    r"\w(?:bericht|pflicht(?:en)?|politik|abkommen|ungen|heit|keit|schaft)\b|\w(?:isch|ziell)e[nrs]?\b|"
+    r"\b(?:[Nn]eue[nrs]?|Lage)\b"
+)
 # French wording in the other segments of a label, as found in the data: procedural terms ("Proposition de
 # résolution (ensemble du texte)", "Accord provisoire", "Après le considérant 3", "Article 2, alinéa 1") and
 # French function words ("Protection des sols", "Cour des comptes"). Names of Members contain neither ("de" and
@@ -277,7 +283,7 @@ def _reads_french(s: str) -> bool:
 
 
 def _reads_german(s: str) -> bool:
-    return bool(_DE_LETTER.search(s) or _DE_WORD.search(s)) and not (
+    return bool(_DE_LETTER.search(s) or _DE_WORD.search(s) or _DE_STEM.search(s)) and not (
         _FR_ACCENT.search(s) or _FR_ONLY_WORD.search(s)
     )
 
@@ -288,24 +294,34 @@ def _reads_neither(s: str) -> bool:
     )
 
 
-def label_languages(label: str | None) -> tuple[int, int] | None:
-    """(k, end) when `label` starts with the same title in French, English and German, each k segments long,
-    the three ending at segment `end` (= 3k); None when the label is not such a concatenation or when in doubt.
+def label_languages(label: str | None) -> tuple[int, int, int] | None:
+    """(i, j, end) when `label` starts with the same title in French (segments 0..i-1), English (i..j-1) and
+    German (j..end-1); None when the label is not such a concatenation or when in doubt.
 
     The titles end where the document reference starts ("A9-0024/2024"); without a reference, the whole label
-    or the label without its last segment (the tail "Proposition de résolution …")."""
+    or the label without its last segment (the tail "Proposition de résolution …"). Runs of equal length are
+    tried first; a title may also have more segments in one language than in another, where one translation
+    uses " – " and another a colon (vote 145677). A joint motion repeats the three titles before its reference
+    (vote 165966); the first three are used."""
     if not label:
         return None
     segs, seps = _segments(label)
     ref = next((i for i, s in enumerate(segs) if _LABEL_DOC_REF.fullmatch(s.strip())), None)
     ends = [ref] if ref is not None else [len(segs), len(segs) - 1]
-    for end in ends:
-        if end < 3 or end % 3 or end // 3 > 3:
-            continue
-        k = end // 3
-        fr, en, de = (_joined(segs, seps, i * k, (i + 1) * k) for i in range(3))
+    ends = [e // 2 if e >= 6 and e % 2 == 0 and segs[: e // 2] == segs[e // 2 : e] else e for e in ends]
+    equal = [(e // 3, 2 * e // 3, e) for e in ends if 3 <= e <= 9 and e % 3 == 0]
+    unequal = [
+        (i, j, e)
+        for e in ends
+        if 3 <= e <= 9
+        for i in range(1, 4)
+        for j in range(i + 1, min(i + 4, e))
+        if e - j <= 3 and not any(_french_segment(s) for s in segs[i:e])
+    ]
+    for i, j, end in equal + unequal:
+        fr, en, de = _joined(segs, seps, 0, i), _joined(segs, seps, i, j), _joined(segs, seps, j, end)
         if len({fr, en, de}) == 3 and _reads_french(fr) and _reads_neither(en) and _reads_german(de):
-            return k, end
+            return i, j, end
     return None
 
 
@@ -314,9 +330,9 @@ def english_title(label: str | None) -> str | None:
     found = label_languages(label)
     if not found or not label:
         return None
-    k, _ = found
+    i, j, _ = found
     segs, seps = _segments(label)
-    return _joined(segs, seps, k, 2 * k).strip() or None
+    return _joined(segs, seps, i, j).strip() or None
 
 
 def label_parts(label: str | None) -> list[list[str | None]] | None:
@@ -331,8 +347,11 @@ def label_parts(label: str | None) -> list[list[str | None]] | None:
     start = 0
     found = label_languages(label)
     if found:
-        k, start = found
-        langs[:start] = ["fr"] * k + [None] * k + ["de"] * k
+        i, j, start = found
+        langs[:start] = ["fr"] * i + [None] * (j - i) + ["de"] * (start - j)
+        if segs[start : 2 * start] == segs[:start]:  # the titles repeated (joint motion)
+            langs[start : 2 * start] = langs[:start]
+            start *= 2
     for i in range(start, len(segs)):
         if _french_segment(segs[i]):
             langs[i] = "fr"

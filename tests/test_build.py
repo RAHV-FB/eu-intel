@@ -827,6 +827,27 @@ _AGENDA_165176 = (
     "Tagesordnung für Mittwoch - Antrag der PPE-Fraktion (Aufnahme von Erklärungen des Rates und der Kommission)"
 )
 LABEL_165176 = _AGENDA_165176 + _AGENDA_165176  # published twice over, without a separator
+# German titles without a German function word or letter
+LABEL_164601 = (
+    "Exigences en matière d’obligations d’information - Reporting requirements - Berichtspflichten - "
+    "A9-0009/2024 - Anna Cavazzini - Proposition de la Commission"
+)
+LABEL_163160 = (
+    "Politique de concurrence – rapport annuel 2023 - Competition policy – annual report 2023 - "
+    "Wettbewerbspolitik – Jahresbericht 2023 - A9-0427/2023 - Stéphanie Yon-Courtin - § 6 - Am 2"
+)
+# the German title has a dash where the French and English titles have a colon
+LABEL_145677 = (
+    "Menaces pour le droit à l'avortement dans le monde: démantèlement possible du droit à l'avortement par la "
+    "Cour suprême des États-Unis – Global threats to abortion rights: the possible overturn of abortion rights "
+    "in the US by the Supreme Court – Weltweite Bedrohungen des Rechts auf Abtreibung – etwaige Abschaffung des "
+    "Rechts auf Abtreibung in den USA durch den Obersten Gerichtshof – B9-0299/2022 – Before § 1 – Am 3"
+)
+# a joint motion: the three titles twice before the reference
+LABEL_165966 = (
+    "Situation critique à Cuba - Critical situation in Cuba - Kritische Lage in Kuba - Situation critique à Cuba "
+    "- Critical situation in Cuba - Kritische Lage in Kuba - RC-B9-0144/2024 - § 1"
+)
 LABEL_198292 = "A10-0264/2026 - Jacek Protas - Proposition de résolution"
 LABEL_113161 = (
     "Final vote: Draft amending budget No 1/2020: Assistance to Greece in response to increased migration "
@@ -848,6 +869,11 @@ LABEL_113161 = (
         # recent labels: no document reference, an en dash before the French tail (or no tail)
         (LABEL_199407, "Escalation of Houthi attacks and implications for regional security"),
         (LABEL_199559, "Reduction of methane emissions in the energy sector: postponement of certain obligations"),
+        (LABEL_164601, "Reporting requirements"),
+        (LABEL_163160, "Competition policy – annual report 2023"),
+        (LABEL_145677, "Global threats to abortion rights: the possible overturn of abortion rights in the US by "
+                       "the Supreme Court"),
+        (LABEL_165966, "Critical situation in Cuba"),
     ],
 )  # fmt: skip
 def test_english_title_of_a_french_english_german_label(label, english):
@@ -890,6 +916,11 @@ def test_label_parts_mark_french_and_german_passages():
         [None, "A10-0264/2026 - Jacek Protas - "],
         ["fr", "Proposition de résolution"],
     ]
+    # a German title longer than the others, and titles repeated for a joint motion
+    assert [lang for lang, _ in label_parts(LABEL_145677)] == ["fr", None, "de", None]
+    assert [lang for lang, _ in label_parts(LABEL_165966)] == ["fr", None, "de", None, "fr", None, "de", None]
+    # a French tail after the German title stays a run of its own
+    assert [lang for lang, _ in label_parts(LABEL_199559)] == ["fr", None, "de", None, "fr"]
     # names, references and English wording are not marked
     for label in (
         LABEL_113161,
