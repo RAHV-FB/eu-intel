@@ -55,14 +55,21 @@ FILES: list[tuple[str, str, str, Callable[[Any], Any] | None]] = [
 ]
 
 
+MANIFEST_KEY = "_manifest"  # errors_by_source key for an unreadable _manifest.json as a whole
+
+
 class Report:
     def __init__(self) -> None:
         self.errors: list[str] = []
+        # source directory (or MANIFEST_KEY / "public") -> its structural errors; a manifest entry's
+        # error counts for that entry's source
+        self.errors_by_source: dict[str, list[str]] = defaultdict(list)
         self.warnings: dict[str, list[str]] = defaultdict(list)
         self.info: list[str] = []
 
-    def error(self, msg: str) -> None:
+    def error(self, msg: str, source: str = "?") -> None:
         self.errors.append(msg)
+        self.errors_by_source[source].append(msg)
 
     def warn(self, check: str, msg: str) -> None:
         self.warnings[check].append(msg)
@@ -107,10 +114,10 @@ def _load(snapshot: Path, source: str, name: str, model_name: str, rep: Report) 
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
-        rep.error(f"{source}/{name}.json: unreadable JSON ({e})")
+        rep.error(f"{source}/{name}.json: unreadable JSON ({e})", source)
         return None
     if not isinstance(raw, list):
-        rep.error(f"{source}/{name}.json: expected a JSON array")
+        rep.error(f"{source}/{name}.json: expected a JSON array", source)
         return None
     out: list[BaseModel] = []
     bad = 0
@@ -121,9 +128,11 @@ def _load(snapshot: Path, source: str, name: str, model_name: str, rep: Report) 
             bad += 1
             if bad <= 5:
                 first = e.errors()[0]
-                rep.error(f"{source}/{name}.json[{i}]: {'.'.join(map(str, first['loc']))}: {first['msg']}")
+                rep.error(
+                    f"{source}/{name}.json[{i}]: {'.'.join(map(str, first['loc']))}: {first['msg']}", source
+                )
     if bad > 5:
-        rep.error(f"{source}/{name}.json: {bad} invalid records in total")
+        rep.error(f"{source}/{name}.json: {bad} invalid records in total", source)
     rep.info.append(f"{source}/{name}.json: {len(out)} records")
     return out
 
@@ -161,9 +170,9 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
                 try:
                     E.SourceStatus.model_validate(v)
                 except ValidationError as e:
-                    rep.error(f"_manifest.json[{k}]: {e.errors()[0]['msg']}")
-        except (OSError, json.JSONDecodeError) as e:
-            rep.error(f"_manifest.json unreadable ({e})")
+                    rep.error(f"_manifest.json[{k}]: {e.errors()[0]['msg']}", str(k))
+        except (OSError, json.JSONDecodeError, AttributeError) as e:
+            rep.error(f"_manifest.json unreadable ({e})", MANIFEST_KEY)
     else:
         rep.warn("manifest", "data/snapshot/_manifest.json missing")
     # schema + duplicates + date format
@@ -175,13 +184,15 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
         if key:
             dup = [k for k, n in Counter(key(r) for r in recs).items() if n > 1]
             for k in dup[:20]:
-                rep.error(f"{source}/{name}.json: duplicate id {k!r}")
+                rep.error(f"{source}/{name}.json: duplicate id {k!r}", source)
             if len(dup) > 20:
-                rep.error(f"{source}/{name}.json: {len(dup)} duplicate ids in total")
+                rep.error(f"{source}/{name}.json: {len(dup)} duplicate ids in total", source)
         for r in recs:
             for p, v in _dates(r.model_dump(mode="json")):
                 if not _valid_date(v[:10]) or (len(v) > 10 and not v[10] == "T"):
-                    rep.error(f"{source}/{name}.json {key(r) if key else '?'}: malformed date {p}={v!r}")
+                    rep.error(
+                        f"{source}/{name}.json {key(r) if key else '?'}: malformed date {p}={v!r}", source
+                    )
                 elif not ((MIN_DATE.get((source, name), "1950-01-01")) <= v[:10] <= "2100-12-31"):
                     rep.warn("date-range", f"{source}/{name} {key(r) if key else '?'}: {p}={v}")
 
@@ -341,7 +352,9 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
             for cv in json.loads(cpath.read_text(encoding="utf-8")):
                 a = cv.get("assessment") or {}
                 if a.get("single_state_veto_possible") and cv.get("voting_rule") != "unanimity":
-                    rep.error(f"public council/index.json {cv['id']}: single-state veto outside unanimity")
+                    rep.error(
+                        f"public council/index.json {cv['id']}: single-state veto outside unanimity", "public"
+                    )
     return rep
 
 
@@ -349,3 +362,15 @@ def validate() -> int:
     rep = check(public=ROOT / "public" / "data")
     rep.print()
     return 1 if rep.errors else 0
+
+
+def validate_by_source(snapshot: Path | None = None, out=sys.stdout, today: str | None = None) -> list[str]:
+    """Check the snapshot only (not the built output) and return the sources with structural errors,
+    so that the refresh can restore just those sources' previous files instead of discarding the run."""
+    from pipeline import snapshot as snapshot_module
+
+    rep = check(snapshot or snapshot_module.SNAPSHOT, today=today)
+    rep.print(out)
+    for source, errs in sorted(rep.errors_by_source.items()):
+        print(f"validate: {source}: {len(errs)} errors, e.g. {errs[0]}", file=out)
+    return sorted(rep.errors_by_source)

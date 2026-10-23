@@ -261,7 +261,7 @@ def snapshot_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(m, "_today", lambda: date(2026, 10, 22))
     monkeypatch.setattr(m, "EP_API_GAP_S", 0.0)
     monkeypatch.setattr(m, "OEIL_GAP_S", 0.0)
-    for var in ("EU_INTEL_FULL_REFRESH", "EU_INTEL_FETCH_BUDGET_S"):
+    for var in ("EU_INTEL_FULL_REFRESH", "EU_INTEL_FETCH_BUDGET_S", "EU_INTEL_FETCH_DEADLINE"):
         monkeypatch.delenv(var, raising=False)
     return tmp_path
 
@@ -449,6 +449,208 @@ def test_full_refresh_retries_unavailable_ids(snapshot_dir, monkeypatch):
     http = FakeHttp()
     m.fetch(http)
     assert {"2021-0211", "2018-0900", "2020-0082", "2014-0332"} <= set(http.detail_calls)
+
+
+# ---------------------------------------------------------------- failures: OEIL, EP list, time limits
+class OeilDown(FakeHttp):
+    """OEIL answers HTTP 500 (after Http's own retries) or, with `page`, a 200 page without the file."""
+
+    def __init__(self, page: bytes | None = None):
+        super().__init__()
+        self.page = page
+
+    def get(self, url, params=None, **kw):
+        if url == m.OEIL_FILE:
+            self.oeil_calls.append(m.normalize_proc_id(params["reference"]))
+            if self.page is not None:
+                return self.page
+            raise m.HttpError(url, 500, "gave up after 6 attempts: retryable status 500")
+        return super().get(url, params=params, **kw)
+
+
+class ListDown(FakeHttp):
+    """GET /procedures (the paged list) answers HTTP 500; single records still work."""
+
+    def get_json(self, url, params=None, **kw):
+        if url == f"{m.EP_API}/procedures":
+            raise m.HttpError(url, 500, "WebClientRequestException")
+        return super().get_json(url, params=params, **kw)
+
+
+def records_by_id(root: Path) -> dict[str, str]:
+    lines = (root / "ep_procedures" / "procedures.json").read_text().splitlines()
+    return {json.loads(x.rstrip(","))["id"]: x for x in lines if x.startswith("{")}
+
+
+def state_of(root: Path) -> dict:
+    return json.loads((root / "ep_procedures" / "_state.json").read_text())
+
+
+@pytest.mark.parametrize(
+    "http_down",
+    [OeilDown, lambda: OeilDown(b"<html><body><h1>Service temporarily unavailable</h1></body></html>")],
+    ids=["oeil-500", "oeil-200-without-procedure-file"],
+)
+def test_oeil_outage_keeps_enriched_records(snapshot_dir, http_down):
+    """An incremental run while OEIL is down must not replace enriched records by stripped ones."""
+    m.fetch(FakeHttp())
+    before = records_by_id(snapshot_dir)
+    http = http_down()
+    status = m.fetch(http)
+    refetched = set(http.detail_calls)
+    assert refetched and set(http.oeil_calls) >= refetched
+    assert records_by_id(snapshot_dir) == before  # every record unchanged, byte for byte
+    assert status.status == "failed"  # nothing could be refreshed; the snapshot is unchanged
+    assert "kept unchanged because their OEIL page could not be read" in status.note
+    assert set(state_of(snapshot_dir)["pending"]) == refetched  # retried first by the next run
+
+    again = FakeHttp()  # OEIL is back
+    status = m.fetch(again)
+    assert status.status == "ok", status.note
+    assert set(again.detail_calls[: len(refetched)]) == refetched
+    assert state_of(snapshot_dir)["pending"] == []
+
+
+def test_oeil_failure_for_some_files_is_partial(snapshot_dir):
+    m.fetch(FakeHttp())
+    before = records_by_id(snapshot_dir)
+
+    class OneDown(FakeHttp):
+        def get(self, url, params=None, **kw):
+            if url == m.OEIL_FILE and params["reference"] == "2023/0448(COD)":
+                raise m.HttpError(url, 503, "gave up")
+            return super().get(url, params=params, **kw)
+
+    status = m.fetch(OneDown())
+    assert status.status == "partial"  # a previously enriched record could not be re-enriched
+    assert "2023-0448" in status.note
+    after = records_by_id(snapshot_dir)
+    assert after["2023-0448"] == before["2023-0448"]
+    assert state_of(snapshot_dir)["pending"] == ["2023-0448"]
+
+
+def test_new_file_without_oeil_is_recorded_and_retried(snapshot_dir):
+    """A file seen for the first time while OEIL is down: EP data only (as before), refreshed later."""
+    status = m.fetch(OeilDown())
+    recs = m.read_records(m.SOURCE_ID, "procedures", Procedure)
+    assert recs and all(r.stage_raw is None and not r.subjects for r in recs)
+    assert status.status == "partial"
+    http = FakeHttp()
+    m.fetch(http)
+    assert set(http.detail_calls) == {r.id for r in recs}  # "no OEIL data": every one is re-fetched
+    assert all(r.stage_raw for r in m.read_records(m.SOURCE_ID, "procedures", Procedure) if r.id != "2012-0011")
+
+
+def test_record_needing_oeil_title_is_not_dropped_while_oeil_is_down(snapshot_dir):
+    add_discovery_snapshots(snapshot_dir)
+    m.fetch(OeilDown())
+    state = state_of(snapshot_dir)
+    # 2021-0211 has no English title in the EP record; without OEIL it cannot be judged "unusable"
+    assert "2021-0211" not in state["unavailable"] and "2021-0211" in state["pending"]
+
+
+def test_oeil_page_check():
+    info = m.parse_oeil((FIX / "oeil_2021-0106.html").read_bytes())
+    assert info.has_basic_info and info.reference == "2021/0106(COD)"
+    m.check_oeil_page(info, "2021/0106(COD)")
+    with pytest.raises(m.OeilPageError, match="shows procedure"):
+        m.check_oeil_page(info, "2022/0196(COD)")
+    with pytest.raises(m.OeilPageError, match="no procedure file"):
+        m.check_oeil_page(m.parse_oeil(b"<html><body>Maintenance</body></html>"), "2021/0106(COD)")
+
+
+def test_listing_outage_resumes_pending_ids(snapshot_dir, monkeypatch):
+    monkeypatch.setattr(m, "CHUNK_SIZE", 4)
+    monkeypatch.setenv("EU_INTEL_FETCH_BUDGET_S", "0")
+    m.fetch(FakeHttp())  # interrupted backfill: one chunk done, the rest pending
+    pending = state_of(snapshot_dir)["pending"]
+    assert len(pending) == len(in_scope()) - 4
+    monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S")
+    http = ListDown()
+    status = m.fetch(http)
+    assert set(pending) <= set(http.detail_calls)
+    assert set(snapshot_ids(snapshot_dir)) == in_scope()
+    assert status.status == "partial"
+    assert "procedure list was unavailable" in status.note
+    assert state_of(snapshot_dir)["pending"] == []
+
+
+def test_listing_outage_without_snapshot_fails(snapshot_dir):
+    with pytest.raises(m.HttpError):
+        m.fetch(ListDown())
+
+
+def test_listing_halves_the_page_on_server_errors():
+    class Picky:
+        def __init__(self):
+            self.limits = []
+
+        def get_json(self, url, params=None, **kw):
+            self.limits.append(params["limit"])
+            if params["limit"] > 250:
+                raise m.HttpError(url, 500, "WebClientRequestException")
+            rows = [{"process_id": f"2024-{i:04d}", "label": f"2024/{i:04d}(COD)"} for i in range(300)]
+            page = rows[params["offset"] : params["offset"] + params["limit"]]
+            return {"data": page, "meta": {"total": len(rows)}}
+
+    http = Picky()
+    ids = m.list_procedure_ids(http, "COD")  # type: ignore[arg-type]
+    assert len(ids) == 300 and http.limits == [500, 250, 250]
+
+    class Broken(Picky):
+        def get_json(self, url, params=None, **kw):
+            self.limits.append(params["limit"])
+            raise m.HttpError(url, 500, "down")
+
+    broken = Broken()
+    with pytest.raises(m.HttpError):
+        m.list_procedure_ids(broken, "COD")  # type: ignore[arg-type]
+    assert broken.limits == [500, 250, 125]
+
+
+def test_run_deadline_in_the_past_starts_nothing(snapshot_dir, monkeypatch):
+    import time
+
+    m.fetch(FakeHttp())
+    before = records_by_id(snapshot_dir)
+    monkeypatch.setenv("EU_INTEL_FETCH_DEADLINE", str(time.time() - 1))
+    http = FakeHttp()
+    status = m.fetch(http)
+    assert http.detail_calls == [] and http.oeil_calls == []
+    assert status.status == "partial" and "time budget reached" in status.note
+    assert records_by_id(snapshot_dir) == before
+    assert state_of(snapshot_dir)["pending"]  # the selected ids wait for the next run
+
+
+def test_budget_stops_starting_ids_inside_a_later_chunk(snapshot_dir, monkeypatch):
+    monkeypatch.setattr(m, "CHUNK_SIZE", 4)
+    run = m._Run(FakeHttp(), {}, {}, deadline=time_past(), min_progress=4)
+    assert not run.out_of_time()  # the first chunk always runs
+    run.started = 4
+    assert run.out_of_time()
+    hard = m._Run(FakeHttp(), {}, {}, hard_deadline=time_past(), min_progress=4)
+    assert hard.out_of_time()  # the run-wide deadline applies from the first id
+
+
+def time_past() -> float:
+    import time
+
+    return time.monotonic() - 1
+
+
+def test_sequential_retries_stop_during_an_outage(snapshot_dir):
+    class ApiDown(FakeHttp):
+        def get(self, url, params=None, **kw):
+            if url.startswith(f"{m.EP_API}/procedures/"):
+                self.detail_calls.append(url.rsplit("/", 1)[1])
+                raise m.HttpError(url, 500, "gave up")
+            return super().get(url, params=params, **kw)
+
+    http = ApiDown()
+    status = m.fetch(http)
+    n = len(in_scope())
+    assert len(http.detail_calls) == n + m.SEQUENTIAL_RETRY_STOP  # parallel pass + 3 one-by-one retries
+    assert status.status == "failed"
 
 
 # ---------------------------------------------------------------- live

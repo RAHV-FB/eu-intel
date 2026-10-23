@@ -71,7 +71,7 @@ from pipeline.models.entities import (
     SourceRef,
     SourceStatus,
 )
-from pipeline.snapshot import now_iso, read_records, write_records
+from pipeline.snapshot import fetch_deadline, now_iso, past, read_records, write_records
 
 log = logging.getLogger("pipeline.sources.council")
 
@@ -1027,6 +1027,9 @@ class CouncilNoteState(Model):
     problem: str | None = None
 
 
+DEFERRED_FINGERPRINT = "deferred"  # a note left for the next run (time budget); never equals a real one
+
+
 def note_fingerprint(versions: list[DocVersion]) -> str:
     payload = {
         "parser": PARSER_VERSION,
@@ -1042,6 +1045,7 @@ class _Result:
     problem: str | None
     state: CouncilNoteState | None  # None: transient failure, retry next run
     reused: bool = False
+    deferred: bool = False  # not processed: time budget reached (previous record kept, retried next run)
 
 
 def process_note(
@@ -1053,14 +1057,23 @@ def process_note(
     retrieved: str,
     *,
     force: bool = False,
+    deadline: float | None = None,
 ) -> _Result:
     """Read one note (all its versions) unless its Cellar metadata and the parser are unchanged since it was
-    last processed (`force` re-reads it regardless)."""
+    last processed (`force` re-reads it regardless). After `deadline` (monotonic) no download is started: the
+    note keeps its previous record and state entry, marked DEFERRED_FINGERPRINT so the next run reads it."""
     fp = note_fingerprint(versions)
     if not force and prev and prev.fingerprint == fp and (prev.vote_id is None or prev_vote is not None):
         return _Result(base, prev_vote, prev.problem, prev, reused=True)
+    if past(deadline):
+        # Keep the note's previous entry (so its vote stays linked) with a fingerprint that forces a re-read.
+        keep = prev.model_copy(update={"fingerprint": DEFERRED_FINGERPRINT}) if prev else None
+        return _Result(base, prev_vote, None, keep, deferred=True)
     parsed = []
     for v in versions:
+        if past(deadline):
+            keep = prev.model_copy(update={"fingerprint": DEFERRED_FINGERPRINT}) if prev else None
+            return _Result(base, prev_vote, None, keep, deferred=True)
         try:
             pdf = http.get(DOC_URL.format(doc=v.doc_id))
         except HttpError as e:
@@ -1143,24 +1156,26 @@ def fetch(http: Http) -> SourceStatus:
             note=f"Cellar listed only {len(bases)} voting-result notes (previously {len(prev_states)}); kept snapshot.",
         )
     retrieved = now_iso()
+    deadline = fetch_deadline()
 
     def work(base: str) -> _Result:
         prev = prev_states.get(base)
         prev_vote = prev_votes.get(prev.vote_id) if prev and prev.vote_id else None
-        return process_note(http, base, groups[base], prev, prev_vote, retrieved)
+        return process_note(http, base, groups[base], prev, prev_vote, retrieved, deadline=deadline)
 
     votes: list[CouncilVote] = []
     states: list[CouncilNoteState] = []
     problems: list[str] = []
-    reused = transient = 0
+    reused = transient = deferred = 0
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
         for i, r in enumerate(ex.map(work, bases), start=1):
             if r.vote is not None:
                 votes.append(r.vote)
             if r.state is not None:
                 states.append(r.state)
-            else:
+            elif not r.deferred:
                 transient += 1
+            deferred += r.deferred
             reused += r.reused
             if r.problem:
                 problems.append(f"{r.base}: {r.problem}")
@@ -1189,12 +1204,17 @@ def fetch(http: Http) -> SourceStatus:
         f"the annexed voting sheet; rules {by_rule}. {len(bases) - reused} notes (re)processed, {reused} unchanged "
         f"and reused; {transient} transient download failures. {len(problems)} notes with problems"
         + (f", e.g. {'; '.join(problems[:3])}" if problems else "")
+        + (
+            f". {deferred} notes not processed (time budget reached; previous records kept, resumes next run)"
+            if deferred
+            else ""
+        )
         + ". The Council's open-data datasets were discontinued (2025) and its web voting-results pages "
         "are bot-protected."
     )
     return SourceStatus(
         source=SOURCE_ID,
-        status="ok" if with_positions >= 0.95 * len(votes) and not transient else "partial",
+        status="ok" if with_positions >= 0.95 * len(votes) and not transient and not deferred else "partial",
         fetched_at=retrieved,
         attempted_at=attempted,
         records={"votes": len(votes), "votes_with_positions": with_positions},

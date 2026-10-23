@@ -8,6 +8,8 @@ the affected files, so previously validated data stays in place.
 from __future__ import annotations
 
 import json
+import os
+import time
 from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -98,11 +100,24 @@ def read_records[M: BaseModel](source: str, name: str, model: type[M]) -> list[M
     return [model.model_validate(x) for x in json.loads(path.read_text(encoding="utf-8"))]
 
 
+def _manifest_path() -> Path:
+    return SNAPSHOT / "_manifest.json"  # follows SNAPSHOT (tests point it at a temporary directory)
+
+
 def read_manifest() -> dict[str, SourceStatus]:
-    if not MANIFEST.exists():
+    path = _manifest_path()
+    if not path.exists():
         return {}
-    raw = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    raw = json.loads(path.read_text(encoding="utf-8"))
     return {k: SourceStatus.model_validate(v) for k, v in raw.items()}
+
+
+def _write_manifest(raw: dict[str, dict]) -> None:
+    path = _manifest_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(dict(sorted(raw.items())), indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)  # atomic: an interrupted run never leaves a truncated manifest
 
 
 def update_manifest(status: SourceStatus) -> None:
@@ -112,12 +127,57 @@ def update_manifest(status: SourceStatus) -> None:
     if status.status in ("failed", "unavailable") and prev and prev.fetched_at:
         status = status.model_copy(update={"fetched_at": prev.fetched_at, "records": prev.records})
     m[status.source] = status
-    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    MANIFEST.write_text(
-        json.dumps({k: v.model_dump(mode="json") for k, v in sorted(m.items())}, indent=1, sort_keys=True)
-        + "\n",
-        encoding="utf-8",
+    _write_manifest({k: v.model_dump(mode="json") for k, v in m.items()})
+
+
+def not_refreshed(source: str, attempted_at: str, reason: str) -> SourceStatus:
+    """Manifest entry for a source whose snapshot this run left as it was (time limit, interruption):
+    the previous entry's data facts, marked "partial" (or still "failed"), with the reason."""
+    prev = read_manifest().get(source)
+    if prev is None:
+        return SourceStatus(source=source, status="failed", attempted_at=attempted_at, note=reason)
+    note = f"{reason} Previous note: {prev.note}" if prev.note else reason
+    return prev.model_copy(
+        update={
+            "status": "partial" if prev.status == "ok" else prev.status,
+            "attempted_at": attempted_at,
+            "note": note[:1500],
+        }
     )
+
+
+def restore_manifest_entries(sources: Iterable[str], previous: dict[str, dict], reason: str) -> list[str]:
+    """Put back the `previous` manifest entries (e.g. the last commit's) of `sources` whose snapshot files
+    were restored because this run's data failed validation. The entry keeps the previous data facts
+    (fetched_at, records), is marked "partial" (the data is valid but not refreshed) and says why.
+    Works on the raw JSON, since the current entry may be the invalid part. Returns the sources handled."""
+    raw: dict[str, dict] = {}
+    if _manifest_path().exists():
+        try:
+            raw = json.loads(_manifest_path().read_text(encoding="utf-8"))
+        except ValueError:
+            raw = {}
+    if not isinstance(raw, dict):
+        raw = {}
+    done: list[str] = []
+    for source in sources:
+        current = raw.get(source) if isinstance(raw.get(source), dict) else {}
+        prev = previous.get(source)
+        if not isinstance(prev, dict):
+            raw.pop(source, None)  # the source had no committed entry
+        else:
+            entry = SourceStatus.model_validate(prev)
+            note = f"{reason} Previous note: {entry.note}" if entry.note else reason
+            raw[source] = entry.model_copy(
+                update={
+                    "status": "partial" if entry.status == "ok" else entry.status,
+                    "attempted_at": current.get("attempted_at") or entry.attempted_at,
+                    "note": note[:1500],
+                }
+            ).model_dump(mode="json")
+        done.append(source)
+    _write_manifest(raw)
+    return done
 
 
 # ---------------------------------------------------------------- incremental / resumable fetching
@@ -157,10 +217,25 @@ def write_state(source: str, state: dict) -> None:
     tmp.replace(path)
 
 
-def fetch_deadline() -> float | None:
-    """Monotonic deadline from EU_INTEL_FETCH_BUDGET_S (seconds); sources stop starting new chunks after it."""
-    import os
-    import time
+def global_deadline() -> float | None:
+    """The run-wide fetch deadline (EU_INTEL_FETCH_DEADLINE, epoch seconds) on the monotonic clock."""
+    from pipeline.http import fetch_deadline_epoch
 
+    epoch = fetch_deadline_epoch()
+    return time.monotonic() + (epoch - time.time()) if epoch is not None else None
+
+
+def fetch_deadline() -> float | None:
+    """Monotonic time after which a source starts no new work: the earlier of its own budget
+    (EU_INTEL_FETCH_BUDGET_S seconds from now, per source) and the run-wide EU_INTEL_FETCH_DEADLINE.
+    Call it once at the start of a source's fetch."""
     budget = os.environ.get("EU_INTEL_FETCH_BUDGET_S")
-    return time.monotonic() + float(budget) if budget else None
+    out = time.monotonic() + float(budget) if budget else None
+    hard = global_deadline()
+    if hard is not None:
+        out = hard if out is None else min(out, hard)
+    return out
+
+
+def past(deadline: float | None) -> bool:
+    return deadline is not None and time.monotonic() > deadline
