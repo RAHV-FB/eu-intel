@@ -93,9 +93,10 @@ def test_no_margin_for_an_outcome_that_is_not_established():
     from tests.test_build_real_records import votes as snapshot_votes
 
     # 116204 (8 Jul 2020, motion to reject the Council's position, 218 for, 469 against): the open data gives no
-    # outcome and the sitting has no minutes XML, so "Majority not reached" would state a result not established
-    v = snapshot_votes("116204")["116204"]
-    assert (v.outcome, v.majority_rule) == ("unknown", "component_members")
+    # outcome and the sitting has no minutes XML; while no outcome is established (the snapshot now derives it from
+    # the counts), "Majority not reached" would state a result not established
+    v = snapshot_votes("116204")["116204"].model_copy(update={"outcome": "unknown"})
+    assert v.majority_rule == "component_members"
     assert margin(v, 705) is None
     assert margin(v.model_copy(update={"outcome": "lapsed"}), 705) is None
     m = margin(v.model_copy(update={"outcome": "rejected"}), 705)  # the same counts with an established outcome
