@@ -211,6 +211,146 @@ def vote_subject(subject: str | None) -> str | None:
     return s or None
 
 
+# Parliament publishes some vote labels with the title in French, English and German, in that order, joined by
+# " - " before the rest of the label (document reference, rapporteur, what was voted), e.g. vote 164581:
+#   "Mise en œuvre de l’accord de partenariat économique (APE) UE-Communauté … - Implementation of the
+#    EU-Southern African Development Community (SADC) Economic Partnership Agreement (EPA) - Umsetzung des …
+#    - A9-0024/2024 - Joachim Schuster - Proposition de résolution (ensemble du texte)"
+# Labels of recent sittings have no document reference and an en dash before the tail (vote 199407):
+#   "Escalade des attaques des Houthis … - Escalation of Houthi attacks … - Eskalation der Huthi-Angriffe …
+#    – Proposition de résolution (ensemble du texte)"
+# A title can itself contain " - " ("Orientations pour le budget 2022 - section III - Guidelines for the 2022
+# Budget - Section III - Leitlinien für den Haushaltsplan 2022 – Einzelplan III"), so the part before the
+# reference is cut into three equal runs of segments. The cut is used only when the first run reads as French,
+# the third as German and the second as neither (see label_languages); otherwise the label is left as it is.
+_LABEL_SEP = re.compile(r"(\s+[-–]\s+)")
+_LABEL_DOC_REF = re.compile(r"(?:RC-B|A|B|C)\d{1,2}-\d{4}/\d{4}")
+_FR_ACCENT = re.compile(r"[àâçéèêëîïôûùœÀÂÇÉÈÊÎÔ]")
+_FR_WORD = re.compile(
+    r"\b(?:[Ll]es?|[Ll]a|[Dd]es?|[Dd]u|aux?|et|en|pour|sur|une?|dans|par|entre|concernant)\b|\b[LlDd][’']"
+)
+_FR_ONLY_WORD = re.compile(r"\b(?:[Ll]es?|[Ll]a|[Dd]u|aux?|et|pour|sur|une?|dans|par|entre)\b|\b[LlDd][’']")
+_DE_LETTER = re.compile(r"[äöüßÄÖÜ]")
+_DE_WORD = re.compile(
+    r"\b(?:[Dd]er|[Dd]ie|[Dd]as|dem|den|und|für|über|zur|zum|von|vom|mit|im|zwischen|eines|einer|einem|"
+    r"auf|bei|gegen|nach|sowie)\b"
+)
+# French wording in the other segments of a label, as found in the data: procedural terms ("Proposition de
+# résolution (ensemble du texte)", "Accord provisoire", "Après le considérant 3", "Article 2, alinéa 1") and
+# French function words ("Protection des sols", "Cour des comptes"). Names of Members contain neither ("de" and
+# "la" are left out for "Nicolás Pascual de la Parte", capitals for "Rosa D'Amato"). A segment with English or
+# German words ("Motion for a resolution", "Durchführung des Programms") is not marked.
+_FR_LABEL_TERM = re.compile(
+    r"\b(?:proposition|projet|résolution|considérant|après|avant|alinéa|amendements?|séparés?|accord provisoire|"
+    r"rejet|décharge|renvoi|ensemble du texte|ordre du jour|demande|procédure|annexe|décision|règlement|"
+    r"commission compétente)\b",
+    re.I,
+)
+_FR_LABEL_WORD = re.compile(r"\b(?:du|des|aux|pour|sur|et)\b|\b[ld][’']")
+_EN_WORD = re.compile(r"\b(?:the|of|for|and|on|to|in|with|by|from|as)\b", re.I)
+
+
+def _french_segment(s: str) -> bool:
+    return bool(_FR_LABEL_TERM.search(s) or _FR_LABEL_WORD.search(s)) and not (
+        _EN_WORD.search(s) or _DE_WORD.search(s) or _DE_LETTER.search(s)
+    )
+
+
+def _segments(label: str) -> tuple[list[str], list[str]]:
+    """Label segments and the separators between them (len(seps) == len(segs) - 1)."""
+    parts = _LABEL_SEP.split(label)
+    return parts[0::2], parts[1::2]
+
+
+def _joined(segs: list[str], seps: list[str], a: int, b: int) -> str:
+    """Segments a..b-1 with their own separators, as published."""
+    out = segs[a]
+    for i in range(a + 1, b):
+        out += seps[i - 1] + segs[i]
+    return out
+
+
+def _reads_french(s: str) -> bool:
+    return bool(_FR_ACCENT.search(s) or _FR_WORD.search(s)) and not (
+        _DE_LETTER.search(s) or _DE_WORD.search(s)
+    )
+
+
+def _reads_german(s: str) -> bool:
+    return bool(_DE_LETTER.search(s) or _DE_WORD.search(s)) and not (
+        _FR_ACCENT.search(s) or _FR_ONLY_WORD.search(s)
+    )
+
+
+def _reads_neither(s: str) -> bool:
+    return not (_FR_ACCENT.search(s) or _FR_WORD.search(s) or _DE_WORD.search(s)) and bool(
+        re.search(r"[A-Za-z]{2}", s)
+    )
+
+
+def label_languages(label: str | None) -> tuple[int, int] | None:
+    """(k, end) when `label` starts with the same title in French, English and German, each k segments long,
+    the three ending at segment `end` (= 3k); None when the label is not such a concatenation or when in doubt.
+
+    The titles end where the document reference starts ("A9-0024/2024"); without a reference, the whole label
+    or the label without its last segment (the tail "Proposition de résolution …")."""
+    if not label:
+        return None
+    segs, seps = _segments(label)
+    ref = next((i for i, s in enumerate(segs) if _LABEL_DOC_REF.fullmatch(s.strip())), None)
+    ends = [ref] if ref is not None else [len(segs), len(segs) - 1]
+    for end in ends:
+        if end < 3 or end % 3 or end // 3 > 3:
+            continue
+        k = end // 3
+        fr, en, de = (_joined(segs, seps, i * k, (i + 1) * k) for i in range(3))
+        if len({fr, en, de}) == 3 and _reads_french(fr) and _reads_neither(en) and _reads_german(de):
+            return k, end
+    return None
+
+
+def english_title(label: str | None) -> str | None:
+    """The English title of a French-English-German vote label (see label_languages), else None."""
+    found = label_languages(label)
+    if not found or not label:
+        return None
+    k, _ = found
+    segs, seps = _segments(label)
+    return _joined(segs, seps, k, 2 * k).strip() or None
+
+
+def label_parts(label: str | None) -> list[list[str | None]] | None:
+    """`label` as consecutive [lang, text] runs whose texts join to the label: "fr" and "de" for the French and
+    German titles of a trilingual label (label_languages) and for other French segments ("Proposition de
+    résolution", see _french_segment); None (English, references, names) for the rest. None when nothing is
+    French or German, so the page language applies to the whole label."""
+    if not label:
+        return None
+    segs, seps = _segments(label)
+    langs: list[str | None] = [None] * len(segs)
+    start = 0
+    found = label_languages(label)
+    if found:
+        k, start = found
+        langs[:start] = ["fr"] * k + [None] * k + ["de"] * k
+    for i in range(start, len(segs)):
+        if _french_segment(segs[i]):
+            langs[i] = "fr"
+    if not any(langs):
+        return None
+    out: list[list[str | None]] = []
+    for i, s in enumerate(segs):
+        pieces = [(langs[i], s)]
+        if i:  # a separator inside a run of one language belongs to that run
+            pieces.insert(0, (langs[i] if langs[i - 1] == langs[i] else None, seps[i - 1]))
+        for lang, text in pieces:
+            if out and out[-1][0] == lang:
+                out[-1][1] = f"{out[-1][1]}{text}"
+            elif text:
+                out.append([lang, text])
+    return out
+
+
 def vote_held(v: EpVote) -> bool:
     """False for a vote that lapsed without being held (no counts): it decided nothing and is not shown."""
     return not (v.outcome == "lapsed" and v.n_for is None and not v.has_ballots)
@@ -249,6 +389,7 @@ PAST_TITLES = {
 }
 INDEX_OFFICIAL_TITLE_MAX = 140  # dossiers/index.json only; full titles are in dossiers/<id>.json
 INDEX_TITLE_MAX = 180
+VOTE_LABEL_TITLE_MAX = 200  # a vote titled by Parliament's raw label; the full label stays in `title`
 
 STAGE_LABELS: dict[str, str] = {
     "proposed": "Proposed",
@@ -1187,11 +1328,15 @@ class Builder:
                 log.debug("margin failed for %s: %r", v.id, e)
         refs = sorted(set(v.procedure_refs))
         proc_ref = p.reference if p else (refs[0] if len(refs) == 1 else None)
+        display, from_label = self.vote_display_title(v, p)
+        # French passages of a title that is Parliament's own label, for lang="fr" (omitted when none)
+        parts = label_parts(display) if from_label else None
         return {
             "id": v.id,
             "date": v.date,
             "title": v.title,
-            "display_title": self.vote_display_title(v, p),
+            "display_title": display,
+            **({"display_title_parts": parts} if parts else {}),
             "kind": v.kind,
             "kind_detail": v.kind_detail,
             "kind_label": VOTE_DETAIL_LABELS.get(v.kind_detail or "") or VOTE_KIND_LABELS.get(v.kind, "Vote"),
@@ -1211,24 +1356,26 @@ class Builder:
             "source": _src(v.source),
         }
 
-    def vote_display_title(self, v: EpVote, p: Procedure | None) -> str:
-        """Readable title: the file's title (or the published subject of the vote) + what was voted.
+    def vote_display_title(self, v: EpVote, p: Procedure | None) -> tuple[str, bool]:
+        """Readable title: the file's title (or the published subject of the vote) + what was voted, and
+        whether it is Parliament's own label.
 
-        Falls back to Parliament's own label only when neither a tracked file nor an English subject exists."""
+        Without a tracked file or an English subject, the English title of a French-English-German label
+        (english_title) stands in for the subject; failing that, Parliament's own label, shortened."""
         phrase = VOTE_DETAIL_PHRASE.get(v.kind_detail or "") or VOTE_KIND_PHRASE.get(v.kind, "vote")
         if p is not None:
             display = f"{_truncate(self.dossier_title(p), 120)} — {phrase}"
             if v.kind in ("amendment", "split_or_separate") and v.reference_text:
                 display += f" ({v.reference_text})"
-            return display
-        subject = vote_subject(v.subject)
+            return display, False
+        subject = vote_subject(v.subject) or english_title(v.title)
         if not subject:
-            return v.title
+            return re.sub(r"\s+[-–]…$", "…", _truncate(v.title, VOTE_LABEL_TITLE_MAX)), True
         # the subject already says what was voted: "Objection pursuant to Rule 114(3): …", "Motion of censure …"
         says_it = {"objection": r"^objection\b", "censure": r"\bcensure\b"}.get(v.kind_detail or "")
         if says_it and re.search(says_it, subject, re.I):
-            return _truncate(subject, 200)
-        return f"{_truncate(subject, 160)} — {phrase}"
+            return _truncate(subject, 200), False
+        return f"{_truncate(subject, 160)} — {phrase}", False
 
     def ep_vote_detail(self, v: EpVote) -> dict:
         summ = self.vote_summary[v.id]
@@ -1322,6 +1469,8 @@ class Builder:
         proc_ref = summ.get("procedure_ref")
         return {
             **summ,
+            # the full label, cut into French / German passages for lang attributes (None: nothing to mark)
+            "title_parts": label_parts(v.title),
             "subject": v.subject,
             "procedure_url": f"{OEIL_PROCEDURE}{proc_ref}" if proc_ref else None,
             "reference_text": v.reference_text,

@@ -10,6 +10,7 @@ import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { EP_MEP_URL, periodText, roleLabel, termShort, useGroups } from '../features/people/labels';
 import { Pos } from '../features/votes/Breakdowns';
+import { VoteTitle } from '../features/votes/VoteTitle';
 import '../features/people/people.css';
 import '../features/votes/common.css';
 
@@ -221,7 +222,7 @@ export default function Mep() {
                           {v ? formatDate(v.date) : '—'}
                         </td>
                         <td className="stack-title" role="cell">
-                          <RowTitle to={`/votes/${encodeURIComponent(b.vote_id)}`}>{v ? v.display_title || v.title : `Vote ${b.vote_id}`}</RowTitle>
+                          <RowTitle to={`/votes/${encodeURIComponent(b.vote_id)}`}>{v ? <VoteTitle v={v} /> : `Vote ${b.vote_id}`}</RowTitle>
                           {v && <span className="meta" style={{ display: 'block' }}>{v.kind_label}</span>}
                         </td>
                         <td role="cell">

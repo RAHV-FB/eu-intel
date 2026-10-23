@@ -8,6 +8,7 @@ import { Disclosure, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceL
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, MarginText, OutcomeBadge } from '../features/votes/components';
 import { BallotList, CountryBreakdownTable, GroupBreakdownTable } from '../features/votes/Breakdowns';
+import { LangText, VoteTitle } from '../features/votes/VoteTitle';
 import { DETAIL_EXPLAINER, KIND_EXPLAINER, KIND_LABEL, POSITION_LABEL } from '../features/votes/labels';
 
 const OUTCOME_BASIS_TEXT: Record<string, string> = {
@@ -63,7 +64,7 @@ export default function Vote() {
             European Parliament plenary · {v.kind_label || KIND_LABEL[v.kind]}
           </>
         }
-        title={v.display_title || v.title}
+        title={<VoteTitle v={v} />}
         lead={
           <>
             Voted on <time dateTime={v.date}>{formatDate(v.date, true)}</time>
@@ -180,7 +181,10 @@ export default function Vote() {
         <p className="note" style={{ marginTop: 'var(--sp-4)' }}>{explainer}</p>
         {v.title && v.title !== v.display_title && (
           <p className="note">
-            Parliament’s own label for this vote: <q>{v.title}</q>
+            Label in the official record:{' '}
+            <q>
+              <LangText text={v.title} parts={v.title_parts} />
+            </q>
           </p>
         )}
       </section>

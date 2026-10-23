@@ -204,6 +204,11 @@
 .table tbody tr:hover {
   background: var(--blue-paler);
 }
+/* muted text is only 4.4:1 on the hover background: use the secondary text colour there (WCAG 1.4.3) */
+.table tbody tr:hover .meta,
+.table tbody tr:hover .muted {
+  color: var(--text-2);
+}
 .table td.nowrap,
 .table th.nowrap {
   white-space: nowrap;

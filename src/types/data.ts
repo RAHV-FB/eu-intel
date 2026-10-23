@@ -333,11 +333,16 @@ export interface VoteMargin {
   component_members?: number | null; // Members in office on the day, for rules based on component Members
 }
 
+/** A run of text and its language ("fr", "de"), or null for the page language, references and names. */
+export type LangRun = [lang: string | null, text: string];
+
 export interface EpVoteSummary {
   id: string;
   date: ISODate;
-  title: string; // EP label (may be technical); see `display_title`
+  title: string; // EP label (may be technical, or the title in French, English and German); see `display_title`
   display_title: string; // human-readable: dossier title + what was voted
+  // only when display_title is Parliament's own label with French passages: its runs, for lang attributes
+  display_title_parts?: LangRun[];
   kind: VoteKind;
   kind_detail?: VoteKindDetail | null;
   kind_label: string; // "Final vote on the text", "Amendment", ...
@@ -395,6 +400,7 @@ export interface VoteIntention {
 }
 
 export interface EpVoteDetail extends EpVoteSummary {
+  title_parts?: LangRun[] | null; // `title` in runs by language when it has French or German passages
   subject?: string | null; // what was voted, as published in English (vote item or minutes block title)
   procedure_url?: string | null; // Legislative Observatory (OEIL) file of procedure_ref
   reference_text?: string | null;

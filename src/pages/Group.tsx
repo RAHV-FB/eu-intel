@@ -10,6 +10,7 @@ import { useDocumentTitle } from '../features/legislation/labels';
 import { termLabel } from '../features/people/labels';
 import { MiniBar, Pos } from '../features/votes/Breakdowns';
 import { SortTh, useSortable } from '../features/votes/sortable';
+import { VoteTitle } from '../features/votes/VoteTitle';
 import { cohesionText } from '../features/votes/labels';
 import '../features/people/people.css';
 
@@ -272,7 +273,7 @@ export default function Group() {
                     <tr key={r.vote_id}>
                       <td className="nowrap">{r.v ? formatDate(r.v.date) : '—'}</td>
                       <td style={{ minWidth: '14rem' }}>
-                        <Link to={`/votes/${encodeURIComponent(r.vote_id)}`}>{r.v ? r.v.display_title || r.v.title : `Vote ${r.vote_id}`}</Link>
+                        <Link to={`/votes/${encodeURIComponent(r.vote_id)}`}>{r.v ? <VoteTitle v={r.v} /> : `Vote ${r.vote_id}`}</Link>
                         <MiniBar c={r.counts} />
                       </td>
                       <td className="num">{formatNumber(r.counts.for)}</td>

@@ -42,11 +42,17 @@ export function RowTitle({ to, children }: { to?: string | null; children: React
   const ref = useRef<HTMLElement | null>(null);
   const [clamped, setClamped] = useState(false);
   const [open, setOpen] = useState(false);
+  // While the title is open it is not clamped, so measuring it would hide the button that closes it (and
+  // drop keyboard focus): keep the last measurement until it is closed again.
+  const openRef = useRef(false);
+  openRef.current = open;
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const check = () => setClamped(el.scrollHeight > el.clientHeight + 1);
+    const check = () => {
+      if (!openRef.current) setClamped(el.scrollHeight > el.clientHeight + 1);
+    };
     check();
     return watch(el, check);
   }, []);

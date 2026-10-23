@@ -300,6 +300,13 @@
   text-decoration-thickness: 2px;
 }
 
+/* titles are clamped only in the stacked layout: no toggle in the table (e.g. after rotating a phone) */
+@media (min-width: 40rem) {
+  .row-title__toggle {
+    display: none;
+  }
+}
+
 @media (max-width: 39.99rem) {
   .table--stack,
   .table--stack tbody,
