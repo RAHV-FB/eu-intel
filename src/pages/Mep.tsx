@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceL
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { EP_MEP_URL, periodText, roleLabel, termShort, useGroups } from '../features/people/labels';
 import { Pos } from '../features/votes/Breakdowns';
+import { VoteTitle } from '../features/votes/VoteTitle';
 import '../features/people/people.css';
 import '../features/votes/common.css';
 
@@ -216,7 +217,7 @@ export default function Mep() {
                       <tr key={b.vote_id}>
                         <td className="nowrap">{v ? formatDate(v.date) : '—'}</td>
                         <td>
-                          <Link to={`/votes/${encodeURIComponent(b.vote_id)}`}>{v ? v.display_title || v.title : `Vote ${b.vote_id}`}</Link>
+                          <Link to={`/votes/${encodeURIComponent(b.vote_id)}`}>{v ? <VoteTitle v={v} /> : `Vote ${b.vote_id}`}</Link>
                           {v && <span className="meta" style={{ display: 'block' }}>{v.kind_label}</span>}
                         </td>
                         <td>

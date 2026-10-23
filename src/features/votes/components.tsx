@@ -3,6 +3,7 @@ import type { EpVoteSummary, VoteKind, VoteMargin, VoteOutcome } from '../../typ
 import { Term, VoteBar } from '../../components/ui';
 import { formatDate, formatNumber } from '../../lib/format';
 import { CLOSE_RELATIVE, KIND_EXPLAINER, KIND_LABEL, OUTCOME_ICON, OUTCOME_LABEL, isClose, outcomeTone } from './labels';
+import { VoteTitle } from './VoteTitle';
 import './common.css';
 import './votes.css';
 
@@ -76,7 +77,9 @@ export function VoteListItem({ v, showDossier = true }: { v: EpVoteSummary; show
           )}
         </p>
         <h3 className="vote-item__title">
-          <Link to={`/votes/${encodeURIComponent(v.id)}`}>{v.display_title || v.title}</Link>
+          <Link to={`/votes/${encodeURIComponent(v.id)}`}>
+            <VoteTitle v={v} />
+          </Link>
         </h3>
         <div className="vote-item__outcome">
           <OutcomeBadge outcome={v.outcome} />

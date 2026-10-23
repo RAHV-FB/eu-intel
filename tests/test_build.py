@@ -718,6 +718,122 @@ def test_council_steps_dated_by_the_council_voting_result():
     assert Builder.council_dated(me, p).events[0].date == "2026-10-01"  # type: ignore[arg-type]
 
 
+# ------------------------------------------------------------------------------- EP vote labels
+# Labels exactly as Parliament published them (data/snapshot/ep_votes/votes.json, by vote id).
+LABEL_164581 = (
+    "Mise en œuvre de l’accord de partenariat économique (APE) UE-Communauté de développement de l’Afrique "
+    "australe (CDAA) - Implementation of the EU-Southern African Development Community (SADC) Economic "
+    "Partnership Agreement (EPA) - Umsetzung des Wirtschaftspartnerschaftsabkommens zwischen der EU und der "
+    "Entwicklungsgemeinschaft des Südlichen Afrika - A9-0024/2024 - Joachim Schuster - Proposition de "
+    "résolution (ensemble du texte)"
+)
+LABEL_164961 = (
+    "Accord de partenariat économique entre l’Union européenne, d’une part, et la République du Kenya, membre "
+    "de la Communauté de l’Afrique de l’Est, d’autre part - Economic Partnership Agreement between the European "
+    "Union of the one part, and Republic of Kenya, Member of the East African Community of the other Part - "
+    "Wirtschaftspartnerschaftsabkommen zwischen der EuropäischenUnion einerseits und der Republik Kenia, "
+    "Mitglied der Ostafrikanischen Gemeinschaft, andererseits - A9-0012/2024 - Alessandra Mussolini - Projet "
+    "de décision du Conseil"
+)
+LABEL_129284 = (
+    "Orientations pour le budget 2022 - section III - Guidelines for the 2022 Budget - Section III - Leitlinien "
+    "für den Haushaltsplan 2022 – Einzelplan III - A9-0046/2021 - Karlo Ressler - Am 19"
+)
+LABEL_163202 = (
+    "Ordre du jour de mercredi - Demande des groupes PPE, S&D, Renew et Verts/ALE - Wednesday’s Agenda - Request "
+    "from the PPE, S&D, Renew and Verts/ALE groups - Tagesordnung für Mittwoch - Antrag der Fraktionen PPE, S&D, "
+    "Renew und Verts/ALE"
+)
+LABEL_199407 = (
+    "Escalade des attaques des Houthis et implications pour la sécurité régionale - Escalation of Houthi attacks "
+    "and implications for regional security - Eskalation der Huthi-Angriffe und Auswirkungen auf die regionale "
+    "Sicherheit – Proposition de résolution (ensemble du texte)"
+)
+LABEL_199559 = (
+    "Réduction des émissions de méthane dans le secteur énergétique: report de certaines obligations - "
+    "Reduction of methane emissions in the energy sector: postponement of certain obligations - Verringerung "
+    "der Methanemissionen im Energiesektor im Hinblick auf die Aufschiebung bestimmter Verpflichtungen – Demande "
+    "de renvoi en commission"
+)
+_AGENDA_165176 = (
+    "Ordre du jour de mercredi - Demande du groupe PPE (ajout de déclarations du Conseil et de la Commission) - "
+    "Wednesday’s Agenda - Request from the PPE Group (addition of Council and Commission statements) - "
+    "Tagesordnung für Mittwoch - Antrag der PPE-Fraktion (Aufnahme von Erklärungen des Rates und der Kommission)"
+)
+LABEL_165176 = _AGENDA_165176 + _AGENDA_165176  # published twice over, without a separator
+LABEL_198292 = "A10-0264/2026 - Jacek Protas - Proposition de résolution"
+LABEL_113161 = (
+    "Final vote: Draft amending budget No 1/2020: Assistance to Greece in response to increased migration "
+    "pressure - Immediate measures in the context of the COVID-19 outbreak - Support to post-earthquake "
+    "reconstruction in Albania - Other adjustments C9-0101/2020 - (2020/2052(BUD))"
+)
+
+
+@pytest.mark.parametrize(
+    ("label", "english"),
+    [
+        (LABEL_164581, "Implementation of the EU-Southern African Development Community (SADC) Economic "
+                       "Partnership Agreement (EPA)"),
+        (LABEL_164961, "Economic Partnership Agreement between the European Union of the one part, and Republic "
+                       "of Kenya, Member of the East African Community of the other Part"),
+        # a title with " - " of its own: three runs of two segments
+        (LABEL_129284, "Guidelines for the 2022 Budget - Section III"),
+        (LABEL_163202, "Wednesday’s Agenda - Request from the PPE, S&D, Renew and Verts/ALE groups"),
+        # recent labels: no document reference, an en dash before the French tail (or no tail)
+        (LABEL_199407, "Escalation of Houthi attacks and implications for regional security"),
+        (LABEL_199559, "Reduction of methane emissions in the energy sector: postponement of certain obligations"),
+    ],
+)  # fmt: skip
+def test_english_title_of_a_french_english_german_label(label, english):
+    from pipeline.build import english_title
+
+    assert english_title(label) == english
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        LABEL_165176,  # the trilingual title twice over: the runs do not line up, so the label is kept
+        LABEL_198292,  # French only
+        LABEL_113161,  # English only
+        "Implementation report on the EU Trust Funds and the Facility for Refugees in Turkey - A9-0255/2021 - "
+        "Milan Zver, György Hölvényi, Janusz Lewandowski - Motion for a resolution (as a whole)",
+        "A10-0011/2025 – Nicolás Pascual de la Parte – Motion for a resolution (as a whole)",
+        None,
+        "",
+    ],
+)
+def test_english_title_leaves_other_labels_alone(label):
+    from pipeline.build import english_title
+
+    assert english_title(label) is None
+
+
+def test_label_parts_mark_french_and_german_passages():
+    from pipeline.build import label_parts
+
+    parts = label_parts(LABEL_164581)
+    assert "".join(t for _, t in parts) == LABEL_164581
+    assert [lang for lang, _ in parts] == ["fr", None, "de", None, "fr"]
+    assert parts[1][1].strip(" -").startswith("Implementation of the EU-Southern African")
+    assert parts[3][1] == " - A9-0024/2024 - Joachim Schuster - "
+    assert parts[4][1] == "Proposition de résolution (ensemble du texte)"
+    # a run of several segments keeps its own separators
+    assert label_parts(LABEL_129284)[0] == ["fr", "Orientations pour le budget 2022 - section III"]
+    assert label_parts(LABEL_198292) == [
+        [None, "A10-0264/2026 - Jacek Protas - "],
+        ["fr", "Proposition de résolution"],
+    ]
+    # names, references and English wording are not marked
+    for label in (
+        LABEL_113161,
+        "A9-0024/2020 - Cláudia Monteiro de Aguiar - Consent procedure",
+        "A10-0011/2025 – Nicolás Pascual de la Parte – After § 1 – Am 66",
+        "A9-0233/2022 - Jörgen Warborn - Amendments by the committee responsible - Am 9",
+    ):
+        assert label_parts(label) is None
+
+
 # ------------------------------------------------------------------------------- EP votes (audit regressions)
 def _vote(vid: str, date: str, kind: str, outcome: str, counts: tuple, refs: list[str], **kw) -> dict:
     n_for, n_against, n_abstain = counts
@@ -758,9 +874,17 @@ def votes_out(tmp_path_factory: pytest.TempPathFactory) -> Path:
         # roll call confirming the committee's decision to enter into negotiations
         _vote("V13", "2025-02-10", "procedural", "adopted", (300, 200, 10), ["2099/0003(COD)"], has_ballots=True,
               kind_detail="negotiation_decision"),
+        # labels as Parliament published them (votes 199407, 198292 and 113161), no subject, no tracked file
+        _vote("V14", "2026-10-22", "resolution", "adopted", (500, 50, 20), ["2026/2939(RSP)"], has_ballots=True,
+              title=LABEL_199407),
+        _vote("V15", "2026-10-22", "resolution", "adopted", (400, 100, 50), ["2026/2054(INI)"], has_ballots=True,
+              title=LABEL_198292),
+        _vote("V16", "2020-04-17", "final", "adopted", (600, 50, 30), ["2020/2052(BUD)"], has_ballots=True,
+              title=LABEL_113161),
     ]  # fmt: skip
     ballots += [{"abstain": [], "against": [], "favor": ["T1"], "intended_abstain": [], "intended_against": [],
-                 "intended_favor": [], "vote_id": vid} for vid in ("V10", "V11", "V12", "V13")]  # fmt: skip
+                 "intended_favor": [], "vote_id": vid}
+                for vid in ("V10", "V11", "V12", "V13", "V14", "V15", "V16")]  # fmt: skip
     for b in ballots:
         if b["vote_id"] == "V3":
             b["intended_abstain"] = ["T3"]  # T3 has no recorded vote on V3 but stated an intention
@@ -835,6 +959,30 @@ def test_vote_titles_say_what_was_voted_and_name_the_procedure(votes_out: Path):
     assert (
         v12["outcome_note"] == "The motion was rejected: Parliament did not reject the Commission proposal."
     )
+
+
+def test_vote_titled_by_its_label_keeps_english_and_the_full_label(votes_out: Path):
+    v14 = load(votes_out, "votes/V14.json")
+    assert v14["display_title"] == (
+        "Escalation of Houthi attacks and implications for regional security — vote on the resolution"
+    )
+    assert v14["title"] == LABEL_199407 and "display_title_parts" not in v14
+    assert [lang for lang, _ in v14["title_parts"]] == ["fr", None, "de", None, "fr"]
+    # a French label stays as published, with its French passage marked
+    v15 = load(votes_out, "votes/V15.json")
+    assert v15["display_title"] == v15["title"] == LABEL_198292
+    assert v15["display_title_parts"] == [[None, "A10-0264/2026 - Jacek Protas - "], ["fr", "Proposition de résolution"]]
+    idx = {v["id"]: v for v in load(votes_out, "votes/index.json")}
+    assert idx["V15"]["display_title_parts"] == v15["display_title_parts"]
+    assert "display_title_parts" not in idx["V14"]
+    # a very long label is shortened for the heading; the full label stays in `title`
+    v16 = load(votes_out, "votes/V16.json")
+    assert v16["title"] == LABEL_113161
+    assert v16["display_title"] == (
+        "Final vote: Draft amending budget No 1/2020: Assistance to Greece in response to increased migration "
+        "pressure - Immediate measures in the context of the COVID-19 outbreak - Support to…"
+    )
+    assert v16["title_parts"] is None
 
 
 def test_home_rejected_list_reads_rejection_motions_correctly(votes_out: Path):

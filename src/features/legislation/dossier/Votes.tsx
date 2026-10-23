@@ -5,6 +5,7 @@ import { ExtLink, SourceLink, Term, VoteBar } from '../../../components/ui';
 import { formatDate } from '../../../lib/format';
 import { CouncilVoteCard } from '../../council/CouncilVoteCard';
 import { MarginText, OutcomeBadge } from '../../votes/components';
+import { VoteTitle } from '../../votes/VoteTitle';
 
 const PRIMARY: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'other'];
 
@@ -17,7 +18,9 @@ function EpVoteCard({ v }: { v: EpVoteSummary }) {
         <span className="tag">{v.kind_label}</span>
       </p>
       <h3 className="dz-vote__title">
-        <Link to={`/votes/${encodeURIComponent(v.id)}`}>{v.display_title || v.title}</Link>
+        <Link to={`/votes/${encodeURIComponent(v.id)}`}>
+          <VoteTitle v={v} />
+        </Link>
       </h3>
       <div className="dz-vote__outcome">
         <OutcomeBadge outcome={v.outcome} />
@@ -44,7 +47,9 @@ function CompactVote({ v }: { v: EpVoteSummary }) {
         <time dateTime={v.date}>{formatDate(v.date)}</time>
       </span>
       <span className="dz-cvote__main">
-        <Link to={`/votes/${encodeURIComponent(v.id)}`}>{v.display_title || v.title}</Link>
+        <Link to={`/votes/${encodeURIComponent(v.id)}`}>
+          <VoteTitle v={v} />
+        </Link>
         <span className="meta"> · {v.kind_label}</span>
       </span>
       <span className="dz-cvote__res">
