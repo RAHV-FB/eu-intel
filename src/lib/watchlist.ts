@@ -2,7 +2,8 @@
  * "Follow this legislation": a browser-local watchlist.
  *
  * Privacy contract (also explained on /following and /privacy):
- * - Nothing is written until the visitor explicitly clicks "Follow".
+ * - Nothing is written until the visitor explicitly clicks "Follow" (pages only read the saved list, to show
+ *   what is followed; storageReadable() checks for storage without writing).
  * - Only dossier ids plus what the visitor last saw (last recorded event date, stage, status label)
  *   are stored, in this browser's localStorage. Nothing is ever sent anywhere; there are no notifications.
  * - A shareable form (/following?ids=2021-0106,2022-0155) works without any storage.
@@ -61,6 +62,20 @@ function storage(): Storage | null {
   }
 }
 
+/** Whether this browser lets the page read localStorage, checked without writing (for checks on page load). A
+ * write can still fail (e.g. no quota left): the writers below return false then. */
+export function storageReadable(): boolean {
+  const s = storage();
+  if (!s) return false;
+  try {
+    s.getItem(KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether a write works: writes and removes a probe key, so only call it on a click. */
 export function storageAvailable(): boolean {
   const s = storage();
   if (!s) return false;

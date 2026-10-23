@@ -169,8 +169,24 @@ test.describe('search', () => {
 // ------------------------------------------------------------------ privacy
 
 test('browsing sets no cookies and stores nothing locally without an explicit action', async ({ page, context }) => {
-  for (const p of ['./', 'legislation', `legislation/${AI_ACT_ID}`, 'votes', 'people', 'countries', 'search?q=climate']) {
+  // every write, even one removed at once (/following used to probe storage that way on load)
+  await context.addInitScript(() => {
+    const w = window as unknown as { __writes: string[] };
+    w.__writes = [];
+    const { setItem, removeItem } = Storage.prototype;
+    Storage.prototype.setItem = function (k: string, v: string) {
+      w.__writes.push(`set ${k}`);
+      return setItem.call(this, k, v);
+    };
+    Storage.prototype.removeItem = function (k: string) {
+      w.__writes.push(`remove ${k}`);
+      return removeItem.call(this, k);
+    };
+  });
+  const pages = ['./', 'legislation', `legislation/${AI_ACT_ID}`, 'votes', 'people', 'countries', 'search?q=climate'];
+  for (const p of [...pages, 'following', `following?ids=${AI_ACT_ID}`]) {
     await open(page, p);
+    expect(await page.evaluate(() => (window as unknown as { __writes: string[] }).__writes), p).toEqual([]);
   }
   expect(await context.cookies()).toEqual([]);
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);

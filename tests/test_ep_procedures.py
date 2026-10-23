@@ -814,6 +814,91 @@ def test_an_outage_stops_the_parallel_pass(snapshot_dir, monkeypatch):
     assert m.fetch(again).status == "ok" and set(again.detail_calls) == in_scope()
 
 
+SYNTH = [f"2024-{n:04d}" for n in range(500, 560)]  # 60 open COD files made from the 2023/0448 captures
+KEEP_FAILING = {SYNTH[i] for i in (3, 10, 17, 24, 31, 38, 45, 52)}  # OUTAGE_STOP of them, scattered
+
+
+class Synth(FakeHttp):
+    """Lists and serves the SYNTH files. The `bad` ones fail at the EP API (HTTP 500 after Http's retries), or
+    with oeil=True their OEIL page does (HTTP 503)."""
+
+    def __init__(self, bad=frozenset(), oeil=False):
+        super().__init__()
+        self.bad, self.oeil = set(bad), oeil
+
+    def get(self, url, params=None, **kw):
+        if url == m.OEIL_FILE:
+            pid = m.normalize_proc_id(params["reference"])
+            self.oeil_calls.append(pid)
+            if self.oeil and pid in self.bad:
+                raise m.HttpError(url, 503, "gave up after 6 attempts: retryable status 503")
+            page = (FIX / "oeil_2023-0448.html").read_text(encoding="utf-8")
+            return page.replace("2023/0448", pid.replace("-", "/")).encode()
+        if url.startswith(f"{m.EP_API}/procedures/"):
+            pid = url.rsplit("/", 1)[1]
+            self.detail_calls.append(pid)
+            if not self.oeil and pid in self.bad:
+                raise m.HttpError(url, 500, "gave up after 6 attempts: retryable status 500")
+            body = (FIX / "ep_2023-0448.json").read_text(encoding="utf-8")
+            return body.replace("2023-0448", pid).replace("2023/0448", pid.replace("-", "/")).encode()
+        return super().get(url, params=params, **kw)
+
+    def get_json(self, url, params=None, **kw):
+        if url == f"{m.EP_API}/procedures":
+            if params["process-type"] == "COD" and params["offset"] == 0:
+                data = [{"process_id": i, "label": i.replace("-", "/") + "(COD)"} for i in SYNTH]
+                return {"data": data, "meta": {"total": len(SYNTH)}}
+            return {"data": [], "meta": {"total": 0}}
+        return super().get_json(url, params=params, **kw)
+
+
+@pytest.mark.parametrize("oeil", [False, True], ids=["ep-api-500", "oeil-503"])
+def test_files_that_keep_failing_do_not_stop_the_others(snapshot_dir, monkeypatch, oeil):
+    """OUTAGE_STOP files that fail in every run used to be resumed first and to trip the outage stop at once,
+    so from the third run on the other files were never refreshed again. Ids that failed in an earlier run now
+    come last and do not count towards the stop; a real outage still stops the run."""
+    monkeypatch.setattr(m, "featured_ids", lambda: [])
+    monkeypatch.setattr(m, "discover_refs", lambda: {})
+    assert m.fetch(Synth()).status == "ok"
+    healthy = set(SYNTH) - KEEP_FAILING
+    for run in (2, 3, 4):
+        http = Synth(KEEP_FAILING, oeil=oeil)
+        status = m.fetch(http)
+        assert status.status == "partial" and "Stopped after" not in status.note, status.note
+        assert status.records["fetched_this_run"] == len(healthy)
+        if run > 2:  # the files that failed before come after every other file
+            assert set(http.detail_calls[: len(healthy) - m.MAX_WORKERS]) <= healthy
+            assert f"{len(KEEP_FAILING)} files failed in more than one run in a row" in status.note
+        state = state_of(snapshot_dir)
+        assert set(state["pending"]) == KEEP_FAILING and state["unsettled"]["ids"] == sorted(KEEP_FAILING)
+        assert state["failing"] == {i: {"since": "2026-10-22", "runs": run - 1} for i in sorted(KEEP_FAILING)}
+
+    if not oeil:  # an outage: new failures still stop the run after OUTAGE_STOP ids
+        down = Synth(set(SYNTH))
+        status = m.fetch(down)
+        assert status.status == "failed" and f"Stopped after {m.OUTAGE_STOP} ids in a row failed" in status.note
+        new_failures = [i for i in down.detail_calls if i not in KEEP_FAILING]
+        assert len(set(new_failures)) <= m.OUTAGE_STOP + m.MAX_WORKERS - 1
+        assert not set(down.detail_calls) & KEEP_FAILING  # they come last: not reached
+        assert set(state_of(snapshot_dir)["pending"]) == set(SYNTH)
+    back = Synth()
+    assert m.fetch(back).status == "ok" and set(back.detail_calls) == set(SYNTH)
+    assert state_of(snapshot_dir)["pending"] == [] and state_of(snapshot_dir)["failing"] == {}
+
+
+def test_failures_of_ids_that_failed_before_do_not_count_towards_the_outage_stop():
+    run = m._Run(FakeHttp(), {}, {}, failed_before=["2024-0503"])
+    for _ in range(m.OUTAGE_STOP):
+        run.note_result(False, "2024-0503")
+    assert not run.outage and not run.out_of_time()
+    for _ in range(m.OUTAGE_STOP - 1):
+        run.note_result(False, "2024-0504")
+    run.note_result(False, "2024-0503")  # does not count, nor does it reset the run of new failures
+    assert not run.outage
+    run.note_result(False, "2024-0505")
+    assert run.outage
+
+
 def test_budget_applies_to_the_first_chunk_once_ids_keep_failing(snapshot_dir, monkeypatch):
     run = m._Run(FakeHttp(), {}, {}, deadline=time_past(), min_progress=100)
     assert not run.out_of_time()  # the first chunk normally runs whatever the budget

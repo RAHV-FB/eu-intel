@@ -66,6 +66,9 @@ jobs:
         run: python -m pipeline validate
 
       - name: Build site data (public/data)
+        env:
+          # Absolute links in the Atom feeds: the Pages URL, so a custom domain is used once it is set.
+          SITE_URL: ${{ steps.pages.outputs.base_url }}/
         run: python -m pipeline build
 
       - name: Build site

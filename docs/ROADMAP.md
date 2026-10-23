@@ -29,9 +29,10 @@ so that nobody reads a gap as a fact about EU law.
   roll-call vote, and a few votes the source does not link to a procedure.
 - Some vote titles are still the raw label of the official record (mainly remote votes in 2020, announced
   on a different day from the minutes).
-- EUR-Lex does not always update an act's dates after an amending act changes them. Corrections checked
-  against the text are kept in `data/curated/act_dates.yaml` (currently three acts); other amended acts carry a
-  note on the page, and `pipeline validate` flags suspicious dates.
+- EUR-Lex does not always record an act's dates correctly: it may miss a change made by an amending act, or
+  give the application date or another act's date as the act's entry into force. Corrections checked against
+  the acts' texts are kept in `data/curated/act_dates.yaml` (listed in DATA_SOURCES.md, "Corrections"); other
+  amended acts carry a note on the page, and `pipeline validate` flags suspicious dates.
 - The EP Legislative Train is used only for its own "Blocked" classification and as a caveat when it reports a
   file as adopted before the official records do; its other statuses lag or lead the records.
 - National parties appear once per parliamentary term (the source records them as separate bodies).

@@ -12,7 +12,8 @@ import { BASE_PATH, PAGES_ORIGIN, PREVIEW_ORIGIN } from './tests/e2e/env';
  *   - `vite preview` (port 4173) for general navigation tests (it has an SPA fallback);
  *   - tests/e2e/pages-server.mjs (port 4174), a plain static server with GitHub Pages semantics (no rewrites,
  *     301 to trailing slash, 404.html with status 404) for direct deep-link tests.
- * In CI the e2e job is opt-in (see .github/workflows/ci.yml and docs/DEPLOYMENT.md).
+ * In CI the e2e job runs on every push to main and every pull request, on the site built by the check job; a manual
+ * run can skip it by unticking its e2e option (see .github/workflows/ci.yml and docs/DEPLOYMENT.md).
  */
 const CI = !!process.env.CI;
 

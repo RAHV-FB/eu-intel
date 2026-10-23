@@ -17,7 +17,7 @@ images. Visitors never contact EU APIs; the data is fetched by a scheduled pipel
 ```
 official EU APIs ──fetch──▶ data/snapshot/** (committed) ──build──▶ public/data/** ──▶ React SPA ──▶ GitHub Pages
                                       ▲
-                     data/curated/*.yaml (editorial selections, aliases, topics)
+        data/curated/*.yaml (editorial selections, aliases, topics, checked date corrections)
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md) and
@@ -25,7 +25,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_SOURCES.md](docs/DA
 
 ## Quick start
 
-Requirements: Python 3.12+, Node.js 22.
+Requirements: Python 3.12+, Node.js 22. For `python -m pipeline fetch council` and the Council parser tests also
+poppler-utils (`pdftoppm`, `pdftotext`); without it the council source is recorded as failed and those tests are
+skipped.
 
 ```sh
 # Pipeline (Python)
@@ -40,9 +42,12 @@ npm run dev                      # http://localhost:5173/
 ```
 
 `python -m pipeline fetch [source …]` refreshes `data/snapshot/` from the official APIs (network; slow; polite
-rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation train`. A source that fails
-keeps its previous files; `data/snapshot/_manifest.json` records each source's status and last successful fetch.
-You rarely need this locally: the snapshot is committed and refreshed weekly by CI.
+rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation optouts train`. A source
+that fails keeps its previous files; `data/snapshot/_manifest.json` records each source's status and last
+successful fetch. You rarely need this locally: the snapshot is committed and refreshed weekly by CI. The weekly
+refresh is incremental for EP procedures, EP votes and the Legislative Train (new, open and recently changed
+records are read again, the others reused); `EU_INTEL_FULL_REFRESH=1` re-reads every record (see
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "What a weekly run re-reads").
 
 ## Checks
 
@@ -61,14 +66,16 @@ End-to-end tests need a build first: `python -m pipeline build && BASE_PATH=/eu-
 `npx playwright test` (it starts `vite preview` and a GitHub-Pages-like static server itself). On a fresh machine
 install the browser once with `npx playwright install chromium`.
 
-All of the above except the link checks run in CI on every push and pull request
+All of the above except the link checks run in CI on every push to `main`, every pull request and on manual runs
 ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
 ## Data refresh and deployment
 
 - **Weekly refresh** ([refresh.yml](.github/workflows/refresh.yml)): Mondays 05:17 UTC (best effort) and on demand
-  from the Actions tab. Fetch → validate → record verified activity → commit `data/snapshot/` and `data/state/`.
-  Nothing is committed if validation fails.
+  from the Actions tab (optionally as a full refresh). Fetch → validate → record verified activity → commit
+  `data/snapshot/` and `data/state/`. A source whose new data fails validation gets its previous files and
+  manifest entry back from the last commit, and the other sources' new data is committed; nothing is committed
+  only if the snapshot still fails after that. `data/state/` is committed only after a successful build.
 - **Deploy** ([pages.yml](.github/workflows/pages.yml)): on push to `main`, on demand, and after each successful
   refresh. A failed build never deploys; the previous version stays online.
 
@@ -79,12 +86,13 @@ Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time
 ```
 pipeline/            Python data pipeline: sources/ (one module per official source), analysis/, build.py, validate.py
 data/snapshot/       committed, normalized source data (diff-friendly JSON) + _manifest.json
-data/curated/        editorial YAML: featured files, topics, search aliases
-data/state/          refresh state (snapshot digest, verified activity log)
+data/curated/        editorial YAML: featured files, topics, search aliases, checked corrections of act dates
+                     (act_dates.yaml) and transposition deadlines (transposition.yaml)
+data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
 src/                 React app: pages/, features/, components/, lib/, types/data.ts (public data contract)
 scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
-docs/                product, architecture, data sources, deployment
+docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap
 .github/workflows/   ci.yml, pages.yml, refresh.yml
 ```
 
@@ -92,7 +100,9 @@ docs/                product, architecture, data sources, deployment
 
 - **Code**: MIT — see [LICENSE](LICENSE).
 - **Data** remains subject to the reuse terms of its publishers, with attribution:
-  European Parliament open data (CC BY 4.0, © European Union – European Parliament);
+  European Parliament — © European Union – Source: European Parliament, reuse authorised provided the source is
+  acknowledged ([European Parliament legal notice](https://www.europarl.europa.eu/legal-notice/en/); the EP Open
+  Data Portal labels many of its datasets CC BY 4.0);
   EUR-Lex / Publications Office (Cellar) — © European Union, https://eur-lex.europa.eu, reuse authorised under
   Commission Decision 2011/833/EU; Council and Commission content — reuse authorised with acknowledgement of the
   source. Details per source in [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md) and on the site's About page.

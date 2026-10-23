@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { HomeData, Meta, Topic } from '../types/data';
 import { useData } from '../lib/data';
-import { formatDateTime, formatNumber } from '../lib/format';
+import { formatDateTime, formatNumber, stillAhead } from '../lib/format';
 import { votesSince } from '../lib/scope';
 import { SearchBox } from '../components/SearchBox';
 import { ErrorState, Loading } from '../components/ui';
@@ -9,6 +9,7 @@ import { FeaturedCard } from '../features/home/FeaturedCard';
 import { HomeLists } from '../features/home/HomeLists';
 import { TopicGrid } from '../features/home/TopicGrid';
 import { useDocumentTitle } from '../features/legislation/labels';
+import { todayISO } from '../features/legislation/explorer';
 import '../features/legislation/common.css';
 import '../features/home/home.css';
 
@@ -24,7 +25,9 @@ export default function Home() {
   const topics = home.data?.topics?.length ? home.data.topics : (topicsFallback.data ?? []);
   const topicLabel = (slug: string) => topics.find((t) => t.slug === slug)?.label ?? slug;
 
-  const lists = home.data?.lists ?? [];
+  // "Coming up" was computed when the data was built: dates that have passed since are left out
+  const today = todayISO();
+  const lists = (home.data?.lists ?? []).map((l) => (l.id === 'upcoming' ? { ...l, items: stillAhead(l.items, today) } : l));
   const featured = home.data?.featured ?? [];
 
   return (

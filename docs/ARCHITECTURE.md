@@ -27,16 +27,18 @@ data/curated/*.yaml ─────────────────┤ build
 | --- | --- |
 | `http.py` | Single HTTP client: timeouts, retries with backoff, Retry-After, per-host throttle, disk cache, Cellar SPARQL helper |
 | `snapshot.py` | Atomic, diff-friendly JSON writing (one record per line, sorted keys); manifest |
-| `models/entities.py` | **Snapshot contract** (pydantic): Procedure, Event, LegalAct, EpVote, EpBallots, Mep, Organization, Membership, CouncilVote, NationalMeasure, InfringementCase, CountryIndicator, TrainFile, SourceRef |
+| `models/entities.py` | **Snapshot contract** (pydantic): Procedure, Event, LegalAct (with its TranspositionDate, ValidityNote and CourtRuling sub-records), ProcedureNotice, EpVote, EpBallots, Mep, Organization, Membership, CouncilVote, NationalMeasure, InfringementCase, CountryIndicator, ImplementationCoverage, DirectiveOptOut, TrainFile, SourceRef, and SourceStatus (`_manifest.json`). CheckedTransposition is a build-only annotation (`exclude=True`, set by `build.py` from curated YAML), not part of the snapshot |
 | `models/countries.py` | Member State table and code normalization (EU "EL" → ISO "GR") |
 | `sources/ep_people.py` | MEPs, groups, national parties, committees, dated memberships (EP Open Data API v2) |
 | `sources/ep_procedures.py` | Procedures and their events/documents (EP Open Data API v2) |
 | `sources/ep_votes.py` | Plenary decisions with roll-call ballots (EP Open Data API v2) |
-| `sources/eurlex.py` | Legal acts: CELEX, ELI, dates, procedure links, amendments (Cellar SPARQL) |
+| `sources/eurlex.py` | Legal acts: CELEX, ELI, dates, procedure links, amendments; Commission withdrawals and replacements of proposals → `procedure_notices.json` (Cellar SPARQL) |
 | `sources/council.py` | Council voting results (see DATA_SOURCES.md for availability) |
 | `sources/implementation.py` | National implementing measures (Cellar), infringements, country indicators |
+| `sources/optouts.py` | Treaty opt-outs (Protocols No 21 and 22: Denmark, Ireland) that a directive's recitals record, and later opt-ins confirmed by Commission decisions → `optouts/directives.json` (EUR-Lex texts via Cellar) |
 | `sources/legislative_train.py` | EP Legislative Train status of major files |
 | `analysis/status.py` | Lifecycle stage, next step, inactivity vs official "blocked" |
+| `analysis/transposition.py` | Classifies each transposition date Cellar records as a deadline, an application date or another date; `data/curated/transposition.yaml` settles the cases its labels cannot |
 | `analysis/ep_margin.py` | Vote margin relative to the legally applicable majority |
 | `analysis/council_qmv.py` | Council QMV/unanimity arithmetic |
 | `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds |
@@ -66,14 +68,18 @@ the UI; every institutional fact on a page has a reachable origin.
   matching, prefix, word-family ("fish" -> "fisheries", ranked below whole words) and bounded fuzzy matching,
   static boosts.
 - Design tokens in `src/styles/tokens.css`; shared primitives in `src/components/ui.tsx`.
-- Strict CSP meta (`default-src 'self'`), no third-party fonts/scripts, no cookies. The optional watchlist uses
-  `localStorage` only after an explicit click.
+- Strict CSP meta (`default-src 'self'`), no third-party fonts/scripts, no cookies. The optional watchlist writes
+  to `localStorage` only after an explicit click; pages that show what is followed only read the saved list.
+- Dates that the data states as still ahead (the home page's "Coming up", "Scheduled" timeline steps, next steps)
+  are compared with the visitor's date, since the data is rebuilt only weekly (`src/lib/format.ts`).
 
 ## Operations
 
-- `ci.yml`: lint, tests, validate, build data, typecheck, build site, privacy check.
+- `ci.yml`: lint, Python tests, validate, build data, typecheck (app and e2e tests), vitest, build site, privacy
+  check; then a Playwright e2e and accessibility job on the built site (runs by default; a manual run can skip it).
 - `pages.yml`: deploy to GitHub Pages on push to `main`, manual dispatch, or after a successful refresh.
-- `refresh.yml`: scheduled weekly `fetch` → `validate` → record activity → commit snapshot.
+- `refresh.yml`: scheduled weekly `fetch` (incremental; a manual run can do a full refresh) → `validate` → record
+  activity → commit snapshot.
 
 ## Future analytics (not implemented)
 

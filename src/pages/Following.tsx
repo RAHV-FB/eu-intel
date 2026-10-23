@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { DossierDetail } from '../types/data';
 import { loadData } from '../lib/data';
-import { formatDate, formatDateTime, formatNumber } from '../lib/format';
+import { asOfToday, formatDate, formatDateTime, formatNumber } from '../lib/format';
 import {
   changeSince,
   clearWatchlist,
@@ -11,7 +11,7 @@ import {
   markSeen,
   parseIds,
   shareUrl,
-  storageAvailable,
+  storageReadable,
   unfollow,
   useWatchlist,
   type WatchEntry,
@@ -52,6 +52,7 @@ function Item({
   shared,
   followingIds,
   today,
+  onSaved,
 }: {
   id: string;
   loaded: Loaded | undefined;
@@ -59,6 +60,7 @@ function Item({
   shared: boolean;
   followingIds: Set<string>;
   today: string;
+  onSaved: (ok: boolean) => void;
 }) {
   if (!loaded)
     return (
@@ -81,7 +83,7 @@ function Item({
         </div>
         {!shared && followingIds.has(id) && (
           <div className="following__item-actions">
-            <button type="button" className="btn lx-btn-quiet" onClick={() => unfollow(id)}>
+            <button type="button" className="btn lx-btn-quiet" onClick={() => onSaved(unfollow(id))}>
               Remove
             </button>
           </div>
@@ -122,7 +124,7 @@ function Item({
             'No dated step recorded.'
           )}
         </p>
-        {d.next_step?.text && <p className="following__latest">Next: {d.next_step.text}</p>}
+        {d.next_step?.text && <p className="following__latest">Next: {asOfToday(d.next_step.text, today)}</p>}
         {!shared && entry?.seen_at && (
           <p className="following__latest meta">You last looked {formatDateTime(entry.seen_at)}</p>
         )}
@@ -134,11 +136,11 @@ function Item({
           </button>
         )}
         {isFollowed ? (
-          <button type="button" className="btn lx-btn-quiet" onClick={() => unfollow(d.id)} aria-label={`Unfollow ${d.title}`}>
+          <button type="button" className="btn lx-btn-quiet" onClick={() => onSaved(unfollow(d.id))} aria-label={`Unfollow ${d.title}`}>
             Unfollow
           </button>
         ) : (
-          <button type="button" className="btn" onClick={() => follow(d)} aria-label={`Follow ${d.title} in this browser`}>
+          <button type="button" className="btn" onClick={() => onSaved(follow(d))} aria-label={`Follow ${d.title} in this browser`}>
             Follow
           </button>
         )}
@@ -156,7 +158,11 @@ export default function Following() {
   const ids = shared ? sharedIds : watch.map((w) => w.id);
   const loaded = useDossiers(ids);
   const today = todayISO();
-  const canStore = useMemo(() => storageAvailable(), []);
+  // checked without writing: nothing is stored before a click; a write that fails then shows the same notice
+  const readable = useMemo(() => storageReadable(), []);
+  const [writeFailed, setWriteFailed] = useState(false);
+  const canStore = readable && !writeFailed;
+  const onSaved = (ok: boolean) => setWriteFailed(!ok);
   useDocumentTitle(shared ? 'Shared list of legislation' : 'Followed legislation');
 
   const [confirmClear, setConfirmClear] = useState(false);
@@ -209,7 +215,7 @@ export default function Following() {
           all” below, removes the list. To use it on another device, copy the share link.
         </p>
         {!canStore && (
-          <p>
+          <p role={writeFailed ? 'alert' : undefined}>
             <strong>Your browser is blocking local storage</strong>, so a list cannot be saved here. Share links still work.
           </p>
         )}
@@ -229,7 +235,7 @@ export default function Following() {
                 className="btn btn--primary"
                 onClick={() => {
                   const ds = notYetFollowed.map((id) => loaded[id]).flatMap((l) => (l?.state === 'ok' ? [l.d] : []));
-                  followMany(ds);
+                  onSaved(followMany(ds));
                 }}
               >
                 {notYetFollowed.length === 1 ? 'Follow this file' : `Follow these ${notYetFollowed.length} files`} in this browser
@@ -313,6 +319,7 @@ export default function Following() {
                 shared={shared}
                 followingIds={followingIds}
                 today={today}
+                onSaved={onSaved}
               />
             ))}
           </ul>

@@ -33,6 +33,44 @@ export function isFuture(d: ISODate, today = new Date()): boolean {
   return daysSince(d, today) < 0;
 }
 
+// ------------------------------------------------------------------ dates stated when the data was built
+// The data is rebuilt weekly, so a date that was ahead then may have passed by the time a visitor reads it.
+// Dated statements are compared with the visitor's date here, as the build does with its own.
+
+/** Items dated after `today` (e.g. the home page's "Coming up", computed when the data was built). */
+export function stillAhead<T extends { date?: ISODate | null }>(items: T[], today: ISODate): T[] {
+  return items.filter((it) => !!it.date && it.date > today);
+}
+
+const LONG_DATE = `(\\d{1,2}) (${MONTHS_LONG.join('|')}) (\\d{4})`;
+
+function isoFromLong(day: string, month: string, year: string): ISODate {
+  return `${year}-${String(MONTHS_LONG.indexOf(month) + 1).padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+/** The build's sentences about a date still ahead (pipeline/analysis/status.py, next steps), and the wording it
+ * uses for the same facts once the date has passed. */
+const PAST_TENSE: [RegExp, (date: string) => string][] = [
+  [new RegExp(`The act enters into force on ${LONG_DATE}\\.`, 'g'), (d) => `The act entered into force on ${d}.`],
+  [
+    new RegExp(`EU countries must transpose the directive into national law by ${LONG_DATE}\\.`, 'g'),
+    (d) => `The transposition deadline (${d}) has passed: EU countries were required to adopt national measures by then.`,
+  ],
+  [new RegExp(`The national measures are to apply from ${LONG_DATE}`, 'g'), (d) => `The national measures were to apply from ${d}`],
+];
+
+/** A sentence written when the data was built, in the past tense for the dates in it that have passed by `today`
+ * (on that day or before); anything else is returned unchanged. */
+export function asOfToday(text: string, today: ISODate): string {
+  let out = text;
+  for (const [re, past] of PAST_TENSE) {
+    out = out.replace(re, (whole, day: string, month: string, year: string) =>
+      isoFromLong(day, month, year) <= today ? past(`${day} ${month} ${year}`) : whole,
+    );
+  }
+  return out;
+}
+
 export function formatNumber(n: number | null | undefined): string {
   return n == null ? '—' : n.toLocaleString('en-GB');
 }

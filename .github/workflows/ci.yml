@@ -1,8 +1,8 @@
 # Continuous integration: lint, offline tests, snapshot validation, data build, typecheck, site build and
 # privacy gate. Runs fully offline against the committed snapshot (no EU API calls).
 #
-# The Playwright e2e/accessibility job runs on every push and pull request against the site built by the
-# check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
+# The Playwright e2e/accessibility job runs on every push to main and every pull request against the site
+# built by the check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
 name: CI
 
 on:
@@ -65,13 +65,8 @@ jobs:
         run: ruff check --output-format=github .
 
       - name: Pytest (offline; network tests deselected)
-        run: |
-          set +e
-          python -m pytest -q
-          rc=$?
-          # 5 = no tests collected: tolerated only while the suite is being written.
-          if [ "$rc" -eq 5 ]; then echo "::warning::pytest collected no tests"; exit 0; fi
-          exit "$rc"
+        # Any non-zero exit fails the job, including 5 (no tests collected).
+        run: python -m pytest -q
 
       - name: Validate snapshot
         run: python -m pipeline validate

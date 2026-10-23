@@ -356,6 +356,28 @@ def test_meta_scope_and_plain_source_summaries(out: Path):
         assert f["oeil_url"] == load(out, f"dossiers/{f['dossier']['id']}.json")["oeil_url"]
 
 
+def test_every_fetched_source_is_listed_and_dates_the_refresh(tmp_path: Path):
+    """The About page lists build.SOURCES, and "Data last refreshed" is the latest retrieval among them. The
+    opt-outs source was fetched but not listed, so that time belonged to no source the site showed."""
+    from pipeline.__main__ import SOURCES as FETCHED
+    from pipeline.build import SOURCES
+
+    assert set(SOURCES) == set(FETCHED)
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    path = tmp_path / "snapshot" / "_manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    for sid, at in (("optouts", "2099-01-02T00:00:00Z"), ("retired", "2099-01-03T00:00:00Z")):
+        manifest[sid] = {"source": sid, "status": "ok", "fetched_at": at, "attempted_at": at}
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    o = tmp_path / "public"
+    assert build(out=o, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state",
+                 today=TODAY) == 0  # fmt: skip
+    meta = load(o, "meta.json")
+    assert meta["snapshot_at"] == "2099-01-02T00:00:00Z"  # not the unlisted entry's time
+    optouts = next(s for s in meta["sources"] if s["id"] == "optouts")
+    assert optouts["fetched_at"] == meta["snapshot_at"] and "Denmark" in optouts["summary"]
+
+
 def test_search_docs(out: Path):
     docs = load(out, "search.json")
     by = {(d["k"], d["id"]): d for d in docs}
