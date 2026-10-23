@@ -13,9 +13,15 @@ from types import SimpleNamespace
 import pytest
 
 from pipeline.build import (
+    VOTE_DETAIL_LABELS,
+    VOTE_OUTCOME_NOTES,
     Builder,
     commission_cod_proposal,
+    english_procedural,
     rejection_title,
+    subject_procedure,
+    vote_label_document,
+    vote_subject,
 )
 from pipeline.models.entities import CouncilVote, EpVote, LegalAct, Procedure
 
@@ -224,3 +230,59 @@ def test_derived_rejection_is_not_repeated_next_to_the_decision_it_restates():
     tl = Builder.timeline(me, p, [], list(v.values()))  # type: ignore[arg-type]
     day = [(e["kind"], e["title"]) for e in tl if e["date"] == "2023-11-22" and "reject" in e["title"]]
     assert day == [("ep_position", "Parliament rejected the proposal at first reading")]
+
+
+# ----------------------------------------------------------------------------- Parliament votes: titles, rules
+def test_recommendation_to_raise_no_objections_reads_as_such():
+    # 150746, 24 Nov 2022: "Decision to raise no objections pursuant to Rule 111(6): …" (minutes "+ 445/102/24")
+    v = votes("150746")["150746"]
+    assert (v.kind, v.kind_detail, v.majority_rule) == ("motion", "no_objection", "votes_cast")
+    title, from_label = Builder.vote_display_title(None, v, None)  # type: ignore[arg-type]
+    assert title.startswith("Decision to raise no objections pursuant to Rule 111(6): value of the clearing")
+    assert not from_label and "objection —" not in title
+    assert VOTE_OUTCOME_NOTES[("no_objection", "adopted")].startswith("Parliament adopted the recommendation")
+    assert VOTE_DETAIL_LABELS["no_objection"] == "Vote on a recommendation to raise no objections to a Commission measure"
+
+
+def test_same_day_votes_with_one_title_are_told_apart():
+    # 30 Jan 2020, "Gender pay gap": B9-0073/2020 adopted 493-82-79, B9-0069/2020 rejected 78-528-50 (EP API
+    # MTG-PL-2020-01-30); 9 Jul 2026, two motions to reject the Council's position on C10-0178/2026, one tabled
+    # as amendments 1, 2 and 7
+    v = votes("112160", "112117", "195775", "195807")
+    me = SimpleNamespace(vote_summary={
+        "112160": {"display_title": "Gender pay gap — vote on the resolution"},
+        "112117": {"display_title": "Gender pay gap — vote on the resolution"},
+        "195775": {"display_title": "Amending … — motion to reject the Council's position (second reading)"},
+        "195807": {"display_title": "Amending … — motion to reject the Council's position (second reading)"},
+    })  # fmt: skip
+    Builder.distinguish_vote_titles(me, list(v.values()))  # type: ignore[arg-type]
+    got = {k: s["display_title"] for k, s in me.vote_summary.items()}
+    assert got["112160"] == "Gender pay gap — vote on the resolution (motion B9-0073/2020)"
+    assert got["112117"] == "Gender pay gap — vote on the resolution (motion B9-0069/2020)"
+    assert got["195775"].endswith("(second reading) (amendments 1, 2 and 7)")
+    assert got["195807"].endswith("(second reading)")
+    joint = v["112160"].model_copy(update={"title": "RC-B9-0505/2022 - Motion for a resolution (text as a whole)"})
+    assert vote_label_document(joint) == "joint motion RC-B9-0505/2022"
+
+
+def test_french_procedural_terms_and_procedure_symbols():
+    # 199517, 22 Oct 2026: label "RC-B10-0476/2026 - Proposition de résolution (ensemble du texte)"
+    v = votes("199517")["199517"]
+    title, from_label = Builder.vote_display_title(None, v, None)  # type: ignore[arg-type]
+    assert (title, from_label) == ("RC-B10-0476/2026 - Motion for a resolution (text as a whole)", True)
+    assert english_procedural("Proposition de la Commission") == "Commission proposal"
+    assert english_procedural("Après le § 1") == "Après le § 1"  # not a fixed term: left as published
+    # 195775: subject "Temporary derogation from the ePrivacy directive ***II"
+    s = votes("195775")["195775"].subject
+    assert vote_subject(s) == "Temporary derogation from the ePrivacy directive"
+    assert subject_procedure(s) == "ordinary legislative procedure, second reading"
+    assert subject_procedure("Administrative cooperation in the field of excise duties *") == "consultation procedure"
+
+
+def test_no_component_member_count_before_parliament_took_note_of_three_mandates():
+    # 109166, 23 Oct 2019: the records count 751 Members, Parliament 747 (press release of 16 Jul 2019); it took
+    # note of the three Spanish mandates dated from 2 Jul 2019 only on 13 Jan 2020 (minutes PV-9-2020-01-13)
+    me = SimpleNamespace(component_cache={}, members_in_office=lambda d: 751 if d < "2020-02-01" else 704)
+    assert Builder.component_members(me, "2019-10-23") is None  # type: ignore[arg-type]
+    assert Builder.component_members(me, "2020-01-13") == 751  # type: ignore[arg-type]
+    assert Builder.component_members(me, "2020-02-10") == 704  # type: ignore[arg-type]

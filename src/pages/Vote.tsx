@@ -17,6 +17,9 @@ const OUTCOME_BASIS_TEXT: Record<string, string> = {
   derived: 'Outcome calculated from the recorded counts under the applicable majority rule',
   none: 'We could not establish the outcome from the official sources we use; see the official record',
 };
+// a derived outcome without an established majority rule: the counts give the same result under every rule
+const DERIVED_ANY_RULE =
+  'Outcome calculated from the recorded counts: it is the same under every majority rule Parliament applies (votes cast, component Members, two thirds)';
 
 export default function Vote() {
   const { id = '' } = useParams();
@@ -91,7 +94,9 @@ export default function Vote() {
             Result
           </h2>
           <OutcomeBadge outcome={v.outcome} />
-          <span className="meta">{OUTCOME_BASIS_TEXT[v.outcome_basis ?? 'none']}</span>
+          <span className="meta">
+            {v.outcome_basis === 'derived' && v.majority_rule === 'unknown' ? DERIVED_ANY_RULE : OUTCOME_BASIS_TEXT[v.outcome_basis ?? 'none']}
+          </span>
         </div>
         {v.outcome_note && <p className="vote-summary__note">{v.outcome_note}</p>}
         <VoteBar forCount={v.for} against={v.against} abstain={v.abstain} label="Official result" />
@@ -146,7 +151,10 @@ export default function Vote() {
           {v.subject && v.subject !== v.display_title && (
             <div>
               <dt>Subject</dt>
-              <dd>{v.subject}</dd>
+              <dd>
+                {v.subject}
+                {v.subject_procedure && <span className="meta"> ({v.subject_procedure})</span>}
+              </dd>
             </div>
           )}
           {procedureRef && (
@@ -168,7 +176,9 @@ export default function Vote() {
           {v.reference_text && (
             <div>
               <dt>Text voted on</dt>
-              <dd className="mono">{v.reference_text}</dd>
+              <dd className="mono" lang={v.reference_text_lang}>
+                {v.reference_text}
+              </dd>
             </div>
           )}
           {v.doc_ids.length > 0 && (

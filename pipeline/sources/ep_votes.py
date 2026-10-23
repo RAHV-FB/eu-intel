@@ -14,7 +14,9 @@ by pipeline.http except sittings of the last FRESH_DAYS days):
     /meetings/{sitting}/vote-results         vote items ("PLENARY_VOTE_RESULTS", one per agenda item)
     /procedures?process-type=T               process id -> official reference "2021/0106(COD)"
     /procedures/{id,id,...}                  references of linked procedures the paginated list never
-                                             returned (its offset paging repeats some rows, skips others)
+                                             returned (its offset paging repeats some rows, skips others);
+                                             referrals back of final votes; titles of procedures whose
+                                             votes have no English subject
     /plenary-documents/{doc}?language=en     fallback: document -> procedure that created it
 
 Source facts relied on (checked against the live API; see tests/test_ep_votes.py and fixtures):
@@ -61,16 +63,20 @@ quoted in CJEU C-650/18 Hungary v Parliament, ECLI:EU:C:2021:426, paras 7 and 89
 
 Outcome (EpVote.outcome / outcome_basis) — see resolve_outcome(): "published" when the decision carries
 decision_outcome (from 2024-01-15); else "minutes" from the sitting's official "Results of votes" annex
-(PV-…-VOT XML, see parse_minutes); else "derived" from the counts when majority_rule is votes_cast and the
-counts are not tied; otherwise "unknown".
+(PV-…-VOT XML, see parse_minutes; in French for the remote-voting sittings of 2020); else "derived" when the
+counts settle it under majority_rule, or under every rule when that is unknown (derived_outcome); otherwise
+"unknown".
 Counts (EpVote.n_for / n_against / n_abstain) — see vote_counts(): the API leaves out a count of zero, so a
 missing count of a decision that publishes the others is the number of MEPs listed in that position (0 when
 none is); a decision without any count (show of hands) keeps all three empty.
 
 Subject (EpVote.subject) — what was voted, in English, as published: the vote item title from 2024-01-15
-(earlier items are titled in French only), else the block title of the sitting's English minutes.
-Kind detail (EpVote.kind_detail) — see kind_detail(): rejection motions, censure, objections, decisions to
-enter into negotiations.
+(earlier items are titled in French only), else the block title of the sitting's English minutes, else the
+title of the vote's only linked procedure (EP API process_title; see procedure_subject).
+Document numbers: an old-format label whose document number the minutes contradict is linked through the
+minutes block that records its counts (minutes_docs).
+Kind detail (EpVote.kind_detail) — see kind_detail(): rejection motions, censure, objections and
+recommendations to raise no objections, decisions to enter into negotiations.
 
 Mandates — a vote classified "final" becomes "mandate" when Parliament referred the file back to committee
 for interinstitutional negotiations right after it: an adopted referral-back decision in the same vote item
@@ -100,6 +106,7 @@ from typing import Any
 
 from lxml import etree
 
+from pipeline.analysis.ep_margin import statutory_seats
 from pipeline.http import EP_API, Http, HttpError
 from pipeline.models.entities import EpBallots, EpVote, KindDetail, SourceRef, SourceStatus, VoteKind
 from pipeline.snapshot import fetch_deadline, now_iso, read_records, read_state, write_records, write_state
@@ -277,13 +284,20 @@ class MinutesRow:
     outcome: str | None
     docs: frozenset[str]  # document ids of the block title/description and the current heading row
     symbol: str | None = None  # procedure symbol of the block title ("Artificial Intelligence Act ***I")
-    title: str | None = None  # block title as printed in the English minutes ("Nature restoration ***I")
+    # block title as printed in the English minutes ("Nature restoration ***I"); None in French minutes
+    title: str | None = None
     subject: str | None = None  # the row's "Subject" column ("Provisional agreement", "Rejection", "§ 4")
+    description: str | None = None  # the block's description ("Report: Petri Sarvamaa (A9-0044/2021)")
 
 
 def parse_minutes(xml: bytes) -> list[MinutesRow]:
-    """Rows with counts from a pre-2024 "Results of votes" XML (PV-VOT.xsd)."""
+    """Rows with counts from a pre-2024 "Results of votes" XML (PV-VOT.xsd).
+
+    Block titles are kept only from English minutes (Document.Language "EN"): they become the vote's English
+    subject. The French minutes of the 2020 remote-voting sittings give results, documents and symbols only."""
     root = etree.fromstring(xml, parser=etree.XMLParser(resolve_entities=False, no_network=True))
+    head = next(root.iter("PV.Vote.Results"), None)
+    english = (head.get("Document.Language") if head is not None else None) in (None, "EN")
     out: list[MinutesRow] = []
     for block in root.iter("Vote.Result"):
         texts = [block.findtext("Vote.Result.Text.Title") or ""]
@@ -291,9 +305,10 @@ def parse_minutes(xml: bytes) -> list[MinutesRow]:
         if desc is not None:
             texts.append("".join(desc.itertext()))
         block_docs = _doc_ids(" ".join(texts))
+        description = clean_subject(texts[1]) if len(texts) > 1 else None
         m = SYMBOL_RE.search(texts[0].strip())
         block_symbol = m.group(0).replace(" ", "") if m else None
-        block_title = clean_subject(texts[0])
+        block_title = clean_subject(texts[0]) if english else None
         heading: frozenset[str] = frozenset()
         for tr in block.iter("TR"):
             tds = tr.findall("TD")
@@ -324,6 +339,7 @@ def parse_minutes(xml: bytes) -> list[MinutesRow]:
                     block_symbol,
                     block_title,
                     clean_subject("".join(tds[0].itertext())) if tds else None,
+                    description,
                 )
             )
     return out
@@ -333,21 +349,31 @@ def _doc_ids(text: str) -> frozenset[str]:
     return frozenset(d for m in DOC_REF_RE.finditer(ascii_hyphens(text)) if (d := doc_ref_to_id(m.group(0))))
 
 
+MINUTES_LANGUAGES = ("en", "fr")  # the remote-voting sittings of 2020 have their "Results of votes" in French only
+
+
 def fetch_minutes(http: Http, sitting: dict) -> list[MinutesRow]:
-    """Parsed "Results of votes" minutes of a pre-2024 sitting ([] when not published)."""
+    """Parsed "Results of votes" minutes of a pre-2024 sitting ([] when not published).
+
+    The English XML, else the XML of the first language in MINUTES_LANGUAGES the document metadata lists:
+    for the sittings from April to November 2020 (e.g. 13 May 2020) Parliament published only the French
+    expression, PV-9-2020-05-13-VOT-FNL_fr.xml."""
     base = f"PV-{sitting['term']}-{sitting['date']}-VOT"
     url = f"https://data.europarl.europa.eu/distribution/doc/{base}-FNL_en.xml"
     try:
         body = _PACER.get(http, url, ok_statuses=(200, 404))
         if not body.lstrip().startswith(b"<?xml") and not body.lstrip().startswith(b"<documents"):
             body = b""
+            files: dict[str, str] = {}
             for r in _get_data(http, f"/documents/{base}"):  # file name differs: ask the metadata
                 for e in r.get("is_realized_by", []):
-                    for m in e.get("is_embodied_by", []) if str(e.get("id", "")).endswith("/en") else []:
+                    lang = str(e.get("id", "")).rsplit("/", 1)[-1]
+                    for m in e.get("is_embodied_by", []) if lang in MINUTES_LANGUAGES else []:
                         if str(m.get("format", "")).endswith("/XML") and m.get("is_exemplified_by"):
-                            body = _PACER.get(
-                                http, f"https://data.europarl.europa.eu/{m['is_exemplified_by']}"
-                            )
+                            files.setdefault(lang, m["is_exemplified_by"])
+            path = next((files[lang] for lang in MINUTES_LANGUAGES if lang in files), None)
+            if path:
+                body = _PACER.get(http, f"https://data.europarl.europa.eu/{path}")
         return parse_minutes(body) if body else []
     except (HttpError, etree.XMLSyntaxError) as e:
         log.warning("minutes %s: %s", base, e)
@@ -378,12 +404,28 @@ def parse_procedures(rows: list[dict]) -> tuple[dict[str, str], dict[str, list[s
     return refs, referrals
 
 
+def procedure_titles(rows: list[dict]) -> dict[str, str]:
+    """Process id -> English title of the procedure (process_title), e.g. "2019-2058" -> "2018 discharge:
+    General budget of the EU - Court of Justice"."""
+    out: dict[str, str] = {}
+    for r in rows:
+        pid, title = r.get("process_id"), _english(r.get("process_title"))
+        if pid and title:
+            out[pid] = title
+    return out
+
+
 def fetch_procedures(http: Http, ids: Iterable[str]) -> tuple[dict[str, str], dict[str, list[str]]]:
     """parse_procedures() of /procedures/{id,id,...} (PROC_BATCH ids per request).
 
     The referral is a procedure event (e.g. "2021-0106-DEC-REFBAK-2023-06-14",
     PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS) on the day of the vote.
     """
+    return parse_procedures(fetch_procedure_records(http, ids))
+
+
+def fetch_procedure_records(http: Http, ids: Iterable[str]) -> list[dict]:
+    """The /procedures/{id,id,...} records of `ids` (PROC_BATCH ids per request)."""
     ids = sorted({pid for pid in ids if PROCESS_ID_RE.fullmatch(pid)})
     rows: list[dict] = []
     for i in range(0, len(ids), PROC_BATCH):
@@ -397,7 +439,7 @@ def fetch_procedures(http: Http, ids: Iterable[str]) -> tuple[dict[str, str], di
                     rows += _get_data(http, f"/procedures/{pid}")
                 except HttpError as e2:
                     log.warning("procedure %s: %s", pid, e2)
-    return parse_procedures(rows)
+    return rows
 
 
 # ============================================================================================= parsing
@@ -622,6 +664,10 @@ _WHOLE_DOC = re.compile(
 # Procedure types whose "motion for a resolution" is the legislative resolution (the EP's position)
 LEGISLATIVE_TYPES = frozenset({"COD", "CNS", "APP", "SYN", "AVC"})
 OBJECTION_TYPES = frozenset({"DEA", "RPS"})
+# Own-initiative, topical and legislative-initiative reports: their whole text is a resolution, also when
+# the label says "Single vote" (or, by mistake, "Commission proposal": 131503, 18 May 2021, minutes "Motion
+# for a resolution (text as a whole)"); a proposal for a decision under them stays a decision
+RESOLUTION_TYPES = frozenset({"INI", "RSP", "INL"})
 
 
 @dataclass
@@ -634,6 +680,7 @@ class Signals:
     about: str | None = None  # decisionAboutId
     item_title: str | None = None
     proc_types: list[str] = field(default_factory=list)
+    symbol: str | None = None  # procedure symbol of the vote item or minutes block ("***I"), see symbol_of
 
 
 def label_parts(label: str | None) -> list[str]:
@@ -691,6 +738,9 @@ def classify(s: Signals) -> VoteKind:
     is_split_doc = any("-SPLIT-" in d for d in s.docs)
     whole_marker = bool(_FINAL.match(ref) or _RESOLUTION.match(ref))
     legislative = bool(set(s.proc_types) & LEGISLATIVE_TYPES) and not set(s.proc_types) - LEGISLATIVE_TYPES
+    # no legislative symbol: the minutes title the tuna plan vote of 28 Apr 2021 "***I" although its label's
+    # document number (A9-0149/2021 for A9-0149/2020) leads to an own-initiative report
+    resolution_file = bool(s.proc_types) and set(s.proc_types) <= RESOLUTION_TYPES and not s.symbol
     is_objection = _is_objection(s)
 
     # 1. procedural decisions (referral back, urgency, agenda, adjournment, negotiation mandates)
@@ -728,7 +778,9 @@ def classify(s: Signals) -> VoteKind:
         if re.match(r"^(final vote|vote final)", text, re.I):
             return "resolution" if re.search(r"\b(RC-)?B\d{1,2}-\d{4}/\d{4}", label) else "final"
         if _FINAL.match(text):
-            return "motion" if is_objection else "final"
+            if is_objection:
+                return "motion"
+            return "resolution" if resolution_file and not re.search(r"d[ée]cision", text, re.I) else "final"
         if _RESOLUTION.match(text) or _WHOLE_DOC.match(text):
             if is_objection:
                 return "motion"  # an objection to a delegated / implementing act, as a whole
@@ -743,6 +795,15 @@ _NEGOTIATION_DECISION = re.compile(
     re.I,
 )
 _COUNCIL_POSITION = re.compile(r"council[’']?s? position|position of the council|position du conseil", re.I)
+# A committee's recommendation that Parliament declare it has no objections to a delegated act or measure
+# before the deadline (Rule 111(6) and 112(4)(d) of the 9th-term Rules of Procedure), as the vote item is titled:
+# "Decision to raise no objections pursuant to Rule 111(6): …", "Recommendation for a decision not to oppose a
+# delegated act: …", "Recommandation de décision de ne pas s’opposer à un acte délégué: …"
+_NO_OBJECTION = re.compile(
+    r"raise no objections?|not to (oppose|object|raise (any )?objections?)|early non-objection|"
+    r"ne pas (s.opposer|soulever d.objections?|faire objection)",
+    re.I,
+)
 
 
 def kind_detail(kind: str, s: Signals, symbol: str | None) -> KindDetail | None:
@@ -753,6 +814,8 @@ def kind_detail(kind: str, s: Signals, symbol: str | None) -> KindDetail | None:
       reading, "***II"). Adopted means Parliament rejected that text; rejected means it did not.
     - "censure": a motion of censure on the Commission (Art. 234 TFEU).
     - "objection": an objection to a delegated or implementing act (adopted = Parliament objects).
+    - "no_objection": a recommendation to declare that Parliament has no objections to a delegated act or
+      measure (see _NO_OBJECTION; adopted = Parliament does not object, and a later objection is inadmissible).
     - "negotiation_decision": the plenary vote on a committee's decision to enter into interinstitutional
       negotiations (Rule 71 of the 9th-term, Rule 72 of the 10th-term Rules of Procedure).
     """
@@ -769,6 +832,8 @@ def kind_detail(kind: str, s: Signals, symbol: str | None) -> KindDetail | None:
             return "reject_council_position"
         return "reject_proposal"
     if _is_objection(s):
+        if _NO_OBJECTION.search(f"{s.item_title or ''} {heading} {s.label or ''}"):
+            return "no_objection"
         return "objection"
     return None
 
@@ -780,17 +845,22 @@ def keeps_ballots(kind: str, detail: str | None) -> bool:
 
 
 # ========================================================================================= majority rule
-def majority_rule(kind: str, title: str | None, symbol: str | None, proc_types: list[str]) -> str:
+def majority_rule(
+    kind: str, title: str | None, symbol: str | None, proc_types: list[str], detail: str | None = None
+) -> str:
     """Majority required by the Treaties for this vote, or "unknown" when it is not established.
 
     `title` is the vote item title, `symbol` its procedure symbol ("***II"), `proc_types` the types of the
-    linked procedures. TFEU Art. 231: "Save as otherwise provided in the Treaties, the European Parliament
-    shall act by a majority of the votes cast" (abstentions are not votes cast: CJEU C-650/18). Exceptions:
+    linked procedures, `detail` its kind_detail. TFEU Art. 231: "Save as otherwise provided in the Treaties, the
+    European Parliament shall act by a majority of the votes cast" (abstentions are not votes cast: CJEU
+    C-650/18). Exceptions:
       - Art. 294(7)(b),(c) TFEU: second reading ("***II", used only for the ordinary legislative procedure) —
         rejection of / amendments to the Council position: majority of component Members.
         Art. 294(13): third reading ("***III") — majority of the votes cast.
       - Art. 290(2) TFEU: objection to a delegated act (DEA): majority of component Members; likewise
-        Decision 1999/468/EC Art. 5a(3)(b), (4)(e) for the regulatory procedure with scrutiny (RPS).
+        Decision 1999/468/EC Art. 5a(3)(b), (4)(e) for the regulatory procedure with scrutiny (RPS). A
+        recommendation to raise no objections (detail "no_objection") is no objection: Rule 111(6) of the Rules
+        of Procedure only says that "it shall be put to the vote", so the votes cast decide (Art. 231).
       - Art. 234 TFEU (censure) and Art. 354 TFEU (Art. 7 TEU): two-thirds of the votes cast representing a
         majority of the component Members ("two_thirds_cast" = both conditions).
       - Art. 225 (INL requests), 223(1), 312(2) (MFF consent), 314 (budget), Art. 49 TEU (accession consent),
@@ -811,6 +881,8 @@ def majority_rule(kind: str, title: str | None, symbol: str | None, proc_types: 
     if ptype == "COD":
         return "votes_cast" if symbol in ("***I", "***III") else "unknown"  # Art. 294(3), 294(13)
     if ptype in OBJECTION_TYPES:
+        if detail == "no_objection":
+            return "votes_cast"
         return "component_members" if kind == "motion" else "unknown"
     if ptype in ("CNS", "INI", "RSP", "DEC", "IMM"):
         # consultation, own-initiative and topical resolutions, discharge, immunity: no Treaty exception
@@ -904,6 +976,60 @@ class Draft:
         return list(dict.fromkeys(out))
 
 
+def _title_key(text: str) -> str:
+    return re.sub(r"\s*[-–—]\s*", " - ", re.sub(r"\s+", " ", text)).strip().casefold()
+
+
+def label_subject(label: str | None) -> tuple[str | None, list[str]]:
+    """(title, rapporteurs) an old-format label gives around its document reference: "2019 discharge: European
+    Foundation for the Improvement of Living and Working Conditions - A9-0074/2021 - Joachim Stanisław
+    Brudziński - Proposals for decisions" -> ("2019 discharge: European Foundation …", ["Joachim Stanisław
+    Brudziński"]); (None, []) where the label has neither."""
+    parts = label_parts(label)
+    at = next((i for i, p in enumerate(parts) if DOC_REF_RE.fullmatch(ascii_hyphens(p))), None)
+    if at is None:
+        return None, []
+    rest = parts[at + 1 :]
+    names = rest[0].split(", ") if len(rest) >= 2 and not DOC_REF_RE.search(ascii_hyphens(rest[0])) else []
+    return (" - ".join(parts[:at]) or None), names
+
+
+def _block_fits(row: MinutesRow, title: str | None, names: list[str]) -> bool:
+    """The minutes block of `row` is the item the label describes: the same English title, or the block names
+    every rapporteur of the label ("Report: Joachim Stanisław Brudziński (A9-0094/2021)")."""
+    if title and row.title and _title_key(SYMBOL_RE.sub("", row.title)) == _title_key(title):
+        return True
+    return bool(names) and all(n in (row.description or "") for n in names)
+
+
+def minutes_docs(sitting: Sitting, dec: dict, label_docs: list[str]) -> list[str] | None:
+    """Documents of the minutes block recording the decision, when the document its label names is another
+    item of the sitting (old format); else None.
+
+    Some labels give a wrong document number: the 2019 discharge votes on Eurofound of 27 and 29 April 2021
+    (130628, 130862) cite A9-0074/2021, the European GNSS Agency report (rapporteur Ryszard Czarnecki), while
+    the minutes record their counts in the Eurofound block, "Report: Joachim Stanisław Brudziński
+    (A9-0094/2021)". Used only when the labelled document's block fits neither the label's title nor its
+    rapporteurs (see _block_fits), none of its rows has the decision's counts, and the rows that have them lie
+    in one block that fits the label. A document number the minutes do not list (a typo in the label or in
+    the minutes) is left as it is."""
+    counts = vote_counts(dec)
+    if sitting.rich or not sitting.minutes or not label_docs or counts[0] is None or counts[1] is None:
+        return None
+    key = (counts[0], counts[1], counts[2] or 0)
+    rows = [r for r in sitting.minutes if r.counts == key]
+    if not rows or any(r.docs & set(label_docs) for r in rows):
+        return None
+    title, names = label_subject(clean_label(_english(dec.get("activity_label"))))
+    if not title and not names:
+        names = label_subject(clean_label(_text(dec.get("activity_label"))))[1]
+    labelled = [r for r in sitting.minutes if r.docs & set(label_docs)]
+    if not labelled or any(_block_fits(r, title, names) for r in labelled):
+        return None
+    blocks = {r.docs for r in rows if _block_fits(r, title, names)}
+    return sorted(blocks.pop()) if len(blocks) == 1 else None
+
+
 def draft(dec: dict, sitting: Sitting) -> Draft:
     raw_label = _text(dec.get("activity_label"))
     label = clean_label(raw_label)
@@ -922,6 +1048,7 @@ def draft(dec: dict, sitting: Sitting) -> Draft:
     label_procs = sorted({m.group(0) for m in PROC_REF_RE.finditer(label or "")})
     if not sitting.rich:
         ref = label_tail(label)
+        label_docs = minutes_docs(sitting, dec, label_docs) or label_docs
         if not items:  # old format: the voted document is the vote item's document
             for d in label_docs:
                 items += [it for it in sitting.doc_items.get(d, []) if it not in items]
@@ -1042,6 +1169,7 @@ class Context:
     doc_symbols: dict[str, set[str]] = field(default_factory=dict)
     referrals: dict[str, list[str]] = field(default_factory=dict)  # process id -> referral-back dates
     referral_items: set[str] = field(default_factory=set)  # vote items with an adopted referral back
+    proc_titles: dict[str, str] = field(default_factory=dict)  # process id -> English procedure title
 
 
 def referral_items(sitting: Sitting) -> set[str]:
@@ -1110,6 +1238,19 @@ def subject_of(d: Draft, counts: tuple[int | None, int | None, int | None]) -> s
     return minutes_title(d, counts)
 
 
+def procedure_subject(refs: list[str], titles: dict[str, str]) -> str | None:
+    """The English title of the vote's only linked procedure, for a vote that subject_of() leaves without one
+    (e.g. the remote-voting sittings of 2020, whose items and minutes are titled in French only: "A9-0027/2020 -
+    Tomáš Zdechovský - Resolution" is about 2019/2058(DEC), "2018 discharge: General budget of the EU - Court of
+    Justice")."""
+    return titles.get(ref_to_process_id(refs[0])) if len(refs) == 1 else None
+
+
+def untitled_procedures(votes: Iterable[EpVote]) -> set[str]:
+    """Process ids whose title procedure_subject() would need: votes without a subject, linked to one procedure."""
+    return {ref_to_process_id(v.procedure_refs[0]) for v in votes if not v.subject and len(v.procedure_refs) == 1}
+
+
 def resolve_outcome(
     dec: dict, d: Draft, rule: str, counts: tuple[int | None, int | None, int | None]
 ) -> tuple[str, str | None]:
@@ -1127,9 +1268,41 @@ def resolve_outcome(
             # 263 for, 421 against): publish neither
             return "unknown", None
         return minutes, "minutes"
-    if rule == "votes_cast" and n_for is not None and n_against is not None and n_for != n_against:
-        return ("adopted" if n_for > n_against else "rejected"), "derived"
+    if derived := derived_outcome(rule, counts, d.sitting.date):
+        return derived, "derived"
     return "unknown", None
+
+
+MAX_MEMBERS = 751  # Art. 14(2) TEU: Members "shall not exceed seven hundred and fifty in number, plus the President"
+
+
+def derived_outcome(rule: str, counts: tuple[int | None, int | None, int | None], day: str) -> str | None:
+    """The outcome the recorded counts settle under `rule`, or under every rule when it is "unknown"; else None.
+
+    - votes_cast (Art. 231 TFEU): adopted if for > against, rejected if for < against (a tie is not derived:
+      a tied final vote is referred back to committee).
+    - component_members: adopted if the votes for exceed half the statutory number of seats (so half of any
+      number of Members in office); rejected if they are at most half of the MEPs who voted (all in office).
+    - two_thirds_cast: adopted if two thirds of the votes cast and that bound are both reached; rejected if the
+      votes for fall short of two thirds of the votes cast or are at most half of the MEPs who voted.
+    - unknown: adopted if it passes under the strictest rule Parliament applies (two_thirds_cast), rejected
+      if fewer voted for than against (it fails under every rule)."""
+    n_for, n_against, n_abstain = counts
+    if n_for is None or n_against is None:
+        return None
+    seats = statutory_seats(day) or MAX_MEMBERS
+    members_reached = n_for >= seats // 2 + 1
+    members_missed = 2 * n_for <= n_for + n_against + (n_abstain or 0)
+    two_thirds = 3 * n_for >= 2 * (n_for + n_against)
+    if rule == "votes_cast" or (rule == "unknown" and n_for < n_against):
+        return None if n_for == n_against else "adopted" if n_for > n_against else "rejected"
+    if rule == "component_members":
+        return "adopted" if members_reached else "rejected" if members_missed else None
+    if rule in ("two_thirds_cast", "unknown") and two_thirds and members_reached:
+        return "adopted"
+    if rule == "two_thirds_cast" and (not two_thirds or members_missed):
+        return "rejected"
+    return None
 
 
 def build_records(
@@ -1149,6 +1322,8 @@ def build_records(
         {m.group(3) for r in refs if (m := PROC_REF_RE.fullmatch(r)) and m.group(2)[-1] not in "RM"}
     )
     item = d.items[0] if len({it.id for it in d.items}) == 1 else None
+    counts = vote_counts(dec)
+    symbol = symbol_of(d, ctx.doc_symbols) or minutes_symbol(d, counts)
     sig = Signals(
         ref=d.ref,
         label=d.label,
@@ -1158,9 +1333,9 @@ def build_records(
         about=dec.get("decisionAboutId") if isinstance(dec.get("decisionAboutId"), str) else None,
         item_title=" | ".join(sorted({it.title or "" for it in d.items})) or None,
         proc_types=proc_types,
+        symbol=symbol,
     )
     kind = classify(sig)
-    counts = vote_counts(dec)
     if kind in ("amendment", "other") and not s.rich and minutes_agreement(d, counts):
         kind = "final"  # the minutes list it as the provisional agreement (label "… – Am 176", 134029)
     day = dec.get("activity_date") or s.date
@@ -1169,8 +1344,7 @@ def build_records(
         or any(referred_after(day, ctx.referrals.get(p, ())) for p in procs)
     ):
         kind = "mandate"  # followed by a referral back to committee for interinstitutional negotiations
-    symbol = symbol_of(d, ctx.doc_symbols) or minutes_symbol(d, counts)
-    rule = majority_rule(kind, item.title if item else None, symbol, proc_types)
+    rule = majority_rule(kind, item.title if item else None, symbol, proc_types, kind_detail(kind, sig, symbol))
 
     outcome, basis = resolve_outcome(dec, d, rule, counts)
     if kind in ("final", "mandate") and outcome == "lapsed":
@@ -1194,7 +1368,7 @@ def build_records(
         reference_text=d.ref if s.rich else None,
         doc_ids=d.docs,
         procedure_refs=refs,
-        subject=subject_of(d, counts),
+        subject=subject_of(d, counts) or procedure_subject(refs, ctx.proc_titles),
         kind=kind,
         kind_detail=detail,
         outcome=outcome,
@@ -1327,15 +1501,17 @@ def assemble(
     retrieved: str,
     known_docs: DocIndex | None = None,
     referrals: dict[str, list[str]] | None = None,
+    proc_titles: dict[str, str] | None = None,
 ) -> Result:
     """Offline: raw sittings + procedure references + document links -> EpVote / EpBallots records.
 
     `referrals`: process id -> dates on which Parliament referred it back for negotiations (fetch_procedures).
+    `proc_titles`: process id -> English title, the subject of votes without one (procedure_subject).
     """
     ref_to_id = {ref: pid for pid, ref in proc_labels.items()}
     idx = item_doc_index(data, known_docs)
     docs_procs = _docs_procs(idx)
-    ctx = Context(doc_symbols=_doc_symbols(idx), referrals=referrals or {})
+    ctx = Context(doc_symbols=_doc_symbols(idx), referrals=referrals or {}, proc_titles=proc_titles or {})
     votes: dict[str, EpVote] = {}
     ballots: list[EpBallots] = []
     how: Counter[str] = Counter()
@@ -1385,6 +1561,7 @@ def ballot_key(b: EpBallots) -> tuple:
 #   doc_links    {document id: [process ids]} from /plenary-documents (never re-requested; [] = no link)
 #   item_docs    {document id: {"procs": [...], "symbols": [...]}} from the vote items of all fetched sittings
 #   proc_refs    {process id: reference} for every procedure linked so far
+#   proc_titles  {process id: English title} of the procedures that give a vote its subject (procedure_subject)
 #   last_full    time of the last completed full pass
 CHUNK = 20
 WINDOW_DAYS = 60
@@ -1452,8 +1629,9 @@ def _fetch_chunk(
     doc_links: dict[str, list[str]],
     known_docs: DocIndex,
     deadline: float | None = None,
+    proc_titles: dict[str, str] | None = None,
 ) -> tuple[Result, Counter[str], set[str]]:
-    """Fetch and assemble one chunk of sittings; updates proc_refs and doc_links in place.
+    """Fetch and assemble one chunk of sittings; updates proc_refs, doc_links and proc_titles in place.
 
     Returns the result, request statistics and the ids of the sittings fetched; sittings that could not be
     fetched are left out (and stay pending)."""
@@ -1467,20 +1645,26 @@ def _fetch_chunk(
     links = {doc: (procs, []) for doc, procs in doc_links.items()}
     missing = sorted(linked_process_ids(data, proc_refs, links, known_docs) - set(proc_refs))
     proc_refs.update(fetch_procedures_by_id(http, missing))
-    res = assemble(data, proc_refs, links, now_iso(), known_docs)
-    # final votes followed by a referral back to committee are negotiating mandates (procedure events)
+    titles = proc_titles if proc_titles is not None else {}
+    res = assemble(data, proc_refs, links, now_iso(), known_docs, proc_titles=titles)
+    # final votes followed by a referral back to committee are negotiating mandates (procedure events);
+    # the procedures of votes without an English subject give their title
     finals = sorted({ref_to_process_id(r) for v in res.votes if v.kind == "final" for r in v.procedure_refs})
-    refs, referrals = fetch_procedures(http, finals)
+    untitled = untitled_procedures(res.votes) - set(titles)
+    rows = fetch_procedure_records(http, set(finals) | untitled)
+    refs, referrals = parse_procedures(rows)
     proc_refs.update(refs)
-    if any(referrals.values()):
-        res = assemble(data, proc_refs, links, now_iso(), known_docs, referrals)
+    new_titles = {p: t for p, t in procedure_titles(rows).items() if p in untitled}
+    titles.update(new_titles)
+    if any(referrals.values()) or new_titles:
+        res = assemble(data, proc_refs, links, now_iso(), known_docs, referrals, titles)
     known_docs.update(item_doc_index(data, known_docs))
     stats: Counter[str] = Counter(
         sittings=len(data),
         votes=len(res.votes),
         lookups=len(lookups),
         proc_by_id=len(missing),
-        procedures=len(finals),
+        procedures=len(set(finals) | untitled),
         issues=len(res.issues),
     )
     return res, stats, {x.id for x in data}
@@ -1521,6 +1705,7 @@ def fetch(http: Http) -> SourceStatus:
         proc_refs = {**fetch_procedure_labels(http), **proc_refs}  # one listing per full pass
     doc_links: dict[str, list[str]] = dict(state.get("doc_links", {}))
     known_docs: DocIndex = dict(state.get("item_docs", {}))
+    proc_titles: dict[str, str] = dict(state.get("proc_titles", {}))
     linked_ids = {ref_to_process_id(r) for v in existing for r in v.procedure_refs}
     pending = [s["id"] for s in targets]
     last_full = state.get("last_full")
@@ -1536,6 +1721,7 @@ def fetch(http: Http) -> SourceStatus:
                 "doc_links": dict(sorted(doc_links.items())),
                 "item_docs": dict(sorted(known_docs.items())),
                 "proc_refs": {p: proc_refs[p] for p in sorted(used) if p in proc_refs},
+                "proc_titles": dict(sorted(proc_titles.items())),
                 "last_full": last_full,
             },
         )
@@ -1551,7 +1737,9 @@ def fetch(http: Http) -> SourceStatus:
             break
         chunk = targets[i : i + CHUNK]
         try:
-            res, stats, done = _fetch_chunk(http, chunk, today, proc_refs, doc_links, known_docs, deadline)
+            res, stats, done = _fetch_chunk(
+                http, chunk, today, proc_refs, doc_links, known_docs, deadline, proc_titles
+            )
         except (HttpError, RuntimeError) as e:  # keep the completed chunks; resume next run
             log.warning("ep_votes: stopping after an error in chunk %s..: %s", chunk[0]["id"], e)
             error = repr(e)[:200]
