@@ -193,7 +193,9 @@ export function NextStep({ d, today }: { d: DossierDetail; today: ISODate }) {
         <p className="meta">Date fixed in the law ({institutionLabel(sched.institution)})</p>
       </>
     ) : (
-      <p className="dz-fact__text meta">No next step is recorded in the official sources.</p>
+      <p className="dz-fact__text meta">
+        {ns.text.startsWith('Not determined:') ? ns.text : 'No next step is recorded in the official sources.'}
+      </p>
     );
   }
   return (

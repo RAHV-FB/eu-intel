@@ -1,10 +1,12 @@
-"""pipeline/build.py on the TEST-ONLY fixture in tests/fixtures/build/ (invented records)."""
+"""pipeline/build.py on the TEST-ONLY fixture in tests/fixtures/build/ (invented records); the procedure-step
+tests use real snapshot records (tests/fixtures/procedure_records.json)."""
 
 from __future__ import annotations
 
 import json
 import shutil
 import xml.etree.ElementTree as ET
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -885,6 +887,203 @@ def test_procedure_event_titles_fit_the_procedure():
                              ["09425/2018"])) == ("Council text submitted to Parliament", "Council")  # fmt: skip
     assert t(proc("COD"), ev(EventKind.proposal, "Commission published its legislative proposal", "Commission",
                              ["COM(2021)0206"])) == ("Commission published its legislative proposal", "Commission")  # fmt: skip
+
+
+# ------------------------------------------------------------------- real records (procedure_records.json)
+RECORDS = json.loads((Path(__file__).parent / "fixtures" / "procedure_records.json").read_text(encoding="utf-8"))
+
+
+def _rec(pid: str):
+    from pipeline.models.entities import Procedure
+
+    return Procedure.model_validate(next(p for p in RECORDS["procedures"] if p["id"] == pid))
+
+
+def _rec_act(celex: str):
+    from pipeline.models.entities import LegalAct
+
+    return LegalAct.model_validate(next(a for a in RECORDS["acts"] if a["celex"] == celex))
+
+
+def _votes(ref: str) -> list:
+    from pipeline.models.entities import EpVote
+
+    return [EpVote.model_validate(v) for v in RECORDS["ep_votes"] if ref in v["procedure_refs"]]
+
+
+def _builder(**kw):
+    """The Builder state the procedure methods read, with the real Cellar notices of the records."""
+    from collections import defaultdict
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder, norm_ref
+    from pipeline.models.entities import ProcedureNotice
+
+    notices: dict = defaultdict(list)
+    for n in RECORDS["notices"]:
+        notices[norm_ref(n["reference"])].append(ProcedureNotice.model_validate(n))
+    state = {"today": TODAY, "notices_by_ref": notices, "acts_of": {}, "votes_of": {}, "council_of": {}, "act_dates": {},
+             "act": {}, "indexed_vote_ids": set(), "procedure_event": Builder.procedure_event}  # fmt: skip
+    me = SimpleNamespace(**(state | kw))
+    me.council_dated = lambda p: Builder.council_dated(me, p)  # type: ignore[attr-defined]
+    return me
+
+
+def _steps(p, parliament_adopts: bool = False) -> list[tuple[str, str, str, str]]:
+    from pipeline.build import Builder
+
+    evs = [Builder.procedure_event(p, e, parliament_adopts) for e in p.events]
+    return [(e.date, e.kind.value, e.title, e.institution) for e in evs]
+
+
+def test_withdrawal_notices_never_override_an_adoption_and_carry_the_replacement():
+    from pipeline.analysis.status import classify
+    from pipeline.build import Builder
+
+    me = _builder()
+    # 2010/0095(COD): Cellar WDW_byCOM 7 March 2015, then Directive (EU) 2015/1535 (Council 13 July 2015)
+    p = Builder.with_recorded_events(me, _rec("2010-0095"))  # type: ignore[arg-type]
+    assert not [e for e in p.events if e.kind.value == "withdrawal"]
+    bare = _rec("2010-0095").model_copy(update={"stage_raw": None, "celex_refs": []})
+    assert not [e for e in Builder.with_recorded_events(me, bare).events if e.kind.value == "withdrawal"]  # type: ignore[arg-type]
+    # 2018/0213(COD): OEIL's withdrawal of 28 May 2018 precedes the proposal of 31 May 2018; Cellar records
+    # RPL_byCOM on 28 May 2020, replaced by COM(2020)0408
+    p = Builder.with_recorded_events(me, _rec("2018-0213"))  # type: ignore[arg-type]
+    w = [e for e in p.events if e.kind.value == "withdrawal"]
+    assert [(e.date, e.raw_type, [d.id for d in e.docs]) for e in w] == [
+        ("2020-05-28", "cellar:RPL_byCOM", ["COM(2020)0408"])]  # fmt: skip
+    s = classify(p, [], [], date.fromisoformat(TODAY))
+    assert (s.label, s.since) == ("Replaced by a new Commission proposal", "2020-05-28")
+    # 2017/0245(COD): OEIL and Cellar both record 14 December 2021; Cellar names the new proposal
+    p = Builder.with_recorded_events(me, _rec("2017-0245"))  # type: ignore[arg-type]
+    assert [e.raw_type for e in p.events if e.kind.value == "withdrawal"] == ["cellar:RPL_byCOM"]
+
+
+def test_event_titles_follow_the_documents_and_the_procedure():
+    # interim and accompanying reports of consent files are resolutions, not consent (OEIL subtypes)
+    assert ("2026-04-28", "ep_position", "Parliament adopted an interim resolution", "EP") in _steps(_rec("2025-0571R"))
+    assert ("2018-11-14", "ep_position", "Parliament adopted an interim resolution", "EP") in _steps(_rec("2018-0166R"))
+    assert ("2024-02-27", "ep_position", "Parliament adopted a resolution accompanying the consent procedure", "EP") in (
+        _steps(_rec("2023-0201M")))  # fmt: skip
+    # 2013/0255(APP), EPPO: interim resolutions in 2014 and 2015, consent on 5 October 2017; OEIL's "Preparatory
+    # document" COM(2013)0534 is the Commission's proposal, 09941/2017 the Council's text
+    eppo = _steps(_rec("2013-0255"))
+    assert [t for d, k, t, i in eppo if d in ("2014-03-12", "2015-04-29", "2017-10-05") and i == "EP"] == [
+        "Parliament adopted an interim resolution", "Parliament adopted an interim resolution",
+        "Parliament voted on consent"]  # fmt: skip
+    assert ("2013-07-17", "proposal", "Commission published its proposal", "Commission") in eppo
+    assert ("2017-06-30", "proposal", "Council text submitted to Parliament", "Council") in eppo
+    # consultation has no readings (2018/0225(CNS), Horizon Europe specific programme)
+    assert not [t for *_, t, _i in _steps(_rec("2018-0225")) if "reading" in t]
+    # Parliament's own texts (T9-0129/2022, electoral law) and other institutions' proposals (OEIL gateway)
+    assert ("2022-05-03", "other", "Parliament adopted a text in plenary", "EP") in _steps(_rec("2022-0902"))
+    assert ("2015-11-17", "proposal", "Court of Justice submitted its request (legislative proposal)", "CJEU") in (
+        _steps(_rec("2015-0906")))  # fmt: skip
+    assert ("2017-07-07", "proposal", "Council text submitted to Parliament", "Council") in _steps(_rec("2016-0357B"))
+    # Statute of the Ombudsman (Art. 228(4) TFEU): Parliament proposes and adopts, the Council consents
+    omb = _steps(_rec("2019-0900"), parliament_adopts=True)
+    assert [(d, t, i) for d, k, t, i in omb if d <= "2021-06-23"] == [
+        ("2019-02-12", "Parliament adopted its proposal for the act", "EP"),
+        ("2021-06-09", "Parliament adopted its proposal for the act", "EP"),
+        ("2021-06-18", "Council gave its consent", "Council"),
+        ("2021-06-23", "Parliament adopted the act", "EP"),
+    ]
+    # OEIL "Act approved by Council, 2nd reading" after Parliament approved the Council's position unamended
+    # (2018/0204(COD), act adopted on 23 November 2020) is not a Council adoption; after amendments it is
+    oeil = [x for x in _steps(_rec("2018-0204")) if x[0] == "2020-11-25" and x[3] != "EP"]
+    assert oeil == [("2020-11-25", "other", "Recorded by the Legislative Observatory: “Act approved by Council, 2nd "
+                     "reading”", "OEIL")]  # fmt: skip
+    assert ("2015-03-02", "council_adoption", "Council approved Parliament's second-reading position", "Council") in (
+        _steps(_rec("2010-0208")))  # fmt: skip
+
+
+def test_referral_back_in_the_same_vote_item_is_a_mandate_not_a_position():
+    # 2025/0393(COD), 6 October 2026: the EP API records PLENARY_AMEND_PROPOSAL, but the vote on the amended
+    # proposal (197467, 515-108-35) was followed by a referral back for negotiations; OEIL does not show it yet
+    from pipeline.analysis.status import classify
+    from pipeline.build import Builder
+
+    me = _builder(votes_of={"2025-0393": _votes("2025/0393(COD)")})
+    p = Builder.with_recorded_events(me, _rec("2025-0393"))  # type: ignore[arg-type]
+    day = [(e.kind.value, e.title) for e in p.events if e.date == "2026-10-06"]
+    assert day == [("plenary_vote", "Parliament voted amendments to the proposal"),
+                   ("negotiation_mandate", "Parliament voted to open negotiations with the Council")]  # fmt: skip
+    s = classify(p, [], [], date.fromisoformat(TODAY))
+    assert (s.stage, s.label, s.since) == ("negotiations", "Mandate to negotiate with the Council", "2026-10-06")
+
+
+def test_adopted_motion_to_reject_the_proposal_is_a_rejection():
+    # 2023/0413(COD) (forest monitoring), 21 October 2025: "Proposal for rejection" adopted 370-264-9 (vote 179804);
+    # adopted text TA-10-2025-0240 "Rejects the Commission proposal"; OEIL "Awaiting Council's 1st reading position"
+    from pipeline.analysis.status import classify
+    from pipeline.build import Builder
+
+    me = _builder(votes_of={"2023-0413": _votes("2023/0413(COD)")})
+    p = Builder.with_recorded_events(me, _rec("2023-0413"))  # type: ignore[arg-type]
+    assert [(e.date, e.title) for e in p.events if e.kind.value == "rejection"] == [
+        ("2025-10-21", "Parliament rejected the proposal in a plenary vote")]  # fmt: skip
+    s = classify(p, [], [], date.fromisoformat(TODAY))
+    assert (s.stage, s.label, s.since) == ("rejected", "Rejected by Parliament", "2025-10-21")
+    # OEIL past Parliament's first reading: a recorded vote does not override it
+    later = _rec("2023-0413").model_copy(update={"stage_raw": "Awaiting Parliament 2nd reading"})
+    assert not [e for e in Builder.with_recorded_events(me, later).events if e.kind.value == "rejection"]  # type: ignore[arg-type]
+
+
+def test_adopted_is_the_council_vote_or_the_act_date_and_never_after_publication():
+    from pipeline.build import Builder
+
+    cases = {
+        # (procedure, act, Council votes on the act) -> (adopted, published)
+        # OEIL 17 Oct 2019; Council voting result ST 14768/19: 3728th meeting, 18 November 2019
+        ("2018-0114", "32019L2121", ("2019-11-18",)): ("2019-11-18", "2019-12-12"),
+        # OEIL 17 July 2024, after publication; Council Regulation (EU) 2024/1732 of 17 June 2024
+        ("2024-0016", "32024R1732", ()): ("2024-06-17", "2024-06-19"),
+        # Parliament approved the Council's position on 23 November 2020 (Art. 294(7)(a) TFEU); a Council "act"
+        # vote before it and OEIL's 25 November are not the adoption
+        ("2018-0204", "32020R1784", ("2020-11-04",)): ("2020-11-23", "2020-12-02"),
+        # OEIL 22 December 2020 (the publication date); ST 14174/20 and the act: 17 December 2020
+        ("2018-0166", "32020R2093", ("2020-12-17",)): ("2020-12-17", "2020-12-22"),
+        # adopted by Parliament on 23 June 2021 after the Council's consent of 18 June 2021
+        ("2019-0900", "32021R1163", ()): ("2021-06-23", "2021-07-16"),
+    }
+    for (pid, celex, votes), want in cases.items():
+        me = _builder(council_of={pid: [{"date": d, "vote_on": "act", "outcome": "adopted"} for d in votes]})
+        adopted, published = Builder.adoption_dates(me, _rec(pid), [_rec_act(celex)])  # type: ignore[arg-type]
+        assert (adopted, published) == want, pid
+        assert adopted <= published
+
+
+def test_proposal_date_is_the_earliest_proposal_or_commission_document():
+    from pipeline.build import Builder
+
+    assert Builder.proposal_date(_rec("2018-0166")) == "2018-05-02"  # COM(2018)0322, not the Council text of 2020
+    assert Builder.proposal_date(_rec("2013-0255")) == "2013-07-17"  # COM(2013)0534
+    assert Builder.proposal_date(_rec("2014-0174")) == "2014-06-10"  # the initial proposal, before COM(2015)0049
+
+
+def test_timeline_dates_the_council_step_by_the_council_act_and_keys_mandates():
+    from pipeline.build import Builder
+
+    tl = Builder.timeline(_builder(), _rec("2024-0016"), [_rec_act("32024R1732")], [])  # type: ignore[arg-type]
+    step = next(e for e in tl if e["kind"] == "council_adoption")
+    assert step["date"] == "2024-06-17" and "17 July 2024" in step["detail"]
+    tl = Builder.timeline(_builder(), _rec("2022-0155"), [], [])  # type: ignore[arg-type]
+    mandate = {(e["title"], e["key"]) for e in tl if e["kind"] == "negotiation_mandate"}
+    assert ("Parliament confirmed the committee's mandate to negotiate with the Council", True) in mandate
+    assert ("Committee decision to negotiate with the Council announced in Parliament", False) in mandate
+
+
+def test_no_link_to_an_oeil_file_that_does_not_exist():
+    from types import SimpleNamespace
+
+    from pipeline.build import OEIL_PROCEDURE, Builder
+
+    me = SimpleNamespace(split_children={"2016-0224": ["2016-0224A", "2016-0224B"]}, proc={
+        "2016-0224A": SimpleNamespace(oeil_url=f"{OEIL_PROCEDURE}2016/0224A(COD)")})  # fmt: skip
+    assert Builder.oeil_link(me, "2016-0224") is None  # type: ignore[arg-type]
+    assert Builder.oeil_link(me, "2020-3521") is None  # type: ignore[arg-type]
+    assert Builder.oeil_link(me, "2011-0901") == f"{OEIL_PROCEDURE}2011/0901B(COD)"  # type: ignore[arg-type]
+    assert Builder.oeil_link(me, "2016-0224A") == f"{OEIL_PROCEDURE}2016/0224A(COD)"  # type: ignore[arg-type]
 
 
 def test_council_steps_dated_by_the_council_voting_result():

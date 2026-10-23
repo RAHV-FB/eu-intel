@@ -39,12 +39,13 @@ PUBLIC_LIMIT = 400
 # Version of the lifecycle-stage logic (pipeline/analysis/status.py and the inputs build.py gives it).
 # Bump it whenever the status logic changes: the next recorded run then re-baselines every stored stage
 # instead of reporting the reclassification as status changes.
-CLASSIFIER_VERSION = "2026-10-23.1"
+CLASSIFIER_VERSION = "2026-10-23.2"
 # Sources whose fetch must have been complete ("ok") for a stage difference to count as a change.
 STAGE_SOURCES = ("ep_procedures", "eurlex")
 SNAPSHOT_EVENT_KINDS = {
     "proposal",
     "committee_report",
+    "negotiation_mandate",
     "ep_position",
     "provisional_agreement",
     "council_position",
@@ -110,6 +111,7 @@ def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
                 or not (cut <= e["date"] <= today)
                 or e["kind"] not in SNAPSHOT_EVENT_KINDS
                 or e.get("after_end_of_validity")  # recorded for after the act's validity ended
+                or (e["kind"] == "negotiation_mandate" and not e["key"])  # announced in plenary: not a decision
             ):
                 continue
             out.append(

@@ -112,6 +112,12 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   amended it (CSRD: Directive (EU) 2026/470 by 19 Mar 2027).
 - Withdrawals and replacements: Cellar procedure events WDW_byCOM / RPL_byCOM (`procedure_notices.json`, 350
   since 2014). OEIL often never records them (CCTB/CCCTB, Return Directive recast, standard-essential patents).
+  A notice is ignored when the procedure went on to adopt the act (a later Council adoption, signature or
+  publication, an OEIL "Procedure completed" stage or final act, or a linked act: 2010/0095(COD) has a notice
+  of 7 March 2015 and produced Directive (EU) 2015/1535). A replacement notice, or a notice where OEIL dates
+  its own withdrawal before the proposal (2018/0213(COD)), takes the place of OEIL's withdrawal event.
+  `validate` fails a build in which a withdrawn file has an act or adoption steps after the withdrawal, or is
+  withdrawn before its proposal.
 - Corrections: where Cellar's date metadata is wrong or was not updated after an amendment, the build applies
   `data/curated/act_dates.yaml`, each date citing the article that sets it (DSA Art. 93, AI Act Art. 113 as
   amended by Regulation 2026/1744, Return Regulation Art. 50, and three acts whose entry into force is tied to
@@ -134,6 +140,32 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   repeals as repeal links (an implicit repeal is used only from the end-of-validity annotation), partial ends of
   validity are described only for decisions that take effect on notification, acts whose procedure is only in
   free text are unlinked.
+
+### Procedure steps as shown (`build.py` `procedure_event`, `proposal_date`, `adoption_dates`)
+- Who acted is read from the documents: OEIL lists a consent file's Commission proposal as a "Preparatory
+  document" (shown as "Commission published its proposal", a proposal step); a text cited as T9-0129/2022 is
+  Parliament's adopted text; a numbered Council document (09941/2017) is the Council's text submitted to
+  Parliament; N-numbered documents are attributed as OEIL's documentation gateway lists them
+  (`OEIL_PROPOSAL_AUTHORS`), otherwise to the Legislative Observatory's record.
+- Consent files: Parliament's decision in an interim or accompanying report (R/M procedure) and any earlier
+  plenary decision in a file that has a later one (2013/0255(APP), 2013/0361(APP)) are interim resolutions, not
+  its consent. Statutes adopted by Parliament with the Council's consent (Articles 223(2) and 228(4) TFEU,
+  `status.PARLIAMENT_ADOPTS`, or an act titled "of the European Parliament of …") show the Council's consent and
+  Parliament's adoption. Consultation and consent files show no readings.
+- "Proposed" (`started`): the earliest recorded proposal or COM document. "Adopted": Parliament's
+  second-reading approval of the Council's position (Art. 294(7)(a) TFEU), else the date of the Council's
+  adopted voting result on the act, else OEIL's Council step; a Council act (consultation, consent) is dated
+  by its voting result, else by the act itself, which bears its adoption date (OEIL's Council date is then
+  shown on the act's date, with OEIL's date in the detail); never after publication.
+- Negotiations: "Negotiations with the Council" runs from the first recorded trilogue after Parliament's
+  mandate; mandate decisions (not their announcement in plenary) are key timeline steps and activity items. A
+  first-reading vote followed by a referral back to committee in the same vote item (a "mandate" vote) is
+  shown as "Parliament voted amendments to the proposal" and a mandate, also when the EP API already records
+  a first-reading position and OEIL has not recorded the referral (2025/0393(COD)).
+- Rejection by Parliament: a final vote officially recorded as rejected, or an adopted motion to reject the
+  proposal (2023/0413(COD), vote 179804), unless OEIL shows the file past Parliament's first reading.
+- OEIL has no procedure file for split parents (e.g. 2016/0224(COD)) or for 2020/3521(COD); those pages carry no
+  OEIL link (`oeil_url` null). Regulation 2015/2422 (2011/0901(COD) in EUR-Lex) links OEIL's 2011/0901B(COD).
 
 ### National implementation (`implementation`) — partial
 - National measures: Cellar `cdm:measure_national_implementing` →

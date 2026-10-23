@@ -132,7 +132,13 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
               <Term id="procedure-reference">Procedure reference</Term>
             </dt>
             <dd>
-              <span className="mono">{d.ref}</span> · <ExtLink href={d.oeil_url}>Legislative Observatory (OEIL)</ExtLink>
+              <span className="mono">{d.ref}</span>
+              {d.oeil_url && (
+                <>
+                  {' '}
+                  · <ExtLink href={d.oeil_url}>Legislative Observatory (OEIL)</ExtLink>
+                </>
+              )}
             </dd>
           </div>
           <div>

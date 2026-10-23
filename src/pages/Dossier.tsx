@@ -201,9 +201,11 @@ function DossierPage({ id }: { id: string }) {
               )}
             </dl>
             <ul className="dz-official-links">
-              <li>
-                <ExtLink href={d.oeil_url}>Procedure file (OEIL)</ExtLink>
-              </li>
+              {d.oeil_url && (
+                <li>
+                  <ExtLink href={d.oeil_url}>Procedure file (OEIL)</ExtLink>
+                </li>
+              )}
               {primaryAct && (
                 <li>
                   <ExtLink href={primaryAct.eurlex_url || EURLEX_CELEX(primaryAct.celex)}>Legal text (EUR-Lex)</ExtLink>

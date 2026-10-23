@@ -3,7 +3,9 @@
     python -m pipeline validate
 
 Errors (exit code 1) are STRUCTURAL problems only: unreadable files, records that do not match
-the schema in pipeline/models/entities.py, duplicate ids, malformed dates.
+the schema in pipeline/models/entities.py, duplicate ids, malformed dates; and, in the built output,
+claims that contradict the rules or the dossier's own dates (a veto outside unanimity, a withdrawn file
+with an adopted act or withdrawn before its proposal, an adoption after publication).
 Everything else is reported as a warning: dangling references, official totals that differ from the
 recorded individual votes (official discrepancies are facts, not bugs), implausible dates,
 transposition data on non-directives, "veto" wording outside unanimity, odd act/procedure pairs.
@@ -384,7 +386,30 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
                     rep.error(
                         f"public council/index.json {cv['id']}: single-state veto outside unanimity", "public"
                     )
+        for f in sorted((public / "dossiers").glob("*.json")):
+            if f.name != "index.json":
+                for msg in dossier_contradictions(json.loads(f.read_text(encoding="utf-8"))):
+                    rep.error(f"public dossiers/{f.name}: {msg}", "public")
     return rep
+
+
+ADOPTION_STEPS = ("council_adoption", "signature", "publication")
+
+
+def dossier_contradictions(d: dict) -> list[str]:
+    """Claims of a built dossier that its own dates contradict."""
+    out = []
+    since = (d.get("status") or {}).get("since")
+    if d.get("stage") == "withdrawn":
+        later = [e["date"] for e in d.get("timeline", []) if e.get("kind") in ADOPTION_STEPS and since and e["date"] > since]
+        if d.get("celex") or d.get("adopted") or later:
+            out.append(f"withdrawn since {since}, but an act is recorded (celex {d.get('celex')}, adopted "
+                       f"{d.get('adopted')}, adoption steps on {', '.join(later) or 'none'})")  # fmt: skip
+        if since and d.get("started") and since < d["started"]:
+            out.append(f"withdrawn on {since}, before the proposal of {d['started']}")
+    if d.get("adopted") and d.get("published") and d["adopted"] > d["published"]:
+        out.append(f"adopted on {d['adopted']}, after its publication on {d['published']}")
+    return out
 
 
 def validate() -> int:
