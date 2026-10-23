@@ -40,6 +40,33 @@ so that nobody reads a gap as a fact about EU law.
   unanimity. Corrections checked against the act's text and the Council's documents are kept in
   `data/curated/council_dates.yaml` and `data/curated/council_votes.yaml`; the voting rule a sheet prints is not
   checked against the act's legal basis automatically (our data does not record legal bases).
+- Some acts' application dates are "not yet set" in EUR-Lex (Cellar's placeholder 1001-01-01): their rules apply
+  from a date a later act sets. The page says EUR-Lex gives no date; the later acts are read only for the dates
+  curated in `act_dates.yaml` (e.g. the Clinical Trials Regulation, the EPPO), not yet for the others (19 acts in
+  force on 23 October 2026, among them ETIAS and PEPP; `pipeline validate` lists them as `application-not-recorded`).
+- An act adopted on a file but not linked to it by any official record (Cellar, the Legislative Observatory, the
+  EP API) is not linked here either; where its text shows the connection, `data/curated/unlinked_acts.yaml` lets
+  the status name it without asserting a link (2025/0806(CNS), Council Regulation (EU) 2026/415).
+- Council adoption dates are checked against the act's text for 37 files; for acts adopted before 2019 there is
+  no Council voting result to compare with, and the other acts dated from the Legislative Observatory, which
+  Cellar confirms, have not been read one by one. Council adoptions recorded only in another Council document
+  (the outcome of a written procedure) are included only where curated (CM 5860/22); others may be missing.
+- Parliament votes that the EP records do not tie to their file stay unlinked (the Ombudsman Statute's vote of
+  2021, 2019/0900(APP), would need Parliament's adopted texts, which are not fetched). Referral votes (sending a
+  file back to committee) are not listed, so referral steps link no vote. A few recommendations to the Council are
+  shown as resolutions because their records call them so, and discharge votes headed only "Decision on
+  discharge" do not say whether discharge was granted, postponed or refused.
+- Infringement cases: open cases and cases with a decision since 1 January 2019; earlier closed cases are not
+  fetched. Exemptions that a directive's own text gives some Member States are recorded for a few directives
+  (`transposition.yaml`); for the others the general deadline sentence is shown.
+- Initiatives of Member States are named from the Legislative Observatory's file title, and requests of the
+  Court of Justice from its record; other initiators, such as the ECB, are not named.
+- Links to committee documents on www.europarl.europa.eu could not be checked automatically (the site refuses
+  scripted requests); a few may lead to pages that no longer exist.
+- Status labels and explanations are written when the data is built (weekly); sentences about dates that have
+  since passed are reworded on the reader's date, and the page notes when a status may be out of date.
+- The site is tested in Chromium only (layouts, keyboard, accessibility checks); Safari and Firefox are not
+  covered by the automated tests.
 - The EP Legislative Train's statuses are used only for its own "Blocked" classification and as a caveat when it
   reports a file as adopted before the official records do; its other statuses lag or lead the records.
 - National parties appear once per parliamentary term (the source records them as separate bodies; a few have
