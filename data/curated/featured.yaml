@@ -208,9 +208,11 @@
     Regulations (EU) 2026/463 and 2026/464 amended it as regards the 'safe third country' concept
     and added an EU-level list of safe countries of origin.
   why: >-
-    Applicants who come from countries with low asylum recognition rates, who are considered a security
-    risk or who have misled the authorities can be examined in an accelerated border procedure; the same
-    procedural guarantees and deadlines apply in all Member States.
+    Applications from people who have misled the authorities, are considered a security risk, or come from
+    countries whose nationals have an EU-wide recognition rate of 20% or lower must be examined in an
+    accelerated procedure and, where made at the external border, in principle in the border procedure,
+    subject to exceptions and capacity limits; the same procedural guarantees and deadlines apply in all
+    Member States.
   aliases: ["APR", "Asylum Procedure Regulation", "asylum procedures", "Migration Pact"]
   topics: ["migration"]
   featured: false
@@ -348,10 +350,11 @@
     submitted by the operator that first places a product on the EU market, not by downstream operators
     and traders; certain printed products are removed from its scope.
   why: >-
-    Fewer companies in a supply chain have to file their own due diligence statements, and all
-    operators have more time before the obligations apply. The regulation required the Commission to
-    carry out a simplification review by 30 April 2026; the Commission presented it on 4 May 2026
-    (COM(2026) 191) and proposed no further amendments to the regulation.
+    Fewer companies in a supply chain have to file their own due diligence statements, and all operators
+    have more time before the obligations apply. In its required simplification review (COM(2026) 191, 4 May
+    2026) the Commission proposed no changes to the legal text, but Delegated Regulation (EU) 2026/2102
+    changed the product list: leather is removed and soluble coffee and certain palm-oil derivatives are
+    covered from 30 December 2027.
   aliases: ["EUDR revision", "EUDR simplification", "EUDR delay"]
   topics: ["environment", "agriculture"]
   featured: false
@@ -443,10 +446,11 @@
   celex: ["32024L1760"]
   short_title: "Corporate Sustainability Due Diligence Directive"
   what: >-
-    Requires large companies to identify, prevent, mitigate and bring to an end adverse impacts on
-    human rights and the environment in their own operations, their subsidiaries and their chains of
-    activities. As amended by Directive (EU) 2026/470, it will apply from 26 July 2029 and only to
-    companies with more than 5,000 employees and over EUR 1.5 billion net turnover.
+    Requires large companies to identify, prevent, mitigate and bring to an end adverse impacts on human
+    rights and the environment in their own operations, their subsidiaries and their chains of activities.
+    As amended by Directive (EU) 2026/470, it will apply from 26 July 2029 to EU companies with more than
+    5,000 employees and over EUR 1.5 billion net worldwide turnover, and to non-EU companies with over EUR
+    1.5 billion net turnover in the EU.
   why: >-
     Companies in scope will have to carry out due diligence on their business partners and in their
     own operations, and national supervisory authorities will be able to investigate and fine them
@@ -466,10 +470,11 @@
   celex: ["32026L0470"]
   short_title: "Omnibus I – sustainability reporting and due diligence simplification"
   what: >-
-    Amends the CSRD and the CSDDD to narrow their scope: once Member States have transposed it,
-    sustainability reporting will be required only from companies with more than 1,000 employees and
-    over EUR 450 million net turnover, and due diligence only from companies with more than 5,000
-    employees and over EUR 1.5 billion net turnover, from 26 July 2029.
+    Narrows the scope of the CSRD and CSDDD. Once transposed, sustainability reporting will apply from
+    financial years starting from 1 January 2027 to companies with over 1,000 employees and EUR 450 million
+    turnover, and to certain EU subsidiaries and branches of non-EU groups. From 26 July 2029, due diligence
+    will apply to EU companies with over 5,000 employees and EUR 1.5 billion turnover, and to non-EU
+    companies with over EUR 1.5 billion EU turnover.
   why: >-
     Once the changes are transposed, most companies previously covered will no longer have to report
     or carry out due diligence under these directives; companies with fewer than 1,000 employees
@@ -656,15 +661,15 @@
   celex: ["32025R2643"]
   short_title: "European Defence Industry Programme"
   what: >-
-    Establishes the European Defence Industry Programme, which provides EUR 1.5 billion in grants from the
-    EU budget for 2025-2027 to strengthen Europe's defence industry, including a Ukraine Support
-    Instrument, and sets measures to secure the supply of defence products.
+    Establishes the European Defence Industry Programme, which provides EUR 1.5 billion from the EU budget
+    for 2025-2027 (EUR 1.2 billion for the Programme and EUR 300 million for a Ukraine Support Instrument)
+    through grants and other forms of EU funding, such as procurement and financial instruments, to
+    strengthen Europe's defence industry, and sets measures to secure the supply of defence products.
   why: >-
-    Defence companies in the EU, and for the Ukraine Support Instrument in Ukraine, can receive EU
-    funding for joint procurement, production capacity and supply chains, provided the cost of
-    components originating outside the EU and associated countries (outside the EU and Ukraine for
-    the Ukraine Support Instrument) does not exceed 35% of the estimated cost of the components of
-    the end product.
+    EU funding can support joint purchases of defence products by at least three Member States or associated
+    countries, and companies in the EU or associated countries (or Ukraine, for the Ukraine Support
+    Instrument) that expand production capacity and strengthen supply chains. Components from outside these
+    countries must not exceed 35% of the estimated cost of the product's components.
   aliases: ["EDIP", "European Defence Industry Programme", "defence industry programme"]
   topics: ["security", "economy"]
   featured: false
