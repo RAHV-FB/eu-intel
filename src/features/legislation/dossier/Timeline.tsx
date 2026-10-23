@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { ActivityItem, ISODate, TimelineEvent } from '../../../types/data';
 import { EmptyState, ExtLink, SourceLink, institutionLabel } from '../../../components/ui';
 import { eventOn, formatDate, formatDateTime, safeUrl } from '../../../lib/format';
+import { dossierPath } from '../labels';
 
 const INSTITUTION_SHORT: Record<string, string> = {
   EP: 'Parliament',
@@ -36,6 +37,36 @@ function EventItem({ e: recorded, today }: { e: TimelineEvent; today: ISODate })
           {INSTITUTION_SHORT[e.institution] ?? institutionLabel(e.institution)}
         </p>
         {e.detail && <p className="tl__detail">{e.detail}</p>}
+        {e.joint_with && e.joint_with.length > 0 && (
+          <p className="tl__detail">
+            Debated together with:{' '}
+            {e.joint_with.map((j, i) => (
+              <span key={j.id ?? j.report?.id ?? i}>
+                {i > 0 && '; '}
+                {j.id ? (
+                  <Link to={dossierPath(j.id)}>
+                    {j.ref ? `${j.ref} – ` : ''}
+                    {j.title}
+                  </Link>
+                ) : (
+                  'a file not in this explorer'
+                )}
+                {j.report && (
+                  <>
+                    {' '}
+                    (
+                    {safeUrl(j.report.url) ? (
+                      <ExtLink href={j.report.url}>{j.report.label || j.report.id}</ExtLink>
+                    ) : (
+                      <span className="mono">{j.report.label || j.report.id}</span>
+                    )}
+                    )
+                  </>
+                )}
+              </span>
+            ))}
+          </p>
+        )}
         {e.after_end_of_validity && (
           <p className="tl__detail">
             A date after the act’s validity ended ({formatDate(e.after_end_of_validity)}); EUR-Lex still records it for

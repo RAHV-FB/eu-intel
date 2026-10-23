@@ -98,9 +98,11 @@ const RAPPORTEUR_ROLE_LABEL: Record<string, string> = {
   shadow_opinion: 'Shadow rapporteur for an opinion',
 };
 
-/** "Rapporteur for an opinion (ENVI)": the role in plain words, with the committee it was held in when recorded. */
-export function rapporteurRoleLabel(role: string, committee?: string | null): string {
-  const label = RAPPORTEUR_ROLE_LABEL[role] ?? roleLabel(role) ?? role;
+/** "Rapporteur for an opinion (ENVI)": the role in plain words, with the committee it was held in when recorded;
+ * "Former rapporteur (TRAN)" for an appointment of an earlier parliamentary term (Rapporteur.former). */
+export function rapporteurRoleLabel(role: string, committee?: string | null, former?: boolean): string {
+  const base = RAPPORTEUR_ROLE_LABEL[role] ?? roleLabel(role) ?? role;
+  const label = former ? `Former ${base.charAt(0).toLowerCase()}${base.slice(1)}` : base;
   return committee ? `${label} (${committee})` : label;
 }
 

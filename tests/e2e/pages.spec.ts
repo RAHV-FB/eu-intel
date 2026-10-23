@@ -362,6 +362,22 @@ test.describe('legislative files', () => {
     await expect(page.locator('#details li', { hasText: 'Barry Andrews' })).toContainText('Rapporteur for an opinion (AFET)');
   });
 
+  test('a committee of an earlier term is former, not joint; a joint debate names the other files', async ({ page }) => {
+    await open(page, 'legislation/2023-0131/'); // OEIL: "Committee responsible SANT", "Former committee responsible ENVI"
+    await page.locator('#details summary').click();
+    await expect(page.locator('#details li', { hasText: /^SANT/ })).toContainText('(committee responsible)');
+    await expect(page.locator('#details li', { hasText: /^ENVI/ })).toContainText('(former committee responsible)');
+    await expect(page.locator('#details')).not.toContainText('joint committee responsible');
+    await expect(page.locator('#details li', { hasText: 'Tiemo Wölken' }).first()).toContainText('Rapporteur (SANT)');
+    await open(page, 'legislation/2023-0112/');
+    await page.getByRole('button', { name: /^Show all \d+ recorded events$/ }).click();
+    const step = page.locator('.tl__item', { hasText: 'Joint debate in Parliament' });
+    await expect(step).toContainText('Debated together with: 2023/0111(COD) – ');
+    await expect(step.getByRole('link', { name: /^2023\/0115\(COD\) – / })).toHaveAttribute('href', `${BASE_PATH}legislation/2023-0115`);
+    await expect(step.locator('.tl__docs')).not.toContainText('A10-0067/2026');
+    await expect(step.locator('.tl__docs')).toContainText('A10-0066/2026');
+  });
+
   test('a report and its main file link each other by procedure reference', async ({ page }) => {
     await open(page, 'legislation/2020-0112/');
     await page.locator('#details summary').click();

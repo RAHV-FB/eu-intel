@@ -35,7 +35,8 @@ Event normalization (deterministic, nothing invented):
 - amendment tablings (committee or plenary) are grouped per day into one event;
 - OEIL key events listed in OEIL_EVENT_MAP are added (Commission proposal and withdrawal,
   Council positions/adoption, ...) unless the EP API already has an event of the same kind and
-  institution on the same day.
+  institution on the same day; OEIL's tabling of a committee report or recommendation for the plenary
+  (OEIL_TABLING_RE) unless an EP API TABLING_PLENARY carries the same report.
 
 Output: data/snapshot/ep_procedures/procedures.json (list[Procedure], sorted by id).
 """
@@ -418,6 +419,30 @@ OEIL_EVENT_MAP: dict[str, tuple[EventKind, Institution, str]] = {
 # The initiative of Member States, which OEIL names at the end of the procedure file's title (2010/0817(COD): "European
 # Investigation Order in criminal matters. Initiative Belgium, Bulgaria, Estonia, Spain, Austria, Slovenia and Sweden")
 OEIL_INITIATIVE_RE = re.compile(r"(?<=\. )Initiative [A-Z][^.]*$")
+# OEIL key events of a committee text tabled for the plenary, added when no EP API TABLING_PLENARY carries the same
+# report (2011/0196(COD): "Committee recommendation tabled for plenary, 2nd reading", 19/12/2013, A7-0471/2013, which
+# the API names only among the procedure's documents) -> title by (text, reading)
+OEIL_TABLING_RE = re.compile(
+    r"(?:Committee (report|interim report|recommendation)|Report) tabled for plenary"
+    r"(?:, (1st reading|1st reading/single reading|2nd reading|3rd reading|reconsultation))?"
+)
+OEIL_TABLING_TITLES: dict[tuple[str | None, str | None], str] = {
+    ("recommendation", "2nd reading"): STAGE_TITLES[("TABLING_PLENARY", "RDG2")],
+    ("recommendation", None): "Committee recommendation tabled for the plenary",
+    ("interim report", None): "Committee interim report tabled for the plenary",
+    (None, "3rd reading"): "Third-reading report tabled for the plenary",
+}
+EP_REPORT_REF = re.compile(r"A(\d+)-(\d{4})/(\d{4})")  # "A7-0471/2013" = EP document A-7-2013-0471
+
+
+def oeil_tabling_title(label: str) -> str | None:
+    if not (m := OEIL_TABLING_RE.fullmatch(label)):
+        return None
+    if m[1] == "report":
+        return ACTIVITY_MAP["TABLING_PLENARY"][1]
+    return OEIL_TABLING_TITLES.get((m[1], m[2])) or OEIL_TABLING_TITLES.get((m[1], None))
+
+
 # Initiators that OEIL's documentation gateway names for a legislative proposal ("Institution/body" column):
 # the Court of Justice's request under Article 281 TFEU (2022/0906(COD): "CJEC | Legislative proposal | 07307/2022")
 OEIL_PROPOSAL_BODIES: dict[str, tuple[Institution, str]] = {
@@ -593,10 +618,11 @@ class OeilPlayer:
     rapporteurs: list[str] = field(default_factory=list)  # EP person ids
     shadows: list[str] = field(default_factory=list)
     groups: dict[str, str] = field(default_factory=dict)  # EP person id -> group printed after the name
+    former: bool = False  # listed under a "Former ..." header
 
 
 # OEIL key-players table headers -> CommitteeRole.role
-# ("Former ..." = committee of a previous parliamentary term; same role.)
+# ("Former ..." = committee of a previous parliamentary term; same role, OeilPlayer.former.)
 OEIL_COMMITTEE_HEADER = {
     "Committee responsible": "responsible",
     "Former committee responsible": "responsible",
@@ -652,7 +678,10 @@ def _text(el: Any) -> str:
 def _cell_refs(cell: Any) -> list[tuple[str, str | None]]:
     """(reference, url) in a references cell: each link with text, and each reference printed as plain text
     (<span>) with the textless flag link that follows it, if any, as its url (2018/0417(CNS): "<span>COM(2018)0825
-    </span> <a href=…EUR-Lex…><i class="flag-icon…"/></a>")."""
+    </span> <a href=…EUR-Lex…><i class="flag-icon…"/></a>"). A Commission document linked in the EP's old register
+    (/registre/docs_autres_institutions/, which answers 404 for some: COM(2012)0643 of 2012/0305(COD)) takes the
+    EUR-Lex link OEIL gives next to it; a link left as an unfilled template ("CELEX:[%SECTOR]2015[%DESCRIPTOR]0110")
+    is not kept."""
     out: list[tuple[str, str | None]] = []
     for el in cell.iter("a", "span"):
         if el.tag == "span" and next(el.iterancestors("a", "span"), None) is not None:
@@ -661,9 +690,14 @@ def _cell_refs(cell: Any) -> list[tuple[str, str | None]]:
         if not t:
             continue
         url = el.get("href")
+        nxt = el.getnext()
+        flag = nxt.get("href") if nxt is not None and nxt.tag == "a" and not _text(nxt) else None
         if el.tag == "span":
-            nxt = el.getnext()
-            url = nxt.get("href") if nxt is not None and nxt.tag == "a" and not _text(nxt) else None
+            url = flag
+        elif url and "/registre/docs_autres_institutions/" in url and (flag or "").startswith("https://eur-lex.europa.eu/"):
+            url = flag
+        if url and "[%" in url:
+            url = None
         out.append((t, url))
     return out
 
@@ -714,6 +748,7 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
     for tbl in doc.xpath('//*[@id="es_accordion-committee"]//table'):
         hdr = tbl.xpath("./thead//th")
         role = OEIL_COMMITTEE_HEADER.get(_text(hdr[0]) if hdr else "", "other")
+        former = bool(hdr) and _text(hdr[0]).startswith("Former ")
         current: OeilPlayer | None = None
         for tr in tbl.xpath("./tbody/tr"):
             badge = tr.xpath('./th//span[contains(@class,"es_badge-committee")]')
@@ -726,7 +761,7 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
             # "KONEČNÁ Kateřina (The Left)": the group the MEP is listed with for this role
             groups = {i: g[1].strip() for i, t in links if (g := re.search(r"\(([^()]+)\)\s*$", t))}
             if badge:
-                current = OeilPlayer(code=_text(badge[0]), role=role, rapporteurs=ids)
+                current = OeilPlayer(code=_text(badge[0]), role=role, rapporteurs=ids, former=former)
                 info.players.append(current)
             elif current is not None:
                 current.shadows.extend(ids)
@@ -989,19 +1024,24 @@ def build_events(
     # 3) OEIL key events not recorded by the EP API
     if oeil:
         have = {(ev.date, ev.kind, ev.institution) for ev in events}
+        tabled = {d.id for ev in events if (ev.raw_type or "").endswith("/TABLING_PLENARY") for d in ev.docs}
         counter: dict[str, int] = {}
         for oe in oeil.events:
-            mapped = OEIL_EVENT_MAP.get(oe.label)
+            tabling = oeil_tabling_title(oe.label)
+            mapped = OEIL_EVENT_MAP.get(oe.label) or ((EventKind.other, "EP", tabling) if tabling else None)
             if not mapped:
                 continue
             kind, inst, title = mapped
-            if (oe.date, kind, inst) in have:
+            if not tabling and (oe.date, kind, inst) in have:
                 continue  # already recorded by the EP API on the same day
             if kind in (EventKind.signature, EventKind.publication) and any(ev.kind == kind for ev in events):
                 continue
             docs = []
             for t, url in oe.refs:
                 m = COM_RE.search(t)
+                if tabling and (a := EP_REPORT_REF.fullmatch(t)):  # the report as the EP API names it
+                    docs.append(ep_docref(f"A-{a[1]}-{a[3]}-{a[2]}", oe.date))
+                    continue
                 docs.append(
                     DocRef(
                         id=com_ref(m[1], m[2]) if m else t,
@@ -1011,6 +1051,8 @@ def build_events(
                         url=url if url and url.startswith("http") else None,
                     )
                 )
+            if tabling and any(d.id in tabled for d in docs):
+                continue  # the EP API records the tabling of this report
             detail = None
             if kind == EventKind.proposal:  # a proposal OEIL lists under another institution than the Commission
                 refs = {t for t, _ in oe.refs}
@@ -1041,7 +1083,8 @@ def build_events(
                     ),
                 )
             )
-            have.add((oe.date, kind, inst))
+            if not tabling:
+                have.add((oe.date, kind, inst))
     events.sort(key=lambda ev: (ev.date, _kind_order(ev.kind), ev.id))
     return events
 
@@ -1064,15 +1107,22 @@ def _dedupe_docs(docs: Iterable[DocRef]) -> list[DocRef]:
 def build_participants(
     proc: dict[str, Any], names: Callable[[str], str | None], committee_names: dict[str, str]
 ) -> tuple[list[CommitteeRole], list[Rapporteur]]:
+    """Committees and rapporteurs of the EP API participations. A file is joint when two or more committees lead it:
+    one committee can lead it in two terms (2023/0226(COD): participations 2023-0226-MHE-ENVI and 2023-0226-MAIN-ENVI,
+    OEIL "Committee responsible ENVI", "Former committee responsible ENVI"). An appointment is former when it is of
+    an earlier parliamentary term than the file's latest appointments, as OEIL's "Former ..." headers are (2023/0290(COD):
+    shadow rapporteurs of the 9th and of the 10th term)."""
     committees: dict[tuple[str, str], CommitteeRole] = {}
-    leads = [
-        p
+    leads = {
+        last_segment(org)
         for p in as_list(proc.get("had_participation"))
         if isinstance(p, dict)
         and "COMMITTEE_LEAD" in [last_segment(r) for r in as_list(p.get("participation_role"))]
-    ]
+        for org in as_list(p.get("had_participant_organization"))
+    }
     joint = len(leads) > 1
     rapps: dict[tuple[str, str, str | None], Rapporteur] = {}
+    terms: dict[tuple[str, str, str | None], int] = {}  # latest parliamentary term of each appointment
     for p in as_list(proc.get("had_participation")):
         if not isinstance(p, dict):
             continue
@@ -1093,6 +1143,7 @@ def build_participants(
                     committee = None
                 day = p.get("activity_date")
                 day = day[:10] if isinstance(day, str) and re.match(r"\d{4}-\d{2}-\d{2}", day) else None
+                term = re.search(r"ep-(\d+)$", str(p.get("parliamentary_term") or ""))
                 for person in as_list(p.get("had_participant_person")):
                     mep_id = last_segment(person)
                     name = names(mep_id)
@@ -1107,34 +1158,76 @@ def build_participants(
                     # re-appointed (e.g. in a new term): the latest appointment is the current one
                     if day and (r.date is None or day > r.date):
                         r.date = day
+                    if term:
+                        terms[key] = max(terms.get(key, 0), int(term[1]))
+    latest = max(terms.values(), default=0)
+    for key, r in rapps.items():
+        r.former = key in terms and terms[key] < latest
     return _sorted_participants(committees.values(), rapps.values())
 
 
-def oeil_participants(
-    oeil: OeilInfo, names: Callable[[str], str | None], committee_names: dict[str, str]
-) -> tuple[list[CommitteeRole], list[Rapporteur]]:
-    """Fallback for procedures without participations in the EP API (mostly older files)."""
-    committees: dict[tuple[str, str], CommitteeRole] = {}
-    rapps: dict[tuple[str, str, str | None], Rapporteur] = {}
+def _lead_or(role: str) -> str:
+    return "lead" if role in ("responsible", "joint") else role
+
+
+SHADOW_ROLES = ("shadow", "shadow_opinion")
+
+
+def oeil_committees(
+    committees: list[CommitteeRole], oeil: OeilInfo, committee_names: dict[str, str]
+) -> list[CommitteeRole]:
+    """The file's committees as OEIL's key players list them, with every committee of the EP API participations that
+    OEIL does not list. OEIL's headers say which committees acted in an earlier term only ("Former committee
+    responsible", `former`): 2023/0131(COD), "Committee responsible SANT", "Former committee responsible ENVI", where
+    the EP API gives both as committee leads; 2024/0061(COD), where the API also lists AFET as a lead and OEIL as a
+    committee for opinion only. A committee also listed in that role in the current term is not repeated as former."""
+    if not oeil.players:
+        return committees
+    current = {(pl.code, _lead_or(pl.role)) for pl in oeil.players if not pl.former}
+    out: dict[tuple[str, str, bool], CommitteeRole] = {}
     for pl in oeil.players:
-        committees.setdefault(
-            (pl.code, pl.role), CommitteeRole(code=pl.code, name=committee_names.get(pl.code), role=pl.role)
-        )
+        if pl.former and (pl.code, _lead_or(pl.role)) in current:
+            continue
+        out.setdefault((pl.code, pl.role, pl.former), CommitteeRole(
+            code=pl.code, name=committee_names.get(pl.code), role=pl.role, former=pl.former))  # fmt: skip
+    listed = {pl.code for pl in oeil.players}
+    for c in committees:
+        if c.code not in listed:
+            out.setdefault((c.code, c.role, c.former), c)
+    return list(out.values())
+
+
+def oeil_rapporteurs(rapps: list[Rapporteur], oeil: OeilInfo, names: Callable[[str], str | None]) -> list[Rapporteur]:
+    """The EP API's rapporteurs with those OEIL's key players list and the API lacks (2025/0313(APP): shadows KELLEHER
+    Billy (Renew) and ANDRESEN Rasmus (Greens/EFA); 2017/0290(COD): "Former rapporteur DANIELSSON Johan (S&D)"), with
+    the group OEIL prints. An entry is former when OEIL lists it only under a "Former ..." header. OEIL lists the
+    shadow rapporteurs of joint committees after the last of them, so shadows taken into an EP API record name no
+    committee, as the API's own do; a file without EP API rapporteurs takes OEIL's committee for each entry."""
+    listed: dict[tuple[str, str, str], list[bool]] = {}  # (EP person id, role, committee) -> former, per listing
+    groups: dict[tuple[str, str, str], str | None] = {}
+    for pl in oeil.players:
         main = pl.role in ("responsible", "joint")
-        groups = (
-            (pl.rapporteurs, "rapporteur" if main else "opinion_rapporteur"),
-            (pl.shadows, "shadow" if main else "shadow_opinion"),
-        )
-        for ids, role in groups:
+        for ids, role in ((pl.rapporteurs, "rapporteur" if main else "opinion_rapporteur"),
+                          (pl.shadows, "shadow" if main else "shadow_opinion")):  # fmt: skip
             for mep_id in ids:
-                name = names(mep_id)
-                if name:
-                    group = pl.groups.get(mep_id)
-                    rapps.setdefault(
-                        (mep_id, role, pl.code),
-                        Rapporteur(mep_id=mep_id, name=name, committee=pl.code, role=role, group=group),
-                    )
-    return _sorted_participants(committees.values(), rapps.values())
+                listed.setdefault((mep_id, role, pl.code), []).append(pl.former)
+                groups.setdefault((mep_id, role, pl.code), pl.groups.get(mep_id))
+    out: list[Rapporteur] = []
+    for r in rapps:
+        flags = [f for (i, role, code), fs in listed.items() for f in fs
+                 if i == r.mep_id and role == r.role and r.committee in (None, code)]  # fmt: skip
+        out.append(r.model_copy(update={"former": all(flags)}) if flags else r)
+    have = {(r.mep_id, r.role, r.committee) for r in out}
+    anywhere = {(r.mep_id, r.role) for r in out if r.committee is None}  # (the API's shadows name no committee)
+    for (mep_id, role, code), fs in listed.items():
+        committee = None if rapps and role in SHADOW_ROLES else code
+        name = names(mep_id)
+        if not name or (mep_id, role, committee) in have or (mep_id, role) in anywhere:
+            continue
+        have.add((mep_id, role, committee))
+        out.append(Rapporteur(mep_id=mep_id, name=name, committee=committee, role=role,
+                              group=groups[(mep_id, role, code)], former=all(fs)))  # fmt: skip
+    return out
 
 
 def oeil_rapporteur_committees(
@@ -1148,7 +1241,7 @@ def oeil_rapporteur_committees(
     codes = {c.code for c in committees}
     listed: dict[tuple[str, str], set[str]] = {}
     for pl in oeil.players:
-        role = "rapporteur" if pl.role in ("responsible", "joint") else "opinion_rapporteur"  # as oeil_participants
+        role = "rapporteur" if pl.role in ("responsible", "joint") else "opinion_rapporteur"  # as oeil_rapporteurs
         for mep_id in pl.rapporteurs:
             listed.setdefault((mep_id, role), set()).add(pl.code)
     out: dict[tuple[str | None, str, str | None], Rapporteur] = {}
@@ -1162,7 +1255,9 @@ def oeil_rapporteur_committees(
         if kept is None:
             out[key] = r
         elif r.date and (kept.date is None or r.date > kept.date):
-            out[key] = kept.model_copy(update={"date": r.date})
+            out[key] = kept.model_copy(update={"date": r.date, "former": kept.former and r.former})
+        elif kept.former and not r.former:
+            out[key] = kept.model_copy(update={"former": False})
     return list(out.values())
 
 
@@ -1171,8 +1266,8 @@ def _sorted_participants(
 ) -> tuple[list[CommitteeRole], list[Rapporteur]]:
     role_order = {"responsible": 0, "joint": 1, "opinion": 2, "other": 3}
     rrole_order = {"rapporteur": 0, "shadow": 1, "opinion_rapporteur": 2, "shadow_opinion": 3}
-    cs = sorted(committees, key=lambda c: (role_order[c.role], c.code))
-    rs = sorted(rapps, key=lambda r: (rrole_order[r.role], r.committee or "", r.name, r.mep_id or ""))
+    cs = sorted(committees, key=lambda c: (c.former, role_order[c.role], c.code))
+    rs = sorted(rapps, key=lambda r: (r.former, rrole_order[r.role], r.committee or "", r.name, r.mep_id or ""))
     return cs, rs
 
 
@@ -1223,25 +1318,32 @@ def build_procedure(
         return names(mep_id) or (oeil.mep_names.get(mep_id) if oeil else None)
 
     committees, rapporteurs = build_participants(proc, name_of, committee_names)
-    if oeil and (not committees or not rapporteurs):
-        o_committees, o_rapporteurs = oeil_participants(oeil, name_of, committee_names)
-        committees = committees or o_committees
-        rapporteurs = rapporteurs or o_rapporteurs
     if oeil:
-        committees, rapporteurs = _sorted_participants(
-            committees, oeil_rapporteur_committees(rapporteurs, committees, oeil)
-        )
+        committees = oeil_committees(committees, oeil, committee_names)
+        rapporteurs = oeil_rapporteurs(oeil_rapporteur_committees(rapporteurs, committees, oeil), oeil, name_of)
+        committees, rapporteurs = _sorted_participants(committees, rapporteurs)
 
     documents: dict[str, DocRef] = {}
     if oeil:
         for d in oeil.com_docs:
             documents.setdefault(d.id, d)
+    # a report is dated by its tabling for the plenary (EP API TABLING_PLENARY or OEIL's key event), not by a vote or
+    # debate that also cites it (2021/0058(COD): A9-0312/2021 tabled 4 November 2021, voted 4 October 2022); undated
+    # without one
+    tabled: dict[str, str] = {}
+    for ev in events:
+        raw = ev.raw_type or ""
+        if raw.endswith("/TABLING_PLENARY") or (raw.startswith("oeil:") and oeil_tabling_title(raw[5:])):
+            for d in ev.docs:
+                if d.kind == "report":
+                    tabled.setdefault(d.id, d.date or ev.date)
     for ev in events:
         if (ev.raw_type or "").endswith("/PLENARY_DEBATE"):
             continue  # a joint debate lists the reports of every file debated with this one (2016/0132(COD))
         for d in ev.docs:
             if is_key_document(d) and d.id not in documents:
-                documents[d.id] = d.model_copy(update={"date": d.date or ev.date})
+                when = tabled.get(d.id) if d.kind == "report" else d.date or ev.date
+                documents[d.id] = d.model_copy(update={"date": when})
     for d in as_list(proc.get("created_a_realization_of")):
         if isinstance(d, str):
             ref = ep_docref(d)

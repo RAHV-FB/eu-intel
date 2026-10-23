@@ -1,0 +1,378 @@
+{
+ "data": [
+  {
+   "process_id": "2023-0131",
+   "label": "2023/0131(COD)",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-124985-2023-07-03",
+     "type": "Participation",
+     "activity_date": "2023-07-03",
+     "had_participant_person": [
+      "person/124985"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 1708
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-AVI-CONT",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/CONT"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMCP-185619-ENVI-2023-05-11",
+     "type": "Participation",
+     "activity_date": "2023-05-11",
+     "had_participant_person": [
+      "person/185619"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/ENVI",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1102
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-197784-2023-10-10",
+     "type": "Participation",
+     "activity_date": "2023-10-10",
+     "had_participant_person": [
+      "person/197784"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1303
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-204414-2023-10-18",
+     "type": "Participation",
+     "activity_date": "2023-10-18",
+     "had_participant_person": [
+      "person/204414"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 1305
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-AVI-AGRI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/AGRI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-197849-2023-07-07",
+     "type": "Participation",
+     "activity_date": "2023-07-07",
+     "had_participant_person": [
+      "person/197849"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 1105
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-197417-2023-05-15",
+     "type": "Participation",
+     "activity_date": "2023-05-15",
+     "had_participant_person": [
+      "person/197417"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1101
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMCP-185619-ENVI-2025-02-19",
+     "type": "Participation",
+     "activity_date": "2025-02-19",
+     "had_participant_person": [
+      "person/185619"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/ENVI",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1102
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-257020-2025-03-18",
+     "type": "Participation",
+     "activity_date": "2025-03-18",
+     "had_participant_person": [
+      "person/257020"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1205
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-197475-2025-10-02",
+     "type": "Participation",
+     "activity_date": "2025-10-02",
+     "had_participant_person": [
+      "person/197475"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ESN",
+     "precedenceOrder": 1208
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-197802-2023-10-10",
+     "type": "Participation",
+     "activity_date": "2023-10-10",
+     "had_participant_person": [
+      "person/197802"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1304
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-257150-2025-03-19",
+     "type": "Participation",
+     "activity_date": "2025-03-19",
+     "had_participant_person": [
+      "person/257150"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 1204
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-4253-2023-07-07",
+     "type": "Participation",
+     "activity_date": "2023-07-07",
+     "had_participant_person": [
+      "person/4253"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1103
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-MHE-ENVI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/ENVI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-247735-2023-10-23",
+     "type": "Participation",
+     "activity_date": "2023-10-23",
+     "had_participant_person": [
+      "person/247735"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1302
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMCP-124808-AGRI-2023-05-23",
+     "type": "Participation",
+     "activity_date": "2023-05-23",
+     "had_participant_person": [
+      "person/124808"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/AGRI",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1701
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-193292-2023-07-07",
+     "type": "Participation",
+     "activity_date": "2023-07-07",
+     "had_participant_person": [
+      "person/193292"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1104
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-AHE-ITRE",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/ITRE"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION_ASSOCIATED"
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-AVI-IMCO",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/IMCO"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-AVI-BUDG",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/BUDG"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-197416-2025-03-20",
+     "type": "Participation",
+     "activity_date": "2025-03-20",
+     "had_participant_person": [
+      "person/197416"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 1207
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-MAIN-SANT",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/SANT"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-23699-2023-07-07",
+     "type": "Participation",
+     "activity_date": "2023-07-07",
+     "had_participant_person": [
+      "person/23699"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 1108
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-124875-2023-10-10",
+     "type": "Participation",
+     "activity_date": "2023-10-10",
+     "had_participant_person": [
+      "person/124875"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ID",
+     "precedenceOrder": 1106
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-AVI-LIBE",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/LIBE"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-204414-2025-03-18",
+     "type": "Participation",
+     "activity_date": "2025-03-18",
+     "had_participant_person": [
+      "person/204414"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PFE",
+     "precedenceOrder": 1203
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-197417-2025-03-20",
+     "type": "Participation",
+     "activity_date": "2025-03-20",
+     "had_participant_person": [
+      "person/197417"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1201
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMCP-125106-BUDG-2023-05-23",
+     "type": "Participation",
+     "activity_date": "2023-05-23",
+     "had_participant_person": [
+      "person/125106"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/BUDG",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 605
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMCP-124726-ITRE-2023-10-05",
+     "type": "Participation",
+     "activity_date": "2023-10-05",
+     "had_participant_person": [
+      "person/124726"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/ITRE",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1301
+    },
+    {
+     "id": "eli/dl/participation/2023-0131-NMSR-193292-2025-03-24",
+     "type": "Participation",
+     "activity_date": "2025-03-24",
+     "had_participant_person": [
+      "person/193292"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1206
+    }
+   ]
+  }
+ ]
+}

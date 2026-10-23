@@ -180,7 +180,7 @@ export default function Mep() {
             {m.rapporteur_for.map((r) => (
               <li key={`${r.dossier_id}-${r.role}-${r.committee ?? ''}`}>
                 <Link to={dossierPath(r.dossier_id)}>{r.title}</Link>{' '}
-                <span className="meta">· {rapporteurRoleLabel(r.role, r.committee)}</span>
+                <span className="meta">· {rapporteurRoleLabel(r.role, r.committee, r.former)}</span>
               </li>
             ))}
           </ul>
