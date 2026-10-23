@@ -231,6 +231,120 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(matchVotes(votes, hay, 'ePrivacy', null)?.has('195775')).toBe(true);
   });
 
+  it('labels typo matches, ranks them last, and keeps them out of the whole-word vote matches', () => {
+    // "Macron" is not in the data: 22 macro-financial assistance files, all flagged with the similar word
+    const macron = engine.search('Macron', { limit: 1000 });
+    expect(macron.length).toBeGreaterThan(0);
+    expect(macron.every((h) => h.approximate && h.similar?.includes('macro'))).toBe(true);
+    expect(engine.search('Macron', { limit: 8, typing: true }).every((h) => h.approximate)).toBe(true);
+    for (const q of ['Merz', 'Barnier', 'abortion', 'interrail', 'withdrawn', 'iran']) {
+      expect(engine.search(q, { limit: 1000 }).every((h) => h.approximate), q).toBe(true);
+    }
+    // the explorer counts the same files and knows they match only approximately
+    const hay = buildHaystacks(rows);
+    const approximate = new Map<string, string[]>();
+    const lx = keywordScores(rows, hay, engine, 'Macron', undefined, approximate);
+    expect(lx.size).toBe(macron.filter((h) => h.doc.k === 'dossier').length);
+    expect(approximate.size).toBe(lx.size);
+    // /votes: the vote titles that say "abortion", not the votes on files that say "adoption"
+    const vh = voteHaystacks(votes);
+    const abortion = matchVoteDetails(votes, vh, 'abortion', engine);
+    expect([...(abortion?.ids ?? [])].sort()).toEqual(['125483', '136129', '145778', '147305', '168054', '182713', '182767']);
+    expect(abortion?.approximate).toBeUndefined();
+    expect(matchVotes(votes, vh, 'iran', engine)?.has('166653')).toBe(false); // EBRD file citing "Iraq"
+    const m = matchVoteDetails(votes, vh, 'Macron', engine);
+    expect(m?.partial).toBe(false); // not "words that start with it"
+    expect(m?.approximate).toBe(true);
+    expect(m?.similar).toEqual(['macro']);
+  });
+
+  it('ranks the typo correction first, not the word family of the misspelt word', () => {
+    expect(top('packageing')).toBe('dossier:2022-0396'); // Packaging and Packaging Waste Regulation
+    expect(typed('packageing')[0]).toBe('dossier:2022-0396');
+    expect(engine.search('packageing', { limit: 1000 }).some((h) => h.partial)).toBe(false);
+    expect(top('manageing')).toBe('dossier:2012-0163');
+    expect(top('measureing')).toBe('dossier:2011-0353'); // "... measuring instruments"
+    // two edits from "backed": the word family ("blocking minority", "geo-blocking") comes first
+    expect(ids('blocked', 3)).toEqual(['page:council-voting', 'dossier:2016-0152', 'dossier:2018-0171']);
+    // whole words, then other forms of a word, then approximate matches
+    for (const q of ['blocked', 'fish', 'farming', 'packageing', 'Macron', 'children', 'cyber', 'AI Act vote']) {
+      const hits = engine.search(q, { limit: 5000 });
+      const rank = (h: SearchHit) => (h.approximate ? 2 : h.partial ? 1 : 0);
+      expect(hits.every((h, k) => k === 0 || rank(hits[k - 1]) <= rank(h)), q).toBe(true);
+    }
+  });
+
+  it('does not count single letters left by apostrophes and "&" as matched words', () => {
+    const vh = voteHaystacks(votes);
+    expect(matchVotes(votes, vh, 'S&D', engine)?.size).toBe(0); // 174881, 174880, 130845, 108941 before
+    expect(ids('S&D')).toEqual(['group:s-d']);
+    const children = ids("children's rights", 50);
+    for (const id of ['2019-0273', '2012-0359', '2014-0174', '2022-0068']) expect(children).not.toContain(`dossier:${id}`);
+    expect(matchVotes(votes, vh, "children's rights", engine)?.has('135950')).toBe(true); // custody rights ... children
+    expect(ids("EU's AI Act")).toEqual(ids('EU AI Act'));
+    expect([...(matchVotes(votes, vh, 'Omnibus I', engine) ?? [])].sort()).toEqual(['180328', '180948', '182518']);
+  });
+
+  it('finds parties by their acronyms without the dots EP data writes', () => {
+    expect(top('ND')).toBe('party:6730'); // Nea Demokratia ("N.D.")
+    expect(top('DIKO')).toBe('party:6766'); // Democratic Party ("DI.KO.")
+    expect(top('DISY')).toBe('party:6764'); // Democratic Rally ("DI.SY.")
+    expect(top('KS EDEK')).toBe('party:5190');
+    expect(top('N.D.')).toBe('party:6730');
+    expect(top('Spa')).toBe('country:ES'); // "SP.A" is not made "SPA"
+    expect(typed('Spa')[0]).toBe('country:ES');
+  });
+
+  it('finds files by the words the acts and the institutions use for them', () => {
+    for (const q of ['whistleblower', 'whistleblowers', 'whistleblowing', 'whistle-blower']) expect(top(q), q).toBe('dossier:2018-0106');
+    expect(ids('whistleblower', 5)).toEqual(['dossier:2018-0106']); // not the files amending Directive (EU) 2019/1937
+    expect(top('USB-C')).toBe('dossier:2021-0291');
+    expect(top('USB Type-C')).toBe('dossier:2021-0291');
+    for (const q of ['stability and growth pact', 'fiscal rules']) expect(ids(q, 5).sort(), q).toEqual(['dossier:2023-0137', 'dossier:2023-0138']);
+    expect(top('defense fund')).toBe('dossier:2018-0254'); // European Defence Fund
+    expect(top('European Defense Fund')).toBe('dossier:2018-0254');
+    expect(top('EP')).toBe('page:parliament');
+    const fit55 = ids('Fit for 55', 50);
+    expect(fit55).toHaveLength(20);
+    for (const id of ['2021-0197', '2021-0211A', '2021-0211B', '2021-0213', '2021-0214', '2021-0424']) expect(fit55).toContain(`dossier:${id}`);
+    expect(read<{ known_as: { part_of?: string[] } }>('dossiers/2021-0213.json').known_as.part_of).toEqual(['Fit for 55 package']);
+    const vh = voteHaystacks(votes);
+    expect(matchVotes(votes, vh, 'USB-C', engine)?.has('148323')).toBe(true); // common charger, final vote
+    const sgp = matchVotes(votes, vh, 'stability and growth pact', engine);
+    expect(sgp?.has('168292') && sgp?.has('168426')).toBe(true);
+  });
+
+  it('lists only the owner for an exact identifier, and nothing for one no file has', () => {
+    const hay = buildHaystacks(rows);
+    const only: [string, string][] = [
+      ['COM(2016) 26', '2016-0011'],
+      ['2023/0134(COD)', '2023-0134'],
+      ['2011/0297(COD)', '2011-0297'],
+      ['COM(2011)0349', '2011-0153'],
+      ['Directive 2014/24/EU', '2011-0438'],
+    ];
+    for (const [q, id] of only) {
+      expect(ids(q, 50), q).toEqual([`dossier:${id}`]);
+      expect(keywordScores(rows, hay, engine, q).size, q).toBe(1);
+    }
+    expect(ids('2008/0028(COD)', 50)).toEqual([]); // "Food information to consumers", not in the data
+    expect(ids('COM(2008) 40', 50)).toEqual([]);
+    expect(ids('2024/1689', 10)).toEqual(expect.arrayContaining(['dossier:2021-0106', 'dossier:2025-0359'])); // cites it
+  });
+
+  it('matches vote rapporteurs only as written: a first name has no plural', () => {
+    const vh = voteHaystacks(votes);
+    const of = (q: string) => matchVotes(votes, vh, q, engine) ?? new Set<string>();
+    expect(of('Carlos').has('190668')).toBe(false); // "A10-0088/2026 – Carlo Fidanza – …"
+    expect(of('Carlos').has('125367')).toBe(false); // "A9-0197/2020 - Carlo Calenda - Resolution"
+    expect(of('Carlos').has('160141')).toBe(true); // Carlos Zorrinho
+    expect(of('Carlo').has('190668')).toBe(true);
+    expect(of('Carlo').has('160141')).toBe(false);
+    expect(of('Nicolas').has('158114')).toBe(false); // Nicola Beer
+    expect(of('Marcos').has('167417')).toBe(false); // Marco Campomenosi
+    expect(of('agreements').size).toBe(of('agreement').size); // "Provisional agreement" in the labels
+  });
+
   it('does not match vote rapporteurs by the start of their names', () => {
     const hay = voteHaystacks(votes);
     const pis = matchVoteDetails(votes, hay, 'PiS', engine);

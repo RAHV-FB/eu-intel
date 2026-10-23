@@ -265,6 +265,13 @@ export default function Votes() {
                   · no whole-word matches for “{q.trim()}”, so these have words in their titles that start with it
                 </>
               )}
+              {keywordMatch?.approximate && filtered.length > 0 && (
+                <>
+                  {' '}
+                  · no votes match “{q.trim()}”, so these are votes on files that match it only approximately (
+                  {keywordMatch.similar ? <>a similar word: {keywordMatch.similar.map((w) => `“${w}”`).join(', ')}</> : 'all but one of the words'})
+                </>
+              )}
             </p>
             {active && (
               <button type="button" className="linkish" onClick={() => setParams(new URLSearchParams(), { replace: true })}>

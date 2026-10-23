@@ -2,9 +2,11 @@
  * Keyword matching for the votes list. Words are matched whole (accent- and case-insensitive, singular or
  * plural), so "gaza" no longer matches a rapporteur called Pagazaurtundúa. A vote linked to a legislative
  * file also matches when the site search finds that file, so its common names work: "AI Act" finds the
- * votes on the Artificial Intelligence Act. References are matched whole: "2023/0134(COD)" or "2023/2116"
- * against the vote's procedure and file references (and acts identified by the number), "A9-0050/2024"
- * against the session document in its label.
+ * votes on the Artificial Intelligence Act ("AI Act vote" too: "vote" is not looked for in the file's names); a
+ * file the search matches only approximately counts last, and flagged. References are matched whole:
+ * "2023/0134(COD)" or "2023/2116" against the vote's procedure and file references (and acts identified by the
+ * number), "A9-0050/2024" against the session document in its label. The rapporteurs named in Parliament's label
+ * match only as written ("Carlos" is not Carlo Fidanza).
  */
 import type { EpVoteSummary } from '../../types/data';
 import {
@@ -12,8 +14,10 @@ import {
   hasWord,
   keywordTokens,
   normalize,
+  similarWords,
   typedAbbreviations,
   wordSet,
+  words as wordsOf,
   type SearchEngine,
 } from '../../lib/search';
 
@@ -44,10 +48,19 @@ function refKeys(v: EpVoteSummary): string[] {
   return out;
 }
 
+// the rapporteurs after a committee report in Parliament's label: "A9-0197/2020 - Carlo Calenda - Resolution"
+const RAPPORTEURS_RE = /\bA\d{1,2}-\d{4}\/\d{4}\s+[-–]\s+(.+?)\s+[-–]\s+/;
+// the words of those names are kept with this mark: a name has no singular form ("Carlos" is not "Carlo")
+const NAME = '=';
+const VOTE_WORDS = new Set(['vote', 'votes', 'voted', 'voting']);
+
 export function voteHaystacks(votes: EpVoteSummary[]): Map<string, Set<string>> {
   const m = new Map<string, Set<string>>();
   for (const v of votes) {
-    const words = wordSet(v.display_title, v.title, v.subject, v.dossier_ref, v.procedure_ref, v.id);
+    const names = RAPPORTEURS_RE.exec(v.title)?.[1];
+    const label = names ? v.title.replace(RAPPORTEURS_RE, (all, n: string) => all.replace(n, ' ')) : v.title;
+    const words = wordSet(v.display_title, label, v.subject, v.dossier_ref, v.procedure_ref, v.id);
+    for (const w of names ? wordsOf(names) : []) words.add(NAME + w);
     for (const k of refKeys(v)) words.add(k);
     m.set(v.id, words);
   }
@@ -58,13 +71,18 @@ export interface VoteMatches {
   ids: Set<string>;
   /** Nothing matched whole words, so these votes have words in their titles that start with those typed. */
   partial: boolean;
+  /** Nothing matched otherwise, so these are votes on files that the search matches only approximately: with
+   * the `similar` words in place of a typed word (typo tolerance: "macro" for "Macron"), or on all but one word. */
+  approximate?: boolean;
+  similar?: string[];
 }
 
 /**
  * The votes matching `q`, or null when the query has no words. If nothing matches whole words, words of 4+
  * letters that are not abbreviations may be the start of a longer word in the vote's title or subject
  * ("artific" -> "artificial"), as on the search page; never in Parliament's raw label, whose rapporteur names
- * would match ("PiS" is not "Pisapia").
+ * would match ("PiS" is not "Pisapia"). A file that the search matches only approximately (a similar word,
+ * or all but one word) links its votes only when nothing else matches, and `similar` says so.
  */
 export function matchVoteDetails(
   votes: EpVoteSummary[],
@@ -94,18 +112,31 @@ export function matchVoteDetails(
       }
       const titled = prefix ? wordSet(v.display_title, v.subject) : null;
       const startsWord = (t: string) => titled !== null && t.length >= 4 && !abbreviations.has(t) && hasWord(titled, t, true);
-      const has = (t: string) => (words && hasWord(words, t)) || startsWord(t);
+      const has = (t: string) => (words && (hasWord(words, t) || words.has(NAME + t))) || startsWord(t);
       if (tokens.every(has) || (v.dossier_id && viaFiles.has(v.dossier_id))) out.add(v.id);
     }
     return out;
   };
-  const words = !tokens.length ? '' : refs.length ? tokens.join(' ') : q;
-  const exact = pass(false, engine && words ? dossierScores(engine, words, { wholeWords: true }) : none);
+  // the linked file: words naming what this page lists say nothing about it ("AI Act vote" is a vote on the AI Act)
+  const fileTokens = tokens.some((t) => !VOTE_WORDS.has(t)) ? tokens.filter((t) => !VOTE_WORDS.has(t)) : tokens;
+  const words = !tokens.length ? '' : refs.length || fileTokens.length < tokens.length ? fileTokens.join(' ') : q;
+  const partial = new Set<string>();
+  const similar = new Map<string, string[]>();
+  const files = engine && words ? dossierScores(engine, words, { partial, approximate: similar }) : none;
+  const only = (keep: (id: string) => boolean) => new Map([...files].filter(([id]) => keep(id)));
+  const exact = pass(false, only((id) => !partial.has(id) && !similar.has(id)));
   if (exact.size || !tokens.length) return { ids: exact, partial: false };
   // through the linked file only when every word may match the start of a longer word ("PiS" may not)
   const loosely = tokens.every((t) => t.length >= 4 && !abbreviations.has(t));
-  const loose = pass(true, engine && loosely ? dossierScores(engine, words) : none);
-  return { ids: loose, partial: loose.size > 0 };
+  const loose = pass(true, loosely ? only((id) => !similar.has(id)) : none);
+  if (loose.size) return { ids: loose, partial: true };
+  // last, the votes on files the search matches only approximately ("Macron": "macro-financial"; "AI Act vote":
+  // the AI Act, on all but one word)
+  const close = pass(false, only((id) => similar.has(id)));
+  if (!close.size) return { ids: close, partial: false };
+  const linked = votes.filter((v) => close.has(v.id) && v.dossier_id).map((v) => similar.get(v.dossier_id!));
+  const alike = similarWords(linked);
+  return { ids: close, partial: false, approximate: true, ...(alike.length ? { similar: alike } : {}) };
 }
 
 /** Ids of the votes matching `q`, or null when the query has no words (see `matchVoteDetails`). */

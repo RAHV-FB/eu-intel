@@ -283,6 +283,9 @@ main:focus {
   font-size: var(--fs-sm);
   color: var(--text-3);
 }
+.searchbox__approx {
+  font-style: italic;
+}
 .searchbox__all {
   color: var(--eu-blue);
   font-size: var(--fs-sm);
