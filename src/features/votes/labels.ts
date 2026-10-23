@@ -1,4 +1,4 @@
-import type { BallotPosition, EpVoteSummary, VoteKind, VoteKindDetail, VoteOutcome } from '../../types/data';
+import type { BallotPosition, EpVoteSummary, FinalRole, VoteKind, VoteKindDetail, VoteOutcome } from '../../types/data';
 
 export const OUTCOME_LABEL: Record<VoteOutcome, string> = {
   adopted: 'Adopted',
@@ -31,7 +31,7 @@ export const KIND_LABEL: Record<VoteKind, string> = {
 /** One-sentence plain-language explanation of each kind of plenary vote. */
 export const KIND_EXPLAINER: Record<VoteKind, string> = {
   final:
-    'Parliament’s vote on a legislative text as a whole (for example its position, or its approval of a negotiated agreement). It decides Parliament’s stance on the law at that stage.',
+    'Parliament’s vote on a text as a whole: for a proposed law, its position or its approval of an agreement negotiated with the Council; for other files, for example its consent to an international agreement, its opinion on a draft Council act, a budget or discharge decision, or a decision on its own organisation.',
   mandate:
     'Parliament’s vote on its amended version of a proposal, after which the file is referred back to committee to negotiate with the Council. It sets Parliament’s negotiating position; it is not the final vote on the law.',
   amendment:
@@ -45,6 +45,24 @@ export const KIND_EXPLAINER: Record<VoteKind, string> = {
   procedural:
     'A vote about how Parliament handles a file (for example referring it back to committee or opening negotiations), not about the content of the law.',
   other: 'A plenary vote that does not fit the categories above.',
+};
+
+/** Explanations that replace the final vote's when the procedure establishes what it decides (`final_role`). */
+export const FINAL_ROLE_EXPLAINER: Record<FinalRole, string> = {
+  legislative:
+    'Parliament’s vote on a legislative text as a whole (for example its position, or its approval of a negotiated agreement). It decides Parliament’s stance on the law at that stage.',
+  consent:
+    'Parliament gives or refuses its consent to the proposed act in a single vote, without amendments. Without its consent the act cannot be adopted (for example the decision concluding an international agreement, Article 218(6)(a) TFEU).',
+  consultation:
+    'Parliament gives its opinion on the proposal. The Council must have Parliament’s opinion before it decides, but is not bound by it.',
+  budget:
+    'Parliament’s vote, as one arm of the budgetary authority with the Council, on a budget text as a whole: the EU’s annual budget or an amending budget (Article 314 TFEU), or a decision to mobilise a special instrument such as the European Globalisation Adjustment Fund, the Solidarity Fund or the Flexibility Instrument.',
+  discharge:
+    'Parliament decides whether to grant, postpone or refuse discharge for how a budget was implemented in a given year: the EU general budget (Article 319 TFEU), including its sections for the other institutions, or the budget of an EU agency or other body. The vote is on the decision proposed in its committee’s report.',
+  commission_election:
+    'Parliament’s vote of consent on the Commission as a body: its President, the High Representative of the Union for Foreign Affairs and Security Policy and the other members. On the basis of this consent the European Council appoints the Commission (Article 17(7) TEU).',
+  parliament_decision:
+    'A decision of Parliament on its own organisation, its Rules of Procedure or an agreement with other institutions (for example setting up a committee or amending its Rules). It is not a vote on a law.',
 };
 
 /** Explanations that replace the kind's when Parliament's texts say what a motion or procedural vote decides. */

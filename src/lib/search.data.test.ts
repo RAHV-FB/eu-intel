@@ -226,6 +226,11 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(refsOf('A9-0050/2024').map((v) => v.id)).toContain('166145');
     const cites = (v: EpVoteSummary) => /2016\/679/.test(`${v.display_title} ${v.title} ${v.subject ?? ''}`);
     expect(refsOf('2016/679').every((v) => cites(v) || v.dossier_id === '2012-0011')).toBe(true);
+    // a label printing the number with another dash (175067 "A10–0049/2025", 155928 "A9‑0256/2020"), and a
+    // query typed with one (171364 has an en dash, 179280 a hyphen)
+    expect(refsOf('A10-0049/2025').map((v) => v.id)).toContain('175067');
+    expect(refsOf('A9-0256/2020').map((v) => v.id)).toContain('155928');
+    expect(refsOf('A10\u20130029/2024').map((v) => v.id)).toEqual(expect.arrayContaining(['171364', '179280']));
     // vote 195775 is titled after the act it amends; its subject names the ePrivacy Directive
     expect(hay.get('195775')?.has('eprivacy')).toBe(true);
     expect(matchVotes(votes, hay, 'ePrivacy', null)?.has('195775')).toBe(true);

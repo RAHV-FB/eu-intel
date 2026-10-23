@@ -164,6 +164,34 @@ VOTE_KIND_PHRASE: dict[str, str] = {
     "mandate": "vote on Parliament's negotiating mandate (text referred back to committee for negotiations)",
     "other": "vote",
 }
+# What a final vote decides (EpVoteSummary.final_role, see final_role): the type of its one linked procedure, else
+# the procedure symbol ending its published subject. Labels and phrases replace the kind's where given.
+FINAL_ROLE_BY_SYMBOL = {"*": "consultation", "***": "consent", "***I": "legislative", "***II": "legislative",
+                        "***III": "legislative"}  # fmt: skip
+FINAL_ROLE_BY_TYPE = {
+    "COD": "legislative", "SYN": "legislative", "CNS": "consultation", "APP": "consent", "AVC": "consent",
+    "BUD": "budget", "DEC": "discharge", "RSO": "parliament_decision", "REG": "parliament_decision",
+    "ACI": "parliament_decision",
+}  # fmt: skip
+FINAL_ROLE_LABELS: dict[str, str] = {
+    "consent": "Vote on consent",
+    "consultation": "Vote on Parliament's opinion (consultation)",
+    "discharge": "Vote on discharge",
+    "commission_election": "Vote of consent on the Commission",
+}
+FINAL_ROLE_PHRASE: dict[str, str] = {
+    "consent": "vote on consent",
+    "consultation": "vote on Parliament's opinion",
+    "discharge": "vote on discharge",
+    "commission_election": "vote of consent on the Commission",
+}
+# A discharge report's "proposal for a decision" grants, postpones or refuses discharge: the vote record does not
+# say which (e.g. 175931 of 7 May 2025 and 179920 of 22 October 2025, both "Proposal for a decision")
+DISCHARGE_NOTES = {
+    "adopted": "Parliament adopted the proposal for a decision on discharge. The vote record does not say whether "
+               "that decision grants, postpones or refuses discharge; the adopted text does.",
+    "rejected": "Parliament rejected the proposal for a decision on discharge.",
+}  # fmt: skip
 # EpVote.kind_detail: what a motion or procedural vote decides (labels and phrases replace the kind's)
 VOTE_DETAIL_LABELS: dict[str, str] = {
     "reject_proposal": "Vote on a motion to reject the Commission proposal",
@@ -235,6 +263,28 @@ def subject_procedure(subject: str | None) -> str | None:
     """The procedure symbol ending a vote's published subject, in words (PROCEDURE_SYMBOLS), else None."""
     m = _SUBJECT_SYMBOL.search(subject or "")
     return PROCEDURE_SYMBOLS.get(re.sub(r"\s+", "", m.group(0))) if m else None
+
+
+_ELECTION_OF_THE_COMMISSION = re.compile(r"^election of the commission\b", re.I)
+
+
+def final_role(v: EpVote) -> str | None:
+    """What a final vote decides: "commission_election" for the vote titled "Election of the Commission" (the vote
+    of consent on the Commission as a body, Art. 17(7) TEU), else by the type of its one linked procedure
+    (FINAL_ROLE_BY_TYPE; an interim report "…R(APP)" or a resolution accompanying a consent "…M(APP)" has none),
+    else by the symbol ending its published subject (FINAL_ROLE_BY_SYMBOL: NLE files are consents or
+    consultations); None when not established (e.g. a vote linked to no procedure and titled without a symbol).
+    The type comes first: an EGF mobilisation, 2024/0003(BUD), is titled "… ***I" in Parliament's records (168353)."""
+    if v.kind != "final":
+        return None
+    if _ELECTION_OF_THE_COMMISSION.match(v.title) or _ELECTION_OF_THE_COMMISSION.match(v.subject or ""):
+        return "commission_election"
+    types = {t.group(2) for r in v.procedure_refs if (t := re.fullmatch(r"\d{4}/\d{4}([A-Z]?)\(([A-Z]{3})\)", r))
+             and t.group(1) not in ("R", "M")}  # fmt: skip
+    if len(types) == 1 and (role := FINAL_ROLE_BY_TYPE.get(next(iter(types)))):
+        return role
+    m = _SUBJECT_SYMBOL.search(v.subject or "")
+    return FINAL_ROLE_BY_SYMBOL.get(re.sub(r"\s+", "", m.group(0))) if m else None
 
 
 # Parliament's fixed procedural wording in French vote labels and referenceTexts, with the wording its English
@@ -486,6 +536,9 @@ KEY_KINDS = {
     "lapsed",
 }
 VOTE_EVENT_KINDS = {"ep_position", "plenary_vote", "rejection"}
+# Days from a Parliament decision recorded without a vote of the file that day to the vote that decided it (the
+# remote voting of 2020-22 recorded votes up to a day before or two days after the decision: decision_vote_near)
+DECISION_VOTE_DAYS = (-1, 2)
 ADOPTION_EVENT_KINDS = (EventKind.council_adoption, EventKind.signature, EventKind.publication)
 MANDATE_ANNOUNCED = "oeil:Committee decision to enter into interinstitutional negotiations announced in plenary"
 ACTIVE_STAGES = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
@@ -872,10 +925,18 @@ def _dedupe_sources(sources: list[dict | None]) -> list[dict]:
     return out
 
 
+_DOC_NUMBER_DASH = re.compile(r"\b((?:RC-B|A|B|C)\d{1,2})[\u2010-\u2015\u2212](\d{4}/\d{4})\b")
+
+
 def _vote_index_entry(v: dict) -> dict:
     """Compact EpVoteSummary for votes/index.json (full record in votes/<id>.json)."""
-    optional = ("dossier_id", "dossier_ref", "margin", "kind_detail", "outcome_note", "procedure_ref", "subject")
+    optional = (
+        "dossier_id", "dossier_ref", "margin", "kind_detail", "outcome_note", "procedure_ref", "subject", "final_role"
+    )  # fmt: skip
     out = {k: x for k, x in v.items() if not (k in optional and x is None)}
+    # session document numbers as officially written, with an ASCII hyphen ("A10–0049/2025" in vote 175067's label):
+    # the votes search reads them from this title
+    out["title"] = _DOC_NUMBER_DASH.sub(r"\1-\2", v["title"])
     src = v.get("source") or {}
     out["source"] = {k: src[k] for k in ("institution", "url") if src.get(k)}
     return out
@@ -939,6 +1000,84 @@ def rejection_title(p: Procedure) -> str:
     if p.type == "APP":
         return "Parliament did not give its consent"
     return f"Parliament rejected {what}"
+
+
+_LEADING_DOC_REF = re.compile(r"^(?:RC-B|A|B|C)\d{1,2}[-\u2010-\u2013\u2212]\d{4}/\d{4}\s*[-\u2013]\s*")
+# Parliament's referral of a file back to committee after its vote on the whole draft act (as its labels cite it)
+_RULE_59_4 = re.compile(r"rule 59\(4\)|article 59, paragraphe 4", re.I)
+
+
+def second_reading_amendments(votes: list[EpVote], day: str) -> str | None:
+    """The amendments by which Parliament amended the Council's position at second reading on `day`: those adopted
+    with the votes of a majority of its component Members (Art. 294(7)(c) TFEU), named as Parliament labels them,
+    since votes on amendments are not listed (2025/0429(COD), 9 July 2026: Am 30, 369 for; Am 26 CP3= …, 362 for)."""
+    adopted = sorted(
+        (v for v in votes if v.date == day and v.kind == "amendment" and v.outcome == "adopted"
+         and v.majority_rule == "component_members"),
+        key=lambda v: (len(v.id), v.id),
+    )  # fmt: skip
+    if not adopted:
+        return None
+    names = [
+        f"“{_LEADING_DOC_REF.sub('', v.title)}”" + (f" ({v.n_for} for)" if v.n_for else "")
+        for v in adopted
+    ]
+    listed = names[0] if len(names) == 1 else f"{', '.join(names[:-1])} and {names[-1]}"
+    what = "1 amendment" if len(names) == 1 else f"{len(names)} amendments"
+    return (
+        f"Parliament adopted {what} to the Council's position with the votes of a majority of its component Members: "
+        f"{listed}. Votes on amendments are not listed on this site."
+    )
+
+
+def vote_label_doc_ids(v: EpVote) -> set[str]:
+    """EP document ids of the session documents a vote's label names ("A9-0201/2021" -> "A-9-2021-0201")."""
+    out = set()
+    for ref in _LABEL_DOC_REF.findall(v.title.translate(_DOC_HYPHENS)):
+        if m := re.fullmatch(r"(RC-B|A|B|C)(\d{1,2})-(\d{4})/(\d{4})", ref):
+            series, term, num, year = m.groups()
+            out.add(f"{'RC' if series == 'RC-B' else series}-{term}-{year}-{num}")
+    return out
+
+
+def referred_back(votes: list[EpVote]) -> set[str]:
+    """Final votes followed later in their sitting by an adopted Rule 59(4) referral of the file back to committee
+    on the same document (9th-term numbering; see Builder.referral_note)."""
+    referrals: dict[str, list[EpVote]] = defaultdict(list)
+    for v in votes:
+        tail = _segments(v.title)[0][-1]
+        if v.term == 9 and v.kind == "procedural" and v.outcome == "adopted" and _RULE_59_4.search(tail):
+            referrals[v.event_id[:17]].append(v)
+    return {
+        v.id
+        for v in votes
+        if v.kind == "final"
+        and any(
+            int(r.id) > int(v.id) and vote_label_doc_ids(r) & vote_label_doc_ids(v)
+            for r in referrals.get(v.event_id[:17], ())
+        )
+    }
+
+
+def decision_vote_near(e: Event, votes_by_date: dict[str, list[EpVote]]) -> EpVote | None:
+    """The vote that decided a Parliament decision recorded on a day without a vote of the file: its one final
+    vote (for a second-reading decision: motion to reject the Council's position) dated DECISION_VOTE_DAYS
+    around the decision, one that names a report the decision lists if any does; None unless exactly one.
+    During remote voting (2020-22) the vote and the decision were recorded on different days: 2020/0331(CNS),
+    vote 134869 on 6 July 2021, decision 7 July 2021; 2020/0065(COD), decision 13 May 2020, vote 114183 on 15 May."""
+    second = bool(SECOND_READING_DECISION_RE.search(e.raw_type or ""))
+    lo, hi = DECISION_VOTE_DAYS
+    cands = [
+        v
+        for day, vs in votes_by_date.items()
+        if lo <= _days_between(e.date, day) <= hi
+        for v in vs
+        if (v.kind_detail == "reject_council_position" if second else v.kind == "final")
+    ]
+    docs = {d.id for d in e.docs}
+    own = [v for v in cands if docs & (vote_label_doc_ids(v) | {x.split("-AM-")[0] for x in v.doc_ids})]
+    pick = own or cands
+    return pick[0] if len(pick) == 1 else None
 
 
 def council_vote_event(cv: dict) -> dict:
@@ -1660,6 +1799,7 @@ class Builder:
         idx.sort(key=lambda v: (v.date, v.id), reverse=True)
         self.indexed_votes = idx
         self.indexed_vote_ids = {v.id for v in idx}
+        self.referred_back = referred_back(s.votes)
         self.component_cache: dict[str, int | None] = {}
         margin_fn = _lazy("pipeline.analysis.ep_margin", "margin")
         self.vote_summary: dict[str, dict] = {}
@@ -1735,6 +1875,7 @@ class Builder:
         display, from_label = self.vote_display_title(v, p)
         # French passages of a title that is Parliament's own label, for lang="fr" (omitted when none)
         parts = label_parts(display) if from_label else None
+        role = final_role(v)
         return {
             "id": v.id,
             "date": v.date,
@@ -1743,10 +1884,14 @@ class Builder:
             **({"display_title_parts": parts} if parts else {}),
             "kind": v.kind,
             "kind_detail": v.kind_detail,
-            "kind_label": VOTE_DETAIL_LABELS.get(v.kind_detail or "") or VOTE_KIND_LABELS.get(v.kind, "Vote"),
+            "kind_label": VOTE_DETAIL_LABELS.get(v.kind_detail or "") or FINAL_ROLE_LABELS.get(role or "")
+            or VOTE_KIND_LABELS.get(v.kind, "Vote"),
+            "final_role": role,
             "outcome": v.outcome,
             "outcome_basis": getattr(v, "outcome_basis", None),
-            "outcome_note": VOTE_OUTCOME_NOTES.get((v.kind_detail or "", v.outcome)) or self.later_act_note(v, p),
+            "outcome_note": VOTE_OUTCOME_NOTES.get((v.kind_detail or "", v.outcome))
+            or " ".join(x for x in (self.later_act_note(v, p), self.referral_note(v)) if x)
+            or (DISCHARGE_NOTES.get(v.outcome) if role == "discharge" else None),
             "for": n_for,
             "against": n_against,
             "abstain": n_abs,
@@ -1761,6 +1906,18 @@ class Builder:
             "has_ballots": bool(b is not None),
             "source": _src(v.source),
         }
+
+    def referral_note(self, v: EpVote) -> str | None:
+        """A final vote recorded as rejected, followed in the same sitting by an adopted referral of the file back to
+        committee on the same document (Rule 59(4) of the 9th-term Rules of Procedure: "If the whole draft
+        legislative act … fails to secure a majority of the votes cast, … Parliament decides to refer the matter
+        back to the committee responsible for reconsideration"): ETS revision, 8 June 2022, 144283 then 144284."""
+        if v.kind != "final" or v.outcome != "rejected" or v.id not in self.referred_back:
+            return None
+        return (
+            "After this vote Parliament referred the file back to the committee responsible for reconsideration "
+            "(Rule 59(4) of its Rules of Procedure)."
+        )
 
     def later_act_note(self, v: EpVote, p: Procedure | None) -> str | None:
         """A final vote recorded as rejected, on a file whose Legislative Observatory record names a final
@@ -1785,7 +1942,11 @@ class Builder:
 
         Without a tracked file or an English subject, the English title of a French-English-German label
         (english_title) stands in for the subject; failing that, Parliament's own label, shortened."""
-        phrase = VOTE_DETAIL_PHRASE.get(v.kind_detail or "") or VOTE_KIND_PHRASE.get(v.kind, "vote")
+        phrase = (
+            VOTE_DETAIL_PHRASE.get(v.kind_detail or "")
+            or FINAL_ROLE_PHRASE.get(final_role(v) or "")
+            or VOTE_KIND_PHRASE.get(v.kind, "vote")
+        )
         if p is not None:
             display = f"{_truncate(self.dossier_title(p), 120)} — {phrase}"
             if v.kind in ("amendment", "split_or_separate") and v.reference_text:
@@ -2325,6 +2486,16 @@ class Builder:
                             f"Parliament voted on {len(motions)} motions to reject the Council's position and rejected "
                             "each of them; the vote link opens the first."
                         )
+                if (e.raw_type or "").endswith("PLENARY_AMEND_COUNCIL_POSITION"):
+                    detail = " ".join(x for x in (detail, second_reading_amendments(votes, e.date)) if x) or None
+            elif kind == "ep_position" and (near := decision_vote_near(e, votes_by_date)):
+                # no vote held on the decision's date: the one deciding vote recorded within DECISION_VOTE_DAYS of it
+                # (remote voting, 2020-22: results were recorded the next day)
+                vote_id = near.id
+                detail = detail or (
+                    f"Parliament's vote records date this vote {_long_date(near.date)}; its procedure record dates "
+                    f"the decision {_long_date(e.date)}."
+                )
             elif kind == "negotiation_mandate" and e.raw_type in NEGOTIATION_EVENT_TYPES:
                 negotiation.append(len(out))  # linked below, once every event of the day is linked
             out.append({
@@ -2343,6 +2514,16 @@ class Builder:
                 for v in votes_by_date.get(day, [])
                 if (v.kind == "mandate" or v.kind_detail == "negotiation_decision") and v.id not in linked
             ]
+            if not votes_by_date.get(day):  # none that day: a mandate vote within DECISION_VOTE_DAYS no event links
+                lo, hi = DECISION_VOTE_DAYS  # (2021/0068(COD): vote 130712 on 28 April 2021, referral on 29 April)
+                anywhere = {x["vote_id"] for x in out if x["vote_id"]}
+                pick = [
+                    v
+                    for vday, vs in votes_by_date.items()
+                    if lo <= _days_between(day, vday) <= hi
+                    for v in vs
+                    if v.kind == "mandate" and v.id not in anywhere
+                ]
             out[i]["vote_id"] = pick[0].id if len(pick) == 1 else None
         # the rejection derived from the vote (with_recorded_events, used for the status) repeats Parliament's own
         # decision that day once that decision is titled as the rejection it was (2022/0196: 22 Nov 2023)

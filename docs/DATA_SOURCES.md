@@ -70,11 +70,41 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
 - Procedure links keep the letter of a split procedure's reference (`2021/0211A(COD)`), and document numbers
   are read with any hyphen-like character (`A9‑0256/2020`, U+2011). A vote item that names neither procedure
   nor document (a secret ballot) is linked through the report in its structured label.
+- Before 2024, a vote that no vote item, label or document links is linked through the minutes block that
+  records it: the one block with a row of the vote's counts that lists a document of its label, has its title or
+  rapporteurs, or has the title the label opens with. The block's procedure reference is used ("Proposal for a
+  regulation (COM(2020)0826 - C9-0399/2020 - 2020/0362(COD))"), else the procedures of the vote items based on
+  its documents ("Report: Véronique Trillet-Lenoir (A9-0247/2021)" → 2020/0322(COD)) when these include the
+  label's document or the label names none (the minutes misprint some numbers too). This links the
+  urgent-procedure votes labelled only "C9-0399/2020 - Commission proposal" (Brexit contingency, EU Digital COVID
+  Certificate), labels with a misprinted year ("Gas storage - C9-0126/2021", minutes "C9-0126/2022") and joint
+  motions for resolutions (`RC-B9-…`, through the motions the block lists). Two blocks with the same counts that
+  both fit leave the vote unlinked. An English label without a document number takes the one its French label
+  gives ("A9-0088/202" / "A9-0088/2020"), and a label without any is linked to the one vote item of the sitting
+  whose (French) title is the French label's title ("Règlement modifiant le cadre financier pluriannuel 2014-2020
+  - Approbation", 113149, 2020/0055(APP)).
 - Before 2024 a decision is the vote on the provisional agreement (kind `final`) when its row in the sitting's
   minutes has the Subject "Provisional agreement", even if the label gives only the amendment number
-  (European Climate Law, 24 Jun 2021, "Am 176"). A final vote is a negotiating mandate when the procedure's
-  referral back for negotiations is recorded on the vote's day or up to two days later (remote voting in
-  2020–21 recorded it the next day).
+  (European Climate Law, 24 Jun 2021, "Am 176"); a roll call labelled only with the title of the text takes its
+  kind from the Subject of its minutes row (Withdrawal Agreement, 29 Jan 2020: "Consent procedure", `final`).
+  A final vote is a negotiating mandate when the procedure's referral back for negotiations is recorded on the
+  vote's day or up to two days later (remote voting in 2020–21 recorded it the next day), or, before 2024, when
+  the text was adopted and an adopted "Referral (Rule 59(4))" on the same document follows it in the sitting
+  (ECDC and cross-border health threats, 15 Sep 2021; EU Digital COVID Certificate, 28 Apr 2021: "Renvoi (article
+  59, paragraphe 4 du règlement)"). A rejected text followed by such a referral stays the final vote: under Rule
+  59(4) the file then goes back to committee "for reconsideration" (ETS revision, 8 Jun 2022, 144283), and the
+  vote's note says so.
+- A proposal to reject the Commission proposal or the Council's position that groups table as a numbered
+  amendment is a motion with kind_detail `reject_proposal` / `reject_council_position`, not an amendment:
+  referenceText "Proposal for rejection" / "Proposal to reject the Council position" / "Rejection", the label
+  part "Rejection" / "Rejet" before "Am N", or (old labels ending only in "Am 1") the minutes Subject
+  "Rejection" (VIS, 7 Jul 2021). Rules 59(2) and 67(1) of the Rules of Procedure have it voted first, on the whole
+  text. The second-reading symbol is also read when printed "*** II" (IPA III, 15 Sep 2021).
+- Majority rule: where the Treaties alone do not settle it, the rule Parliament's record states for a whole-text
+  vote: the vote item's structured label (2024+, "(Majority of votes cast required)") or the minutes block
+  description (before 2024, "(Majority of Parliament’s component Members required)"). Only statements that hold
+  for the whole text are read; conditional or mixed ones ("… required to amend or reject the Council position",
+  "… + 3/5 of votes cast") leave the rule unknown.
 - Minutes: the remote-voting sittings of April–November 2020 have their "Results of votes" in French only
   (`PV-9-2020-05-13-VOT-FNL_fr.xml`); outcomes, documents and procedure symbols are read from them, block
   titles are not (the subject must be English).
@@ -113,7 +143,22 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
 - Timeline (build): Parliament's first-reading decision recorded only as "took its decision" is titled as a
   rejection when every final vote of that day linked to the file was officially rejected (2025/0429(COD),
   26 Mar 2026, OEIL: "the European Parliament rejected the proposal"). A rejected final vote on a file whose
-  OEIL record names a later final act carries a note saying the procedure continued.
+  OEIL record names a later final act carries a note saying the procedure continued. A decision recorded on a
+  day without a vote of the file is linked to its one final vote (second reading: motion to reject the Council's
+  position) dated from one day before to two days after it, preferring one whose report the decision lists, with
+  a note giving both dates (remote voting: 2020/0331(CNS), vote 6 Jul 2021, decision 7 Jul 2021); a referral back
+  for negotiations recorded without a vote that day is linked the same way to a mandate vote no other step links.
+  A decision amending the Council's position at second reading names the amendments adopted by a majority of
+  the component Members, since votes on amendments are not listed (2025/0429(COD), 9 Jul 2026).
+- Final votes (`final_role`, build): what a final vote decides, from the type of its one linked procedure (COD
+  legislative, CNS consultation, APP consent, BUD budget, DEC discharge, RSO / REG / ACI Parliament's own
+  decisions), else from the symbol ending its subject (`*` consultation, `***` consent, `***I`–`***III`
+  legislative; NLE files are either), and "Election of the Commission" (Art. 17(7) TEU). Consent, consultation,
+  discharge and the election of the Commission get their own label ("Vote on consent", "Vote on Parliament's
+  opinion (consultation)", "Vote on discharge", "Vote of consent on the Commission") and the vote page explains
+  what that vote decides; a vote whose role is not established gets the general explanation of a vote on a text
+  as a whole, never one about a law. A discharge vote's note says that the record does not tell whether the
+  proposed decision grants, postpones or refuses discharge (the labels say only "Proposal for a decision").
 - Margin (`analysis/ep_margin.py`, build): computed only for an adopted or rejected outcome under an established
   majority rule. Its label is about the majority that vote needed, "Majority reached: N votes more than needed" /
   "Majority not reached: N votes short", never about a law passing (a final vote can be a consultation opinion or
@@ -137,6 +182,10 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   procedure symbol), only when the display title and Parliament's label lack some of its words; the vote search
   matches it (vote 195775, titled after the act it amends, has the subject "Temporary derogation from the ePrivacy
   directive"). `votes/<id>.json` keeps the full published subject.
+- `title` in `votes/index.json`: Parliament's label with session document numbers written with an ASCII hyphen,
+  as officially numbered (label "A10–0049/2025 – Gilles Boyer – …" of vote 175067), so the vote search finds the
+  number as typed; the search also reads a number typed with another dash as the official one. `votes/<id>.json`
+  keeps the label as published.
 
 ### EUR-Lex / Cellar (`eurlex`) — ok
 - 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 21 final acts that OEIL
