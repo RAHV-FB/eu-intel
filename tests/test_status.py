@@ -134,7 +134,7 @@ def test_regulations_never_get_transposition_steps():
 def test_withdrawn_is_not_rejected_by_parliament():
     s = status("2017-0003")  # ePrivacy Regulation proposal, withdrawn 6 Oct 2025
     assert (s.stage, s.since, s.basis) == ("withdrawn", "2025-10-06", "source")
-    assert "not a rejection by Parliament" in s.explanation
+    assert "not a vote of Parliament" in s.explanation
     assert s.stall is None
 
 
@@ -404,3 +404,67 @@ def test_directive_next_step_uses_general_deadline_not_application_date():
         ("2025-11-20", "deadline", ["Art. 48(1)"]),
         ("2026-11-20", "application", ["Art. 48(1)"]),
     ]
+
+
+def _with_events(p: Procedure, *events) -> Procedure:
+    return p.model_copy(update={"events": sorted([*p.events, *events], key=lambda e: e.date)})
+
+
+def _event(kind: str, d: str, raw: str, title: str, institution: str = "EP", docs=()):
+    from pipeline.models.entities import DocRef, Event, EventKind, SourceRef
+
+    return Event(
+        id=f"t-{raw}-{d}", date=d, kind=EventKind(kind), raw_type=raw, institution=institution, title=title,
+        docs=[DocRef(id=x, label=x, kind="proposal") for x in docs],
+        source=SourceRef(institution="EUR-Lex", url="https://eur-lex.europa.eu/", retrieved_at=RETRIEVED),
+    )  # fmt: skip
+
+
+def test_withdrawal_after_rejection_names_the_rejection():
+    # Sustainable use of pesticides: Parliament rejected the proposal on 22 November 2023 (final vote
+    # 161821), the Commission withdrew it on 6 May 2024: never "not a rejection by Parliament"
+    p = _with_events(
+        proc("2022-0196"),
+        _event("rejection", "2023-11-22", "ep_vote:final:rejected", "Parliament rejected the proposal"),
+    )
+    s = classify(p, [], [], TODAY)
+    assert s.stage == "withdrawn"
+    assert "Parliament had rejected the proposal on 22 November 2023" in s.explanation
+    assert "not a vote of Parliament" not in s.explanation
+
+
+def test_replaced_proposal():
+    # Cellar RPL_byCOM on 2018/0329(COD): replaced by COM(2025)0101 (the Return Regulation)
+    p = _with_events(
+        proc("2018-0329"),
+        _event("withdrawal", "2025-03-11", "cellar:RPL_byCOM", "Commission withdrew the proposal and replaced it",
+               "Commission", docs=["COM(2025)0101"]),
+    )  # fmt: skip
+    s = classify(p, acts_for(p), [], TODAY)
+    assert (s.stage, s.label, s.since) == ("withdrawn", "Replaced by a new Commission proposal", "2025-03-11")
+    assert "COM(2025)0101" in s.explanation
+    assert s.next_step.text.startswith("None")
+
+
+def test_mandate_decision_alone_is_not_negotiations():
+    # the plenary endorsing the committee's decision to negotiate (EP activity code containing
+    # "INTERINSTITUTIONAL_NEGOTIATIONS") is not a trilogue
+    p = proc("2024-0068")
+    first_mandate = next(e for e in p.events if e.kind.value == "negotiation_mandate")
+    early = [
+        e for e in p.events
+        if e.date <= first_mandate.date and (e.raw_type or "").rsplit("/", 1)[-1] != "INTERINSTITUTIONAL_NEGOTIATION"
+    ]  # fmt: skip
+    endorse = _event("negotiation_mandate", first_mandate.date,
+                     "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+                     "Plenary endorsed the committee decision to open negotiations")  # fmt: skip
+    s = classify(p.model_copy(update={"events": [*early, endorse], "stage_raw": None}), [], [], TODAY)
+    assert (s.stage, s.label) == ("negotiations", "Mandate to negotiate with the Council")
+
+
+def test_stale_consultation_does_not_assert_a_pending_council_decision():
+    s = status("2023-0320", date(2030, 1, 1))  # CNS opinion of 10 April 2024, nothing since
+    assert s.stage == "parliament_position"
+    assert s.next_step.basis == "unknown" and s.next_step.text.startswith("Not determined")
+    recent = status("2023-0320", date(2024, 6, 1))
+    assert "Council decides" in recent.next_step.text

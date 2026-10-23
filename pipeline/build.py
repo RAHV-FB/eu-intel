@@ -36,14 +36,18 @@ from pipeline.models.countries import MEMBER_STATES
 from pipeline.models.entities import (
     CouncilVote,
     CountryIndicator,
+    DocRef,
     EpBallots,
     EpVote,
+    Event,
+    EventKind,
     InfringementCase,
     LegalAct,
     Mep,
     NationalMeasure,
     Organization,
     Procedure,
+    ProcedureNotice,
     SourceStatus,
     TrainFile,
 )
@@ -334,6 +338,7 @@ def short_names(title: str) -> list[str]:
     return out
 
 
+PARLIAMENT_REPORT_RE = re.compile(r"(\d{4}-\d{4})([RM])")
 ACT_NUMBER_RE = re.compile(
     r"^((?:Council |Commission )?(?:Implementing |Delegated )?(?:Regulation|Directive|Decision)"
     r"(?: \([A-Z][A-Za-z, ]*\))?(?: No)? \d{1,4}/\d{1,4}(?:/[A-Z]+)*)"
@@ -662,6 +667,7 @@ class Snapshot:
         self.coverage = _load("implementation", "coverage", cov_model, i, root) if cov_model else []
         self.has_coverage_file = self.file_exists("implementation", "coverage")
         self.train = _load("train", "files", TrainFile, i, root)
+        self.notices = _load("eurlex", "procedure_notices", ProcedureNotice, i, root)
 
     def _manifest(self) -> dict[str, SourceStatus]:
         if self.root == SNAPSHOT:
@@ -871,7 +877,8 @@ class Builder:
         self.split_children: dict[str, list[str]] = defaultdict(list)
         for pid in sorted(pids):
             m = re.fullmatch(r"(\d{4}-\d{4})([A-Z])", pid)
-            if m and m.group(1) in pids:
+            # R / M suffixes are Parliament reports on the procedure, not parts of a split procedure
+            if m and m.group(1) in pids and not PARLIAMENT_REPORT_RE.fullmatch(pid):
                 self.split_children[m.group(1)].append(pid)
         for celex, ds in act_dossiers.items():
             for parent, children in self.split_children.items():
@@ -1180,6 +1187,21 @@ class Builder:
                            "since": None, "basis": "derived"},
                 "next_step": {"text": text, "institution": None, "basis": "derived"},
             })  # fmt: skip
+        if (m := PARLIAMENT_REPORT_RE.fullmatch(p.id)) is not None:
+            # 2017/0333R(APP): Parliament's interim report (Rule 105(5)) or report accompanying a consent
+            # (M) on the main procedure 2017/0333(APP); a resolution, not a legislative act
+            main = self.proc.get(m.group(1))
+            kind = "an interim report" if m.group(2) == "R" else "a report"
+            text = (
+                f"Parliament adopted {kind} on the procedure {main.reference if main else m.group(1)}. It is a "
+                "resolution of Parliament, not a legislative act; the proposal itself is followed on the main file."
+            )
+            return self._status_dict({
+                "status": {"stage": "unknown", "label": "Parliament report (not a legislative act)",
+                           "explanation": text, "since": None, "basis": "source"},
+                "next_step": {"text": "None for this report. See the main procedure for the proposal.",
+                              "institution": None, "basis": "source"},
+            })  # fmt: skip
         fn = (
             _lazy("pipeline.analysis.status", "classify")
             if not hasattr(self, "_classify")
@@ -1477,12 +1499,99 @@ class Builder:
             "source": _src(a.source), "note": note,
         }  # fmt: skip
 
+    def with_recorded_events(self, p: Procedure) -> Procedure:
+        """The procedure with official facts that its EP/OEIL record lacks: a Commission withdrawal or
+        replacement recorded by Cellar on the procedure (OEIL often never adds it), and Parliament's
+        rejection when a final plenary vote on the file was officially recorded as rejected."""
+        have = {e.kind for e in p.events}
+        extra: list[Event] = []
+        notices = sorted(self.notices_by_ref.get(norm_ref(p.reference), []), key=lambda n: n.date)
+        if notices and EventKind.withdrawal not in have:
+            n = notices[0]
+            replaced = n.kind == "replaced"
+            extra.append(Event(
+                id=f"cellar-{n.id}", date=n.date, kind=EventKind.withdrawal,
+                raw_type="cellar:RPL_byCOM" if replaced else "cellar:WDW_byCOM", institution="Commission",
+                title="Commission withdrew the proposal and replaced it with a new one" if replaced
+                else "Commission withdrew the proposal",
+                detail=f"New proposal: {n.document}" if replaced and n.document else None,
+                docs=[DocRef(id=n.document, label=n.document, kind="proposal")] if replaced and n.document else [],
+                source=n.source,
+            ))  # fmt: skip
+        # OEIL labels meaning Parliament adopted a position (a "rejected" final vote then contradicts it)
+        past_parliament = (p.stage_raw or "").startswith(("Awaiting Council", "Awaiting Parliament 2nd",
+                                                           "Awaiting signature", "Procedure completed"))  # fmt: skip
+        if EventKind.rejection not in have and not past_parliament:
+            for v in sorted(self.votes_of.get(p.id, []), key=lambda v: (v.date, v.id)):
+                if v.kind == "final" and v.outcome == "rejected" and getattr(v, "outcome_basis", None) in (
+                    "published", "minutes"
+                ):
+                    extra.append(Event(
+                        id=f"vote-{v.id}-rejected", date=v.date, kind=EventKind.rejection,
+                        raw_type="ep_vote:final:rejected", institution="EP",
+                        title="Parliament rejected the proposal in a plenary vote", source=v.source,
+                    ))  # fmt: skip
+                    break
+        # a plenary vote that OEIL does not record yet (it lags by days): Parliament's position / mandate
+        official = [v for v in self.votes_of.get(p.id, []) if v.outcome == "adopted" and v.date <= self.today
+                    and getattr(v, "outcome_basis", None) in ("published", "minutes")]  # fmt: skip
+        for vkind, ekind in (("final", EventKind.ep_position), ("mandate", EventKind.negotiation_mandate)):
+            vs = sorted((v for v in official if v.kind == vkind), key=lambda v: (v.date, v.id))
+            if vs and not past_parliament and not any(e.kind == ekind and e.date >= vs[-1].date for e in p.events):
+                v = vs[-1]
+                title = {
+                    EventKind.negotiation_mandate: "Parliament voted to open negotiations with the Council",
+                    EventKind.ep_position: {"CNS": "Parliament delivered its opinion in a plenary vote",
+                                            "APP": "Parliament voted on consent"}.get(
+                        p.type, "Parliament adopted its position in a plenary vote"),
+                }[ekind]  # fmt: skip
+                extra.append(Event(
+                    id=f"vote-{v.id}-{ekind.value}", date=v.date, kind=ekind, raw_type=f"ep_vote:{vkind}:adopted",
+                    institution="EP", title=title, source=v.source,
+                ))  # fmt: skip
+        events = [self.procedure_event(p, e) for e in p.events]
+        if not extra and events == p.events:
+            return p
+        return p.model_copy(update={"events": sorted([*events, *extra], key=lambda e: (e.date, e.id))})
+
+    @staticmethod
+    def procedure_event(p: Procedure, e: Event) -> Event:
+        """Titles that fit the procedure: readings exist only in the ordinary legislative procedure,
+        consent is not consultation, and a Council text submitted to Parliament is not a Commission
+        proposal."""
+        title, inst = e.title, e.institution
+        if p.type in ("CNS", "APP"):
+            if title == "Parliament took its decision (first reading)":
+                title = "Parliament delivered its opinion" if p.type == "CNS" else "Parliament voted on consent"
+            title = title.replace(" (first reading)", "")
+        if p.type == "APP" and title == "Council adopted the act after consulting Parliament":
+            title = "Council adopted the act after Parliament's consent"
+        if (
+            e.kind == EventKind.proposal
+            and e.docs
+            and not any(d.id.startswith("COM(") for d in e.docs)
+            and any(re.fullmatch(r"\d{5}/\d{2,4}", d.id) for d in e.docs)
+        ):
+            title, inst = "Council text submitted to Parliament", "Council"
+        if (title, inst) == (e.title, e.institution):
+            return e
+        return e.model_copy(update={"title": title, "institution": inst})
+
     def build_dossiers(self) -> None:
         self.dossier_summary: dict[str, dict] = {}
         self.dossier_detail: dict[str, dict] = {}
+        self.notices_by_ref: dict[str, list[ProcedureNotice]] = defaultdict(list)
+        for n in self.s.notices:
+            self.notices_by_ref[norm_ref(n.reference)].append(n)
+        relevant = _lazy("pipeline.analysis.status", "relevant_acts")
+        self.dossier_acts: dict[str, list[LegalAct]] = {}
         for pid in self.dossier_ids:
-            p = self.proc[pid]
+            p = self.proc[pid] = self.with_recorded_events(self.proc[pid])
             acts = self.acts_of.get(pid, [])
+            if relevant is not None:  # an act EUR-Lex links to several procedures needs evidence it is this one's
+                t = date.fromisoformat(self.today)
+                acts = relevant(p, acts, sorted((e for e in p.events if e.date <= self.today), key=lambda e: e.date), t)
+            self.dossier_acts[pid] = acts
             votes = sorted(self.votes_of.get(pid, []), key=lambda v: (v.date, v.id), reverse=True)
             st = self.classify(p)
             tl = self.timeline(p, acts, votes)
@@ -1600,9 +1709,39 @@ class Builder:
                 inv_amended[c].add(a.celex)
             for c in a.repeals:
                 inv_repealed[c].add(a.celex)
+        # an act belongs to the dossiers whose own record supports it (see status.relevant_acts)
+        self.act_dossiers = defaultdict(set)
+        for pid, acts in self.dossier_acts.items():
+            for a in acts:
+                self.act_dossiers[a.celex].add(pid)
+        # proposals the Commission replaced by a new one (Cellar RPL_byCOM) -> the new proposal's file
+        by_proposal: dict[str, str] = {}
+        for pid in self.dossier_ids:
+            for d in self.proc[pid].documents:
+                if d.kind == "proposal" and d.id.startswith("COM("):
+                    by_proposal.setdefault(d.id, pid)
+        replaced_by: dict[str, str] = {}
+        for pid in self.dossier_ids:
+            for e in self.proc[pid].events:
+                if e.raw_type == "cellar:RPL_byCOM":
+                    new = next((d.id for d in e.docs if d.id in by_proposal and by_proposal[d.id] != pid), None)
+                    if new:
+                        replaced_by[pid] = by_proposal[new]
+        replaces: dict[str, list[str]] = defaultdict(list)
+        for old, new in replaced_by.items():
+            replaces[new].append(old)
         for pid, det in self.dossier_detail.items():
             related: dict[str, dict] = {}
-            for a in self.acts_of.get(pid, []):
+            if pid in replaced_by:
+                new = replaced_by[pid]
+                related[f"replaced_by:{new}"] = {
+                    "id": new, "title": _truncate(self.dossier_summary[new]["title"], 160), "relation": "Replaced by",
+                }  # fmt: skip
+            for old in sorted(replaces.get(pid, [])):
+                related[f"replaces:{old}"] = {
+                    "id": old, "title": _truncate(self.dossier_summary[old]["title"], 160), "relation": "Replaces",
+                }  # fmt: skip
+            for a in self.dossier_acts.get(pid, []):
                 # one item per amending act: its dossier when known, else the act itself (id = CELEX)
                 for c in sorted(set(a.amended_by) | inv_amended.get(a.celex, set())):
                     others = sorted(o for o in self.act_dossiers.get(c, ()) if o != pid)
@@ -1627,12 +1766,20 @@ class Builder:
                 related.setdefault(f"split:{child}", {
                     "id": child, "title": _truncate(self.dossier_summary[child]["title"], 160), "relation": "Split into",
                 })  # fmt: skip
-            if (m := re.fullmatch(r"(\d{4}-\d{4})[A-Z]", pid)) and m.group(1) in self.dossier_summary:
+            if (m := PARLIAMENT_REPORT_RE.fullmatch(pid)) and m.group(1) in self.dossier_summary:
+                related.setdefault(f"report_on:{m.group(1)}", {
+                    "id": m.group(1), "title": _truncate(self.dossier_summary[m.group(1)]["title"], 160),
+                    "relation": "Report on",
+                })  # fmt: skip
+            elif (m := re.fullmatch(r"(\d{4}-\d{4})[A-Z]", pid)) and m.group(1) in self.dossier_summary:
                 related.setdefault(f"split_from:{m.group(1)}", {
                     "id": m.group(1), "title": _truncate(self.dossier_summary[m.group(1)]["title"], 160),
                     "relation": "Split from",
                 })  # fmt: skip
             order = {
+                "Report on": 0,
+                "Replaced by": 0,
+                "Replaces": 0,
                 "Split into": 0,
                 "Split from": 0,
                 "Amended by": 1,

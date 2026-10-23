@@ -526,3 +526,31 @@ def test_act_number_from_title():
         "Council Decision (EU, Euratom) 2018/994"
     )
     assert act_number(a("Something else")) == "32026R1744"
+
+
+def test_procedure_event_titles_fit_the_procedure():
+    from pipeline.build import Builder
+    from pipeline.models.entities import DocRef, Event, EventKind, Procedure, SourceRef
+
+    src = SourceRef(institution="EP", url="u", retrieved_at="2026-10-22T00:00:00Z")
+
+    def ev(kind: EventKind, title: str, inst: str = "EP", docs=()) -> Event:
+        return Event(id="e", date="2020-01-01", kind=kind, institution=inst, title=title,
+                     docs=[DocRef(id=d) for d in docs], source=src)  # type: ignore[arg-type]  # fmt: skip
+
+    def proc(ptype: str) -> Procedure:
+        return Procedure(id="2018-0900", reference=f"2018/0900({ptype})", type=ptype, title="t", oeil_url="u", source=src)
+
+    t = lambda p, e: (Builder.procedure_event(p, e).title, Builder.procedure_event(p, e).institution)  # noqa: E731
+    assert t(proc("APP"), ev(EventKind.ep_position, "Parliament took its decision (first reading)")) == (
+        "Parliament voted on consent", "EP")
+    assert t(proc("CNS"), ev(EventKind.ep_position, "Parliament took its decision (first reading)"))[0] == (
+        "Parliament delivered its opinion")
+    assert t(proc("APP"), ev(EventKind.council_adoption, "Council adopted the act after consulting Parliament",
+                             "Council"))[0] == "Council adopted the act after Parliament's consent"  # fmt: skip
+    assert t(proc("COD"), ev(EventKind.ep_position, "Parliament took its decision (first reading)"))[0] == (
+        "Parliament took its decision (first reading)")
+    assert t(proc("APP"), ev(EventKind.proposal, "Commission published its legislative proposal", "Commission",
+                             ["09425/2018"])) == ("Council text submitted to Parliament", "Council")  # fmt: skip
+    assert t(proc("COD"), ev(EventKind.proposal, "Commission published its legislative proposal", "Commission",
+                             ["COM(2021)0206"])) == ("Commission published its legislative proposal", "Commission")  # fmt: skip

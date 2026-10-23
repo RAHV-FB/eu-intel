@@ -146,6 +146,18 @@ class CourtRuling(Model):
     url: str  # EUR-Lex page of the judgment
 
 
+class ProcedureNotice(Model):
+    """A Commission withdrawal of a proposal, or its replacement by a new proposal, as recorded by Cellar
+    on the procedure (event types WDW_byCOM / WDW_PROPLEG_byCOM / RPL_byCOM)."""
+
+    id: str  # "2016/0337(CNS):replaced:2023-09-12"
+    reference: str  # "2016/0337(CNS)"
+    kind: Literal["withdrawn", "replaced"]
+    date: str
+    document: str | None = None  # "COM(2023)0532" (the new proposal) or the OJ withdrawal notice
+    source: SourceRef
+
+
 class TranspositionDate(Model):
     """One `directive_date_transposition` value with Cellar's annotation of what it is."""
 

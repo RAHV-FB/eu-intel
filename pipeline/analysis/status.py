@@ -181,7 +181,8 @@ def relevant_acts(proc: Procedure, acts: list[LegalAct], events: list[Event], to
     """Acts that can establish this procedure's status. An act linked by EUR-Lex to several
     procedures (e.g. a new proposal that replaced an older one) only counts when this procedure
     itself shows the act was adopted under it: its final act (OEIL) or a recorded adoption,
-    signature or publication. Acts dated after `today` are ignored."""
+    signature or publication - and, when OEIL lists the procedure's final acts, is one of them. Acts
+    dated after `today` are ignored."""
     t = today.isoformat()
     out = []
     adopted_here = any(e.kind in ADOPTION_KINDS for e in events) or (proc.stage_raw or "").startswith(
@@ -191,7 +192,8 @@ def relevant_acts(proc: Procedure, acts: list[LegalAct], events: list[Event], to
         dated = a.date_publication or a.date_signature or a.date_document
         if dated and dated > t:
             continue
-        if a.celex in proc.celex_refs or len(a.procedure_refs) <= 1 or adopted_here:
+        # OEIL's final-act list, when there is one, decides between procedures sharing an act
+        if a.celex in proc.celex_refs or len(a.procedure_refs) <= 1 or (adopted_here and not proc.celex_refs):
             out.append(a)
     return out
 
@@ -459,9 +461,10 @@ def _cod_stage(events: list[Event]) -> _S:
         )
     mandate = _last(events, EventKind.negotiation_mandate)
     if mandate:
-        trilogues = [
-            e for e in events if "INTERINSTITUTIONAL_NEGOTIATION" in _code(e) and e.date >= mandate.date
-        ]
+        # a recorded trilogue (EP activity INTERINSTITUTIONAL_NEGOTIATION) after the mandate; the
+        # mandate decisions themselves (PLENARY_ENDORSE/REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS)
+        # also contain the words but are not negotiations
+        trilogues = [e for e in events if _code(e) == "INTERINSTITUTIONAL_NEGOTIATION" and e.date >= mandate.date]
         return _S(
             "negotiations",
             "Negotiations with the Council" if trilogues else "Mandate to negotiate with the Council",
@@ -625,6 +628,11 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
     t = today.isoformat()
     ptype = proc.type
     stage = s.stage
+    if stage == "withdrawn" and s.label == "Replaced by a new Commission proposal":
+        return NextStep(
+            text="None: the procedure has ended. The Commission's new proposal is a separate legislative file.",
+            basis="source",
+        )
     if stage == "withdrawn":
         return NextStep(
             text="None: the procedure has ended. The proposal could only return as a new Commission proposal.",
@@ -838,11 +846,23 @@ def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], toda
     lapsed = _last(events, EventKind.lapsed)
     rejection = _last(events, EventKind.rejection)
     if withdrawal:
+        replaced = withdrawal.raw_type == "cellar:RPL_byCOM"
+        new = next((d.id for d in withdrawal.docs if d.kind == "proposal"), None)
+        text = (
+            "The Commission withdrew its proposal and replaced it with a new one"
+            + (f" ({new})" if new else "")
+            + ", so it will not become law in this form."
+            if replaced
+            else "The Commission withdrew its proposal, so it will not become law."
+        )
+        if rejection and rejection.date <= withdrawal.date:
+            text += f" Parliament had rejected the proposal on {_fmt(rejection.date)}."
+        else:
+            text += " A withdrawal is a decision of the Commission, not a vote of Parliament."
         s = _S(
             "withdrawn",
-            "Withdrawn by the Commission",
-            "The Commission withdrew its proposal, so it will not become law. "
-            "This is not a rejection by Parliament.",
+            "Replaced by a new Commission proposal" if replaced else "Withdrawn by the Commission",
+            text,
             withdrawal.date,
             "source",
         )
@@ -890,16 +910,54 @@ def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], toda
         s = _reconcile_with_oeil(proc, s, events)
 
     app = application_of(acts, today)
+    next_step = _next_step(proc, s, events, acts, today)
+    if s.stage in ACTIVE_STAGES and not acts:
+        reported = _train_adopted(train, t)
+        if reported:
+            # The Train is not a record of adoption (it lags or leads OEIL); it only stops us from
+            # asserting that a decision is still pending.
+            s.explanation += (
+                f" The EP Legislative Train reports this file as “{reported.status}” (information updated as of "
+                f"{_fmt(reported.last_updated)}), but no final act is linked in our data."
+            )
+            next_step = NextStep(
+                text="Not determined: the EP Legislative Train reports the file as adopted, but the official "
+                "records in our data do not yet show the final act.",
+                basis="unknown",
+            )
+    if (
+        s.stage == "parliament_position"
+        and ptype in ("CNS", "APP")
+        and events
+        and (today - date.fromisoformat(events[-1].date)).days > STALE_DECISION_DAYS
+    ):
+        next_step = NextStep(
+            text=f"Not determined: no final decision has been recorded in the official sources since "
+            f"{_fmt(events[-1].date)}. The Council's public register may show whether it acted.",
+            basis="unknown",
+        )
     return DossierStatus(
         stage=s.stage,  # type: ignore[arg-type]
         label=s.label,
         explanation=s.explanation,
         since=s.since,
         basis=s.basis,
-        next_step=_next_step(proc, s, events, acts, today),
+        next_step=next_step,
         stall=_stall(s.stage, events, train, today),
         application=app,
     )
+
+
+# A consultation or consent file with no recorded step for this long: a pending Council decision is no
+# longer a safe assumption (e.g. agreements whose legal basis has since been replaced).
+STALE_DECISION_DAYS = 3 * 365
+
+
+def _train_adopted(train: list[TrainFile], t: str) -> TrainFile | None:
+    for tf in train:
+        if (tf.status or "").lower().startswith("adopted") and tf.last_updated and tf.last_updated <= t:
+            return tf
+    return None
 
 
 def _generic_stage(ptype: str, events: list[Event]) -> _S:

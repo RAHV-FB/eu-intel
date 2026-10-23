@@ -475,3 +475,19 @@ def test_live_known_acts():
     assert by["32024R1689"].entry_into_force == "2024-08-01"
     assert by["32016R0679"].procedure_refs == ["2012/0011(COD)"]
     assert by["32022L2555"].transposition_deadlines == ["2024-10-17", "2024-10-18"]
+
+
+def test_procedure_notices():
+    rows = [
+        {"ref": "2016/0337/CNS", "type": E.AUTH + "event/RPL_byCOM", "date": "2023-09-12", "doc": "COM/2023/532/FINAL"},
+        {"ref": "2023/0133/COD", "type": E.AUTH + "event/WDW_byCOM", "date": "2025-10-06"},
+        {"ref": "2023/0133/COD", "type": E.AUTH + "event/WDW_byCOM", "date": "2025-10-06", "doc": "JO C/2025/5423"},
+        {"ref": "2023/0133/COD", "type": E.AUTH + "event/ADP_byCOM", "date": "2023-04-27"},
+    ]
+    got = E.build_notices(rows, RETRIEVED)
+    assert [(n.reference, n.kind, n.date, n.document) for n in got] == [
+        ("2016/0337(CNS)", "replaced", "2023-09-12", "COM(2023)0532"),
+        ("2023/0133(COD)", "withdrawn", "2025-10-06", None),
+    ]
+    assert got[0].id == "2016/0337(CNS):replaced:2023-09-12"
+    assert got[0].source.url == "https://eur-lex.europa.eu/procedure/EN/2016_337"

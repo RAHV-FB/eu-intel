@@ -89,6 +89,7 @@ from pipeline.http import HttpError
 from pipeline.models.entities import (
     CourtRuling,
     LegalAct,
+    ProcedureNotice,
     SourceRef,
     SourceStatus,
     Subject,
@@ -868,6 +869,61 @@ def read_featured_celex(path: Path = FEATURED_FILE) -> list[str]:
     return sorted(found)
 
 
+# Cellar procedure events (authority table "event") recording that the Commission withdrew a proposal
+PROCEDURE_NOTICE_TYPES = {"WDW_byCOM": "withdrawn", "WDW_PROPLEG_byCOM": "withdrawn", "RPL_byCOM": "replaced"}
+
+
+def procedure_notices_query() -> str:
+    types = " ".join(f"<{AUTH}event/{t}>" for t in sorted(PROCEDURE_NOTICE_TYPES))
+    return (
+        PREFIXES
+        + f"""SELECT DISTINCT ?ref ?ptype ?type ?date ?doc WHERE {{
+  VALUES ?type {{ {types} }}
+  ?ev cdm:event_legal_has_type_concept_type_event_legal ?type ;
+      cdm:event_legal_part_of_dossier ?dos ;
+      cdm:event_legal_date ?date .
+  ?dos cdm:procedure_code_interinstitutional_reference_procedure ?ref .
+  OPTIONAL {{ ?dos cdm:procedure_code_interinstitutional_has_type_concept_type_procedure_code_interinstitutional ?ptype }}
+  OPTIONAL {{ ?ev cdm:event_legal_document_reference ?doc }}
+  FILTER(?date >= "{MIN_DOCUMENT_DATE}"^^xsd:date)
+}} ORDER BY ?ref ?date ?type ?doc"""
+    )
+
+
+COM_DOC_RE = re.compile(r"^COM/(\d{4})/0*(\d+)")
+
+
+def build_notices(rows: list[dict[str, str]], retrieved_at: str) -> list[ProcedureNotice]:
+    """One notice per procedure, kind and date; a replacement names the new proposal (COM document)."""
+    out: dict[tuple[str, str, str], ProcedureNotice] = {}
+    for r in rows:
+        ref = format_procedure_ref(r["ref"], r.get("ptype") or None)
+        kind = PROCEDURE_NOTICE_TYPES.get(_authority_code(r["type"]))
+        d = _date(r.get("date"))
+        if not (ref and kind and d):
+            continue
+        m = COM_DOC_RE.match(r.get("doc") or "")
+        doc = f"COM({m[1]}){int(m[2]):04d}" if m else None
+        key = (ref, kind, d)
+        if key in out and (out[key].document or not doc):
+            continue
+        out[key] = ProcedureNotice(
+            id=f"{ref}:{kind}:{d}",
+            reference=ref,
+            kind=kind,  # type: ignore[arg-type]
+            date=d,
+            document=doc,
+            source=SourceRef(
+                institution="EUR-Lex",
+                url=f"https://eur-lex.europa.eu/procedure/EN/{ref[:4]}_{int(ref[5:9])}",
+                label=f"EUR-Lex procedure {ref}",
+                identifier=ref,
+                retrieved_at=retrieved_at,
+            ),
+        )
+    return sorted(out.values(), key=lambda n: (n.reference, n.date, n.kind))
+
+
 def procedure_celex_refs() -> list[str]:
     """Final-act CELEX ids that OEIL records for the procedures in the EP snapshot."""
     from pipeline.models.entities import Procedure
@@ -941,12 +997,20 @@ def fetch(http: Any) -> SourceStatus:
         raise RuntimeError(f"eurlex: {len(dropped)} of {len(works)} acts could not be fetched/built")
 
     write_records(SOURCE_ID, "acts", acts, key=lambda a: a.celex)  # type: ignore[attr-defined]
+    try:  # withdrawals / replacements recorded on procedures; on failure the previous file is kept
+        notices = build_notices(http.sparql(procedure_notices_query()), attempted)
+        write_records(SOURCE_ID, "procedure_notices", notices, key=lambda n: (n.reference, n.date, n.kind))
+        notices_note = f"{len(notices)} withdrawal/replacement notices on procedures"
+    except Exception as e:  # noqa: BLE001 - optional data: never fail the acts
+        log.warning("eurlex: procedure notices not fetched: %r", e)
+        notices_note = "procedure notices not refreshed (fetch failed)"
     with_proc = sum(1 for a in acts if a.procedure_refs)
     notes = [
         f"{len(scope)} acts in scope ({'/'.join(PROCEDURE_TYPES)} procedures, date >= {MIN_DOCUMENT_DATE})",
         f"{len(featured_works)} featured",
         f"{len(linked_works)} more recorded by OEIL as final acts of procedures in the EP snapshot",
         f"{with_proc} with procedure reference",
+        notices_note,
     ]
     if dropped:
         notes.append(f"{len(dropped)} dropped (fetch/parse failures)")
