@@ -24,6 +24,19 @@
   font-size: var(--fs-sm);
   color: var(--text-2);
 }
+/* Phones: the two explanations sit inside a disclosure (PartyVsGroup), without their own cards. */
+.party-vs-group-disclosure {
+  margin-bottom: var(--sp-5);
+}
+.party-vs-group--plain {
+  margin-bottom: 0;
+}
+.party-vs-group--plain > div {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
 
 .status-dot {
   display: inline-flex;

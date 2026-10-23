@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { GroupSummary, MepSummary } from '../../types/data';
 import { countryName, formatNumber } from '../../lib/format';
 import { EmptyState } from '../../components/ui';
+import { CollapsibleFilters } from '../../components/CollapsibleFilters';
 import { SortTh, useSortable } from '../votes/sortable';
 import { FULL_TERM_MIN_MEPS, termLabel } from './labels';
 import './people.css';
@@ -67,6 +68,7 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
   );
 
   const anyFilter = [q, country, group, party, term].some(Boolean) || status !== 'current';
+  const activeFilters = [country, group, party.trim(), term].filter(Boolean).length + (status !== 'current' ? 1 : 0);
 
   return (
     <section aria-labelledby="mep-h">
@@ -78,54 +80,56 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
           <label htmlFor="mf-q">Name</label>
           <input id="mf-q" className="input" type="search" value={q} placeholder="Search by name" onChange={(e) => set('q', e.target.value)} />
         </div>
-        <div className="field">
-          <label htmlFor="mf-country">Country represented</label>
-          <select id="mf-country" className="select" value={country} onChange={(e) => set('country', e.target.value)}>
-            <option value="">All countries</option>
-            {opts.countries.map((c) => (
-              <option key={c} value={c}>
-                {countryName(c)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="mf-group">Political group</label>
-          <select id="mf-group" className="select" value={group} onChange={(e) => set('group', e.target.value)}>
-            <option value="">All groups</option>
-            {opts.groupIds.map((g) => (
-              <option key={g} value={g}>
-                {groups.get(g)?.code ?? g}
-                {groups.get(g) && !groups.get(g)!.active ? ' (earlier term)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="mf-party">National party</label>
-          <input id="mf-party" className="input" type="search" value={party} placeholder="Party name" onChange={(e) => set('party', e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor="mf-status">Status</label>
-          <select id="mf-status" className="select" value={status} onChange={(e) => set('status', e.target.value, 'current')}>
-            <option value="current">Current MEPs</option>
-            <option value="former">Former MEPs</option>
-            <option value="all">Current and former</option>
-          </select>
-        </div>
-        {opts.terms.length > 1 && (
+        <CollapsibleFilters label="Filters" active={activeFilters}>
           <div className="field">
-            <label htmlFor="mf-term">Parliamentary term</label>
-            <select id="mf-term" className="select" value={term} onChange={(e) => set('term', e.target.value)}>
-              <option value="">All terms covered</option>
-              {opts.terms.map((t) => (
-                <option key={t} value={t}>
-                  {termLabel(t)}
+            <label htmlFor="mf-country">Country represented</label>
+            <select id="mf-country" className="select" value={country} onChange={(e) => set('country', e.target.value)}>
+              <option value="">All countries</option>
+              {opts.countries.map((c) => (
+                <option key={c} value={c}>
+                  {countryName(c)}
                 </option>
               ))}
             </select>
           </div>
-        )}
+          <div className="field">
+            <label htmlFor="mf-group">Political group</label>
+            <select id="mf-group" className="select" value={group} onChange={(e) => set('group', e.target.value)}>
+              <option value="">All groups</option>
+              {opts.groupIds.map((g) => (
+                <option key={g} value={g}>
+                  {groups.get(g)?.code ?? g}
+                  {groups.get(g) && !groups.get(g)!.active ? ' (earlier term)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="mf-party">National party</label>
+            <input id="mf-party" className="input" type="search" value={party} placeholder="Party name" onChange={(e) => set('party', e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="mf-status">Status</label>
+            <select id="mf-status" className="select" value={status} onChange={(e) => set('status', e.target.value, 'current')}>
+              <option value="current">Current MEPs</option>
+              <option value="former">Former MEPs</option>
+              <option value="all">Current and former</option>
+            </select>
+          </div>
+          {opts.terms.length > 1 && (
+            <div className="field">
+              <label htmlFor="mf-term">Parliamentary term</label>
+              <select id="mf-term" className="select" value={term} onChange={(e) => set('term', e.target.value)}>
+                <option value="">All terms covered</option>
+                {opts.terms.map((t) => (
+                  <option key={t} value={t}>
+                    {termLabel(t)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </CollapsibleFilters>
       </form>
 
       <div className="results-bar">
