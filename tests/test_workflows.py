@@ -39,6 +39,11 @@ def test_the_refresh_commits_nothing_when_the_built_data_fails_validation():
     assert "steps.validate_built.outcome == 'success'" in commit["env"]["BUILD_OK"]  # data/state only after it
 
 
+def test_vitest_fails_when_it_finds_no_tests():
+    runs = [s["run"] for s in steps("ci.yml", "check") if "vitest" in (s.get("run") or "")]
+    assert runs == ["npx vitest run"]  # with --passWithNoTests a broken include pattern was a green step
+
+
 def test_actions_are_pinned_to_commit_shas():
     for path in sorted(WORKFLOWS.glob("*.yml")):
         for job in yaml.safe_load(path.read_text(encoding="utf-8"))["jobs"].values():

@@ -87,7 +87,8 @@ jobs:
         run: npx tsc -p tests/e2e/tsconfig.json
 
       - name: Unit tests (vitest)
-        run: npx vitest run --passWithNoTests
+        # Fails when no test file matches the include pattern in vite.config.ts.
+        run: npx vitest run
 
       - name: Build site (BASE_PATH=${{ env.BASE_PATH }})
         run: npm run build
