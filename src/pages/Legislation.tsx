@@ -105,17 +105,19 @@ export default function Legislation() {
   const rows = index.data ?? [];
   const haystacks = useMemo(() => buildHaystacks(rows), [rows]);
 
-  const { matched, scores, related, approximate } = useMemo(() => {
-    const related = new Set<string>(); // files matching only another form of a query word
+  const { matched, scores, related, starts, approximate } = useMemo(() => {
+    const related = new Set<string>(); // files matching only another form of a query word, or a word starting with it
+    const starts = new Set<string>(); // of those, the files matching only through words starting with those typed
     const approximate = new Map<string, string[]>(); // files matching only approximately, with the similar words
-    if (!hasQuery) return { matched: rows, scores: new Map<string, number>(), related, approximate };
-    const keyword = keywordScores(rows, haystacks, engine, state.q, related, approximate);
-    return { matched: rows.filter((d) => keyword.has(d.id)), scores: keyword, related, approximate };
+    if (!hasQuery) return { matched: rows, scores: new Map<string, number>(), related, starts, approximate };
+    const keyword = keywordScores(rows, haystacks, engine, state.q, related, approximate, starts);
+    return { matched: rows.filter((d) => keyword.has(d.id)), scores: keyword, related, starts, approximate };
   }, [rows, haystacks, engine, state.q, hasQuery]);
 
   const preds = useMemo(() => makePredicates(state), [state]);
   const filtered = useMemo(() => applyFilters(matched, preds), [matched, preds]);
   const relatedShown = useMemo(() => filtered.filter((d) => related.has(d.id)).length, [filtered, related]);
+  const startShown = useMemo(() => filtered.filter((d) => starts.has(d.id)).length, [filtered, starts]);
   // best match first, so that the summary names the similar words of the first of them
   const approxShown = useMemo(
     () => filtered.filter((d) => approximate.has(d.id)).sort((a, b) => (scores.get(b.id) ?? 0) - (scores.get(a.id) ?? 0)),
@@ -400,11 +402,21 @@ export default function Legislation() {
               {relatedShown > 0 && relatedShown < sorted.length && (
                 <span className="meta">
                   {' '}
-                  · {formatNumber(relatedShown)} of them only through another form of a word
+                  · {formatNumber(relatedShown)} of them only through another form of a word (a longer word built on it, or
+                  another ending)
                 </span>
               )}
-              {relatedShown > 0 && relatedShown === sorted.length && (
-                <span className="meta"> · only through other forms of the words (longer words built on them)</span>
+              {relatedShown > 0 && relatedShown === sorted.length && startShown === relatedShown && (
+                <span className="meta">
+                  {' '}
+                  · no whole-word matches for “{state.q.trim()}”, so these contain words that start with it
+                </span>
+              )}
+              {relatedShown > 0 && relatedShown === sorted.length && startShown < relatedShown && (
+                <span className="meta">
+                  {' '}
+                  · only through other forms of the words (a longer word built on them, or another ending)
+                </span>
               )}
               {approxShown.length > 0 && approxShown.length < sorted.length && (
                 <span className="meta">

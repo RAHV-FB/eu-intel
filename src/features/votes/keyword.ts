@@ -91,7 +91,14 @@ export function matchVoteDetails(
   q: string,
   engine: SearchEngine | null,
 ): VoteMatches | null {
-  const n = normalize(q).replace(/(\d)\/(?:eu|ec|eec|euratom)\b/g, '$1 '); // "No 376/2014/EU" cites 376/2014
+  let fileIds: Set<string | null | undefined> | null = null;
+  const n = normalize(q)
+    .replace(/(\d)\/(?:eu|ec|eec|euratom)\b/g, '$1 ') // "No 376/2014/EU" cites 376/2014
+    // a file's id as in the site's addresses ("2021-0106", "2016-0282A", "2021 0106") is its procedure number; other
+    // pairs of numbers are not ("2021-2027", "2019-2024")
+    .replace(/(?<![\w/-])(\d{4})[-\s](\d{4}[a-z]?)(?![\w/-])/g, (all, y: string, num: string) =>
+      (fileIds ??= new Set(votes.map((v) => v.dossier_id))).has(`${y}-${num.toUpperCase()}`) ? `${y}/${num}` : all,
+    );
   const refs = [...n.matchAll(REF_RE)].map((m) => m[0].replace(/\s+/g, ''));
   const rest = refs.length ? n.replace(REF_RE, ' ') : q;
   const tokens = keywordTokens(rest).filter((t) => !refs.length || !CITATION_WORDS.has(t));
