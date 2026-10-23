@@ -248,6 +248,42 @@ def test_oeil_key_players_keep_the_group_printed_for_each_role():
     assert (lead.mep_id, lead.group, lead.date) == ("96736", "Verts/ALE", None)
 
 
+def participants_with_oeil(pid: str) -> list[tuple[str, str, str | None, str | None]]:
+    """Committees and rapporteurs as build_procedure derives them, from the real EP API participations and OEIL
+    key players of `pid` (fixtures trimmed to those parts)."""
+    proc = json.loads((FIX / f"participants_{pid}.json").read_text(encoding="utf-8"))["data"][0]
+    oeil = m.parse_oeil((FIX / f"players_{pid}.html").read_bytes())
+    committees, rapps = m.build_participants(proc, lambda i: f"MEP {i}", {})
+    rapps = m.oeil_rapporteur_committees(rapps, committees, oeil)
+    return sorted((r.mep_id or "", r.role, r.committee, r.date) for r in rapps if r.role in ("rapporteur", "opinion_rapporteur"))
+
+
+def test_rapporteur_committee_null_in_the_ep_api_is_read_from_oeil():
+    # 2021/0240(COD): participation 2021-0240-NMCP-96899-null-2021-10-28 is "in name of" org/null; OEIL's key
+    # players: "CONT Budgetary Control FERNANDES José Manuel (EPP) 28/10/2021". Never the string "null".
+    assert ("96899", "opinion_rapporteur", "CONT", "2021-10-28") in participants_with_oeil("2021-0240")
+    proc = json.loads((FIX / "participants_2021-0240.json").read_text(encoding="utf-8"))["data"][0]
+    _c, rapps = m.build_participants(proc, lambda i: f"MEP {i}", {})
+    assert {r.committee for r in rapps if r.mep_id == "96899"} == {None}  # without OEIL: no committee, not "null"
+
+
+def test_rapporteur_for_a_subcommittee_is_listed_under_the_committee_giving_the_opinion():
+    # 2025/0045(COD), Omnibus I: the EP API names the subcommittee DROI for Barry Andrews
+    # (2025-0045-NMCP-204332-DROI-2025-04-10); the file's committee for opinion is AFET, and OEIL lists
+    # "AFET Foreign Affairs ANDREWS Barry (Renew) 10/04/2025".
+    rows = participants_with_oeil("2025-0045")
+    assert ("204332", "opinion_rapporteur", "AFET", "2025-04-10") in rows
+    assert not any(r[2] == "DROI" for r in rows)
+    # the other rapporteurs keep the committee the EP API gives
+    assert ("197405", "rapporteur", "JURI", "2025-03-18") in rows and ("256805", "opinion_rapporteur", "EMPL", "2025-04-16") in rows
+
+
+def test_rapporteur_listed_for_a_subcommittee_and_its_committee_is_one_appointment():
+    # 2023/0187(CNS): Herbert Dorfmann for FISC (2023-06-27) and for ECON (2024-09-12); OEIL lists him for ECON
+    # (rapporteur appointed 12/09/2024, former rapporteur 27/06/2023): one rapporteur entry, the later date
+    assert participants_with_oeil("2023-0187") == [("96787", "rapporteur", "ECON", "2024-09-12")]
+
+
 def test_second_reading_gdpr():
     p = build("2012-0011")
     kinds = [(e.date, e.kind) for e in p.events]

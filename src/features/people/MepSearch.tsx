@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { GroupSummary, MepSummary } from '../../types/data';
 import { countryName, formatNumber } from '../../lib/format';
-import { shownParam } from '../../lib/urlState';
+import { clearAllParams, shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { EmptyState } from '../../components/ui';
 import { CollapsibleFilters } from '../../components/CollapsibleFilters';
 import { SortTh, useSortable } from '../votes/sortable';
@@ -10,31 +10,25 @@ import { FULL_TERM_MIN_MEPS, termLabel } from './labels';
 import './people.css';
 
 const PAGE = 60;
+const SHOW_RESET = ['show']; // a new search starts from the first page
 type Key = 'name' | 'country' | 'group' | 'party';
 
 export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<string, GroupSummary> }) {
-  const [params, setParams] = useSearchParams();
+  const [params, patch] = useParamState();
   // rows shown: kept in the address like the filters, so that Back from an MEP returns to the same list
   const shown = shownParam(params, 'show', PAGE);
-  const q = params.get('q') ?? '';
+  const qBox = useParamText('q', SHOW_RESET);
+  const q = qBox.value;
   const country = params.get('country') ?? '';
   const group = params.get('group') ?? '';
-  const party = params.get('party') ?? '';
+  const partyBox = useParamText('party', SHOW_RESET);
+  const party = partyBox.value;
   const status = params.get('status') ?? 'current';
   const term = params.get('term') ?? '';
 
-  const set = (key: string, value: string, dflt = '') => {
-    const next = new URLSearchParams(params);
-    if (value && value !== dflt) next.set(key, value);
-    else next.delete(key);
-    next.delete('show'); // a new filter starts from the first page
-    setParams(next, { replace: true });
-  };
-  const setShown = (n: number) => {
-    const next = new URLSearchParams(params);
-    next.set('show', String(n));
-    setParams(next, { replace: true, preventScrollReset: true });
-  };
+  // a new filter starts from the first page
+  const set = (key: string, value: string, dflt = '') => patch({ [key]: value !== dflt ? value : null, show: null });
+  const setShown = (n: number) => patch({ show: String(n) });
 
   const opts = useMemo(() => {
     const countries = [...new Set(meps.map((m) => m.country))].sort((a, b) => countryName(a).localeCompare(countryName(b)));
@@ -86,7 +80,7 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
       <form className="filters filters--wide-first" role="search" aria-label="Find an MEP" onSubmit={(e) => e.preventDefault()}>
         <div className="field">
           <label htmlFor="mf-q">Name</label>
-          <input id="mf-q" className="input" type="search" value={q} placeholder="Search by name" onChange={(e) => set('q', e.target.value)} />
+          <input id="mf-q" className="input" type="search" value={q} placeholder="Search by name" onChange={(e) => qBox.set(e.target.value)} onBlur={qBox.flush} />
         </div>
         <CollapsibleFilters label="Filters" active={activeFilters}>
           <div className="field">
@@ -114,7 +108,7 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
           </div>
           <div className="field">
             <label htmlFor="mf-party">National party</label>
-            <input id="mf-party" className="input" type="search" value={party} placeholder="Party name" onChange={(e) => set('party', e.target.value)} />
+            <input id="mf-party" className="input" type="search" value={party} placeholder="Party name" onChange={(e) => partyBox.set(e.target.value)} onBlur={partyBox.flush} />
           </div>
           <div className="field">
             <label htmlFor="mf-status">Status</label>
@@ -146,7 +140,7 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
           {status === 'current' ? ' currently in office' : status === 'former' ? ' no longer in office' : ''}
         </p>
         {anyFilter && (
-          <button type="button" className="linkish" onClick={() => setParams(new URLSearchParams({ view: 'meps' }), { replace: true })}>
+          <button type="button" className="linkish" onClick={() => patch(clearAllParams({ view: 'meps' }))}>
             Clear all filters
           </button>
         )}

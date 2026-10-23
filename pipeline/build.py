@@ -120,7 +120,7 @@ SOURCES: dict[str, dict[str, str]] = {
         "under Council Decision (EU) 2017/1842, with acknowledgement of the source.",
     },
     "implementation": {
-        "name": "European Commission / EUR-Lex – national transposition measures, infringements and indicators",
+        "name": "European Commission / EUR-Lex – national transposition measures and infringements",
         "institution": "Commission",
         "url": "https://commission.europa.eu/law/application-eu-law_en",
         "licence": "© European Union. Reuse authorised under Commission Decision 2011/833/EU, with "
@@ -3754,10 +3754,11 @@ class Builder:
                     "id": child, "title": _truncate(self.dossier_summary[child]["title"], 160), "relation": "Split into",
                     "ref": self.dossier_summary[child]["ref"], "status_label": self.dossier_summary[child]["status_label"],
                 })  # fmt: skip
+            # a report and its main file have the same title: their links also give the procedure reference
             if (m := PARLIAMENT_REPORT_RE.fullmatch(pid)) and m.group(1) in self.dossier_summary:
                 related.setdefault(f"report_on:{m.group(1)}", {
                     "id": m.group(1), "title": _truncate(self.dossier_summary[m.group(1)]["title"], 160),
-                    "relation": "Report on",
+                    "relation": "Report on", "ref": self.dossier_summary[m.group(1)]["ref"],
                 })  # fmt: skip
             elif (m := re.fullmatch(r"(\d{4}-\d{4})[A-Z]", pid)) and m.group(1) in self.dossier_summary:
                 related.setdefault(f"split_from:{m.group(1)}", {
@@ -3768,6 +3769,7 @@ class Builder:
                 if rep in self.dossier_summary:  # the R / M file of Parliament's report on this procedure
                     related.setdefault(f"report:{rep}", {
                         "id": rep, "title": _truncate(self.dossier_summary[rep]["title"], 160), "relation": label,
+                        "ref": self.dossier_summary[rep]["ref"],
                     })  # fmt: skip
             order = {
                 "Report on": 0,
@@ -3933,9 +3935,17 @@ class Builder:
                 r["mep_active"] = m.active
                 now = [other for _s, e, other in self.mep_parties.get(m.id, []) if e is None and other != oid]
                 r["now_party"] = now[-1] if m.active and not r["active"] and now else None
+            # memberships Parliament records in this party record outside the record's own period (corporate body
+            # 5320 ends on 15 Jul 2024; Dan Nica's membership of it from 16 Jul 2024 has no end), said as such
+            outside = [
+                {"id": m.id, "name": m.name, "from": start, "to": end}
+                for m, start, end in sorted(rows, key=lambda r: (r[1] or "", r[0].name, r[0].id))
+                if (o.end and (end is None or end > o.end)) or (o.start and start and start < o.start)
+            ]  # fmt: skip
             self.files[f"people/parties/{oid}.json"] = {
                 **summ,
                 "start": o.start, "end": o.end,
+                **({"outside_period": outside} if outside else {}),
                 "meps": sorted(meps_rows.values(), key=lambda r: (not r["active"], r["name"], r["id"])),
                 "group_history": [
                     {
@@ -4230,8 +4240,11 @@ class Builder:
                                       "subtitle": sub + (f" (information updated as of {_long_date(as_of)})" if as_of else ""),
                                       "date": d["last_event"], "badge": "Officially blocked", "_o": 0,
                                       "_as_of": as_of or ""})  # fmt: skip
-        # the most recently confirmed blockages first
-        stalled_items.sort(key=lambda x: (x["_as_of"], x["dossier_id"]), reverse=True)
+        # the most recently confirmed blockages first; of those, the longest without a recorded procedural step (the
+        # date shown), as the inactive files below
+        stalled_items.sort(key=lambda x: (x["date"] or "", x["dossier_id"]))
+        stalled_items.sort(key=lambda x: x["_as_of"], reverse=True)
+        n_blocked = len(stalled_items)
         inactive = []
         for d in summ.values():
             # inactivity is only meaningful where both co-legislators must still act (ordinary procedure);
@@ -4247,6 +4260,7 @@ class Builder:
         # the home page shows six rows: both kinds, so that inactive files are visible too
         n_inactive = min(3, len(inactive))
         stalled_items = stalled_items[: 6 - n_inactive]
+        n_blocked_shown = len(stalled_items)
         for n, d in inactive[:n_inactive]:
             stalled_items.append({"dossier_id": d["id"], "title": d["title"],
                                   "subtitle": f"No recorded procedural update in {n} days", "date": d["last_event"],
@@ -4292,9 +4306,11 @@ class Builder:
                             "agencies and bodies).",
              "items": rej_items[:12]},
             {"id": "stalled", "title": "Stalled",
-             "description": "Files officially reported as blocked (Legislative Train), then ordinary-procedure files "
-                            "with no recorded procedural update for a year or more. Dates are each file's last "
-                            "recorded procedural step.",
+             "description": "Files officially reported as blocked (Legislative Train"
+                            + (f"; {n_blocked_shown} of {n_blocked} shown: the Train's most recent classifications, "
+                               "longest without a recorded procedural step first" if n_blocked_shown < n_blocked else "")
+                            + "), then ordinary-procedure files with no recorded procedural update for a year or more. "
+                            "Dates are each file's last recorded procedural step.",
              "items": stalled_items},
             {"id": "upcoming", "title": "Coming up",
              "description": "Legally fixed dates in the next 12 months: provisions starting to apply and transposition deadlines.",
@@ -4313,8 +4329,11 @@ class Builder:
         sources = []
         for sid, info in SOURCES.items():
             st = m.get(sid)
+            name = info["name"]
+            if sid == "implementation" and s.indicators:  # named only in a release that has them (About page)
+                name = name.replace(" and infringements", ", infringements and indicators")
             sources.append({
-                "id": sid, "name": info["name"], "institution": info["institution"], "url": info["url"],
+                "id": sid, "name": name, "institution": info["institution"], "url": info["url"],
                 "licence": info["licence"], "status": st.status if st else "unavailable",
                 "fetched_at": st.fetched_at if st else None, "records": dict(sorted(st.records.items())) if st else {},
                 "note": st.note if st else "Not yet retrieved in this release.",

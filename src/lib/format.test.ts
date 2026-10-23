@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { DossierDetail, DossierSummary, HomeData, Meta, TimelineEvent } from '../types/data';
-import { aheadOn, asOfToday, eventOn, stepTitle, stillAhead } from './format';
+import { aheadOn, asOfToday, eventOn, noUpdateText, stepTitle, stillAhead } from './format';
 
 // Next steps and status explanations of the build of 23 October 2026 (public/data/dossiers/<id>.json), and what
 // the pipeline itself writes for the same files when it is run on a later date (pipeline/analysis/status.py
@@ -140,6 +140,16 @@ describe('dated statements on the visitor’s date', () => {
     ]);
   });
 
+  it('counts the days without a recorded procedural step on the visitor’s date, in the singular for one', () => {
+    // 2026/0325(COD): last recorded step 22 October 2026, counted as 1 day by the build of 23 October
+    expect(noUpdateText(1, '2026-10-22', '2026-10-23')).toBe('No recorded procedural update in 1 day');
+    expect(noUpdateText(1, '2026-10-22', '2026-12-03')).toBe('No recorded procedural update in 42 days');
+    expect(noUpdateText(3787, '2016-06-10', '2026-10-23')).toBe('No recorded procedural update in 3,787 days');
+    // never fewer than the build counted (a visitor's clock behind the build's), nor a guess without the date
+    expect(noUpdateText(352, '2025-11-05', '2026-10-01')).toBe('No recorded procedural update in 352 days');
+    expect(noUpdateText(5, null, '2027-01-01')).toBe('No recorded procedural update in 5 days');
+  });
+
   it('gives a timeline step the state and title the build would give it on the visitor’s date', () => {
     // 2021/0367(COD), Regulation (EU) 2024/1157; 2022/0167(COD), Directive (EU) 2024/1260
     const applies = { id: 'a', kind: 'application', date: '2026-11-21', state: 'scheduled', title: 'Some provisions start to apply (date recorded by EUR-Lex)' } as TimelineEvent;
@@ -229,6 +239,11 @@ describe.skipIf(!built)('dated statements in the built data', () => {
 
   it('reads on the day it was built as the build wrote it', () => {
     for (const [id, text] of texts) expect(asOfToday(text, buildDay), id).toBe(text);
+    // the days without a recorded step: as many as the build's own text gives, in the same number ("1 day")
+    const days = (t: string) => /in ([\d,]+ days?)\b/.exec(t)?.[1].replace(/,/g, '');
+    for (const d of all)
+      if (d.stall?.text && d.stall.days_since_last_event > 0)
+        expect(days(noUpdateText(d.stall.days_since_last_event, d.stall.last_event_date, buildDay)), d.id).toBe(days(d.stall.text));
     for (const d of all) for (const e of d.timeline) expect(eventOn(e, buildDay), `${d.id} ${e.id}`).toBe(e);
   });
 

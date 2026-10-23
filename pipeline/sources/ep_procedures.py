@@ -1080,6 +1080,8 @@ def build_participants(
                     )
             elif role in RAPPORTEUR_ROLE:
                 committee = last_segment(p.get("participation_in_name_of")) or None
+                if committee == "null":  # "org/null" (2021/0240(COD), José Manuel Fernandes): not a committee
+                    committee = None
                 day = p.get("activity_date")
                 day = day[:10] if isinstance(day, str) and re.match(r"\d{4}-\d{2}-\d{2}", day) else None
                 for person in as_list(p.get("had_participant_person")):
@@ -1124,6 +1126,35 @@ def oeil_participants(
                         Rapporteur(mep_id=mep_id, name=name, committee=pl.code, role=role, group=group),
                     )
     return _sorted_participants(committees.values(), rapps.values())
+
+
+def oeil_rapporteur_committees(
+    rapps: list[Rapporteur], committees: list[CommitteeRole], oeil: OeilInfo
+) -> list[Rapporteur]:
+    """A rapporteur's committee where the EP API names none, or one that is not among the file's committees: the
+    committee the OEIL key players list the MEP under in that role, when they list exactly one. 2021/0240(COD):
+    "org/null" for José Manuel Fernandes, whom OEIL lists for CONT's opinion; 2025/0045(COD): the subcommittee DROI
+    for Barry Andrews, whom OEIL lists for AFET's opinion; 2023/0187(CNS): FISC, and ECON for the same rapporteur,
+    whom OEIL lists for ECON (one appointment then, with the later date)."""
+    codes = {c.code for c in committees}
+    listed: dict[tuple[str, str], set[str]] = {}
+    for pl in oeil.players:
+        role = "rapporteur" if pl.role in ("responsible", "joint") else "opinion_rapporteur"  # as oeil_participants
+        for mep_id in pl.rapporteurs:
+            listed.setdefault((mep_id, role), set()).add(pl.code)
+    out: dict[tuple[str | None, str, str | None], Rapporteur] = {}
+    for r in rapps:
+        if r.role in ("rapporteur", "opinion_rapporteur") and r.committee not in codes:
+            found = listed.get((r.mep_id or "", r.role), set())
+            if len(found) == 1:
+                r = r.model_copy(update={"committee": next(iter(found))})
+        key = (r.mep_id, r.role, r.committee)
+        kept = out.get(key)
+        if kept is None:
+            out[key] = r
+        elif r.date and (kept.date is None or r.date > kept.date):
+            out[key] = kept.model_copy(update={"date": r.date})
+    return list(out.values())
 
 
 def _sorted_participants(
@@ -1187,6 +1218,10 @@ def build_procedure(
         o_committees, o_rapporteurs = oeil_participants(oeil, name_of, committee_names)
         committees = committees or o_committees
         rapporteurs = rapporteurs or o_rapporteurs
+    if oeil:
+        committees, rapporteurs = _sorted_participants(
+            committees, oeil_rapporteur_committees(rapporteurs, committees, oeil)
+        )
 
     documents: dict[str, DocRef] = {}
     if oeil:

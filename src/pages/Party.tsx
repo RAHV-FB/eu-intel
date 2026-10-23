@@ -6,23 +6,17 @@ import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
 import { ErrorState, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
-import { periodText, termYears, useGroups } from '../features/people/labels';
+import { partyRecordTitle, periodText, recordPeriod, termYears, useGroups } from '../features/people/labels';
 import { SortTh, useSortable } from '../features/votes/sortable';
 import '../features/people/people.css';
 
 type MepRow = PartyDetail['meps'][number];
 
-/** "2 Jul 2019 – 15 Jul 2024", or "from 16 Jul 2024" for a record still open. */
-function recordPeriod(start?: string | null, end?: string | null): string {
-  if (!start) return 'dates not recorded';
-  return end ? `${formatDate(start)} – ${formatDate(end)}` : `from ${formatDate(start)}`;
-}
-
 /** A link to another party record, with the term it covers when it shares this record's name (and its period when
- * it also shares the term, as Azione's two 2019–2024 records do). */
-function PartyRefLink({ r, withTerm, terms }: { r: PartyRef; withTerm: boolean; terms?: number[] }) {
+ * it also shares the term with this record or with another record listed, as Azione's two 2019–2024 records do). */
+function PartyRefLink({ r, withTerm, terms, others = [] }: { r: PartyRef; withTerm: boolean; terms?: number[]; others?: PartyRef[] }) {
   const term = termYears(r.terms);
-  const sameTerm = !!term && term === termYears(terms);
+  const sameTerm = !!term && (term === termYears(terms) || others.some((o) => o.id !== r.id && termYears(o.terms) === term));
   return (
     <>
       <Link to={`/people/parties/${encodeURIComponent(r.id)}`}>{r.label}</Link>
@@ -37,6 +31,11 @@ function PartyRefLink({ r, withTerm, terms }: { r: PartyRef; withTerm: boolean; 
   );
 }
 
+/** "Dan Nica from 16 Jul 2024": a membership Parliament records in the record outside the record's own period. */
+function outsideText(x: NonNullable<PartyDetail['outside_period']>[number]): string {
+  return `${x.name} ${x.to ? `${x.from ? `from ${formatDate(x.from)} ` : ''}to ${formatDate(x.to)}` : x.from ? `from ${formatDate(x.from)}` : ''}`.trim();
+}
+
 /** The MEP's own status: sitting today (in this party record or under another one) or a former MEP. */
 function statusText(r: MepRow): string {
   return r.active || r.mep_active ? 'Current MEP' : 'Former MEP';
@@ -46,7 +45,7 @@ export default function Party() {
   const { id = '' } = useParams();
   const { data: p, error, loading } = useData<PartyDetail>(`people/parties/${encodeURIComponent(id)}.json`);
   const groups = useGroups();
-  useDocumentTitle(p ? `${p.label} (${countryName(p.country)})` : isMissing(error) ? 'National party not found' : 'National party');
+  useDocumentTitle(p ? partyRecordTitle(p) : isMissing(error) ? 'National party not found' : 'National party');
 
   const m = useSortable<MepRow, 'name' | 'from' | 'to' | 'status'>(
     p?.meps ?? [],
@@ -58,6 +57,7 @@ export default function Party() {
     },
     { key: 'status', dir: 'asc' },
     { from: 'desc', to: 'desc' },
+    'sort',
   );
   const history = useMemo(() => [...(p?.group_history ?? [])].sort((a, b) => (b.from ?? '').localeCompare(a.from ?? '')), [p]);
   const now = useMemo(() => new Map((p?.now_parties ?? []).map((r) => [r.id, r])), [p]);
@@ -71,7 +71,11 @@ export default function Party() {
   const nowParties = p.now_parties ?? [];
   // a record of an earlier term: Parliament closed it, and its MEPs are no longer recorded in it
   const closed = !!p.end && p.members_active === 0;
-  const sameLabel = (r: PartyRef) => r.label === p.label;
+  // the records the build lists as having this record's name (names compared without spacing or punctuation)
+  const sameIds = new Set(sameName.map((r) => r.id));
+  const sameLabel = (r: PartyRef) => sameIds.has(r.id) || r.label === p.label;
+  const outside = p.outside_period ?? [];
+  const afterEnd = !!p.end && outside.every((x) => !!x.from && x.from > p.end!);
   const sittingElsewhere = nowParties.reduce((n, r) => n + (r.meps ?? 0), 0);
 
   return (
@@ -96,13 +100,20 @@ export default function Party() {
         }
       />
 
-      {(sameName.length > 0 || closed) && (
+      {(sameName.length > 0 || closed || outside.length > 0) && (
         <div className="callout party-record">
           <p>
             Parliament’s membership data records national parties term by term, so the same party can have several records. This
             record covers {p.start ? <>the period {recordPeriod(p.start, p.end)}</> : 'a period that is not recorded'}
             {term && <> ({term})</>}
             {closed ? ', and none of its MEPs is recorded in it today.' : '.'}
+            {outside.length > 0 && (
+              <>
+                {' '}
+                Parliament’s membership data also lists {outside.map(outsideText).join(', ')} in this record,{' '}
+                {afterEnd ? 'after that period ended' : 'outside that period'}.
+              </>
+            )}
           </p>
           {sameName.length > 0 && (
             <p>
@@ -110,7 +121,7 @@ export default function Party() {
               {sameName.map((r, i) => (
                 <span key={r.id}>
                   {i > 0 && ', '}
-                  <PartyRefLink r={r} withTerm terms={p.terms} />
+                  <PartyRefLink r={r} withTerm terms={p.terms} others={sameName} />
                   {r.start && !r.end && r.members_active > 0 && <> – {formatNumber(r.members_active)} current {r.members_active === 1 ? 'MEP' : 'MEPs'}</>}
                 </span>
               ))}
@@ -135,8 +146,15 @@ export default function Party() {
         ) : (
           <>
             <div>
-              <dt>Current MEPs</dt>
+              {/* MEPs sitting today who are still in this record; those listed here who sit under another record are
+                  counted next to it, so that the figure agrees with the "Current MEP" rows below */}
+              <dt>Current MEPs in this record</dt>
               <dd className="big">{formatNumber(p.members_active)}</dd>
+              {sittingElsewhere > 0 && (
+                <dd className="meta">
+                  {formatNumber(sittingElsewhere)} of its MEPs now {sittingElsewhere === 1 ? 'sits' : 'sit'} under another record
+                </dd>
+              )}
             </div>
             <div>
               <dt>MEPs in our dataset</dt>

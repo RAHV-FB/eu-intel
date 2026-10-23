@@ -825,6 +825,18 @@ def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
     assert [(r["group"], r["group_code"]) for r in durand] == [("greens-efa", "Greens/EFA")]
 
 
+def test_snapshot_rapporteur_committees_are_among_the_files_committees():
+    # re-derived with ep_procedures.oeil_rapporteur_committees over the cached EP API and OEIL answers:
+    # 2021/0240(COD) "org/null" -> CONT, 2025/0045(COD) DROI -> AFET, 2023/0187(CNS) FISC + ECON -> ECON
+    p = procs("2021-0240", "2025-0045", "2023-0187")
+    by = {(pid, r.mep_id): r.committee for pid, x in p.items() for r in x.rapporteurs if r.role != "shadow"}
+    assert by[("2021-0240", "96899")] == "CONT" and by[("2025-0045", "204332")] == "AFET"
+    assert [(r.committee, r.date) for r in p["2023-0187"].rapporteurs if r.role == "rapporteur"] == [("ECON", "2024-09-12")]
+    for x in p.values():
+        codes = {c.code for c in x.committees}
+        assert all(r.committee in codes for r in x.rapporteurs if r.role in ("rapporteur", "opinion_rapporteur")), x.id
+
+
 # ----------------------------------------------------------------------------- timelines: steps, dates and order
 def stand_in(**kw) -> SimpleNamespace:
     """The Builder state the procedure methods read (with_recorded_events, timeline, adoption_dates), with the

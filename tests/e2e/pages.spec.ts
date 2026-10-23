@@ -213,3 +213,174 @@ test('home cards do not scroll sideways at 320px with increased text spacing (WC
   await page.addStyleTag({ content: '*{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important} p{margin-bottom:2em!important}' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
+
+test.describe('filters kept in the address keep what is typed', () => {
+  // React Router renders a new address after the keystroke: a box that read its text back from the address moved
+  // the caret to the end and dropped keys typed in between ("network and information security" became "er fraiy")
+  for (const [path, box, param] of [
+    ['countries/IE/', '#tr-q', 'tr-q'],
+    ['countries/IE/', '#inf-q', 'inf-q'],
+    ['votes/199592/', '#bl-q', 'bl-q'],
+    ['votes', '#vf-q', 'q'],
+    ['people', '#mf-q', 'q'],
+    ['people?view=parties', '#pf-q', 'pq'],
+  ]) {
+    test(`${path} ${box}`, async ({ page }) => {
+      await open(page, path);
+      const input = page.locator(box);
+      await input.click();
+      await page.keyboard.type('abcd', { delay: 30 });
+      await input.evaluate((el: HTMLInputElement) => el.setSelectionRange(1, 1));
+      await page.keyboard.type('XY', { delay: 30 });
+      await expect(input).toHaveValue('aXYbcd');
+      await input.fill('');
+      await page.keyboard.type('network and information security', { delay: 0 });
+      await expect(input).toHaveValue('network and information security');
+      await expect(page).toHaveURL(new RegExp(`[?&]${param}=network\\+and\\+information\\+security`));
+    });
+  }
+
+  test('a search typed and left at once is kept for Back', async ({ page }) => {
+    await open(page, 'countries/IE/');
+    await page.locator('#tr-q').click();
+    await page.keyboard.type('cyber', { delay: 0 });
+    await page.locator('td.impl-dir a[href*="/legislation/"]').first().click(); // before the pause that writes it
+    await settle(page);
+    await page.goBack();
+    await settle(page);
+    await expect(page.locator('#tr-q')).toHaveValue('cyber');
+  });
+
+  test('a checkbox or a list keeps the choice at once', async ({ page }) => {
+    await open(page, 'countries/IE/');
+    await page.locator('#inf-nc').check(); // failed with "did not change its state" while the address caught up
+    await expect(page).toHaveURL(/inf-nc=1/);
+    await open(page, 'votes');
+    await page.locator('#vf-close').check();
+    await expect(page).toHaveURL(/close=1/);
+    await page.locator('#vf-year').focus();
+    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowDown');
+    await expect(page.locator('#vf-year')).toHaveJSProperty('selectedIndex', 3);
+  });
+});
+
+test.describe('votes list', () => {
+  test('"All votes" returns to the list as filtered; options count the votes the other filters leave', async ({ page }) => {
+    await open(page, 'votes?kind=final&year=2024&sort=margin');
+    const count = (await page.locator('.results-bar__count').textContent())!;
+    expect(await page.locator('#vf-kind option[value="final"]').textContent()).toBe(`Final vote (${/^([\d,]+)/.exec(count)![1]})`);
+    await expect(page.locator('main h2', { hasText: 'Results' })).toHaveCount(1); // between the h1 and the votes' h3
+    await page.locator('main .vote-item__title a').first().click();
+    await settle(page);
+    await page.getByRole('link', { name: '← All votes' }).click();
+    await settle(page);
+    await expect(page).toHaveURL(/votes\?kind=final&year=2024&sort=margin$/);
+    await expect(page.locator('.results-bar__count')).toHaveText(count);
+    await open(page, 'votes?kind=mandate');
+    await expect(page.locator('#vf-outcome option[value="rejected"]')).toHaveText('Rejected (0)');
+    await expectNoSeriousA11yViolations(page);
+  });
+});
+
+test.describe('party records: figures, titles and links', () => {
+  test('the current MEPs of a record and those now under another record add up to its “Current MEP” rows', async ({ page }) => {
+    await open(page, 'people/parties/6703/'); // Platforma Obywatelska: 18 now under Koalicja Obywatelska
+    await expect(page).toHaveTitle(`Platforma Obywatelska (Poland, 2024–2029 term) – ${SITE_NAME}`);
+    const facts = page.locator('.facts');
+    await expect(facts).toContainText('Current MEPs in this record');
+    await expect(facts).toContainText('18 of its MEPs now sit under another record');
+    await expect(page.locator('section[aria-labelledby="pm-h"] tbody tr', { hasText: 'Current MEP' })).toHaveCount(18);
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('a membership outside the record’s period is stated as such (PSD 5320, Dan Nica)', async ({ page }) => {
+    await open(page, 'people/parties/5320/');
+    await expect(page.locator('.party-record')).toContainText(
+      'Parliament’s membership data also lists Dan Nica from 16 Jul 2024 in this record, after that period ended.',
+    );
+  });
+
+  test('records of the same party have their own titles, and a “Now” link to one names its term', async ({ page, request }) => {
+    await open(page, 'people/parties/6103/');
+    await expect(page).toHaveTitle(`Azione (Italy, 2019–2024 term, 20 Nov 2019 – 8 Nov 2022) – ${SITE_NAME}`);
+    const prerendered = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}people/parties/6478/`)).text();
+    expect(prerendered).toContain(`<title>Azione (Italy, 2019–2024 term, 6 Dec 2023 – 15 Jul 2024) – ${SITE_NAME}</title>`);
+    await open(page, 'people/parties/5288/'); // 6685's name differs only in spacing: "…Latvijai!" - "Tēvzemei…"
+    await expect(page.getByRole('row', { name: /Roberts Zīle/ }).locator('.party-now').first()).toContainText('(2024–2029 term)');
+  });
+
+  test('the MEP table’s order is kept for Back', async ({ page }) => {
+    await open(page, 'people/parties/5494/');
+    const name = page.getByRole('button', { name: /^Name/ });
+    await name.click();
+    await name.click();
+    await expect(page).toHaveURL(/sort=name-desc/);
+    const first = page.locator('section[aria-labelledby="pm-h"] tbody tr th a').first();
+    const who = (await first.textContent())!;
+    await first.click();
+    await settle(page);
+    await page.goBack();
+    await settle(page);
+    await expect(page.locator('section[aria-labelledby="pm-h"] tbody tr th a').first()).toHaveText(who);
+  });
+});
+
+test('a shared list: Unfollow keeps focus on the file’s button and says what changed', async ({ page }) => {
+  await open(page, 'following/?ids=2021-0106,2020-0359,2016-0400');
+  await page.getByRole('button', { name: 'Follow these 3 files in this browser' }).click();
+  await page.getByRole('button', { name: 'Unfollow Artificial Intelligence Act' }).press('Enter');
+  await expect(page.locator(':focus')).toHaveAccessibleName('Follow Artificial Intelligence Act in this browser');
+  await expect(page.getByRole('status').filter({ hasText: 'You no longer follow Artificial Intelligence Act in this browser.' })).toHaveCount(1);
+  await expect(page.locator('.following__item')).toHaveCount(3);
+  await page.keyboard.press('Enter');
+  await expect(page.locator(':focus')).toHaveAccessibleName('Unfollow Artificial Intelligence Act');
+  await expect(page.getByRole('status').filter({ hasText: 'Now following Artificial Intelligence Act in this browser.' })).toHaveCount(1);
+});
+
+test('"Show all … Council votes" moves focus to the first vote it adds; the sources name no indicators', async ({ page }) => {
+  await open(page, 'countries/IE/');
+  await page.getByRole('button', { name: /^Show all [\d,]+ Council votes$/ }).press('Enter');
+  await expect(page).toHaveURL(/cvotes=all/);
+  await expect(page.locator(':focus')).toHaveCount(1);
+  const index = await page.evaluate(() => {
+    const tr = document.activeElement?.closest('tr');
+    return tr ? [...tr.parentElement!.children].indexOf(tr) : -1;
+  });
+  expect(index).toBe(20);
+  await expect(page.locator('#implementation .note', { hasText: 'Sources:' })).toHaveText(
+    /^Sources: European Commission \/ EUR-Lex – national transposition measures and infringements/,
+  );
+});
+
+test.describe('legislative files', () => {
+  test('a rapporteur’s committee is the one OEIL names, never "null"', async ({ page }) => {
+    await open(page, 'legislation/2021-0240/');
+    await page.locator('#details summary').click();
+    await expect(page.locator('#details li', { hasText: 'José Manuel Fernandes' })).toContainText('Rapporteur for an opinion (CONT)');
+    await open(page, 'legislation/2025-0045/');
+    await page.locator('#details summary').click();
+    await expect(page.locator('#details li', { hasText: 'Barry Andrews' })).toContainText('Rapporteur for an opinion (AFET)');
+  });
+
+  test('a report and its main file link each other by procedure reference', async ({ page }) => {
+    await open(page, 'legislation/2020-0112/');
+    await page.locator('#details summary').click();
+    await expect(page.locator('#details li', { hasText: 'interim report' }).getByRole('link')).toHaveText(/^2020\/0112R\(APP\) – /);
+    await open(page, 'legislation/2020-0112R/');
+    await page.locator('#details summary').click();
+    await expect(page.locator('#details li', { hasText: 'Report on' }).getByRole('link')).toHaveText(/^2020\/0112\(APP\) – /);
+    await expect(page.locator('#details')).toContainText('None: Parliament’s report is a resolution of Parliament, not a legislative act');
+  });
+
+  test('the days without a recorded step are counted on the visitor’s date, in the singular for one', async ({ page, request }) => {
+    const d = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/dossiers/2026-0325.json`)).json();
+    const last: string = d.stall.last_event_date;
+    const day = (n: number) => new Date(Date.parse(`${last}T12:00:00Z`) + n * 86_400_000);
+    await page.clock.install({ time: day(1) });
+    await open(page, 'legislation/2026-0325/');
+    await expect(page.locator('.dz-where')).toContainText('No recorded procedural update in 1 day.');
+    await page.clock.setSystemTime(day(42));
+    await open(page, 'legislation/2026-0325/');
+    await expect(page.locator('.dz-where')).toContainText('No recorded procedural update in 42 days.');
+  });
+});

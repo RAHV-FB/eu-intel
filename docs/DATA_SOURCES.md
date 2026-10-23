@@ -75,7 +75,12 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   (5494 → 6848) or a new party (Platforma Obywatelska 6703 → Koalicja Obywatelska 7979: 18 MEPs, most from
   1 December 2025). `same_name` lists the records with the same name and country, `now_parties` the records of
   `now_party` with how many of this record's MEPs sit under each. A record whose `temporal` has ended and has no
-  current member shows its period instead of "Current MEPs 0".
+  current member shows its period instead of "Current MEPs 0"; otherwise the page counts its current MEPs in this
+  record (`members_active`) and, next to them, those listed here who now sit under another record (the sum of
+  `now_parties`). `outside_period` lists the memberships Parliament records in the record outside its `temporal`
+  (PSD 5320 ends on 15 July 2024, but `/api/v2/meps/124784` lists Dan Nica in it from 16 July 2024 with no end
+  date), which the page states as such. Records that share a name and country also differ in their page title,
+  by their term (and their period when they share the term).
 
 ### EP plenary votes (`ep_votes`) — ok
 - Fields are documented in `pipeline/sources/ep_votes.py`; the points below are where we read more than one
@@ -554,6 +559,15 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   opinion_rapporteur (`RAPPORTEUR_OPINION`, `_CHAIR_OPINION`) and shadow_opinion (`RAPPORTEUR_SHADOW_OPINION`;
   stored as "other" before October 2026). Files without EP API participations (mostly older ones) take them from
   OEIL's key players: the rapporteur of a committee responsible or for opinion, then the shadow rapporteurs.
+- `committee`: the committee the participation is `participation_in_name_of`. Where the EP API names none
+  ("org/null"), or one that is not among the file's committees, the rapporteur (or rapporteur for an opinion)
+  takes the committee OEIL's key players list the MEP under in that role, when they list exactly one: 2021/0240(COD)
+  José Manuel Fernandes "org/null" → CONT ("CONT Budgetary Control FERNANDES José Manuel (EPP) 28/10/2021");
+  2025/0045(COD) Barry Andrews, the subcommittee DROI → AFET ("AFET Foreign Affairs ANDREWS Barry (Renew)
+  10/04/2025"); 2023/0187(CNS) Herbert Dorfmann, FISC → ECON, where the API also lists him for ECON (one entry,
+  with the later date). The 8 JURI opinions on the legal basis keep JURI, which OEIL lists too. These three snapshot
+  records were re-derived with the module's code over the cached API and OEIL answers (network blocked): the
+  previous code reproduces all 1,564 stored records from that cache, and no other record changes.
 - `date`: the participation's `activity_date` (the appointment; the latest when an MEP was re-appointed, e.g. in
   a new term). `group`: for OEIL entries, the group OEIL prints after the name ("KONEČNÁ Kateřina (The Left)").
 - The group shown is the one held in the role, never the MEP's current group: the MEP's group membership on
@@ -597,7 +611,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   still transpose the rest.
 - Country indicators (Single Market Scoreboard): **unavailable** — host returns a CloudFront 403 to scripts;
   data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed. Country
-  pages show an indicators section only when a release has indicators.
+  pages show an indicators section only when a release has indicators, and the source is named "national
+  transposition measures and infringements" (meta.json, under the country pages' Implementation section), with
+  "and indicators" only then.
 - Country pages' directive rows (`countries/<cc>.json` `transposition`) carry the directive's own number as its
   official title cites it (`act`: "Directive (EU) 2022/2555", "Directive 2014/35/EU"; from the CELEX id only when
   the title has none) and the names its file is known by (`names`, as `known_as.names` on the file's page, else

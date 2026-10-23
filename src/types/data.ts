@@ -649,6 +649,8 @@ export interface PartyDetail extends PartySummary {
     to?: ISODate | null;
   }[];
   group_history: { group: string; from?: ISODate | null; to?: ISODate | null; meps: number }[];
+  // memberships Parliament records in this record that run outside the record's own period (`start`–`end`)
+  outside_period?: { id: string; name: string; from?: ISODate | null; to?: ISODate | null }[];
   same_name?: PartyRef[]; // records with the same name and country (the same party in other terms)
   now_parties?: PartyRef[]; // the records this record's sitting MEPs are in now, most MEPs first
   source: SourceRef;

@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { GroupSummary, PartySummary } from '../../types/data';
 import { countryName, formatNumber } from '../../lib/format';
-import { shownParam } from '../../lib/urlState';
+import { shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { Disclosure, EmptyState } from '../../components/ui';
 import { CollapsibleFilters, PHONE_WIDTH } from '../../components/CollapsibleFilters';
 import { useMediaQuery } from '../../components/useMediaQuery';
 import { SortTh, useSortable } from '../votes/sortable';
-import { termLabel, termYears } from './labels';
+import { partyNameKey, termLabel, termYears } from './labels';
 import './people.css';
 
 type GKey = 'code' | 'name' | 'members' | 'countries';
@@ -94,36 +94,30 @@ export function GroupsOverview({ groups }: { groups: GroupSummary[] }) {
 }
 
 const PAGE = 60;
+const PSHOW_RESET = ['pshow']; // a new search starts from the first page
 type PKey = 'label' | 'country' | 'active' | 'total';
 
 export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; groups: Map<string, GroupSummary> }) {
-  const [params, setParams] = useSearchParams();
+  const [params, patch] = useParamState();
   // rows shown: kept in the address like the filters, so that Back from a party returns to the same list
   const shown = shownParam(params, 'pshow', PAGE);
-  const q = params.get('pq') ?? '';
+  const qBox = useParamText('pq', PSHOW_RESET);
+  const q = qBox.value;
   const country = params.get('pcountry') ?? '';
   const scope = params.get('pscope') ?? 'current';
-  const set = (key: string, value: string, dflt = '') => {
-    const next = new URLSearchParams(params);
-    if (value && value !== dflt) next.set(key, value);
-    else next.delete(key);
-    next.delete('pshow'); // a new filter starts from the first page
-    setParams(next, { replace: true });
-  };
-  const setShown = (n: number) => {
-    const next = new URLSearchParams(params);
-    next.set('pshow', String(n));
-    setParams(next, { replace: true, preventScrollReset: true });
-  };
+  // a new filter starts from the first page
+  const set = (key: string, value: string, dflt = '') => patch({ [key]: value !== dflt ? value : null, pshow: null });
+  const setShown = (n: number) => patch({ pshow: String(n) });
 
   const countries = useMemo(
     () => [...new Set(parties.map((p) => p.country))].sort((a, b) => countryName(a).localeCompare(countryName(b))),
     [parties],
   );
-  // records of the same party in different terms share a name: those rows say which term they cover
+  // records of the same party in different terms share a name (as the build compares names: the party pages'
+  // "Other records"): those rows say which term they cover
   const sharedName = useMemo(() => {
     const n = new Map<string, number>();
-    for (const p of parties) n.set(`${p.country}|${p.label}`, (n.get(`${p.country}|${p.label}`) ?? 0) + 1);
+    for (const p of parties) n.set(`${p.country}|${partyNameKey(p.label)}`, (n.get(`${p.country}|${partyNameKey(p.label)}`) ?? 0) + 1);
     return n;
   }, [parties]);
   const filtered = useMemo(() => {
@@ -158,7 +152,7 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
       <form className="filters" role="search" aria-label="Find a national party" onSubmit={(e) => e.preventDefault()}>
         <div className="field">
           <label htmlFor="pf-q">Party name</label>
-          <input id="pf-q" className="input" type="search" value={q} onChange={(e) => set('pq', e.target.value)} />
+          <input id="pf-q" className="input" type="search" value={q} onChange={(e) => qBox.set(e.target.value)} onBlur={qBox.flush} />
         </div>
         <CollapsibleFilters label="Filters" active={(country ? 1 : 0) + (scope !== 'current' ? 1 : 0)}>
           <div className="field">
@@ -214,7 +208,7 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
                     <th scope="row" style={{ fontWeight: 500 }}>
                       <Link to={`/people/parties/${encodeURIComponent(p.id)}`}>{p.label}</Link>
                       {p.code && p.code !== p.label && <span className="meta"> ({p.code})</span>}
-                      {(sharedName.get(`${p.country}|${p.label}`) ?? 0) > 1 && p.terms?.length ? (
+                      {(sharedName.get(`${p.country}|${partyNameKey(p.label)}`) ?? 0) > 1 && p.terms?.length ? (
                         <span className="meta"> · {termYears(p.terms)}</span>
                       ) : null}
                     </th>

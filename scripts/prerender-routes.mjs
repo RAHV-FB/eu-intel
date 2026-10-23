@@ -27,6 +27,22 @@ const inCountry = (code) => (['NL', 'GB'].includes(code) ? `the ${countryName(co
 // "2019–2024 term" (as search subtitles and party pages name a party record's term)
 const termYears = (terms) =>
   terms?.length ? `${terms.map((t) => `${1979 + 5 * (t - 1)}–${1984 + 5 * (t - 1)}`).join(' and ')} term${terms.length > 1 ? 's' : ''}` : '';
+// "20 Nov 2019" (src/lib/format.ts formatDate)
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const formatDate = (d) => {
+  const [y, m, day] = d.slice(0, 10).split('-').map(Number);
+  return `${day} ${MONTHS[m - 1]} ${y}`;
+};
+// a party page's title, as partyRecordTitle (src/features/people/labels.ts) gives it: records of the same name and
+// country (the same party in other terms) are told apart by their term, and by their period when they share the term
+const partyTitle = (p) => {
+  const term = termYears(p.terms);
+  const others = p.same_name ?? [];
+  if (!others.length || !term) return `${p.label} (${countryName(p.country)})`;
+  const sameTerm = others.some((r) => termYears(r.terms) === term);
+  const period = !p.start ? 'dates not recorded' : p.end ? `${formatDate(p.start)} – ${formatDate(p.end)}` : `from ${formatDate(p.start)}`;
+  return `${p.label} (${countryName(p.country)}, ${term}${sameTerm ? `, ${period}` : ''})`;
+};
 
 function page(route, title, description) {
   let html = shell.replace(/<title>[^<]*<\/title>/, `<title>${esc(title ? `${title} – ${SITE}` : SITE)}</title>`);
@@ -83,8 +99,8 @@ for (const f of existsSync(partyDir) ? readdirSync(partyDir).filter((x) => x.end
   const term = termYears(p.terms);
   page(
     `people/parties/${p.id}`,
-    `${p.label} (${countryName(p.country)})`,
-    `National party from ${countryName(p.country)} as recorded in the European Parliament's membership data${term ? ` (${term} record)` : ''}: its MEPs and political groups.`,
+    partyTitle(p),
+    `National party from ${countryName(p.country)} as recorded in the European Parliament's membership data${term ? ` (record for the ${term})` : ''}: its MEPs and political groups.`,
   );
   n++;
 }

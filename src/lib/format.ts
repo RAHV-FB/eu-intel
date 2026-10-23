@@ -29,6 +29,14 @@ export function daysSince(d: ISODate, today = new Date()): number {
   return Math.round((t - Date.UTC(y, m - 1, day)) / 86_400_000);
 }
 
+/** "No recorded procedural update in 9 days" on `today`: the build counts the days since a file's last recorded step
+ * (`days`) on its own date, up to a week before the visitor's; `last` is that step's date. Never fewer than the
+ * build counted. */
+export function noUpdateText(days: number, last: ISODate | null | undefined, today: ISODate): string {
+  const n = last ? Math.max(days, daysSince(last, new Date(`${today}T00:00:00Z`))) : days;
+  return `No recorded procedural update in ${plural(n, 'day')}`;
+}
+
 export function isFuture(d: ISODate, today = new Date()): boolean {
   return daysSince(d, today) < 0;
 }

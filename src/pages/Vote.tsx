@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import type { EpVoteDetail, GroupSummary } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
@@ -29,6 +29,10 @@ export default function Vote() {
   const groupsState = useData<GroupSummary[]>('people/groups.json');
   const notFound = !validId || (!!v && !Array.isArray(v.ballots)) || isMissing(error);
   useDocumentTitle(notFound ? 'Vote not found' : v ? v.display_title || v.title : 'Parliament vote');
+
+  // "All votes" returns to the list as it was filtered, when the vote was opened from it (VoteListItem)
+  const fromList = (useLocation().state as { votesList?: unknown } | null)?.votesList;
+  const listUrl = typeof fromList === 'string' && /^\/votes(\?|$)/.test(fromList) ? fromList : '/votes';
 
   const groupNames = useMemo(() => new Map((groupsState.data ?? []).map((g) => [g.id, g.name])), [groupsState.data]);
   const groupCodes = useMemo(() => {
@@ -64,7 +68,7 @@ export default function Vote() {
   return (
     <div className="container page">
       <p className="meta" style={{ marginBottom: 'var(--sp-3)' }}>
-        <Link to="/votes">← All votes</Link>
+        <Link to={listUrl}>← All votes</Link>
       </p>
       <PageHeader
         eyebrow={

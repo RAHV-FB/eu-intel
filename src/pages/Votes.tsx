@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { EpVoteSummary, Topic, VoteKind, VoteOutcome } from '../types/data';
 import { useData } from '../lib/data';
 import { formatNumber, plural } from '../lib/format';
 import { loadSearch, type SearchEngine } from '../lib/search';
-import { shownParam } from '../lib/urlState';
+import { clearAllParams, shownParam, useParamState, useParamText } from '../lib/urlState';
 import { Disclosure, EmptyState, ErrorState, Loading, PageHeader, Term } from '../components/ui';
 import { CollapsibleFilters } from '../components/CollapsibleFilters';
 import { useDocumentTitle } from '../features/legislation/labels';
@@ -13,6 +13,7 @@ import { KIND_LABEL, OUTCOME_LABEL, isClose } from '../features/votes/labels';
 import { matchVoteDetails, voteHaystacks } from '../features/votes/keyword';
 
 const PAGE = 50;
+const SHOW_RESET = ['show']; // a new search starts from the first page
 const KIND_ORDER: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'amendment', 'split_or_separate', 'procedural', 'other'];
 const OUTCOME_ORDER: VoteOutcome[] = ['adopted', 'rejected', 'lapsed', 'unknown'];
 type SortKey = 'newest' | 'oldest' | 'margin';
@@ -30,11 +31,12 @@ export default function Votes() {
   useDocumentTitle('Parliament votes');
   const { data, error, loading } = useData<EpVoteSummary[]>('votes/index.json');
   const topicsState = useData<Topic[]>('topics.json');
-  const [params, setParams] = useSearchParams();
+  const [params, patch] = useParamState();
   // rows shown: kept in the address like the filters, so that Back from a vote returns to the same list
   const shown = shownParam(params, 'show', PAGE);
 
-  const q = params.get('q') ?? '';
+  const qBox = useParamText('q', SHOW_RESET);
+  const q = qBox.value;
   const year = params.get('year') ?? '';
   const kind = params.get('kind') ?? '';
   const outcome = params.get('outcome') ?? '';
@@ -43,18 +45,16 @@ export default function Votes() {
   const close = params.get('close') === '1';
   const sort = (params.get('sort') as SortKey) || 'newest';
 
-  const set = (key: string, value: string) => {
-    const next = new URLSearchParams(params);
-    if (value) next.set(key, value);
-    else next.delete(key);
-    next.delete('show'); // a new filter starts from the first page
-    setParams(next, { replace: true });
-  };
-  const setShown = (n: number) => {
-    const next = new URLSearchParams(params);
-    next.set('show', String(n));
-    setParams(next, { replace: true, preventScrollReset: true });
-  };
+  const set = (key: string, value: string) => patch({ [key]: value, show: null }); // a new filter starts from the first page
+  const setShown = (n: number) => patch({ show: String(n) });
+  // this list's address, with the search as typed: a vote page's "All votes" link returns to it
+  const listUrl = useMemo(() => {
+    const p = new URLSearchParams(params);
+    if (q) p.set('q', q);
+    else p.delete('q');
+    const s = p.toString();
+    return s ? `/votes?${s}` : '/votes';
+  }, [params, q]);
 
   const votes = useMemo(() => data ?? [], [data]);
   const opts = useMemo(() => {
@@ -65,10 +65,9 @@ export default function Votes() {
     for (const v of votes) for (const t of v.topics) topics.set(t, (topics.get(t) ?? 0) + 1);
     const linked = votes.filter((v) => v.dossier_id).length;
     const withMargin = votes.filter((v) => v.margin).length;
-    const closeCount = votes.filter(isClose).length;
     const derived = votes.filter((v) => v.outcome_basis === 'derived').length;
     const noTopic = votes.filter((v) => !v.topics.length).length;
-    return { years, kinds, outcomes, topics, linked, withMargin, closeCount, derived, noTopic };
+    return { years, kinds, outcomes, topics, linked, withMargin, derived, noTopic };
   }, [votes]);
 
   const topicLabel = useMemo(() => {
@@ -88,18 +87,41 @@ export default function Votes() {
   const keywordMatch = useMemo(() => matchVoteDetails(votes, haystacks, q, engine), [votes, haystacks, q, engine]);
   const keywordHits = keywordMatch?.ids ?? null;
 
+  // each filter, so that a filter's options can count the votes matching all the other filters
+  const tests = useMemo(
+    () => ({
+      year: (v: EpVoteSummary) => !year || v.date.startsWith(year),
+      kind: (v: EpVoteSummary) => !kind || v.kind === kind,
+      outcome: (v: EpVoteSummary) => !outcome || v.outcome === outcome,
+      topic: (v: EpVoteSummary) => !topic || v.topics.includes(topic),
+      dossier: (v: EpVoteSummary) => (dossier === 'linked' ? !!v.dossier_id : dossier === 'unlinked' ? !v.dossier_id : true),
+      close: (v: EpVoteSummary) => !close || isClose(v),
+      keyword: (v: EpVoteSummary) => !keywordHits || keywordHits.has(v.id),
+    }),
+    [year, kind, outcome, topic, dossier, close, keywordHits],
+  );
+  const facets = useMemo(() => {
+    const others = (skip: keyof typeof tests) => {
+      const ts = Object.entries(tests).filter(([k]) => k !== skip).map(([, t]) => t);
+      return votes.filter((v) => ts.every((t) => t(v)));
+    };
+    const topics = new Map<string, number>();
+    for (const v of others('topic')) for (const t of v.topics) topics.set(t, (topics.get(t) ?? 0) + 1);
+    const byDossier = others('dossier');
+    const linked = byDossier.filter((v) => v.dossier_id).length;
+    return {
+      kinds: countBy(others('kind'), (v) => v.kind),
+      outcomes: countBy(others('outcome'), (v) => v.outcome),
+      topics,
+      linked,
+      unlinked: byDossier.length - linked,
+      closeCount: others('close').filter(isClose).length,
+    };
+  }, [votes, tests]);
+
   const filtered = useMemo(() => {
-    const rows = votes.filter((v) => {
-      if (year && !v.date.startsWith(year)) return false;
-      if (kind && v.kind !== kind) return false;
-      if (outcome && v.outcome !== outcome) return false;
-      if (topic && !v.topics.includes(topic)) return false;
-      if (dossier === 'linked' && !v.dossier_id) return false;
-      if (dossier === 'unlinked' && v.dossier_id) return false;
-      if (close && !isClose(v)) return false;
-      if (keywordHits && !keywordHits.has(v.id)) return false;
-      return true;
-    });
+    const ts = Object.values(tests);
+    const rows = votes.filter((v) => ts.every((t) => t(v)));
     const byDate = (a: EpVoteSummary, b: EpVoteSummary) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
     if (sort === 'oldest') rows.sort((a, b) => -byDate(a, b));
     else if (sort === 'margin')
@@ -111,7 +133,7 @@ export default function Votes() {
       });
     else rows.sort(byDate);
     return rows;
-  }, [votes, keywordHits, year, kind, outcome, topic, dossier, close, sort]);
+  }, [votes, tests, sort]);
 
   const active = [q, year, kind, outcome, topic, dossier, close ? '1' : ''].some(Boolean);
   // what the phone toggle reports: everything behind it that differs from the default, including the order
@@ -162,7 +184,8 @@ export default function Votes() {
                 type="search"
                 value={q}
                 placeholder="e.g. artificial intelligence, 2021/0106(COD)"
-                onChange={(e) => set('q', e.target.value)}
+                onChange={(e) => qBox.set(e.target.value)}
+                onBlur={qBox.flush}
               />
             </div>
             <CollapsibleFilters label="Filters and sorting" active={activeFilters}>
@@ -183,7 +206,7 @@ export default function Votes() {
                   <option value="">All kinds</option>
                   {KIND_ORDER.filter((k) => opts.kinds.has(k)).map((k) => (
                     <option key={k} value={k}>
-                      {KIND_LABEL[k]} ({formatNumber(opts.kinds.get(k))})
+                      {KIND_LABEL[k]} ({formatNumber(facets.kinds.get(k) ?? 0)})
                     </option>
                   ))}
                 </select>
@@ -200,7 +223,7 @@ export default function Votes() {
                   <option value="">Any outcome</option>
                   {OUTCOME_ORDER.filter((o) => opts.outcomes.has(o)).map((o) => (
                     <option key={o} value={o}>
-                      {OUTCOME_LABEL[o]} ({formatNumber(opts.outcomes.get(o))})
+                      {OUTCOME_LABEL[o]} ({formatNumber(facets.outcomes.get(o) ?? 0)})
                     </option>
                   ))}
                 </select>
@@ -224,7 +247,7 @@ export default function Votes() {
                       .sort((a, b) => topicLabel(a).localeCompare(topicLabel(b)))
                       .map((t) => (
                         <option key={t} value={t}>
-                          {topicLabel(t)} ({formatNumber(opts.topics.get(t))})
+                          {topicLabel(t)} ({formatNumber(facets.topics.get(t) ?? 0)})
                         </option>
                       ))}
                   </select>
@@ -240,8 +263,8 @@ export default function Votes() {
                   <label htmlFor="vf-dossier">Legislative file</label>
                   <select id="vf-dossier" className="select" value={dossier} onChange={(e) => set('dossier', e.target.value)}>
                     <option value="">Linked or not</option>
-                    <option value="linked">Linked to a file ({formatNumber(opts.linked)})</option>
-                    <option value="unlinked">Not linked ({formatNumber(votes.length - opts.linked)})</option>
+                    <option value="linked">Linked to a file ({formatNumber(facets.linked)})</option>
+                    <option value="unlinked">Not linked ({formatNumber(facets.unlinked)})</option>
                   </select>
                 </div>
               )}
@@ -256,12 +279,14 @@ export default function Votes() {
               {opts.withMargin > 0 && (
                 <div className="field field--check">
                   <input id="vf-close" type="checkbox" checked={close} onChange={(e) => set('close', e.target.checked ? '1' : '')} />
-                  <label htmlFor="vf-close">Close votes only ({formatNumber(opts.closeCount)})</label>
+                  <label htmlFor="vf-close">Close votes only ({formatNumber(facets.closeCount)})</label>
                 </div>
               )}
             </CollapsibleFilters>
           </form>
 
+          {/* the votes' titles are h3: this heading puts them under the page's h1 in the outline */}
+          <h2 className="visually-hidden">Results</h2>
           <div className="results-bar">
             <p className="results-bar__count" aria-live="polite">
               {filtered.length === votes.length ? plural(votes.length, 'vote') : `${formatNumber(filtered.length)} of ${plural(votes.length, 'vote')}`}
@@ -280,7 +305,7 @@ export default function Votes() {
               )}
             </p>
             {active && (
-              <button type="button" className="linkish" onClick={() => setParams(new URLSearchParams(), { replace: true })}>
+              <button type="button" className="linkish" onClick={() => patch(clearAllParams())}>
                 Clear all filters
               </button>
             )}
@@ -292,7 +317,7 @@ export default function Votes() {
             <>
               <ul className="vote-list">
                 {filtered.slice(0, shown).map((v) => (
-                  <VoteListItem key={v.id} v={v} />
+                  <VoteListItem key={v.id} v={v} listUrl={listUrl} />
                 ))}
               </ul>
               {filtered.length > shown && (

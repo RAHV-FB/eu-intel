@@ -40,6 +40,18 @@ describe.skipIf(!built)('home lists and feed on the built data', () => {
     if (eudr) expect(eudr.latest_note ?? '').toContain('Regulation 2026/2102');
   });
 
+  it('lists the officially blocked files in a stated order and says how many of them it shows', () => {
+    const stalled = list('stalled');
+    const blocked = stalled.items.filter((i) => i.badge === 'Officially blocked');
+    const total = read<{ id: string; officially_blocked?: boolean }[]>('dossiers/index.json').filter((d) => d.officially_blocked).length;
+    expect(blocked.length).toBeGreaterThan(0);
+    if (blocked.length < total) expect(stalled.description).toContain(`${blocked.length} of ${total} shown`);
+    // the same Train date for all: the longest without a recorded procedural step (the date shown) first
+    const asOf = (i: (typeof blocked)[number]) => /as of (.+)\)$/.exec(i.subtitle ?? '')?.[1];
+    for (let k = 1; k < blocked.length; k++)
+      if (asOf(blocked[k]) === asOf(blocked[k - 1])) expect(blocked[k - 1].date! <= blocked[k].date!, blocked[k].dossier_id!).toBe(true);
+  });
+
   it('headlines a motion to reject by what became of the text', () => {
     for (const it of activity.filter((i) => i.kind === 'ep_vote' && i.vote_id)) {
       const v = votes.get(it.vote_id!);
