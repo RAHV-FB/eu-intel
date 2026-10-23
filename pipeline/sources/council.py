@@ -10,7 +10,7 @@ Official source and route
 - For every legislative act it adopts, the General Secretariat of the Council issues a public note
   titled "Voting result" (ST document, codes VOTE/PUBLIC). The Council transmits these documents to the
   Publications Office: they are catalogued in Cellar (created by corporate-body CONSIL, English title
-  starting "Voting result") and served as PDF by the Council's document service
+  starting "Voting result", sometimes after a dash or bullet) and served as PDF by the Council's document service
   https://data.consilium.europa.eu/doc/document/<ST-NNNNN-YYYY-INIT>/EN/pdf (reachable by scripts).
 - Page 1 of each note is text (interinstitutional file, act title, meeting/written procedure, reference
   documents). The annex is the GSC voting sheet, published only as a raster image: a fixed template
@@ -90,7 +90,9 @@ RIGHT_COLUMN = ["LT", "LU", "HU", "MT", "NL", "AT", "PL", "PT", "RO", "SI", "SK"
 UK_LEFT_DATE = "2020-02-01"  # first day without the UK in the Council
 MEMBER_STATE_NAMES = {**MEMBER_STATES, **FORMER_MEMBER_STATES}
 
-# Voting-result notes created by the Council, English title starting "Voting result".
+# Voting-result notes created by the Council, English title starting "Voting result", in some notes after a dash or
+# bullet ("- Voting result -", "· Voting result ·", "− Voting result −": ST 9887/25, 10177/25, 6219/25). The query
+# selects titles containing the words; VOTING_RESULT_TITLE_RE keeps those that start with them.
 SPARQL_VOTING_RESULTS = """
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 SELECT ?work ?docid ?date ?title ?event ?evdate ?evtype WHERE {
@@ -100,7 +102,7 @@ SELECT ?work ?docid ?date ?title ?event ?evdate ?evtype WHERE {
   ?expr cdm:expression_belongs_to_work ?work ;
         cdm:expression_uses_language <http://publications.europa.eu/resource/authority/language/ENG> ;
         cdm:expression_title ?title .
-  FILTER(STRSTARTS(LCASE(STR(?title)), "voting result"))
+  FILTER(CONTAINS(LCASE(STR(?title)), "voting result"))
   ?work cdm:work_id_document ?docid . FILTER(STRSTARTS(STR(?docid), "consil:"))
   OPTIONAL {
     ?work cdm:work_part_of_event_legal ?event .
@@ -109,6 +111,11 @@ SELECT ?work ?docid ?date ?title ?event ?evdate ?evtype WHERE {
   }
 }
 """
+
+# (a prefix match, as titles can run on without a space: "Voting resultREGULATION …", ST 11790/25)
+VOTING_RESULT_TITLE_RE = re.compile(r"^[\W_]*voting\s+result", re.I)
+# "Voting result" and the separators after it at the start of a subject or title
+_VOTING_RESULT_PREFIX = re.compile(r"^[\W_]*voting\s+results?[\s\-–‒−·•:=]*", re.I)
 
 MONTHS = {
     m: i
@@ -495,7 +502,7 @@ class NoteMeta:
     nullified: list[str] = field(default_factory=list)
 
 
-BULLETS = "•‒–-=■▪►●·"
+BULLETS = "•‒–-−=■▪►●·"
 # "2021/0106 (COD)"; split procedures are written "2016/0224/A(COD)" (EP format "2016/0224A(COD)").
 PROC_RE = re.compile(r"\b((?:19|20)\d{2})/(\d{4})(?:/?([A-Z]))?\s*\(\s*([A-Z]{3})\s*\)")
 
@@ -610,13 +617,17 @@ def _steps(text: str) -> list[str]:
 
 
 def _parse_subject(meta: NoteMeta) -> None:
-    s = re.sub(r"^Voting results?\b\s*[-–‒:]?\s*", "", meta.subject, flags=re.I)
+    s = _VOTING_RESULT_PREFIX.sub("", meta.subject)
     meeting = re.search(
         r"(\d{3,5}\s*(?:st|nd|rd|th)\s+meeting\s+of\s+the\s+COUNCIL\s+OF\s+THE\s+EUROPEAN\s+UNION)(.*)$",
         s,
         re.I,
     )
     written = re.search(r"Outcome\s+of\s+the\s+written\s+procedure\s+completed\s+on\s+(.+?)\s*$", s, re.I)
+    # "Outcome of the written procedure initiated by CM 2163/21": no completion date in the note (ST 7108/21)
+    initiated = None if written else re.search(
+        r"Outcome\s+of\s+the\s+written\s+procedure\s+initiated\s+by\s+CM\s*\d+/\d+", s, re.I
+    )
     # Items listed after the written-procedure line, e.g. "... completed on 16 March 2021 = Adoption of the
     # Council's position at first reading and of the statement of the Council's reasons".
     after_written: list[str] = []
@@ -624,6 +635,8 @@ def _parse_subject(meta: NoteMeta) -> None:
         d = DATE_RE.search(written.group(1))
         if d:
             after_written = _steps(written.group(1)[d.end() :])
+    elif initiated:
+        after_written = _steps(s[initiated.end() :])
     cut = None
     if meeting:
         meta.meeting = re.sub(
@@ -653,6 +666,9 @@ def _parse_subject(meta: NoteMeta) -> None:
         d = parse_dates(written.group(1))
         meta.written_procedure_date = d[0] if d else None
         cut = written.start() if cut is None else min(cut, written.start())
+    elif initiated:
+        meta.written_procedure = True
+        cut = initiated.start() if cut is None else min(cut, initiated.start())
     head = s[:cut].strip(" -–‒=■") if cut is not None else s
     # The title ends where the first item voted on begins; every later item is part of the step.
     first = STEP_RE.search(head)
@@ -665,13 +681,23 @@ def _parse_subject(meta: NoteMeta) -> None:
     meta.step = "; ".join(steps) or None
 
 
-STATEMENTS_HEADING_RE = re.compile(r"(?:Joint\s+)?(?:Statements?|Declarations?|Explanations?\s+of\s+votes?)", re.I)
+STATEMENTS_HEADING_RE = re.compile(
+    r"(?:Draft\s+)?(?:Joint\s+)?(?:Statements?|Declarations?|Explanations?\s+of\s+votes?)", re.I
+)
+# The first line of a statement's heading: "Statement by …", "Joint declaration …", "Explanation of vote by …",
+# "Explanation by Hungary of its vote", "Draft Joint Statement by the Council, …" (ST 14020/20)
+STATEMENT_HEAD_RE = re.compile(
+    r"^(?:Draft\s+)?(?:Joint\s+)?(?:Statements?|Declarations?|Explanations?\s+of\s+votes?|Explanations?\s+by)\b",
+    re.I,
+)
 
 
 def parse_statements(pages: list[str]) -> list[str]:
-    """Titles of statements / declarations / explanations of vote printed in the note's annexes."""
+    """Titles of statements / declarations / explanations of vote printed in the note's annexes, in order. A title
+    printed again for another text ("Statement by the Commission" twice, ST 14020/20) is numbered: "… (2)"."""
     out: list[str] = []
-    head = re.compile(r"^(Joint\s+)?(Statements?|Declarations?|Explanations?\s+of\s+vote)\b", re.I)
+    seen: dict[str, int] = {}
+    head = STATEMENT_HEAD_RE
     for page in pages[1:]:
         lines = page.splitlines()
         i = 0
@@ -687,8 +713,9 @@ def parse_statements(pages: list[str]) -> list[str]:
                     j += 1
                 t = re.sub(r"\s+", " ", " ".join(title))
                 # the annex heading alone ("STATEMENTS" above "Statement by Spain", ST 7085/20) is not a statement
-                if t not in out and not STATEMENTS_HEADING_RE.fullmatch(t):
-                    out.append(t)
+                if not STATEMENTS_HEADING_RE.fullmatch(t):
+                    seen[t] = seen.get(t, 0) + 1
+                    out.append(t if seen[t] == 1 else f"{t} ({seen[t]})")
                 i = j
                 continue
             i += 1
@@ -711,7 +738,7 @@ def _versions_from_rows(rows: list[dict[str, str]]) -> dict[str, list[DocVersion
     by_work: dict[str, DocVersion] = {}
     for r in rows:
         m = re.match(r"consil:(ST)_(\d+)_(\d{4})_(INIT|REV_\d+|COR_\d+)$", r["docid"])
-        if not m:
+        if not m or not VOTING_RESULT_TITLE_RE.match(r.get("title", "")):
             continue
         v = by_work.get(r["work"])
         if v is None:
@@ -884,6 +911,10 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
     elif meta.meeting_dates:
         events = [e for p in valid for e in p.version.events]
         vote_date = _event_date(events, meta.meeting_dates) or meta.meeting_dates[0]
+    elif meta.written_procedure and len(ev := {e for p in valid for e in p.version.events if e <= p.version.date}) == 1:
+        # a written procedure the note does not date: the Council event Cellar attaches the note to (ST 7108/21:
+        # ADP_R1_POS_byCONSIL 16 March 2021, note of 17 March)
+        vote_date = ev.pop()
     else:
         vote_date = valid[0].version.date
     if vote_date < MIN_VOTE_DATE:
@@ -925,12 +956,9 @@ def build_vote(parsed: list[Parsed], retrieved_at: str) -> tuple[CouncilVote | N
         rule, outcome, positions_note = _sheet_fallback(fallback_src or valid[-1], vote_date)
 
     src = sheet_src or fallback_src or meta_src
-    statements: list[str] = []
-    for p in valid:
-        for s in parse_statements(p.pages):
-            if s not in statements:
-                statements.append(s)
-    title = meta.title or re.sub(r"^Voting results?\s*[-–‒:]?\s*", "", src.version.title, flags=re.I)
+    # the statements printed in the latest version that prints any (a corrigendum may reprint only page 1)
+    statements: list[str] = next((st for p in reversed(valid) if (st := parse_statements(p.pages))), [])
+    title = meta.title or _VOTING_RESULT_PREFIX.sub("", src.version.title)
     vote = CouncilVote(
         id=src.version.base,
         date=vote_date,

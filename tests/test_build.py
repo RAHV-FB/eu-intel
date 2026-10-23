@@ -296,6 +296,7 @@ def test_home_lists_only_from_real_data(out: Path):
     assert all(i.get("vote_id") != "V2" for i in lists["rejected"]["items"])  # amendment rejections excluded
     upcoming = lists["upcoming"]["items"]
     assert upcoming and all(TODAY < i["date"] <= "2027-10-22" for i in upcoming)
+    assert "discharge" in lists["rejected"]["description"] and "discharge" in lists["close_votes"]["description"]
 
 
 def test_meta_sources_and_counts(out: Path):
@@ -307,12 +308,31 @@ def test_meta_sources_and_counts(out: Path):
         "eurlex",
         "council",
         "implementation",
+        "optouts",
         "train",
     }
     assert all(s["licence"] for s in meta["sources"])
     assert meta["counts"]["dossiers"] == 4 and meta["counts"]["ep_votes"] == 3
     assert meta["snapshot_at"] == "2099-01-01T00:00:00Z"
     assert any("Country indicators" in n for n in meta["coverage_notes"])
+
+
+def test_snapshot_time_comes_from_a_listed_source(tmp_path: Path):
+    # "Data refreshed" must be traceable to a source on the About page: a manifest entry with no SOURCES entry
+    # (here a later retrieval) does not set it, and every source of the real snapshot is listed
+    from pipeline.build import SOURCES
+
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    path = tmp_path / "snapshot" / "_manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest["unlisted"] = {**manifest["council"], "source": "unlisted", "fetched_at": "2099-06-01T00:00:00Z"}
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    out = tmp_path / "public"
+    build(out=out, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state", today=TODAY)
+    assert load(out, "meta.json")["snapshot_at"] == "2099-01-01T00:00:00Z"
+    real = Path(__file__).resolve().parent.parent / "data" / "snapshot" / "_manifest.json"
+    if real.exists():
+        assert set(json.loads(real.read_text(encoding="utf-8"))) <= set(SOURCES)
 
 
 def test_meta_scope_and_plain_source_summaries(out: Path):

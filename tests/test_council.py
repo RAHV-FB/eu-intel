@@ -546,3 +546,82 @@ def test_reprocess_replaces_only_the_given_notes(tmp_path, monkeypatch):
     assert states["ST-1-2024"].fingerprint == "old"
     with pytest.raises(ValueError):
         C.reprocess(http, ["ST-404-2024"])
+
+
+# ------------------------------------------------------------------ notes the listing used to miss
+def test_listing_accepts_a_title_that_starts_after_a_dash_or_bullet():
+    # 26 notes of 2020-2025 have English titles "- Voting result - …", "· Voting result ·", "− Voting result −" or
+    # "- Voting Result …" (ST 9887/25, the wolf Directive; 10177/25; 6219/25; 9902/25); ST 11790/25 INIT runs on
+    # without a space. A title that only mentions a voting result further on is still not a voting-result note.
+    titles = {
+        "ST_9887_2025_INIT": "- Voting result - DIRECTIVE OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL amending …",
+        "ST_10177_2025_INIT": "· Voting result · Council Regulation on strengthening the security of identity cards …",
+        "ST_6219_2025_INIT": "− Voting result − REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL amending …",
+        "ST_9902_2025_INIT": "- Voting Result REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL suspending …",
+        "ST_11790_2025_INIT": "Voting resultREGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL amending …",
+        "ST_1_2025_INIT": "Corrigendum to the voting result of …",
+    }
+    rows = [{"work": f"w{i}", "docid": f"consil:{d}", "date": "2025-06-12", "title": t}
+            for i, (d, t) in enumerate(titles.items())]  # fmt: skip
+    assert sorted(C._versions_from_rows(rows)) == [
+        "ST-10177-2025", "ST-11790-2025", "ST-6219-2025", "ST-9887-2025", "ST-9902-2025"
+    ]  # fmt: skip
+    assert 'CONTAINS(LCASE(STR(?title)), "voting result")' in C.SPARQL_VOTING_RESULTS
+
+
+def test_parse_note_wolf_directive_subject_with_dashes():
+    m = C.parse_note(text("ST-9887-2025-INIT.page1.txt"))
+    assert m.procedure_refs == ["2025/0058(COD)"]
+    assert m.title == (
+        "DIRECTIVE OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL amending Council Directive 92/43/EEC as regards "
+        "the protection status of the wolf (Canis lupus)"
+    )
+    assert m.step == "Adoption of the legislative act"
+    assert m.meeting == "4101st meeting of the COUNCIL OF THE EUROPEAN UNION"
+    assert m.configuration == "Transport, Telecommunications and Energy"
+    assert m.meeting_dates == ["2025-06-05", "2025-06-06"]
+
+
+def test_written_procedure_initiated_by_cm_is_dated_by_the_council_event():
+    # ST 7108/21 (European Defence Fund): "Outcome of the written procedure initiated by CM 2163/21", no completion
+    # date; Cellar attaches the note (dated 17 March 2021) to ADP_R1_POS_byCONSIL of 16 March 2021
+    page1 = text("ST-7108-2021-INIT.page1.txt")
+    m = C.parse_note(page1)
+    assert m.written_procedure and m.written_procedure_date is None
+    assert m.step == "Adoption of the Council's position at first reading and of the statement of the Council's reasons"
+    row = {"work": "w", "docid": "consil:ST_7108_2021_INIT", "date": "2021-03-17",
+           "title": "- Voting result - REGULATION …", "evdate": "2021-03-16", "evtype": "ADP_R1_POS_byCONSIL"}  # fmt: skip
+    (v,) = C._versions_from_rows([row])["ST-7108-2021"]
+    vote, _ = C.build_vote([C.Parsed(v, [page1], m, None, "no voting sheet")], "t")
+    assert (vote.date, vote.written_procedure, vote.vote_on) == ("2021-03-16", True, "first_reading_position")
+    # without a Council event, the note's own date
+    (v,) = C._versions_from_rows([{**row, "evdate": "", "evtype": ""}])["ST-7108-2021"]
+    assert C.build_vote([C.Parsed(v, [page1], m, None, "no voting sheet")], "t")[0].date == "2021-03-17"
+
+
+def test_statements_include_explanations_by_a_state_and_draft_joint_statements():
+    # ST 14020/20, Annex II (rule-of-law conditionality): five headed texts, the Commission's statement twice
+    assert C.parse_statements(pages("ST-14020-2020-INIT.txt")) == [
+        "Explanation by Hungary of its vote",
+        "Statement by Hungary",
+        "Statement by the Commission",
+        "Draft Joint Statement by the Council, the European Parliament and the Commission",
+        "Statement by the Commission (2)",
+    ]
+
+
+def test_statements_come_from_the_latest_version_that_prints_any():
+    # ST 11580/20: the INIT's Annex II carried statements on the Taxonomy Regulation; REV 1 replaces the note and
+    # prints only Italy's statement on the regulation voted on
+    rev_pages = pages("ST-11580-2020-REV-1.txt")
+    rows = [{"work": "w1", "docid": "consil:ST_11580_2020_INIT", "date": "2020-10-07", "title": "‒ Voting result"},
+            {"work": "w2", "docid": "consil:ST_11580_2020_REV_1", "date": "2020-10-07", "title": "‒ Voting result"}]  # fmt: skip
+    init, rev = C._versions_from_rows(rows)["ST-11580-2020"]
+    init_pages = [rev_pages[0], "                          Statement by Austria\n\nWe share the objective …\n"]
+    p_init = C.Parsed(init, init_pages, C.parse_note(init_pages[0]), None, "no voting sheet")
+    p_rev = C.Parsed(rev, rev_pages, C.parse_note(rev_pages[0]), None, "no voting sheet")
+    vote, _ = C.build_vote([p_init, p_rev], "t")
+    assert vote.statements == ["Statement by Italy"]
+    # a corrigendum printing no statements keeps those of the version before it
+    p_cor = C.Parsed(rev, [rev_pages[0]], C.parse_note(rev_pages[0]), None, "no voting sheet")
+    assert C.build_vote([p_rev, p_cor], "t")[0].statements == ["Statement by Italy"]

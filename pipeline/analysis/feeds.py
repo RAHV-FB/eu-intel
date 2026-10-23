@@ -3,7 +3,8 @@
     public/data/feeds/updates.xml       all recent activity
     public/data/feeds/<topic>.xml       activity on dossiers in that topic
 
-Links point to the app routes under SITE_URL (default https://rahv-fb.github.io/eu-intel/).
+Links point to the app routes under SITE_URL (default https://rahv-fb.github.io/eu-intel/); an item with no
+page on the site (e.g. a Council vote on no tracked file) links to its official source document.
 All text is XML-escaped; entry ids are stable tag URIs derived from the activity id.
 """
 
@@ -55,7 +56,9 @@ def atom(
         "  <rights>Data © European Union (official EU sources); see the About page for reuse terms.</rights>",
     ]
     for it in items:
-        link = site + _route(it)
+        # an item with no page on the site (a Council vote on no tracked file) links to its official document
+        route, src_url = _route(it), (it.get("source") or {}).get("url")
+        link = site + route if route or not src_url else src_url
         summary = f"{it['date']}: {it['title']}"
         if it.get("detected_at") is None:
             summary += " (recorded in the official source; detection time not tracked)"

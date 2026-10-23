@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from pipeline.build import build
 
 FIX = Path(__file__).parent / "fixtures" / "build"
 TODAY = "2026-10-22"
+ATOM = "{http://www.w3.org/2005/Atom}"
 
 
 def _run(base: Path, monkeypatch: pytest.MonkeyPatch, record: bool, now: str) -> list[dict]:
@@ -370,3 +372,108 @@ def test_feed_names_parliaments_step_in_consultation_and_consent_files():
     # a rejected consultation or consent vote says so in the same terms
     b.vote_summary = {"195415": {**summary["195415"], "outcome": "rejected"}}
     assert snapshot_items(b)[0]["title"] == "Parliament did not give its consent: TEST 195415"
+
+
+@pytest.mark.skipif(not SNAP_VOTES.exists(), reason="no snapshot")
+def test_feed_says_what_a_motion_to_reject_did_to_the_text():
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import snapshot_items
+    from tests.test_build_real_records import votes
+
+    # 199567 (2026/0325(COD), rejected 123-374-41) was published as "Parliament rejected: Reduction of methane
+    # emissions … — motion to reject the Commission proposal"; 195807 (2025/0429(COD), rejected 276-286-30) as
+    # "Parliament rejected: Amending Regulation (EU) 2021/1232 …", although the act was then adopted; 179804
+    # (2023/0413(COD), adopted 370-264-9) did reject the Commission proposal
+    v = votes("199567", "195807", "179804")
+    files = {"199567": ("2026-0325", "Reduction of methane emissions in the energy sector: postponement of certain obligations"),
+             "195807": ("2025-0429", "Amending Regulation (EU) 2021/1232 as regards the extension of its period of application"),
+             "179804": ("2023-0413", "Monitoring framework for resilient European forests")}  # fmt: skip
+    summary = {vid: {"id": vid, "date": "2026-10-01", "kind": x.kind, "kind_detail": x.kind_detail,
+                     "outcome": x.outcome, "dossier_id": files[vid][0], "procedure_ref": None,
+                     "display_title": f"{files[vid][1]} — motion to reject …", "source": None}
+               for vid, x in v.items()}  # fmt: skip
+    b = SimpleNamespace(today="2026-10-22", dossier_ids=[], dossier_detail={}, council_public=[], vote_summary=summary,
+                        dossier_summary={d: {"type": "COD", "title": t} for d, t in files.values()},
+                        indexed_votes=list(v.values()))  # fmt: skip
+    titles = {i["vote_id"]: i["title"] for i in snapshot_items(b)}
+    assert titles == {
+        "199567": "Parliament did not reject the Commission proposal: Reduction of methane emissions in the energy "
+        "sector: postponement of certain obligations",
+        "195807": "Parliament did not reject the Council's position: Amending Regulation (EU) 2021/1232 as regards "
+        "the extension of its period of application",
+        "179804": "Parliament rejected the Commission proposal: Monitoring framework for resilient European forests",
+    }
+    # an adopted motion to reject the Council's position; without a file, the vote's title without its kind
+    b.vote_summary = {"195807": {**summary["195807"], "outcome": "adopted", "dossier_id": None}}
+    assert snapshot_items(b)[0]["title"] == (
+        "Parliament rejected the Council's position: Amending Regulation (EU) 2021/1232 as regards the extension of "
+        "its period of application"
+    )
+
+
+def test_discharge_decisions_are_not_headlined_as_adopted_or_rejected():
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import is_discharge_vote, snapshot_items
+
+    # 149084 (2021/2146(DEC), adopted 345-284-8) refused discharge to Frontex; 142787 (2021/2110(DEC), rejected)
+    # rejected a proposal to postpone, so discharge was granted. Titles as in votes/index.json.
+    frontex = {"id": "149084", "date": "2026-10-01", "kind": "final", "outcome": "adopted", "dossier_id": None,
+               "procedure_ref": "2021/2146(DEC)", "source": None,
+               "display_title": "Discharge 2020: European Border and Coast Guard Agency — final vote on the text"}  # fmt: skip
+    old = {**frontex, "id": "136221", "procedure_ref": None,
+           "display_title": "2019 Discharge: European Border and Coast Guard Agency — final vote on the text"}  # fmt: skip
+    law = {**frontex, "id": "1", "procedure_ref": "2021/0106(COD)", "display_title": "Artificial Intelligence Act"}
+    assert is_discharge_vote(frontex) and is_discharge_vote(old) and not is_discharge_vote(law)
+    assert is_discharge_vote({**law, "kind": "discharge"})  # a kind of its own, when votes carry one
+    b = SimpleNamespace(today="2026-10-22", dossier_ids=[], dossier_detail={}, dossier_summary={}, council_public=[],
+                        vote_summary={"149084": frontex}, indexed_votes=[])  # fmt: skip
+    assert snapshot_items(b)[0]["title"] == (
+        "Parliament voted on a discharge decision: Discharge 2020: European Border and Coast Guard Agency"
+    )
+
+
+def test_consent_milestone_says_whether_consent_was_given():
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import snapshot_items
+
+    # 2025/0313(APP): the timeline step "Parliament voted on consent" of 6 October 2026 links vote 197472,
+    # adopted 462-121-75 (published); the same feed says "Parliament gave its consent" for other consent votes
+    event = {"id": "2025-0313-DEC-DCPL-2026-10-06", "date": "2026-10-06", "kind": "ep_position", "state": "done",
+             "key": True, "title": "Parliament voted on consent", "vote_id": "197472", "source": None}  # fmt: skip
+    vote = {"id": "197472", "date": "2026-10-06", "kind": "final", "outcome": "adopted", "outcome_basis": "published",
+            "dossier_id": "2025-0313", "display_title": "x", "source": None}  # fmt: skip
+    b = SimpleNamespace(today="2026-10-22", dossier_ids=["2025-0313"],
+                        dossier_detail={"2025-0313": {"title": "Amending Council Regulation (EC) No 332/2002",
+                                                      "timeline": [event]}},
+                        dossier_summary={"2025-0313": {"type": "APP", "title": "x"}}, council_public=[],
+                        vote_summary={"197472": vote}, indexed_votes=[])  # fmt: skip
+    items = snapshot_items(b)
+    assert [i["title"] for i in items] == ["Amending Council Regulation (EC) No 332/2002: Parliament gave its consent"]
+    # an outcome not officially recorded keeps the neutral wording
+    b.vote_summary = {"197472": {**vote, "outcome_basis": "derived"}}
+    assert snapshot_items(b)[0]["title"].endswith(": Parliament voted on consent")
+
+
+def test_council_vote_feed_item_names_the_item_voted_on_and_links_its_document():
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import snapshot_items
+    from pipeline.analysis.feeds import atom
+
+    # ST 14700/26: every Member State voted for the NON-approval of Parliament's amendments to the 2027 draft budget;
+    # the item was titled "Council vote: Amendments of the European Parliament …" and linked to the site root
+    url = "https://data.consilium.europa.eu/doc/document/ST-14700-2026-INIT/EN/pdf"
+    cv = {"id": "ST-14700-2026", "date": "2026-10-19", "dossier_id": None, "source": {"url": url},
+          "title": "Amendments of the European Parliament to the Council's position on the draft budget for 2027",
+          "display_title": "Amendments of the European Parliament to the Council's position on the draft budget for "
+          "2027 – Non-approval of the European Parliament's amendment(s)"}  # fmt: skip
+    b = SimpleNamespace(today="2026-10-22", dossier_ids=[], dossier_detail={}, dossier_summary={}, council_public=[cv],
+                        vote_summary={}, indexed_votes=[])  # fmt: skip
+    (item,) = snapshot_items(b)
+    assert item["title"].startswith("Council vote: ") and item["title"].endswith("Non-approval of the European Parliament's amendment(s)")
+    xml = atom("t", "s", "feeds/updates.xml", [item], "https://example.org/eu-intel/", "2026-10-22T00:00:00Z")
+    entry = ET.fromstring(xml).find(f"{ATOM}entry")
+    assert entry.find(f"{ATOM}link[@rel='alternate']").get("href") == url

@@ -37,6 +37,7 @@ export function FeaturedCard({ item, topicLabel }: { item: FeaturedItem; topicLa
             ) : (
               <span className="meta">No dated step recorded</span>
             )}
+            {item.latest_note && <span className="meta fcard__note">{item.latest_note}</span>}
           </dd>
         </div>
         <div>
