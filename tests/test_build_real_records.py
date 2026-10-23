@@ -367,3 +367,120 @@ def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
     )  # fmt: skip
     durand = [r for r in Builder.rapporteur_entries(me, p["2016-0107"]) if r["mep_id"] == "124693"]  # type: ignore[arg-type]
     assert [(r["group"], r["group_code"]) for r in durand] == [("greens-efa", "Greens/EFA")]
+
+
+# ------------------------------------------------------------------------- acts, types of act, implementation
+def test_type_of_act_of_a_file_not_adopted_is_the_one_proposed():
+    # OEIL "Legislative instrument". 2023/0085(COD), Green Claims: "Directive"; COM(2023) 166 is a "Proposal for a
+    # DIRECTIVE ...". 2016/0284(COD) was proposed as a regulation and became Directive (EU) 2019/789: the build takes
+    # the adopted act's type first.
+    from pipeline.build import proposed_instrument
+
+    p = procs("2023-0085", "2016-0284")
+    assert proposed_instrument(p["2023-0085"]) == "directive"
+    assert proposed_instrument(p["2016-0284"]) == "regulation"
+    assert proposed_instrument(p["2023-0085"].model_copy(update={"instrument": "Act"})) is None
+
+
+def _impl_builder(measures: dict, checks: dict | None = None) -> SimpleNamespace:
+    me = SimpleNamespace(measures_by=measures, measure_celexes={c for c, _ in measures}, optouts={}, infr_by_celex={},
+                         transposition_checks=checks or {}, today="2026-10-23", act_refs={}, not_participating_by_ref={})  # fmt: skip
+    me.transposition_status = lambda c, k, d: Builder.transposition_status(me, c, k, d)  # type: ignore[arg-type]
+    me.not_participating = lambda c, k: Builder.not_participating(me, c, k)  # type: ignore[arg-type]
+    me.participation_recorded = lambda c, k: Builder.participation_recorded(me, c, k)  # type: ignore[arg-type]
+    me.infr_info = lambda i, c=None: Builder.infr_info(me, i, c)  # type: ignore[arg-type]
+    me.implementation_table = lambda a: Builder.implementation_table(me, a)  # type: ignore[arg-type]
+    me.implementations = lambda acts: Builder.implementations(me, acts)  # type: ignore[arg-type]
+    return me
+
+
+def _measures(*celex: str) -> dict:
+    from collections import defaultdict
+
+    from pipeline.models.entities import NationalMeasure
+
+    by: dict = defaultdict(list)
+    with (SNAP / "implementation" / "measures.json").open(encoding="utf-8") as f:
+        for line in f:
+            if any(f'"directive_celex":"{c}"' in line for c in celex):
+                r = json.loads(line.strip().rstrip(","))
+                by[(r["directive_celex"], r["country"])].append(NationalMeasure.model_validate(r))
+    return by
+
+
+def test_a_file_with_two_directives_has_a_table_for_each():
+    # 2013/0400(CNS) adopted Council Directive 2014/86/EU and Council Directive (EU) 2015/121. Cellar lists measures
+    # of Ireland (1) and Sweden (2) for the second only; both directives' deadline (31 December 2015) is before 2019,
+    # so the table says that infringement cases closed before 2019 are not in the data
+    a = acts("32014L0086", "32015L0121")
+    me = _impl_builder(_measures("32014L0086", "32015L0121"))
+    tables = Builder.implementations(me, [a["32014L0086"], a["32015L0121"]])  # type: ignore[arg-type]
+    assert [(t["celex"], t["act"]) for t in tables] == [
+        ("32014L0086", "Council Directive 2014/86/EU"), ("32015L0121", "Council Directive (EU) 2015/121"),
+    ]  # fmt: skip
+    rows = {t["celex"]: {c["country"]: (c["measures"], c["status"]) for c in t["countries"]} for t in tables}
+    assert rows["32014L0086"]["IE"] == (0, "none_found") and rows["32015L0121"]["IE"] == (1, "measures_notified")
+    assert rows["32015L0121"]["SE"] == (2, "measures_notified")
+    assert all(t["infringements_from"] == "2019-01-01" for t in tables)
+    assert "cases closed before then are not included" in tables[0]["note"]
+
+
+def test_countries_the_directive_exempts_are_not_shown_as_missing_measures():
+    # Directive (EU) 2016/798, Art. 33(4): "The obligation to transpose and implement this Directive shall not apply
+    # to Cyprus and Malta for as long as no rail system is established within their territories."
+    # Directive (EU) 2016/1629, Art. 40: "addressed to the Member States except Denmark, Estonia, Ireland, Greece,
+    # Spain, Cyprus, Latvia, Malta, Portugal, Slovenia and Finland"
+    from pipeline.build import load_transposition_checks
+
+    checks = load_transposition_checks()
+    a = acts("32016L0798", "32016L1629", "32021L1233")
+    me = _impl_builder(_measures("32016L0798", "32016L1629", "32021L1233"), checks)
+    rail = {c["country"]: c["status"] for c in Builder.implementation_table(me, a["32016L0798"])["countries"]}  # type: ignore[arg-type]
+    assert (rail["CY"], rail["MT"]) == ("not_required", "not_required") and rail["IE"] != "not_required"
+    vessels = Builder.implementation_table(me, a["32016L1629"])  # type: ignore[arg-type]
+    assert sum(c["status"] == "not_required" for c in vessels["countries"]) == 11
+    assert vessels["exemption"]["provision"] == "Art. 40"
+    # a conditional derogation names no country: quoted, no row changed (32021L1233 applies Art. 39(4) of 2017/2397)
+    boat = Builder.implementation_table(me, a["32021L1233"])  # type: ignore[arg-type]
+    assert boat["exemption"]["countries"] is None and "Article 39(4)" in boat["exemption"]["quote"]
+    assert not [c for c in boat["countries"] if c["status"] == "not_required"]
+
+
+def test_infringement_cut_off_matches_the_source_module():
+    from pipeline.build import INFRINGEMENTS_FROM
+    from pipeline.sources.implementation import INFRINGEMENTS_SINCE_YEAR
+
+    assert INFRINGEMENTS_FROM == f"{INFRINGEMENTS_SINCE_YEAR}-01-01"
+
+
+def test_partial_repeal_and_partial_application_on_entry_into_force_are_stated():
+    # Decision 2014/335/EU, Euratom: in force per EUR-Lex; Cellar records Decision (EU, Euratom) 2020/2053 as
+    # repealing it with role AP (Art. 11(1): "Subject to paragraph 2, Decision 2014/335/EU, Euratom is repealed").
+    # DMA, Art. 54: "Article 3(6) and (7) and Articles 40, 46, 47, 48, 49 and 50 shall apply from 1 November 2022".
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+
+    a = acts("32014D0335", "32020D2053", "32022R1925")
+    p = procs("2011-0183", "2020-0374")
+    s = classify(p["2011-0183"], [a["32014D0335"]], [], date(2026, 10, 23), others=a)
+    assert s.stage == "in_force" and "partly repealed by Council Decision (EU, Euratom) 2020/2053." in s.explanation
+    assert [r.celex for r in s.named_acts] == ["32020D2053"]
+    s = classify(p["2020-0374"], [a["32022R1925"]], [], date(2026, 10, 23), others=a)
+    assert "EUR-Lex records that some provisions apply from that date." in s.explanation
+    assert s.application.entry_into_force == "2022-11-01" and s.application.partial_on_entry_into_force
+    assert "2022-11-01" not in s.application.application_dates
+
+
+def test_dates_set_by_a_corrigendum_cite_it():
+    # AMMR, Regulation (EU) 2024/1351, Art. 85 as published: "It shall apply from 1 July 2026"; corrigendum OJ L,
+    # 2025/90929, point 10: read "It shall apply from 12 June 2026" (the date EUR-Lex records)
+    from pipeline.build import act_date_source, apply_act_dates, load_act_dates
+
+    cur = load_act_dates()["32024R1351"]
+    assert act_date_source(cur, "2026-06-12")["label"] == (
+        "Corrigendum to Regulation (EU) 2024/1351, OJ L, 2025/90929, 25.11.2025"
+    )
+    assert act_date_source(cur, "2024-06-11")["label"] == "Regulation (EU) 2024/1351, Article 85"
+    a = apply_act_dates(acts("32024R1351")["32024R1351"], cur)
+    assert a.other_application_dates == ["2026-06-12"] and not a.partial_on_entry_into_force

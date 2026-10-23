@@ -54,6 +54,8 @@ function ActBlock({ a }: { a: LegalActSummary }) {
     ['Amended by', a.amended_by],
     ['Repeals', a.repeals],
     ['Repealed by', a.repealed_by],
+    ['Partly repeals', a.partly_repeals ?? []],
+    ['Partly repealed by', a.partly_repealed_by ?? []],
   ];
   return (
     <div className="dz-act">
@@ -169,7 +171,11 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
           {d.instrument && (
             <div>
               <dt>Type of act</dt>
-              <dd>{INSTRUMENT_LABEL[d.instrument]}</dd>
+              <dd>
+                {INSTRUMENT_LABEL[d.instrument]}
+                {/* no linked act of this type: the type of act proposed (OEIL "Legislative instrument") */}
+                {!d.acts.some((a) => a.act_type === d.instrument) && <span className="meta"> (as proposed)</span>}
+              </dd>
             </div>
           )}
           <div>

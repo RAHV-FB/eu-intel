@@ -203,6 +203,7 @@ export interface ApplicationInfo {
   effect_on_notification?: boolean; // a decision that takes effect on notification to its addressee; EUR-Lex records no date
   application_dates: ISODate[]; // further dates recorded by EUR-Lex for (parts of) the act
   partial_application_dates?: ISODate[]; // those of application_dates from which only some provisions apply
+  partial_on_entry_into_force?: boolean; // EUR-Lex also marks the entry-into-force date as one from which some provisions apply
   application_detail?: { date: ISODate; partial: boolean; provisions?: string | null }[]; // checked against the act's text
   dates_note?: { reason: string; sources: { label: string; url: string }[]; reviewed?: ISODate | null } | null; // why dates were corrected
   transposition_deadlines: ISODate[]; // directives only: deadlines to transpose (general and further), not application or other dates
@@ -277,6 +278,8 @@ export interface LegalActSummary {
   amended_by: string[];
   repeals: string[];
   repealed_by: string[];
+  partly_repeals?: string[]; // repeals EUR-Lex limits to some provisions or marks as partial
+  partly_repealed_by?: string[];
   court_rulings: CourtRulingInfo[]; // Court of Justice judgments recorded by EUR-Lex as annulling / invalidating
 }
 
@@ -315,7 +318,8 @@ export interface DossierDetail extends DossierSummary {
   council_votes: CouncilVote[];
   // Split procedures only: Council votes that cite this (parent) reference, listed on the part whose act they adopted
   council_votes_in_parts?: { id: string; date: ISODate; dossier_id: string; dossier_ref: string }[];
-  implementation?: DossierImplementation | null; // directives only
+  implementation?: DossierImplementation | null; // directives only (the file's first directive)
+  implementation_more?: DossierImplementation[]; // the file's further directives, one table each (2013/0400(CNS))
   committees: { code: string; name?: string | null; role: string }[];
   // group / group_code: the political group held in that role (not the MEP's current group); null when not established
   rapporteurs: {
@@ -636,6 +640,7 @@ export type TranspositionStatus =
   | 'deadline_not_reached'
   | 'no_deadline' // EUR-Lex records no transposition deadline (e.g. codifications)
   | 'not_participating' // recorded as not participating in the Council's adoption (Treaty opt-out): not bound
+  | 'not_required' // the directive's own text exempts the country or is not addressed to it (quoted in exemption)
   | 'unavailable';
 
 export interface InfringementInfo {
@@ -665,6 +670,10 @@ export interface DossierImplementation {
   source: SourceRef;
   note: string;
   participation_unknown?: string[]; // DK/IE: neither the recitals nor a Council vote say whether they are bound
+  act?: string; // the directive's number, e.g. "Council Directive (EU) 2015/121"
+  infringements_from?: ISODate | null; // set when cases closed before this date are not in the data (deadline earlier)
+  // the directive's own exemption from transposition, quoted; countries: the rows marked not_required
+  exemption?: { provision: string; quote: string; countries?: string[] | null } | null;
 }
 
 // ---------------------------------------------------------------- home & activity

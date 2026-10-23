@@ -431,7 +431,7 @@ def test_amld6_next_step_names_the_general_deadline_not_a_derogation():
     assert text.startswith("EU countries must transpose the directive into national law by 10 July 2027.")
     assert "earlier transposition deadlines for specific provisions, which have passed: 10 July 2025 and 10 July 2026" in text
     assert "later transposition deadline for specific provisions: 10 July 2029" in text
-    assert "has passed: EU countries were required" not in text
+    assert "has passed: the Member States it binds were required" not in text
 
 
 def test_driving_licences_next_step():
@@ -616,10 +616,13 @@ def test_end_of_validity_before_the_act_itself_is_explained():
     # Council Regulation 1377/2014 of 18 December 2014: Cellar end of validity 2013-12-31, "Implicitly
     # repealed by 32014R0609" - the own-resources recast of 26 May 2014, older than the act: its rules cannot
     # "continue" in it
+    # "No longer in force" since the day after the last day of validity: Regulation 609/2014, Art. 19, "It shall
+    # apply from 1 January 2014"
     s = act_status("32014R1377", "2014/0332(CNS)", "CNS")
-    assert s.stage == "no_longer_in_force" and s.since == "2013-12-31"
+    assert s.stage == "no_longer_in_force" and s.since == "2014-01-01"
     assert "a date earlier than the act itself, which is dated 18 December 2014" in s.explanation
-    assert "implicitly repealed by Council Regulation (EU, Euratom) No 609/2014, with effect from that earlier date" in (
+    assert "EUR-Lex gives 31 December 2013 as the end of its validity" in s.explanation
+    assert "implicitly repealed by Council Regulation (EU, Euratom) No 609/2014, with effect from 1 January 2014" in (
         s.explanation
     )
     assert "recast" not in s.explanation and "its validity ended on" not in s.explanation
@@ -631,6 +634,12 @@ def test_application_date_after_the_end_of_validity_is_marked():
     # EUR-Lex still records 2026-07-01 as a date from which some provisions apply
     s = act_status("32024R2822", "2022/0391(COD)")
     assert s.stage == "no_longer_in_force"
+    # its last day of validity is 30 June 2026: no longer in force from 1 July 2026, still in force on 30 June
+    assert s.since == "2026-07-01" and "its validity ended on 30 June 2026" in s.explanation
+    on_30_june = VALIDITY["32024R2822"].model_copy(update={"in_force": True})  # EUR-Lex's flag as it was that day
+    last_day = classify(_bare_proc("2022/0391(COD)", "COD", ["32024R2822"]), [on_30_june], [], date(2026, 6, 30),
+                        others=VALIDITY)  # fmt: skip
+    assert last_day.stage == "in_force" and "its validity ends on 30 June 2026" in last_day.explanation
     assert s.application.after_end_of_validity == ["2026-07-01"]
     assert "Regulation (EU) 2026/715 is a codification" in s.explanation
 
@@ -688,6 +697,30 @@ def test_negotiations_run_from_the_first_trilogue():
     assert (s.stage, s.label, s.since) == ("negotiations", "Negotiations with the Council", "2025-12-09")
 
 
+def test_a_committee_decision_to_negotiate_is_not_parliaments_mandate():
+    # 2025/0255(COD): only the committee's decision of 19 October 2026 (OEIL "Committee decision to open
+    # interinstitutional negotiations with report adopted in committee"; OEIL status "Awaiting committee decision")
+    s = classify(rec("2025-0255"), [], [], TODAY)
+    assert (s.stage, s.label, s.since) == ("proposed", "Committee decided to negotiate with the Council", "2026-10-19")
+    assert "does not hold a mandate yet" in s.explanation and "Rule 72" in s.explanation
+    assert s.next_step.text.startswith("The committee's decision is announced in plenary")
+    # 2025/0176(COD): announced in plenary on 19 January 2026, confirmed by plenary on 21 January 2026
+    p = rec("2025-0176")
+    for day in (date(2026, 1, 19), date(2026, 1, 21)):
+        s = classify(p, [], [], day)
+        assert (s.stage, s.label) == ("negotiations", "Mandate to negotiate with the Council")
+    # 2025/0045(COD) (Omnibus I): committee decision 13 Oct 2025, announced 20 Oct, rejected by plenary on 22 Oct
+    # (PLENARY_REJECT_COMMITTEE_INTERINSTUTIONAL_NEGOTIATIONS); file referred back for negotiations on 13 Nov 2025
+    p = rec("2025-0045")
+    s = classify(p, [], [], date(2025, 10, 23))
+    assert (s.stage, s.label, s.since) == (
+        "proposed", "Parliament rejected the committee's decision to negotiate", "2025-10-22"
+    )
+    assert "no mandate" in s.explanation and s.next_step.text.startswith("Parliament votes on the committee report")
+    s = classify(p, [], [], date(2025, 11, 14))
+    assert (s.stage, s.label, s.since) == ("negotiations", "Mandate to negotiate with the Council", "2025-11-13")
+
+
 def test_consent_file_with_only_the_commission_proposal_waits_for_the_council_draft():
     # 2025/0571(APP), MFF 2028-2034: OEIL lists only COM(2025)0571 ("Preparatory document"); Parliament's consent
     # (Art. 312(2) TFEU) concerns the Council's draft, which is not recorded yet
@@ -698,6 +731,53 @@ def test_consent_file_with_only_the_commission_proposal_waits_for_the_council_dr
     # 2025/0313(APP): the Council's text 06190/2026 was submitted to Parliament on 21 May 2026
     s = classify(rec("2025-0313"), [], [], date(2026, 6, 1))
     assert s.next_step.text == "Parliament decides whether to give its consent."
+
+
+def test_consent_given_in_the_linked_vote_is_stated():
+    # 2025/0313(APP): vote 197472 of 6 October 2026 (A10-0206/2026, "Draft Council regulation"), decision_outcome
+    # ADOPTED 462-121-75; T10-0324/2026: Parliament "Gives its consent to the draft Council regulation"
+    from pipeline.models.entities import EpVote
+
+    p = rec("2025-0313")
+    vote = EpVote.model_validate(next(v for v in RECORDS["ep_votes"] if v["id"] == "197472"))
+    assert (vote.kind, vote.outcome, vote.outcome_basis) == ("final", "adopted", "published")
+    s = classify(p, [], [], TODAY, votes=[vote])
+    assert (s.stage, s.label, s.since, s.basis) == ("parliament_position", "Parliament gave its consent", "2026-10-06",
+                                                    "source")  # fmt: skip
+    assert "gave its consent on 6 October 2026" in s.explanation and "only if" not in s.explanation
+    assert s.next_step.text == "The Council decides whether to adopt the act." and s.next_step.institution == "Council"
+    # without the vote, or with an outcome only derived from the counts, the decision stays unqualified
+    assert classify(p, [], [], TODAY).label == "Parliament voted on consent"
+    derived = vote.model_copy(update={"outcome_basis": "derived"})
+    assert classify(p, [], [], TODAY, votes=[derived]).label == "Parliament voted on consent"
+    refused = vote.model_copy(update={"outcome": "rejected"})
+    assert classify(p, [], [], TODAY, votes=[refused]).stage == "rejected"
+
+
+def test_council_decision_reported_by_the_train_is_not_presented_as_pending():
+    # 2025/0806(CNS): Parliament's opinion of 26 November 2025; the Legislative Train reports "Adopted / Completed"
+    # (20 September 2026). Council Regulation (EU) 2026/415 cites "the Opinion of the European Parliament" of that day,
+    # but no official record (Cellar dossier, OEIL, Council document ST 16026/25) ties it to the procedure: not linked
+    from pipeline.models.entities import SourceRef
+
+    url = ("https://www.europarl.europa.eu/legislative-train/theme-a-new-plan-for-europe-s-sustainable-prosperity-and-"
+           "competitiveness/file-collection-of-statistical-information-by-the-european-central-bank")  # fmt: skip
+    tf = TrainFile(
+        title="Collection of statistical information by the European Central Bank", status="Adopted / Completed",
+        last_updated="2026-09-20", procedure_refs=["2025/0806(CNS)"], url=url,
+        source=SourceRef(institution="LegislativeTrain", url=url, retrieved_at="2026-10-22T17:52:59Z"),
+    )  # fmt: skip
+    p = rec("2025-0806")
+    s = classify(p, [], [tf], TODAY)
+    assert (s.stage, s.label, s.since) == ("parliament_position", "Parliament gave its opinion", "2025-11-26")
+    assert s.explanation.startswith(
+        "Parliament has delivered its opinion. Under the consultation procedure the Council takes the final decision; "
+        "the official sources in our data do not record it. The EP Legislative Train reports this file as “Adopted / "
+        "Completed”"
+    )
+    assert s.next_step.basis == "unknown"
+    # without the Train's report the decision is still to come
+    assert "do not record it" not in classify(p, [], [], TODAY).explanation
 
 
 def test_act_adopted_by_parliament_with_the_councils_consent():

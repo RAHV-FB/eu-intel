@@ -324,6 +324,10 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
             if e and checked.transposition_checked is None:
                 rep.warn("transposition-check-stale", f"{a.celex}: data/curated/transposition.yaml names a date "
                          f"EUR-Lex does not record for the act ({', '.join(a.transposition_deadlines)})")  # fmt: skip
+            for x in (e or {}).get("amends") or []:  # the deadlines covering its changes to another directive
+                if not {x["deadline"], *(f["date"] for f in x.get("further") or [])} <= set(a.transposition_deadlines):
+                    rep.warn("transposition-check-stale", f"{a.celex}: data/curated/transposition.yaml amends "
+                             f"{x['celex']} names a date EUR-Lex does not record for the act")  # fmt: skip
             deadlines = [x.date for x in classify_transposition(checked) if x.kind in ("deadline", "further_deadline")]
             if general_deadline_basis(checked) == "date_order":
                 rep.warn("transposition-date-order", f"{a.celex}: general deadline {deadlines[0]} taken by date "

@@ -133,6 +133,9 @@ class Procedure(Model):
     documents: list[DocRef] = Field(default_factory=list)
     com_refs: list[str] = Field(default_factory=list)  # "COM(2021)0206"
     celex_refs: list[str] = Field(default_factory=list)  # final acts if the EP source links them
+    # "Legislative instrument" in the OEIL procedure file, verbatim ("Regulation", "Directive", "Decision",
+    # "Recommendation"): the type of act proposed, which the final act can differ from
+    instrument: str | None = None
     oeil_url: str
     source: SourceRef
 
@@ -236,6 +239,10 @@ class LegalAct(Model):
     other_application_dates: list[str] = Field(default_factory=list)
     # those of other_application_dates that Cellar marks as partial application (MA/PART, PE/PART)
     partial_application_dates: list[str] = Field(default_factory=list)
+    # Cellar marks the entry-into-force date as a partial application date too: some provisions apply from the entry
+    # into force (DMA, Regulation (EU) 2022/1925, Art. 54: "Article 3(6) and (7) and Articles 40, 46, 47, 48, 49 and
+    # 50 shall apply from 1 November 2022")
+    partial_on_entry_into_force: bool = False
     end_of_validity: str | None = None  # None if open-ended (Cellar "9999-12-31")
     validity_notes: list[ValidityNote] = Field(default_factory=list)  # end-of-validity values Cellar comments on
     in_force: bool | None = None
@@ -249,6 +256,9 @@ class LegalAct(Model):
     amended_by: list[str] = Field(default_factory=list)
     repeals: list[str] = Field(default_factory=list)
     repealed_by: list[str] = Field(default_factory=list)
+    # partial repeals: repeal links that every Cellar annotation limits to a provision or marks as partial (role AP)
+    partly_repeals: list[str] = Field(default_factory=list)
+    partly_repealed_by: list[str] = Field(default_factory=list)
     court_rulings: list[CourtRuling] = Field(default_factory=list)  # annulment / invalidity, by date
     eurlex_url: str
     source: SourceRef

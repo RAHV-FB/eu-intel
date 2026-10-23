@@ -24,15 +24,15 @@ Principles (each one is covered by tests/test_status.py):
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
-from datetime import date
+from collections.abc import Mapping, Sequence
+from datetime import date, timedelta
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from pipeline.analysis.transposition import application_start, article_label
 from pipeline.analysis.transposition import classify as classify_transposition
-from pipeline.models.entities import Event, EventKind, Institution, LegalAct, Procedure, TrainFile
+from pipeline.models.entities import EpVote, Event, EventKind, Institution, LegalAct, Procedure, TrainFile
 
 Stage = Literal[
     "proposed",
@@ -128,6 +128,7 @@ class Application(_M):
     effect_on_notification: bool = False  # takes effect on notification to its addressee (date not recorded)
     application_dates: list[str] = Field(default_factory=list)
     partial_application_dates: list[str] = Field(default_factory=list)  # only some provisions apply from
+    partial_on_entry_into_force: bool = False  # EUR-Lex marks the entry-into-force date as such a date too
     transposition_deadlines: list[str] = Field(default_factory=list)  # directives: deadlines only
     transposition: list[TranspositionDateInfo] = Field(default_factory=list)  # directives: every date
     future: bool = False  # any of the above dates is after `today`
@@ -274,6 +275,7 @@ def application_of(acts: list[LegalAct], today: date) -> Application | None:
         effect_on_notification=not eif and not pending and any(a.effect_on_notification for a in acts),
         application_dates=app,
         partial_application_dates=sorted({d for a in acts for d in a.partial_application_dates if d in app}),
+        partial_on_entry_into_force=any(a.partial_on_entry_into_force for a in acts if eif and a.entry_into_force == eif),
         transposition_deadlines=[x.date for x in tr if x.kind in ("deadline", "further_deadline")],
         transposition=tr,
         future=future,
@@ -412,7 +414,13 @@ def _rules_continue(act: LegalAct, refs: list[ActRef], others: Mapping[str, Lega
     return out
 
 
+def _day_after(d: str) -> str:
+    return (date.fromisoformat(d) + timedelta(days=1)).isoformat()
+
+
 def _no_longer_in_force(act: LegalAct, others: Mapping[str, LegalAct]) -> _S:
+    """Cellar's end of validity is the act's last day of validity (Directive 95/46/EC: 24 May 2018, repealed by the
+    GDPR with effect from 25 May 2018); the act is no longer in force from the day after."""
     eov = act.end_of_validity
     how, refs = _ended_by(act, others)
     by = f" EUR-Lex records it as {how} by {_labels(refs)}" if refs else ""
@@ -426,14 +434,17 @@ def _no_longer_in_force(act: LegalAct, others: Mapping[str, LegalAct]) -> _S:
             f"The act was adopted and published, but EUR-Lex gives {_fmt(eov)} as the end of its validity, a date "
             f"earlier than the act itself, {which}."
         )
-        text += f"{by}, with effect from that earlier date." if refs else " EUR-Lex records no reason for the earlier date."
+        text += (
+            f"{by}, with effect from {_fmt(_day_after(eov))}." if refs else " EUR-Lex records no reason for the earlier date."
+        )
     elif eov:
         text = f"The act was adopted and published, but its validity ended on {_fmt(eov)}." + (by + "." if by else "")
     else:
         text = "The act was adopted and published, but EUR-Lex records it as no longer in force." + (
             by + "." if by else ""
         )
-    s = _S("no_longer_in_force", "No longer in force", text + _rules_continue(act, refs, others), eov, "source")
+    since = _day_after(eov) if eov else None
+    s = _S("no_longer_in_force", "No longer in force", text + _rules_continue(act, refs, others), since, "source")
     s.named_acts = refs
     return s
 
@@ -478,7 +489,7 @@ def _acts_stage(
                 f"It enters into force on {_fmt(eif)}."
             )
             return _S("published", "Published, not yet in force", text, pub_date, "source")
-        if act.end_of_validity and act.end_of_validity <= t:
+        if act.end_of_validity and act.end_of_validity < t:  # still valid on its last day of validity
             return _no_longer_in_force(act, others)
         published = f"published in the Official Journal{' on ' + _fmt(pub_date) if pub_date else ''}."
         if act.effect_on_notification and not act.end_of_validity and not act.repealed_by and not act.in_force:
@@ -512,6 +523,8 @@ def _acts_stage(
         if act.in_force is True or (eif and eif <= t):
             basis: Basis = "source" if act.in_force is True else "derived"
             text = f"The act has been in force since {_fmt(eif)}." if eif else "The act is in force."
+            if eif and act.partial_on_entry_into_force:  # Cellar marks that date MA/PART too (DMA, Art. 54)
+                text += " EUR-Lex records that some provisions apply from that date."
             later = [d for a in acts for d in a.other_application_dates if d and eif and d > eif]
             if later:
                 text += (
@@ -527,8 +540,13 @@ def _acts_stage(
                 )
             elif refs:
                 text += f" EUR-Lex also records it as repealed by {_labels(refs)}."
+            # repeals that Cellar limits to some provisions or marks as partial (32014D0335: Decision (EU, Euratom)
+            # 2020/2053, Art. 11(1), "Subject to paragraph 2, Decision 2014/335/EU, Euratom is repealed")
+            partly = [_ref(c, others) for c in act.partly_repealed_by]
+            if partly:
+                text += f" EUR-Lex records it as partly repealed by {_labels(partly)}."
             s = _S("in_force", "In force", text, eif or pub_date, basis)
-            s.named_acts = refs
+            s.named_acts = refs + partly
             return s
         if pub_date:
             return _S(
@@ -549,6 +567,25 @@ def _acts_stage(
             "source",
         )
     return None
+
+
+# OEIL's record of a committee's decision to enter into negotiations before Parliament's first reading: Parliament
+# holds a mandate only once the decision is announced in plenary (OEIL "... announced in plenary (Rule 72)") or
+# Parliament confirms it (EP PLENARY_ENDORSE_...), or after Parliament's own vote referring the file back
+COMMITTEE_MANDATE_DECISION = (
+    "oeil:Committee decision to open interinstitutional negotiations with report adopted in committee"
+)
+# Parliament's own decisions giving the mandate, and its rejection of a committee's decision (sic: the EP data spell
+# some records INTERINSTUTIONAL)
+PLENARY_MANDATE = {
+    "PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+    "PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+    "ep_vote:mandate:adopted",  # a plenary vote OEIL does not record yet (build.with_recorded_events)
+}
+MANDATE_REFUSED = {
+    "PLENARY_REJECT_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+    "PLENARY_REJECT_COMMITTEE_INTERINSTUTIONAL_NEGOTIATIONS",
+}
 
 
 def _cod_stage(events: list[Event]) -> _S:
@@ -643,6 +680,46 @@ def _cod_stage(events: list[Event]) -> _S:
             "source",
         )
     mandate = _last(events, EventKind.negotiation_mandate)
+    refused = [e for e in events if _code(e) in MANDATE_REFUSED]
+    if mandate and refused and not [e for e in events if e.kind == EventKind.negotiation_mandate and (
+        e.date > refused[-1].date or (e.date == refused[-1].date and _code(e) in PLENARY_MANDATE)
+    )]:  # fmt: skip
+        s = _S(
+            "proposed",
+            "Parliament rejected the committee's decision to negotiate",
+            "Parliament rejected its committee's decision to enter into negotiations with the Council, so it holds "
+            "no mandate to negotiate. The committee report goes to a vote in plenary.",
+            refused[-1].date,
+            "derived",
+        )
+        s.next_step = NextStep(
+            text="Parliament votes on the committee report and amendments in plenary.", institution="EP", basis="derived"
+        )
+        return s
+    if mandate and all(
+        _code(e) == COMMITTEE_MANDATE_DECISION
+        for e in events
+        if e.kind == EventKind.negotiation_mandate and e.date == mandate.date
+    ):
+        # not yet announced in plenary, nor confirmed by it (2025/0255(COD): committee decision of 19 October 2026,
+        # OEIL "Awaiting committee decision")
+        s = _S(
+            "proposed",
+            "Committee decided to negotiate with the Council",
+            "Parliament's responsible committee has adopted its report and decided to enter into negotiations with "
+            "the Council. Parliament does not hold a mandate yet: the decision is first announced in plenary, where "
+            "Members can ask for a vote on it (Rule 72 of Parliament's Rules of Procedure).",
+            mandate.date,
+            "derived",
+        )
+        s.next_step = NextStep(
+            text="The committee's decision is announced in plenary. If no vote is requested, or Parliament approves the "
+            "decision, negotiations with the Council can start; if Parliament rejects it, Parliament votes on the "
+            "committee report in plenary.",
+            institution="EP",
+            basis="derived",
+        )
+        return s
     if mandate:
         # a recorded trilogue (EP activity INTERINSTITUTIONAL_NEGOTIATION) after the mandate; the
         # mandate decisions themselves (PLENARY_ENDORSE/REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS)
@@ -975,8 +1052,10 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 basis = "source"
             elif general:
                 parts.append(
-                    f"The transposition deadline ({_fmt(general)}) has passed: EU countries were required "
-                    "to adopt national measures by then."
+                    # a directive binds only the Member States to which it is addressed (Art. 288 TFEU), and its
+                    # text can exempt some (Directive (EU) 2016/798, Art. 33(4): Cyprus and Malta)
+                    f"The transposition deadline ({_fmt(general)}) has passed: the Member States it binds were "
+                    "required to adopt national measures by then."
                 )
                 basis = "source"
             elif "(codification)" in act.title.lower():
@@ -1150,15 +1229,28 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
 
 
 # ====================================================================== entry point
+def _consent_outcome(votes: Sequence[EpVote], day: str | None) -> str | None:
+    """"adopted" or "rejected": the officially recorded outcome (decision or minutes) of the final votes linked to a
+    consent file on the day of Parliament's decision, when they agree."""
+    outcomes = {
+        v.outcome
+        for v in votes
+        if v.date == day and v.kind == "final" and v.outcome_basis in ("published", "minutes")
+    }
+    return next(iter(outcomes)) if len(outcomes) == 1 and outcomes <= {"adopted", "rejected"} else None
+
+
 def classify(
     proc: Procedure,
     acts: list[LegalAct],
     train: list[TrainFile],
     today: date,
     others: Mapping[str, LegalAct] | None = None,
+    votes: Sequence[EpVote] = (),
 ) -> DossierStatus:
     """`others`: all known acts by CELEX, used only to name acts the procedure's acts refer to (the act that
-    repealed one, for example) in the explanation."""
+    repealed one, for example) in the explanation. `votes`: Parliament's plenary votes linked to the file, used only
+    for the outcome of its vote on consent."""
     t = today.isoformat()
     events = sorted((e for e in proc.events if e.date <= t), key=lambda e: e.date)
     ptype = proc.type
@@ -1238,6 +1330,28 @@ def classify(
             s = _ep_act_stage(proc, events)
         elif ptype in ("CNS", "APP", "AVC"):
             s = _cns_app_stage("APP" if ptype == "AVC" else ptype, events)
+            outcome = _consent_outcome(votes, s.since) if s.label == "Parliament voted on consent" else None
+            if outcome == "adopted":  # 2025/0313(APP): vote 197472 of 6 October 2026, adopted 462-121-75
+                s = _S(
+                    "parliament_position",
+                    "Parliament gave its consent",
+                    f"Parliament gave its consent on {_fmt(s.since or '')}. Under the consent procedure the Council "
+                    "can now adopt the act.",
+                    s.since,
+                    "source",
+                )
+                s.next_step = NextStep(
+                    text="The Council decides whether to adopt the act.", institution="Council", basis="derived"
+                )
+            elif outcome == "rejected":
+                s = _S(
+                    "rejected",
+                    "Consent refused by Parliament",
+                    "Parliament refused its consent. Under the consent procedure the Council cannot adopt the act "
+                    "without it.",
+                    s.since,
+                    "source",
+                )
         else:
             s = _generic_stage(ptype, events)
         s = _reconcile_with_oeil(proc, s, events)
@@ -1249,6 +1363,9 @@ def classify(
         if reported:
             # The Train is not a record of adoption (it lags or leads OEIL); it only stops us from
             # asserting that a decision is still pending.
+            if s.label in UNRECORDED_COUNCIL_DECISION and ptype in ("CNS", "APP"):
+                # 2025/0806(CNS): the Council's decision is not in the official records we hold, not pending
+                s.explanation = UNRECORDED_COUNCIL_DECISION[s.label]
             s.explanation += (
                 f" The EP Legislative Train reports this file as “{reported.status}” (information updated as of "
                 f"{_fmt(reported.last_updated)}), but no final act is linked in our data."
@@ -1298,6 +1415,16 @@ def classify(
     )
 
 
+# A consultation or consent file whose Council decision the Legislative Train reports but no official record we hold
+# shows (no act linked): the stage's explanation without the suggestion that the decision is still to come
+UNRECORDED_COUNCIL_DECISION = {
+    "Parliament gave its opinion": "Parliament has delivered its opinion. Under the consultation procedure the Council "
+    "takes the final decision; the official sources in our data do not record it.",
+    "Parliament gave its consent": "Parliament has given its consent. Under the consent procedure the Council then adopts "
+    "the act; the official sources in our data do not record its decision.",
+    "Parliament voted on consent": "Parliament has taken its decision on consent. The Council can adopt the act only if "
+    "Parliament has given its consent; the official sources in our data do not record the Council's decision.",
+}
 # A consultation or consent file with no recorded step for this long: a pending Council decision is no
 # longer a safe assumption (e.g. agreements whose legal basis has since been replaced).
 STALE_DECISION_DAYS = 3 * 365

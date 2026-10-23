@@ -91,12 +91,14 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
     const items = (xs: typeof general) => xs.map((x) => ({ date: x.date, note: x.provisions ?? undefined }));
     if (general.length) rows.push({ label: 'Rules apply from', items: items(general) });
     if (partial.length) rows.push({ label: 'Some provisions apply from', items: items(partial) });
-  } else if (app.application_dates.length) {
+  } else if (app.application_dates.length || app.partial_on_entry_into_force) {
     const partialSet = new Set(app.partial_application_dates ?? []);
     const general = app.application_dates.filter((d) => !partialSet.has(d));
     const partial = app.application_dates.filter((d) => partialSet.has(d));
+    // EUR-Lex marks the entry-into-force date too: some provisions apply from it
+    const onEif = app.partial_on_entry_into_force && app.entry_into_force ? [{ date: app.entry_into_force, note: 'On entry into force' }] : [];
     if (general.length) rows.push({ label: general.length > 1 ? 'Rules apply (in phases) from' : 'Rules apply from', items: plain(general) });
-    if (partial.length) rows.push({ label: 'Some provisions apply from', items: plain(partial) });
+    if (partial.length || onEif.length) rows.push({ label: 'Some provisions apply from', items: [...onEif, ...plain(partial)] });
   }
   const tr = transpositionDates(app);
   const general = tr.filter((x) => x.kind === 'deadline');

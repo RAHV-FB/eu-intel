@@ -304,7 +304,8 @@ export default function About() {
               and <strong>Data unavailable</strong> mean exactly that.
             </li>
             <li>
-              <strong>Infringement cases</strong> come from the Commission’s register of infringement decisions; stages are shown as
+              <strong>Infringement cases</strong> come from the Commission’s register of infringement decisions: all open cases and all
+              cases with a Commission decision since 1 January 2019 (cases closed before then are not included). Stages are shown as
               published. An open case is not a court ruling.
             </li>
             <li>

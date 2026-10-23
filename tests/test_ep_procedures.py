@@ -187,6 +187,13 @@ def test_build_without_oeil_keeps_ep_data_only():
     assert p.started == "2021-06-07"  # first EP event (referral), not invented
 
 
+def test_type_of_act_proposed_from_oeil():
+    # OEIL "Legislative instrument": 2023/0448(COD), still at committee stage, "Regulation"; none without OEIL
+    assert build("2023-0448").instrument == "Regulation"
+    assert build("2021-0106").instrument == "Regulation"
+    assert build("2021-0106", with_oeil=False).instrument is None
+
+
 def test_withdrawn_proposal_epprivacy():
     p = build("2017-0003")
     assert p.stage_raw == "Procedure lapsed or withdrawn"
@@ -447,6 +454,25 @@ def add_discovery_snapshots(root: Path) -> None:
     acts = json.loads((root / "eurlex" / "acts.json").read_text())
     acts += json.loads((FIX / "discovery" / "eurlex_acts_sample.json").read_text())
     (root / "eurlex" / "acts.json").write_text(json.dumps(acts, ensure_ascii=False))
+
+
+def test_discovery_includes_legislative_train_references(snapshot_dir):
+    # The digital services tax, 2018/0073(CNS): no act and no EP vote record name it, the Train's file does (real
+    # train snapshot record, "Blocked", blocking institution COUNCIL)
+    url = ("https://www.europarl.europa.eu/legislative-train/theme-deeper-and-fairer-internal-market-with-a-strengthened-"
+           "industrial-base-taxation/file-digital-services-tax-on-revenues-from-certain-digital-tax-services")  # fmt: skip
+    rec = {
+        "blocking_institution": "COUNCIL", "last_updated": "2023-05-20", "procedure_refs": ["2018/0073(CNS)"],
+        "source": {"identifier": "digital-services-tax-on-revenues-from-certain-digital-tax-services",
+                   "institution": "LegislativeTrain", "label": "Legislative Train Schedule", "published": "2023-05-20",
+                   "retrieved_at": "2026-10-22T17:52:59Z", "url": url},
+        "status": "Blocked", "theme": "Deeper and fairer internal market with a strengthened industrial base: taxation",
+        "title": "Proposal for a Directive on the common system of a digital services tax on revenues resulting from "
+                 "the provision of certain digital services", "url": url,
+    }  # fmt: skip
+    (snapshot_dir / "train").mkdir(exist_ok=True)
+    (snapshot_dir / "train" / "files.json").write_text(json.dumps([rec]))
+    assert m.discover_refs()["2018-0073"] == ("2018/0073(CNS)", "train")
 
 
 def test_discovery_union_of_list_acts_votes_featured(snapshot_dir):

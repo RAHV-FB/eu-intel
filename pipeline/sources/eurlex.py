@@ -40,6 +40,8 @@ Source facts relied on (checked against the live endpoint, see tests/test_eurlex
   placeholder 1001-01-01), so entry_into_force is the EV date (else PE); other values become
   other_application_dates, and those marked MA/PART or PE/PART (application of some provisions; in
   the type or in the comment_on_date annotation) are also listed in partial_application_dates. Values without any annotation fall back to "earliest".
+  An entry-into-force date that is also marked MA/PART or PE/PART sets partial_on_entry_into_force (DMA
+  32022R1925, Art. 54: some provisions apply from its entry into force on 1 November 2022).
 - 1001-01-01 (unknown/undetermined) and 9999-12-31 (open-ended) are Cellar placeholder dates.
 - Publication: acts in the act-by-act OJ (from Oct 2023) carry `official-journal-act_*`
   properties on the work; older acts link to an OJ issue via
@@ -66,9 +68,9 @@ Source facts relied on (checked against the live endpoint, see tests/test_eurlex
   32024D0867 ART 6" next to 9999-12-31.
 - amends / amended_by: `cdm:resource_legal_amends_resource_legal` (both directions). repeals /
   repealed_by: `cdm:resource_legal_repeals_resource_legal` for whole-act repeals only. A link is a
-  partial repeal (left out) when every OWL axiom on it names a modified location
-  (`annotation:reference_to_modified_location`, an article/annex) or has role fd_375 "AP" (Partial
-  repeal) - e.g. the MDR 32017R0745 -> Directive 93/42/EEC. "Implicit repeals"
+  partial repeal (kept apart, as partly_repeals / partly_repealed_by) when every OWL axiom on it names a modified
+  location (`annotation:reference_to_modified_location`, an article/annex) or has role fd_375 "AP" (Partial
+  repeal) - e.g. the MDR 32017R0745 -> Directive 93/42/EEC, Decision 2020/2053 -> Decision 2014/335/EU, Euratom. "Implicit repeals"
   (`..._implicitly_repeals_...`: e.g. the amending acts of a repealed act, or GDPR -> one annex
   point of Regulation 1882/2003) are left out too.
   A modified location that starts with a CELEX id ("32017R0625 {AR} 165 {PO} 16") names the
@@ -789,6 +791,15 @@ def _whole_repeals(f: Facts, rel: str) -> set[str]:
     return {c for (r, c), axioms in f.repeal_axioms.items() if r == rel and whole_repeal(axioms)}
 
 
+def _partial_repeals(f: Facts, rel: str) -> set[str]:
+    return {c for (r, c), axioms in f.repeal_axioms.items() if r == rel and not whole_repeal(axioms)}
+
+
+def partial_on_entry_into_force(f: Facts, eif: str | None) -> bool:
+    """Cellar also marks the entry-into-force date MA/PART or PE/PART (in the type or the comment)."""
+    return bool(eif) and any(c.endswith("/PART") for c in f.eif_types.get(eif or "", ()))
+
+
 def _linked(values: set[str], own: str) -> list[str]:
     return sorted({c for c in values if LINKED_CELEX_RE.match(c) and c != own})
 
@@ -835,6 +846,7 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         effect_on_notification=on_notification,
         other_application_dates=other_dates,
         partial_application_dates=partial,
+        partial_on_entry_into_force=partial_on_entry_into_force(f, eif),
         end_of_validity=end_of_validity,
         validity_notes=validity_notes(f),
         in_force=in_force,
@@ -846,6 +858,8 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         amended_by=_linked(f.relations.get("amended_by", set()), celex),
         repeals=_linked(_whole_repeals(f, "repeals"), celex),
         repealed_by=_linked(_whole_repeals(f, "repealed_by"), celex),
+        partly_repeals=_linked(_partial_repeals(f, "repeals"), celex),
+        partly_repealed_by=_linked(_partial_repeals(f, "repealed_by"), celex),
         court_rulings=_court_rulings(f),
         eurlex_url=url,
         source=SourceRef(

@@ -43,7 +43,12 @@ export function DossierRow({
         {d.short && <p className="drow__short">{d.short}</p>}
         <p className="drow__meta">
           <span>{d.type_label || d.type}</span>
-          {d.instrument && d.instrument !== 'other' && <span>{INSTRUMENT_LABEL[d.instrument]}</span>}
+          {d.instrument && d.instrument !== 'other' && (
+            <span>
+              {INSTRUMENT_LABEL[d.instrument]}
+              {d.celex.length === 0 && ' (as proposed)'}
+            </span>
+          )}
           <span className="mono drow__ref">{d.ref}</span>
         </p>
         {topicLabel && d.topics.length > 0 && (

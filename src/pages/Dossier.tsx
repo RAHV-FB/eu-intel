@@ -144,7 +144,13 @@ function DossierPage({ id }: { id: string }) {
                 <dt>Type</dt>
                 <dd>
                   {d.type === 'COD' ? <Term id="olp">{d.type_label}</Term> : d.type_label}
-                  {d.instrument && d.instrument !== 'other' && <> · {INSTRUMENT_LABEL[d.instrument]}</>}
+                  {d.instrument && d.instrument !== 'other' && (
+                    <>
+                      {' · '}
+                      {INSTRUMENT_LABEL[d.instrument]}
+                      {!d.acts.some((a) => a.act_type === d.instrument) && ' (as proposed)'}
+                    </>
+                  )}
                 </dd>
               </div>
               {d.started && (

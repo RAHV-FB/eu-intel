@@ -19,7 +19,7 @@ Sources (both official European Parliament publications):
 2. EP Legislative Observatory (OEIL) procedure file, ``/oeil/en/procedure-file?reference=``
    (HTML), used to fill exactly those gaps: the official status label ("Stage reached in
    procedure"), EP subject codes, COM references, the Commission/Council key events,
-   withdrawal, and the final act's CELEX number. OEIL data is recorded with
+   withdrawal, the final act's CELEX number and the "Legislative instrument" (type of act proposed). OEIL data is recorded with
    ``SourceRef(institution="OEIL")``. If an OEIL page cannot be fetched or parsed (an HTTP 200
    page without the procedure file counts as a failure), a file without earlier OEIL data is
    recorded with EP API data only (stage_raw/subjects/com_refs/celex_refs empty); a file whose
@@ -70,6 +70,7 @@ from pipeline.models.entities import (
     SourceRef,
     SourceStatus,
     Subject,
+    TrainFile,
 )
 from pipeline.snapshot import (
     CURATED,
@@ -1092,6 +1093,7 @@ def build_procedure(
         documents=docs,
         com_refs=com_refs,
         celex_refs=[f.id for f in oeil.final_acts] if oeil else [],
+        instrument=oeil.instrument if oeil else None,
         oeil_url=oeil_url(reference),
         source=SourceRef(
             institution="EP",
@@ -1326,6 +1328,9 @@ def in_scope_ref(ref: str, any_year: bool = False) -> str | None:
 DISCOVERY_SOURCES: tuple[tuple[str, str, type[Any]], ...] = (
     ("eurlex", "acts", LegalAct),
     ("ep_votes", "votes", EpVote),
+    # the Legislative Train's links to OEIL: files with neither an act nor a vote since 2019, e.g. the digital
+    # services tax 2018/0073(CNS) (Council blocked; Parliament's opinion of 13 December 2018)
+    ("train", "files", TrainFile),
 )
 
 
@@ -1333,7 +1338,8 @@ def discover_refs() -> dict[str, tuple[str, str]]:
     """In-scope procedure ids referenced by other snapshots: id -> (reference, source).
 
     The paged EP list endpoint repeats some rows and omits others, so ids are also taken from the
-    procedure references of EUR-Lex acts and EP plenary votes."""
+    procedure references of EUR-Lex acts, EP plenary votes and Legislative Train files. A reference only
+    leads to a request for the EP record: the procedure's data come from that record and OEIL."""
     out: dict[str, tuple[str, str]] = {}
     for source, name, model in DISCOVERY_SOURCES:
         try:
@@ -1599,7 +1605,7 @@ def fetch(http: Http) -> SourceStatus:
             wanted.setdefault(pid, "")
         by_type = {}
     listed = len(wanted)
-    # The paged list is incomplete: add in-scope ids referenced by EUR-Lex acts and EP votes.
+    # The paged list is incomplete: add in-scope ids referenced by EUR-Lex acts, EP votes and Train files.
     discovered: Counter[str] = Counter()
     for pid, (ref, origin) in sorted(discover_refs().items()):
         if pid not in wanted:
