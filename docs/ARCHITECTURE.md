@@ -70,7 +70,10 @@ the UI; every institutional fact on a page has a reachable origin.
   boosts. A query that is an identifier matches only through identifiers and names citing it.
 - Design tokens in `src/styles/tokens.css`; shared primitives in `src/components/ui.tsx`.
 - Strict CSP meta (`default-src 'self'`), no third-party fonts/scripts, no cookies. The optional watchlist writes
-  to `localStorage` only after an explicit click; pages that show what is followed only read the saved list.
+  nothing to `localStorage` before the visitor's first "Follow" click (pages check for storage by reading only).
+  After that the list changes on clicks only, except that opening the page of a followed file records what the
+  visitor last saw there (`markSeen`: its stage, status label and latest event, when one of them changed), as
+  /privacy says ("when you last viewed it").
 - Dates that the data states as still ahead (the home page's "Coming up", "Scheduled" timeline steps, next steps)
   are compared with the visitor's date, since the data is rebuilt only weekly (`src/lib/format.ts`).
 
