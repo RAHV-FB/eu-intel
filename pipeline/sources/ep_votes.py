@@ -2,7 +2,8 @@
 
 Produces data/snapshot/ep_votes/votes.json (list[EpVote]) for every recorded plenary vote of the 9th and
 10th terms (sittings from 2019-07-02 to today) and ballots.json (list[EpBallots]) with the individual
-positions of roll-call votes on whole texts (kind final / resolution / motion; see BALLOT_KINDS).
+positions of roll-call votes on whole texts (kind final / mandate / resolution / motion; see BALLOT_KINDS)
+and of votes on a committee's decision to enter into negotiations (see keeps_ballots).
 
 Requests (paced for the API's limit of 500 requests / 5 min per endpoint, shared with the other EP sources;
 ~800 for the sittings, ~30 for the procedure list, ~600 document and ~10 procedure fallbacks; all cached
@@ -26,10 +27,15 @@ Source facts relied on (checked against the live API; see tests/test_ep_votes.py
 - A vote item lists the procedure(s) it belongs to in inverse_consists_of ("eli/dl/proc/2021-0106") and
   the document(s) it is based on (based_on_a_realization_of: report A-9-2023-0188, motions B-9-…).
 - The provisional agreement of a trilogue is tabled as one amendment ("Am 808", document …-AM-808) with
-  referenceText "Provisional agreement": it is the final vote, not an amendment.
+  referenceText "Provisional agreement": it is the final vote, not an amendment. Old labels carry it in
+  the tail: "Digital Services Act - A9-0356/2021 - Christel Schaldemose - Provisional agreement - Am 564".
+- Once that agreement is adopted, the vote on the "Commission proposal" is published as LAPSED without
+  counts: it was never held, so it is kept as kind "other", not as a final vote.
 
 Procedure links (EpVote.procedure_refs) are made only through official identifiers, in this order:
-  1. new format: decision -> vote item (inverse_consists_of) -> procedures of that item;
+  1. new format: decision -> vote item (inverse_consists_of) -> procedures of that item (an item voted
+     under the urgent procedure names its procedure only in its structuredLabel, "(COM(2025)0652 –
+     C10-0263/2025 – 2025/0329(COD))");
   2. old format: the document reference that opens the label ("A9-0188/2023", "RC-B9-0118/2019") is the
      exact id of a document the sitting's vote item is based on -> that item's procedures; a joint motion
      (RC) is matched through the motions it replaces (document is_derivative_of, via /plenary-documents);
@@ -53,6 +59,11 @@ Outcome (EpVote.outcome / outcome_basis) — see resolve_outcome(): "published" 
 decision_outcome (from 2024-01-15); else "minutes" from the sitting's official "Results of votes" annex
 (PV-…-VOT XML, see parse_minutes); else "derived" from the counts when majority_rule is votes_cast and the
 counts are not tied; otherwise "unknown".
+
+Subject (EpVote.subject) — what was voted, in English, as published: the vote item title from 2024-01-15
+(earlier items are titled in French only), else the block title of the sitting's English minutes.
+Kind detail (EpVote.kind_detail) — see kind_detail(): rejection motions, censure, objections, decisions to
+enter into negotiations.
 
 Mandates — a vote classified "final" becomes "mandate" when Parliament referred the file back to committee
 for interinstitutional negotiations right after it: an adopted referral-back decision in the same vote item
@@ -80,7 +91,7 @@ from typing import Any
 from lxml import etree
 
 from pipeline.http import EP_API, Http, HttpError
-from pipeline.models.entities import EpBallots, EpVote, SourceRef, SourceStatus, VoteKind
+from pipeline.models.entities import EpBallots, EpVote, KindDetail, SourceRef, SourceStatus, VoteKind
 from pipeline.snapshot import fetch_deadline, now_iso, read_records, read_state, write_records, write_state
 
 log = logging.getLogger("pipeline.sources.ep_votes")
@@ -256,6 +267,7 @@ class MinutesRow:
     outcome: str | None
     docs: frozenset[str]  # document ids of the block title/description and the current heading row
     symbol: str | None = None  # procedure symbol of the block title ("Artificial Intelligence Act ***I")
+    title: str | None = None  # block title as printed in the English minutes ("Nature restoration ***I")
 
 
 def parse_minutes(xml: bytes) -> list[MinutesRow]:
@@ -270,6 +282,7 @@ def parse_minutes(xml: bytes) -> list[MinutesRow]:
         block_docs = _doc_ids(" ".join(texts))
         m = SYMBOL_RE.search(texts[0].strip())
         block_symbol = m.group(0).replace(" ", "") if m else None
+        block_title = clean_subject(texts[0])
         heading: frozenset[str] = frozenset()
         for tr in block.iter("TR"):
             tds = tr.findall("TD")
@@ -292,7 +305,14 @@ def parse_minutes(xml: bytes) -> list[MinutesRow]:
             symbols = [c for c in ("".join(td.itertext()).strip() for td in tds) if c in MINUTES_SYMBOLS]
             outcome = MINUTES_SYMBOLS[symbols[-1]] if symbols else None
             out.append(
-                MinutesRow(block.get("Number") or "", counts, outcome, block_docs | heading, block_symbol)
+                MinutesRow(
+                    block.get("Number") or "",
+                    counts,
+                    outcome,
+                    block_docs | heading,
+                    block_symbol,
+                    block_title,
+                )
             )
     return out
 
@@ -454,6 +474,35 @@ def clean_label(label: str | None) -> str | None:
     return TIMESTAMP_RE.sub("", label).strip() or None
 
 
+def clean_subject(text: str | None) -> str | None:
+    """A published title with whitespace normalised (spreadsheet artefacts such as '_x000D_' removed)."""
+    if not text:
+        return None
+    return re.sub(r"\s+", " ", text.replace("_x000D_", " ")).strip() or None
+
+
+def _english(v: Any) -> str | None:
+    """The English text of a multilingual field, or None: no fallback to another language."""
+    x = v.get("en") if isinstance(v, dict) else None
+    if isinstance(x, list):
+        x = x[0] if x else None
+    return clean_subject(x) if isinstance(x, str) else None
+
+
+STRUCTURED_LABEL_RE = re.compile(r"<label>(.*?)</label>", re.S)
+
+
+def structured_label_refs(item: dict) -> list[str]:
+    """Procedure references in a vote item's structuredLabel, e.g. "Proposal for a regulation (COM(2025)0652 –
+    C10-0263/2025 – 2025/0329(COD)) (Majority of votes cast required)" -> ["2025/0329(COD)"].
+
+    Items voted under the urgent procedure (Rule 170) name their procedure only there."""
+    text = _text(item.get("structuredLabel")) or ""
+    return sorted(
+        {m.group(0) for lab in STRUCTURED_LABEL_RE.findall(text) for m in PROC_REF_RE.finditer(lab)}
+    )
+
+
 @dataclass
 class VoteItem:
     """A PLENARY_VOTE_RESULTS item: one agenda item's votes (e.g. 'Artificial Intelligence Act ***I')."""
@@ -462,6 +511,7 @@ class VoteItem:
     title: str | None
     procs: list[str] = field(default_factory=list)  # EP process ids, e.g. "2021-0106"
     docs: list[str] = field(default_factory=list)  # document ids the item is based on
+    subject: str | None = None  # the title in English only (before 2024 items are titled in French)
 
     @property
     def symbol(self) -> str | None:
@@ -479,8 +529,16 @@ def index_items(items: list[dict]) -> dict[str, VoteItem]:
         if not iid:
             continue
         procs = [pid for p in _ids(x.get("inverse_consists_of")) if "/proc/" in p and (pid := process_id(p))]
+        if not procs:  # urgent-procedure items: the reference printed in the structured label
+            procs = [ref_to_process_id(r) for r in structured_label_refs(x)]
         docs = [_suffix(d) or d for d in _ids(x.get("based_on_a_realization_of"))]
-        out[iid] = VoteItem(id=iid, title=_text(x.get("activity_label")), procs=sorted(set(procs)), docs=docs)
+        out[iid] = VoteItem(
+            id=iid,
+            title=_text(x.get("activity_label")),
+            procs=sorted(set(procs)),
+            docs=docs,
+            subject=_english(x.get("activity_label")),
+        )
     return out
 
 
@@ -548,12 +606,48 @@ class Signals:
     proc_types: list[str] = field(default_factory=list)
 
 
+def label_parts(label: str | None) -> list[str]:
+    """' - ' / ' – ' segments of an old-format label: 'A9-0042/2024 - Name - § 4/2' -> [..., '§ 4/2']."""
+    if not label:
+        return []
+    return [p.strip() for p in re.split(r"\s+[-–]\s*|\s*[-–]\s+|–", label) if p.strip()]
+
+
 def label_tail(label: str | None) -> str | None:
     """Last ' - ' / ' – ' segment of an old-format label: 'A9-0042/2024 - Name - § 4/2' -> '§ 4/2'."""
-    if not label:
-        return None
-    parts = [p.strip() for p in re.split(r"\s+[-–]\s*|\s*[-–]\s+|–", label) if p.strip()]
+    parts = label_parts(label)
     return parts[-1] if parts else None
+
+
+_PROVISIONAL = re.compile(r"^(provisional agreement|accord provisoire)(?![a-z])", re.I)
+_STATEMENT = re.compile(r"\b(statements?|declarations?|déclarations?)\b", re.I)
+
+
+def is_provisional_agreement(ref: str, heading: str, label: str) -> bool:
+    """The vote on a provisional agreement (tabled as one amendment, voted as the whole text).
+
+    New format: referenceText "Provisional agreement", or the heading when the referenceText does not name
+    another text (a Commission statement voted under the same heading, e.g. Nature Restoration Am 138 on
+    27 Feb 2024, is not the agreement). Old format (before 2024): the label ends "… – Provisional agreement –
+    Am 564" (Digital Services Act, 5 July 2022)."""
+    if _PROVISIONAL.match(ref):
+        return True
+    if _PROVISIONAL.match(heading) and not _STATEMENT.search(ref):
+        return True
+    parts = label_parts(label)
+    return (
+        len(parts) >= 2
+        and bool(_PROVISIONAL.fullmatch(parts[-2]))
+        and bool(re.fullmatch(r"am\s*\d+", parts[-1], re.I))
+    )
+
+
+def _is_objection(s: Signals) -> bool:
+    """Objections to delegated / implementing acts: the item or heading says so, or every linked procedure
+    is an objection procedure (DEA, RPS), whose whole-text vote is always the objection."""
+    return bool(re.search(r"\bobjection\b", f"{s.item_title or ''} {s.heading or ''}", re.I)) or (
+        bool(s.proc_types) and set(s.proc_types) <= OBJECTION_TYPES
+    )
 
 
 def classify(s: Signals) -> VoteKind:
@@ -566,17 +660,13 @@ def classify(s: Signals) -> VoteKind:
     is_split_doc = any("-SPLIT-" in d for d in s.docs)
     whole_marker = bool(_FINAL.match(ref) or _RESOLUTION.match(ref))
     legislative = bool(set(s.proc_types) & LEGISLATIVE_TYPES) and not set(s.proc_types) - LEGISLATIVE_TYPES
-    # objections to delegated acts (DEA) / under the regulatory procedure with scrutiny (RPS); the whole-text
-    # vote of those procedures is always the objection
-    is_objection = bool(re.search(r"\bobjection\b", f"{item} {heading}", re.I)) or (
-        bool(s.proc_types) and set(s.proc_types) <= OBJECTION_TYPES
-    )
+    is_objection = _is_objection(s)
 
     # 1. procedural decisions (referral back, urgency, agenda, adjournment, negotiation mandates)
     if _PROCEDURAL.search(ref) or _PROCEDURAL.search(heading) or _PROCEDURAL_LABEL.match(label):
         return "procedural"
     # 2. a provisional agreement is tabled as one amendment but is the vote on the whole text
-    if re.match(r"^provisional agreement", ref, re.I) or re.match(r"^provisional agreement", heading, re.I):
+    if is_provisional_agreement(ref, heading, label):
         return "final"
     # 3. rejection motions and motions of censure (decisions on the whole text)
     if not is_am_doc and (
@@ -592,7 +682,10 @@ def classify(s: Signals) -> VoteKind:
     if re.search(r"amendments by the committee", label, re.I) and not whole_marker:
         return "amendment"
     about = (s.about or "").strip()
-    if about and about != "§" and re.search(r"\d", about) and not whole_marker:
+    # an amendment number (decisionAboutId "1") on "Text as a whole" is an amendment replacing the whole text
+    # (urgent procedure, tabled by a committee or groups), not the vote on the text
+    whole_text_amendment = bool(re.fullmatch(r"(text )?as a whole", ref, re.I))
+    if about and about != "§" and re.search(r"\d", about) and (not whole_marker or whole_text_amendment):
         return "amendment"
     # 5. split / separate votes on parts of the original text
     if not whole_marker and (
@@ -610,6 +703,49 @@ def classify(s: Signals) -> VoteKind:
                 return "motion"  # an objection to a delegated / implementing act, as a whole
             return "final" if legislative else "resolution"
     return "other"
+
+
+_CENSURE = re.compile(r"motion of censure|motion de censure", re.I)
+_NEGOTIATION_DECISION = re.compile(
+    r"decision to enter (into )?interinstitutional negotiations|décision d.engager des négociations "
+    r"interinstitutionnelles",
+    re.I,
+)
+_COUNCIL_POSITION = re.compile(r"council[’']?s? position|position of the council|position du conseil", re.I)
+
+
+def kind_detail(kind: str, s: Signals, symbol: str | None) -> KindDetail | None:
+    """What a motion or procedural vote decides, where the published texts say so (else None).
+
+    - "reject_proposal" / "reject_council_position": a motion to reject the Commission proposal (first
+      reading, heading "Proposal to reject the Commission proposal") or the Council's position (second
+      reading, "***II"). Adopted means Parliament rejected that text; rejected means it did not.
+    - "censure": a motion of censure on the Commission (Art. 234 TFEU).
+    - "objection": an objection to a delegated or implementing act (adopted = Parliament objects).
+    - "negotiation_decision": the plenary vote on a committee's decision to enter into interinstitutional
+      negotiations (Rule 71 of the 9th-term, Rule 72 of the 10th-term Rules of Procedure).
+    """
+    ref = (s.ref or "").strip()
+    heading = s.heading or ""
+    if kind == "procedural":
+        return "negotiation_decision" if _NEGOTIATION_DECISION.search(f"{ref} {s.label or ''}") else None
+    if kind != "motion":
+        return None
+    if _CENSURE.search(f"{ref} {heading} {s.item_title or ''}"):
+        return "censure"
+    if _REJECTION.search(ref) or re.search(r"\breject", heading, re.I):
+        if symbol == "***II" or _COUNCIL_POSITION.search(heading):
+            return "reject_council_position"
+        return "reject_proposal"
+    if _is_objection(s):
+        return "objection"
+    return None
+
+
+def keeps_ballots(kind: str, detail: str | None) -> bool:
+    """Roll-call votes whose individual positions are kept: votes on whole texts, and the vote confirming
+    (or not) a committee's decision to negotiate with the Council."""
+    return kind in BALLOT_KINDS or detail == "negotiation_decision"
 
 
 # ========================================================================================= majority rule
@@ -886,6 +1022,23 @@ def minutes_symbol(d: Draft, counts: tuple[int | None, int | None, int | None]) 
     return symbols.pop() if len(symbols) == 1 else None
 
 
+def minutes_title(d: Draft, counts: tuple[int | None, int | None, int | None]) -> str | None:
+    """English block title of the minutes rows matching the decision (by counts, else by its documents)."""
+    titles = {r.title for r in minutes_rows(d, counts)}
+    if not titles and d.label_docs:
+        titles = {r.title for r in d.sitting.minutes if r.docs & set(d.label_docs)}
+    return titles.pop() if len(titles) == 1 else None
+
+
+def subject_of(d: Draft, counts: tuple[int | None, int | None, int | None]) -> str | None:
+    """What was voted, as published in English: the vote item title (from 2024-01-15; earlier items are
+    titled in French only) or the block title of the sitting's English minutes (before that date)."""
+    if d.sitting.rich:
+        subjects = {it.subject for it in d.items}
+        return subjects.pop() if len(subjects) == 1 else None
+    return minutes_title(d, counts)
+
+
 def resolve_outcome(
     dec: dict, d: Draft, rule: str, counts: tuple[int | None, int | None, int | None]
 ) -> tuple[str, str | None]:
@@ -946,12 +1099,18 @@ def build_records(
     rule = majority_rule(kind, item.title if item else None, symbol, proc_types)
 
     outcome, basis = resolve_outcome(dec, d, rule, counts)
+    if kind in ("final", "mandate") and outcome == "lapsed":
+        # a whole-text vote that fell without being held (the "Commission proposal" decision once the
+        # provisional agreement replacing that text was adopted): not a vote of Parliament on the law
+        kind = "other"
+        rule = majority_rule(kind, item.title if item else None, symbol, proc_types)
+    detail = kind_detail(kind, sig, symbol)
     method = _suffix(dec.get("decision_method"))
     favor, against, abstain = (
         _person_ids(dec.get(k)) for k in ("had_voter_favor", "had_voter_against", "had_voter_abstention")
     )
     rollcall = method == ROLLCALL
-    keep_ballots = rollcall and kind in BALLOT_KINDS and bool(favor or against or abstain)
+    keep_ballots = rollcall and keeps_ballots(kind, detail) and bool(favor or against or abstain)
     vid = str(dec.get("notation_votingId"))
     event_id = dec.get("activity_id") or _suffix(dec.get("id")) or vid
     vote = EpVote(
@@ -963,7 +1122,9 @@ def build_records(
         reference_text=d.ref if s.rich else None,
         doc_ids=d.docs,
         procedure_refs=refs,
+        subject=subject_of(d, counts),
         kind=kind,
+        kind_detail=detail,
         outcome=outcome,
         outcome_basis=basis,
         method=method,

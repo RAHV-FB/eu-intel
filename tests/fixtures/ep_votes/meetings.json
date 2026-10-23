@@ -32,6 +32,18 @@
     }
    ]
   },
+  "2022": {
+   "data": [
+    {
+     "id": "eli/dl/event/MTG-PL-2022-07-05",
+     "type": "Activity",
+     "activity_date": "2022-07-05",
+     "activity_id": "MTG-PL-2022-07-05",
+     "had_activity_type": "def/ep-activities/PLENARY_SITTING",
+     "parliamentary_term": "org/ep-9"
+    }
+   ]
+  },
   "2023": {
    "data": [
     {
@@ -41,11 +53,27 @@
      "id": "eli/dl/event/MTG-PL-2023-06-14",
      "parliamentary_term": "org/ep-9",
      "type": "Activity"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2023-07-11",
+     "type": "Activity",
+     "activity_date": "2023-07-11",
+     "activity_id": "MTG-PL-2023-07-11",
+     "had_activity_type": "def/ep-activities/PLENARY_SITTING",
+     "parliamentary_term": "org/ep-9"
     }
    ]
   },
   "2024": {
    "data": [
+    {
+     "id": "eli/dl/event/MTG-PL-2024-02-27",
+     "type": "Activity",
+     "activity_date": "2024-02-27",
+     "activity_id": "MTG-PL-2024-02-27",
+     "had_activity_type": "def/ep-activities/PLENARY_SITTING",
+     "parliamentary_term": "org/ep-9"
+    },
     {
      "activity_date": "2024-03-13",
      "activity_id": "MTG-PL-2024-03-13",
@@ -53,6 +81,14 @@
      "id": "eli/dl/event/MTG-PL-2024-03-13",
      "parliamentary_term": "org/ep-9",
      "type": "Activity"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-03-14",
+     "type": "Activity",
+     "activity_date": "2024-03-14",
+     "activity_id": "MTG-PL-2024-03-14",
+     "had_activity_type": "def/ep-activities/PLENARY_SITTING",
+     "parliamentary_term": "org/ep-9"
     },
     {
      "activity_date": "2024-09-19",
@@ -81,6 +117,14 @@
      "id": "eli/dl/event/MTG-PL-2025-10-07",
      "parliamentary_term": "org/ep-10",
      "type": "Activity"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2025-12-17",
+     "type": "Activity",
+     "activity_date": "2025-12-17",
+     "activity_id": "MTG-PL-2025-12-17",
+     "had_activity_type": "def/ep-activities/PLENARY_SITTING",
+     "parliamentary_term": "org/ep-10"
     }
    ]
   },

@@ -147,6 +147,56 @@
      "fr": "The Left\nVerts/ALE\nESN"
     },
     "type": "Vote"
+   },
+   {
+    "id": "eli/dl/event/MTG-PL-2026-07-09-DEC-195719",
+    "type": "Vote",
+    "activity_date": "2026-07-09",
+    "activity_id": "MTG-PL-2026-07-09-DEC-195719",
+    "activity_label": {
+     "mul": "A10-0185/2026 - Fernando Navarrete Rojas - Décision d'engager des négociations interinstitutionnelles",
+     "fr": "A10-0185/2026 - Fernando Navarrete Rojas - Décision d'engager des négociations interinstitutionnelles",
+     "en": "A10-0185/2026 – Fernando Navarrete Rojas – Decision to enter into interinstitutional negotiations"
+    },
+    "activity_order": "1.0",
+    "activity_start_date": "2026-07-09T13:19:55+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197534",
+     "person/96791",
+     "person/257049"
+    ],
+    "had_voter_against": [
+     "person/256900",
+     "person/197734",
+     "person/257025"
+    ],
+    "had_voter_favor": [
+     "person/197529",
+     "person/256820",
+     "person/257110"
+    ],
+    "number_of_attendees": 607,
+    "number_of_votes_abstention": 22,
+    "number_of_votes_against": 169,
+    "number_of_votes_favor": 416,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2026-07-09-RCV-ITM-001"
+    ],
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "notation_votingId": "195719",
+    "referenceText": {
+     "en": "Decision to enter into interinstitutional negotiations",
+     "fr": "Décision d'engager des négociations interinstitutionnelles"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2026-07-09-VOT-ITM-992995"
+    ]
    }
   ]
  },
@@ -210,6 +260,44 @@
      "fr": "<structuredLabel><title>Dérogation temporaire à la directive vie privée et communications électroniques ***II</title><label>Recommandation pour la deuxième lecture (11261/1/2026 - C10-0178/2026 – 2025/0429(COD)) (Majorité des députés qui composent le Parlement requise pour modifier ou rejeter la position du Conseil)</label></structuredLabel>"
     },
     "type": "Activity"
+   },
+   {
+    "id": "eli/dl/event/MTG-PL-2026-07-09-VOT-ITM-992995",
+    "type": "Activity",
+    "activity_date": "2026-07-09",
+    "activity_id": "MTG-PL-2026-07-09-VOT-ITM-992995",
+    "activity_label": {
+     "mul": "Création d'un euro numérique - Establishment of the digital euro - Einführung des digitalen Euro",
+     "en": "Establishment of the digital euro ***I",
+     "fr": "Création d'un euro numérique ***I"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-10-2026-0185"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2026-07-09-DEC-195719"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2026-07-09-OJ-ITM-V-118"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2026-07-09-VOT-ITM-002"
+    ],
+    "notation_dlvId": "992995",
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Establishment of the digital euro ***I</title><label>Report: Fernando Navarrete Rojas (A10-0185/2026) (Majority of votes cast required)</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Création d'un euro numérique ***I</title><label>Rapport: Fernando Navarrete Rojas (A10-0185/2026) (Majorité des suffrages exprimés requise)</label></structuredLabel>"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2026-07-09",
+     {
+      "id": "eli/dl/proc/2023-0212",
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2026-07-09-VOT-ITM-992995"
+      ]
+     }
+    ]
    }
   ]
  }
