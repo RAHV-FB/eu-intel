@@ -352,7 +352,7 @@ export interface VoteMargin {
   threshold: number; // votes in favour needed
   distance: number; // votes_for - threshold (signed)
   relative: number; // distance / votes counted towards the threshold
-  label: string; // "Passed with 12 votes more than needed"
+  label: string; // "Majority reached: 12 votes more than needed" (the vote's majority, not a law passing)
   component_members?: number | null; // Members in office on the day, for rules based on component Members
 }
 

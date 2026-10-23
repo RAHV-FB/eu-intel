@@ -73,6 +73,24 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   rejection when every final vote of that day linked to the file was officially rejected (2025/0429(COD),
   26 Mar 2026, OEIL: "the European Parliament rejected the proposal"). A rejected final vote on a file whose
   OEIL record names a later final act carries a note saying the procedure continued.
+- Margin (`analysis/ep_margin.py`, build): computed only for an adopted or rejected outcome under an established
+  majority rule. Its label is about the majority that vote needed, "Majority reached: N votes more than needed" /
+  "Majority not reached: N votes short", never about a law passing (a final vote can be a consultation opinion or
+  a position the Council has not yet agreed to). `python -m pipeline validate` fails a build in which a margin
+  stands next to another outcome or on the other side of the threshold. A vote is *close* when the distance is at
+  most 5% of the votes cast for and against (`CLOSE_RELATIVE` in `build.py` and `src/features/votes/labels.ts`).
+- `outcome_basis` `derived` (calculated from the counts under the votes-cast rule) is shown as such wherever the
+  outcome is: vote pages, the /votes list, dossier vote cards and the home lists.
+- Home lists (`build_home`): *Close votes* are the most recent close final votes (no time window: one final vote
+  in the 12 months to October 2026 was close). *Rejected* holds final votes on a whole text that were rejected
+  and adopted motions to reject the proposal or the Council's position, each with the file's decision as its
+  timeline words it and what followed (adopted later, withdrawn; a consultation opinion is not binding), then
+  files recorded as rejected without such a vote. Rejected objections and motions of censure are not listed: they
+  leave the Commission measure or the Commission in place.
+- Feeds and activity: a final vote not already a file's milestone is titled by Parliament's step when the file is
+  a consultation or consent procedure (CNS, APP, or the "*" / "***" symbol ending the vote's published subject):
+  "Parliament delivered its opinion" / "a negative opinion", "Parliament gave its consent" / "did not give its
+  consent", rather than "Parliament adopted".
 
 ### EUR-Lex / Cellar (`eurlex`) — ok
 - 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 21 final acts that OEIL

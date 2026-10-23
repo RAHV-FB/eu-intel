@@ -408,6 +408,9 @@ RULE_LABELS = {
     "component_members": "Majority of Parliament's component Members (abstentions and absences count like votes against)",
     "two_thirds_cast": "Two-thirds of the votes cast, representing a majority of component Members",
 }
+# a close vote: the votes in favour within this share of the votes counted towards the threshold (the same
+# rule as CLOSE_RELATIVE in src/features/votes/labels.ts, which the /votes page explains)
+CLOSE_RELATIVE = 0.05
 PAST_TITLES = {
     "entry_into_force": "Entered into force",
     "application": "Further provisions started to apply (date recorded by EUR-Lex)",
@@ -3059,6 +3062,31 @@ class Builder:
                 and not e.get("after_end_of_validity")]  # fmt: skip
         return done[-1] if done else None
 
+    def home_rejection_note(self, v: dict) -> str:
+        """What a rejection on the home "Rejected" list meant, in the words of the file's timeline where the vote
+        is its decision, and what became of the file after it (2025/0429(COD): rejected at first reading on
+        26 March 2026, adopted on 23 July 2026 after a second reading; 2025/0580(CNS): a negative opinion)."""
+        d = self.dossier_summary.get(v["dossier_id"]) if v["dossier_id"] else None
+        timeline = self.dossier_detail[d["id"]]["timeline"] if d else []
+        decision = next((e["title"] for e in timeline if e.get("vote_id") == v["id"] and "rejected" in e["title"]), None)
+        if v["outcome"] == "adopted":  # an adopted motion to reject
+            note = v["outcome_note"] or v["kind_label"]
+        else:
+            note = f"{decision}." if decision else "Parliament rejected the text in this vote."
+        if d is None:
+            return v["outcome_note"] or note
+        since = self.dossier_detail[d["id"]]["status"].get("since") or ""
+        if d["stage"] in ADOPTED_STAGES and d["adopted"] and d["adopted"] > v["date"]:
+            return f"{note} The procedure continued and the act was adopted on {_long_date(d['adopted'])}."
+        if v["outcome_note"] and v["outcome"] == "rejected":
+            return v["outcome_note"]  # a later act the file's dates do not show (later_act_note)
+        if d["type"] == "CNS" and v["outcome"] == "rejected" and d["stage"] not in ADOPTED_STAGES:
+            return (f"{note} Under the consultation procedure Parliament's opinion is not binding: the Council can "
+                    "still adopt the act.")  # fmt: skip
+        if since > v["date"] and d["stage"] != "rejected":
+            return f"{note} Status now: {d['status_label']}."
+        return note
+
     def build_home(self) -> None:
         featured = []
         cur_sorted = sorted(
@@ -3093,41 +3121,40 @@ class Builder:
         )[:12]  # fmt: skip
         under_debate = [{"dossier_id": d["id"], "title": d["title"], "subtitle": d["status_label"],
                          "date": d["last_event"], "badge": d["type"]} for d in debate]  # fmt: skip
-        recent_cut = _add_days(today, -365)
+
+        def badge(v: dict, text: str) -> str:
+            # an outcome we calculated from the counts says so, as on the vote's page
+            return f"{text} (calculated from the recorded counts)" if v.get("outcome_basis") == "derived" else text
+
+        # close final votes as the /votes page defines them (CLOSE_RELATIVE), newest first; over all the votes
+        # covered, as few final votes are that close (one in the 12 months to October 2026)
         close = [
             v for v in self.vote_summary.values()
-            if v["kind"] == "final" and v.get("margin") and v["date"] >= recent_cut
-            and isinstance(v["margin"].get("relative"), (int, float))
+            if v["kind"] == "final" and v.get("margin") and v["outcome"] in ("adopted", "rejected")
+            and isinstance(v["margin"].get("relative"), (int, float)) and abs(v["margin"]["relative"]) <= CLOSE_RELATIVE
         ]  # fmt: skip
-        close.sort(
-            key=lambda v: (
-                abs(v["margin"]["relative"]),
-                v["date"] and -int(v["date"].replace("-", "")),
-                v["id"],
-            )
-        )
+        close.sort(key=lambda v: (v["date"], v["id"]), reverse=True)
         close_votes = [{"vote_id": v["id"], "dossier_id": v["dossier_id"], "title": v["display_title"],
-                        "subtitle": v["margin"].get("label"), "date": v["date"], "badge": v["outcome"]}
+                        "subtitle": v["margin"].get("label"), "date": v["date"], "badge": badge(v, v["outcome"])}
                        for v in close[:10]]  # fmt: skip
-        # A rejected motion to reject is not a rejection by Parliament: the adopted motion is. Other motions
-        # (objections, censure) are listed when rejected, with what that means.
+        # What Parliament rejected: final votes on a whole text that it rejected, and adopted motions to reject the
+        # proposal or the Council's position (a rejected motion to reject is not a rejection by Parliament), each
+        # leading to its file; then files recorded as rejected without such a vote. A rejected objection or motion
+        # of censure leaves the Commission measure or the Commission in place, so neither is listed.
         rejecting = ("reject_proposal", "reject_council_position")
         rej_votes = [
             v
             for v in self.vote_summary.values()
             if (v["kind_detail"] in rejecting and v["outcome"] == "adopted")
-            or (
-                v["kind_detail"] not in rejecting
-                and v["outcome"] == "rejected"
-                and v["kind"] in ("final", "motion")
-            )
+            or (v["kind"] == "final" and v["outcome"] == "rejected")
         ]
         rej_items = [{"vote_id": v["id"], "dossier_id": v["dossier_id"], "title": v["display_title"],
-                      "subtitle": v["outcome_note"] or v["kind_label"], "date": v["date"], "badge": "Rejected"}
+                      "subtitle": self.home_rejection_note(v), "date": v["date"], "badge": badge(v, "Rejected")}
                      for v in rej_votes]  # fmt: skip
+        listed = {x["dossier_id"] for x in rej_items if x["dossier_id"]}
         rej_items += [{"dossier_id": d["id"], "title": d["title"], "subtitle": d["status_label"],
                        "date": self.dossier_detail[d["id"]]["status"].get("since") or d["last_event"], "badge": "Rejected"}
-                      for d in summ.values() if d["stage"] == "rejected"]  # fmt: skip
+                      for d in summ.values() if d["stage"] == "rejected" and d["id"] not in listed]  # fmt: skip
         rej_items.sort(
             key=lambda x: (x["date"] or "", x.get("vote_id") or x.get("dossier_id") or ""), reverse=True
         )
@@ -3182,11 +3209,14 @@ class Builder:
              "description": "Legislative files with a recorded procedural step in the last 120 days that are not yet adopted.",
              "items": under_debate},
             {"id": "close_votes", "title": "Close votes",
-             "description": "Final Parliament votes of the last 12 months decided by the smallest margin against the applicable majority.",
+             "description": "The most recent final Parliament votes on a whole text that were close: the votes in favour "
+                            f"were within {CLOSE_RELATIVE:.0%} of the votes counted towards the applicable majority.",
              "items": close_votes},
             {"id": "rejected", "title": "Rejected",
-             "description": "Votes on whole texts or motions that Parliament rejected, and files recorded as rejected. "
-                            "A rejected amendment is not a rejected law, so amendments are not listed.",
+             "description": "Proposals and texts Parliament rejected in plenary, newest first: final votes on a whole text "
+                            "it voted down, and motions to reject a proposal or the Council's position that it adopted, "
+                            "with what happened to the file next. A rejected amendment is not a rejected law, so "
+                            "amendments are not listed; nor are rejected objections or motions of censure.",
              "items": rej_items[:12]},
             {"id": "stalled", "title": "Stalled",
              "description": "Files officially reported as blocked (Legislative Train), then files with no recorded "

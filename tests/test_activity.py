@@ -236,3 +236,38 @@ def test_classifier_is_stored_only_with_trusted_stages(base: Path, monkeypatch: 
     _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
     # the stored stages are still those of the previous logic: they are re-baselined by a later trusted run
     assert json.loads((base / "state" / "digest.json").read_text())["classifier"] != "test-next"
+
+
+SNAP_VOTES = Path(__file__).resolve().parent.parent / "data" / "snapshot" / "ep_votes" / "votes.json"
+
+
+@pytest.mark.skipif(not SNAP_VOTES.exists(), reason="no snapshot")
+def test_feed_names_parliaments_step_in_consultation_and_consent_files():
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import snapshot_items
+    from tests.test_build_real_records import votes
+
+    # published as "Parliament adopted: …" although Parliament only gives an opinion (198386, 2026/0137(NLE),
+    # subject "Guidelines for the employment policies of the Member States *"; 195831, 2025/0265(CNS)) or its
+    # consent (195415, 2025/0271(NLE), "EU–Mexico Interim Agreement on Trade ***"; 197472, 2025/0313(APP)).
+    # 166051 (AI Act, 2021/0106(COD) ***I) is Parliament's own decision on the text and keeps "adopted".
+    v = votes("198386", "195831", "195415", "197472", "166051")
+    refs = {"198386": "2026/0137(NLE)", "195831": "2025/0265(CNS)", "195415": "2025/0271(NLE)",
+            "197472": "2025/0313(APP)", "166051": "2021/0106(COD)"}  # fmt: skip
+    summary = {vid: {"id": vid, "date": "2026-10-01", "kind": x.kind, "outcome": x.outcome, "dossier_id": None,
+                     "procedure_ref": refs[vid], "display_title": f"TEST {vid}", "source": None}
+               for vid, x in v.items()}  # fmt: skip
+    b = SimpleNamespace(today="2026-10-22", dossier_ids=[], dossier_detail={}, dossier_summary={},
+                        council_public=[], vote_summary=summary, indexed_votes=list(v.values()))  # fmt: skip
+    titles = {i["vote_id"]: i["title"] for i in snapshot_items(b)}
+    assert titles == {
+        "198386": "Parliament delivered its opinion: TEST 198386",
+        "195831": "Parliament delivered its opinion: TEST 195831",
+        "195415": "Parliament gave its consent: TEST 195415",
+        "197472": "Parliament gave its consent: TEST 197472",
+        "166051": "Parliament adopted: TEST 166051",
+    }
+    # a rejected consultation or consent vote says so in the same terms
+    b.vote_summary = {"195415": {**summary["195415"], "outcome": "rejected"}}
+    assert snapshot_items(b)[0]["title"] == "Parliament did not give its consent: TEST 195415"

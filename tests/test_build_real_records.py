@@ -164,6 +164,50 @@ def test_rejected_final_vote_on_a_file_that_later_became_law_says_so():
     assert Builder.later_act_note(SimpleNamespace(acts_of={}), v, p) is None  # type: ignore[arg-type]
 
 
+def test_home_rejected_list_says_what_each_rejection_meant_and_what_followed():
+    # 189270 (2025/0429(COD), rejected at first reading 26 Mar 2026; Regulation (EU) 2026/1881, adopted 23 Jul 2026
+    # after a second reading); 193822 (2025/0580(CNS), 17 Jun 2026: a negative opinion, OEIL "Awaiting Council
+    # decision"); 161821 (2022/0196(COD), rejected 22 Nov 2023, withdrawn by the Commission on 6 May 2024). The
+    # timelines are built from the procedures; stage, dates and status labels are those of the build.
+    p = procs("2025-0429", "2025-0580", "2022-0196")
+    v = votes("189270", "193822", "161821")
+    me = SimpleNamespace(indexed_vote_ids=set(v), council_of={}, today="2026-10-22")
+    detail = {
+        pid: {"timeline": Builder.timeline(me, p[pid], [], [v[vid]]), "status": {"since": since}}  # type: ignore[arg-type]
+        for pid, vid, since in (("2025-0429", "189270", "2026-07-31"), ("2025-0580", "193822", "2026-06-17"),
+                                ("2022-0196", "161821", "2024-05-06"))
+    }  # fmt: skip
+    summary = {
+        "2025-0429": {"id": "2025-0429", "type": "COD", "stage": "in_force", "adopted": "2026-07-23", "status_label": "In force"},
+        "2025-0580": {"id": "2025-0580", "type": "CNS", "stage": "parliament_position", "adopted": None,
+                      "status_label": "Parliament delivered a negative opinion"},
+        "2022-0196": {"id": "2022-0196", "type": "COD", "stage": "withdrawn", "adopted": None,
+                      "status_label": "Withdrawn by the Commission"},
+    }  # fmt: skip
+    me = SimpleNamespace(dossier_summary=summary, dossier_detail=detail)
+    later = "Parliament rejected the text in this vote, but the procedure continued: it later produced Regulation (EU) 2026/1881."
+
+    def note(vid: str, pid: str | None, outcome_note: str | None = None) -> str:
+        x = v[vid]
+        s = {"id": x.id, "date": x.date, "outcome": x.outcome, "dossier_id": pid, "outcome_note": outcome_note,
+             "kind_label": "Final vote on the text"}  # fmt: skip
+        return Builder.home_rejection_note(me, s)  # type: ignore[arg-type]
+
+    assert note("189270", "2025-0429", later) == (
+        "Parliament rejected the proposal at first reading. The procedure continued and the act was adopted on "
+        "23 July 2026."
+    )
+    assert note("193822", "2025-0580") == (
+        "Parliament delivered its opinion: it rejected the proposal. Under the consultation procedure Parliament's "
+        "opinion is not binding: the Council can still adopt the act."
+    )
+    assert note("161821", "2022-0196") == (
+        "Parliament rejected the proposal at first reading. Status now: Withdrawn by the Commission."
+    )
+    # without a tracked file: what the vote's outcome says, and nothing more
+    assert note("161821", None) == "Parliament rejected the text in this vote."
+
+
 def test_derived_rejection_is_not_repeated_next_to_the_decision_it_restates():
     # 2022/0196(COD), 22 Nov 2023: Parliament's decision (final vote 161821 REJECTED 207-299-121, minutes) is titled
     # as the rejection; the event derived from the vote for the status must not appear a second time

@@ -24,8 +24,8 @@ function EpVoteCard({ v }: { v: EpVoteSummary }) {
         </Link>
       </h3>
       <div className="dz-vote__outcome">
-        <OutcomeBadge outcome={v.outcome} />
-        {v.margin && <MarginText margin={v.margin} />}
+        <OutcomeBadge outcome={v.outcome} basis={v.outcome_basis} />
+        {v.margin && <MarginText margin={v.margin} outcome={v.outcome} />}
       </div>
       {v.outcome_note && <p className="meta dz-vote__note">{v.outcome_note}</p>}
       <VoteBar forCount={v.for} against={v.against} abstain={v.abstain} label={v.display_title || v.title} />
@@ -54,7 +54,7 @@ function CompactVote({ v }: { v: EpVoteSummary }) {
         <span className="meta"> · {v.kind_label}</span>
       </span>
       <span className="dz-cvote__res">
-        <OutcomeBadge outcome={v.outcome} />
+        <OutcomeBadge outcome={v.outcome} basis={v.outcome_basis} />
         {v.for != null && (
           <span className="meta num">
             {v.for}–{v.against ?? 0}–{v.abstain ?? 0}

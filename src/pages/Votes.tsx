@@ -62,7 +62,9 @@ export default function Votes() {
     const linked = votes.filter((v) => v.dossier_id).length;
     const withMargin = votes.filter((v) => v.margin).length;
     const closeCount = votes.filter(isClose).length;
-    return { years, kinds, outcomes, topics, linked, withMargin, closeCount };
+    const derived = votes.filter((v) => v.outcome_basis === 'derived').length;
+    const noTopic = votes.filter((v) => !v.topics.length).length;
+    return { years, kinds, outcomes, topics, linked, withMargin, closeCount, derived, noTopic };
   }, [votes]);
 
   const topicLabel = useMemo(() => {
@@ -181,7 +183,13 @@ export default function Votes() {
               </div>
               <div className="field">
                 <label htmlFor="vf-outcome">Outcome</label>
-                <select id="vf-outcome" className="select" value={outcome} onChange={(e) => set('outcome', e.target.value)}>
+                <select
+                  id="vf-outcome"
+                  className="select"
+                  value={outcome}
+                  onChange={(e) => set('outcome', e.target.value)}
+                  aria-describedby="vf-outcome-d"
+                >
                   <option value="">Any outcome</option>
                   {OUTCOME_ORDER.filter((o) => opts.outcomes.has(o)).map((o) => (
                     <option key={o} value={o}>
@@ -189,11 +197,21 @@ export default function Votes() {
                     </option>
                   ))}
                 </select>
+                <span className="meta" id="vf-outcome-d">
+                  Outcomes come from Parliament’s open data or the official minutes of the sitting
+                  {opts.derived > 0 && <>; {formatNumber(opts.derived)} are calculated from the recorded counts</>}.
+                </span>
               </div>
               {opts.topics.size > 0 && (
                 <div className="field">
                   <label htmlFor="vf-topic">Topic</label>
-                  <select id="vf-topic" className="select" value={topic} onChange={(e) => set('topic', e.target.value)}>
+                  <select
+                    id="vf-topic"
+                    className="select"
+                    value={topic}
+                    onChange={(e) => set('topic', e.target.value)}
+                    aria-describedby={opts.noTopic > 0 ? 'vf-topic-d' : undefined}
+                  >
                     <option value="">All topics</option>
                     {[...opts.topics.keys()]
                       .sort((a, b) => topicLabel(a).localeCompare(topicLabel(b)))
@@ -203,6 +221,11 @@ export default function Votes() {
                         </option>
                       ))}
                   </select>
+                  {opts.noTopic > 0 && (
+                    <span className="meta" id="vf-topic-d">
+                      Topics come from a vote’s linked legislative file, so {formatNumber(opts.noTopic)} votes are in no topic.
+                    </span>
+                  )}
                 </div>
               )}
               {opts.linked > 0 && opts.linked < votes.length && (

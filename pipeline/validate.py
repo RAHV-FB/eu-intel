@@ -5,7 +5,8 @@
 Errors (exit code 1) are STRUCTURAL problems only: unreadable files, records that do not match
 the schema in pipeline/models/entities.py, duplicate ids, malformed dates; and, in the built output,
 claims that contradict the rules or the dossier's own dates (a veto outside unanimity, a withdrawn file
-with an adopted act or withdrawn before its proposal, an adoption after publication).
+with an adopted act or withdrawn before its proposal, an adoption after publication, a vote margin next to an
+outcome that is not established or on the other side of the threshold from it).
 Everything else is reported as a warning: dangling references, official totals that differ from the
 recorded individual votes (official discrepancies are facts, not bugs), implausible dates,
 transposition data on non-directives, "veto" wording outside unanimity, odd act/procedure pairs.
@@ -394,10 +395,18 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
                     rep.error(f"public dossiers/{f.name}: {msg}", "public")
                 for c in d.get("celex") or []:
                     owners.setdefault(c, []).append(d["id"])
+                for v in d.get("ep_votes") or []:
+                    for msg in margin_contradictions(v):
+                        rep.error(f"public dossiers/{f.name}: {msg}", "public")
         # one law, one page: an act shown on two files means EUR-Lex and the EP disagree on its procedure
         for c, ids in sorted(owners.items()):
             if len(ids) > 1:
                 rep.warn("act-on-two-dossiers", f"{c} is shown on {', '.join(ids)}; check which procedure adopted it")
+        for f in sorted((public / "votes").glob("*.json")):
+            recs = json.loads(f.read_text(encoding="utf-8"))
+            for v in recs if isinstance(recs, list) else [recs]:
+                for msg in margin_contradictions(v):
+                    rep.error(f"public votes/{f.name}: {msg}", "public")
     return rep
 
 
@@ -418,6 +427,22 @@ def dossier_contradictions(d: dict) -> list[str]:
     if d.get("adopted") and d.get("published") and d["adopted"] > d["published"]:
         out.append(f"adopted on {d['adopted']}, after its publication on {d['published']}")
     return out
+
+
+def margin_contradictions(v: dict) -> list[str]:
+    """A built vote's margin that its outcome contradicts. A margin is our calculation: it may stand only next to
+    an established outcome (adopted or rejected), on the side of the threshold that outcome says."""
+    m = v.get("margin")
+    if not m:
+        return []
+    outcome, distance, label = v.get("outcome"), m.get("distance"), str(m.get("label") or "")
+    if outcome not in ("adopted", "rejected"):
+        return [f"vote {v.get('id')}: margin {label!r} with outcome {outcome!r}"]
+    if not isinstance(distance, int) or (distance >= 0) != (outcome == "adopted"):
+        return [f"vote {v.get('id')}: margin distance {distance} contradicts outcome {outcome!r}"]
+    if label.startswith("Majority not reached") == (outcome == "adopted"):
+        return [f"vote {v.get('id')}: margin label {label!r} contradicts outcome {outcome!r}"]
+    return []
 
 
 def validate() -> int:

@@ -7,6 +7,9 @@ export const OUTCOME_LABEL: Record<VoteOutcome, string> = {
   unknown: 'Outcome not established',
 };
 
+/** Shown next to an outcome we calculated because neither Parliament's open data nor the minutes give it. */
+export const DERIVED_OUTCOME = 'Outcome calculated from the recorded counts';
+
 export const OUTCOME_ICON: Record<VoteOutcome, string> = {
   adopted: '●',
   rejected: '✕',
@@ -71,14 +74,15 @@ export const POSITION_ICON: Record<BallotPosition, string> = {
 };
 
 /**
- * Close-vote rule, shared by the explorer filter and its methodology note.
- * A vote is "close" when its margin is known (the legal threshold is established) and the
- * distance from the threshold is at most 5% of the votes counted towards it.
+ * Close-vote rule, shared by the explorer filter, its methodology note and the home page list (CLOSE_RELATIVE in
+ * pipeline/build.py). A vote is "close" when its outcome is established (adopted or rejected), its margin is known
+ * (the legal threshold is established) and the distance from the threshold is at most 5% of the votes counted
+ * towards it.
  */
 export const CLOSE_RELATIVE = 0.05;
 
-export function isClose(v: Pick<EpVoteSummary, 'margin'>): boolean {
-  return !!v.margin && Math.abs(v.margin.relative) <= CLOSE_RELATIVE;
+export function isClose(v: Pick<EpVoteSummary, 'margin' | 'outcome'>): boolean {
+  return !!v.margin && (v.outcome === 'adopted' || v.outcome === 'rejected') && Math.abs(v.margin.relative) <= CLOSE_RELATIVE;
 }
 
 export function outcomeTone(o: VoteOutcome): string {

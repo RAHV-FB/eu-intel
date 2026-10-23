@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,31 @@ SNAPSHOT_EVENT_KINDS = {
     "rejection",
     "lapsed",
 }
+# A final vote in a consultation or consent procedure is Parliament's opinion or its consent, not the adoption of
+# the act: the procedure type says which (CNS, APP), or else the procedure symbol that ends the vote's published
+# subject, "*" for consultation and "***" for consent ("Guidelines for the employment policies of the Member
+# States *", 2026/0137(NLE); "EU–Mexico Interim Agreement on Trade ***", 2025/0271(NLE))
+VOTE_STEP_TITLES = {
+    ("opinion", "adopted"): "Parliament delivered its opinion",
+    ("opinion", "rejected"): "Parliament delivered a negative opinion",
+    ("consent", "adopted"): "Parliament gave its consent",
+    ("consent", "rejected"): "Parliament did not give its consent",
+}
+_PROCEDURE_TYPE = re.compile(r"\(([A-Z]{3})\)$")
+_PROCEDURE_SYMBOL = re.compile(r"(?<![*])(\*{1,3})\s*$")
+
+
+def vote_step(v: dict, ptype: str | None, subject: str | None) -> str | None:
+    """What a final vote in a consultation or consent procedure gave: "opinion" or "consent"; else None."""
+    if v["kind"] != "final":
+        return None
+    if ptype is None and v.get("procedure_ref"):
+        m = _PROCEDURE_TYPE.search(v["procedure_ref"])
+        ptype = m.group(1) if m else None
+    if ptype in ("CNS", "APP"):
+        return "opinion" if ptype == "CNS" else "consent"
+    symbol = _PROCEDURE_SYMBOL.search(subject or "")
+    return {"*": "opinion", "***": "consent"}.get(symbol.group(1)) if symbol else None
 
 
 def short_title(t: str, n: int = 110) -> str:
@@ -128,12 +154,16 @@ def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
     # a vote that is already a dossier milestone (its timeline event) is listed once, as that milestone
     milestone_votes = {i["vote_id"] for i in out if i.get("vote_id")}
     milestone_ids = {i["id"] for i in out}
+    subjects = {v.id: v.subject for v in getattr(b, "indexed_votes", [])}
     for v in b.vote_summary.values():
         if v["kind"] in ("final", "motion") and cut <= v["date"] <= today and v["id"] not in milestone_votes:
             res = {"adopted": "adopted", "rejected": "rejected", "lapsed": "lapsed"}.get(
                 v["outcome"], "voted on"
             )
-            out.append(_item(f"vote:{v['id']}", v["date"], "ep_vote", f"Parliament {res}: {v['display_title']}",
+            d = b.dossier_summary.get(v["dossier_id"]) if v.get("dossier_id") else None
+            step = vote_step(v, d["type"] if d else None, subjects.get(v["id"]))
+            head = VOTE_STEP_TITLES.get((step or "", v["outcome"])) or f"Parliament {res}"
+            out.append(_item(f"vote:{v['id']}", v["date"], "ep_vote", f"{head}: {v['display_title']}",
                              v.get("dossier_id"), v["id"], v.get("source")))  # fmt: skip
     for cv in b.council_public:
         if cut <= cv["date"] <= today and f"ev:council-{cv['id']}" not in milestone_ids:
