@@ -20,6 +20,9 @@
 
 # ------------------------------------------------------------------------ digital & data
 - {terms: ["ai"], expands_to: ["artificial intelligence"]}
+# "Artificial Intelligence Act" is the short title Regulation (EU) 2024/1689 gives itself in its OJ title;
+# files whose official title cites that Regulation (e.g. the Digital Omnibus on AI, 2025/0359(COD)) amend it
+- {terms: ["ai act"], expands_to: ["artificial intelligence act", "2024/1689"]}
 - {terms: ["gdpr"], expands_to: ["general data protection regulation", "protection of natural persons with regard to the processing of personal data"]}
 - {terms: ["dsa"], expands_to: ["digital services act", "single market for digital services"]}
 - {terms: ["dma"], expands_to: ["digital markets act", "contestable and fair markets in the digital sector"]}
@@ -115,6 +118,10 @@
 - {procedure: "2016/0222(COD)", names: ["Pact on Migration and Asylum", "Reception Conditions Directive"]}
 - {procedure: "2016/0223(COD)", names: ["Pact on Migration and Asylum", "Qualification Regulation"]}
 - {procedure: "2016/0225(COD)", names: ["Pact on Migration and Asylum", "Resettlement Framework Regulation"]}
+
+# ------------------------------------- extension of the interim ePrivacy derogation (Regulation (EU) 2021/1232)
+# source: https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0429(COD) (the Legislative Observatory's title of the procedure: "Temporary derogation from certain provisions of the ePrivacy Directive to combat online child sexual abuse")
+- {procedure: "2025/0429(COD)", names: ["Temporary derogation from certain provisions of the ePrivacy Directive to combat online child sexual abuse"]}
 
 # ------------------------------------------------- CO2 standards for cars and vans (Regulation (EU) 2023/851)
 # source: https://www.europarl.europa.eu/topics/en/article/20221019STO44572/eu-ban-on-sale-of-new-petrol-and-diesel-cars-from-2035-explained ("EU ban on the sale of new petrol and diesel cars from 2035 explained")

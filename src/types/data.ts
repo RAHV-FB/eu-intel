@@ -292,6 +292,8 @@ export interface DossierDetail extends DossierSummary {
   acts: LegalActSummary[];
   ep_votes: EpVoteSummary[]; // votes linked to this dossier via official ids, newest first
   council_votes: CouncilVote[];
+  // Split procedures only: Council votes that cite this (parent) reference, listed on the part whose act they adopted
+  council_votes_in_parts?: { id: string; date: ISODate; dossier_id: string; dossier_ref: string }[];
   implementation?: DossierImplementation | null; // directives only
   committees: { code: string; name?: string | null; role: string }[];
   rapporteurs: { mep_id?: string | null; name: string; group?: string | null; country?: string | null; role: string }[];
@@ -422,6 +424,9 @@ export interface CouncilAssessment {
   rule: 'qmv' | 'unanimity' | 'simple_majority';
   states_for: number;
   states_required: number;
+  // Only when legal_basis is null under QMV: Member States needed if the Council did NOT act on a Commission
+  // proposal (72%, TFEU Art. 238(2)); states_required is then the figure for a Commission proposal (55%)
+  states_required_alt?: number | null;
   // Percentage 0–100 of the population of the Member States TAKING PART in the vote. Equal to the share of
   // the EU population only when states_not_participating is 0.
   population_for_pct?: number | null;
@@ -456,6 +461,9 @@ export interface CouncilVote {
   configuration?: string | null;
   stage?: string | null; // item(s) voted on as listed in the voting-result document, "; "-separated
   vote_on?: CouncilVoteOn | null; // normalised from the subject; null when the document names no item
+  // Set when vote_on differs from what the voting-result document's own label says, citing the procedure
+  // record that shows it (e.g. its reference document is the Council's first-reading position)
+  vote_on_note?: string | null;
   meeting?: string | null; // meeting reference as published
   written_procedure?: boolean | null; // adopted by written procedure rather than at a meeting
   council_doc?: string | null; // e.g. "PE-CONS 24/24"

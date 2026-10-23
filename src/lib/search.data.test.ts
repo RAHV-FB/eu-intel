@@ -42,7 +42,8 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(ai.has('2021-0106')).toBe(true);
     expect(ai.has('2020-0163')).toBe(false); // "AIEM tax in the Canary Islands"
     expect(ai.has('2014-0014')).toBe(false); // "Aid scheme for ... fruit"
-    expect(keywordScores(rows, hay, engine, 'AI Act').size).toBeLessThanOrEqual(3);
+    // the AI Act and the files whose official title cites it (Regulation (EU) 2024/1689), not every "act"
+    expect(keywordScores(rows, hay, engine, 'AI Act').size).toBeLessThanOrEqual(5);
   });
 
   it('puts the best match first: groups, parties and countries are not buried under prefix matches', () => {
@@ -76,6 +77,22 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(ids('car CO2', 3)).toContain('dossier:2021-0197');
     expect(ids('petrol and diesel cars 2035', 3)).toContain('dossier:2021-0197');
     expect(top('new batteries regulation')).toBe('dossier:2020-0353');
+    // files amending the AI Act cite Regulation (EU) 2024/1689 in their official title (aliases.yaml "ai act")
+    expect(top('AI Act')).toBe('dossier:2021-0106');
+    expect(ids('AI Act', 3)).toContain('dossier:2025-0359');
+    // the Legislative Observatory's title of 2025/0429(COD); the contested "chat control" stays with 2022/0155
+    expect(ids('child sexual abuse', 5)).toContain('dossier:2025-0429');
+    expect(top('child sexual abuse')).toBe('dossier:2022-0155');
+    expect(ids('chat control', 10)).not.toContain('dossier:2025-0429');
+  });
+
+  it('ranks the parts of a split procedure, which hold the acts, above the split parent', () => {
+    const ets = ids('ETS revision', 5);
+    expect(ets.indexOf('dossier:2021-0211A')).toBeGreaterThanOrEqual(0);
+    expect(ets.indexOf('dossier:2021-0211A')).toBeLessThan(ets.indexOf('dossier:2021-0211'));
+    expect(top('common procedure for international protection')).toBe('dossier:2016-0224A');
+    expect(top('APR')).toBe('dossier:2016-0224A');
+    expect(ids('APR', 10)).not.toContain('dossier:2016-0224'); // curated keywords stay on the parts
   });
 
   it('tells same-name party records apart by term, current term first', () => {
@@ -105,7 +122,7 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(titles('gaza').some((v) => /pagazaurtund/i.test(v.title))).toBe(false);
     const ai = titles('AI Act');
     expect(ai.length).toBeGreaterThan(0);
-    expect(ai.every((v) => v.dossier_id === '2021-0106')).toBe(true);
+    expect(ai.every((v) => v.dossier_id === '2021-0106' || v.dossier_id === '2025-0359')).toBe(true); // AI Act, its amendment
     expect(ai.some((v) => v.kind === 'final')).toBe(true);
     expect(titles('résolution').length).toBe(titles('resolution').length);
   });

@@ -665,6 +665,9 @@ def _parse_subject(meta: NoteMeta) -> None:
     meta.step = "; ".join(steps) or None
 
 
+STATEMENTS_HEADING_RE = re.compile(r"(?:Joint\s+)?(?:Statements?|Declarations?|Explanations?\s+of\s+votes?)", re.I)
+
+
 def parse_statements(pages: list[str]) -> list[str]:
     """Titles of statements / declarations / explanations of vote printed in the note's annexes."""
     out: list[str] = []
@@ -683,7 +686,8 @@ def parse_statements(pages: list[str]) -> list[str]:
                     title.append(lines[j].strip())
                     j += 1
                 t = re.sub(r"\s+", " ", " ".join(title))
-                if t not in out:
+                # the annex heading alone ("STATEMENTS" above "Statement by Spain", ST 7085/20) is not a statement
+                if t not in out and not STATEMENTS_HEADING_RE.fullmatch(t):
                     out.append(t)
                 i = j
                 continue

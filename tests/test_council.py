@@ -72,6 +72,14 @@ def test_parse_note_written_procedure_and_statements():
     ]
 
 
+def test_statements_heading_is_not_a_statement():
+    # ST 7085/20, annex 2: the centred heading "STATEMENTS" above "Statement by Spain", "… by Greece", …
+    p = pages("ST-7085-2020-INIT.txt")
+    assert C.parse_statements(p) == ["Statement by Spain", "Statement by Greece", "Statement by the Commission"]
+    assert all(C.STATEMENTS_HEADING_RE.fullmatch(h) for h in ("STATEMENTS", "STATEMENT", "Joint declarations"))
+    assert not C.STATEMENTS_HEADING_RE.fullmatch("Statement by France")
+
+
 def test_parse_note_council_position_multi_day_meeting():
     m = C.parse_note(pages("ST-14522-2025-REV-1.txt")[0])
     assert m.title.startswith(
