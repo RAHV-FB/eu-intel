@@ -4,7 +4,7 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Three
 
 | Workflow | Trigger | Does | Permissions |
 | --- | --- | --- | --- |
-| `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, pytest (offline), `pipeline validate`, `pipeline build`, typecheck, vitest, site build with `BASE_PATH=/eu-intel/`, privacy check; optional Playwright e2e | `contents: read` |
+| `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, pytest (offline), `pipeline validate`, `pipeline build`, typecheck, vitest, site build with `BASE_PATH=/eu-intel/`, privacy check; Playwright e2e and accessibility tests on the built site | `contents: read` |
 | `pages.yml` (Deploy to GitHub Pages) | push to `main`, manual, after a successful *Data refresh* | validate → build data → build site with the Pages base path → privacy check → size check → upload → deploy | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
 | `refresh.yml` (Data refresh) | Mondays 05:17 UTC, manual | fetch all sources → validate → build with activity recording → commit `data/snapshot/` + `data/state/` to `main` | `contents: write` (this job only) |
 
@@ -24,9 +24,7 @@ All actions are pinned to full commit SHAs (with the version in a comment); Depe
    Required status checks on `main` also block bot pushes unless bypassed.
 4. **Environment**: enabling Pages creates the `github-pages` environment, which by default only accepts
    deployments from `main`. Keep it that way (manual runs from other branches will build but not deploy).
-5. Optional: *Settings → Secrets and variables → Actions → Variables* → `E2E_ENABLED = true` turns on the
-   Playwright job in CI (see below).
-6. Optional: a custom domain (*Settings → Pages → Custom domain*). The base path then becomes `/` automatically.
+5. Optional: a custom domain (*Settings → Pages → Custom domain*). The base path then becomes `/` automatically.
 
 The site will be at `https://rahv-fb.github.io/eu-intel/`.
 
@@ -72,10 +70,8 @@ open http://127.0.0.1:4174/eu-intel/).
 
 ## End-to-end tests in CI
 
-The `e2e` job in `ci.yml` (Playwright + axe-core on the built site) is opt-in while pages are being completed:
-
-- one run: *Actions → CI → Run workflow* and tick "Run Playwright e2e + accessibility tests";
-- always: set the repository variable `E2E_ENABLED` to `true`.
+The `e2e` job in `ci.yml` (Playwright + axe-core on the built site) runs on every push and pull request; a
+manual run (*Actions → CI → Run workflow*) can skip it by unticking "Run Playwright e2e + accessibility tests".
 
 It reuses the site built by the `check` job (uploaded as the `site-dist` artifact), installs Chromium, runs
 `npx playwright test`, and uploads the HTML report and traces as the `playwright-report` artifact.

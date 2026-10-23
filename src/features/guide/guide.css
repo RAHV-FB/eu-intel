@@ -330,7 +330,11 @@
 /* ---------- about / sources ---------- */
 .sources {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--sp-3);
+}
+.sources > * {
+  min-width: 0;
 }
 .source-card {
   background: var(--surface);
@@ -361,14 +365,37 @@
 }
 .source-card dd {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 @media (max-width: 30rem) {
   .source-card dl {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .source-card dd {
     margin-bottom: var(--sp-2);
   }
+}
+.source-card__log {
+  margin-top: var(--sp-3);
+  font-size: var(--fs-sm);
+}
+.source-card__log > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  cursor: pointer;
+  color: var(--text-2);
+}
+.source-card__log p {
+  margin: var(--sp-1) 0 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-sunk);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .src-status {
   display: inline-flex;

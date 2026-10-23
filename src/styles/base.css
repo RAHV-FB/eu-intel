@@ -19,6 +19,8 @@ body {
   line-height: var(--lh-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Long identifiers, URLs and compound words wrap instead of widening the page. */
+  overflow-wrap: break-word;
 }
 
 h1,
@@ -30,6 +32,8 @@ h4 {
   font-weight: var(--fw-semibold);
   color: var(--text);
   letter-spacing: -0.01em;
+  /* Very long words (e.g. German compounds in official vote titles) may break rather than overflow. */
+  overflow-wrap: anywhere;
 }
 
 h1 {
@@ -311,6 +315,42 @@ hr {
   position: relative; /* contain .visually-hidden text in cells so it scrolls with the table */
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/*
+ * Tables wider than their container (attributes set by src/components/scrollableTables.ts):
+ * edge shadows show that more columns are off-screen (the solid "local" layers cover them at either end),
+ * a short hint says so, and a row-header first column stays in view.
+ */
+.table-wrap[data-overflow] {
+  background:
+    linear-gradient(to right, var(--surface) 40%, rgba(255, 255, 255, 0)) left center / 2.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 40%, rgba(255, 255, 255, 0)) right center / 2.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(16, 36, 73, 0.22), rgba(16, 36, 73, 0)) left center / 0.875rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(16, 36, 73, 0.22), rgba(16, 36, 73, 0)) right center / 0.875rem 100% no-repeat scroll,
+    var(--surface);
+}
+
+.table-wrap[data-hint]::before {
+  content: 'Scroll sideways to see all columns →';
+  content: 'Scroll sideways to see all columns →' / '';
+  display: block;
+  position: sticky;
+  left: 0;
+  width: max-content;
+  max-width: 100%;
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.table-wrap[data-sticky] tbody tr > th[scope='row']:first-child,
+.table-wrap[data-sticky] thead tr:first-child > :first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: inset -1px 0 0 var(--border);
 }
 
 .num {

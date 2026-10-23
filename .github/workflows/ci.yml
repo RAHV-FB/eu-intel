@@ -1,9 +1,8 @@
 # Continuous integration: lint, offline tests, snapshot validation, data build, typecheck, site build and
 # privacy gate. Runs fully offline against the committed snapshot (no EU API calls).
 #
-# The Playwright e2e/accessibility job is opt-in until the pages it covers are complete. Enable it either
-#   - permanently: Settings -> Secrets and variables -> Actions -> Variables -> E2E_ENABLED = true, or
-#   - for one run: Actions -> CI -> Run workflow -> tick "Run Playwright e2e + accessibility tests".
+# The Playwright e2e/accessibility job runs on every push and pull request against the site built by the
+# check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
 name: CI
 
 on:
@@ -15,7 +14,7 @@ on:
       e2e:
         description: Run Playwright e2e + accessibility tests
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -101,7 +100,7 @@ jobs:
           echo "files: $(find dist -type f | wc -l)"
 
       - name: Upload built site for e2e
-        if: ${{ vars.E2E_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.e2e) }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.e2e }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: site-dist
@@ -112,7 +111,7 @@ jobs:
   e2e:
     name: E2E + accessibility (Playwright)
     needs: check
-    if: ${{ vars.E2E_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.e2e) }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.e2e }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

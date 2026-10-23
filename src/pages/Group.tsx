@@ -4,6 +4,7 @@ import type { BallotPosition, EpVoteSummary, GroupDetail, MepSummary, Meta, Posi
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber, pct } from '../lib/format';
+import { ballotScope } from '../lib/scope';
 import { EmptyState, ErrorState, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { termLabel } from '../features/people/labels';
@@ -227,7 +228,7 @@ export default function Group() {
         <p className="section-intro">
           A group has no vote of its own. For each <Term id="roll-call">roll-call vote</Term> we list, these figures add up how the group’s
           members voted individually, using membership on the day of the vote. “Group majority” is the most common position among them;
-          check the number of recorded votes before drawing conclusions.
+          check the number of recorded votes before drawing conclusions. {ballotScope(meta.data?.scope, meta.data?.counts.ep_votes_with_ballots)}
         </p>
         {g.votes.length === 0 ? (
           <EmptyState

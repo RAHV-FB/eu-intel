@@ -74,8 +74,31 @@ main:focus {
   background: var(--surface);
   font-size: 1.25rem;
 }
-.site-header__search + .menu-toggle {
+.site-header__search ~ .menu-toggle {
   margin-left: 0;
+}
+
+/* Search button and panel for screens where the header search field does not fit. */
+.search-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-2);
+}
+.header-search {
+  border-top: 1px solid var(--border);
+  padding-block: var(--sp-3);
+}
+.header-search[hidden] {
+  display: none;
+}
+.primary-nav__search {
+  display: none;
 }
 
 .primary-nav {
@@ -114,8 +137,29 @@ main:focus {
   .site-header__search {
     display: none;
   }
-  .site-header__search + .menu-toggle {
+  .search-toggle {
+    display: inline-flex;
+    flex-shrink: 0;
     margin-left: auto;
+  }
+  .menu-toggle {
+    flex-shrink: 0;
+  }
+  .site-header__inner {
+    gap: var(--sp-2);
+  }
+  /* Let the site name wrap onto two lines so the search and menu buttons fit at 320px. */
+  .brand {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  .primary-nav__search {
+    display: list-item;
+  }
+}
+@media (min-width: 48rem) {
+  .header-search {
+    display: none;
   }
 }
 

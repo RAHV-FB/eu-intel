@@ -72,7 +72,19 @@ export interface SourceStatusInfo {
   status: 'ok' | 'partial' | 'failed' | 'unavailable';
   fetched_at?: ISODateTime | null; // last successful retrieval
   records: Record<string, number>;
-  note?: string | null;
+  note?: string | null; // retrieval log from the pipeline (technical detail)
+  summary?: string | null; // plain-language note: what this release holds from the source, known gaps
+}
+
+/** The limits of the dataset, stated next to lists and counts (meta.json `scope`). */
+export interface CoverageScope {
+  procedure_types: string[]; // ["COD", "CNS", "APP"]
+  procedures_from_year?: number | null; // procedures with this reference year or later
+  acts_from?: ISODate | null; // adopted acts dated on or after this
+  ep_votes_from?: ISODate | null; // first and last Parliament vote listed
+  ep_votes_to?: ISODate | null;
+  ep_roll_call_votes: number; // all roll-call votes in the source data (incl. amendments)
+  dossiers_without_topic: number; // files that no topic covers
 }
 
 export interface Meta {
@@ -91,6 +103,7 @@ export interface Meta {
     infringements: number;
   };
   coverage_notes: string[]; // plain-language statements of what is and isn't covered
+  scope?: CoverageScope;
 }
 
 // ---------------------------------------------------------------- topics
@@ -635,6 +648,7 @@ export interface FeaturedItem {
   latest?: TimelineEvent | null;
   next_step: NextStep;
   source: SourceRef;
+  oeil_url?: string | null; // the human-readable procedure file on the Legislative Observatory
 }
 
 export interface HomeData {

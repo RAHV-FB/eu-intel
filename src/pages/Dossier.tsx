@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import type { DossierDetail, Meta, Topic } from '../types/data';
+import { Link, Navigate, useParams } from 'react-router-dom';
+import type { DossierDetail, DossierSummary, Meta, Topic } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDate } from '../lib/format';
 import { changeSince, getWatchlist, markSeen, type ChangeInfo } from '../lib/watchlist';
-import { ErrorState, ExtLink, Loading, NotFound, Term } from '../components/ui';
-import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, isMissing, isSameTitle, useDocumentTitle } from '../features/legislation/labels';
+import { ErrorState, ExtLink, Loading, NotFound, PageHeader, Term } from '../components/ui';
+import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, dossierPath, isMissing, isSameTitle, useDocumentTitle } from '../features/legislation/labels';
 import { todayISO } from '../features/legislation/explorer';
 import { DossierSummaryPanel } from '../features/legislation/dossier/Summary';
 import { WhereIsIt } from '../features/legislation/dossier/WhereIsIt';
@@ -17,13 +17,26 @@ import { FollowButton } from '../features/watchlist/FollowButton';
 import '../features/legislation/common.css';
 import '../features/legislation/dossier/dossier.css';
 
+/** Procedure ids as published: "2021-0106", or a split part such as "2016-0282A". */
+const DOSSIER_ID = /^\d{4}-\d{4}[A-Z]{0,2}$/;
+/** A CELEX number, e.g. "32017R1550": a legal act, which may have no legislative file in this dataset. */
+const CELEX_ID = /^[0-9][0-9]{4}[A-Z]{1,2}[0-9]{4}(\(\d{2}\))?$/;
+
 export default function Dossier() {
   const { id = '' } = useParams();
-  const valid = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(id);
-  const { data: d, error, loading } = useData<DossierDetail>(valid ? `dossiers/${id}.json` : null);
+  if (CELEX_ID.test(id)) return <ActByCelex celex={id} />;
+  return <DossierPage id={id} />;
+}
+
+function DossierPage({ id }: { id: string }) {
+  const valid = DOSSIER_ID.test(id);
+  const { data: raw, error, loading } = useData<DossierDetail>(valid ? `dossiers/${id}.json` : null);
+  // A file without the basic parts of a dossier (e.g. a list file) is treated as not found rather than rendered.
+  const d = raw && raw.id === id && Array.isArray(raw.timeline) ? raw : undefined;
+  const malformed = !!raw && !d;
   const { data: meta } = useData<Meta>('meta.json');
   const { data: topics } = useData<Topic[]>('topics.json');
-  useDocumentTitle(d?.title ?? (error ? 'Legislative file not found' : 'Legislation'));
+  useDocumentTitle(d?.title ?? (error || malformed ? 'Legislative file not found' : 'Legislation'));
 
   // "Changed since you last looked" for followed files; then record that the visitor has now seen it.
   const [change, setChange] = useState<ChangeInfo | null>(null);
@@ -37,7 +50,7 @@ export default function Dossier() {
     markSeen(d);
   }, [d]);
 
-  if (!valid || isMissing(error)) return <NotFound what="legislative file" />;
+  if (!valid || malformed || isMissing(error)) return <NotFound what="legislative file" />;
   if (error)
     return (
       <div className="container page">
@@ -210,6 +223,38 @@ export default function Dossier() {
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * /legislation/<CELEX>: links to related acts use the act's CELEX number. Open the legislative file that adopted
+ * the act when it is in the dataset; otherwise say so and link to the act on EUR-Lex.
+ */
+function ActByCelex({ celex }: { celex: string }) {
+  const index = useData<DossierSummary[]>('dossiers/index.json');
+  const owner = index.data?.find((d) => d.celex.includes(celex));
+  useDocumentTitle(owner ? 'Legislation' : `Legal act ${celex}`);
+  if (owner) return <Navigate to={dossierPath(owner.id)} replace />;
+  if (index.loading)
+    return (
+      <div className="container page">
+        <Loading label="Loading legislative files…" />
+      </div>
+    );
+  return (
+    <div className="container page">
+      <PageHeader
+        eyebrow="Legal act"
+        title={<>Legal act <span className="mono">{celex}</span></>}
+        lead="This act is not one of the legislative files covered by this site. It may have been adopted under a procedure the site does not cover, such as a delegated or implementing act. Its official text and details are on EUR-Lex."
+      />
+      <p>
+        <ExtLink href={EURLEX_CELEX(celex)}>Open act {celex} on EUR-Lex</ExtLink>
+      </p>
+      <p>
+        <Link to="/legislation">Browse legislation</Link> · <Link to="/about#coverage">What’s covered</Link>
+      </p>
+    </div>
   );
 }
 

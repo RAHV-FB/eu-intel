@@ -4,6 +4,7 @@ import type { EpVoteSummary, MembershipPeriod, MepDetail, Meta } from '../types/
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
+import { ballotScope } from '../lib/scope';
 import { EmptyState, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { EP_MEP_URL, periodText, roleLabel, termShort, useGroups } from '../features/people/labels';
@@ -183,8 +184,9 @@ export default function Mep() {
       <section className="section" aria-labelledby="v-h">
         <h2 id="v-h">Recorded votes</h2>
         <p className="section-intro">
-          How {m.name} voted in the <Term id="roll-call">roll-call votes</Term> listed on this site. Votes where no position is recorded
-          (for example when the MEP was absent) are not shown; that is not the same as abstaining.
+          How {m.name} voted in the <Term id="roll-call">roll-call votes</Term> listed on this site.{' '}
+          {ballotScope(meta.data?.scope, meta.data?.counts.ep_votes_with_ballots)} Votes where no position is recorded (for example
+          when the MEP was absent) are not shown; that is not the same as abstaining.
         </p>
         {m.votes.length === 0 ? (
           noVoteData ? (
