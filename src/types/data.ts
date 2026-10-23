@@ -353,16 +353,24 @@ export type VoteKind =
   | 'motion'
   | 'procedural'
   | 'other';
-/** What a motion or procedural vote decides, where Parliament's published texts say so. */
+/** What a motion or procedural vote, or a final vote on discharge, decides, where Parliament's published texts say so. */
 export type VoteKindDetail =
   | 'reject_proposal' // motion to reject the Commission proposal: "adopted" = Parliament rejected the proposal
   | 'reject_council_position' // second reading: motion to reject the Council's position
   | 'censure' // motion of censure on the Commission
   | 'objection' // objection to a delegated or implementing act: "adopted" = Parliament objects
   | 'no_objection' // recommendation to raise no objections to one: "adopted" = Parliament does not object
-  | 'negotiation_decision'; // vote on a committee's decision to enter into interinstitutional negotiations
+  | 'negotiation_decision' // vote on a committee's decision to enter into interinstitutional negotiations
+  // final vote on a discharge report's proposal to grant, postpone or refuse discharge (where the record says which)
+  | 'grant_discharge'
+  | 'postpone_discharge'
+  | 'refuse_discharge';
 export type VoteOutcome = 'adopted' | 'rejected' | 'lapsed' | 'unknown';
-/** What a final vote decides: by the procedure symbol of its subject ("***I", "***", "*"), else its procedure type. */
+/**
+ * What a final vote decides: "commission_election" for the vote titled "Election of the Commission"; else by the type
+ * of its one linked procedure; else by the procedure symbol ending its subject ("***I", "***", "*"); else, for an NLE
+ * file, by its label naming the consent procedure (pipeline/build.py final_role).
+ */
 export type FinalRole =
   | 'legislative' // a proposed law (ordinary legislative procedure)
   | 'consent' // Parliament gives or refuses its consent

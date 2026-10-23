@@ -107,13 +107,24 @@ export function VoteListItem({ v, showDossier = true }: { v: EpVoteSummary; show
   );
 }
 
-const GUIDE_ORDER: VoteKind[] = ['final', 'mandate', 'amendment', 'split_or_separate', 'resolution', 'motion', 'procedural'];
+const GUIDE_ORDER: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'procedural'];
+// kinds of vote the explorer never lists (votes/index.json holds none), explained so the results can be read
+const NOT_LISTED: VoteKind[] = ['amendment', 'split_or_separate'];
 
 export function VoteKindGuide() {
   return (
     <div className="vote-guide">
       <dl className="vote-guide__list">
         {GUIDE_ORDER.map((k) => (
+          <div key={k}>
+            <dt>{KIND_LABEL[k]}</dt>
+            <dd>{KIND_EXPLAINER[k]}</dd>
+          </div>
+        ))}
+      </dl>
+      <p>Not listed on this site: votes on amendments and on parts of a text.</p>
+      <dl className="vote-guide__list">
+        {NOT_LISTED.map((k) => (
           <div key={k}>
             <dt>{KIND_LABEL[k]}</dt>
             <dd>{KIND_EXPLAINER[k]}</dd>

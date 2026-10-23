@@ -87,8 +87,10 @@ export function ParliamentVotes({
     <section className="dz-section" id="ep-votes" aria-labelledby="ep-votes-title">
       <h2 id="ep-votes-title">How the European Parliament voted</h2>
       <p className="dz-intro">
-        Results of <Term id="roll-call">roll-call votes</Term> in plenary linked to this file by official identifiers. Each vote’s
-        page breaks the result down by <Term id="political-group">political group</Term>, by MEPs’ country and by MEP.
+        Parliament’s plenary votes linked to this file by official identifiers: its final and negotiating-mandate votes, votes on
+        the committee’s decision to negotiate, and <Term id="roll-call">roll-call votes</Term> on motions and resolutions. Votes on
+        amendments and on parts of the text are not listed. Each vote’s page breaks a roll-call result down by{' '}
+        <Term id="political-group">political group</Term>, by MEPs’ country and by MEP.
       </p>
       <p className="dz-callout">
         <strong>“Spanish MEPs voted…” is not the same as “Spain voted…”.</strong> MEPs are elected in each country but vote
@@ -119,7 +121,8 @@ export function ParliamentVotes({
           {rest.length > 0 && (
             <div className="dz-votes-more">
               <button type="button" className="btn" aria-expanded={showAll} aria-controls={listId} onClick={() => setShowAll((s) => !s)}>
-                {showAll ? 'Hide' : 'Show'} {rest.length} other vote{rest.length === 1 ? '' : 's'} (amendments, separate parts, procedure)
+                {showAll ? 'Hide' : 'Show'} {rest.length} {rest.every((v) => v.kind === 'procedural') ? 'procedural' : 'other'}{' '}
+                vote{rest.length === 1 ? '' : 's'}
               </button>
               {showAll && (
                 <ol className="dz-cvotes" id={listId}>

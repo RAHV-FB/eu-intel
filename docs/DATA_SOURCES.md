@@ -120,7 +120,12 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   vote: the vote item's structured label (2024+, "(Majority of votes cast required)") or the minutes block
   description (before 2024, "(Majority of Parliament’s component Members required)"). Only statements that hold
   for the whole text are read; conditional or mixed ones ("… required to amend or reject the Council position",
-  "… + 3/5 of votes cast") leave the rule unknown.
+  "… + 3/5 of votes cast") leave the rule unknown. A statement that contradicts the rule assumed for the vote
+  leaves it unknown, so no margin is shown: the objections under Rule 112 of 25 Nov 2020 on RSP files (125373,
+  125374), whose minutes say "(majority of Parliament’s component Members)" where RSP files are given the votes
+  cast. A negotiating mandate on an ordinary-procedure file is a first-reading vote (majority of the votes cast)
+  also when its item's title carries no procedure symbol (142178, 3 May 2022; the latest sitting's items, first
+  published with French titles only).
 - Minutes: the remote-voting sittings of April–November 2020 have their "Results of votes" in French only
   (`PV-9-2020-05-13-VOT-FNL_fr.xml`); outcomes, documents and procedure symbols are read from them, block
   titles are not (the subject must be English).
@@ -133,14 +138,32 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Wrong document numbers in labels: a label naming a document whose block in the minutes has neither the
   label's title nor its rapporteur, and none of the decision's counts, is linked through the one block that
   records the counts and fits the label (130628 and 130862, Eurofound 2019 discharge, labelled with the GNSS
-  Agency report A9-0074/2021; minutes "Report: Joachim Stanisław Brudziński (A9-0094/2021)").
+  Agency report A9-0074/2021; minutes "Report: Joachim Stanisław Brudziński (A9-0094/2021)"). An English label
+  whose document no minutes block and no vote item of the sitting lists takes the document of its French label
+  when the one block with the vote's counts lists that one: the bluefin tuna vote of 28 Apr 2021 (130719),
+  English label "A9-0149/2021" (an own-initiative report, 2020/2216(INI)), French label and minutes "A9-0149/2020"
+  (2019/0272(COD)); likewise 125904 (16 Dec 2020, "A9-0621/2020" for A9-0261/2020). A number misprinted only in
+  the minutes leaves the label's (153312).
 - Kinds: a whole-text marker ("Single vote", or a mistaken "Commission proposal") on an own-initiative, topical
   or legislative-initiative procedure (INI, RSP, INL) without a legislative procedure symbol is the vote on the
   resolution, not a final vote on a law; a proposal for a decision stays a decision. A "Recommendation for a
   decision" to raise no objections to a delegated act or measure (Rule 111(6) of the Rules of Procedure, 9th
   term) has kind_detail `no_objection`: it is decided by a majority of the votes cast ("it shall be put to the
   vote"; only the objection itself needs a majority of component Members, Rule 111(5) and Art. 290(2) TFEU), and
-  its adoption makes any later objection inadmissible.
+  its adoption makes any later objection inadmissible. A label opening "Objection pursuant to Rule …" makes the
+  whole-text vote an objection also without a vote item (157978, 12 Sep 2023, GM maize MON 87419).
+- Discharge: a final vote on a discharge report's proposal for a decision has kind_detail `grant_discharge`,
+  `postpone_discharge` or `refuse_discharge` where Parliament's record says what was proposed: before 2024 the
+  minutes heading above the row ("Proposal for a decision to postpone the discharge", "Decision to refuse
+  discharge", "Décision d'ajournement de la décharge", "Refusal of discharge") or its Subject ("Proposal for a
+  decision to grant discharge"), from 2024 the decision's headingLabel ("Decision to refuse discharge", 179920).
+  "Decision on discharge" or "Proposal for a decision" alone says nothing, and the detail is left empty (175931).
+  A heading "Decision to postpone discharge" no longer makes the vote procedural (168778, 191886). The vote page
+  says what the outcome decided: adopted, discharge was granted, postponed or refused; a rejected proposal to
+  postpone or to refuse discharge means, under the Rules of Procedure of the 9th term (Annex V, Article 5(1)(b)
+  and 5(2)(b)), that discharge is deemed to have been granted (142787, 4 May 2022, Court of Auditors 2020: "If a
+  proposal to postpone discharge fails to secure a majority, discharge shall be deemed to have been granted").
+  This is not stated for later terms, whose Rules we have not checked.
 - Outcome `derived`: also when the counts settle the result under a component-Members rule (votes for above half
   the statutory seats, or at most half of the MEPs who voted) or, with no established rule, under every rule
   Parliament applies (two thirds of the votes cast and a majority of the seats; or fewer for than against).
@@ -162,19 +185,37 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   OEIL record names a later final act carries a note saying the procedure continued. A decision recorded on a
   day without a vote of the file is linked to its one final vote (second reading: motion to reject the Council's
   position) dated from one day before to two days after it, preferring one whose report the decision lists, with
-  a note giving both dates (remote voting: 2020/0331(CNS), vote 6 Jul 2021, decision 7 Jul 2021); a referral back
-  for negotiations recorded without a vote that day is linked the same way to a mandate vote no other step links.
-  A decision amending the Council's position at second reading names the amendments adopted by a majority of
-  the component Members, since votes on amendments are not listed (2025/0429(COD), 9 Jul 2026).
+  a note giving both dates (remote voting: 2020/0331(CNS), vote 6 Jul 2021, decision 7 Jul 2021); a decision
+  recording the amendments voted before a referral back ("Parliament voted amendments to the proposal") is linked
+  the same way to its mandate vote (2021/0008(COD): vote 15 Sep 2021, decision 16 Sep 2021). On a day with votes, a
+  step links the day's final vote, else its mandate vote, else the one vote of the file that day; a motion to
+  reject the text that was rejected never decides such a step (2021/0206(COD), 8 Jun 2022). A referral back to
+  committee for negotiations ("Parliament sent the file back to committee to negotiate with the Council") is a
+  decision of its own, voted after the text (Rule 59(4) of the 9th-term Rules of Procedure: "Parliament decides to
+  refer the matter back"; 2025/0524(COD), 13 Nov 2025: 181375 on the text, 181446 "Request for referral back (Rule
+  60(4))"); referral votes are not listed, so that step links no vote, and the mandate vote stays on the step that
+  records the vote on the text, which is then a key step shown by default (2021/0106(COD), 14 Jun 2023, vote
+  156022); a step built from a vote that the procedure record does not show yet links that vote (2026/0325(COD),
+  "Parliament voted to open negotiations with the Council", 199592). Parliament's confirmation of a committee's decision to negotiate links the vote on
+  that decision, if one was held. A second-reading approval links the motions to reject the Council's position that
+  decided it; a decision amending the Council's position links none (its amendments decided it: 2025/0429(COD), 9 Jul
+  2026, motion 195775 rejected) and names, on any day, the votes on amendments adopted by a majority of the
+  component Members, counting votes, not amendments (one vote may cover "Am 1-243": 2013/0072(COD), 21 Jan 2026),
+  since votes on amendments are not listed.
 - Final votes (`final_role`, build): what a final vote decides, from the type of its one linked procedure (COD
   legislative, CNS consultation, APP consent, BUD budget, DEC discharge, RSO / REG / ACI Parliament's own
   decisions), else from the symbol ending its subject (`*` consultation, `***` consent, `***I`–`***III`
-  legislative; NLE files are either), and "Election of the Commission" (Art. 17(7) TEU). Consent, consultation,
-  discharge and the election of the Commission get their own label ("Vote on consent", "Vote on Parliament's
-  opinion (consultation)", "Vote on discharge", "Vote of consent on the Commission") and the vote page explains
-  what that vote decides; a vote whose role is not established gets the general explanation of a vote on a text
-  as a whole, never one about a law. A discharge vote's note says that the record does not tell whether the
-  proposed decision grants, postpones or refuses discharge (the labels say only "Proposal for a decision").
+  legislative; NLE files are either), else, for an NLE file, from its label naming the consent procedure ("A9-0199/
+  2020 - Iuliu Winkler - Consent procedure", "… - procédure d'approbation": the 2020 votes recorded only in French
+  minutes have subjects without a symbol), and "Election of the Commission" (Art. 17(7) TEU). Consent,
+  consultation, discharge and the election of the Commission get their own label ("Vote on consent", "Vote on
+  Parliament's opinion (consultation)", "Vote on discharge", "Vote of consent on the Commission") and the vote page
+  explains what that vote decides; a vote whose role is not established gets the general explanation of a vote on
+  a text as a whole, never one about a law. The consultation explanation names no institution as the one deciding
+  (the Ombudsman adopts its implementing provisions after consulting Parliament, Regulation (EU, Euratom)
+  2021/1163, Article 18: vote 152545). A discharge vote whose record says what was proposed is labelled and
+  explained by that (see Discharge above); otherwise its note says that the record does not tell whether the
+  proposed decision grants, postpones or refuses discharge, and, for a rejection, that its effect depends on that.
 - Margin (`analysis/ep_margin.py`, build): computed only for an adopted or rejected outcome under an established
   majority rule. Its label is about the majority that vote needed, "Majority reached: N votes more than needed" /
   "Majority not reached: N votes short", never about a law passing (a final vote can be a consultation opinion or

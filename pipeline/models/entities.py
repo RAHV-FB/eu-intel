@@ -291,7 +291,8 @@ VoteKind = Literal[
     "mandate",
     "other",  # incl. a whole-text vote that lapsed without being held
 ]
-# What a motion or procedural vote decides, where the published texts say so (see ep_votes.kind_detail)
+# What a motion or procedural vote, or a final vote on discharge, decides, where the published texts say so (see
+# ep_votes.kind_detail)
 KindDetail = Literal[
     "reject_proposal",  # motion to reject the Commission proposal (adopted = proposal rejected)
     "reject_council_position",  # second reading: motion to reject the Council's position
@@ -299,6 +300,10 @@ KindDetail = Literal[
     "objection",  # objection to a delegated or implementing act (adopted = Parliament objects)
     "no_objection",  # recommendation to raise no objections to one (adopted = Parliament does not object)
     "negotiation_decision",  # vote on a committee's decision to enter into interinstitutional negotiations
+    # final vote on a discharge report's proposal for a decision to grant, postpone or refuse discharge
+    "grant_discharge",
+    "postpone_discharge",
+    "refuse_discharge",
 ]
 
 

@@ -773,6 +773,99 @@ def test_majority_stated_in_the_record():
         assert ev.stated_rule([f"Report: X (A9-0001/2022) {text}"], kind) == rule, text
 
 
+# ------------------------------------------- discharge proposals, misprinted labels, objections (fixtures in roles/)
+ROLES = FIX / "roles"
+ROLE_LABELS = {
+    "2021-2110": "2021/2110(DEC)", "2023-2131": "2023/2131(DEC)", "2024-2021": "2024/2021(DEC)",
+    "2019-0272": "2019/0272(COD)", "2020-2216": "2020/2216(INI)", "2020-2853": "2020/2853(RSP)",
+}  # fmt: skip
+
+
+def roles(day: str, links: dict | None = None) -> dict[str, EpVote]:
+    res = ev.assemble([load_sitting(day, base=ROLES)], ROLE_LABELS, links or {}, RETRIEVED)
+    return {v.id: v for v in res.votes}
+
+
+def test_discharge_vote_says_what_was_proposed_where_the_record_does():
+    # 4 May 2022, PV-9-2022-05-04-VOT: block 8 "Discharge 2020: EU general budget - Court of Auditors", heading
+    # "Proposal for a decision to postpone the discharge", row "Proposal for a decision | RCV | - | 291 333 8"
+    # (142787); block 6, Council and European Council, same heading, "+" 555-60-13 (142821); block 7, Court of
+    # Justice, heading "Decision on discharge" only (142809, 548-51-7)
+    votes = roles("2022-05-04")
+    assert {vid: (v.kind, v.kind_detail, v.outcome) for vid, v in votes.items()} == {
+        "142787": ("final", "postpone_discharge", "rejected"),
+        "142821": ("final", "postpone_discharge", "adopted"),
+        "142809": ("final", None, "adopted"),
+    }
+    rows = {r.counts: r for r in ev.parse_minutes((ROLES / "minutes_2022-05-04.xml").read_bytes())}
+    assert rows[(291, 333, 8)].heading == "Proposal for a decision to postpone the discharge"
+    assert rows[(548, 51, 7)].heading == "Decision on discharge"
+    # French minutes of 13 May 2020, block 34: "Décision d'ajournement de la décharge" (114108, 643-37-11)
+    assert roles("2020-05-13")["114108"].kind_detail == "postpone_discharge"
+    # from 2024 the headingLabel says it: 179920 (22 Oct 2025) "Decision to refuse discharge"; 175931 (7 May 2025)
+    # is headed only "European Council and Council"
+    assert (roles("2025-10-22")["179920"].kind, roles("2025-10-22")["179920"].kind_detail) == ("final", "refuse_discharge")
+    assert (roles("2025-05-07")["175931"].kind, roles("2025-05-07")["175931"].kind_detail) == ("final", None)
+    # 23 Apr 2024, 168778: heading "Proposal for a decision to postpone the discharge", referenceText "Proposal for a
+    # decision": the decision on discharge, not a procedural postponement
+    v = roles("2024-04-23")["168778"]
+    assert (v.kind, v.kind_detail, v.has_ballots) == ("final", "postpone_discharge", True)
+    s = ev.Signals(ref="Proposal for a decision", label=None)
+    assert ev.discharge_proposal(ev.Signals(ref=None, label=None, section="Refusal of discharge")) == "refuse_discharge"
+    assert ev.discharge_proposal(ev.Signals(ref=None, label=None, subject="Proposal for a decision to grant discharge",
+                                            section="Decision on discharge")) == "grant_discharge"  # fmt: skip
+    assert ev.discharge_proposal(s) is None
+    assert ev.classify(ev.Signals(ref="Request to postpone the vote", label=None)) == "procedural"
+
+
+def test_french_label_gives_the_document_the_minutes_confirm():
+    # 28 Apr 2021, 130719 (643-11-47): English label "… - A9-0149/2021 - Giuseppe Ferrandino - Proposition de la
+    # Commission" (A-9-2021-0149: "REPORT on shaping the digital future of Europe", 2020/2216(INI)); French label
+    # "… - A9-0149/2020 - …"; minutes block 26 "Multiannual management plan for bluefin tuna … ***I | Report:
+    # Giuseppe Ferrandino (A9-0149/2020)" (OEIL 2019/0272(COD): report A9-0149/2020, decision of 28/04/2021)
+    links = {"A-9-2021-0149": (["2020-2216"], []), "A-9-2020-0149": (["2019-0272"], [])}
+    v = roles("2021-04-28", links)["130719"]
+    assert (v.procedure_refs, v.kind, v.majority_rule) == (["2019/0272(COD)"], "final", "votes_cast")
+    # not when the English label's document is an item of the sitting (26 Mar 2020: 112990 "Request for urgency
+    # procedure: … - C9-0083/2020", French label "C9-0082/2020 - Am 1", both items of that sitting)
+    sitting = load_sitting("2021-04-28", base=ROLES)
+    dec = sitting.decisions[0]
+    assert ev.french_label_docs(sitting, dec, ["A-9-2021-0149"]) == ["A-9-2020-0149"]
+    sitting.doc_items["A-9-2021-0149"] = [ev.VoteItem(id="X", title="X", procs=["2020-2216"], docs=["A-9-2021-0149"])]
+    assert ev.french_label_docs(sitting, dec, ["A-9-2021-0149"]) is None
+    # 15 Mar 2023, 153312: both labels say A9-0247/2022, the minutes A9-0247/2023: the label's number stays
+    sitting = load_sitting("2023-03-15", base=MLINKS)
+    dec = sitting.decisions[0]
+    assert ev.french_label_docs(sitting, dec, ["A-9-2022-0247"]) is None
+    assert ev.draft(dec, sitting).label_docs == ["A-9-2022-0247"]
+
+
+def test_stated_majority_that_contradicts_the_assumed_one_is_not_used():
+    # 25 Nov 2020, 125373 "B9-0367/2020 - Resolution" on 2020/2853(RSP) (425-231-40): minutes block 19 "Objection
+    # pursuant to Rule 112: Active substances, including chlorotoluron", "Motion for a resolution: B9-0367/2020
+    # (majority of Parliament’s component Members)"; majority_rule gives an RSP objection the votes cast
+    v = roles("2020-11-25", {"B-9-2020-0367": (["2020-2853"], [])})["125373"]
+    assert v.procedure_refs == ["2020/2853(RSP)"]
+    assert (v.kind, v.kind_detail, v.outcome, v.majority_rule) == ("motion", "objection", "adopted", "unknown")
+    # without the procedure the stated rule is the only one there is
+    assert roles("2020-11-25")["125373"].majority_rule == "component_members"
+
+
+def test_negotiating_mandate_needs_the_votes_cast_without_a_symbol():
+    # 3 May 2022, 142178 (POPs, 2021/0340(COD)): a mandate whose subject has no "***I"; also the votes of the latest
+    # sitting before their vote items get English titles (22 Oct 2026, 199592, first answered in French without one)
+    assert ev.majority_rule("mandate", None, None, ["COD"]) == "votes_cast"
+    assert ev.majority_rule("final", None, None, ["COD"]) == "unknown"  # could be a second-reading text
+    assert ev.majority_rule("amendment", None, "***II", ["COD"]) == "component_members"
+
+
+def test_old_format_objection_label_without_a_vote_item():
+    # 12 Sep 2023, 157978 "Objection pursuant to Rule 112(2) and (3): Genetically modified maize MON 87419 – Motion
+    # for a resolution (text as a whole)" (426-180-21), no vote item; minutes block 12, B9-0362/2023
+    v = roles("2023-09-12")["157978"]
+    assert (v.kind, v.kind_detail, v.outcome) == ("motion", "objection", "adopted")
+
+
 # -------------------------------------------------------------------------------------- snapshot
 def _snapshot() -> tuple[list[EpVote], list[EpBallots]]:
     votes = read_records(ev.SOURCE_ID, "votes", EpVote)
