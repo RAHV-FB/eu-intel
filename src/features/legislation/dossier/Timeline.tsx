@@ -92,6 +92,12 @@ export function Timeline({
       <h2 id="timeline-title">Timeline</h2>
       <p className="dz-intro">
         Steps recorded in the official procedure file and in EUR-Lex.{' '}
+        {oeilUrl && !eurlexOnly && (
+          <>
+            Parliament’s <ExtLink href={oeilUrl}>procedure file in the Legislative Observatory</ExtLink> lists them in
+            readable form; “Machine-readable record” links open the underlying data in Parliament’s open data API.{' '}
+          </>
+        )}
         {hasToggle && !all ? 'Showing key milestones. ' : ''}
         Not every law goes through every step: many are agreed at Parliament’s first reading, some never reach a vote.
       </p>

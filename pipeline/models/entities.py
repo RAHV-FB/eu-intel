@@ -46,7 +46,10 @@ class SourceRef(Model):
     label: str | None = None  # e.g. "EP Open Data API – procedure 2021/0106(COD)"
     identifier: str | None = None  # official identifier of the record at the source
     retrieved_at: str  # ISO UTC timestamp of retrieval
-    published: str | None = None  # source publication / last-modified date if provided
+    # the source's own date for the record, if provided: a last-modified date for EUR-Lex/Cellar
+    # (cmr:lastModificationDate), national measures and Legislative Train pages; the document's date for a
+    # Council register document. Not an Official Journal publication date (LegalAct.date_publication).
+    published: str | None = None
 
 
 class DocRef(Model):
@@ -108,7 +111,10 @@ class Rapporteur(Model):
     mep_id: str | None = None
     name: str
     committee: str | None = None
-    role: Literal["rapporteur", "shadow", "opinion_rapporteur", "other"] = "rapporteur"
+    # shadow_opinion = shadow rapporteur for a committee opinion (EP role RAPPORTEUR_SHADOW_OPINION)
+    role: Literal["rapporteur", "shadow", "opinion_rapporteur", "shadow_opinion"] = "rapporteur"
+    date: str | None = None  # EP API participation activity_date (the appointment); latest if several
+    group: str | None = None  # political group printed next to the name in the OEIL file, e.g. "The Left"
 
 
 class Procedure(Model):

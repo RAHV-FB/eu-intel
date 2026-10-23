@@ -203,6 +203,25 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   proposal (2023/0413(COD), vote 179804), unless OEIL shows the file past Parliament's first reading.
 - OEIL has no procedure file for split parents (e.g. 2016/0224(COD)) or for 2020/3521(COD); those pages carry no
   OEIL link (`oeil_url` null). Regulation 2015/2422 (2011/0901(COD) in EUR-Lex) links OEIL's 2011/0901B(COD).
+- Timeline sources: a step whose source is an EP Open Data API record (`/api/v2/events/…`, `/procedures/…`:
+  RDF/XML or JSON-LD) is labelled "Machine-readable record (EP Open Data API)"; the timeline introduction links
+  the readable OEIL procedure file. `SourceRef.published` is the source's own date for a record: Cellar's
+  `cmr:lastModificationDate` (shown as "record updated", not the Official Journal date), a Legislative Train
+  page's update, a Council register document's date.
+
+### Rapporteurs (`ep_procedures` participants, `build.py` `rapporteur_entries`)
+- Roles: rapporteur (EP `RAPPORTEUR`, `_CO`, `_CHAIR`), shadow (`RAPPORTEUR_SHADOW`, `_SHADOW_REPORT`),
+  opinion_rapporteur (`RAPPORTEUR_OPINION`, `_CHAIR_OPINION`) and shadow_opinion (`RAPPORTEUR_SHADOW_OPINION`;
+  stored as "other" before October 2026). Files without EP API participations (mostly older ones) take them from
+  OEIL's key players: the rapporteur of a committee responsible or for opinion, then the shadow rapporteurs.
+- `date`: the participation's `activity_date` (the appointment; the latest when an MEP was re-appointed, e.g. in
+  a new term). `group`: for OEIL entries, the group OEIL prints after the name ("KONEČNÁ Kateřina (The Left)").
+- The group shown is the one held in the role, never the MEP's current group: the MEP's group membership on
+  `date`, else OEIL's printed group (PPE → EPP, Verts/ALE → Greens/EFA as for groups; groups before 2019 such as
+  ALDE, EFDD or ENF are shown by their code without a group page). Left out when neither establishes it: 143
+  API entries dated before the group memberships we hold (2 July 2019). Checked against the EP API's own
+  `politicalGroup` on each participation: the membership on `date` agrees on all 5,495 entries it covers.
+  2021/0106(COD): Konečná The Left, Madison ID, Solís Pérez Renew, as in OEIL.
 
 ### National implementation (`implementation`) — partial
 - National measures: Cellar `cdm:measure_national_implementing` →

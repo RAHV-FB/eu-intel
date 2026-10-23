@@ -532,6 +532,15 @@ def _src(ref: Any) -> dict | None:
     return ref.model_dump(mode="json") if ref is not None else None
 
 
+def _event_src(ref: Any) -> dict | None:
+    """A timeline step's source. An EP Open Data API record (RDF/XML or JSON-LD, not a page to read) is labelled as
+    data; the dossier links the human-readable procedure file (OEIL) separately."""
+    src = _src(ref)
+    if src and not src.get("label") and "data.europarl.europa.eu/api/" in (src.get("url") or ""):
+        src["label"] = "Machine-readable record (EP Open Data API)"
+    return src
+
+
 # Same political group under an earlier official short label (EP corporate bodies are re-created at
 # renamings): GUE/NGL was renamed "The Left in the European Parliament – GUE/NGL" in December 2020.
 GROUP_SLUG_MERGE = {"gue-ngl": "the-left"}
@@ -1355,6 +1364,28 @@ class Builder:
             return max(ongoing, key=lambda t: t[0] or "")[2]
         return max(spans, key=lambda t: t[1] or "")[2]
 
+    def rapporteur_entries(self, p: Procedure) -> list[dict]:
+        """A file's rapporteurs with the political group they held in that role, never their current group:
+        their group membership on the date the EP API gives for the appointment, else the group the OEIL file
+        prints next to the name (older files). Left out when neither establishes it (memberships start July 2019)."""
+        familiar = _lazy("pipeline.sources.ep_people", "GROUP_CODES") or {}
+        out = []
+        for r in p.rapporteurs:
+            m = self.mep.get(r.mep_id or "")
+            slug = code = None
+            gid = self.group_at(m.id, r.date) if m and r.date else None
+            if gid:
+                o = self.org.get(gid)
+                slug, code = self.org_slug.get(gid), (o.code or o.label) if o else None
+            elif r.group:
+                code = familiar.get(r.group, r.group)  # "PPE" -> "EPP", "Verts/ALE" -> "Greens/EFA"
+                slug = group_slug(code) if group_slug(code) in self.group_orgs else None
+            out.append({
+                "mep_id": r.mep_id, "name": r.name, "group": slug, "group_code": code,
+                "country": m.country if m else None, "role": r.role, "committee": r.committee,
+            })  # fmt: skip
+        return out
+
     def group_code(self, slug: str | None) -> str | None:
         if not slug or slug not in self.group_orgs:
             return None
@@ -2146,7 +2177,7 @@ class Builder:
             out.append({
                 "id": e.id, "date": when, "kind": kind, "title": title, "detail": detail,
                 "institution": e.institution, "state": "done", "key": key,
-                "docs": [d.model_dump(mode="json") for d in e.docs], "source": _src(e.source), "vote_id": vote_id,
+                "docs": [d.model_dump(mode="json") for d in e.docs], "source": _event_src(e.source), "vote_id": vote_id,
             })  # fmt: skip
             seen.add((kind, when))
         # Parliament's own decision on negotiations (referral back to committee, or confirming the committee's
@@ -2632,17 +2663,7 @@ class Builder:
                     ],
                     "reviewed": str(cur.get("reviewed") or ""),
                 }
-            rapps = []
-            for r in p.rapporteurs:
-                m = self.mep.get(r.mep_id or "")
-                gslug = None
-                if m:
-                    gid = self.current_or_last(self.mep_groups.get(m.id, []))
-                    gslug = self.org_slug.get(gid) if gid else None
-                rapps.append({
-                    "mep_id": r.mep_id, "name": r.name, "group": gslug, "country": m.country if m else None,
-                    "role": r.role,
-                })  # fmt: skip
+            rapps = self.rapporteur_entries(p)
             # the procedure record: the human-readable OEIL file first, the API's JSON-LD labelled as data
             psrc = _src(p.source)
             sources = []
@@ -2826,7 +2847,7 @@ class Builder:
             for r in self.proc[pid].rapporteurs:
                 if r.mep_id:
                     rapp_for[r.mep_id].append({"dossier_id": pid, "title": self.dossier_summary[pid]["title"],
-                                               "role": r.role})  # fmt: skip
+                                               "role": r.role, "committee": r.committee})  # fmt: skip
         self.mep_summary: dict[str, dict] = {}
         for m in sorted(s.meps, key=lambda m: m.id):
             gid = self.current_or_last(self.mep_groups.get(m.id, []))

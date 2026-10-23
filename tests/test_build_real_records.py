@@ -224,3 +224,38 @@ def test_derived_rejection_is_not_repeated_next_to_the_decision_it_restates():
     tl = Builder.timeline(me, p, [], list(v.values()))  # type: ignore[arg-type]
     day = [(e["kind"], e["title"]) for e in tl if e["date"] == "2023-11-22" and "reject" in e["title"]]
     assert day == [("ep_position", "Parliament rejected the proposal at first reading")]
+
+
+def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
+    # 2021/0106(COD), AI Act. OEIL's key players: "KONEČNÁ Kateřina (The Left)", "MADISON Jaak (ID)",
+    # ENVI "SOLÍS PÉREZ Susana (Renew)". Konečná is in PfE since 2026-10-21 and Madison left ID in 2024: their
+    # current groups must not be shown. 2016/0107(COD): Pascal Durand was a shadow rapporteur in the 8th term,
+    # listed by OEIL as "DURAND Pascal (Verts/ALE)" (that file's roles come from OEIL, with no date).
+    from collections import defaultdict
+
+    from pipeline.build import group_slug
+    from pipeline.models.entities import Mep, Organization
+
+    ids = {"23699", "197493", "197784", "124693"}
+    meps = {k: Mep.model_validate(v) for k, v in records("ep_people/meps.json", ids).items()}
+    orgs = [Organization.model_validate(o) for o in json.loads((SNAP / "ep_people" / "orgs.json").read_text("utf-8"))]
+    group_orgs: dict[str, list[Organization]] = defaultdict(list)
+    for o in orgs:
+        if o.kind == "group":
+            group_orgs[group_slug(o.code or o.label)].append(o)
+    me = SimpleNamespace(
+        mep=meps, org={o.id: o for o in orgs}, group_orgs=group_orgs,
+        org_slug={o.id: s for s, os_ in group_orgs.items() for o in os_},
+        mep_groups={i: sorted((x.start, x.end, x.org_id) for x in m.memberships if x.kind == "group")
+                    for i, m in meps.items()},
+    )  # fmt: skip
+    me.group_at = lambda mep_id, d: Builder.group_at(me, mep_id, d)  # type: ignore[arg-type]
+    p = procs("2021-0106", "2016-0107")
+    ai = {r["mep_id"]: r for r in Builder.rapporteur_entries(me, p["2021-0106"])}  # type: ignore[arg-type]
+    assert (ai["23699"]["group"], ai["23699"]["group_code"], ai["23699"]["role"]) == ("the-left", "The Left", "shadow")
+    assert (ai["197493"]["group"], ai["197493"]["group_code"]) == ("id", "ID")
+    assert (ai["197784"]["group_code"], ai["197784"]["role"], ai["197784"]["committee"]) == (
+        "Renew", "opinion_rapporteur", "ENVI",
+    )  # fmt: skip
+    durand = [r for r in Builder.rapporteur_entries(me, p["2016-0107"]) if r["mep_id"] == "124693"]  # type: ignore[arg-type]
+    assert [(r["group"], r["group_code"]) for r in durand] == [("greens-efa", "Greens/EFA")]
