@@ -308,7 +308,10 @@ def test_snapshot_matches_curated_references():
         for celex in e.get("celex") or []:
             assert celex in by, celex
             if e.get("reference"):
-                assert e["reference"] in by[celex].procedure_refs, (celex, e["reference"])
+                # EUR-Lex links acts of split procedures (2016/0224A(COD)) to the parent reference
+                parent = re.sub(r"^(\d{4}/\d{4})[A-Z]", r"\1", e["reference"])
+                refs = by[celex].procedure_refs
+                assert e["reference"] in refs or parent in refs, (celex, e["reference"])
 
 
 @needs_snapshot

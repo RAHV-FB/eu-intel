@@ -769,10 +769,25 @@ class Builder:
                 p = self.resolve_ref(r)
                 if p:
                     act_dossiers[a.celex].add(p.id)
+        claimed_by: dict[str, set[str]] = defaultdict(set)
         for p in self.procedures:
             for c in p.celex_refs:
                 if c in self.act:
                     act_dossiers[c].add(p.id)
+                    claimed_by[c].add(p.id)
+        # Split procedures (e.g. 2016/0224A and 2016/0224B): EUR-Lex links their acts to the parent reference,
+        # while the EP records each adoption under the split procedure. Keep an act on the split procedure that
+        # claims it and drop the parent link, so that one law has one page.
+        pids = {p.id for p in self.procedures}
+        self.split_children: dict[str, list[str]] = defaultdict(list)
+        for pid in sorted(pids):
+            m = re.fullmatch(r"(\d{4}-\d{4})([A-Z])", pid)
+            if m and m.group(1) in pids:
+                self.split_children[m.group(1)].append(pid)
+        for celex, ds in act_dossiers.items():
+            for parent, children in self.split_children.items():
+                if parent in ds and any(c in claimed_by[celex] for c in children):
+                    ds.discard(parent)
         for celex, ds in sorted(act_dossiers.items()):
             for d in sorted(ds):
                 self.acts_of[d].append(self.act[celex])
@@ -1064,6 +1079,17 @@ class Builder:
 
     # ---------------------------------------------------------------- dossiers
     def classify(self, p: Procedure) -> dict:
+        children = self.split_children.get(p.id)
+        if children:
+            refs = ", ".join(self.proc[c].reference for c in children)
+            text = (
+                f"This file was split into separate procedures ({refs}). Follow those for the current status."
+            )
+            return self._status_dict({
+                "status": {"stage": "unknown", "label": "Split into separate procedures", "explanation": text,
+                           "since": None, "basis": "derived"},
+                "next_step": {"text": text, "institution": None, "basis": "derived"},
+            })  # fmt: skip
         fn = (
             _lazy("pipeline.analysis.status", "classify")
             if not hasattr(self, "_classify")
@@ -1430,7 +1456,23 @@ class Builder:
                                 related.setdefault(f"{attr}:{other}", {
                                     "id": other, "title": _truncate(self.dossier_summary[other]["title"], 160), "relation": label,
                                 })  # fmt: skip
-            order = {"Amended by": 0, "Repealed by": 1, "Amends": 2, "Repeals": 3}
+            for child in self.split_children.get(pid, []):
+                related.setdefault(f"split:{child}", {
+                    "id": child, "title": _truncate(self.dossier_summary[child]["title"], 160), "relation": "Split into",
+                })  # fmt: skip
+            if (m := re.fullmatch(r"(\d{4}-\d{4})[A-Z]", pid)) and m.group(1) in self.dossier_summary:
+                related.setdefault(f"split_from:{m.group(1)}", {
+                    "id": m.group(1), "title": _truncate(self.dossier_summary[m.group(1)]["title"], 160),
+                    "relation": "Split from",
+                })  # fmt: skip
+            order = {
+                "Split into": 0,
+                "Split from": 0,
+                "Amended by": 1,
+                "Repealed by": 2,
+                "Amends": 3,
+                "Repeals": 4,
+            }
             det["related"] = sorted(related.values(), key=lambda r: (order.get(r["relation"], 9), r["id"]))
         index = sorted(
             self.dossier_summary.values(), key=lambda d: (d["last_event"] or "", d["id"]), reverse=True
