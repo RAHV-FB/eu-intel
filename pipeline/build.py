@@ -1405,6 +1405,16 @@ class Builder:
             for parent, children in self.split_children.items():
                 if parent in ds and any(c in claimed_by[celex] for c in children):
                     ds.discard(parent)
+        # Where EUR-Lex and the EP disagree on which procedure adopted an act, the EP's final-act list wins: Cellar
+        # links Regulation (EU) No 37/2014 to 2011/0153 and No 38/2014 to 2011/0039, while OEIL gives the reverse,
+        # as the acts' titles do. A EUR-Lex link is dropped only when another procedure claims the act and the
+        # linked procedure lists its own, different, final acts.
+        for celex, ds in act_dossiers.items():
+            for pid in sorted(ds - claimed_by[celex]):
+                if claimed_by[celex] and self.proc[pid].celex_refs:
+                    log.info("act %s: EUR-Lex names %s, the EP gives %s; kept on the EP's", celex, pid,
+                             ", ".join(sorted(claimed_by[celex])))  # fmt: skip
+                    ds.discard(pid)
         # a split parent known only from EUR-Lex was built from one part's act (Regulation (EU) 2017/2393 is part
         # B of 2016/0282): name it by the split instead of by that act's title
         for parent, children in self.split_children.items():

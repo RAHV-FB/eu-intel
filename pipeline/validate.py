@@ -386,10 +386,18 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
                     rep.error(
                         f"public council/index.json {cv['id']}: single-state veto outside unanimity", "public"
                     )
+        owners: dict[str, list[str]] = {}
         for f in sorted((public / "dossiers").glob("*.json")):
             if f.name != "index.json":
-                for msg in dossier_contradictions(json.loads(f.read_text(encoding="utf-8"))):
+                d = json.loads(f.read_text(encoding="utf-8"))
+                for msg in dossier_contradictions(d):
                     rep.error(f"public dossiers/{f.name}: {msg}", "public")
+                for c in d.get("celex") or []:
+                    owners.setdefault(c, []).append(d["id"])
+        # one law, one page: an act shown on two files means EUR-Lex and the EP disagree on its procedure
+        for c, ids in sorted(owners.items()):
+            if len(ids) > 1:
+                rep.warn("act-on-two-dossiers", f"{c} is shown on {', '.join(ids)}; check which procedure adopted it")
     return rep
 
 

@@ -1527,3 +1527,25 @@ def test_dates_after_the_end_of_validity_are_marked():
     own = acts["32014R1377"]
     tl = [{"id": "act-32014R1377-entry_into_force-2014-12-24", "date": "2014-12-24"}]
     assert "after_end_of_validity" not in mark_after_end_of_validity(tl, [own])[0]
+
+
+def test_the_eps_final_act_list_wins_when_eurlex_names_another_procedure(tmp_path: Path):
+    # as Cellar records Regulations (EU) No 37/2014 and 38/2014: each linked to the other's procedure, while OEIL's
+    # final-act lists (celex_refs) give them the right way round; one law must have one page
+    base = tmp_path / "b"
+    shutil.copytree(FIX / "snapshot", base / "snapshot")
+    procs_path = base / "snapshot" / "ep_procedures" / "procedures.json"
+    procs = json.loads(procs_path.read_text(encoding="utf-8"))
+    for p in procs:
+        p["celex_refs"] = {"2099-0001": ["32099R0001"], "2099-0003": ["32099L0003"]}.get(p["id"], p.get("celex_refs", []))
+    procs_path.write_text(json.dumps(procs), encoding="utf-8")
+    acts_path = base / "snapshot" / "eurlex" / "acts.json"
+    acts = json.loads(acts_path.read_text(encoding="utf-8"))
+    swapped = {"32099R0001": ["2099/0003(COD)"], "32099L0003": ["2099/0001(COD)"]}
+    for a in acts:
+        a["procedure_refs"] = swapped.get(a["celex"], a["procedure_refs"])
+    acts_path.write_text(json.dumps(acts), encoding="utf-8")
+    o = base / "public"
+    assert build(out=o, snapshot=base / "snapshot", curated=FIX / "curated", state=base / "state", today=TODAY) == 0
+    assert load(o, "dossiers/2099-0001.json")["celex"] == ["32099R0001"]
+    assert load(o, "dossiers/2099-0003.json")["celex"] == ["32099L0003"]
