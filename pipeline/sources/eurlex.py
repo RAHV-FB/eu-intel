@@ -48,6 +48,16 @@ Source facts relied on (checked against the live endpoint, see tests/test_eurlex
   repeal) - e.g. the MDR 32017R0745 -> Directive 93/42/EEC. "Implicit repeals"
   (`..._implicitly_repeals_...`: e.g. the amending acts of a repealed act, or GDPR -> one annex
   point of Regulation 1882/2003) are left out too.
+  A modified location that starts with a CELEX id ("32017R0625 {AR} 165 {PO} 16") names the
+  provision of another act that changed the link, so it does not make the repeal partial.
+- date_document / date_signature: the date in the official English title ("... of 29 January
+  2020") prevails over `work_date_document` / `resource_legal_date_signature` when they differ
+  (Cellar has 2019-01-29 for 32020R0127); jointly signed acts are dated by their signature.
+- court_rulings: judgments linked by `cdm:case-law_amends_resource_legal` (kept only for actions for
+  annulment defended by an institution that adopted the act; General Court trade-mark judgments
+  are also linked this way to Regulation 2017/1001) or
+  `cdm:case-law_declares_void_by_preliminary_ruling_resource_legal`; case number, title and
+  keywords come from the judgment's English expression, provisions from the link's OWL axioms.
 - Linked works are mapped to their CELEX id; only base-act ids are kept (corrigenda "…R(01)" and
   consolidated versions "0…" are dropped) and works without a CELEX id are skipped.
 """
@@ -67,7 +77,7 @@ from typing import Any, Protocol
 import yaml
 
 from pipeline.http import HttpError
-from pipeline.models.entities import LegalAct, SourceRef, SourceStatus, Subject
+from pipeline.models.entities import CourtRuling, LegalAct, SourceRef, SourceStatus, Subject
 from pipeline.snapshot import CURATED, now_iso, write_records
 
 log = logging.getLogger("pipeline.sources.eurlex")
@@ -106,6 +116,26 @@ PROC_REF_RE = re.compile(r"^(\d{4})/(\d{4})(?:/([A-Z]{3})|\(([A-Z]{3})\))$")  # 
 # dossier's type concept contradicts its reference (e.g. "2018/0359/COD" typed NLE), neither is trusted.
 SUFFIX_TYPES = {"COD": {"COD", "OLP"}, "CNS": {"CNS", "SLP"}}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}")
+MONTHS = (
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+)
+# Date of the act in its official title: "Regulation (EU) 2020/127 of the European Parliament and of the
+# Council of 29 January 2020 amending ..." (first "of <day> <Month> <year>").
+TITLE_DATE_RE = re.compile(r"\bof (\d{1,2}) (" + "|".join(MONTHS) + r") (\d{4})\b")
+# A modified-location annotation that starts with a CELEX id names a provision of ANOTHER act (the act
+# through which the link was made or changed, e.g. "32017R0625 {AR} 165 {PO} 16"), not part of the target.
+OTHER_ACT_LOCATION_RE = re.compile(r"^\s*\d{5}[A-Z]{1,2}\d{4}\b")
 
 # EIF annotation types (fd_335 authority codes) -> role
 EIF_TYPES = ("EV",)  # entry into force
@@ -121,6 +151,7 @@ PROPS = {
     "resource_legal_date_entry-into-force": "eif",
     "resource_legal_date_end-of-validity": "end_of_validity",
     "resource_legal_in-force": "in_force",
+    "work_created_by_agent": "authors",
     "directive_date_transposition": "transposition",
     "official-journal-act_date_publication": "ojact_date",
     "official-journal-act_number": "ojact_number",
@@ -179,6 +210,17 @@ def _annotation_code(value: str) -> str:
 def directory_code(raw: str) -> str:
     """Directory-of-legislation authority code "131030" -> "13.10.30" (pairs of digits)."""
     return ".".join(raw[i : i + 2] for i in range(0, len(raw), 2)) if raw.isdigit() else raw
+
+
+def title_date(title: str) -> str | None:
+    """ISO date of the act as stated in its official title, or None."""
+    m = TITLE_DATE_RE.search(title)
+    if not m:
+        return None
+    try:
+        return date(int(m[3]), MONTHS.index(m[2]) + 1, int(m[1])).isoformat()
+    except ValueError:
+        return None
 
 
 def oj_date_label(iso: str) -> str:
@@ -344,6 +386,35 @@ def relations_query(works: list[str]) -> str:
     )
 
 
+RULING_LINKS = (
+    ("cdm:case-law_amends_resource_legal", "annulment"),
+    ("cdm:case-law_declares_void_by_preliminary_ruling_resource_legal", "invalidity"),
+)
+
+
+def rulings_query(works: list[str]) -> str:
+    """Judgments linked to the acts as amending (annulment actions) or declaring them void."""
+    links = " ".join(f'({p} "{e}")' for p, e in RULING_LINKS)
+    return (
+        PREFIXES
+        + f"""SELECT DISTINCT ?w ?effect ?s ?celex ?date ?ecli ?procjur ?defender ?loc ?case ?title ?keywords
+WHERE {{ {_values(works)}
+  VALUES (?p ?effect) {{ {links} }}
+  ?s ?p ?w ; cdm:resource_legal_id_celex ?celex .
+  OPTIONAL {{ ?s cdm:work_date_document ?date }}
+  OPTIONAL {{ ?s cdm:case-law_ecli ?ecli }}
+  OPTIONAL {{ ?s cdm:case-law_has_procjur ?procjur }}
+  OPTIONAL {{ ?s cdm:case-law_defended_by_agent ?defender }}
+  OPTIONAL {{ ?ax owl:annotatedSource ?s ; owl:annotatedProperty ?p ; owl:annotatedTarget ?w ;
+                 ann:reference_to_modified_location ?loc }}
+  OPTIONAL {{ ?e cdm:expression_belongs_to_work ?s ; cdm:expression_uses_language <{ENG}> .
+    OPTIONAL {{ ?e cdm:expression_case-law_identifier_case ?case }}
+    OPTIONAL {{ ?e cdm:expression_title ?title }}
+    OPTIONAL {{ ?e cdm:expression_case-law_indicator_decision ?keywords }} }}
+}}"""
+    )
+
+
 # ------------------------------------------------------------------------------- facts accumulation
 @dataclass
 class Facts:
@@ -358,6 +429,8 @@ class Facts:
     relations: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     # (rel, celex) -> {axiom id -> (names a modified location, role codes)} for repeal links
     repeal_axioms: dict[tuple[str, str], dict[str, tuple[bool, set[str]]]] = field(default_factory=dict)
+    # (judgment CELEX, effect) -> field -> values, merged over the judgment's Cellar works
+    rulings: dict[tuple[str, str], dict[str, set[str]]] = field(default_factory=dict)
 
 
 PROP_KEYS = {CDM + k: v for k, v in PROPS.items()} | {
@@ -416,13 +489,26 @@ def add_relations(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
             located, roles = axioms.get(r["ax"], (False, set()))
             if r.get("role"):
                 roles = roles | {_annotation_code(r["role"])}
-            axioms[r["ax"]] = (located or bool(r.get("loc")), roles)
+            axioms[r["ax"]] = (located or _target_location(r.get("loc")), roles)
+
+
+def _target_location(loc: str | None) -> bool:
+    """Does a modified-location annotation name a part of the link's target?"""
+    return bool(loc and loc.strip()) and not OTHER_ACT_LOCATION_RE.match(loc)
 
 
 def whole_repeal(axioms: dict[str, tuple[bool, set[str]]]) -> bool:
     """A repeal link is a whole-act repeal unless every annotation on it limits it to a modified
     location (article, annex point...) or classifies it as a partial repeal (role AP)."""
     return not axioms or any(not located and "AP" not in roles for located, roles in axioms.values())
+
+
+def add_rulings(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
+    for r in rows:
+        ruling = facts[r["w"]].rulings.setdefault((r["celex"], r["effect"]), defaultdict(set))
+        for k in ("date", "ecli", "procjur", "defender", "loc", "case", "title", "keywords"):
+            if r.get(k):
+                ruling[k].add(r[k])
 
 
 # Query kinds: (name, query builder, accumulator)
@@ -436,6 +522,7 @@ QUERIES: list[
     ("procedure", procedure_query, add_procedures),
     ("subjects", subjects_query, add_subjects),
     ("relations", relations_query, add_relations),
+    ("rulings", rulings_query, add_rulings),
 ]
 
 
@@ -489,6 +576,75 @@ def _subjects(f: Facts) -> list[Subject]:
     return sorted(out, key=lambda s: (SUBJECT_SCHEMES.index(s.scheme), s.code))
 
 
+def _court_rulings(f: Facts) -> list[CourtRuling]:
+    """Judgments Cellar links to the act as annulling or declaring it invalid.
+
+    An "amends" link counts as an annulment only for an action for annulment (procjur ACTION_ANNU)
+    defended by an institution that adopted the act: Cellar also links some General Court trade-mark
+    judgments (which annul EUIPO decisions, defended by EUIPO) to the regulation they apply.
+    """
+    authors = {_authority_code(a) for a in f.props.get("authors", set())}
+    out: list[CourtRuling] = []
+    for (celex, effect), r in f.rulings.items():
+        if effect == "annulment":
+            defenders = {_authority_code(d) for d in r.get("defender", set())}
+            if not (
+                {_authority_code(p) for p in r.get("procjur", set())} & {"ACTION_ANNU"}
+                and defenders & authors
+            ):
+                continue
+        titles = sorted(" ".join(t.split()) for t in r.get("title", set()))
+        if not titles:
+            log.warning("eurlex: judgment %s has no English title; not recorded", celex)
+            continue
+        # Cellar titles are "#"-separated: court and date, parties, keywords...; keep the first two parts
+        parts = [x.strip() for x in titles[0].split("#") if x.strip()]
+        title = " ".join(parts[:2])
+        case = _one(r.get("case", set()))
+        if case and case.startswith("Case "):
+            case = case[len("Case ") :]
+        keywords = _one(r.get("keywords", set()))
+        out.append(
+            CourtRuling(
+                celex=celex,
+                case_number=case,
+                ecli=_one(r.get("ecli", set())),
+                date=_date(_one(r.get("date", set()))),
+                title=title,
+                effect=effect,  # type: ignore[arg-type]
+                effect_text=" ".join(keywords.split()) if keywords else None,
+                provisions=sorted(r.get("loc", set())),
+                url=eurlex_url(celex),
+            )
+        )
+    return sorted(out, key=lambda c: (c.date or "", c.celex))
+
+
+def _act_dates(title: str, p: dict[str, set[str]], celex: str) -> tuple[str | None, str | None]:
+    """(date_document, date_signature). The date in the official title prevails over Cellar's metadata
+    when they differ (e.g. 32020R0127, "of 29 January 2020", recorded as 2019-01-29); acts signed by the
+    Presidents of Parliament and Council bear the date of signature in their title."""
+    meta_doc = _date(_one(p.get("date_document", set())))
+    meta_sig = _date(_one(p.get("date_signature", set())))
+    official = title_date(title)
+    if official and meta_doc and official != meta_doc:
+        log.warning(
+            "eurlex: %s document date %s differs from title date %s; using the title",
+            celex,
+            meta_doc,
+            official,
+        )
+    if official and meta_sig and official != meta_sig:
+        log.warning(
+            "eurlex: %s signature date %s differs from title date %s; using the title",
+            celex,
+            meta_sig,
+            official,
+        )
+        meta_sig = official
+    return official or meta_doc, meta_sig
+
+
 def _whole_repeals(f: Facts, rel: str) -> set[str]:
     return {c for (r, c), axioms in f.repeal_axioms.items() if r == rel and whole_repeal(axioms)}
 
@@ -519,6 +675,7 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
     proc_refs = sorted({r for raw, pt in f.procedure_refs if (r := format_procedure_ref(raw, pt or None))})
     transposition = _real_dates(p.get("transposition", set())) if act_type == "directive" else []
     eli = _one(p.get("eli", set()))
+    date_document, date_signature = _act_dates(title, p, celex)
     last_modified = _date(_one(p.get("last_modified", set())))
     url = eurlex_url(celex)
     return LegalAct(
@@ -526,8 +683,8 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         eli=eli,
         act_type=act_type,  # type: ignore[arg-type]
         title=title,
-        date_document=_date(_one(p.get("date_document", set()))),
-        date_signature=_date(_one(p.get("date_signature", set()))),
+        date_document=date_document,
+        date_signature=date_signature,
         date_publication=date_publication,
         oj_ref=oj_ref,
         entry_into_force=eif,
@@ -541,6 +698,7 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         amended_by=_linked(f.relations.get("amended_by", set()), celex),
         repeals=_linked(_whole_repeals(f, "repeals"), celex),
         repealed_by=_linked(_whole_repeals(f, "repealed_by"), celex),
+        court_rulings=_court_rulings(f),
         eurlex_url=url,
         source=SourceRef(
             institution="EUR-Lex",

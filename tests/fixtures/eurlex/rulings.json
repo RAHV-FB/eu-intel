@@ -1,0 +1,1084 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "w",
+   "effect",
+   "s",
+   "celex",
+   "date",
+   "ecli",
+   "procjur",
+   "defender",
+   "loc",
+   "case",
+   "title",
+   "keywords"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/961a4b8b-357a-11eb-b27b-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62020TJ0035"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2020-12-02"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:T:2020:579"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/OAMI"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A08P1LB"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case T-35/20"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the General Court (Second Chamber) of 2 December 2020.#Monster Energy Co. v European Union Intellectual Property Office.#EU trade mark – Opposition proceedings – Application for an EU figurative mark representing a claw-like scratch – Earlier EU and UK figurative marks representing claw-like scratches – Relative ground for refusal – Likelihood of confusion – Article 8(1)(b), (4) and (5) of Regulation (EU) 2017/1001.#Case T-35/20."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "EU trade mark – Opposition proceedings – Application for an EU figurative mark representing a claw-like scratch – Earlier EU and UK figurative marks representing claw-like scratches – Relative ground for refusal – Likelihood of confusion – Article 8(1)(b), (4) and (5) of Regulation (EU) 2017/1001"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/961a4b8b-357a-11eb-b27b-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62020TJ0035"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2020-12-02"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:T:2020:579"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/role-qualifier/EUINST"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A08P1LB"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case T-35/20"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the General Court (Second Chamber) of 2 December 2020.#Monster Energy Co. v European Union Intellectual Property Office.#EU trade mark – Opposition proceedings – Application for an EU figurative mark representing a claw-like scratch – Earlier EU and UK figurative marks representing claw-like scratches – Relative ground for refusal – Likelihood of confusion – Article 8(1)(b), (4) and (5) of Regulation (EU) 2017/1001.#Case T-35/20."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "EU trade mark – Opposition proceedings – Application for an EU figurative mark representing a claw-like scratch – Earlier EU and UK figurative marks representing claw-like scratches – Relative ground for refusal – Likelihood of confusion – Article 8(1)(b), (4) and (5) of Regulation (EU) 2017/1001"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/1ea52417-bee6-11f0-a612-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62023CJ0019"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-11-11"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2025:865"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A05P2"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-19/23"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 11 November 2025.#Kingdom of Denmark v European Parliament and Council of the European Union.#Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine.#Case C-19/23."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/1ea52417-bee6-11f0-a612-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62023CJ0019"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-11-11"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2025:865"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/EP"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A05P2"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-19/23"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 11 November 2025.#Kingdom of Denmark v European Parliament and Council of the European Union.#Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine.#Case C-19/23."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/1ea52417-bee6-11f0-a612-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62023CJ0019"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-11-11"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2025:865"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/role-qualifier/EUINST"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A05P2"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-19/23"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 11 November 2025.#Kingdom of Denmark v European Parliament and Council of the European Union.#Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine.#Case C-19/23."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/1ea52417-bee6-11f0-a612-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62023CJ0019"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-11-11"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2025:865"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A05P3"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-19/23"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 11 November 2025.#Kingdom of Denmark v European Parliament and Council of the European Union.#Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine.#Case C-19/23."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/1ea52417-bee6-11f0-a612-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62023CJ0019"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-11-11"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2025:865"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/EP"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A05P3"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-19/23"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 11 November 2025.#Kingdom of Denmark v European Parliament and Council of the European Union.#Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine.#Case C-19/23."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/1ea52417-bee6-11f0-a612-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62023CJ0019"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-11-11"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2025:865"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/role-qualifier/EUINST"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A05P3"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-19/23"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 11 November 2025.#Kingdom of Denmark v European Parliament and Council of the European Union.#Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine.#Case C-19/23."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/1ea52417-bee6-11f0-a612-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62023CJ0019"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-11-11"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2025:865"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A05P1"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-19/23"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 11 November 2025.#Kingdom of Denmark v European Parliament and Council of the European Union.#Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine.#Case C-19/23."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/1ea52417-bee6-11f0-a612-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62023CJ0019"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-11-11"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2025:865"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/EP"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A05P1"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-19/23"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 11 November 2025.#Kingdom of Denmark v European Parliament and Council of the European Union.#Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine.#Case C-19/23."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/1ea52417-bee6-11f0-a612-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62023CJ0019"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-11-11"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2025:865"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/role-qualifier/EUINST"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A05P1"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-19/23"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 11 November 2025.#Kingdom of Denmark v European Parliament and Council of the European Union.#Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine.#Case C-19/23."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – Directive (EU) 2022/2041 – Adequate minimum wages in the European Union – Article 153(1)(b) TFEU – Article 153(2)(b) TFEU – Respect for the competences conferred on the Union by the Treaties – Article 153(5) TFEU – Exclusions of competence – ‘Pay’ and ‘right of association’ – Direct interference by EU law in the determination of pay within the European Union and in the right of association – Partial annulment – Article 5(1), in part, (2) and (3) in fine"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/7d371566-eb78-4aab-9f84-9efbce45af4f"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62019TJ0050"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2020-09-09"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:T:2020:407"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/OAMI"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case T-50/19"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the General Court (Ninth Chamber) of 9 September 2020.#Casual Dreams, SLU v European Union Intellectual Property Office.#EU trade mark – Opposition proceedings – Application for EU figurative mark Dayaday – Earlier national figurative marks DAYADAY and dayaday – Relative grounds for refusal – Article 8(1)(b) of Regulation (EC) No 207/2009 (now Article 8(1)(b) of Regulation (EU) 2017/1001) – Likelihood of confusion – Article 8(5) of Regulation No 207/2009 (now Article 8(5) of Regulation 2017/1001) – Reputation – Unfair advantage taken of the distinctive character or the repute of the earlier trade mark.#Case T-50/19."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "EU trade mark – Opposition proceedings – Application for EU figurative mark Dayaday – Earlier national figurative marks DAYADAY and dayaday – Relative grounds for refusal – Article 8(1)(b) of Regulation (EC) No 207/2009 (now Article 8(1)(b) of Regulation (EU) 2017/1001) – Likelihood of confusion – Article 8(5) of Regulation No 207/2009 (now Article 8(5) of Regulation 2017/1001) – Reputation – Unfair advantage taken of the distinctive character or the repute of the earlier trade mark"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/7d371566-eb78-4aab-9f84-9efbce45af4f"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62019TJ0050"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2020-09-09"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:T:2020:407"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/role-qualifier/EUINST"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case T-50/19"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the General Court (Ninth Chamber) of 9 September 2020.#Casual Dreams, SLU v European Union Intellectual Property Office.#EU trade mark – Opposition proceedings – Application for EU figurative mark Dayaday – Earlier national figurative marks DAYADAY and dayaday – Relative grounds for refusal – Article 8(1)(b) of Regulation (EC) No 207/2009 (now Article 8(1)(b) of Regulation (EU) 2017/1001) – Likelihood of confusion – Article 8(5) of Regulation No 207/2009 (now Article 8(5) of Regulation 2017/1001) – Reputation – Unfair advantage taken of the distinctive character or the repute of the earlier trade mark.#Case T-50/19."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "EU trade mark – Opposition proceedings – Application for EU figurative mark Dayaday – Earlier national figurative marks DAYADAY and dayaday – Relative grounds for refusal – Article 8(1)(b) of Regulation (EC) No 207/2009 (now Article 8(1)(b) of Regulation (EU) 2017/1001) – Likelihood of confusion – Article 8(5) of Regulation No 207/2009 (now Article 8(5) of Regulation 2017/1001) – Reputation – Unfair advantage taken of the distinctive character or the repute of the earlier trade mark"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/228f90cd-823b-11ef-a67d-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62020CJ0541"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2024-10-04"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2024:818"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Joined Cases C-541/20 to C-555/20"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 4 October 2024.#Republic of Lithuania and Others v European Parliament and Council of the European Union.#Action for annulment – First package of mobility measures (‘Mobility Package’) – Regulation (EU) 2020/1054 – Maximum daily and weekly driving times – Minimum breaks and daily and weekly rest periods – Organisation of the work of the drivers in such a way that the drivers are able to return every three or four weeks, depending on the case, to their place of residence or to the operational centre of their employer to begin and spend their regular or compensatory weekly rest period – Prohibition on taking regular or compensatory weekly rest in the vehicle – Time limit for the installation of second generation (V2) smart tachographs – Date of entry into force – Regulation (EU) 2020/1055 – Conditions relating to the requirement of establishment – Obligation to return the vehicle to the operational centre in the Member State of establishment – Obligation concerning the number of vehicles and drivers normally based at the operational centre of the Member State of establishment – Cabotage – Cooling-off period of four days for cabotage – Derogation for cabotage as part of combined transport operations – Directive (EU) 2020/1057 – Specific rules for posting drivers in the road transport sector – Transposition period – Internal market – Specific regime applicable to the freedom to provide transport services – Common transport policy – Articles 91 and 94 TFEU – Fundamental freedoms – Principle of proportionality – Impact assessment – Principles of equal treatment and non-discrimination – Principles of legal certainty and protection of legitimate expectations – Protection of the environment – Article 11 TFEU – Consultation of the European Economic and Social Committee and the European Committee of the Regions.#Joined Cases C-541/20 to C-555/20."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – First package of mobility measures (‘Mobility Package’) – Regulation (EU) 2020/1054 – Maximum daily and weekly driving times – Minimum breaks and daily and weekly rest periods – Organisation of the work of the drivers in such a way that the drivers are able to return every three or four weeks, depending on the case, to their place of residence or to the operational centre of their employer to begin and spend their regular or compensatory weekly rest period – Prohibition on taking regular or compensatory weekly rest in the vehicle – Time limit for the installation of second generation (V2) smart tachographs – Date of entry into force – Regulation (EU) 2020/1055 – Conditions relating to the requirement of establishment – Obligation to return the vehicle to the operational centre in the Member State of establishment – Obligation concerning the number of vehicles and drivers normally based at the operational centre of the Member State of establishment – Cabotage – Cooling-off period of four days for cabotage – Derogation for cabotage as part of combined transport operations – Directive (EU) 2020/1057 – Specific rules for posting drivers in the road transport sector – Transposition period – Internal market – Specific regime applicable to the freedom to provide transport services – Common transport policy – Articles 91 and 94 TFEU – Fundamental freedoms – Principle of proportionality – Impact assessment – Principles of equal treatment and non-discrimination – Principles of legal certainty and protection of legitimate expectations – Protection of the environment – Article 11 TFEU – Consultation of the European Economic and Social Committee and the European Committee of the Regions"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/228f90cd-823b-11ef-a67d-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62020CJ0541"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2024-10-04"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2024:818"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/EP"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Joined Cases C-541/20 to C-555/20"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 4 October 2024.#Republic of Lithuania and Others v European Parliament and Council of the European Union.#Action for annulment – First package of mobility measures (‘Mobility Package’) – Regulation (EU) 2020/1054 – Maximum daily and weekly driving times – Minimum breaks and daily and weekly rest periods – Organisation of the work of the drivers in such a way that the drivers are able to return every three or four weeks, depending on the case, to their place of residence or to the operational centre of their employer to begin and spend their regular or compensatory weekly rest period – Prohibition on taking regular or compensatory weekly rest in the vehicle – Time limit for the installation of second generation (V2) smart tachographs – Date of entry into force – Regulation (EU) 2020/1055 – Conditions relating to the requirement of establishment – Obligation to return the vehicle to the operational centre in the Member State of establishment – Obligation concerning the number of vehicles and drivers normally based at the operational centre of the Member State of establishment – Cabotage – Cooling-off period of four days for cabotage – Derogation for cabotage as part of combined transport operations – Directive (EU) 2020/1057 – Specific rules for posting drivers in the road transport sector – Transposition period – Internal market – Specific regime applicable to the freedom to provide transport services – Common transport policy – Articles 91 and 94 TFEU – Fundamental freedoms – Principle of proportionality – Impact assessment – Principles of equal treatment and non-discrimination – Principles of legal certainty and protection of legitimate expectations – Protection of the environment – Article 11 TFEU – Consultation of the European Economic and Social Committee and the European Committee of the Regions.#Joined Cases C-541/20 to C-555/20."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – First package of mobility measures (‘Mobility Package’) – Regulation (EU) 2020/1054 – Maximum daily and weekly driving times – Minimum breaks and daily and weekly rest periods – Organisation of the work of the drivers in such a way that the drivers are able to return every three or four weeks, depending on the case, to their place of residence or to the operational centre of their employer to begin and spend their regular or compensatory weekly rest period – Prohibition on taking regular or compensatory weekly rest in the vehicle – Time limit for the installation of second generation (V2) smart tachographs – Date of entry into force – Regulation (EU) 2020/1055 – Conditions relating to the requirement of establishment – Obligation to return the vehicle to the operational centre in the Member State of establishment – Obligation concerning the number of vehicles and drivers normally based at the operational centre of the Member State of establishment – Cabotage – Cooling-off period of four days for cabotage – Derogation for cabotage as part of combined transport operations – Directive (EU) 2020/1057 – Specific rules for posting drivers in the road transport sector – Transposition period – Internal market – Specific regime applicable to the freedom to provide transport services – Common transport policy – Articles 91 and 94 TFEU – Fundamental freedoms – Principle of proportionality – Impact assessment – Principles of equal treatment and non-discrimination – Principles of legal certainty and protection of legitimate expectations – Protection of the environment – Article 11 TFEU – Consultation of the European Economic and Social Committee and the European Committee of the Regions"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/228f90cd-823b-11ef-a67d-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62020CJ0541"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2024-10-04"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2024:818"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/role-qualifier/EUINST"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Joined Cases C-541/20 to C-555/20"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 4 October 2024.#Republic of Lithuania and Others v European Parliament and Council of the European Union.#Action for annulment – First package of mobility measures (‘Mobility Package’) – Regulation (EU) 2020/1054 – Maximum daily and weekly driving times – Minimum breaks and daily and weekly rest periods – Organisation of the work of the drivers in such a way that the drivers are able to return every three or four weeks, depending on the case, to their place of residence or to the operational centre of their employer to begin and spend their regular or compensatory weekly rest period – Prohibition on taking regular or compensatory weekly rest in the vehicle – Time limit for the installation of second generation (V2) smart tachographs – Date of entry into force – Regulation (EU) 2020/1055 – Conditions relating to the requirement of establishment – Obligation to return the vehicle to the operational centre in the Member State of establishment – Obligation concerning the number of vehicles and drivers normally based at the operational centre of the Member State of establishment – Cabotage – Cooling-off period of four days for cabotage – Derogation for cabotage as part of combined transport operations – Directive (EU) 2020/1057 – Specific rules for posting drivers in the road transport sector – Transposition period – Internal market – Specific regime applicable to the freedom to provide transport services – Common transport policy – Articles 91 and 94 TFEU – Fundamental freedoms – Principle of proportionality – Impact assessment – Principles of equal treatment and non-discrimination – Principles of legal certainty and protection of legitimate expectations – Protection of the environment – Article 11 TFEU – Consultation of the European Economic and Social Committee and the European Committee of the Regions.#Joined Cases C-541/20 to C-555/20."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Action for annulment – First package of mobility measures (‘Mobility Package’) – Regulation (EU) 2020/1054 – Maximum daily and weekly driving times – Minimum breaks and daily and weekly rest periods – Organisation of the work of the drivers in such a way that the drivers are able to return every three or four weeks, depending on the case, to their place of residence or to the operational centre of their employer to begin and spend their regular or compensatory weekly rest period – Prohibition on taking regular or compensatory weekly rest in the vehicle – Time limit for the installation of second generation (V2) smart tachographs – Date of entry into force – Regulation (EU) 2020/1055 – Conditions relating to the requirement of establishment – Obligation to return the vehicle to the operational centre in the Member State of establishment – Obligation concerning the number of vehicles and drivers normally based at the operational centre of the Member State of establishment – Cabotage – Cooling-off period of four days for cabotage – Derogation for cabotage as part of combined transport operations – Directive (EU) 2020/1057 – Specific rules for posting drivers in the road transport sector – Transposition period – Internal market – Specific regime applicable to the freedom to provide transport services – Common transport policy – Articles 91 and 94 TFEU – Fundamental freedoms – Principle of proportionality – Impact assessment – Principles of equal treatment and non-discrimination – Principles of legal certainty and protection of legitimate expectations – Protection of the environment – Article 11 TFEU – Consultation of the European Economic and Social Committee and the European Committee of the Regions"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "invalidity"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/7d80135a-e766-11ee-9ea8-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62022CJ0061"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2024-03-21"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2024:251"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/REFER_PREL"
+    },
+    "case": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Case C-61/22"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Judgment of the Court (Grand Chamber) of 21 March 2024.#RL v Landeshauptstadt Wiesbaden.#Request for a preliminary ruling from the Verwaltungsgericht Wiesbaden.#Reference for a preliminary ruling – Regulation (EU) 2019/1157 – Strengthening the security of identity cards of EU citizens – Validity – Legal basis – Article 21(2) TFEU – Article 77(3) TFEU – Regulation (EU) 2019/1157 – Article 3(5) – Obligation for Member States to include two fingerprints in interoperable digital formats in the storage medium of identity cards – Article 7 of the Charter of Fundamental Rights of the European Union – Respect for private and family life – Article 8 of the Charter of Fundamental Rights – Protection of personal data – Regulation (EU) 2016/679 – Article 35 – Obligation to carry out a data protection impact assessment – Maintaining the effects for a certain time of a regulation which has been declared invalid.#Case C-61/22."
+    },
+    "keywords": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Reference for a preliminary ruling – Regulation (EU) 2019/1157 – Strengthening the security of identity cards of EU citizens – Validity – Legal basis – Article 21(2) TFEU – Article 77(3) TFEU – Regulation (EU) 2019/1157 – Article 3(5) – Obligation for Member States to include two fingerprints in interoperable digital formats in the storage medium of identity cards – Article 7 of the Charter of Fundamental Rights of the European Union – Respect for private and family life – Article 8 of the Charter of Fundamental Rights – Protection of personal data – Regulation (EU) 2016/679 – Article 35 – Obligation to carry out a data protection impact assessment – Maintaining the effects for a certain time of a regulation which has been declared invalid"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4402f363-823b-11ef-a67d-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62020CJ0541"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2024-10-04"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2024:818"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A01PT3"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4402f363-823b-11ef-a67d-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62020CJ0541"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2024-10-04"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2024:818"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/EP"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A01PT3"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "effect": {
+     "type": "literal",
+     "value": "annulment"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4402f363-823b-11ef-a67d-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "62020CJ0541"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2024-10-04"
+    },
+    "ecli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ECLI:EU:C:2024:818"
+    },
+    "procjur": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procjur/ACTION_ANNU"
+    },
+    "defender": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/role-qualifier/EUINST"
+    },
+    "loc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "A01PT3"
+    }
+   }
+  ]
+ }
+}

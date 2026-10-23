@@ -13,6 +13,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/EMPL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Employment"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
     },
     "scheme": {
@@ -51,7 +70,7 @@
    {
     "w": {
      "type": "uri",
-     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
     },
     "scheme": {
      "type": "literal",
@@ -70,7 +89,7 @@
    {
     "w": {
      "type": "uri",
-     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
     },
     "scheme": {
      "type": "literal",
@@ -108,6 +127,44 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/LCP"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Free movement of persons"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/LES"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Freedom of establishment"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
     },
     "scheme": {
@@ -122,6 +179,44 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "Freedom of establishment"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/MARI"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Internal market - Principles"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/MARI"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Internal market - Principles"
     }
    },
    {
@@ -146,7 +241,7 @@
    {
     "w": {
      "type": "uri",
-     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
     },
     "scheme": {
      "type": "literal",
@@ -154,12 +249,12 @@
     },
     "s": {
      "type": "uri",
-     "value": "http://publications.europa.eu/resource/authority/subject-matter/MARI"
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/PROP"
     },
     "label": {
      "type": "literal",
      "xml:lang": "en",
-     "value": "Internal market - Principles"
+     "value": "Intellectual, industrial and commercial property"
     }
    },
    {
@@ -241,6 +336,44 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/TRAN"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Transport"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/PHYT"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Plant health legislation"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
     },
     "scheme": {
@@ -317,6 +450,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/FEADER"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Agricultural structural funds"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
     },
     "scheme": {
@@ -374,6 +526,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "subject-matter"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/subject-matter/IPHE"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Plant health"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
     },
     "scheme": {
@@ -407,6 +578,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "France"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1164"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "financial management"
     }
    },
    {
@@ -450,6 +640,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1542"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "rural development"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
     },
     "scheme": {
@@ -469,6 +678,63 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1633"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "free movement of persons"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/191"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "plant health control"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/206"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "administrative cooperation"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
     },
     "scheme": {
@@ -483,6 +749,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "standard"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2081"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "marketing standard"
     }
    },
    {
@@ -564,6 +849,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2454"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EU employment policy"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
     },
     "scheme": {
@@ -578,6 +882,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "EU production"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2827"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "protection of plant life"
     }
    },
    {
@@ -621,6 +944,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2965"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "aid to agriculture"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
     },
     "scheme": {
@@ -640,6 +982,44 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3160"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "transport regulations"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3191"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "import (EU)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
     },
     "scheme": {
@@ -654,6 +1034,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "single market"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3409"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "plant propagation"
     }
    },
    {
@@ -692,6 +1091,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "bilateral agreement"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3526"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EU national"
     }
    },
    {
@@ -754,6 +1172,101 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3662"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "registered trade mark"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3665"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "trade-mark law"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3666"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EU trade mark"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4003"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "foreign national"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4004"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "residence permit"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
     },
     "scheme": {
@@ -792,6 +1305,44 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4509"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "carriage of goods"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4511"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "carriage of passengers"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
     },
     "scheme": {
@@ -806,6 +1357,44 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "access to information"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4533"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "road transport"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4542"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "carrier"
     }
    },
    {
@@ -887,6 +1476,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5181"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "data protection"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
     },
     "scheme": {
@@ -901,6 +1509,44 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "safety standard"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5283"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EU Member State"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5283"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EU Member State"
     }
    },
    {
@@ -963,6 +1609,44 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5369"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "health certificate"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/545"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "access to a profession"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
     },
     "scheme": {
@@ -1020,6 +1704,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5595"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "personal data"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
     },
     "scheme": {
@@ -1034,6 +1737,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "negotiation of an agreement (EU)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/6268"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "surveillance concerning imports"
     }
    },
    {
@@ -1072,6 +1794,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "testing"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/922"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "financial aid"
     }
    },
    {
@@ -1172,6 +1913,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4519"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "international transport"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
     },
     "scheme": {
@@ -1186,6 +1946,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "quality standard"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/557"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "labour law"
     }
    },
    {
@@ -1229,6 +2008,82 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/82"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "working conditions"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/83"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "living conditions"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2494"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "transport policy"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3579"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "import restriction"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
     },
     "scheme": {
@@ -1243,6 +2098,120 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "artificial intelligence"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3906"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "freedom of movement"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/450652"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EAGF"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/450658"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EAFRD"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/488"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "identity document"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5498"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "codification of EU law"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3645"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "technical specification"
     }
    },
    {
@@ -1267,6 +2236,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/5590"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "budgetary discipline (EU)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
     },
     "scheme": {
@@ -1281,6 +2269,44 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "judicial cooperation in civil matters in the EU"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/1026"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "wage determination"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/194"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "collective agreement"
     }
    },
    {
@@ -1319,6 +2345,44 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "signature of an agreement"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4490"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "plant health treatment"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/4518"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "inland transport"
     }
    },
    {
@@ -1400,6 +2464,82 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2062"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "standard of living"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2046"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "collective bargaining"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/420"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "destruction of crops"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/2239"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "family relationship"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
     },
     "scheme": {
@@ -1433,6 +2573,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "information security"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/3850"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "minimum pay"
     }
    },
    {
@@ -1552,6 +2711,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "eurovoc"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://eurovoc.europa.eu/c_8b0ac3e2"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "EU direct payments"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
     },
     "scheme": {
@@ -1585,6 +2763,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "smart technology"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/05202020"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Wages, income and working hours"
     }
    },
    {
@@ -1666,6 +2863,44 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/1720"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Intellectual property law"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/1910"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Free movement of persons"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
     },
     "scheme": {
@@ -1680,6 +2915,44 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "Programmes"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/031020"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Common agricultural policy mechanisms"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/035020"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Plant health"
     }
    },
    {
@@ -1723,7 +2996,64 @@
    {
     "w": {
      "type": "uri",
-     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/032020"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "European Agricultural Guarantee Fund"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/032030"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "European Agricultural Fund for Rural Development"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/07203020"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Market access"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
     },
     "scheme": {
      "type": "literal",
@@ -1742,7 +3072,7 @@
    {
     "w": {
      "type": "uri",
-     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
     },
     "scheme": {
      "type": "literal",
@@ -1780,6 +3110,25 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/2010"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Freedom of movement of people"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
     },
     "scheme": {
@@ -1794,6 +3143,25 @@
      "type": "literal",
      "xml:lang": "en",
      "value": "Company law"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "scheme": {
+     "type": "literal",
+     "value": "directory"
+    },
+    "s": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/dir-eu-legal-act/06202030"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Transport"
     }
    },
    {

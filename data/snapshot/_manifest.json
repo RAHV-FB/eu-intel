@@ -40,9 +40,9 @@
   "status": "ok"
  },
  "ep_votes": {
-  "attempted_at": "2026-10-22T23:58:29Z",
-  "fetched_at": "2026-10-23T00:03:46Z",
-  "note": "full pass: 17/17 sittings fetched (2507 votes, 2 document lookups, 0 procedures by id). Snapshot: 35465 votes (26267 roll-call, 2724 with ballots), 32375 linked to procedures; kinds {'amendment': 21019, 'final': 1239, 'mandate': 125, 'motion': 171, 'other': 32, 'procedural': 514, 'resolution': 2513, 'split_or_separate': 9852}; 0 fetched votes whose voter lists differ from the counts; 317s",
+  "attempted_at": "2026-10-23T00:07:19Z",
+  "fetched_at": "2026-10-23T00:10:05Z",
+  "note": "full pass: 155/155 sittings fetched (14159 votes, 0 document lookups, 0 procedures by id). Snapshot: 35465 votes (26267 roll-call, 2724 with ballots), 32375 linked to procedures; kinds {'amendment': 21019, 'final': 1239, 'mandate': 125, 'motion': 171, 'other': 32, 'procedural': 514, 'resolution': 2513, 'split_or_separate': 9852}; 0 fetched votes whose voter lists differ from the counts; 166s",
   "records": {
    "ballots": 2724,
    "sittings": 359,
@@ -52,9 +52,9 @@
   "status": "ok"
  },
  "eurlex": {
-  "attempted_at": "2026-10-22T17:35:28Z",
-  "fetched_at": "2026-10-22T17:35:34Z",
-  "note": "1248 acts in scope (COD/CNS/APP procedures, date >= 2014-01-01); 25 featured; 1248 with procedure reference",
+  "attempted_at": "2026-10-23T00:08:42Z",
+  "fetched_at": "2026-10-23T00:09:29Z",
+  "note": "1248 acts in scope (COD/CNS/APP procedures, date >= 2014-01-01); 24 featured; 1248 with procedure reference",
   "records": {
    "acts": 1248
   },

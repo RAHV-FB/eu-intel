@@ -33,6 +33,26 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32017R1001"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2016/0345/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
     },
     "celex": {
@@ -113,6 +133,26 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32022L2041"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2020/0310/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
     },
     "celex": {
@@ -124,6 +164,46 @@
      "type": "literal",
      "datatype": "http://www.w3.org/2001/XMLSchema#string",
      "value": "2020/0359/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32019R1157"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2018/0104/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32020R1055"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2017/0123/COD"
     },
     "ptype": {
      "type": "uri",
@@ -153,6 +233,26 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32020R0127"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2019/0253/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
     },
     "celex": {
@@ -168,6 +268,26 @@
     "ptype": {
      "type": "uri",
      "value": "http://publications.europa.eu/resource/authority/procedure/CNS"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32016R2031"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2013/0141/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
     }
    }
   ]

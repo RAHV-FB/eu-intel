@@ -11,11 +11,33 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2017/1001 of the European Parliament and of the Council of 14 June 2017 on the European Union trade mark (codification) (Text with EEA relevance)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
     },
     "title": {
      "type": "literal",
      "value": "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC (General Data Protection Regulation) (Text with EEA relevance)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Regulation (EU) 2016/2031 of the European Parliament of the Council of 26 October 2016 on protective measures against pests of plants, amending Regulations (EU) No 228/2013, (EU) No 652/2014 and (EU) No 1143/2014 of the European Parliament and of the Council and repealing Council Directives 69/464/EEC, 74/647/EEC, 93/85/EEC, 98/57/EC, 2000/29/EC, 2006/91/EC and 2007/33/EC"
     }
    },
    {
@@ -43,12 +65,56 @@
    {
     "w": {
      "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2019/1157 of the European Parliament and of the Council of 20 June 2019 on strengthening the security of identity cards of Union citizens and of residence documents issued to Union citizens and their family members exercising their right of free movement (Text with EEA relevance.)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2020/1055 of the European Parliament and of the Council of 15 July 2020 amending Regulations (EC) No 1071/2009, (EC) No 1072/2009 and (EU) No 1024/2012 with a view to adapting them to developments in the road transport sector"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2020/127 of the European Parliament and of the Council of 29 January 2020 amending Regulation (EU) No 1306/2013 as regards financial discipline as from financial year 2021 and Regulation (EU) No 1307/2013 as regards flexibility between pillars in respect of calendar year 2020"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
      "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
     },
     "title": {
      "type": "literal",
      "xml:lang": "en",
      "value": "Directive (EU) 2022/2464 of the European Parliament and of the Council of 14 December 2022 amending Regulation (EU) No 537/2014, Directive 2004/109/EC, Directive 2006/43/EC and Directive 2013/34/EU, as regards corporate sustainability reporting (Text with EEA relevance)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Directive (EU) 2022/2041 of the European Parliament and of the Council of 19 October 2022 on adequate minimum wages in the European Union"
     }
    },
    {

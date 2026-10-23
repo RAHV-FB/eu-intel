@@ -3,7 +3,10 @@
 Offline tests parse real (trimmed) Cellar SPARQL responses from tests/fixtures/eurlex/ (each
 <name>.json was produced by the query in <name>.rq) for: AI Act 32024R1689, GDPR 32016R0679,
 CSRD 32022L2464, NIS2 32022L2555, MDR 32017R0745, Chips Act 32023R1781, Council Decision
-32024D0592 and Council Decision 32019D1096 (whose dossier reference contradicts its type).
+32024D0592, Council Decision 32019D1096 (whose dossier reference contradicts its type), and the
+regression cases 32020R0127 (wrong year in Cellar's dates), 32016R2031 (repeal link changed by a later
+act), 32022L2041 / 32020R1055 (partially annulled), 32019R1157 (declared invalid) and 32017R1001
+(trade-mark judgments linked to it that do not annul it).
 Snapshot tests check invariants of data/snapshot/eurlex/acts.json when it exists.
 """
 
@@ -170,6 +173,78 @@ def test_quirky_acts(fixture_acts):
     assert fixture_acts["32019D1096"].procedure_refs == []  # "2018/0359/COD" typed NLE: not linked
 
 
+def test_title_date():
+    assert E.title_date(
+        "Regulation (EU) 2020/127 of the European Parliament and of the Council of 29 January 2020 amending"
+    ) == ("2020-01-29")
+    assert E.title_date("Council Decision (EU) 2024/592 of 23 January 2024 empowering France") == "2024-01-23"
+    assert E.title_date("Directive 2014/60/EU ... amending Regulation (EU) No 1024/2012 (Recast)") is None
+
+
+def test_official_title_date_prevails(fixture_acts):
+    # Cellar records work_date_document and resource_legal_date_signature 2019-01-29 for this act;
+    # its official title (and OJ text) says "of 29 January 2020", and the proposal dates from 2019-10-31.
+    a = fixture_acts["32020R0127"]
+    assert a.title.startswith(
+        "Regulation (EU) 2020/127 of the European Parliament and of the Council of 29 January 2020"
+    )
+    assert (a.date_document, a.date_signature) == ("2020-01-29", "2020-01-29")
+    assert a.procedure_refs == ["2019/0253(COD)"]
+
+
+def test_repeal_kept_when_changed_by_later_act(fixture_acts):
+    # The repeal of Directive 2000/29/EC is annotated with "32017R0625 {AR} 165 {PO} 16" (the provision
+    # of Regulation 2017/625 that amended the repealing article), not with a part of 2000/29/EC.
+    a = fixture_acts["32016R2031"]
+    assert a.repeals == [
+        "31969L0464",
+        "31974L0647",
+        "31993L0085",
+        "31998L0057",
+        "32000L0029",
+        "32006L0091",
+        "32007L0033",
+    ]
+    assert not E._target_location(
+        "32017R0625 {AR|http://publications.europa.eu/resource/authority/fd_370/AR} 165"
+    )
+    assert E._target_location("{AR|http://publications.europa.eu/resource/authority/fd_370/AR} 3")
+
+
+def test_court_rulings(fixture_acts):
+    (mw,) = fixture_acts["32022L2041"].court_rulings
+    assert (mw.celex, mw.case_number, mw.ecli, mw.date) == (
+        "62023CJ0019",
+        "C-19/23",
+        "ECLI:EU:C:2025:865",
+        "2025-11-11",
+    )
+    assert mw.effect == "annulment" and mw.provisions == ["A05P1", "A05P2", "A05P3"]
+    assert mw.title == (
+        "Judgment of the Court (Grand Chamber) of 11 November 2025. "
+        "Kingdom of Denmark v European Parliament and Council of the European Union."
+    )
+    assert mw.effect_text.endswith("Partial annulment – Article 5(1), in part, (2) and (3) in fine")
+    assert mw.url == "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:62023CJ0019"
+    (mob,) = fixture_acts["32020R1055"].court_rulings
+    assert (mob.celex, mob.case_number, mob.effect) == (
+        "62020CJ0541",
+        "Joined Cases C-541/20 to C-555/20",
+        "annulment",
+    )
+    assert mob.provisions == ["A01PT3"]
+    (ids,) = fixture_acts["32019R1157"].court_rulings
+    assert (ids.celex, ids.case_number, ids.effect, ids.date) == (
+        "62022CJ0061",
+        "C-61/22",
+        "invalidity",
+        "2024-03-21",
+    )
+    # General Court trade-mark judgments (defended by EUIPO) linked to the EU Trade Mark Regulation
+    assert fixture_acts["32017R1001"].court_rulings == []
+    assert fixture_acts["32024R1689"].court_rulings == []
+
+
 # ---------------------------------------------------------------------------- batching and paging
 def test_run_batched_splits_failing_batches():
     calls: list[int] = []
@@ -201,7 +276,7 @@ def test_run_batched_does_not_split_malformed_queries():
 
 
 def test_discover_scope_pages_and_filters():
-    rows = fixture_rows("scope_page_trimmed")
+    rows = fixture_rows("scope_pages_trimmed")
     queries: list[str] = []
 
     class Pager:
@@ -211,16 +286,10 @@ def test_discover_scope_pages_and_filters():
             return rows[offset : offset + limit]
 
     scope = E.discover_scope(Pager(), page=3)
-    assert len(queries) == 3  # 8 rows in pages of 3
-    assert sorted(scope.values()) == [
-        "32016R0679",
-        "32017R0745",
-        "32022L2464",
-        "32022L2555",
-        "32023R1781",
-        "32024D0592",
-        "32024R1689",
-    ]  # 32019D1096 dropped: its reference contradicts the dossier type
+    assert len(queries) == len(rows) // 3 + 1
+    assert "32024R1689" in scope.values() and "32016R0679" in scope.values()
+    # 32019D1096 dropped: its reference contradicts the dossier type
+    assert sorted(scope.values()) == sorted({r["celex"] for r in rows} - {"32019D1096"})
 
 
 def test_read_featured_celex(tmp_path):
@@ -315,12 +384,44 @@ def test_snapshot_matches_curated_references():
 
 
 @needs_snapshot
+def test_snapshot_dates_match_official_title():
+    for a in SNAPSHOT:
+        td = E.title_date(a.title)
+        if td:
+            assert a.date_document == td, a.celex
+            if a.date_signature:
+                assert a.date_signature == td, a.celex
+        for r in a.procedure_refs:
+            if a.date_document:
+                assert a.date_document[:4] >= r[:4], (a.celex, r)  # not adopted before its procedure began
+
+
+@needs_snapshot
+def test_snapshot_court_rulings():
+    for a in SNAPSHOT:
+        assert [(r.date or "", r.celex) for r in a.court_rulings] == sorted(
+            (r.date or "", r.celex) for r in a.court_rulings
+        )
+        for r in a.court_rulings:
+            assert re.match(r"^6\d{4}[A-Z]{2}\d{4}$", r.celex), (a.celex, r.celex)
+            assert r.title.startswith("Judgment of the"), (a.celex, r.celex)
+            if r.date and a.date_publication:
+                assert r.date > a.date_publication, (a.celex, r.celex)
+
+
+@needs_snapshot
 def test_snapshot_known_acts():
     by = {a.celex: a for a in SNAPSHOT}
     if "32024R1689" in by:
         assert by["32024R1689"].procedure_refs == ["2021/0106(COD)"]
     if "32016R0679" in by:
         assert by["32016R0679"].procedure_refs == ["2012/0011(COD)"]
+    if "32020R0127" in by:
+        assert by["32020R0127"].date_signature == "2020-01-29"
+    if "32016R2031" in by:
+        assert "32000L0029" in by["32016R2031"].repeals
+    if "32022L2041" in by:
+        assert [r.case_number for r in by["32022L2041"].court_rulings] == ["C-19/23"]
 
 
 # ----------------------------------------------------------------------------------------- live
