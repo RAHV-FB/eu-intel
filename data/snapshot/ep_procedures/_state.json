@@ -1,7 +1,22 @@
 {
- "last_complete": "2026-10-22T18:29:03Z",
+ "last_complete": "2026-10-23T00:40:25Z",
  "last_mode": "incremental",
  "mode": null,
  "pending": [],
- "started_at": null
+ "started_at": null,
+ "unavailable": {
+  "2016-0282": "404; split procedure, parts: 2016-0282A, 2016-0282B",
+  "2016-0357": "404; split procedure, parts: 2016-0357A, 2016-0357B",
+  "2016-0360": "404; split procedure, parts: 2016-0360A, 2016-0360B",
+  "2016-0400": "404; split procedure, parts: 2016-0400A, 2016-0400B",
+  "2018-0063": "404; split procedure, parts: 2018-0063A, 2018-0063B",
+  "2018-0152": "404; split procedure, parts: 2018-0152A, 2018-0152B",
+  "2018-0330": "404; split procedure, parts: 2018-0330A, 2018-0330B",
+  "2018-0900": "EP record 2018-0900 merges several procedures (labels: 2018/0900(COD), 2018/0900(NLE))",
+  "2019-0001": "404; split procedure, parts: 2019-0001A, 2019-0001B",
+  "2020-3521": "404 at /procedures/{id}",
+  "2021-0211": "no English title for 2021/0211(COD) in the EP record or OEIL; split procedure, parts: 2021-0211A, 2021-0211B",
+  "2022-0132": "no English title for 2022/0132(COD) in the EP record or OEIL; split procedure, parts: 2022-0132A, 2022-0132B",
+  "2026-0324": "no English title for 2026/0324(COD) in the EP record or OEIL"
+ }
 }

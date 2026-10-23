@@ -56,6 +56,7 @@ from pipeline.http import EP_API, Http, HttpError
 from pipeline.models.entities import (
     CommitteeRole,
     DocRef,
+    EpVote,
     Event,
     EventKind,
     Institution,
@@ -74,6 +75,7 @@ from pipeline.snapshot import (
     read_records,
     read_state,
     upsert_records,
+    write_records,
     write_state,
 )
 
@@ -566,6 +568,7 @@ OEIL_COMMITTEE_HEADER = {
 
 @dataclass
 class OeilInfo:
+    title: str | None = None  # procedure title shown on the OEIL page (often the short title)
     status: str | None = None
     instrument: str | None = None
     subjects: list[Subject] = field(default_factory=list)
@@ -587,6 +590,10 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
         body = body.decode("utf-8", errors="replace")
     doc = lxml_html.fromstring(body)
     info = OeilInfo()
+    # page header: <h2 class="es_title-h1">reference</h2> ... <h2 class="es_title-h2 mb-3">title</h2>
+    head = doc.xpath('//h2[contains(@class,"es_title-h2") and contains(@class,"mb-3")]')
+    if head:
+        info.title = _text(head[0]) or None
 
     sec1 = doc.xpath('//*[@id="section1"]')
     if sec1:
@@ -962,22 +969,45 @@ def _sorted_participants(
     return cs, rs
 
 
+class InvalidRecord(ValueError):
+    """The EP record cannot be turned into a Procedure without guessing (it is skipped)."""
+
+
+def _single(value: Any, what: str, pid: str) -> str | None:
+    values = sorted({v for v in as_list(value) if isinstance(v, str) and v})
+    if len(values) > 1:
+        raise InvalidRecord(f"EP record {pid} merges several procedures ({what}: {', '.join(values)})")
+    return values[0] if values else None
+
+
 def build_procedure(
     proc: dict[str, Any],
     retrieved_at: str,
     oeil: OeilInfo | None,
     names: Callable[[str], str | None],
     committee_names: dict[str, str] | None = None,
+    reference: str | None = None,
 ) -> Procedure:
-    pid = proc["process_id"]
-    reference = proc.get("label") or pid
-    ptype = last_segment(proc.get("process_type")) or (
+    """`reference` = the procedure reference under which the id was discovered (used only when
+    the EP record itself has none, and only if it matches the id)."""
+    pid = proc.get("process_id") or ""
+    label = _single(proc.get("label"), "labels", pid)
+    if not label and reference and normalize_proc_id(reference) == pid and PROC_REF_RE.match(reference):
+        label = reference
+    if not label:
+        raise InvalidRecord(f"EP record {pid} has no procedure reference")
+    reference = label
+    ptype = last_segment(_single(proc.get("process_type"), "types", pid)) or (
         PROC_REF_RE.match(reference)[3] if PROC_REF_RE.match(reference) else ""
     )
-    titles = proc.get("process_title") or {}
+    titles = proc.get("process_title")
+    if isinstance(titles, list):
+        raise InvalidRecord(f"EP record {pid} has several titles")
     title = titles.get("en") if isinstance(titles, dict) else None
+    if not title and oeil and oeil.title:
+        title = oeil.title  # OEIL procedure-file title (official EP page); never translated or invented
     if not title:
-        title = reference  # no English title in the source; never translate or invent one
+        raise InvalidRecord(f"no English title for {reference} in the EP record or OEIL")
     events = build_events(proc, retrieved_at, oeil, reference)
     committee_names = {**(committee_names or {}), **(oeil.committee_names if oeil else {})}
 
@@ -1220,6 +1250,45 @@ def select_ids(
     return out, reasons
 
 
+def in_scope_ref(ref: str) -> str | None:
+    """'2016/0224A(COD)' -> '2016-0224A' if the reference is in scope (type, year), else None."""
+    m = PROC_REF_RE.match(ref.strip())
+    if not m or m[3] not in PROCEDURE_TYPES or int(m[1]) < MIN_YEAR:
+        return None
+    return f"{m[1]}-{m[2]}"
+
+
+DISCOVERY_SOURCES: tuple[tuple[str, str, type[Any]], ...] = (
+    ("eurlex", "acts", LegalAct),
+    ("ep_votes", "votes", EpVote),
+)
+
+
+def discover_refs() -> dict[str, tuple[str, str]]:
+    """In-scope procedure ids referenced by other snapshots: id -> (reference, source).
+
+    The paged EP list endpoint repeats some rows and omits others, so ids are also taken from the
+    procedure references of EUR-Lex acts and EP plenary votes."""
+    out: dict[str, tuple[str, str]] = {}
+    for source, name, model in DISCOVERY_SOURCES:
+        try:
+            records = read_records(source, name, model)
+        except Exception as e:  # noqa: BLE001 - another source's snapshot may be absent/invalid
+            log.info("%s snapshot not usable for id discovery (%s)", source, e)
+            continue
+        for r in records:
+            for ref in r.procedure_refs:
+                pid = in_scope_ref(ref)
+                if pid:
+                    out.setdefault(pid, (ref, source))
+    return out
+
+
+def split_parts(pid: str, ids: Iterable[str]) -> list[str]:
+    """'2021-0211' -> ['2021-0211A', '2021-0211B'] if those split procedures are known."""
+    return sorted(i for i in ids if re.fullmatch(re.escape(pid) + r"[A-Z]", i))
+
+
 class _Run:
     """State shared by the chunks of one fetch run."""
 
@@ -1230,8 +1299,10 @@ class _Run:
         self.names = MepNames(http)
         self.committees = committees  # code -> name, grows with every OEIL page seen
         self.errors: dict[str, str] = {}  # transient/unexpected failures (stay pending)
-        self.not_found: list[str] = []  # listed by the API but GET /procedures/{id} answers 404
+        self.not_found: list[str] = []  # GET /procedures/{id} answers 404
+        self.invalid: dict[str, str] = {}  # records that cannot be built without guessing
         self.oeil_errors: list[str] = []
+        self.oeil_missing: list[str] = []  # OEIL answers 404 (no procedure file)
         self.build_errors: list[str] = []
         self.requests = 0
         self.lock = threading.Lock()
@@ -1243,7 +1314,11 @@ def _fetch_one(run: _Run, pid: str) -> tuple[dict[str, Any], str, OeilInfo | Non
             run.requests += 1
         body = run.ep_pacer.call(lambda: run.http.get(f"{EP_API}/procedures/{pid}", params=JSONLD))
         data = json.loads(body)
-        procs = [p for p in as_list(data.get("data")) if isinstance(p, dict) and p.get("process_id")]
+        procs = [p for p in as_list(data.get("data")) if isinstance(p, dict)]
+        for p in procs:  # some records lack process_id but carry it in their id "eli/dl/proc/<id>"
+            if not p.get("process_id") and isinstance(p.get("id"), str) and "/proc/" in p["id"]:
+                p["process_id"] = last_segment(p["id"])
+        procs = [p for p in procs if p.get("process_id")]
         if not procs:
             raise ValueError("empty response")
         proc = procs[0]
@@ -1259,13 +1334,20 @@ def _fetch_one(run: _Run, pid: str) -> tuple[dict[str, Any], str, OeilInfo | Non
             run.errors[pid] = str(e)[:120]
         return None
     retrieved = now_iso()
-    reference = proc.get("label") or run.wanted.get(pid) or pid
+    label = proc.get("label")
+    reference = (label if isinstance(label, str) else None) or run.wanted.get(pid) or pid
     info: OeilInfo | None = None
     try:
         with run.lock:
             run.requests += 1
         page = run.oeil_pacer.call(lambda: run.http.get(OEIL_FILE, params={"reference": reference}))
         info = parse_oeil(page)
+    except HttpError as e:  # keep the EP API record without OEIL enrichment
+        with run.lock:
+            if e.status == 404:
+                run.oeil_missing.append(reference)  # no OEIL page for this reference
+            else:
+                run.oeil_errors.append(f"{reference}: {str(e)[:120]}")
     except Exception as e:  # noqa: BLE001 - keep the EP API record without OEIL enrichment
         with run.lock:
             run.oeil_errors.append(f"{reference}: {str(e)[:120]}")
@@ -1291,7 +1373,11 @@ def _fetch_chunk(run: _Run, ids: list[str]) -> list[Procedure]:
     out: list[Procedure] = []
     for pid, (proc, retrieved, info) in fetched:
         try:
-            out.append(build_procedure(proc, retrieved, info, run.names.get, run.committees))
+            out.append(
+                build_procedure(proc, retrieved, info, run.names.get, run.committees, run.wanted.get(pid))
+            )
+        except InvalidRecord as e:
+            run.invalid[pid] = str(e)
         except Exception as e:  # noqa: BLE001
             run.build_errors.append(f"{pid}: {e!r}"[:160])
     return out
@@ -1323,9 +1409,20 @@ def fetch(http: Http) -> SourceStatus:
         for pid, label in items:
             if int(pid[:4]) >= MIN_YEAR:
                 wanted[pid] = label
+    listed = len(wanted)
+    # The paged list is incomplete: add in-scope ids referenced by EUR-Lex acts and EP votes.
+    discovered: Counter[str] = Counter()
+    for pid, (ref, origin) in sorted(discover_refs().items()):
+        if pid not in wanted:
+            wanted[pid] = ref
+            discovered[origin] += 1
     featured = featured_ids()
     for pid in featured:
         wanted.setdefault(pid, "")
+    # ids known to be unusable: structural cases (split procedure, merged record) are retried
+    # only by a full refresh; others (404, missing title) are retried by every run.
+    unavailable: dict[str, str] = {} if full else dict(state.get("unavailable", {}))
+    skip = {k for k, v in unavailable.items() if "split procedure" in v or "merges several" in v}
 
     existing = {p.id: p for p in read_records(SOURCE_ID, "procedures", Procedure)}
     acts_by_ref: dict[str, list[LegalAct]] = {}
@@ -1339,7 +1436,14 @@ def fetch(http: Http) -> SourceStatus:
     # Ids left over by an interrupted run come first (an interrupted full refresh stays "full").
     resumed = [i for i in state.get("pending", []) if i in wanted]
     mode = "full" if full or (resumed and state.get("mode") == "full") else "incremental"
-    selected, reasons = select_ids(wanted, existing, featured, acts_by_ref, today, full)
+    selected, reasons = select_ids(
+        {k: v for k, v in wanted.items() if k not in skip},
+        existing,
+        featured,
+        acts_by_ref,
+        today,
+        full,
+    )
     todo = list(dict.fromkeys(resumed + selected))
     if resumed:
         reasons["resumed"] += len(resumed)
@@ -1356,7 +1460,39 @@ def fetch(http: Http) -> SourceStatus:
     run = _Run(http, wanted, committees)
     started_at = state.get("started_at") if resumed else attempted
     done: list[str] = []
+    built: set[str] = set()
     stopped_early = False
+
+    def note_unavailable() -> None:
+        known = set(existing) | set(wanted) | built
+        for pid in run.not_found:
+            parts = split_parts(pid, known)
+            unavailable[pid] = (
+                f"404; split procedure, parts: {', '.join(parts)}" if parts else "404 at /procedures/{id}"
+            )
+        for pid, reason in run.invalid.items():
+            parts = split_parts(pid, known)
+            unavailable[pid] = reason + (f"; split procedure, parts: {', '.join(parts)}" if parts else "")
+        for pid in built:
+            unavailable.pop(pid, None)
+
+    def save_state(pending: list[str]) -> None:
+        base = {"unavailable": dict(sorted(unavailable.items()))}
+        if pending:
+            write_state(SOURCE_ID, {**base, "mode": mode, "pending": pending, "started_at": started_at})
+        else:
+            write_state(
+                SOURCE_ID,
+                {
+                    **base,
+                    "mode": None,
+                    "pending": [],
+                    "started_at": None,
+                    "last_complete": now_iso(),
+                    "last_mode": mode,
+                },
+            )
+
     for i in range(0, len(todo), CHUNK_SIZE):
         # at least one chunk per run (progress even with a tiny budget), then respect the budget
         if i and deadline is not None and time.monotonic() > deadline:
@@ -1366,17 +1502,19 @@ def fetch(http: Http) -> SourceStatus:
         records = _fetch_chunk(run, chunk)
         if records:
             upsert_records(SOURCE_ID, "procedures", Procedure, records, id_of=lambda r: r.id)
+        built |= {r.id for r in records}
+        dropped = set(run.invalid) & set(existing)
+        if dropped:  # a stored record that no longer passes validation is removed, not kept stale
+            keep = [r for r in read_records(SOURCE_ID, "procedures", Procedure) if r.id not in dropped]
+            write_records(SOURCE_ID, "procedures", keep, key=lambda r: r.id)
+            for pid in dropped:
+                existing.pop(pid, None)
         done += [pid for pid in chunk if pid not in run.errors]
-        pending = [pid for pid in todo if pid not in done]
-        write_state(SOURCE_ID, {"mode": mode, "pending": pending, "started_at": started_at})
+        note_unavailable()
+        save_state([pid for pid in todo if pid not in done])
         log.info("ep_procedures: %d/%d fetched (%d requests)", len(done), len(todo), run.requests)
     pending = [pid for pid in todo if pid not in done]
-    write_state(
-        SOURCE_ID,
-        {"mode": mode, "pending": pending, "started_at": started_at}
-        if pending
-        else {"mode": None, "pending": [], "started_at": None, "last_complete": now_iso(), "last_mode": mode},
-    )
+    save_state(pending)
 
     final = read_records(SOURCE_ID, "procedures", Procedure)
     if todo and not done and not stopped_early:
@@ -1392,26 +1530,31 @@ def fetch(http: Http) -> SourceStatus:
         counts[f"type_{r.type}"] = counts.get(f"type_{r.type}", 0) + 1
     counts["with_oeil"] = sum(1 for r in final if r.stage_raw is not None)
     counts["events"] = sum(len(r.events) for r in final)
-    counts["fetched_this_run"] = len(done)
+    counts["fetched_this_run"] = len(built)
+    counts["unavailable"] = len(unavailable)
     counts["requests_this_run"] = run.requests + len(PROCEDURE_TYPES) + len(run.names.fetched_terms)
     counts["pending"] = len(pending)
     note = (
-        f"Scope: {', '.join(PROCEDURE_TYPES)} with reference year >= {MIN_YEAR} "
-        f"(API totals all years: {by_type}) + {len(featured)} featured. Mode {mode}: fetched "
-        f"{len(done)} ({dict(reasons)}), reused {len(final) - len(done)} from the snapshot. "
+        f"Scope: {', '.join(PROCEDURE_TYPES)} with reference year >= {MIN_YEAR}: {listed} ids from the "
+        f"paged list (API totals all years, with repeats: {by_type}) + {sum(discovered.values())} more "
+        f"referenced by other snapshots ({dict(discovered)}) + {len(featured)} featured. Mode {mode}: "
+        f"fetched {len(built)} ({dict(reasons)}), reused {len(final) - len(built)} from the snapshot. "
         f"OEIL enrichment for {counts['with_oeil']}/{len(final)}."
     )
     if pending:
         note += f" {len(pending)} pending; resumes next run" + (
             " (time budget reached)." if stopped_early else "."
         )
-    if run.not_found:
+    if unavailable:
         note += (
-            f" {len(run.not_found)} listed procedures answer 404 at /procedures/{{id}}: "
-            + ", ".join(sorted(run.not_found)[:10])
+            f" {len(unavailable)} ids skipped (no usable EP record; split/merged ones are retried on "
+            "full refresh, others every run): "
+            + "; ".join(f"{k} ({v})" for k, v in sorted(unavailable.items()))[:1500]
             + "."
         )
     problems = [f"{k}: {v}" for k, v in sorted(run.errors.items())] + run.build_errors
+    if run.oeil_missing:
+        note += f" No OEIL procedure file (404) for: {', '.join(sorted(run.oeil_missing))}."
     if problems or run.oeil_errors:
         note += (
             f" Failures: {len(run.errors)} EP API, {len(run.build_errors)} build, {len(run.oeil_errors)} OEIL. "

@@ -225,18 +225,19 @@ class FakeHttp:
         if url == m.OEIL_FILE:
             pid = m.normalize_proc_id(params["reference"])
             self.oeil_calls.append(pid)
-            path = FIX / f"oeil_{pid}.html"
-            if not path.exists():
-                raise m.HttpError(url, 404, "not in fixtures")
-            return path.read_bytes()
+            return self._fixture(f"oeil_{pid}.html", url)
         if url.startswith(f"{m.EP_API}/procedures/"):
             pid = url.rsplit("/", 1)[1]
             self.detail_calls.append(pid)
-            path = FIX / f"ep_{pid}.json"
-            if not path.exists():
-                raise m.HttpError(url, 404, "not in fixtures")
-            return path.read_bytes()
+            return self._fixture(f"ep_{pid}.json", url)
         raise m.HttpError(url, 404, "not in fixtures")
+
+    @staticmethod
+    def _fixture(name, url):
+        for path in (FIX / name, FIX / "discovery" / name):
+            if path.exists():
+                return path.read_bytes()
+        raise m.HttpError(url, 404, "not in fixtures")  # the real API/OEIL answer 404 for unknown ids
 
     def get_json(self, url, params=None, **kw):
         if url == f"{m.EP_API}/procedures":
@@ -358,6 +359,96 @@ def test_time_budget_stops_after_a_chunk_and_resumes(snapshot_dir, monkeypatch):
     monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S")
     assert m.fetch(FakeHttp()).status == "ok"
     assert set(snapshot_ids(snapshot_dir)) == in_scope()
+
+
+# ---------------------------------------------------------------- id discovery
+def test_in_scope_ref():
+    assert m.in_scope_ref("2016/0224A(COD)") == "2016-0224A"
+    assert m.in_scope_ref("2014/0308(CNS)") == "2014-0308"
+    assert m.in_scope_ref("2025/0313(APP)") == "2025-0313"
+    assert m.in_scope_ref("2013/0001(COD)") is None  # before 2014
+    assert m.in_scope_ref("2014/0332(NLE)") is None  # not a legislative type in scope
+    assert m.in_scope_ref("COM(2021)0206") is None
+
+
+def test_split_parts():
+    assert m.split_parts("2021-0211", ["2021-0211A", "2021-0211B", "2021-0212", "2021-0211"]) == [
+        "2021-0211A",
+        "2021-0211B",
+    ]
+
+
+def test_parse_oeil_title():
+    info = m.parse_oeil((FIX / "discovery" / "oeil_2018-0900.html").read_bytes())
+    assert info.title == "Statute of the Court of Justice: amendment of Protocol No 3"
+    assert info.status == "Procedure completed"
+
+
+def test_invalid_records_are_not_invented():
+    def rec(pid):
+        return json.loads((FIX / "discovery" / f"ep_{pid}.json").read_text())["data"][0]
+
+    # 2021-0211: no process_id, label, type or title in the EP record; OEIL has no page either
+    with pytest.raises(m.InvalidRecord, match="no English title"):
+        m.build_procedure(
+            {**rec("2021-0211"), "process_id": "2021-0211"},
+            RETRIEVED,
+            None,
+            lambda _: None,
+            None,
+            "2021/0211(COD)",
+        )
+    # 2018-0900: one EP record merges 2018/0900(COD) and 2018/0900(NLE)
+    with pytest.raises(m.InvalidRecord, match="merges several procedures"):
+        m.build_procedure(rec("2018-0900"), RETRIEVED, None, lambda _: None)
+
+
+def add_discovery_snapshots(root: Path) -> None:
+    """Real EP vote and EUR-Lex act records (from the pipeline snapshots) that reference procedures
+    missing from the paged list."""
+    (root / "ep_votes").mkdir(exist_ok=True)
+    (root / "ep_votes" / "votes.json").write_text((FIX / "discovery" / "ep_votes_sample.json").read_text())
+    acts = json.loads((root / "eurlex" / "acts.json").read_text())
+    acts += json.loads((FIX / "discovery" / "eurlex_acts_sample.json").read_text())
+    (root / "eurlex" / "acts.json").write_text(json.dumps(acts, ensure_ascii=False))
+
+
+def test_discovery_union_of_list_acts_votes_featured(snapshot_dir):
+    add_discovery_snapshots(snapshot_dir)
+    found = m.discover_refs()
+    assert found["2023-0320"] == ("2023/0320(CNS)", "ep_votes")
+    assert found["2025-0313"] == ("2025/0313(APP)", "ep_votes")
+    assert found["2020-0082"] == ("2020/0082(CNS)", "ep_votes")
+    assert found["2021-0211"] == ("2021/0211(COD)", "eurlex")
+    assert found["2014-0332"] == ("2014/0332(CNS)", "eurlex")
+    assert found["2018-0900"] == ("2018/0900(COD)", "eurlex")
+
+    http = FakeHttp()
+    status = m.fetch(http)
+    assert status.status == "ok", status.note
+    # usable records referenced only by votes are added (CNS / APP files absent from the COD list)
+    assert set(snapshot_ids(snapshot_dir)) == in_scope() | {"2023-0320", "2025-0313"}
+    state = json.loads((snapshot_dir / "ep_procedures" / "_state.json").read_text())
+    assert set(state["unavailable"]) == {"2021-0211", "2018-0900", "2020-0082", "2014-0332"}
+    assert "no English title" in state["unavailable"]["2021-0211"]
+    assert "merges several procedures" in state["unavailable"]["2018-0900"]
+    assert "2018-0900" in status.note and "ids skipped (no usable EP record" in status.note
+    assert status.records["unavailable"] == 4
+
+    again = FakeHttp()
+    m.fetch(again)  # incremental: a merged/split record is not requested again; 404s and
+    calls = set(again.detail_calls)  # records without a title are retried (they may be fixed)
+    assert "2018-0900" not in calls
+    assert {"2014-0332", "2020-0082", "2021-0211"} <= calls
+
+
+def test_full_refresh_retries_unavailable_ids(snapshot_dir, monkeypatch):
+    add_discovery_snapshots(snapshot_dir)
+    m.fetch(FakeHttp())
+    monkeypatch.setenv("EU_INTEL_FULL_REFRESH", "1")
+    http = FakeHttp()
+    m.fetch(http)
+    assert {"2021-0211", "2018-0900", "2020-0082", "2014-0332"} <= set(http.detail_calls)
 
 
 # ---------------------------------------------------------------- live
