@@ -347,7 +347,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   title, e.g. "Directive (EU) 2025/794"; for an act outside the snapshot from its CELEX id, 2015 onwards and
   directives from 1999, e.g. "Regulation 2026/2102"), followed by its file's short title when it has one; an
   act this file amends or repeals, or that repeals it, by its file's title too, unless that is an "Amending …"
-  title.
+  title. Cellar records two titles without the space after the act type ("Directive2014/63/EU of the European
+  Parliament …", "Regulation(EU) 2022/870 …"); their numbers are read as if it were there ("Directive 2014/63/EU").
 - Partial repeals: a repeal link that every Cellar annotation limits to a provision or marks as partial (role
   AP) is kept apart (`partly_repeals`, `partly_repealed_by`: 19 links on 13 acts, e.g. Decision 2014/335/EU,
   Euratom, partly repealed by Decision (EU, Euratom) 2020/2053, whose Art. 11(1) reads "Subject to paragraph 2,
@@ -536,11 +537,15 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed. Country
   pages show an indicators section only when a release has indicators.
 - Country pages' directive rows (`countries/<cc>.json` `transposition`) carry the directive's own number as its
-  official title cites it (`act`: "Directive (EU) 2022/2555", "Directive 2014/35/EU"; from the CELEX id only when
-  the title has none) and the names its file is known by (`names`, as `known_as.names` on the file's page, else
-  the act's own short title). The page's directive search matches the title, `act`, `names`, the CELEX id and the
-  files the site search finds for the query; a directive whose own number is searched for is listed first, and
-  rows found only because their title cites that number (amending acts) say so.
+  official title cites it (`act`: "Directive (EU) 2022/2555", "Directive 2014/35/EU"; read also from a title that
+  Cellar records without the space after the act type, "Directive2014/63/EU"; from the CELEX id only when the
+  title has none) and the names its file is known by (`names`, as `known_as.names` on the file's page, else the
+  act's own short title). The page's directive search matches the words of the title, `act`, `names` and the CELEX
+  id whole (singular or plural, as the site search does: "ban" is not "Urban"; only when no directive has them,
+  words of 4+ letters as the start of a longer word, and the page says so), the number however it is written, and
+  the files the site search finds for the query; a directive whose own number is searched for is listed first, and
+  rows found only because their title cites that number (amending acts) or only because the site search finds
+  their file say so.
 
 ### Opt-outs in directives' recitals (`optouts`) — ok
 - Denmark (Protocol No 22) and Ireland (Protocol No 21) are not bound by most justice and home affairs measures

@@ -820,8 +820,12 @@ ACT_NUMBER_RE = re.compile(
 
 
 def act_label(a: LegalAct) -> str:
-    """'Regulation (EU) 2026/1744' from the act's official title, else its CELEX id."""
-    m = ACT_NUMBER_RE.match(a.title or "")
+    """'Regulation (EU) 2026/1744' from the act's official title, else its CELEX id. Cellar records a few titles
+    without the space after the act type ('Directive2014/63/EU of the European Parliament ...', 'Regulation(EU)
+    2022/870 ...'): the number is read with it."""
+    title = re.sub(r"^((?:Council |Commission )?(?:Implementing |Delegated )?(?:Regulation|Directive|Decision))(?=[\d(])",
+                   r"\1 ", a.title or "")  # fmt: skip
+    m = ACT_NUMBER_RE.match(title)
     return m.group(1) if m else a.celex
 
 

@@ -19,6 +19,7 @@ from pipeline.build import (
     VOTE_OUTCOME_NOTES,
     Builder,
     _vote_index_entry,
+    act_label,
     build_search_docs,
     commission_cod_proposal,
     english_procedural,
@@ -115,6 +116,15 @@ def test_party_acronyms_written_with_dots_are_also_searchable_without_them():
     assert docs == {"6730": "N.D. | ND", "6764": "DI.SY. | DISY", "6766": "DI.KO. | DIKO", "5190": "K.S. EDEK | KS EDEK",
                     "5172": "SP.A", "6324": "E.Verde"}  # fmt: skip
     assert undotted_acronym("GRÜNE.") is None and undotted_acronym("Ind.") is None and undotted_acronym("PiS") is None
+
+
+def test_act_number_of_a_title_written_without_a_space_after_the_act_type():
+    # Cellar's title of 32014L0063 reads "Directive2014/63/EU of the European Parliament ...": the country pages
+    # wrote "Directive 2014/63" (from the CELEX id); 32022R0870 reads "Regulation(EU) 2022/870 ..."
+    a = acts("32014L0063", "32022R0870", "32022L2555")
+    assert act_label(a["32014L0063"]) == "Directive 2014/63/EU"
+    assert act_label(a["32022R0870"]) == "Regulation (EU) 2022/870"
+    assert act_label(a["32022L2555"]) == "Directive (EU) 2022/2555"
 
 
 def test_vote_subject_is_kept_for_search_when_the_titles_lack_its_words():

@@ -187,7 +187,8 @@
   margin-top: var(--sp-1);
 }
 
-/* a row found only because its title cites the number searched for (e.g. an amending directive) */
+/* a row found only because its title cites the number searched for (e.g. an amending directive), or only because
+   the site search finds its file */
 .impl-dir__cites {
   display: block;
   font-style: italic;

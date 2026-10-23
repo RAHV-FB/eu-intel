@@ -1,10 +1,13 @@
 /**
  * Keyword search over a country page's directives: by title, by the directive's own number however it is written
  * ("2022/2555", "Directive (EU) 2022/2555", "Directive 2014/35/EU", the CELEX id 32022L2555), and by the names
- * its file is known by ("NIS 2 Directive", also typed "NIS2"). The files the site search finds for the query (by
- * their common names and aliases) match as well, as in the legislation explorer.
+ * its file is known by ("NIS 2 Directive", also typed "NIS2"). Words are matched whole (singular or plural), as
+ * in the rest of the site: "ban" does not find "Urban", "NIS" does not find "mechanisms"; only when no directive
+ * has them, words of 4+ letters that are not abbreviations may be the start of a longer word in a title or name.
+ * The files the site search finds for the query (by their common names and aliases) match as well, as in the
+ * legislation explorer, and are marked when nothing else in the row matches.
  */
-import { normalize } from '../../lib/search';
+import { hasWord, keywordTokens, normalize, typedAbbreviations, wordSet } from '../../lib/search';
 
 export interface DirectiveRow {
   celex: string;
@@ -47,8 +50,12 @@ export interface DirectiveMatches<T> {
   own: Set<string>;
   /** CELEX ids of rows whose title cites the number the query names (e.g. an act amending that directive) */
   citing: Set<string>;
+  /** CELEX ids of rows listed only because the site search finds their file for the query */
+  viaSearch: Set<string>;
   /** the number the query names, if any */
   number: string | null;
+  /** no row has the query's words whole, so these have words in their titles or names that start with them */
+  partial: boolean;
 }
 
 export function matchDirectives<T extends DirectiveRow>(rows: T[], query: string, files?: Set<string> | null): DirectiveMatches<T> {
@@ -56,22 +63,36 @@ export function matchDirectives<T extends DirectiveRow>(rows: T[], query: string
   const number = queryNumber(query);
   const own = new Set<string>();
   const citing = new Set<string>();
-  if (!needle) return { rows, own, citing, number };
+  const viaSearch = new Set<string>();
+  if (!needle) return { rows, own, citing, viaSearch, number, partial: false };
   // a query naming a regulation or a decision does not name a directive of the same number
   const ownNumber = number && !/\b(?:regulation|decision)s?\b/.test(needle) ? number : null;
   const cited = number ? citationRe(number) : null;
   const tight = /\d/.test(needle) ? compact(needle) : null; // "NIS2" finds "NIS 2 Directive"
-  const out: T[] = [];
-  for (const r of rows) {
-    const hay = normalize([r.title, r.act, ...(r.names ?? []), r.celex].filter(Boolean).join(' '));
-    const isOwn = ownNumber !== null && directiveNumber(r.celex) === ownNumber;
-    const cites = !isOwn && !!cited?.test(normalize(r.title));
-    const hit =
-      isOwn || cites || hay.includes(needle) || (tight !== null && compact(hay).includes(tight)) || (!!r.dossier_id && !!files?.has(r.dossier_id));
-    if (!hit) continue;
-    out.push(r);
-    if (isOwn) own.add(r.celex);
-    if (cites) citing.add(r.celex);
-  }
-  return { rows: out, own, citing, number };
+  // a query naming a number is matched by that number; other queries by their words
+  const tokens = number ? [] : keywordTokens(query);
+  const abbreviations = typedAbbreviations(query);
+  const pass = (prefix: boolean) => {
+    const out: T[] = [];
+    for (const r of rows) {
+      const hay = normalize([r.title, r.act, ...(r.names ?? []), r.celex].filter(Boolean).join(' '));
+      const isOwn = ownNumber !== null && directiveNumber(r.celex) === ownNumber;
+      const cites = !isOwn && !!cited?.test(normalize(r.title));
+      const words = wordSet(r.title, r.act, ...(r.names ?? []), r.celex);
+      const named = prefix ? wordSet(r.title, ...(r.names ?? [])) : null;
+      const has = (t: string) => hasWord(words, t) || (named !== null && t.length >= 4 && !abbreviations.has(t) && hasWord(named, t, true));
+      const inRow = isOwn || cites || (tokens.length > 0 && tokens.every(has)) || (tight !== null && compact(hay).includes(tight));
+      const found = !prefix && !!r.dossier_id && !!files?.has(r.dossier_id);
+      if (!inRow && !found) continue;
+      out.push(r);
+      if (isOwn) own.add(r.celex);
+      if (cites) citing.add(r.celex);
+      if (!inRow) viaSearch.add(r.celex);
+    }
+    return out;
+  };
+  const exact = pass(false);
+  if (exact.length || !tokens.length) return { rows: exact, own, citing, viaSearch, number, partial: false };
+  const loose = pass(true);
+  return { rows: loose, own, citing, viaSearch, number, partial: loose.length > 0 };
 }

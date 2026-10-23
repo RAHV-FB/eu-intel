@@ -47,7 +47,7 @@
 - {terms: ["co2"], expands_to: ["carbon dioxide", "co2 emission"]}
 - {terms: ["lulucf"], expands_to: ["land use, land use change and forestry"]}
 - {terms: ["esr"], expands_to: ["effort sharing"]}
-- {terms: ["red ii", "red iii"], expands_to: ["renewable energy directive", "promotion of the use of energy from renewable sources"]}
+# ("RED II" and "RED III" are the names of two directives, not of every renewable-energy file: entries below)
 - {terms: ["epbd"], expands_to: ["energy performance of buildings"]}
 - {terms: ["afir"], expands_to: ["alternative fuels infrastructure"]}
 - {terms: ["eudr"], expands_to: ["deforestation regulation", "deforestation and forest degradation"]}
@@ -205,10 +205,20 @@
 # source: https://www.amla.europa.eu/index_en ("The Authority for Anti-Money Laundering and Countering the Financing of Terrorism (AMLA) is a decentralised EU agency")
 - {procedure: "2021/0240(COD)", names: ["AMLA", "Authority for Anti-Money Laundering and Countering the Financing of Terrorism"]}
 
+# ------------------------------------------------- Renewable Energy Directive RED II (Directive (EU) 2018/2001)
+# (RED III, Directive (EU) 2023/2413, is a name of 2021/0218(COD) in the Fit for 55 package below)
+# source: https://publications.europa.eu/resource/celex/32018L2001 (Cellar, the act's English metadata: short title, cdm:expression_title_short, "RED II, red ii, RED 2")
+- {procedure: "2016/0382(COD)", names: ["RED II"]}
+
+# --------------------------------------------------------------------- NIS Directive (Directive (EU) 2016/1148)
+# source: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52017DC0476 (Commission, COM(2017) 476 final, Introduction: "The Directive (EU) 2016/1148 on the security of network and information systems across the Union (hereinafter referred to as “NIS Directive” or the “Directive”)")
+- {procedure: "2013/0027(COD)", names: ["NIS Directive"]}
+
 # ------------------------------------------------------------------------------ Fit for 55 package
 # The package's other carriages (2021/0197(COD) and 2021/0210(COD) have entries above). The carriage "Revised regulatory
 # framework for competitive decarbonised gas markets" is only announced and names no procedure; the carriage "Revision
 # of the EU emission trading system (ETS)" names 2021/0211(COD), split into 2021/0211A(COD) and 2021/0211B(COD).
+# source: https://publications.europa.eu/resource/celex/32023L2413 (Cellar, the English metadata of Directive (EU) 2023/2413, the act of 2021/0218(COD): short title, cdm:expression_title_short, "RED III, red iii, RED 3")
 # source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55 (EP Legislative Train, "Fit for 55 package under the European Green Deal (20 carriage(s) in this package)": each carriage names its procedure)
 # source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-revision-of-the-eu-emission-trading-system-for-aviation (the carriage of 2021/0207(COD))
 # source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-notification-on-international-aviation-carbon-offsetting-and-reduction-scheme (the carriage of 2021/0204(COD))
@@ -224,7 +234,7 @@
 - {procedure: "2021/0211B(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0213(CNS)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0214(COD)", names: ["Fit for 55 package"]}
-- {procedure: "2021/0218(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0218(COD)", names: ["Fit for 55 package", "RED III"]}
 - {procedure: "2021/0223(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0423(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0424(COD)", names: ["Fit for 55 package"]}
