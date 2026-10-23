@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { CouncilVote, DossierDetail, EpVoteSummary, Meta, VoteKind } from '../../../types/data';
+import type { CouncilVote, CoverageScope, DossierDetail, EpVoteSummary, ISODate, Meta, TimelineEvent, VoteKind } from '../../../types/data';
 import { ExtLink, SourceLink, Term, VoteBar } from '../../../components/ui';
 import { formatDate } from '../../../lib/format';
 import { CouncilVoteCard } from '../../council/CouncilVoteCard';
@@ -139,14 +139,47 @@ export function ParliamentVotes({
   );
 }
 
+/**
+ * Why a file shows no Council vote: its latest recorded Council step (the act's adoption or the Council's first-reading
+ * position), else its adoption date, set against the first and last Council vote in our data (meta.json `scope`). A
+ * file adopted within that period is not "under discussion or outside the period covered" (2021/0433(CNS), adopted
+ * 14 December 2022): none of the voting-result documents we read is linked to it.
+ */
+export function noCouncilVoteNote(timeline: TimelineEvent[], adopted: ISODate | null | undefined, scope: CoverageScope | undefined): string {
+  const head = 'No Council vote is linked to this file in the data we have.';
+  const from = scope?.council_votes_from;
+  const to = scope?.council_votes_to;
+  const step = [...timeline].reverse().find((e) => e.state === 'done' && (e.kind === 'council_adoption' || e.kind === 'council_position'));
+  const when = step?.date ?? adopted;
+  if (!from || !to || !when) {
+    const period = from && to ? ` (${formatDate(from, true)} to ${formatDate(to, true)})` : '';
+    return (
+      `${head} The Council publishes how each Member State voted when it formally adopts a legislative act; files still under ` +
+      `discussion, or adopted outside the period covered${period}, have no record here.`
+    );
+  }
+  const what = step ? `Its timeline records “${step.title}” on ${formatDate(step.date, true)}` : `The file was adopted on ${formatDate(when, true)}`;
+  if (when < from) return `${head} ${what}, before the first Council vote in our data (${formatDate(from, true)}).`;
+  if (when > to) return `${head} ${what}, after the latest Council vote in our data (${formatDate(to, true)}).`;
+  return (
+    `${head} ${what}, within the period of the Council votes in our data (${formatDate(from, true)} to ${formatDate(to, true)}), ` +
+    'but none of the Council’s voting-result documents we read is linked to it. We read them from those the Publications Office ' +
+    'lists, which do not include every Council vote.'
+  );
+}
+
 export function CouncilVotes({
   votes,
   meta,
   split = [],
+  timeline = [],
+  adopted,
 }: {
   votes: CouncilVote[];
   meta: Meta | undefined;
   split?: DossierDetail['related'];
+  timeline?: TimelineEvent[];
+  adopted?: ISODate | null;
 }) {
   const src = meta?.sources.find((s) => s.id === 'council');
   const unavailable = src && (src.status === 'failed' || src.status === 'unavailable');
@@ -173,11 +206,7 @@ export function CouncilVotes({
           See <Link to="/about#sources">data sources</Link>.
         </p>
       ) : (
-        <p className="dz-none">
-          No Council vote is linked to this file in the data we have. The Council publishes how each Member State voted when it
-          formally adopts a legislative act; files still under discussion, or adopted outside the period covered, have no record
-          here.
-        </p>
+        <p className="dz-none">{noCouncilVoteNote(timeline, adopted, meta?.scope)}</p>
       )}
     </section>
   );

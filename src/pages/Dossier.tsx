@@ -236,7 +236,7 @@ function DossierPage({ id }: { id: string }) {
           {active && <WhereIsIt d={d} today={today} />}
           <Timeline events={d.timeline} changes={d.changes ?? []} today={today} eurlexOnly={d.eurlex_only} oeilUrl={d.oeil_url} />
           <ParliamentVotes votes={d.ep_votes} oeilUrl={d.oeil_url} split={splitParts(d)} />
-          <CouncilVotes votes={d.council_votes} meta={meta} split={splitParts(d)} />
+          <CouncilVotes votes={d.council_votes} meta={meta} split={splitParts(d)} timeline={d.timeline} adopted={d.adopted} />
           <NationalApplication d={d} today={today} />
           <DossierDetails d={d} />
         </div>

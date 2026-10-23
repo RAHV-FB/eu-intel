@@ -4373,6 +4373,7 @@ class Builder:
         """The limits of the dataset as figures, so pages can state them next to lists and counts."""
         s = self.s
         vote_dates = sorted(v.date for v in self.indexed_votes)
+        council_dates = sorted(c["date"] for c in getattr(self, "council_public", []))
         types = _lazy("pipeline.sources.ep_procedures", "PROCEDURE_TYPES")
         return {
             "procedure_types": list(types) if types else [],
@@ -4380,6 +4381,9 @@ class Builder:
             "acts_from": _lazy("pipeline.sources.eurlex", "MIN_DOCUMENT_DATE"),
             "ep_votes_from": vote_dates[0] if vote_dates else None,
             "ep_votes_to": vote_dates[-1] if vote_dates else None,
+            # the first and last Council vote listed (council/index.json), for files that show none
+            "council_votes_from": council_dates[0] if council_dates else None,
+            "council_votes_to": council_dates[-1] if council_dates else None,
             "ep_roll_call_votes": sum(1 for v in s.votes if v.method == "VOTE_ELECTRONIC_ROLLCALL"),
             "dossiers_without_topic": sum(1 for d in self.dossier_summary.values() if not d["topics"]),
             # files Parliament classes as non-legislative (NLE) that EUR-Lex records as consultation or consent
@@ -4422,23 +4426,26 @@ class Builder:
                        "force and application.")  # fmt: skip
         elif sid == "council":
             if s.council:
-                dates = sorted(c.date for c in s.council)
-                with_pos = sum(1 for c in s.council if c.positions)
-                out.append(f"{len(s.council):,} voting results of the Council of the EU "
-                           f"({dates[0][:4]}–{dates[-1][:4]}), {with_pos:,} of them with each Member State's "
-                           "position.")  # fmt: skip
-                if len(s.council) > with_pos:
-                    out.append(f"{len(s.council) - with_pos:,} voting-result documents could not be read and are "
-                               "shown without positions.")  # fmt: skip
+                # the votes listed and counted (council/index.json, meta counts): the voting results and the curated
+                # records of adoptions that only a Council communication on a written procedure records
+                listed = [*s.council, *self.council_extra]
+                dates = sorted(c.date for c in listed)
+                with_pos = sum(1 for c in listed if c.positions)
+                unread = sum(1 for c in s.council if not c.positions)
+                n = len(self.council_extra)
+                extra = (f": {len(s.council):,} from the Council's voting-result documents and {n:,} "
+                         f"{'adoption' if n == 1 else 'adoptions'} by written procedure from the Council's "
+                         f"{'communication' if n == 1 else 'communications'} on its outcome "
+                         f"({', '.join(c.source.identifier or c.id for c in self.council_extra)})") if n else ""  # fmt: skip
+                out.append(f"{len(listed):,} votes of the Council of the EU ({dates[0][:4]}–{dates[-1][:4]}), "
+                           f"{with_pos:,} of them with each Member State's position{extra}.")  # fmt: skip
+                if unread:
+                    out.append(f"{unread:,} voting-result {'document' if unread == 1 else 'documents'} could not be "
+                               f"read and {'is' if unread == 1 else 'are'} shown without positions.")  # fmt: skip
                 fixed = sum(1 for r in getattr(self, "council_public", []) if r.get("sheet_voting_rule"))
                 if fixed:
                     out.append(f"For {fixed:,} votes the document prints “qualified majority” although the act's legal "
                                "basis requires unanimity: they are shown under unanimity, with a note.")  # fmt: skip
-                if self.council_extra:
-                    n = len(self.council_extra)
-                    out.append(f"{n:,} {'adoption' if n == 1 else 'adoptions'} recorded only in another Council "
-                               "document (the outcome of a written procedure) "
-                               f"{'is' if n == 1 else 'are'} shown from that document.")  # fmt: skip
         elif sid == "implementation":
             with_m = len({x.directive_celex for x in s.measures})
             out.append(f"{len(s.measures):,} national transposition measures for {len(self.measure_celexes):,} "
@@ -4526,11 +4533,16 @@ class Builder:
             notes.append("Adopted acts (EUR-Lex): not available in this release, so adoption, entry-into-force "
                          "and application dates may be missing.")  # fmt: skip
         if avail("council") and s.council:
-            dates = sorted(c.date for c in s.council)
+            listed = [*s.council, *self.council_extra]  # as counted (meta counts.council_votes)
+            dates = sorted(c.date for c in listed)
             unread = sum(1 for c in s.council if not c.positions)
-            note = (f"Council votes: {len(s.council):,} voting results of the Council of the EU "
+            n = len(self.council_extra)
+            extra = (f" and, for {n} {'adoption' if n == 1 else 'adoptions'} by written procedure, from the Council's "
+                     f"{'communication' if n == 1 else 'communications'} on its outcome "
+                     f"({', '.join(c.source.identifier or c.id for c in self.council_extra)})") if n else ""  # fmt: skip
+            note = (f"Council votes: {len(listed):,} votes of the Council of the EU "
                     f"({dates[0][:4]}–{dates[-1][:4]}), with each Member State government's position read from the "
-                    "official Council voting-result documents. These are positions of national governments in "
+                    f"official Council voting-result documents{extra}. These are positions of national governments in "
                     "the Council, not of MEPs. Only a vote under unanimity can be blocked by a single country.")  # fmt: skip
             if unread:
                 note += (

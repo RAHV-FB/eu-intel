@@ -4,7 +4,9 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { CountryDetail, CouncilVote, DossierDetail } from '../../types/data';
+import type { CountryDetail, CountrySummary, CouncilVote, DossierDetail, Meta } from '../../types/data';
+import { formatNumber } from '../../lib/format';
+import { councilRowTag, councilRowTitle } from './CouncilVoteCard';
 
 const DATA = new URL('../../../public/data/', import.meta.url);
 const built = existsSync(new URL('council/index.json', DATA));
@@ -72,6 +74,53 @@ describe.skipIf(!built)('Council votes on the built data', () => {
     const step = read<DossierDetail>('dossiers/2022-0369.json').timeline.find((e) => e.id === 'council-ST-15907-2022')!;
     expect(step.title).toBe('Council did not adopt the act');
     expect(step.docs.map((d) => d.label)).toContain('Council of the EU – ST 15179/22');
+  });
+
+  it('links ST 9252/19 ("Interinstitutional File: 2016/0360 A (COD)") to the CRR II part, as an ordinary-procedure act', () => {
+    const v = votes.get('ST-9252-2019')!;
+    expect(v.dossier_id).toBe('2016-0360A');
+    expect([v.assessment?.legal_basis, v.assessment?.states_required]).toEqual(['TEU Art. 16(4)', 16]);
+    expect(read<DossierDetail>('dossiers/2016-0360A.json').council_votes.map((c) => c.id)).toEqual(['ST-9252-2019']);
+    expect(read<CountryDetail>('countries/FR.json').council_votes.find((r) => r.vote_id === 'ST-9252-2019')?.dossier_id).toBe('2016-0360A');
+  });
+
+  it('marks every vote as taken at a meeting or by written procedure (ST 7236/20, 7237/20, 7360/20)', () => {
+    expect([...votes.values()].filter((v) => v.written_procedure == null).map((v) => v.id)).toEqual([]);
+    // Position (EU) No 8/2020 "Adopted by the Council on 15 April 2020"; the note is dated 16 April
+    const taxonomy = votes.get('ST-7360-2020')!;
+    expect([taxonomy.date, taxonomy.written_procedure, taxonomy.meeting ?? null]).toEqual(['2020-04-15', true, null]);
+    const step = read<DossierDetail>('dossiers/2018-0178.json').timeline.find((e) => e.id === 'council-ST-7360-2020')!;
+    expect([step.date, step.title]).toEqual(['2020-04-15', 'Council adopted its position at first reading (written procedure)']);
+  });
+
+  it('tags a country row with the item voted on, outside the title that phones clamp (ST 8160/20 beside ST 8159/20)', () => {
+    const be = read<CountryDetail>('countries/BE.json').council_votes;
+    const derog = be.find((r) => r.vote_id === 'ST-8160-2020')!;
+    const act = be.find((r) => r.vote_id === 'ST-8159-2020')!;
+    expect([derog.pos, act.pos]).toEqual(['for', 'against']);
+    expect(councilRowTag(derog)).toBe(derog.vote_on_label);
+    expect(councilRowTag(act)).toBeNull();
+    expect(councilRowTitle(derog)).toBe(councilRowTitle(act)); // the same act; the tag tells the rows apart
+    for (const r of be.filter((x) => x.vote_on === 'other')) {
+      expect(councilRowTag(r), r.vote_id).toBe(r.vote_on_label || 'Other Council decision');
+      if (r.vote_on_label) expect(councilRowTitle(r).endsWith(r.vote_on_label), r.vote_id).toBe(false);
+    }
+  });
+
+  it('gives the About page and the country pages the same Council totals (747 votes, 745 with positions)', () => {
+    const meta = read<Meta>('meta.json');
+    const listed = [...votes.values()];
+    const withPositions = listed.filter((v) => Object.keys(v.positions).length > 0).length;
+    const summary = meta.sources.find((s) => s.id === 'council')!.summary ?? '';
+    const coverage = meta.coverage_notes.find((n) => n.startsWith('Council votes:'))!;
+    expect(meta.counts.council_votes).toBe(listed.length);
+    expect(summary.startsWith(`${formatNumber(listed.length)} votes of the Council of the EU`)).toBe(true);
+    expect(summary).toContain(`${formatNumber(withPositions)} of them with each Member State's position`);
+    expect(coverage.startsWith(`Council votes: ${formatNumber(listed.length)} votes`)).toBe(true);
+    for (const c of read<CountrySummary[]>('countries/index.json')) {
+      const p = c.council_positions;
+      expect(p.for + p.against + p.abstain + p.not_participating, c.code).toBe(withPositions);
+    }
   });
 
   it('lists every statement heading of ST 14020/20, numbering a repeated one', () => {

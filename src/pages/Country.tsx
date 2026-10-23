@@ -11,7 +11,7 @@ import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { useGroups } from '../features/people/labels';
 import { formatIndicator } from '../features/countries/CountryTable';
 import { InfringementNote, InfringementTable, TranspositionTable } from '../features/countries/Implementation';
-import { COUNCIL_POSITION_LABEL, COUNCIL_VOTE_ON_SHORT } from '../features/council/CouncilVoteCard';
+import { COUNCIL_POSITION_LABEL, councilRowTag, councilRowTitle } from '../features/council/CouncilVoteCard';
 import { Pos } from '../features/votes/Breakdowns';
 import { SortTh, useSortable } from '../features/votes/sortable';
 import '../features/countries/countries.css';
@@ -44,12 +44,8 @@ function FormerMemberState({ code }: { code: string }) {
 
 /** Tag on a Council vote row: what was voted on when it is not the act itself, or that the act was not adopted. */
 function CouncilRowTag({ v }: { v: CouncilRow }) {
-  if (v.vote_on === 'first_reading_position') return <Tag>{COUNCIL_VOTE_ON_SHORT.first_reading_position}</Tag>;
-  // an 'other' vote's list title names the item voted on (Non-approval of the European Parliament's amendments, …)
-  // when there is one (vote_on_label); otherwise the row says it is another Council decision
-  if (v.vote_on === 'other' && !v.vote_on_label) return <Tag>{COUNCIL_VOTE_ON_SHORT.other}</Tag>;
-  if (v.vote_on === 'act' && v.outcome === 'not_adopted') return <Tag>Act not adopted by this vote</Tag>;
-  return null;
+  const tag = councilRowTag(v);
+  return tag ? <Tag>{tag}</Tag> : null;
 }
 
 export default function Country() {
@@ -327,7 +323,7 @@ export default function Country() {
                           {formatDate(v.date)}
                         </td>
                         <td className="stack-title" role="cell">
-                          <RowTitle to={v.dossier_id ? dossierPath(v.dossier_id) : null}>{v.display_title ?? v.title}</RowTitle>{' '}
+                          <RowTitle to={v.dossier_id ? dossierPath(v.dossier_id) : null}>{councilRowTitle(v)}</RowTitle>{' '}
                           <CouncilRowTag v={v} />
                         </td>
                         <td role="cell">

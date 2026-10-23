@@ -4,8 +4,9 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { DossierDetail, TimelineEvent } from '../../../types/data';
+import type { CoverageScope, DossierDetail, Meta, TimelineEvent } from '../../../types/data';
 import { latestDone } from './Summary';
+import { noCouncilVoteNote } from './Votes';
 
 const DATA = new URL('../../../../public/data/', import.meta.url);
 const built = existsSync(new URL('dossiers/index.json', DATA));
@@ -20,6 +21,26 @@ describe('latest verified development', () => {
     expect(latestDone(tl, '2026-10-23')?.id).toBe('referral');
     expect(latestDone([ev('a', '2026-09-14', true), ev('b', '2026-09-15', false)], '2026-10-23')?.id).toBe('b');
     expect(latestDone([ev('a', '2026-11-01', true)], '2026-10-23')).toBeNull();
+  });
+});
+
+describe('why a file shows no Council vote', () => {
+  const scope = { council_votes_from: '2019-01-28', council_votes_to: '2026-10-19' } as CoverageScope;
+  const step = { ...ev('council', '2022-12-14', true), kind: 'council_adoption', title: 'Council adopted the act after consulting Parliament' } as TimelineEvent;
+
+  it('does not call a file adopted within the period of our Council data under discussion or outside it (2021-0433)', () => {
+    const note = noCouncilVoteNote([step], '2022-12-14', scope);
+    expect(note).toContain('Its timeline records “Council adopted the act after consulting Parliament” on 14 December 2022, within the period');
+    expect(note).toContain('28 January 2019 to 19 October 2026');
+    expect(note).not.toContain('under discussion');
+  });
+
+  it('says when the Council’s step falls before or after the Council votes in our data, and keeps the general reason otherwise', () => {
+    expect(noCouncilVoteNote([{ ...step, date: '2018-03-12' }], '2018-03-12', scope)).toContain('before the first Council vote in our data (28 January 2019)');
+    expect(noCouncilVoteNote([{ ...step, date: '2026-10-21' }], null, scope)).toContain('after the latest Council vote in our data (19 October 2026)');
+    expect(noCouncilVoteNote([], '2020-08-06', scope)).toContain('The file was adopted on 6 August 2020, within the period');
+    expect(noCouncilVoteNote([], null, scope)).toContain('files still under discussion, or adopted outside the period covered (28 January 2019 to 19 October 2026)');
+    expect(noCouncilVoteNote([step], '2022-12-14', undefined)).toContain('files still under discussion');
   });
 });
 
@@ -71,6 +92,19 @@ describe.skipIf(!built)('dossiers on the built data', () => {
       // the two have the same title (2020/0112(APP) and 2020/0112R(APP)): each link gives the other's reference
       expect(back?.ref, d.id).toBe(d.ref);
       expect(d.related.find((r) => r.relation === 'Report on')?.ref, d.id).toBe(read<DossierDetail>(`dossiers/${main}.json`).ref);
+    }
+  });
+
+  it('says why a file adopted while our Council data runs has no Council vote, and links CRR II’s (2016-0360A)', () => {
+    const scope = read<Meta>('meta.json').scope;
+    expect([scope?.council_votes_from, scope?.council_votes_to]).toEqual(['2019-01-28', '2026-10-19']);
+    const none = all.filter((d) => d.council_votes.length === 0 && !d.related.some((r) => r.relation === 'Split into'));
+    const within = none.filter((d) => noCouncilVoteNote(d.timeline, d.adopted, scope).includes('within the period'));
+    expect(within.map((d) => d.id)).toContain('2021-0433');
+    expect(within.map((d) => d.id)).not.toContain('2016-0360A');
+    for (const d of none) {
+      const step = [...d.timeline].reverse().find((e) => e.state === 'done' && (e.kind === 'council_adoption' || e.kind === 'council_position'));
+      if (step || d.adopted) expect(noCouncilVoteNote(d.timeline, d.adopted, scope), d.id).not.toContain('under discussion');
     }
   });
 

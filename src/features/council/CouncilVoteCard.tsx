@@ -3,7 +3,7 @@
  * Used on the dossier page and wherever a full CouncilVote record is available.
  */
 import { Link } from 'react-router-dom';
-import type { CouncilAssessment, CouncilPosition, CouncilVote, CouncilVoteOn } from '../../types/data';
+import type { CountryDetail, CouncilAssessment, CouncilPosition, CouncilVote, CouncilVoteOn } from '../../types/data';
 import { ExtLink, SourceLink, Term, VoteBar } from '../../components/ui';
 import { COUNTRY_NAMES, countryName, formatDate, formatNumber } from '../../lib/format';
 import './council.css';
@@ -27,6 +27,28 @@ export const COUNCIL_VOTE_ON_SHORT: Record<CouncilVoteOn, string> = {
   first_reading_position: 'Council position at first reading (not the final act)',
   other: 'Other Council decision',
 };
+
+type CouncilRow = CountryDetail['council_votes'][number];
+
+/**
+ * Tag on a country page's Council vote row: what was voted on when it is not the act itself, or that the act was not
+ * adopted. An 'other' vote is tagged with the item voted on (vote_on_label: "Derogation from the eight-week period …",
+ * ST 8160/20), or as another Council decision when the document names none. The tag sits outside the title, which
+ * phones clamp to three lines, so that row does not read like the act's row beside it (ST 8159/20).
+ */
+export function councilRowTag(v: CouncilRow): string | null {
+  if (v.vote_on === 'first_reading_position') return COUNCIL_VOTE_ON_SHORT.first_reading_position;
+  if (v.vote_on === 'other') return v.vote_on_label || COUNCIL_VOTE_ON_SHORT.other;
+  if (v.vote_on === 'act' && v.outcome === 'not_adopted') return 'Act not adopted by this vote';
+  return null;
+}
+
+/** A country page's Council vote row title: the list title, without the item voted on that its tag shows. */
+export function councilRowTitle(v: CouncilRow): string {
+  const title = v.display_title ?? v.title;
+  const tail = v.vote_on === 'other' && v.vote_on_label ? ` – ${v.vote_on_label}` : null;
+  return tail && title.endsWith(tail) ? title.slice(0, -tail.length) : title;
+}
 
 /** Outcome wording that says what was adopted: the act, the Council's first-reading position, or another item. */
 export function councilOutcomeLabel(vote: Pick<CouncilVote, 'outcome' | 'vote_on'>): string {

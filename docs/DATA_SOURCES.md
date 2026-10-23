@@ -692,8 +692,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   before its letter ("2016/0360 A (COD)" in ST 9252/19, the adoption of Regulation (EU) 2019/876; "2016/0224/A(COD)").
 - 746 voting results 2019-01 → 2026-10 (747 Council votes listed and counted on the About page, with the curated
   record CM-5860-2022, 745 of them with positions, as the country pages count them; the About page's source card
-  and coverage note give these figures and how they divide); 744 with positions; rules: 702 QMV, 44 unanimity (as the sheets print them); 2 notes
-  without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
+  and coverage note give these figures and how they divide); 744 with positions; rules: 702 QMV, 44 unanimity (as
+  the sheets print them); 2 notes without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
   unreadable). `meta.json` (`sources[council].note`) gives the counts of each release. Verified against the
   rendered sheets: AI Act (ST 10199/24, 27 in favour), Copyright Directive 2019 (6 against, 3 abstentions),
   Eurodac 2024 (DK/IE not participating), the wolf Directive 2025 (ST 9887/25: 24 in favour, Belgium, Spain and
@@ -746,8 +746,17 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   "Adoption of the legislative act" first); in the budget procedure (a budget title or a BUD reference) without
   "Adoption of the legislative act", which some notes add (ST 14735/24), as a Council vote there does not by itself
   adopt the budget: Parliament and the Council establish it together and the President of Parliament declares it
-  adopted (Art. 314(1) and (9) TFEU). A row whose vote names no other item is tagged "Other Council decision".
-  Country rows also carry `stage` and `outcome` ("Act not adopted by this vote").
+  adopted (Art. 314(1) and (9) TFEU). On country pages such a row is tagged with that item, shown outside the title
+  (which phones clamp to three lines) and not repeated at its end, so that the derogation's row (ST 8160/20) does
+  not read like the act's row of the same day (ST 8159/20); a row whose vote names no other item is tagged "Other
+  Council decision". Country rows also carry `stage` and `outcome` ("Act not adopted by this vote").
+- A file with no Council vote says why from its timeline: its latest Council step (the act's adoption or the
+  Council's first-reading position), else its adoption date, set against the first and last Council vote listed
+  (`meta.json` `scope.council_votes_from` / `council_votes_to`). Within that period it says that none of the
+  voting-result documents we read is linked to the file (the documents Cellar lists do not include every Council
+  vote: CM 5860/22 records adoptions that none of them does); before or after it, that the step falls outside it;
+  with neither a step nor an adoption, that files still under discussion or adopted outside the period have no
+  record. That last reason was given for every such file, also for 2021/0433(CNS), adopted 14 December 2022.
 - Build-time checks against the procedure record (`vote_on_note` says when one applies): a note headed
   "Adoption of the legislative act" whose reference document is the Council's first-reading position (same
   number as OEIL's "Council position published"), followed by Parliament's second-reading decision, adopted
