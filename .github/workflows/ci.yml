@@ -1,5 +1,5 @@
-# Continuous integration: lint, offline tests, snapshot validation, data build, typecheck, site build and
-# privacy gate. Runs fully offline against the committed snapshot (no EU API calls).
+# Continuous integration: lint, offline tests, snapshot validation, data build and its validation, typecheck,
+# site build and privacy gate. Runs fully offline against the committed snapshot (no EU API calls).
 #
 # The Playwright e2e/accessibility job runs on every push to main and every pull request against the site
 # built by the check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
@@ -74,6 +74,12 @@ jobs:
       - name: Build site data (public/data)
         run: python -m pipeline build
 
+      - name: Validate built data
+        # The checks of the built output (pipeline/validate.py, e.g. a vote margin that contradicts its outcome, a
+        # withdrawn file with an act, a veto outside unanimity) need a build; --built fails instead of skipping them
+        # when public/data is missing.
+        run: python -m pipeline validate --built
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -81,7 +87,8 @@ jobs:
         run: npx tsc -p tests/e2e/tsconfig.json
 
       - name: Unit tests (vitest)
-        run: npx vitest run --passWithNoTests
+        # Fails when no test file matches the include pattern in vite.config.ts.
+        run: npx vitest run
 
       - name: Build site (BASE_PATH=${{ env.BASE_PATH }})
         run: npm run build

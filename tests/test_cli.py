@@ -158,3 +158,33 @@ def test_validate_list_failing(snap, monkeypatch, capsys):
     captured = capsys.readouterr()
     assert captured.out.split() == ["council"]
     assert "council/votes.json: unreadable" in captured.err
+
+
+def test_validate_built_needs_the_built_output_and_fails_on_its_contradictions(snap, monkeypatch, tmp_path_factory, capsys):
+    # The workflows validated only before `pipeline build`, when public/data (not committed) is missing, so the
+    # built-output checks were skipped without a word. `--built` (run after the build) fails without it, and on a
+    # contradiction: vote 156022 (AI Act mandate, 14 Jun 2023) as built, then with its outcome turned to "rejected".
+    import pipeline.validate as val
+
+    shutil.copytree(FIX, snap, dirs_exist_ok=True)
+    root = tmp_path_factory.mktemp("root")
+    monkeypatch.setattr(val, "ROOT", root)
+    assert cli.main(["validate"]) == 0
+    assert "built output not checked" in capsys.readouterr().out
+    assert cli.main(["validate", "--built"]) == 1
+    assert f"ERROR no built output in {root / 'public' / 'data'}" in capsys.readouterr().out
+    votes = root / "public" / "data" / "votes"
+    votes.mkdir(parents=True)
+    margin = {"rule": "votes_cast", "threshold": 264, "distance": 235, "relative": 0.4459,
+              "label": "Majority reached: 235 votes more than needed"}  # fmt: skip
+    (votes / "156022.json").write_text(json.dumps({"id": "156022", "outcome": "adopted", "margin": margin}))
+    assert cli.main(["validate", "--built"]) == 0
+    out = capsys.readouterr().out
+    assert "validate: OK" in out and "not checked" not in out
+    (votes / "156022.json").write_text(json.dumps({"id": "156022", "outcome": "rejected", "margin": margin}))
+    assert cli.main(["validate", "--built"]) == 1
+    assert "ERROR public votes/156022.json: vote 156022: margin distance 235 contradicts outcome 'rejected'" in (
+        capsys.readouterr().out
+    )
+    with pytest.raises(SystemExit):  # the refresh's per-source check reads the snapshot only
+        cli.main(["validate", "--built", "--list-failing"])

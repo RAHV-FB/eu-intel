@@ -2,8 +2,8 @@
 #
 # Triggers: push to main, manual dispatch, and completion of a successful "Data refresh" run (commits
 # pushed with GITHUB_TOKEN do not trigger `push` workflows, so the refresh hands over via workflow_run).
-# Any failure in the build job (validation, data build, site build, privacy check) stops the run before
-# deploy; the previous deployment stays live.
+# Any failure in the build job (validation of the snapshot or of the built data, data build, site build, privacy
+# check, size check) stops the run before deploy; the previous deployment stays live.
 #
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions" (docs/DEPLOYMENT.md).
 name: Deploy to GitHub Pages
@@ -71,6 +71,10 @@ jobs:
           # (The feed and entry ids do not depend on it: pipeline/analysis/feeds.py TAG_BASE.)
           SITE_URL: ${{ steps.pages.outputs.base_url }}/
         run: python -m pipeline build
+
+      - name: Validate built data
+        # The built-output checks of pipeline/validate.py; --built fails if public/data is missing.
+        run: python -m pipeline validate --built
 
       - name: Build site
         env:

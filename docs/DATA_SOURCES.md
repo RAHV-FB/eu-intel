@@ -224,15 +224,17 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Margin (`analysis/ep_margin.py`, build): computed only for an adopted or rejected outcome under an established
   majority rule. Its label is about the majority that vote needed, "Majority reached: N votes more than needed" /
   "Majority not reached: N votes short", never about a law passing (a final vote can be a consultation opinion or
-  a position the Council has not yet agreed to). `python -m pipeline validate` fails a build in which a margin
-  stands next to another outcome or on the other side of the threshold. A vote is *close* when the distance is at
-  most 5% of the votes cast for and against (`CLOSE_RELATIVE` in `build.py` and `src/features/votes/labels.ts`).
+  a position the Council has not yet agreed to). `python -m pipeline validate` (run after the build in CI, the
+  deploy and the refresh, with `--built`) fails a build in which a margin stands next to another outcome or on the
+  other side of the threshold. A vote is *close* when the distance is at most 5% of the votes cast for and against
+  (`CLOSE_RELATIVE` in `build.py` and `src/features/votes/labels.ts`).
 - `outcome_basis` `derived` (calculated from the counts where they settle the result: under the votes-cast or
   component-Members rule that applies, or under every rule when none is known) is shown as such wherever the
   outcome is: vote pages, the /votes list, dossier vote cards and the home lists.
-- Home lists (`build_home`): *Close votes* are the most recent close final votes (no time window: one final vote
-  in the 12 months to October 2026 was close). *Rejected* holds final votes on a whole text that were rejected
-  and adopted motions to reject the proposal or the Council's position, each with the file's decision as its
+- Home lists (`build_home`): *Close votes* are the most recent close final votes (no time window: few final votes
+  are that close; in the snapshot of 23 October 2026, two in the preceding 12 months, 193557 and 181828).
+  *Rejected* holds final votes on a whole text that were rejected and adopted motions to reject the proposal or
+  the Council's position, each with the file's decision as its
   timeline words it and what followed (adopted later, withdrawn; a consultation opinion is not binding), then
   files recorded as rejected without such a vote. Rejected objections and motions of censure are not listed: they
   leave the Commission measure or the Commission in place. Neither list holds decisions on discharge (procedure
@@ -526,8 +528,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   decisions of the day, since negotiations open on Parliament's mandate (2025/0132(COD), 17 December 2025); a text
   tabled for the plenary follows the committee's approval of it (2024/0071(COD), 16 June 2025); a second-reading
   step follows the Council's first-reading position of the same day (2018/0136(COD), 14 December 2020: ST 14020/20,
-  then the referral and the committee's recommendation). `validate` reports a trilogue or a second-reading step
-  listed before what it follows.
+  then the referral and the committee's recommendation). `validate` fails a build in which a trilogue or a
+  second-reading step is listed before what it follows.
 - Rejection by Parliament: a final vote officially recorded as rejected, or an adopted motion to reject the
   proposal (2023/0413(COD), vote 179804), unless OEIL shows the file past Parliament's first reading.
 - Type of act (`instrument`): the type of the file's adopted act; for a file without a linked act of a known type,
@@ -577,7 +579,7 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - The group shown is the one held in the role, never the MEP's current group: the MEP's group membership on
   `date`, else OEIL's printed group (PPE → EPP, Verts/ALE → Greens/EFA as for groups; groups before 2019 such as
   ALDE, EFDD or ENF are shown by their code without a group page). Left out when neither establishes it: 152
-  of the 12,375 entries (snapshot of 23 October 2026): 144 API entries dated before the group memberships we hold
+  of the 12,374 entries (snapshot of 23 October 2026): 144 API entries dated before the group memberships we hold
   (2 July 2019), and 8 whose API date is earlier than the MEP's first group membership (e.g. Johan Nissinen on
   2021/0379(COD), dated 9 December 2021, ECR member from 11 October 2022), so for them `date` is not the
   appointment in a group. Checked against the EP API's own `politicalGroup` on each participation (the cached

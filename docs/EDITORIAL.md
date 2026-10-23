@@ -2,8 +2,9 @@
 
 EU Legislative Intelligence explains EU legislation using only official, verifiable data. Almost
 everything on the site is computed from official sources. The one exception is a small curated layer
-in `data/curated/`: editorial selections and texts, and a few date corrections checked against the acts'
-texts. This document covers what goes into that layer and how it is written and reviewed.
+in `data/curated/`: editorial selections and texts, a few date corrections checked against the acts' texts,
+and a few corrections of Council voting records checked against the acts, the Treaties and the Council's own
+documents. This document covers what goes into that layer and how it is written and reviewed.
 
 | File | Contents |
 |---|---|
@@ -12,13 +13,18 @@ texts. This document covers what goes into that layer and how it is written and 
 | `aliases.yaml` | General search synonyms (standard, official abbreviations) and per-file names that the institutions themselves use, each with a cited source. |
 | `act_dates.yaml` | Corrections to the entry-into-force and application dates Cellar records for an act. Each date cites the provision that sets it (or the amending act), and the entry lists the official texts it was checked against. The correction applies in the build only; the snapshot keeps Cellar's values. |
 | `transposition.yaml` | Which of the transposition dates EUR-Lex records for a directive is its general deadline (one of the recorded dates), with the provision quoted verbatim, the text checked and a review date. |
+| `council_dates.yaml` | The day the Council adopted an act of the ordinary legislative procedure, as the act's own text gives it, where the date our sources record differs. Each entry names the act and quotes verbatim the footnote to its citation "Acting in accordance with the ordinary legislative procedure" that gives the date of the Council's decision, with a review date. It re-dates the Legislative Observatory's adoption step and, only where the Council's voting sheet gives that day as its "Sitting date" (quoted in the entry), the Council's voting result; the file's header sets which date takes precedence. The correction applies in the build only; the snapshot keeps the source values. |
+| `council_votes.yaml` | Council voting results corrected where the Council's voting-result document prints something else than the Treaties require, and Council adoptions that no voting-result document records. A correction shows the voting rule as unanimity where the sheet prints "qualified majority" but the act's legal basis requires unanimity: only a Treaty provision listed in `UNANIMITY_BASES` (`pipeline/build.py`, which quotes it), with the act's citation of it quoted verbatim. It may set the outcome to "not adopted" only when, under unanimity, the vote did not adopt the act, with a note on what the Council did instead citing its documents. A correction lists the official texts checked, which are linked on the vote. A record is taken from the Council's communication on the outcome of a written procedure, which is its source, with a note on why it is recorded by hand. Each entry has a review date; the snapshot keeps what the voting-result documents print. |
 
 ## What the curated layer must not contain
 
 - **No procedural status or next steps.** Stage, votes, adoption, entry into force and upcoming
   steps are computed from the snapshot (EP Open Data, OEIL, Cellar/EUR-Lex, Council, Legislative
-  Train), so they cannot go stale in the YAML. The one exception is the dates in `act_dates.yaml` and
-  `transposition.yaml`: corrections of recorded dates, each checked against the act's text. Dates are allowed when they are part of the legal
+  Train), so they cannot go stale in the YAML. The exceptions are corrections of recorded facts, each
+  checked against official texts: the dates in `act_dates.yaml` and `transposition.yaml` (against the
+  act's text), the Council adoption dates in `council_dates.yaml` (against the act's own footnote), and
+  the Council voting rules, outcomes and records in `council_votes.yaml` (against the act's legal basis,
+  the Treaty and the Council's own documents). Dates are allowed when they are part of the legal
   content, such as a cut-off date ("land not deforested after 31 December 2020"), a target year,
   an application or transposition date ("from 30 December 2026"), or a deadline the act sets.
 - **Exceptions that change the substance.** Name, by act number, any later act that changes what
@@ -99,9 +105,15 @@ proposal. At most two items may come from the same topic.
   also lists Council/EP/Commission press releases or Legislative Train pages.
 
 `tests/test_curated.py` enforces the schema, the proposal wording, a list of banned words, the
-"no status wording" rule, word counts and the homepage rules. `act_dates.yaml` and `transposition.yaml` are
-checked by `python -m pipeline validate` and `tests/test_build.py`; their entries follow the same review
-process, including the re-review of their `reviewed` dates.
+"no status wording" rule, word counts and the homepage rules. The correction files are checked when the
+build loads them (`pipeline/build.py`): an entry that breaks its file's rules (a malformed date, a quote that
+does not give its date, a legal basis not in `UNANIMITY_BASES`, no texts listed) is skipped with a warning in
+the build log, and the build carries on. `act_dates.yaml` and `transposition.yaml` are also checked by
+`python -m pipeline validate` (it warns about a `transposition.yaml` entry naming a date EUR-Lex does not
+record, and about suspicious act dates that no `act_dates.yaml` entry covers) and `tests/test_build.py`;
+`council_dates.yaml` and `council_votes.yaml` by `tests/test_build_real_records.py` on the real records.
+Their entries follow the same review process, including the second review and the re-review of their
+`reviewed` dates.
 
 ## Alias policy
 
@@ -141,7 +153,7 @@ an official subject fits more than one theme. Curated entries set their topics e
    press releases or Legislative Train pages) before writing. Record the sources in the entry.
 2. **Writing.** Follow the standards above, then run `pytest tests/test_curated.py`.
 3. **Second review.** Changes are made by pull request and reviewed by a second person, who checks
-   each sentence against the cited sources.
+   each sentence, and each corrected date or vote record, against the cited sources.
 4. **Re-review.** Each entry carries a `reviewed` date. An entry is re-reviewed:
    - when the computed data show a material change, such as a new act amending it, adoption,
      withdrawal, or a new Legislative Train status; and

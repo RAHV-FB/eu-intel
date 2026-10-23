@@ -43,7 +43,7 @@ data/curated/*.yaml ─────────────────┤ build
 | `analysis/council_qmv.py` | Council QMV/unanimity arithmetic |
 | `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds |
 | `build.py` | Joins everything by official identifiers → `public/data/**` per `src/types/data.ts` |
-| `validate.py` | Schema + invariants (ballot totals, referential integrity, legal-type rules) |
+| `validate.py` | Schema + invariants (ballot totals, referential integrity, legal-type rules); on a build, the claims in `public/data` against the rules and the files' own dates |
 
 ### Identifiers and linking
 
@@ -86,11 +86,13 @@ the UI; every institutional fact on a page has a reachable origin.
 
 ## Operations
 
-- `ci.yml`: lint, Python tests, validate, build data, typecheck (app and e2e tests), vitest, build site, privacy
-  check; then a Playwright e2e and accessibility job on the built site (runs by default; a manual run can skip it).
-- `pages.yml`: deploy to GitHub Pages on push to `main`, manual dispatch, or after a successful refresh.
-- `refresh.yml`: scheduled weekly `fetch` (incremental; a manual run can do a full refresh) → `validate` → record
-  activity → commit snapshot.
+- `ci.yml`: lint, Python tests, validate, build data, validate the built data, typecheck (app and e2e tests),
+  vitest, build site, privacy check; then a Playwright e2e and accessibility job on the built site (runs by
+  default; a manual run can skip it).
+- `pages.yml`: deploy to GitHub Pages on push to `main`, manual dispatch, or after a successful refresh (validate,
+  build data, validate the built data, build site).
+- `refresh.yml`: scheduled weekly `fetch` (incremental; a manual run can do a full refresh) → `validate` → build
+  and record activity → `validate --built` → commit snapshot.
 
 ## Future analytics (not implemented)
 

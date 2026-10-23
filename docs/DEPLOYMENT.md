@@ -4,9 +4,9 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Three
 
 | Workflow | Trigger | Does | Permissions |
 | --- | --- | --- | --- |
-| `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, pytest (offline), `pipeline validate`, `pipeline build`, typecheck, vitest, site build with `BASE_PATH=/eu-intel/`, privacy check; Playwright e2e and accessibility tests on the built site | `contents: read` |
-| `pages.yml` (Deploy to GitHub Pages) | push to `main`, manual, after a successful *Data refresh* | validate → build data → build site with the Pages base path → privacy check → size check → upload → deploy | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
-| `refresh.yml` (Data refresh) | Mondays 05:17 UTC, manual (optionally a full refresh) | fetch all sources (incremental, see below) → validate → build with activity recording → commit `data/snapshot/` + `data/state/` to `main` | `contents: write` (this job only) |
+| `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, pytest (offline), `pipeline validate`, `pipeline build`, `pipeline validate --built`, typecheck, vitest, site build with `BASE_PATH=/eu-intel/`, privacy check; Playwright e2e and accessibility tests on the built site | `contents: read` |
+| `pages.yml` (Deploy to GitHub Pages) | push to `main`, manual, after a successful *Data refresh* | validate → build data → validate the built data → build site with the Pages base path → privacy check → size check → upload → deploy | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
+| `refresh.yml` (Data refresh) | Mondays 05:17 UTC, manual (optionally a full refresh) | fetch all sources (incremental, see below) → validate → build with activity recording → validate the built data → commit `data/snapshot/` + `data/state/` to `main` | `contents: write` (this job only) |
 
 All actions are pinned to full commit SHAs (with the version in a comment); Dependabot
 (`.github/dependabot.yml`) proposes weekly grouped updates.
@@ -88,15 +88,24 @@ open http://127.0.0.1:4174/eu-intel/).
   without OEIL data, an act or notice kept or lost), and only those dossiers keep their stored stage until a later
   run refreshes them. A partial fetch without that list (e.g. a restored state file) suspends all status changes for
   the run. The build log warns in both cases, with the date since when.
+- **The built data fails validation**: after the build, `python -m pipeline validate --built` checks the claims
+  the build derived against the rules and the files' own dates (`pipeline/validate.py`, e.g. a vote margin that
+  contradicts its outcome, a withdrawn file with an act, Council adoption steps on more than one day, a step
+  listed before the one it follows, a single-state veto outside unanimity). If it fails, the run commits nothing
+  (neither the snapshot nor `data/state`) and fails, so nothing is deployed; `main` keeps the last snapshot whose
+  build passed, and the next run fetches again. A build that fails outright still commits the snapshot without
+  `data/state` (above).
 - **No changes**: nothing is committed (the deploy still re-runs; harmless).
 - **Push rejected** because `main` moved during the run: the job resets onto the new `main`, re-applies only the
   data files this run changed (this run's version wins for those; `_manifest.json` is merged per source) and
   pushes again, up to five times. Do not commit snapshot data by hand while a refresh is running.
-- **Deploy build fails** (validation, data build, TypeScript, Vite, privacy check, > 900 MB): the deploy job does
-  not run and the previous deployment stays live. Fix and push, or re-run the workflow.
+- **Deploy build fails** (validation of the snapshot or of the built data, data build, TypeScript, Vite, privacy
+  check, > 900 MB): the deploy job does not run and the previous deployment stays live. Fix and push, or re-run
+  the workflow.
 - Deploys are serialised (`concurrency: pages`, never cancelled mid-flight).
 - Commits made by the refresh use `GITHUB_TOKEN`, which by design does not trigger `push` workflows; the deploy
-  is chained with `workflow_run` instead, and CI does not run on refresh commits (the deploy re-validates).
+  is chained with `workflow_run` instead, and CI does not run on refresh commits: the refresh and the deploy each
+  validate the snapshot and the built data, but pytest, vitest and the browser tests do not run on them.
 
 ## What a weekly run re-reads
 
@@ -130,7 +139,9 @@ by its time budget stays a full refresh in the next runs until it completes.
 - **Redeploy** without data changes: *Actions → Deploy to GitHub Pages → Run workflow* (`gh workflow run pages.yml`).
 - **Roll back**: revert the offending commit on `main` (a data refresh is a single commit); the push redeploys.
 - **Refresh locally** (e.g. to debug a source): `EU_INTEL_NO_CACHE=1 python -m pipeline fetch ep_votes`, then
-  `python -m pipeline validate && EU_INTEL_RECORD_ACTIVITY=1 python -m pipeline build`, review the diff, commit.
+  `python -m pipeline validate && EU_INTEL_RECORD_ACTIVITY=1 python -m pipeline build && python -m pipeline
+  validate --built`, review the diff, commit. If the last check fails, do not commit: the build has already
+  written the activity it recorded to `data/state`.
 
 ## End-to-end tests in CI
 

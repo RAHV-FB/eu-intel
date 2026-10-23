@@ -17,7 +17,7 @@ images. Visitors never contact EU APIs; the data is fetched by a scheduled pipel
 ```
 official EU APIs ──fetch──▶ data/snapshot/** (committed) ──build──▶ public/data/** ──▶ React SPA ──▶ GitHub Pages
                                       ▲
-        data/curated/*.yaml (editorial selections, aliases, topics, checked date corrections)
+        data/curated/*.yaml (editorial selections, aliases, topics, checked corrections of dates and Council vote records)
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md) and
@@ -35,6 +35,7 @@ python -m venv .venv && . .venv/bin/activate      # or: uv venv && uv pip instal
 pip install -e '.[dev]'
 python -m pipeline validate      # check the committed snapshot (offline)
 python -m pipeline build         # snapshot + curated data -> public/data (offline, deterministic)
+python -m pipeline validate --built   # check the snapshot again and the claims in public/data
 
 # Frontend (React + TypeScript + Vite)
 npm ci
@@ -55,7 +56,7 @@ records are read again, the others reused); `EU_INTEL_FULL_REFRESH=1` re-reads e
 | --- | --- |
 | `ruff check .` | Python lint |
 | `pytest` | Offline unit tests (network tests are deselected; run them with `pytest -m network`) |
-| `python -m pipeline validate` | Snapshot schema and invariants |
+| `python -m pipeline validate` | Snapshot schema and invariants; once built, the claims in `public/data` against the rules and the files' own dates (`--built` fails if there is no build) |
 | `npm run typecheck` · `npx vitest run` | TypeScript types · frontend unit tests |
 | `BASE_PATH=/eu-intel/ npm run build` | Production build under the Pages subpath, with prerendered route shells |
 | `node scripts/check_privacy.mjs` | No third-party loads, trackers, cookie writes or raw-HTML injection in `dist/` and `src/` |
@@ -72,12 +73,13 @@ All of the above except the link checks run in CI on every push to `main`, every
 ## Data refresh and deployment
 
 - **Weekly refresh** ([refresh.yml](.github/workflows/refresh.yml)): Mondays 05:17 UTC (best effort) and on demand
-  from the Actions tab (optionally as a full refresh). Fetch → validate → record verified activity → commit
-  `data/snapshot/` and `data/state/`. A source whose new data fails validation gets its previous files and
-  manifest entry back from the last commit, and the other sources' new data is committed; nothing is committed
-  only if the snapshot still fails after that. `data/state/` is committed only after a successful build.
+  from the Actions tab (optionally as a full refresh). Fetch → validate → build and record verified activity →
+  validate the built data → commit `data/snapshot/` and `data/state/`. A source whose new data fails validation
+  gets its previous files and manifest entry back from the last commit, and the other sources' new data is
+  committed; nothing is committed if the snapshot still fails after that, or if the built data fails validation.
+  `data/state/` is committed only after a successful build.
 - **Deploy** ([pages.yml](.github/workflows/pages.yml)): on push to `main`, on demand, and after each successful
-  refresh. A failed build never deploys; the previous version stays online.
+  refresh. A failed build or validation never deploys; the previous version stays online.
 
 Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time Pages setup.
 
@@ -87,7 +89,8 @@ Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time
 pipeline/            Python data pipeline: sources/ (one module per official source), analysis/, build.py, validate.py
 data/snapshot/       committed, normalized source data (diff-friendly JSON) + _manifest.json
 data/curated/        editorial YAML: featured files, topics, search aliases, checked corrections of act dates
-                     (act_dates.yaml) and transposition deadlines (transposition.yaml)
+                     (act_dates.yaml), transposition deadlines (transposition.yaml), Council adoption dates
+                     (council_dates.yaml) and Council voting records (council_votes.yaml)
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
 src/                 React app: pages/, features/, components/, lib/, types/data.ts (public data contract)
 scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py
