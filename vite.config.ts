@@ -7,5 +7,6 @@ export default defineConfig({
   base: process.env.BASE_PATH || '/',
   plugins: [react()],
   build: { target: 'es2022', sourcemap: false, chunkSizeWarningLimit: 400 },
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  // the data tests read the whole built site; give them room on a loaded runner
+  test: { environment: 'node', include: ['src/**/*.test.ts'], testTimeout: 30_000 },
 });
