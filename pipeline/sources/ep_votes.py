@@ -84,7 +84,7 @@ import time
 from collections import Counter
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -1171,9 +1171,12 @@ def ballot_issues(vote: EpVote, b: EpBallots) -> list[str]:
 RETRY_WAIT_S = 60.0  # pause before fetching failed sittings again
 
 
-def _fetch_sittings(http: Http, sittings: list[dict], today: str) -> tuple[list[Sitting], list[dict]]:
+def _fetch_sittings(
+    http: Http, sittings: list[dict], today: str, deadline: float | None = None
+) -> tuple[list[Sitting], list[dict]]:
     """(fetched sittings, sittings that still failed after 3 attempts — e.g. one whose results are not
-    published yet). The shared rate limit can exhaust Http's own retries, hence the extra attempts."""
+    published yet). The shared rate limit can exhaust Http's own retries, hence the extra attempts; no
+    extra attempt is started if its wait would end after `deadline` (monotonic)."""
 
     def one(s: dict) -> Sitting:
         decisions, items = fetch_sitting(http, s, today)
@@ -1196,6 +1199,8 @@ def _fetch_sittings(http: Http, sittings: list[dict], today: str) -> tuple[list[
         if not pending:
             break
         if attempt < 2:
+            if deadline is not None and time.monotonic() + RETRY_WAIT_S > deadline:
+                break
             time.sleep(RETRY_WAIT_S)
     return [out[s["id"]] for s in sittings if s["id"] in out], pending
 
@@ -1313,12 +1318,33 @@ CHUNK = 20
 WINDOW_DAYS = 60
 
 
+MIN_KEEP_SHARE = 0.5  # a re-fetched sitting with fewer votes than this share of its stored ones is not replaced
+
+
 def _out_of_time(deadline: float | None) -> bool:
     return deadline is not None and time.monotonic() > deadline
 
 
 def _sitting_of(v: EpVote) -> str:
     return v.event_id[:17]  # "MTG-PL-2024-03-13-DEC-166051" -> "MTG-PL-2024-03-13"
+
+
+def _shrunk_sittings(done: set[str], res: Result, stored: Counter[str]) -> set[str]:
+    """Sittings of a chunk whose new result has far fewer votes than the snapshot holds: an empty or partial
+    /decisions answer (204 and 404 read as "no records"), not a real removal. Their stored votes and
+    ballots are kept and they stay pending."""
+    new = Counter(_sitting_of(v) for v in res.votes)
+    return {s for s in done if stored.get(s, 0) and new.get(s, 0) < MIN_KEEP_SHARE * stored[s]}
+
+
+def _without_sittings(res: Result, sittings: set[str]) -> Result:
+    keep = {v.id for v in res.votes if _sitting_of(v) not in sittings}
+    return replace(
+        res,
+        votes=[v for v in res.votes if v.id in keep],
+        ballots=[b for b in res.ballots if b.vote_id in keep],
+        issues={k: x for k, x in res.issues.items() if k in keep},
+    )
 
 
 def _merge_chunk(chunk_ids: set[str], res: Result) -> tuple[int, int]:
@@ -1353,12 +1379,13 @@ def _fetch_chunk(
     proc_refs: dict[str, str],
     doc_links: dict[str, list[str]],
     known_docs: DocIndex,
+    deadline: float | None = None,
 ) -> tuple[Result, Counter[str], set[str]]:
     """Fetch and assemble one chunk of sittings; updates proc_refs and doc_links in place.
 
     Returns the result, request statistics and the ids of the sittings fetched; sittings that could not be
     fetched are left out (and stay pending)."""
-    data, failed = _fetch_sittings(http, chunk, today)
+    data, failed = _fetch_sittings(http, chunk, today, deadline)
     if not data:
         raise RuntimeError(f"{len(failed)} sittings could not be fetched, e.g. {failed[0]['id']}")
     lookups = plan_lookups(data, proc_refs, known_docs, done=doc_links)
@@ -1444,17 +1471,24 @@ def fetch(http: Http) -> SourceStatus:
     save()
     counts: Counter[str] = Counter()
     n_ballots = len(read_records(SOURCE_ID, "ballots", EpBallots))
+    stored_per_sitting = Counter(_sitting_of(v) for v in existing)
+    held: set[str] = set()  # sittings whose stored votes were kept (new answer far smaller)
     error = None
     for i in range(0, len(targets), CHUNK):
         if _out_of_time(deadline):
             break
         chunk = targets[i : i + CHUNK]
         try:
-            res, stats, done = _fetch_chunk(http, chunk, today, proc_refs, doc_links, known_docs)
+            res, stats, done = _fetch_chunk(http, chunk, today, proc_refs, doc_links, known_docs, deadline)
         except (HttpError, RuntimeError) as e:  # keep the completed chunks; resume next run
             log.warning("ep_votes: stopping after an error in chunk %s..: %s", chunk[0]["id"], e)
             error = repr(e)[:200]
             break
+        shrunk = _shrunk_sittings(done, res, stored_per_sitting)
+        if shrunk:
+            log.warning("ep_votes: kept the stored votes of %s (new answer far smaller)", ", ".join(sorted(shrunk)))
+            res, done = _without_sittings(res, shrunk), done - shrunk
+            held |= shrunk
         _, n_ballots = _merge_chunk(done, res)
         linked_ids |= {ref_to_process_id(r) for v in res.votes for r in v.procedure_refs}
         pending = [sid for sid in pending if sid not in done]
@@ -1476,6 +1510,12 @@ def fetch(http: Http) -> SourceStatus:
         f"{counts['lookups']} document lookups, {counts['proc_by_id']} procedures by id)"
         + (f"; {len(pending)} sittings pending; resumes next run" if pending else "")
         + (f" (stopped by {error})" if error else "")
+        + (
+            f"; stored votes kept for {len(held)} sittings whose new answer had far fewer votes "
+            f"({', '.join(sorted(held)[:5])})"
+            if held
+            else ""
+        )
         + f". Snapshot: {len(votes)} votes ({rollcalls} roll-call, {n_ballots} with ballots), {linked} linked "
         f"to procedures; kinds {dict(sorted(kinds.items()))}; {counts['issues']} fetched votes whose voter "
         f"lists differ from the counts; {time.monotonic() - t0:.0f}s"

@@ -46,13 +46,22 @@ open http://127.0.0.1:4174/eu-intel/).
 - **Refresh** runs weekly on Monday at 05:17 UTC. GitHub runs schedules on a best-effort basis: runs can start
   late or be dropped at busy times. GitHub also disables scheduled workflows in a public repository after 60
   days without repository activity; re-enable it under *Actions → Data refresh → Enable workflow*.
-- **A source fails** (API down, timeout, schema change): its previous snapshot files are kept, the manifest
-  records `failed` with the previous successful `fetched_at`, the run logs a warning and continues with the other
-  sources. The site shows each source's last successful retrieval.
-- **Validation fails** after fetching: the job fails before committing; nothing changes on `main` and no deploy
-  is triggered. The run's summary shows the per-source status table.
+- **Time limits**: the fetch has a run-wide deadline (`EU_INTEL_FETCH_DEADLINE`, set by the workflow); no new
+  request or retry starts after it, and `timeout --signal=INT` stops the fetch well before the job limit, so the
+  checkpoints already written (`_state.json`, chunked snapshot files) are always validated and committed.
+  Sources resume their pending work on the next run.
+- **A source fails or returns less** (API down, timeout, schema change, an empty answer): its previous records
+  are kept (sources carry previous records forward and refuse to overwrite a file whose record count drops by more
+  than a few percent), the manifest records `partial` or `failed` with the previous successful `fetched_at`, and
+  the run continues with the other sources. The site shows each source's last successful retrieval.
+- **Validation fails** for one source: that source's snapshot directory and manifest entry are restored from the
+  previous commit (marked `partial`), the whole snapshot must then validate, and the other sources' new data is
+  committed. The activity log (`data/state`) is committed only after a successful build. Status changes are
+  recorded only from runs in which the procedure and EUR-Lex fetches were complete.
 - **No changes**: nothing is committed (the deploy still re-runs; harmless).
-- **Push rejected** because `main` moved during the run: the job rebases and retries up to three times.
+- **Push rejected** because `main` moved during the run: the job resets onto the new `main`, re-applies only the
+  data files this run changed (this run's version wins for those; `_manifest.json` is merged per source) and
+  pushes again, up to five times. Do not commit snapshot data by hand while a refresh is running.
 - **Deploy build fails** (validation, data build, TypeScript, Vite, privacy check, > 900 MB): the deploy job does
   not run and the previous deployment stays live. Fix and push, or re-run the workflow.
 - Deploys are serialised (`concurrency: pages`, never cancelled mid-flight).

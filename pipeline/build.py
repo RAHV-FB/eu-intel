@@ -2566,8 +2566,9 @@ class Builder:
         scope = scope or {}
 
         def avail(sid: str) -> bool:
+            # a source whose latest fetch failed still serves its previous records (kept in the snapshot)
             st = m.get(sid)
-            return bool(st and st.fetched_at and st.status in ("ok", "partial"))
+            return bool(st and st.fetched_at)
 
         if avail("ep_people"):
             notes.append("MEPs: everyone who sat in the 9th (2019–2024) or 10th (from 2024) Parliament, with their "
