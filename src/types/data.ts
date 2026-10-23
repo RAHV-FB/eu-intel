@@ -125,6 +125,7 @@ export type LifecycleStage =
   | 'adopted' // formally adopted; not yet published
   | 'published' // published in the Official Journal; not yet in force
   | 'in_force' // in force (some provisions may apply later)
+  | 'takes_effect_on_notification' // decision addressed to specific recipients; EUR-Lex records no notification date
   | 'no_longer_in_force' // repealed, expired or otherwise no longer in force according to EUR-Lex
   | 'withdrawn'
   | 'rejected'
@@ -165,6 +166,15 @@ export interface DossierStatus {
   explanation: string; // 1–2 plain sentences
   since?: ISODate | null;
   basis: Basis;
+  named_acts?: NamedAct[]; // acts the explanation names by `label` (e.g. the repealing act), to link them
+}
+
+/** An act named in a status explanation. */
+export interface NamedAct {
+  celex: string;
+  label: string; // "Directive (EU) 2021/555" (official title), "Regulation 2017/1430" (from the CELEX id), or the CELEX id
+  url: string; // EUR-Lex
+  dossier?: string | null; // its legislative file on this site, if any
 }
 
 export interface NextStep {
@@ -185,7 +195,9 @@ export interface Stall {
 
 export interface ApplicationInfo {
   entry_into_force?: ISODate | null;
-  entry_into_force_pending?: boolean; // EUR-Lex gives no entry-into-force date: the act takes effect on a condition not yet met
+  entry_into_force_pending?: boolean; // EUR-Lex gives no entry-into-force date: the act enters into force on a condition not yet met
+  entry_into_force_condition?: string | null; // that condition, when the Treaty or EUR-Lex states it (one sentence)
+  effect_on_notification?: boolean; // a decision that takes effect on notification to its addressee; EUR-Lex records no date
   application_dates: ISODate[]; // further dates recorded by EUR-Lex for (parts of) the act
   partial_application_dates?: ISODate[]; // those of application_dates from which only some provisions apply
   application_detail?: { date: ISODate; partial: boolean; provisions?: string | null }[]; // checked against the act's text
@@ -193,6 +205,7 @@ export interface ApplicationInfo {
   transposition_deadlines: ISODate[]; // directives only: deadlines to transpose (general and further), not application dates
   transposition?: TranspositionDateInfo[]; // directives only: every recorded date, classified
   future: boolean; // true if any of the above lies in the future
+  after_end_of_validity?: ISODate[]; // dates above that EUR-Lex records for after the end of the act's validity
 }
 
 /** A directive's transposition date as classified from EUR-Lex's own annotations. */
@@ -239,6 +252,7 @@ export interface TimelineEvent {
   docs: DocRef[];
   source?: SourceRef | null;
   vote_id?: string | null; // EP vote linked to this event, if any
+  after_end_of_validity?: ISODate | null; // an act's date recorded for after its validity ended (that end date)
 }
 
 export interface LegalActSummary {

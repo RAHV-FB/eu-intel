@@ -719,7 +719,9 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
 
     for a in doc.xpath('//*[@id="section9"]//a[@href]'):
         m = CELEX_IN_URL.search(a.get("href", ""))
-        if m and not CORRIGENDUM_CELEX.search(m[1]):
+        # OEIL also lists "Corrigendum to final act <CELEX>" entries, some of them other acts altogether (for
+        # 2021/0426(COD): Commission Implementing Regulation 32025R1328); they are not the procedure's final act
+        if m and not CORRIGENDUM_CELEX.search(m[1]) and not _text(a).lower().startswith("corrigendum"):
             celex = m[1].upper()
             if not any(f.id == celex for f in info.final_acts):
                 info.final_acts.append(

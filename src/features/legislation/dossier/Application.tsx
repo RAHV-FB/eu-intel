@@ -134,6 +134,9 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
   const general: ISODate | null = impl?.deadline ?? tr.find((x) => x.kind === 'deadline')?.date ?? null;
   const further = tr.filter((x) => x.kind === 'further_deadline');
   const applies = tr.filter((x) => x.kind === 'application');
+  // dates EUR-Lex records for after the act's validity ended (e.g. a deadline after a repeal)
+  const ended = new Set(d.application?.after_end_of_validity ?? []);
+  const endedNote = (x: ISODate) => ended.has(x) && <span className="meta"> (a date after the directive’s validity ended)</span>;
   const dateList = (xs: { date: ISODate; articles: string[] }[]) =>
     xs.map((x, i) => (
       <span key={x.date}>
@@ -141,6 +144,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
         <time dateTime={x.date}>{formatDate(x.date, true)}</time>
         {x.articles.length > 0 && <span className="meta"> ({x.articles.join(', ')})</span>}
         {x.date > today && <span className="dz-upcoming">upcoming</span>}
+        {endedNote(x.date)}
       </span>
     ));
 
@@ -178,6 +182,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
               <time dateTime={general}>{formatDate(general, true)}</time>
             </strong>
             {general > today && <span className="dz-upcoming">upcoming</span>}
+            {endedNote(general)}
           </p>
         )}
         {further.length > 0 && <p className="meta">Further deadline{further.length > 1 ? 's' : ''} for specific provisions: {dateList(further)}</p>}
@@ -231,19 +236,30 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
       </>
     );
   } else if (instrument === 'decision') {
-    body = (
+    const app = d.application;
+    const seeAbove = app ? (
       <>
-        <p className="dz-lede">
-          A decision is binding on those it is addressed to; it does not need national transposition
-          {d.application ? (
-            <>
-              {' '}
-              (see <a href="#summary">When it applies</a> above)
-            </>
-          ) : null}
-          .
-        </p>
+        {' '}
+        (see <a href="#summary">When it applies</a> above)
       </>
+    ) : null;
+    body = app?.entry_into_force_pending ? (
+      // e.g. an amendment of the Electoral Act: the condition (approval by every Member State) is the point
+      <p className="dz-lede">
+        {app.entry_into_force_condition ?? 'It enters into force only once a condition set in the decision is met.'} EUR-Lex
+        records no date of entry into force yet{seeAbove}.
+      </p>
+    ) : app?.effect_on_notification ? (
+      <p className="dz-lede">
+        This decision is addressed to specific recipients and is binding only on them (Article 288 TFEU). EUR-Lex gives its
+        date of effect as the date of notification to them. It does not need national transposition{seeAbove}.
+      </p>
+    ) : (
+      // Article 288 TFEU; whether this decision names addressees is not in our data
+      <p className="dz-lede">
+        A decision is binding in its entirety; one that specifies those to whom it is addressed is binding only on them
+        (Article 288 TFEU). It does not need national transposition{seeAbove}.
+      </p>
     );
   } else {
     body = (

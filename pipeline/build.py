@@ -375,7 +375,7 @@ KEY_KINDS = {
 }
 VOTE_EVENT_KINDS = {"ep_position", "plenary_vote", "rejection"}
 ACTIVE_STAGES = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
-ADOPTED_STAGES = {"adopted", "published", "in_force", "no_longer_in_force"}
+ADOPTED_STAGES = {"adopted", "published", "in_force", "takes_effect_on_notification", "no_longer_in_force"}
 
 RULE_LABELS = {
     "votes_cast": "Majority of votes cast (abstentions are not counted)",
@@ -399,6 +399,7 @@ STAGE_LABELS: dict[str, str] = {
     "adopted": "Adopted",
     "published": "Published",
     "in_force": "In force",
+    "takes_effect_on_notification": "Takes effect on notification",
     "no_longer_in_force": "No longer in force",
     "withdrawn": "Withdrawn",
     "rejected": "Rejected",
@@ -700,6 +701,21 @@ def _vote_index_entry(v: dict) -> dict:
 
 def _valid_on(start: str | None, end: str | None, d: str) -> bool:
     return (start is None or start <= d) and (end is None or d <= end)
+
+
+def mark_after_end_of_validity(timeline: list[dict], acts: list[LegalAct]) -> list[dict]:
+    """Flag an act's own timeline entries (application dates, deadlines, amendments...) dated after the end of
+    its validity, e.g. Regulation 2024/2822: validity ended 30 June 2026, provisions recorded to apply from
+    1 July 2026. Such an entry is not the file's latest development. Not done when Cellar's end of validity
+    is earlier than the act itself (a retroactive repeal), where every date of the act is later."""
+    for a in acts:
+        eov = a.end_of_validity
+        if not eov or eov < (a.date_document or a.date_publication or ""):
+            continue
+        for e in timeline:
+            if e["id"].startswith(f"act-{a.celex}-") and e["date"] > eov:
+                e["after_end_of_validity"] = eov
+    return timeline
 
 
 # Title ep_procedures gives the OEIL key event "Council position published" (see `timeline`).
@@ -1581,7 +1597,8 @@ class Builder:
         p = self.council_dated(p)
         if fn is not None:
             try:
-                return self._status_dict(_as_dict(fn(p, acts, train, date.fromisoformat(self.today))))
+                st = fn(p, acts, train, date.fromisoformat(self.today), others=self.act)  # others: to name acts
+                return self._status_dict(_as_dict(st))
             except Exception as e:  # noqa: BLE001 - never let one dossier break the build
                 log.warning("classify failed for %s: %r", p.id, e)
                 self.s.issues.append(f"status.classify failed for {p.id}: {e!r}"[:300])
@@ -1598,7 +1615,8 @@ class Builder:
             stall = {k: stall.get(k) for k in STALL_KEYS}
         ns = r.get("next_step") or {}
         return {
-            "status": {k: status.get(k) for k in ("stage", "label", "explanation", "since", "basis")},
+            "status": {k: status.get(k) for k in ("stage", "label", "explanation", "since", "basis")}
+            | ({"named_acts": r["named_acts"]} if r.get("named_acts") else {}),  # acts the explanation names
             "next_step": {"text": ns.get("text") or "Not available.", "institution": ns.get("institution"),
                           "basis": ns.get("basis") or "unknown"} if ns else
                          {"text": "Not available.", "institution": None, "basis": "unknown"},
@@ -2040,9 +2058,9 @@ class Builder:
             self.dossier_acts[pid] = acts
             votes = sorted(self.votes_of.get(pid, []), key=lambda v: (v.date, v.id), reverse=True)
             st = self.classify(p)
-            tl = self.timeline(p, acts, votes)
+            tl = mark_after_end_of_validity(self.timeline(p, acts, votes), acts)
             cur = self.curated_of.get(pid)
-            done = [e for e in tl if e["state"] == "done"]
+            done = [e for e in tl if e["state"] == "done" and not e.get("after_end_of_validity")]
             instrument = None
             for a in acts:
                 if a.act_type != "other":
@@ -2184,6 +2202,9 @@ class Builder:
         for old, new in replaced_by.items():
             replaces[new].append(old)
         for pid, det in self.dossier_detail.items():
+            for ref in det["status"].get("named_acts") or []:  # an act the status names: its file, when we have one
+                files = sorted(o for o in self.act_dossiers.get(ref["celex"], ()) if o != pid)
+                ref["dossier"] = files[0] if files else None
             related: dict[str, dict] = {}
             if pid in replaced_by:
                 new = replaced_by[pid]
@@ -2500,7 +2521,8 @@ class Builder:
     # ---------------------------------------------------------------- home
     def latest_event(self, pid: str) -> dict | None:
         """The latest recorded step, as the dossier page shows it ("Latest verified development")."""
-        done = [e for e in self.dossier_detail[pid]["timeline"] if e["state"] == "done" and e["date"] <= self.today]
+        done = [e for e in self.dossier_detail[pid]["timeline"] if e["state"] == "done" and e["date"] <= self.today
+                and not e.get("after_end_of_validity")]  # fmt: skip
         return done[-1] if done else None
 
     def build_home(self) -> None:
@@ -2610,6 +2632,7 @@ class Builder:
                     and e["kind"] in ("application", "transposition_deadline", "transposition_application",
                                       "entry_into_force")
                     and today < e["date"] <= horizon
+                    and not e.get("after_end_of_validity")
                 ):
                     upcoming.append({"dossier_id": pid, "title": summ[pid]["title"], "subtitle": e["title"],
                                      "date": e["date"], "badge": "Deadline" if e["kind"] == "transposition_deadline"

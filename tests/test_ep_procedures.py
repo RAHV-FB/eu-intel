@@ -132,6 +132,12 @@ def test_parse_oeil_skips_corrigenda_in_final_act():
     assert [f.id for f in oeil_info("2012-0011").final_acts] == ["32016R0679"]
 
 
+def test_parse_oeil_corrigendum_entries_are_not_final_acts():
+    # EPBD 2021/0426(COD): OEIL lists "Corrigendum to final act 32025R1328", which is Commission Implementing
+    # Regulation (EU) 2025/1328 implementing the directive, not a final act of the procedure
+    assert [f.id for f in oeil_info("2021-0426").final_acts] == ["32024L1275"]
+
+
 # ---------------------------------------------------------------- building records
 def test_build_ai_act():
     p = build("2021-0106")

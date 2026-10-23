@@ -33,6 +33,12 @@ function EventItem({ e, today }: { e: TimelineEvent; today: ISODate }) {
           {INSTITUTION_SHORT[e.institution] ?? institutionLabel(e.institution)}
         </p>
         {e.detail && <p className="tl__detail">{e.detail}</p>}
+        {e.after_end_of_validity && (
+          <p className="tl__detail">
+            A date after the act’s validity ended ({formatDate(e.after_end_of_validity)}); EUR-Lex still records it for
+            the act.
+          </p>
+        )}
         {(docs.length > 0 || e.vote_id || e.source) && (
           <div className="tl__links">
             {e.vote_id && (

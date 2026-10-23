@@ -56,9 +56,9 @@
  "eurlex": {
   "attempted_at": "2026-10-23T02:28:47Z",
   "fetched_at": "2026-10-23T02:28:49Z",
-  "note": "1248 acts in scope (COD/CNS/APP procedures, date >= 2014-01-01); 24 featured; 22 more recorded by OEIL as final acts of procedures in the EP snapshot; 1249 with procedure reference; 272 withdrawal/replacement notices on procedures",
+  "note": "1248 acts in scope (COD/CNS/APP procedures, date >= 2014-01-01); 24 featured; 22 more recorded by OEIL as final acts of procedures in the EP snapshot; 1249 with procedure reference; 272 withdrawal/replacement notices on procedures. Targeted update 2026-10-23: end-of-validity comments re-read for all acts (validity query) and the date type of the 1001-01-01 entry-into-force value for the 5 acts that have one (props, eif_types queries); 32025R1328 (Commission Implementing Regulation listed by OEIL as a corrigendum, not a final act) removed",
   "records": {
-   "acts": 1270
+   "acts": 1269
   },
   "source": "eurlex",
   "status": "ok"

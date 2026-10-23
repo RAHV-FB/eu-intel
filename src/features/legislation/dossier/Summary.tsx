@@ -1,16 +1,43 @@
-import type { ApplicationInfo, DossierDetail, ISODate, TimelineEvent, TranspositionDateInfo } from '../../../types/data';
+import type { ApplicationInfo, DossierDetail, ISODate, NamedAct, TimelineEvent, TranspositionDateInfo } from '../../../types/data';
 import { Link } from 'react-router-dom';
 import { BasisNote, ExtLink, SourceLink, StatusBadge, Term, institutionLabel } from '../../../components/ui';
 import { formatDate } from '../../../lib/format';
 import { ADOPTED_STAGES, dossierPath, institutionSuffix } from '../labels';
 
-/** Most recent recorded (done) event on or before today. */
+/** Most recent recorded (done) event on or before today; not a date an act records for after its validity ended. */
 export function latestDone(timeline: TimelineEvent[], today: ISODate): TimelineEvent | null {
   for (let i = timeline.length - 1; i >= 0; i--) {
     const e = timeline[i];
-    if (e.state === 'done' && e.date <= today) return e;
+    if (e.state === 'done' && e.date <= today && !e.after_end_of_validity) return e;
   }
   return null;
+}
+
+/** A status explanation with the acts it names (e.g. the repealing act) linked: to their file here, else EUR-Lex. */
+export function ExplanationText({ text, acts }: { text: string; acts?: NamedAct[] | null }) {
+  const named = [...(acts ?? [])].filter((a) => a.label).sort((a, b) => b.label.length - a.label.length);
+  if (!named.length) return <>{text}</>;
+  const escape = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${named.map((a) => escape(a.label)).join('|')})`));
+  const linked = new Set<string>();
+  return (
+    <>
+      {parts.map((part, i) => {
+        const a = named.find((x) => x.label === part);
+        if (!a || linked.has(a.label)) return part;
+        linked.add(a.label);
+        return a.dossier ? (
+          <Link key={i} to={dossierPath(a.dossier)}>
+            {part}
+          </Link>
+        ) : (
+          <ExtLink key={i} href={a.url}>
+            {part}
+          </ExtLink>
+        );
+      })}
+    </>
+  );
 }
 
 function DateWhen({ date, today }: { date: ISODate; today: ISODate }) {
@@ -49,7 +76,13 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
     rows.push({
       label: <Term id="entry-into-force">Entry into force</Term>,
       items: [],
-      text: 'Not yet: EUR-Lex records no date. The act takes effect once a condition it sets is met.',
+      text: `Not yet: EUR-Lex records no date. ${app.entry_into_force_condition ?? 'The act enters into force once a condition it sets is met.'}`,
+    });
+  else if (app.effect_on_notification)
+    rows.push({
+      label: 'Takes effect',
+      items: [],
+      text: 'On notification to those to whom the decision is addressed, according to EUR-Lex, which does not record the date of notification.',
     });
   if (app.application_detail?.length) {
     const general = app.application_detail.filter((x) => !x.partial);
@@ -82,6 +115,7 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
   if (applies.length)
     rows.push({ label: `Application date${applies.length > 1 ? 's' : ''} for national measures`, items: withArticles(applies) });
   if (!rows.length) return <p className="meta">No application dates are recorded for this act in EUR-Lex.</p>;
+  const ended = new Set(app.after_end_of_validity ?? []);
   return (
     <>
     <dl className="dz-dates">
@@ -96,6 +130,9 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
                   <li key={it.date}>
                     <DateWhen date={it.date} today={today} />
                     {it.note && <span className="meta dz-dates__prov">{it.note}</span>}
+                    {ended.has(it.date) && (
+                      <span className="meta dz-dates__prov">A date after the act’s validity ended</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -230,7 +267,7 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
           <dd>
             <StatusBadge stage={d.status.stage} label={d.status.label} blocked={d.officially_blocked} />
             <p className="dz-fact__text">
-              {d.status.explanation} <BasisNote basis={d.status.basis} />
+              <ExplanationText text={d.status.explanation} acts={d.status.named_acts} /> <BasisNote basis={d.status.basis} />
             </p>
             {d.status.since && <p className="meta">Since {formatDate(d.status.since)}</p>}
             {adopted && amendedBy.length > 0 && (

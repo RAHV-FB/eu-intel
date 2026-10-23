@@ -19,6 +19,7 @@ from pipeline.build import (
     ep_term_label,
     group_slug,
     instrument_from_title,
+    mark_after_end_of_validity,
     short_names,
 )
 
@@ -491,6 +492,8 @@ def test_output_matches_data_ts_contract(out: Path):
         det = load(out, f"dossiers/{d['id']}.json")
         _check(det, "DossierDetail", ifs, f"dossiers/{d['id']}.json")
         _check(det["status"], "DossierStatus", ifs, "status")
+        for r in det["status"].get("named_acts") or []:
+            _check(r, "NamedAct", ifs, "status.named_acts")
         _check(det["next_step"], "NextStep", ifs, "next_step")
         if det["stall"]:
             _check(det["stall"], "Stall", ifs, "stall")
@@ -1090,3 +1093,25 @@ def test_vote_outputs_match_the_contract(votes_out: Path):
             _check(det["margin"], "VoteMargin", ifs, "vote.margin")
         for x in det["intentions"]:
             _check(x, "VoteIntention", ifs, "vote.intentions")
+
+
+def test_dates_after_the_end_of_validity_are_marked():
+    # real EUR-Lex records (tests/fixtures/eurlex/validity_acts.json)
+    from pipeline.models.entities import LegalAct
+
+    acts = {
+        a["celex"]: LegalAct.model_validate(a)
+        for a in json.loads((FIX.parent / "eurlex" / "validity_acts.json").read_text(encoding="utf-8"))
+    }
+    designs = acts["32024R2822"]  # validity ended 2026-06-30; EUR-Lex: some provisions apply from 2026-07-01
+    tl = [
+        {"id": "act-32024R2822-entry_into_force-2024-12-08", "date": "2024-12-08"},
+        {"id": "act-32024R2822-application-2026-07-01", "date": "2026-07-01"},
+        {"id": "ev-2026-07-02", "date": "2026-07-02"},  # not the act's own entry
+    ]
+    mark_after_end_of_validity(tl, [designs])
+    assert [e.get("after_end_of_validity") for e in tl] == [None, "2026-06-30", None]
+    # Council Regulation 1377/2014 (18 December 2014): end of validity 2013-12-31, before the act itself
+    own = acts["32014R1377"]
+    tl = [{"id": "act-32014R1377-entry_into_force-2014-12-24", "date": "2014-12-24"}]
+    assert "after_end_of_validity" not in mark_after_end_of_validity(tl, [own])[0]
