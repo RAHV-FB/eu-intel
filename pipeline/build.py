@@ -2078,18 +2078,108 @@ def _com_variants(ref: str) -> list[str]:
 
 ALIAS_RULE_MAX_DOCS = 60
 
+# "Regulation (EU) 2024/1689 of ...", "Regulation (EU) No 1316/2013 ...", "Directive 2014/24/EU ...",
+# "Council Implementing Decision (EU) 2024/123 ...", "2014/335/EU, Euratom: Council Decision of ..."
+_ACT_NUMBER = re.compile(
+    r"^(?:(?:Commission\s+|Council\s+)?(?:Implementing\s+|Delegated\s+)?(?:Regulation|Directive|Decision)\s*"
+    r"(?:\((?:EU|EC|EEC|Euratom)(?:,\s*Euratom)?\)\s+)?(?:No\s+)?(\d{1,4}/\d{1,4})\b"
+    r"|(\d{4}/\d{1,4})/(?:EU|EC|EEC|Euratom)\b)"
+)
+_ACT_TITLE_TAIL = re.compile(r"\s*\((?:Text with EEA relevance|recast|codification)\)\s*$", re.IGNORECASE)
+_ACT_OWN_SHORT = re.compile(
+    r"\(['‘’\"“]?([A-Z][^()]{2,70}?(?:Act|Regulation|Directive|Code|Mechanism|Instrument|Fund|Programme|Law))"
+    r"['‘’\"”]?\)$"
+)
+_ACT_SUBJECT = re.compile(r"\bof\s+\d{1,2}\s+[A-Z][a-z]+\s+\d{4}\s+(.*)$", re.DOTALL)
+TRAIN_NAME_MAX = 60
+
+
+def act_number(celex: str, title: str = "") -> str | None:
+    """The act's number as the Official Journal cites it: '2024/1689' for Regulation (EU) 2024/1689,
+    '1316/2013' for Regulation (EU) No 1316/2013, '2014/24' for Directive 2014/24/EU.
+
+    Read from the start of the act's own title; for acts from 2015 on (one numbering for all acts,
+    'YYYY/N') it can also be derived from a sector-3 CELEX number ('32024R1689').
+    """
+    m = _ACT_NUMBER.match(title or "")
+    if m:
+        return m.group(1) or m.group(2)
+    m = re.fullmatch(r"3(\d{4})[RLD]0*(\d+)", celex or "")
+    if m and int(m.group(1)) >= 2015:
+        return f"{m.group(1)}/{m.group(2)}"
+    return None
+
+
+def act_short_name(title: str) -> str | None:
+    """The act's own short title, which the Official Journal title gives in parentheses at its end:
+    '... and Directive (EU) 2020/1828 (Cyber Resilience Act) (Text with EEA relevance)'.
+
+    An act whose subject is amending or repealing another act ('of 20 June 2019 amending Regulation
+    (EC) No 810/2009 establishing a Community Code on Visas (Visa Code)') ends with the short title
+    of that other act, so none is returned for it.
+    """
+    t = (title or "").strip()
+    while (s := _ACT_TITLE_TAIL.sub("", t)) != t:
+        t = s
+    m = _ACT_OWN_SHORT.search(t)
+    if not m:
+        return None
+    subject = _ACT_SUBJECT.search(t[: m.start()])
+    if subject and re.match(r"(?:amending|repealing|correcting|supplementing)\b", subject.group(1)):
+        return None
+    return m.group(1).strip()
+
+
+def train_names(files: list[TrainFile]) -> list[str]:
+    """Short names the EP Legislative Train gives a file ('New Batteries Regulation'); long titles that
+    restate the proposal ('Proposal for a Regulation on ...') are not names."""
+    out = []
+    for f in files:
+        t = re.sub(r"\s+", " ", f.title or "").strip()
+        if t and len(t) <= TRAIN_NAME_MAX and not t.lower().startswith("proposal"):
+            out.append(t)
+    return out
+
+
+def curated_file_names(b: Builder) -> dict[str, list[str]]:
+    """aliases.yaml entries {procedure, names}: verified common names of one legislative file
+    ("Right to repair"), by procedure id. Each entry cites its source in a YAML comment."""
+    out: dict[str, list[str]] = defaultdict(list)
+    for e in b.alias_rules:
+        ref = str(e.get("procedure") or "").strip()
+        if not ref:
+            continue
+        p = b.resolve_ref(ref)
+        if p is None:
+            log.info("aliases.yaml: %s not in snapshot", ref)
+            continue
+        out[p.id] += _as_list(e.get("names"))
+    return out
+
+
+def ep_term_label(terms: set[int]) -> str:
+    """{9} -> '2019–2024 term', {9, 10} -> '2019–2024 and 2024–2029 terms' (EP terms run five years from 1979)."""
+    spans = [f"{1979 + 5 * (t - 1)}–{1984 + 5 * (t - 1)}" for t in sorted(terms)]
+    return f"{' and '.join(spans)} term{'s' if len(spans) > 1 else ''}"
+
 
 def build_search_docs(b: Builder) -> list[dict]:
     """SearchDoc[] for src/lib/search.ts. Field `a` holds alternative names separated by ' | '."""
     docs: list[dict] = []
+    named = curated_file_names(b)
     for pid in sorted(b.dossier_summary):
         d = b.dossier_summary[pid]
         p = b.proc[pid]
         cur = b.curated_of.get(pid) or {}
-        alts = _as_list(cur.get("aliases")) + short_names(p.title)
+        acts = b.acts_of.get(pid, [])
+        alts = _as_list(cur.get("aliases")) + named.get(pid, []) + short_names(p.title)
+        alts += [n for a in acts if (n := act_short_name(a.title))]
+        alts += train_names(b.train_of.get(pid, []))
         if cur.get("short_title"):
             alts.append(clean_title(p.title))
         ids = [p.reference, ref_number(p.reference) or "", *d["celex"]]
+        title_of = {a.celex: a.title for a in acts}
+        ids += [n for c in d["celex"] if (n := act_number(c, title_of.get(c, "")))]
         for c in p.com_refs:
             ids += _com_variants(c)
         doc = {
@@ -2135,11 +2225,26 @@ def build_search_docs(b: Builder) -> list[dict]:
         sub = f"Political group · {g['members']} MEPs" if g["active"] else "Former political group"
         docs.append({"id": g["id"], "k": "group", "t": g["name"], "s": sub, "a": _join_alts(alts, g["name"]),
                      "u": f"/people/groups/{g['id']}", "w": 4.0 if g["active"] else 1.5})  # fmt: skip
+    # EP open data has one record per party per parliamentary term, often with the same name: such
+    # records say which term they cover, and earlier-term records rank below the latest one.
+    party_terms: dict[str, set[int]] = defaultdict(set)
+    for m in b.s.meps:
+        for x in m.memberships:
+            if x.kind == "party" and x.term:
+                party_terms[x.org_id].add(x.term)
+    same_party: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for pid, pt in b.party_summary.items():
+        same_party[(_norm_key(pt["label"]), pt["country"])].append(pid)
     for pid in sorted(b.party_summary):
         pt = b.party_summary[pid]
-        doc = {"id": pid, "k": "party", "t": pt["label"],
-               "s": f"National party · {MEMBER_STATES.get(pt['country'], pt['country'] or 'unknown country')}",
-               "u": f"/people/parties/{pid}", "w": 1.3 if pt["members_active"] else 0.8}  # fmt: skip
+        sub = f"National party · {MEMBER_STATES.get(pt['country'], pt['country'] or 'unknown country')}"
+        w = 1.3 if pt["members_active"] else 0.8
+        twins = same_party[(_norm_key(pt["label"]), pt["country"])]
+        if len(twins) > 1 and party_terms.get(pid):
+            sub += f" · {ep_term_label(party_terms[pid])}"
+            if max(party_terms[pid]) < max(max(party_terms.get(t) or {0}) for t in twins):
+                w = 0.5
+        doc = {"id": pid, "k": "party", "t": pt["label"], "s": sub, "u": f"/people/parties/{pid}", "w": w}
         if pt.get("code") and _norm_key(pt["code"]) != _norm_key(pt["label"]):
             doc["a"] = pt["code"]
         docs.append(doc)
