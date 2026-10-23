@@ -82,7 +82,7 @@ REGISTER_NOTE = "Council of the EU – Voting result {num}"
 RENDER_DPI = 100
 MAX_WORKERS = 4
 # Bump when parsing changes: every note is then re-processed on the next fetch.
-PARSER_VERSION = "2026-10-23.1"
+PARSER_VERSION = "2026-10-23.2"
 
 # Protocol order of the GSC voting sheet (Member States by their name in their own language).
 LEFT_COLUMN = ["BE", "BG", "CZ", "DK", "DE", "EE", "IE", "GR", "ES", "FR", "HR", "IT", "CY", "LV"]
@@ -584,7 +584,9 @@ def parse_note(page1: str) -> NoteMeta:
             ref_block.append(ln)
         rb = " ".join(ref_block)
         pc = re.search(r"PE-CONS\s+(\d+)/(\d{2})", rb)
-        st = re.search(r"\b(\d{3,5})/(?:\d+/)?(\d{2})\b", rb.split(":", 1)[-1])
+        # a Council document number has four or five digits (9890/20); a bare shorter number is of another series
+        # ("102/24" in ST 6219/25, whose file OEIL lists with the draft final act 00102/2024/LEX) and is not one
+        st = re.search(r"\b(\d{4,5})/(?:\d+/)?(\d{2})\b", rb.split(":", 1)[-1])
         if pc:
             meta.council_doc = f"PE-CONS {pc.group(1)}/{pc.group(2)}"
         elif st:
@@ -685,16 +687,29 @@ STATEMENTS_HEADING_RE = re.compile(
     r"(?:Draft\s+)?(?:Joint\s+)?(?:Statements?|Declarations?|Explanations?\s+of\s+votes?)", re.I
 )
 # The first line of a statement's heading: "Statement by …", "Joint declaration …", "Explanation of vote by …",
-# "Explanation by Hungary of its vote", "Draft Joint Statement by the Council, …" (ST 14020/20)
+# "Explanation by Hungary of its vote", "Draft Joint Statement by the Council, …" (ST 14020/20), "Joint political
+# statement on …" (ST 7097/21), "Commission declaration on …" (ST 5878/21), "Additional declaration by …" (ST 6149/21)
 STATEMENT_HEAD_RE = re.compile(
-    r"^(?:Draft\s+)?(?:Joint\s+)?(?:Statements?|Declarations?|Explanations?\s+of\s+votes?|Explanations?\s+by)\b",
+    r"^(?:Draft\s+)?(?:(?:Joint|Additional|Commission|Political)\s+){0,2}"
+    r"(?:Statements?|Declarations?|Explanations?\s+of\s+votes?|Explanations?\s+by)\b",
+    re.I,
+)
+# A heading at the margin names its author ("Statement of the European Commission on …"), unlike the subheading
+# "Statement in relation to Recital 6" under "Statement by the Commission" (ST 14341/20)
+MARGIN_HEAD_RE = re.compile(
+    r"^(?:Draft\s+)?(?:(?:Joint|Additional|Commission|Political)\s+){0,2}"
+    r"(?:Statements?|Declarations?|Explanations?(?:\s+of\s+votes?)?)\s+(?:by|of|from)\s",
     re.I,
 )
 
 
 def parse_statements(pages: list[str]) -> list[str]:
     """Titles of statements / declarations / explanations of vote printed in the note's annexes, in order. A title
-    printed again for another text ("Statement by the Commission" twice, ST 14020/20) is numbered: "… (2)"."""
+    printed again for another text ("Statement by the Commission" twice, ST 14020/20) is numbered: "… (2)".
+    A heading is indented (centred, its further lines indented too: ST 6149/21), or at the margin when it starts
+    the page or follows a blank line, names its author and is set off by a blank line within four lines
+    (ST 8502/21: "Statement by the European Commission on the modulation/suspension …"; ST 7232/20 REV 1:
+    "Statement by Bulgaria, Cyprus, …", indented by two)."""
     out: list[str] = []
     seen: dict[str, int] = {}
     head = STATEMENT_HEAD_RE
@@ -702,11 +717,18 @@ def parse_statements(pages: list[str]) -> list[str]:
         lines = page.splitlines()
         i = 0
         while i < len(lines):
-            ln = lines[i]
-            if _indent(ln) >= 3 and head.match(ln.strip()) and len(ln.strip()) < 200:
-                title = [ln.strip()]
+            ln = lines[i].strip()
+            indented = _indent(lines[i]) >= 3
+            # the heading's lines end at a blank line (or the end of the page) within four lines
+            set_off = any(k == len(lines) or not lines[k].strip() for k in range(i + 1, min(i + 5, len(lines) + 1)))
+            margin = not indented and not (i and lines[i - 1].strip()) and set_off and bool(MARGIN_HEAD_RE.match(ln))
+            if (margin or (indented and head.match(ln))) and len(ln) < 200:
+                title = [ln]
                 j = i + 1
-                while j < len(lines) and lines[j].strip() and _indent(lines[j]) >= 3 and len(title) < 4:
+                while (
+                    j < len(lines) and lines[j].strip() and len(title) < 4
+                    and (_indent(lines[j]) >= 3 or (set_off and (margin or _indent(lines[j]) >= 1)))
+                ):  # fmt: skip
                     if head.match(lines[j].strip()):
                         break
                     title.append(lines[j].strip())
