@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { CoverageScope, DossierDetail, Meta, TimelineEvent } from '../../../types/data';
 import { latestDone } from './Summary';
 import { noCouncilVoteNote } from './Votes';
+import { currentStepKey } from './WhereIsIt';
 
 const DATA = new URL('../../../../public/data/', import.meta.url);
 const built = existsSync(new URL('dossiers/index.json', DATA));
@@ -105,6 +106,19 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     for (const d of none) {
       const step = [...d.timeline].reverse().find((e) => e.state === 'done' && (e.kind === 'council_adoption' || e.kind === 'council_position'));
       if (step || d.adopted) expect(noCouncilVoteNote(d.timeline, d.adopted, scope), d.id).not.toContain('under discussion');
+    }
+  });
+
+  it('never shows a recorded provisional agreement as not yet reached on the path (2023-0210, 2023-0134)', () => {
+    const at = (id: string) => currentStepKey(all.find((d) => d.id === id)!);
+    expect(at('2023-0210')).toBe('adopted'); // early second-reading agreement approved in committee on 5 May 2026
+    expect(at('2023-0134')).toBe('adopted'); // "Approved by Parliament" on the text agreed with the Council
+    expect(at('2018-0332')).toBe('deciding'); // negotiations after the first reading, no agreement recorded
+    const order = ['proposed', 'deciding', 'agreement', 'adopted', 'in_force'];
+    for (const d of all.filter((x) => x.type === 'COD')) {
+      const agreed = d.timeline.some((e) => e.state === 'done' && e.kind === 'provisional_agreement');
+      const key = currentStepKey(d);
+      if (agreed && key) expect(order.indexOf(key), d.id).toBeGreaterThanOrEqual(order.indexOf('agreement'));
     }
   });
 

@@ -406,13 +406,18 @@ OEIL_EVENT_MAP: dict[str, tuple[EventKind, Institution, str]] = {
         "Parliament committee approved the provisional agreement with the Council",
     ),
     "Debate in Parliament": (EventKind.plenary_debate, "EP", "Debate in Parliament"),
+    # Negotiations before the Council's first-reading position, not part of a second reading (Article 294(7) TFEU:
+    # it starts on that position): 2023/0226(COD), 8 Apr 2025, the Council's position on 21 Apr 2026
     "Committee decision to open interinstitutional negotiations after 1st reading in Parliament": (
         EventKind.negotiation_mandate,
         "EP",
-        "Parliament committee decided to open second-reading negotiations with the Council",
+        "Parliament committee decided to open negotiations with the Council after Parliament's first reading",
     ),
 }
 
+# The initiative of Member States, which OEIL names at the end of the procedure file's title (2010/0817(COD): "European
+# Investigation Order in criminal matters. Initiative Belgium, Bulgaria, Estonia, Spain, Austria, Slovenia and Sweden")
+OEIL_INITIATIVE_RE = re.compile(r"(?<=\. )Initiative [A-Z][^.]*$")
 # Initiators that OEIL's documentation gateway names for a legislative proposal ("Institution/body" column):
 # the Court of Justice's request under Article 281 TFEU (2022/0906(COD): "CJEC | Legislative proposal | 07307/2022")
 OEIL_PROPOSAL_BODIES: dict[str, tuple[Institution, str]] = {
@@ -1006,10 +1011,13 @@ def build_events(
                         url=url if url and url.startswith("http") else None,
                     )
                 )
+            detail = None
             if kind == EventKind.proposal:  # a proposal OEIL lists under another institution than the Commission
                 refs = {t for t, _ in oe.refs}
                 body = next((b for b, dtype, r in oeil.other_docs if r in refs and "proposal" in dtype.lower()), None)
                 inst, title = OEIL_PROPOSAL_BODIES.get(body or "", (inst, title))
+                if refs and not any(COM_RE.search(t) for t in refs) and (ini := OEIL_INITIATIVE_RE.search(oeil.title or "")):
+                    detail = ini.group(0)  # the Member States' initiative, as OEIL's title names it
             slug = re.sub(r"[^a-z0-9]+", "-", oe.label.lower()).strip("-")[:40]
             base = f"OEIL-{pid}-{oe.date}-{slug}"
             n = counter.get(base, 0)
@@ -1022,6 +1030,7 @@ def build_events(
                     raw_type=f"oeil:{oe.label}",
                     institution=inst,
                     title=title,
+                    detail=detail,
                     docs=_dedupe_docs(docs),
                     source=_src(
                         "OEIL",

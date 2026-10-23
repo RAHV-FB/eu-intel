@@ -46,8 +46,20 @@ function lastKeyDone(timeline: TimelineEvent[], today: ISODate): TimelineEvent |
 }
 
 /** "Where is it?" — for files still being decided. */
+/**
+ * The current step of the path: the one of the file's stage, except that a recorded provisional agreement is reached
+ * even while the stage is still one of positions: Parliament's first-reading position on the agreed text ("Approved
+ * by Parliament"), or an agreement after it (early second reading, 2023/0210(COD)). The formal steps that follow are
+ * then the current step, so the agreement is never "Not yet".
+ */
+export function currentStepKey(d: Pick<DossierDetail, 'stage' | 'timeline'>): string | undefined {
+  const step = OLP_STEPS.find((s) => s.stages.includes(d.stage));
+  return step?.key === 'deciding' && firstOf(d.timeline, ['provisional_agreement']) ? 'adopted' : step?.key;
+}
+
 export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
-  const currentIdx = OLP_STEPS.findIndex((s) => s.stages.includes(d.stage));
+  const current = currentStepKey(d);
+  const currentIdx = OLP_STEPS.findIndex((s) => s.key === current);
   const showPath = d.type === 'COD' && currentIdx >= 0;
   const milestone = lastKeyDone(d.timeline, today);
   const stall = d.stall;

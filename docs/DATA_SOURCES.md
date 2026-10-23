@@ -408,9 +408,19 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   Parliament and Council" (actor `EP and Council`), on the act's signature date (else the date in its title),
   in place of the EP's or OEIL's "Final act signed", which can be a week off (2017/0329(COD): 11 April 2018,
   before the Council adopted the act; Directive (EU) 2018/597 of 18 April 2018). Without such an act in our data
-  the EP's record is shown as it is ("Final act signed", actor `EP`, on the EP's date), since that date is not
-  established as the date both Presidents signed (9 files on 23 October 2026, e.g. 2016/0397(COD)). A Council
-  act is signed on the day of its adoption, which the Council's own step records.
+  the EP's record keeps its title and date ("Final act signed", on the EP's date), since that date is not
+  established as the date both Presidents signed; in an ordinary procedure its actor is `EP and Council` and its
+  detail says that both Presidents sign (Art. 297(1) TFEU) and that the date is the EP's (9 files on 23 October
+  2026, e.g. 2016/0397(COD), 2025/0106(COD)). A Council act is signed on the day of its adoption, which the
+  Council's own step records.
+- Timeline: the Official Journal dates an act's publication. The EP's (or OEIL's) "Final act published in the
+  Official Journal" on a day that is not the publication date of one of the file's acts is not shown as a
+  publication: the act's own step ("Published in the Official Journal of the EU", with its OJ reference) is shown
+  instead, and for a file with one act its detail gives the EP's date (6 files on 23 October 2026: 2018/0069(COD),
+  EP 25 July 2019, Regulation (EU) 2019/982 in OJ L 164 of 20.6.2019; 2016/0074(COD), EP 20 June 2019,
+  Regulation (EU) 2019/1241 in OJ L 198 of 25.7.2019; 2017/0219(COD), EP 23 May 2018, Regulation (EU, Euratom)
+  2018/673 in OJ L 114I of 4.5.2018; 2021/0097, 2022/0047, 2025/0526(COD)).
+  An EP record on the act's publication day stays as it is.
 - Related files: an amending, amended, repealing or repealed act is named by its number (from its official
   title, e.g. "Directive (EU) 2025/794"; for an act outside the snapshot from its CELEX id, 2015 onwards and
   directives from 1999, e.g. "Regulation 2026/2102"), followed by its file's short title when it has one; an
@@ -440,11 +450,26 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 ### Procedure steps as shown (`build.py` `procedure_event`, `proposal_date`, `adoption_dates`)
 - Who acted is read from the documents: OEIL lists a consent file's Commission proposal as a "Preparatory document"
   (shown as "Commission published its proposal", a proposal step); a text cited as T9-0129/2022 is Parliament's
-  adopted text; a numbered Council document (09941/2017) is the Council's text submitted to Parliament, except in
-  an ordinary procedure, which the Council does not initiate: there it is the initiative of Member States or the
-  recommendation of the ECB (Art. 294(15) TFEU), which our record does not name, so the step is shown as
-  "Legislative proposal published (as recorded by the Legislative Observatory)" (2010/0817(COD), 09288/2010, OEIL
-  "Initiative Belgium, Bulgaria, …"; 2013/0812(COD); 2017/0810(COD)). In a non-legislative file (NLE) the Council's
+  adopted text. A consent file without a COM document that opens with such a text opens with Parliament's own
+  proposal ("Parliament adopted its proposal for the act", a proposal step that dates the file): Article 223(1)
+  TFEU, the Council acting "upon a proposal drawn up by the European Parliament" (2022/0902(APP), T9-0129/2022 of
+  3 May 2022, "Adopts the annexed proposal and submits it to the Council"; 2025/0900(APP), T10-0257/2025 of 13
+  November 2025, "Proposed" 13 November 2025, not the Council's later draft 06708/2026). OEIL's "Legislative
+  proposal published" of that day under a Council number (00129/2022) is not a Council text submitted to
+  Parliament (the Council received Parliament's proposal on 19 May 2022, ST 9333/22): it is shown as "Recorded by
+  the Legislative Observatory: …", not as a key step. While no Council draft follows, the status is "Parliament
+  adopted its proposal", the next step the Council's. A numbered Council document (09941/2017) is the Council's
+  text submitted to Parliament; in a consultation file without a COM document it is shown as "Text submitted to
+  Parliament by the Council", since the Council consults Parliament on a text it need not have drafted
+  (2025/0806(CNS), 09737/2025: ST 9737/25, cover note of the President of the ECB on Recommendation ECB/2025/17; the
+  EIB's requests under Art. 308 TFEU). An ordinary procedure the Council does not initiate: there the Council
+  document is the initiative of Member States or the recommendation of the ECB (Art. 294(15) TFEU), shown as
+  "Legislative proposal published (as recorded by the Legislative Observatory)" (2017/0810(COD)), or, where OEIL's
+  file title names the
+  initiative ("Initiative Belgium, Bulgaria, …", which `ep_procedures` keeps as the step's detail), as "Member
+  States' initiative published (as recorded by the Legislative Observatory)" with OEIL's words (2010/0817(COD),
+  09288/2010, Directive 2014/41/EU "Having regard to the initiative of the Kingdom of Belgium, …"; 2013/0812(COD)).
+  In a non-legislative file (NLE) the Council's
   text is its request for Parliament's consent or opinion, not the proposal it acts on: it is not a proposal step
   and does not date the proposal (2008/0027(NLE), 13395/2014; Council Decision (EU) 2016/1218 "Having regard to the
   proposal from the European Commission", which OEIL does not list, so the file's "Proposed" date is not recorded).
@@ -513,7 +538,29 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   file stays at the proposal stage. A
   first-reading vote followed by a referral back to committee in the same vote item (a "mandate" vote) is
   shown as "Parliament voted amendments to the proposal" and a mandate, also when the EP API already records
-  a first-reading position and OEIL has not recorded the referral (2025/0393(COD)).
+  a first-reading position and OEIL has not recorded the referral (2025/0393(COD)). That step links the vote; the
+  mandate step built from the vote links it only when no other key step does (2026/0325(COD), vote 199592).
+  Parliament's referral of a file back to the committee responsible for reconsideration
+  (`PLENARY_REFER_COMMITTEE_RECONSIDERATION`, OEIL "Matter referred back to the committee responsible for
+  reconsideration", Rule 198 of the Rules of Procedure) is a key step, and a decision to negotiate taken before
+  it, or announced the same day, gives no mandate: until a new committee report or decision to negotiate, the file
+  is "Referred back to committee"
+  (2022/0135(COD), 12 December 2022: minutes PV-9-2022-12-12, item 5, the referral back "under Rule 198 of the
+  report … (A9-0288/2022)", "The House agreed to the proposal").
+- Negotiations after Parliament's first reading, before the Council's first-reading position, aim at an agreement
+  that the Council adopts as its position for Parliament to approve at second reading (Art. 294(5) and (7)(a)
+  TFEU). OEIL's "Committee decision to open interinstitutional negotiations after 1st reading in Parliament" is
+  "Parliament committee decided to open negotiations with the Council after Parliament's first reading" (not a
+  second reading, which starts on the Council's position: 2023/0226(COD), 8 April 2025, Council position 21 April
+  2026); "… at 2nd reading" keeps "second-reading negotiations". Re-derived offline on 23 October 2026 from the
+  cached EP API and OEIL answers: 134 steps of 133 records changed title, the two Member States' initiatives gained
+  their detail, and every other record came out unchanged. The status of such a file, still at Parliament's
+  position (OEIL "Awaiting Council's 1st reading position"), is "Early second-reading agreement reached" once
+  Parliament's committee approved the agreed text (2023/0209, 2023/0210, 2023/0227(COD)), else "Negotiations with
+  the Council after Parliament's first reading" from the first recorded trilogue (2023/0085, 2023/0265(COD)) or
+  "Committee decided to negotiate with the Council after Parliament's first reading" (2018/0332(COD)), each with its
+  next step. The "Where is it now?" path shows a recorded provisional agreement as reached, with the formal adoption
+  as the current step, also in files still at a position stage ("Approved by Parliament", early second reading).
 - Plenary vote records: the EP API attaches to a procedure the vote items of each sitting (`PLENARY_VOTE`,
   `PLENARY_VOTE_RESULTS`). They are folded into that day's decision of Parliament (its position, opinion, consent,
   or, when there is none, its decision on negotiations or on a referral back). An item may cover every file voted
@@ -575,6 +622,15 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - An R/M file (Parliament's interim or accompanying report, e.g. 2020/0112R(APP)) links the main procedure in
   its status text and next step the same way; the main file lists it among its related files ("Parliament's
   interim report", "Parliament's report").
+- A file still awaiting a decision in the official records while an act whose text cites Parliament's opinion on
+  it is published (`data/curated/unlinked_acts.yaml`, `unlinked_act_status`): the act is not linked (no official
+  record links it), but the status names it and what it cites, stage `unknown`, "Final act not linked in the
+  official records", with no "no recorded update" line. 2025/0806(CNS): Council Regulation (EU) 2026/415 of 16
+  December 2025 cites "the Opinion of the European Parliament" with the footnote "Opinion of 26 November 2025", the
+  file's T10-0297/2025, and the ECB's Recommendation ECB/2025/17 (OJ C/2025/3224), the text of the file's proposal
+  step 09737/2025; Cellar records no procedure for the act and OEIL still gives "Awaiting final decision". Its
+  timeline, dates and acts are unchanged. 2021/0415(CNS) has no such entry: Council Recommendation (EU) 2022/915
+  cites no opinion of Parliament.
 
 ### Rapporteurs (`ep_procedures` participants, `build.py` `rapporteur_entries`)
 - Roles: rapporteur (EP `RAPPORTEUR`, `_CO`, `_CHAIR`), shadow (`RAPPORTEUR_SHADOW`, `_SHADOW_REPORT`),

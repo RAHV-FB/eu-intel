@@ -205,6 +205,9 @@ const PAST = [
   /information updated as of/, /partial end of its validity on/,
   /which is dated/, /as the end of (?:its|the act's) validity/, /repealed this directive with effect from/, /started to apply on/,
   /repealed by .+ \(?with effect from/, /had until \d/,
+  /adopted its (?:first-reading position|proposal for the act) on/, /delivered its opinion on/, /approved, on \d/,
+  /first recorded meeting: \d/, /Parliament referred the file back/, /to negotiate with the Council was recorded/,
+  /\(checked on \d/,
 ];
 const isoOf = (long: string) => {
   const [day, month, year] = long.split(' ');
