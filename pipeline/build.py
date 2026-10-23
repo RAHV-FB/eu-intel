@@ -406,6 +406,8 @@ PAST_TITLES = {
     "application": "Further provisions started to apply (date recorded by EUR-Lex)",
     "transposition_deadline": "Deadline for Member States to transpose the directive (passed)",
 }
+# status.py's in-force explanation for an act with later application dates; reworded for checked dates
+EURLEX_LATER_DATES = "EUR-Lex records later dates from which (parts of) the act apply."
 INDEX_OFFICIAL_TITLE_MAX = 140  # dossiers/index.json only; full titles are in dossiers/<id>.json
 INDEX_TITLE_MAX = 180
 VOTE_LABEL_TITLE_MAX = 200  # a vote titled by Parliament's raw label; the full label stays in `title`
@@ -561,6 +563,20 @@ def act_label(a: LegalAct) -> str:
     """'Regulation (EU) 2026/1744' from the act's official title, else its CELEX id."""
     m = ACT_NUMBER_RE.match(a.title or "")
     return m.group(1) if m else a.celex
+
+
+CELEX_ACT_RE = re.compile(r"^3(\d{4})([RLD])(\d{4})$")
+
+
+def celex_act_label(celex: str) -> str | None:
+    """'Regulation 2026/2102' for an act known only by its CELEX id: from 2015, when every act in the
+    Official Journal L series is numbered year/number and the CELEX id carries that number, and for
+    directives, always numbered year/number, from 1999 (four-digit years)."""
+    m = CELEX_ACT_RE.match(celex)
+    if not m or int(m.group(1)) < (1999 if m.group(2) == "L" else 2015):
+        return None
+    kind = {"R": "Regulation", "L": "Directive", "D": "Decision"}[m.group(2)]
+    return f"{kind} {m.group(1)}/{int(m.group(3))}"
 
 
 def _squash(text: Any) -> str:
@@ -898,6 +914,10 @@ def load_act_dates(curated: Path = CURATED) -> dict[str, dict]:
         if not ok or not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates):
             log.warning("curated act_dates.yaml: entry %s has a malformed date; ignored", e["celex"])
             continue
+        n_src = max(len(e.get("sources") or []), 1)  # a date's own source: an index into sources
+        if not all(type(x.get("source", 0)) is int and 0 <= x.get("source", 0) < n_src for x in app or []):
+            log.warning("curated act_dates.yaml: entry %s cites a source it does not list; ignored", e["celex"])
+            continue
         out[e["celex"]] = e
     return out
 
@@ -915,6 +935,15 @@ def apply_act_dates(a: LegalAct, e: dict | None) -> LegalAct:
         upd["other_application_dates"] = sorted({x["date"] for x in items})
         upd["partial_application_dates"] = sorted({x["date"] for x in items if x.get("partial")})
     return a.model_copy(update=upd)
+
+
+def act_date_source(e: dict, d: str) -> dict | None:
+    """The text a curated act_dates entry cites for date d: the date's own source (e.g. the amending act
+    that set it), else the entry's first source."""
+    srcs = e.get("sources") or []
+    item = next((x for x in e.get("application") or [] if x["date"] == d), {})
+    s = srcs[item.get("source", 0)] if item.get("source", 0) < len(srcs) else None
+    return s if isinstance(s, dict) else None
 
 
 def load_curated(curated: Path = CURATED) -> tuple[dict[str, dict], dict[str, dict], list[dict]]:
@@ -1280,6 +1309,20 @@ class Builder:
             return str(cur["short_title"])
         names = short_names(p.title)
         return names[0] if names else clean_title(p.title)
+
+    def related_act_title(self, celex: str, pid: str | None, topic: bool = False) -> str:
+        """A related act by its number ('Directive (EU) 2025/794'), followed by its file's short title when it
+        has one (curated, or an official short name) or, with topic, by its file's title unless that is a
+        run-on 'Amending …' title. Its file's title, or its CELEX id, when no number is known."""
+        a = self.act.get(celex)
+        label = act_label(a) if a and act_label(a) != celex else celex_act_label(celex)
+        title = self.dossier_summary[pid]["title"] if pid else None
+        if not label:
+            return _truncate(title, 160) if title else f"Act {celex} (EUR-Lex)"
+        named = pid and ((self.curated_of.get(pid) or {}).get("short_title") or short_names(self.proc[pid].title))
+        if title and (named or (topic and not title.startswith("Amending"))):
+            return f"{label} ({_truncate(_squash(title), 120)})"
+        return label
 
     def topics_for(self, p: Procedure) -> list[str]:
         out: set[str] = set()
@@ -1819,7 +1862,9 @@ class Builder:
             label = f"{a.act_type.capitalize()} {a.celex}" if a.act_type != "other" else f"Act {a.celex}"
             # (kind, date, title, title once the date has passed)
             synth: list[tuple[str, str, str, str | None]] = []
-            if a.date_signature:
+            # only an act of Parliament and the Council is signed by both Presidents; a Council act is signed
+            # on the day the Council adopted it, which the Council's own step already records
+            if a.date_signature and "of the European Parliament and of the Council" in (a.title or ""):
                 synth.append(
                     ("signature", a.date_signature, "Signed by the Presidents of Parliament and Council", None)
                 )
@@ -1827,10 +1872,23 @@ class Builder:
                 synth.append(
                     ("publication", a.date_publication, "Published in the Official Journal of the EU", None)
                 )
-            if a.entry_into_force:
-                synth.append(("entry_into_force", a.entry_into_force, "Enters into force", None))
             cur = self.act_dates.get(a.celex) or {}
             provisions = {x["date"]: _squash(x.get("provisions")) for x in cur.get("application") or []}
+            if a.entry_into_force:
+                # a checked date on the entry-into-force day is not a further application date (apply_act_dates):
+                # name what starts to apply in the entry-into-force event
+                on_eif = next((x for x in cur.get("application") or [] if x["date"] == a.entry_into_force), None)
+                prov = provisions.get(a.entry_into_force)
+                if on_eif and prov and on_eif.get("partial"):
+                    synth.append(("entry_into_force", a.entry_into_force,
+                                  f"Enters into force; some provisions start to apply: {prov}",
+                                  f"Entered into force; some provisions started to apply: {prov}"))  # fmt: skip
+                elif on_eif and prov:
+                    synth.append(("entry_into_force", a.entry_into_force,
+                                  f"Enters into force and starts to apply: {prov}",
+                                  f"Entered into force and started to apply: {prov}"))  # fmt: skip
+                else:
+                    synth.append(("entry_into_force", a.entry_into_force, "Enters into force", None))
             for d in a.other_application_dates:
                 if provisions.get(d):
                     synth.append(("application", d, f"Starts to apply: {provisions[d]}",
@@ -1863,8 +1921,8 @@ class Builder:
                 doc = {"id": a.celex, "label": a.oj_ref or a.celex, "kind": "act", "date": a.date_document,
                        "url": a.eurlex_url}  # fmt: skip
                 if kind in ("entry_into_force", "application", "transposition_deadline", "transposition_application"):
-                    if cur.get("sources"):  # corrected date: cite the text it was checked against
-                        doc |= {"label": _squash(cur["sources"][0].get("label")), "url": cur["sources"][0].get("url")}
+                    if cite := act_date_source(cur, d):  # corrected date: cite the text it was checked against
+                        doc |= {"label": _squash(cite.get("label")), "url": cite.get("url")}
                     elif a.amended_by:  # Cellar's current record, which may reflect later amendments
                         doc["label"] = f"EUR-Lex record, CELEX {a.celex}"
                 out.append({
@@ -2215,6 +2273,12 @@ class Builder:
             elif any(a.celex in self.act_dates for a in acts):  # dates checked against the act's text
                 info = self.application_info(acts) or {}
                 det["application"] |= {k: info.get(k) for k in ("application_detail", "dates_note")}
+            later = [a for a in acts if a.other_application_dates]
+            if later and all((self.act_dates.get(a.celex) or {}).get("application") is not None for a in later):
+                # the later dates are those of the act's text (data/curated/act_dates.yaml), not EUR-Lex's record
+                det["status"]["explanation"] = det["status"]["explanation"].replace(
+                    EURLEX_LATER_DATES, "the act's text sets later dates from which (parts of) the act apply."
+                )
             det["next_step"] = self.derived_next_step(det)
             self.dossier_detail[pid] = det
         # officially established relations between dossiers (act amends/repeals another dossier's act)
@@ -2248,6 +2312,14 @@ class Builder:
         replaces: dict[str, list[str]] = defaultdict(list)
         for old, new in replaced_by.items():
             replaces[new].append(old)
+        # dates an amending act set for another act: a date's own source in data/curated/act_dates.yaml
+        dates_set_by: dict[str, list[tuple[str, list[str]]]] = defaultdict(list)
+        for base, e in self.act_dates.items():
+            for i, s in enumerate(e.get("sources") or []):
+                c = s.get("celex") if isinstance(s, dict) else None
+                ds = sorted(x["date"] for x in e.get("application") or [] if x.get("source", 0) == i)
+                if c and c != base and ds:
+                    dates_set_by[c].append((base, ds))
         for pid, det in self.dossier_detail.items():
             related: dict[str, dict] = {}
             if pid in replaced_by:
@@ -2266,11 +2338,11 @@ class Builder:
                     if others:
                         for other in others:
                             related.setdefault(f"amended_by:{other}", {
-                                "id": other, "title": _truncate(self.dossier_summary[other]["title"], 160), "relation": "Amended by",
+                                "id": other, "title": self.related_act_title(c, other), "relation": "Amended by",
                             })  # fmt: skip
                     elif c not in self.act_dossiers:
                         related.setdefault(f"amended_by:{c}", {
-                            "id": c, "title": f"Act {c} (EUR-Lex)", "relation": "Amended by",
+                            "id": c, "title": self.related_act_title(c, None), "relation": "Amended by",
                         })  # fmt: skip
                 for attr, label in rels:
                     extra = inv_repealed.get(a.celex, set()) if attr == "repealed_by" else set()
@@ -2278,7 +2350,7 @@ class Builder:
                         for other in sorted(self.act_dossiers.get(c, ())):
                             if other != pid:
                                 related.setdefault(f"{attr}:{other}", {
-                                    "id": other, "title": _truncate(self.dossier_summary[other]["title"], 160), "relation": label,
+                                    "id": other, "title": self.related_act_title(c, other, topic=True), "relation": label,
                                 })  # fmt: skip
             for child in self.split_children.get(pid, []):
                 related.setdefault(f"split:{child}", {
@@ -2306,6 +2378,15 @@ class Builder:
                 "Repeals": 4,
             }
             det["related"] = sorted(related.values(), key=lambda r: (order.get(r["relation"], 9), r["id"]))
+            dates_set = [
+                {"id": other, "title": self.related_act_title(base, other), "dates": ds}
+                for a in self.dossier_acts.get(pid, [])
+                for base, ds in dates_set_by.get(a.celex, [])
+                for other in sorted(self.act_dossiers.get(base, ()))
+                if other != pid
+            ]
+            if dates_set:
+                det["dates_set_for"] = dates_set
         index = sorted(
             self.dossier_summary.values(), key=lambda d: (d["last_event"] or "", d["id"]), reverse=True
         )

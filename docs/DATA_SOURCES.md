@@ -79,8 +79,22 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   since 2014). OEIL often never records them (CCTB/CCCTB, Return Directive recast, standard-essential patents).
 - Corrections: where Cellar's date metadata is wrong or was not updated after an amendment, the build applies
   `data/curated/act_dates.yaml`, each date citing the article that sets it (DSA Art. 93, AI Act Art. 113 as
-  amended by Regulation 2026/1744, Return Regulation Art. 50). The snapshot keeps the source values;
-  `validate` warns about application dates a year or more before the act.
+  amended by Regulation 2026/1744, Return Regulation Art. 50, and three acts whose entry into force is tied to
+  another act's: Regulation 2021/768 Art. 9, Decision 2015/457 Art. 3(2), Regulation 608/2014 Art. 9, where
+  Cellar gives the application date or the other act's date). A date set by an amending act cites that act in
+  the timeline, and the amending act's page lists the dates it set (`dates_set_for`); the status sentence says
+  that the act's text, not EUR-Lex, sets the later dates. A checked date on the entry-into-force day is named in
+  the entry-into-force event. The snapshot keeps the source values; `validate` warns about application dates a
+  year or more before the act, and about an entry into force before the act's adoption (or before a
+  regulation's publication).
+- Timeline: an act's signature date is shown as "Signed by the Presidents of Parliament and Council" only for
+  acts of the European Parliament and of the Council (by the act's title); a Council act is signed on the day
+  of its adoption, which the Council's own step records.
+- Related files: an amending, amended, repealing or repealed act is named by its number (from its official
+  title, e.g. "Directive (EU) 2025/794"; for an act outside the snapshot from its CELEX id, 2015 onwards and
+  directives from 1999, e.g. "Regulation 2026/2102"), followed by its file's short title when it has one; an
+  act this file amends or repeals, or that repeals it, by its file's title too, unless that is an "Amending …"
+  title.
 - Known gaps: 352 acts without signature date, 24 directives without transposition date, only explicit whole-act
   repeals, acts whose procedure is only in free text are unlinked.
 

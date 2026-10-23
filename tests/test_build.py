@@ -723,6 +723,122 @@ def test_curated_act_dates_replace_cellar_dates(tmp_path: Path):
     assert load(o, "dossiers/2099-0003.json")["application"].get("application_detail") in (None, [])
 
 
+def test_curated_dates_cite_their_own_text_and_are_labelled_as_checked(tmp_path: Path):
+    """A date set by an amending act cites that act (AI Act dates from Regulation 2026/1744), the amending
+    act's page points to them, a checked date on the entry-into-force day stays in the timeline (DSA
+    16 Nov 2022), and the status sentence does not credit checked dates to EUR-Lex."""
+    cur = tmp_path / "curated"
+    shutil.copytree(FIX / "curated", cur)
+    (cur / "act_dates.yaml").write_text(
+        """
+- celex: "32099R0001"
+  reason: "Article 99 sets the dates."
+  application:
+    - {date: "2024-12-21", partial: true, provisions: "Article 3 (Art. 99(2))"}
+    - {date: "2026-06-01", partial: false, provisions: "The Regulation in general (Art. 99(1))"}
+    - {date: "2027-01-01", partial: true, provisions: "Article 5 (Art. 99(3), as amended)", source: 1}
+  sources:
+    - {label: "Regulation 2099/1, Article 99", url: "https://eur-lex.europa.eu/eli/reg/2099/1/oj"}
+    - {label: "Regulation 2099/77, Article 1", url: "https://eur-lex.europa.eu/eli/reg/2099/77/oj", celex: "32099R0077"}
+  reviewed: "2026-10-01"
+- celex: "32099L0003"
+  reason: "Regulation 2099/1 added a date."
+  application:
+    - {date: "2023-06-01", partial: true, provisions: "Article 2 (as amended)", source: 1}
+  sources:
+    - {label: "Directive 2099/3", url: "https://eur-lex.europa.eu/eli/dir/2099/3/oj"}
+    - {label: "Regulation 2099/1, Article 7", url: "https://eur-lex.europa.eu/eli/reg/2099/1/oj", celex: "32099R0001"}
+  reviewed: "2026-10-01"
+- celex: "32099L0009"
+  application:
+    - {date: "2026-01-01", source: 3}
+  sources:
+    - {label: "Directive 2099/9", url: "https://eur-lex.europa.eu/eli/dir/2099/9/oj"}
+""",
+        encoding="utf-8",
+    )
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    o = tmp_path / "public"
+    assert build(out=o, snapshot=tmp_path / "snapshot", curated=cur, state=tmp_path / "state", today=TODAY) == 0
+    d1 = load(o, "dossiers/2099-0001.json")
+    ev = {(e["kind"], e["date"]): (e["title"], e["docs"][0]["label"]) for e in d1["timeline"] if e["docs"]}
+    assert ev[("entry_into_force", "2024-12-21")] == (
+        "Entered into force; some provisions started to apply: Article 3 (Art. 99(2))",
+        "Regulation 2099/1, Article 99",
+    )
+    assert ev[("application", "2026-06-01")][1] == "Regulation 2099/1, Article 99"
+    assert ev[("application", "2027-01-01")][1] == "Regulation 2099/77, Article 1"  # the date's own source
+    assert "EUR-Lex records later dates" not in d1["status"]["explanation"]
+    assert "the act's text sets later dates from which (parts of) the act apply." in d1["status"]["explanation"]
+    # the amending act's file points to the dates it set for the act it amends
+    assert d1["dates_set_for"] == [{"id": "2099-0003", "title": "Directive (EU) 2099/3", "dates": ["2023-06-01"]}]
+    d3 = load(o, "dossiers/2099-0003.json")
+    assert next(e for e in d3["timeline"] if e["kind"] == "application")["docs"][0]["label"] == (
+        "Regulation 2099/1, Article 7"
+    )
+    assert "dates_set_for" not in d3
+    # an entry citing a source it does not list is ignored whole
+    assert load(o, "dossiers/2099-0009.json")["application"].get("application_detail") in (None, [])
+
+
+def test_related_acts_are_named_by_their_number(out: Path):
+    """'Amended since by …' names the amending act by number (with its file's short title), not by a
+    run-on official title or a bare CELEX id."""
+    d1 = load(out, "dossiers/2099-0001.json")
+    rel = {(r["relation"], r["id"]): r["title"] for r in d1["related"]}
+    assert rel[("Amended by", "32099R0077")] == "Regulation 2099/77"  # not in the snapshot: from the CELEX id
+    assert rel[("Amends", "2099-0003")] == "Directive (EU) 2099/3 (Test thingamajigs)"  # with its file's topic
+    d3 = load(out, "dossiers/2099-0003.json")
+    assert {(r["relation"], r["id"]): r["title"] for r in d3["related"]}[("Amended by", "2099-0001")] == (
+        "Regulation (EU) 2099/1 (Test Widgets Act)"
+    )
+    from pipeline.build import celex_act_label
+
+    assert celex_act_label("32026R2102") == "Regulation 2026/2102"
+    assert celex_act_label("32024L0012") == "Directive 2024/12"
+    assert celex_act_label("32014L0109") == "Directive 2014/109"  # directives: year/number
+    assert celex_act_label("32013R1303") is None  # Regulation (EU) No 1303/2013: number/year before 2015
+    assert celex_act_label("32013D1313") is None  # Decision No 1313/2013/EU
+    assert celex_act_label("32015D0103(01)") is None
+
+
+def test_only_parliament_and_council_acts_are_signed_by_both_presidents(out: Path):
+    """Council Directive (EU) 2019/475 reads 'For the Council The President': no 'Signed by the Presidents of
+    Parliament and Council' event for an act that is not an act of Parliament and the Council."""
+    sig = lambda pid: [  # noqa: E731
+        e["title"] for e in load(out, f"dossiers/{pid}.json")["timeline"] if e["kind"] == "signature"
+    ]
+    # "Regulation (EU) 2099/1 of the European Parliament and of the Council …"
+    assert sig("2099-0001") == ["Signed by the Presidents of Parliament and Council"]
+    assert sig("2099-0003") == []  # "Directive (EU) 2099/3 on test thingamajigs"
+
+
+REAL_ACTS = Path(__file__).resolve().parent.parent / "data" / "snapshot" / "eurlex" / "acts.json"
+
+
+def test_curated_entry_into_force_tied_to_another_act():
+    """Cellar dates these acts' entry into force wrongly where it depends on another act; the corrections
+    in data/curated/act_dates.yaml follow the act's text and agree with the other act's own record."""
+    from pipeline.build import apply_act_dates, load_act_dates
+    from pipeline.models.entities import LegalAct
+
+    if not REAL_ACTS.exists():
+        pytest.skip("no eurlex snapshot")
+    acts = {r["celex"]: LegalAct(**r) for r in json.loads(REAL_ACTS.read_text(encoding="utf-8"))}
+    cur = load_act_dates()
+    fixed = {c: apply_act_dates(acts[c], cur.get(c)) for c in ("32021R0768", "32015D0457", "32014R0608")}
+    # Regulation 2021/768, Art. 9: in force with Decision 2020/2053; applies from 1 January 2021
+    assert acts["32021R0768"].entry_into_force == "2021-01-01" < acts["32021R0768"].date_document
+    assert fixed["32021R0768"].entry_into_force == acts["32020D2053"].entry_into_force == "2021-06-01"
+    assert fixed["32021R0768"].other_application_dates == ["2021-01-01"]
+    # Regulation 608/2014, Art. 9: in force with Decision 2014/335; applies from 1 January 2014
+    assert fixed["32014R0608"].entry_into_force == acts["32014D0335"].entry_into_force == "2016-10-01"
+    assert fixed["32014R0608"].other_application_dates == ["2014-01-01"]
+    # Decision 2015/457, Art. 3(2): Regulation 513/2014 was in force before its publication, so the next day
+    assert acts["32014R0513"].entry_into_force < acts["32015D0457"].date_publication == "2015-03-20"
+    assert fixed["32015D0457"].entry_into_force == "2015-03-21"
+
+
 def test_act_label_from_title():
     from pipeline.build import act_label
     from pipeline.models.entities import LegalAct

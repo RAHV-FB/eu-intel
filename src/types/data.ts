@@ -299,6 +299,7 @@ export interface DossierDetail extends DossierSummary {
   rapporteurs: { mep_id?: string | null; name: string; group?: string | null; country?: string | null; role: string }[];
   documents: DocRef[];
   related: { id: string; title: string; relation: string }[]; // only officially established relations
+  dates_set_for?: { id: string; title: string; dates: ISODate[] }[]; // dates this file's act set for another act (checked)
   oeil_url: string;
   eurlex_only?: boolean; // built from the EUR-Lex act alone: the procedure's own steps are not in our data
   sources: SourceRef[];

@@ -286,6 +286,18 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
               for it; they may not yet reflect every change made by the amending acts.
             </p>
           )}
+          {d.dates_set_for?.map((x) => (
+            <p key={x.id} className="meta dz-amended-note">
+              This act set dates from which (parts of) <Link to={dossierPath(x.id)}>{x.title}</Link> apply:{' '}
+              {x.dates.map((date, i) => (
+                <span key={date}>
+                  {i > 0 && (i === x.dates.length - 1 ? ' and ' : ', ')}
+                  <time dateTime={date}>{formatDate(date, true)}</time>
+                </span>
+              ))}
+              . See “When it applies” on that page.
+            </p>
+          ))}
         </div>
       )}
 
