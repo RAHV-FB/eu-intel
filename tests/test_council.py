@@ -127,7 +127,73 @@ def test_subject_variants():
     assert m.written_procedure and m.written_procedure_date == "2020-12-04" and m.meeting is None
 
 
-# ------------------------------------------------------------------ Cellar listing
+# ------------------------------------------------------------------ what was voted on
+def test_item_listed_after_the_written_procedure_line():
+    # ST 7100/21: the first-reading position is listed after "Outcome of the written procedure ...";
+    # it used to be lost, so the vote read as an adoption of the act.
+    m = C.parse_note(text("ST-7100-2021-INIT.page1.txt"))
+    assert m.title == (
+        "REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL on preventing the dissemination of terrorist content"
+    )
+    assert m.step == "Adoption of the Council's position at first reading and of the statement of the Council's reasons"
+    assert m.written_procedure_date == "2021-03-16"
+    assert C.vote_subject(m.title, m.step) == "first_reading_position"
+
+
+def test_title_ends_at_the_first_item_voted_on():
+    m = C.NoteMeta(
+        subject="Voting result Position of the Council at first reading with a view to the adoption of a REGULATION "
+        "OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL on preventing plastic pellet losses - Adoption of a Council's "
+        "position (at first reading) - Adoption of the statement of the Council's reasons - 4118th meeting of the "
+        "COUNCIL OF THE EUROPEAN UNION (Agriculture and Fisheries) 22 September 2025, Brussels"
+    )
+    C._parse_subject(m)
+    assert m.title.endswith("on preventing plastic pellet losses")
+    assert m.step == "Adoption of a Council's position (at first reading); Adoption of the statement of the Council's reasons"
+    assert m.meeting_dates == ["2025-09-22"]
+    m = C.NoteMeta(
+        subject="Voting result REGULATION X Adoption of the legislative act, and Approval of the joint statements "
+        "Outcome of the written procedure completed on 22 December 2020"
+    )
+    C._parse_subject(m)
+    assert (m.title, m.step) == ("REGULATION X", "Adoption of the legislative act; Approval of the joint statements")
+    m = C.NoteMeta(
+        subject="Voting result Amendments of the European Parliament to the Council's position on the draft budget for "
+        "2026 - Non-approval of the European Parliament's amendment(s)"
+    )
+    C._parse_subject(m)
+    assert m.title == "Amendments of the European Parliament to the Council's position on the draft budget for 2026"
+    assert m.step == "Non-approval of the European Parliament's amendment(s)"
+
+
+@pytest.mark.parametrize(
+    ("title", "step", "expected"),
+    [
+        ("REGULATION X", "Adoption of the Council's position at first reading and of the statement of the Council's reasons",
+         "first_reading_position"),
+        ("REGULATION X", "Adoption of the Council first reading position and Statement of Reasons; Approval of the joint "
+         "statement", "first_reading_position"),
+        ("Position of the Council at first reading with a view to the adoption of a REGULATION X", "Adoption",
+         "first_reading_position"),
+        ("Position of the Council at first reading with a view to the adoption of a REGULATION X",
+         "Adoption of the statement of the Council's reasons", "first_reading_position"),
+        # second reading: approving Parliament's amendments adopts the act
+        ("REGULATION X", "Approval of the European Parliament's amendments to the Council’s position at first reading; "
+         "Adoption of the legislative act", "act"),
+        ("REGULATION X", "Adoption of the legislative act; Approval of the Council declaration", "act"),
+        ("REGULATION X", "Adoption of legilsative act", "act"),  # typo in the published note
+        ("COUNCIL DIRECTIVE amending Directive 2006/112/EC", "Adoption", "act"),
+        ("Council position on draft amending budget No 2 to the general budget for 2025",
+         "Adoption of the Council's position", "other"),
+        ("Joint text on the general budget of the European Union for the financial year 2025",
+         "Approval; Adoption of the legislative act", "other"),
+        ("COUNCIL DIRECTIVE on standards for equality bodies",
+         "Agreement in principle; Request for the consent of the European Parliament", "other"),
+        ("REGULATION X", None, None),
+    ],
+)  # fmt: skip
+def test_vote_subject(title, step, expected):
+    assert C.vote_subject(title, step) == expected
 def test_versions_from_sparql_rows():
     groups = C._versions_from_rows(rows())
     assert [v.suffix for v in groups["ST-15212-2024"]] == ["INIT", "REV_1", "COR_1"]
@@ -177,6 +243,69 @@ def test_sheet_eu28_with_united_kingdom():
 
 
 @needs_poppler
+def test_sheet_2019_template_with_ring_shaped_abstain_icon():
+    # ST 7859/19: the 2019 template draws "abstain" as a yellow ring around a disc; its legend used to be
+    # missed, so the record had no positions, rule or outcome although the sheet shows them.
+    s = annex("ST-7859-2019-INIT")
+    assert (s.rule, s.outcome) == ("qmv", "adopted")
+    pos = C.sheet_positions(s, "2019-03-22")
+    assert pos["GB"] == "abstain" and sum(1 for p in pos.values() if p == "for") == 27
+
+
+@needs_poppler
+def test_sheet_rule_read_when_footnote_glyphs_leave_sparse_pixel_rows():
+    s = annex("ST-5847-2021-INIT")  # the QMV footnote line has 1-pixel rows at 100 dpi
+    assert (s.rule, s.outcome) == ("qmv", "adopted")
+
+
+@needs_poppler
+def test_unreadable_slot_keeps_rule_and_outcome_and_names_the_state():
+    # ST 7080/24: Latvia's row is not in the published image. Positions stay empty (fail closed), the
+    # final result and rule are still read, and the record says exactly what could not be read.
+    pdf = (FIX / "ST-7080-2024-INIT.annex.pdf").read_bytes()
+    with pytest.raises(C.SheetError) as exc:
+        C.analyse_sheet(C.render_page(pdf, 1))
+    err = exc.value
+    assert err.partial is not None and (err.partial.rule, err.partial.outcome) == ("qmv", "adopted")
+    assert err.unreadable == [("left", 13), ("right", 13)]
+    v = C._versions_from_rows([{"work": "w", "docid": "consil:ST_7080_2024_INIT", "date": "2024-02-27",
+                                "title": "Voting result"}])["ST-7080-2024"][0]  # fmt: skip
+    meta = C.NoteMeta(title="REGULATION X", step="Adoption of legislative act", meeting_dates=["2024-02-26"],
+                      meeting="4007th meeting of the COUNCIL OF THE EUROPEAN UNION")  # fmt: skip
+    parsed = C.Parsed(v, ["p1"], meta, None, f"p2: {err}", partial=[(2, err)])
+    vote, problem = C.build_vote([parsed], "t")
+    assert vote.positions == {} and (vote.voting_rule, vote.outcome, vote.vote_on) == ("qmv", "adopted", "act")
+    assert vote.positions_note == (
+        "We could not read Latvia's vote from the published voting sheet (page 2), so no individual positions "
+        "are shown for this vote."
+    )
+    assert "unreadable" in problem
+
+
+def _sheet(rule: str, outcome: str, abstain_first: bool = False) -> C.Sheet:
+    left = ["abstain" if abstain_first else "for"] + ["for"] * 13
+    return C.Sheet(left=left, right=["for"] * 13 + ["grey"], outcome=outcome, rule=rule)
+
+
+def test_several_sheets_keep_only_what_they_agree_on():
+    # ST 7085/20: one sheet for the act, one for the derogation from the 8-week period; which is which is not
+    # machine-readable, so no positions; rule and outcome are kept because both sheets agree on them.
+    v = C._versions_from_rows([{"work": "w", "docid": "consil:ST_7085_2020_INIT", "date": "2020-03-30",
+                                "title": "Voting result"}])["ST-7085-2020"][0]  # fmt: skip
+    meta = C.NoteMeta(title="Regulation X", step="Adoption of the legislative act", written_procedure=True,
+                      written_procedure_date="2020-03-30")  # fmt: skip
+    sheets = [(2, _sheet("qmv", "adopted", abstain_first=True)), (3, _sheet("qmv", "adopted"))]
+    parsed = C.Parsed(v, ["p1"], meta, None, "several voting sheets in one note", sheets=sheets)
+    vote, _ = C.build_vote([parsed], "t")
+    assert vote.positions == {} and (vote.voting_rule, vote.outcome) == ("qmv", "adopted")
+    assert vote.positions_note.startswith("The voting-result document contains 2 voting sheets (pages 2 and 3)")
+    assert "source does not record" not in vote.positions_note
+    sheets = [(2, _sheet("qmv", "adopted")), (3, _sheet("unanimity", "not_adopted"))]
+    vote, _ = C.build_vote([C.Parsed(v, ["p1"], meta, None, "several", sheets=sheets)], "t")
+    assert (vote.voting_rule, vote.outcome) == ("unknown", "unknown")
+
+
+@needs_poppler
 def test_build_vote_ai_act():
     groups = C._versions_from_rows(rows())
     v = groups["ST-10199-2024"][0]
@@ -197,6 +326,7 @@ def test_build_vote_ai_act():
     assert vote.stage == "Adoption of the Legislative Act"
     assert vote.meeting == "4024th meeting of the COUNCIL OF THE EUROPEAN UNION"
     assert vote.written_procedure is False
+    assert vote.vote_on == "act" and vote.positions_note is None
 
 
 def test_build_vote_drops_nullified_versions_and_keeps_sheetless_metadata():
@@ -342,3 +472,39 @@ def test_fetch_refuses_truncated_listing(tmp_path, monkeypatch):
     snapshot, _ai_rows, _prev = _seed(tmp_path, monkeypatch, C.note_fingerprint)
     st = C.fetch(FakeHttp([]))
     assert st.status == "failed" and "previously 1" in st.note
+
+
+def test_reprocess_replaces_only_the_given_notes(tmp_path, monkeypatch):
+    from pipeline.models.entities import CouncilVote
+
+    snapshot, ai_rows, prev = _seed(tmp_path, monkeypatch, C.note_fingerprint)
+    other = prev.model_copy(update={"id": "ST-1-2024", "title": "untouched"})
+    snapshot.write_records("council", "votes", [prev, other])
+    snapshot.write_records(
+        "council",
+        "notes",
+        [*snapshot.read_records("council", "notes", C.CouncilNoteState),
+         C.CouncilNoteState(id="ST-1-2024", fingerprint="old", vote_id="ST-1-2024")],
+    )  # fmt: skip
+    page1 = text("ST-10199-2024-INIT.page1.txt")
+
+    class Http(FakeHttp):
+        def get(self, url, **kw):
+            self.gets.append(url)
+            return b"%PDF"
+
+    def parse(v, pdf):
+        return C.Parsed(v, [page1], C.parse_note(page1), None, "no voting sheet")
+
+    monkeypatch.setattr(C, "parse_document", parse)
+    http = Http(ai_rows)
+    assert C.reprocess(http, ["ST-10199-2024"]) == {"ST-10199-2024": "ST-10199-2024-INIT: no voting sheet"}
+    assert http.gets == [C.DOC_URL.format(doc="ST-10199-2024-INIT")]  # re-read although its fingerprint is unchanged
+    votes = {v.id: v for v in snapshot.read_records("council", "votes", CouncilVote)}
+    assert votes["ST-1-2024"] == other
+    assert votes["ST-10199-2024"].vote_on == "act" and votes["ST-10199-2024"].positions == {}
+    assert votes["ST-10199-2024"].positions_note.startswith("We found no voting sheet")
+    states = {s.id: s for s in snapshot.read_records("council", "notes", C.CouncilNoteState)}
+    assert states["ST-1-2024"].fingerprint == "old"
+    with pytest.raises(ValueError):
+        C.reprocess(http, ["ST-404-2024"])

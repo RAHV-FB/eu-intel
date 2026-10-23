@@ -3,7 +3,7 @@
  * Used on the dossier page and wherever a full CouncilVote record is available.
  */
 import { Link } from 'react-router-dom';
-import type { CouncilPosition, CouncilVote } from '../../types/data';
+import type { CouncilAssessment, CouncilPosition, CouncilVote, CouncilVoteOn } from '../../types/data';
 import { SourceLink, Term, VoteBar } from '../../components/ui';
 import { COUNTRY_NAMES, countryName, formatDate, formatNumber } from '../../lib/format';
 import './council.css';
@@ -21,17 +21,60 @@ export const COUNCIL_POSITION_LABEL: Record<CouncilPosition, string> = {
 
 const POSITION_ORDER: CouncilPosition[] = ['for', 'against', 'abstain', 'not_participating'];
 
-const OUTCOME_LABEL: Record<CouncilVote['outcome'], string> = {
-  adopted: 'Adopted',
-  not_adopted: 'Not adopted',
-  unknown: 'Outcome not recorded',
+/** Short label for what a Council vote was on (country tables, timelines). */
+export const COUNCIL_VOTE_ON_SHORT: Record<CouncilVoteOn, string> = {
+  act: 'Adoption of the act',
+  first_reading_position: 'Council position at first reading (not the final act)',
+  other: 'Other Council decision',
 };
+
+/** Outcome wording that says what was adopted: the act, the Council's first-reading position, or another item. */
+export function councilOutcomeLabel(vote: Pick<CouncilVote, 'outcome' | 'vote_on'>): string {
+  if (vote.outcome === 'unknown') return 'Result not read from the source document';
+  const adopted = vote.outcome === 'adopted';
+  if (vote.vote_on === 'first_reading_position') return adopted ? 'Position adopted' : 'Position not adopted';
+  if (vote.vote_on === 'act') return adopted ? 'Act adopted' : 'Act not adopted';
+  return adopted ? 'Adopted' : 'Not adopted';
+}
 
 export function CouncilRule({ rule }: { rule: CouncilVote['voting_rule'] }) {
   if (rule === 'qmv') return <Term id="qmv">Qualified majority</Term>;
   if (rule === 'unanimity') return <Term id="unanimity">Unanimity</Term>;
   if (rule === 'simple_majority') return <>Simple majority</>;
-  return <>Voting rule not recorded</>;
+  return <>Voting rule not read from the source document</>;
+}
+
+/** "Denmark", "Denmark and Ireland", "Denmark, Ireland and the United Kingdom". */
+function listNames(codes: string[]): string {
+  const names = codes.map((c) => (c === 'GB' ? 'the United Kingdom' : countryName(c)));
+  return names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+function VoteOn({ vote }: { vote: CouncilVote }) {
+  if (vote.vote_on === 'first_reading_position') {
+    return (
+      <>
+        <strong>The Council’s position at first reading</strong> — this vote did not adopt the act. Under the{' '}
+        <Term id="olp">ordinary legislative procedure</Term>, Parliament then decides on the Council’s position at second reading.
+      </>
+    );
+  }
+  if (vote.vote_on === 'act') {
+    return <strong>{/legislative act/i.test(vote.stage ?? '') ? 'Adoption of the legislative act' : 'Adoption of the act'}</strong>;
+  }
+  if (vote.stage) return <strong>{vote.stage}</strong>;
+  return <>Not named in the voting-result document</>;
+}
+
+/** Size of a blocking minority under the established legal basis, or null when it is not established. */
+function blockingRule(a: CouncilAssessment, notParticipating: number): string | null {
+  if (notParticipating === 0 && a.legal_basis === 'TEU Art. 16(4)') {
+    return 'at least four Member States representing more than 35% of the EU population';
+  }
+  if (notParticipating > 0 && a.legal_basis === 'TFEU Art. 238(3)(a)' && a.blocking_minority_min_states != null) {
+    return `at least ${formatNumber(a.blocking_minority_min_states)} of the participating Member States, representing more than 35% of their combined population (TFEU Art. 238(3)(a))`;
+  }
+  return null;
 }
 
 /** Percentages may arrive as 0–100 or as 0–1 fractions; normalise for display. */
@@ -64,7 +107,9 @@ export function CouncilVoteCard({
   const scale = a?.population_required_pct != null && a.population_required_pct <= 1 ? 100 : 1;
   const popFor = pctValue(a?.population_for_pct, scale);
   const popReq = pctValue(a?.population_required_pct, scale);
-  const participating = recorded.length - groups.not_participating.length;
+  const notParticipating = a?.states_not_participating ?? groups.not_participating.length;
+  const participating = a?.states_participating ?? recorded.length - groups.not_participating.length;
+  const bmRule = a ? blockingRule(a, notParticipating) : null;
 
   return (
     <article className="cvote" aria-labelledby={`cvote-${vote.id}`}>
@@ -72,17 +117,22 @@ export function CouncilVoteCard({
         <p className="cvote__eyebrow">
           <Term id="council">Council of the EU</Term>
           {vote.configuration ? <> · {vote.configuration}</> : null} · <time dateTime={vote.date}>{formatDate(vote.date, true)}</time>
+          {vote.written_procedure ? <> · written procedure</> : null}
         </p>
         <H id={`cvote-${vote.id}`} className="cvote__title">
           {vote.title}
         </H>
+        <p className="cvote__voteon">
+          <span className="cvote__voteon-label">Vote on: </span>
+          <VoteOn vote={vote} />
+        </p>
         <dl className="cvote__facts">
           <div>
             <dt>Outcome</dt>
             <dd>
               <span className={`cvote__outcome cvote__outcome--${vote.outcome}`}>
                 <span aria-hidden="true">{vote.outcome === 'adopted' ? '●' : vote.outcome === 'not_adopted' ? '✕' : '○'}</span>{' '}
-                {OUTCOME_LABEL[vote.outcome]}
+                {councilOutcomeLabel(vote)}
               </span>
             </dd>
           </div>
@@ -129,10 +179,10 @@ export function CouncilVoteCard({
               </section>
             ))}
             {missing.length > 0 && (
-              <section className="cvote__pos cvote__pos--missing" aria-label={`No position recorded: ${missing.length}`}>
+              <section className="cvote__pos cvote__pos--missing" aria-label={`Position not read: ${missing.length}`}>
                 <p className="cvote__pos-title">
                   <i className="cvote__swatch cvote__swatch--missing" aria-hidden="true" />
-                  No position recorded in the source <span className="num">({missing.length})</span>
+                  Position not read from the voting sheet <span className="num">({missing.length})</span>
                 </p>
                 <ul className="cvote__states">
                   {missing.map((c) => (
@@ -144,7 +194,11 @@ export function CouncilVoteCard({
           </div>
         </>
       ) : (
-        <p className="meta">The source does not record individual Member State positions for this vote.</p>
+        <p className="meta">
+          {vote.positions_note ||
+            'We could not read the Member State positions from the published voting sheet, so no individual positions are shown for this vote.'}{' '}
+          See the Council’s voting-result document linked below.
+        </p>
       )}
 
       <div className="cvote__assessment">
@@ -160,7 +214,8 @@ export function CouncilVoteCard({
                 </li>
                 {popFor && (
                   <li>
-                    They represent <b className="num">{popFor}</b> of the EU population
+                    They represent <b className="num">{popFor}</b> of{' '}
+                    {notParticipating > 0 ? 'the population of the participating Member States' : 'the EU population'}
                     {popReq ? (
                       <>
                         ; at least <b className="num">{popReq}</b> was needed
@@ -169,13 +224,17 @@ export function CouncilVoteCard({
                     .
                   </li>
                 )}
+                {notParticipating > 0 && (
+                  <li>
+                    {groups.not_participating.length > 0 ? listNames(groups.not_participating) : `${formatNumber(notParticipating)} Member States`}{' '}
+                    did not take part in this vote, so both thresholds are calculated over the {formatNumber(participating)} participating
+                    Member States (TFEU Art. 238(3)).
+                  </li>
+                )}
                 {a.adopted_by_rule === true && <li>On these figures, both qualified-majority thresholds were met.</li>}
                 {a.adopted_by_rule === false && <li>On these figures, the qualified-majority thresholds were not met.</li>}
                 {a.blocking_minority_existed === true && (
-                  <li>
-                    The Member States not voting in favour met the conditions for a blocking minority (at least four Member States
-                    representing more than 35% of the EU population).
-                  </li>
+                  <li>The Member States not voting in favour formed a blocking minority{bmRule ? ` (${bmRule})` : ''}.</li>
                 )}
                 {a.blocking_minority_existed === false && (
                   <li>The Member States not voting in favour did not form a blocking minority.</li>
@@ -204,10 +263,7 @@ export function CouncilVoteCard({
                 <>
                   <strong>Could a single country block it?</strong> No. Only under unanimity can one Member State block a decision on
                   its own
-                  {a.rule === 'qmv'
-                    ? '; under qualified majority a blocking minority needs at least four Member States representing more than 35% of the EU population'
-                    : ''}
-                  .
+                  {a.rule === 'qmv' && bmRule ? `; here a blocking minority needed ${bmRule}` : ''}.
                 </>
               )}
             </li>
@@ -215,7 +271,9 @@ export function CouncilVoteCard({
           </ul>
         ) : (
           <p className="meta">
-            No assessment: the applicable voting rule or the data needed to check it could not be established from the records.
+            {recorded.length === 0
+              ? 'No assessment: applying the voting rule needs the individual Member State positions, which we could not read.'
+              : 'No assessment: the applicable voting rule or the data needed to check it could not be established from the records.'}
           </p>
         )}
       </div>

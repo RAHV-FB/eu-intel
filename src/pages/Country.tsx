@@ -4,12 +4,12 @@ import type { CountryDetail, Meta } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { COUNTRY_NAMES, formatDate, formatNumber, pct } from '../lib/format';
-import { ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
+import { ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Tag, Term } from '../components/ui';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { useGroups } from '../features/people/labels';
 import { formatIndicator } from '../features/countries/CountryTable';
 import { InfringementNote, InfringementTable, TranspositionTable } from '../features/countries/Implementation';
-import { COUNCIL_POSITION_LABEL } from '../features/council/CouncilVoteCard';
+import { COUNCIL_POSITION_LABEL, COUNCIL_VOTE_ON_SHORT } from '../features/council/CouncilVoteCard';
 import { Pos } from '../features/votes/Breakdowns';
 import { SortTh, useSortable } from '../features/votes/sortable';
 import '../features/countries/countries.css';
@@ -254,7 +254,7 @@ export default function Country() {
                   <thead>
                     <tr>
                       <th scope="col">Date</th>
-                      <th scope="col">Act voted on</th>
+                      <th scope="col">Voted on</th>
                       <th scope="col">{c.name}’s position</th>
                     </tr>
                   </thead>
@@ -262,7 +262,15 @@ export default function Country() {
                     {votesShown.map((v) => (
                       <tr key={v.vote_id}>
                         <td className="nowrap">{formatDate(v.date)}</td>
-                        <td>{v.dossier_id ? <Link to={dossierPath(v.dossier_id)}>{v.title}</Link> : v.title}</td>
+                        <td>
+                          {v.dossier_id ? <Link to={dossierPath(v.dossier_id)}>{v.title}</Link> : v.title}
+                          {v.vote_on && v.vote_on !== 'act' && (
+                            <>
+                              {' '}
+                              <Tag>{COUNCIL_VOTE_ON_SHORT[v.vote_on]}</Tag>
+                            </>
+                          )}
+                        </td>
                         <td>
                           <Pos pos={v.pos} />
                         </td>

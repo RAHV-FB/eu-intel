@@ -380,7 +380,9 @@ export interface CouncilAssessment {
   rule: 'qmv' | 'unanimity' | 'simple_majority';
   states_for: number;
   states_required: number;
-  population_for_pct?: number | null; // percentage 0–100 of the EU population (participating states)
+  // Percentage 0–100 of the population of the Member States TAKING PART in the vote. Equal to the share of
+  // the EU population only when states_not_participating is 0.
+  population_for_pct?: number | null;
   population_required_pct?: number | null; // percentage 0–100, e.g. 65
   adopted_by_rule?: boolean | null;
   blocking_minority_existed?: boolean | null;
@@ -390,7 +392,18 @@ export interface CouncilAssessment {
   states_against?: number | null;
   states_abstain?: number | null;
   states_not_participating?: number | null; // not taking part under the Treaties (opt-outs); not abstentions
+  states_participating?: number | null; // thresholds are computed over these Member States only
+  // Minimum number of Member States in a blocking minority under the applicable rule (4 under TEU Art. 16(4);
+  // computed under TFEU Art. 238(3)(a)); null where no such clause applies or the legal basis is not established
+  blocking_minority_min_states?: number | null;
 }
+
+/**
+ * What the Council voted on. 'first_reading_position': the Council's position at first reading — the act is NOT
+ * adopted by this vote (Parliament must still approve it at second reading). 'act': adoption of the act itself.
+ * 'other': another item (budget procedure, approval of a joint text or statement, consent, ...).
+ */
+export type CouncilVoteOn = 'act' | 'first_reading_position' | 'other';
 
 export interface CouncilVote {
   id: string;
@@ -399,13 +412,17 @@ export interface CouncilVote {
   dossier_id?: string | null;
   dossier_ref?: string | null;
   configuration?: string | null;
-  stage?: string | null; // e.g. "Adoption of the legislative act" (verbatim from the voting-result document)
+  stage?: string | null; // item(s) voted on as listed in the voting-result document, "; "-separated
+  vote_on?: CouncilVoteOn | null; // normalised from the subject; null when the document names no item
   meeting?: string | null; // meeting reference as published
   written_procedure?: boolean | null; // adopted by written procedure rather than at a meeting
   council_doc?: string | null; // e.g. "PE-CONS 24/24"
   voting_rule: 'qmv' | 'unanimity' | 'simple_majority' | 'unknown';
   outcome: 'adopted' | 'not_adopted' | 'unknown';
   positions: Record<string, CouncilPosition>; // ISO2 -> position
+  // Only when positions is empty: why we could not read them from the published voting sheet (the Council
+  // does publish them). Plain language, specific.
+  positions_note?: string | null;
   assessment?: CouncilAssessment | null;
   statements: string[];
   source: SourceRef;
@@ -503,7 +520,14 @@ export interface CountrySummary {
 export interface CountryDetail extends CountrySummary {
   meps: { id: string; name: string; group?: string | null; party_label?: string | null }[];
   parties: { id: string; label: string; members_active: number }[];
-  council_votes: { vote_id: string; date: ISODate; title: string; pos: CouncilPosition; dossier_id?: string | null }[];
+  council_votes: {
+    vote_id: string;
+    date: ISODate;
+    title: string;
+    pos: CouncilPosition;
+    dossier_id?: string | null;
+    vote_on?: CouncilVoteOn | null;
+  }[];
   transposition: {
     celex: string;
     title: string;
