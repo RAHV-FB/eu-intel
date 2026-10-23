@@ -62,9 +62,11 @@ DEFAULT_SITE_URL = "https://rahv-fb.github.io/eu-intel/"
 
 # ------------------------------------------------------------------------------------------ sources
 # Reuse / licence statements shown on the About page. Keep them factual and short.
-# Verified 2026-10-22: the EP legal notice (https://www.europarl.europa.eu/legal-notice/en/) authorises
-# reuse provided the source is acknowledged; data.europa.eu lists the EP open datasets under the
-# "European Commission reuse notice". (No CC BY claim is made because none was confirmed.)
+# Verified 2026-10-23: the EP legal notice (https://www.europarl.europa.eu/legal-notice/en/) authorises
+# reuse "provided that the entire item is reproduced and the source is acknowledged", unless an item states
+# other conditions; the EP Open Data Portal labels some datasets "CC BY 4.0" (MEPs, procedures, vote results)
+# and others "European Parliament's Legal Notice". Both require acknowledging the source, which is what this
+# states; docs/DATA_SOURCES.md ("Licences") has the detail.
 EP_LICENCE = (
     "© European Union – Source: European Parliament. Reuse is authorised provided the source is "
     "acknowledged (European Parliament legal notice)."
@@ -108,6 +110,14 @@ SOURCES: dict[str, dict[str, str]] = {
         "url": "https://commission.europa.eu/law/application-eu-law_en",
         "licence": "© European Union. Reuse authorised under Commission Decision 2011/833/EU, with "
         "acknowledgement of the source.",
+    },
+    "optouts": {
+        "name": "EUR-Lex / Publications Office (Cellar) – directives' texts: Danish and Irish participation "
+        "(Protocols No 21 and 22)",
+        "institution": "EUR-Lex",
+        "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+        "licence": "© European Union, https://eur-lex.europa.eu. Reuse authorised under Commission "
+        "Decision 2011/833/EU, with acknowledgement of the source.",
     },
     "train": {
         "name": "European Parliament – Legislative Train Schedule",
@@ -3430,7 +3440,7 @@ class Builder:
                 "note": st.note if st else "Not yet retrieved in this release.",
                 "summary": self.source_summary(sid, st),
             })  # fmt: skip
-        fetched = [x.fetched_at for x in m.values() if x.fetched_at]
+        fetched = [m[sid].fetched_at for sid in SOURCES if sid in m and m[sid].fetched_at]  # those listed
         scope = self.coverage_scope()
         notes = self.coverage_notes(scope)
         self.files["meta.json"] = {
@@ -3522,6 +3532,18 @@ class Builder:
                        "infringement cases.")  # fmt: skip
             if not s.indicators:
                 out.append("Country indicators (Single Market Scoreboard) could not be retrieved.")
+        elif sid == "optouts":
+            read = list(self.optouts.values())
+
+            def bound_not(c: str) -> int:
+                return sum(c in o.not_bound and c not in o.opted_in for o in read)
+
+            later = sum("IE" in o.opted_in for o in read)
+            out.append(f"The recitals of {len(read):,} directives, which say whether Denmark and Ireland took part in "
+                       f"their adoption: they declare Denmark not bound by {bound_not('DK'):,} of them and Ireland by "
+                       f"{bound_not('IE'):,}"
+                       + (f" (not counting {later:,} in which the Commission later confirmed Ireland's participation)"
+                          if later else "") + ".")  # fmt: skip
         elif sid == "train":
             blocked = sum(1 for t in s.train if t.status.strip().lower() == "blocked")
             out.append(f"{len(s.train):,} files on Parliament's Legislative Train Schedule, {blocked:,} of them "
