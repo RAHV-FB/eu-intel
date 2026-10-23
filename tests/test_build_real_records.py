@@ -640,8 +640,11 @@ def test_same_day_votes_with_one_title_are_told_apart():
 
 
 def test_french_procedural_terms_and_procedure_symbols():
-    # 199517, 22 Oct 2026: label "RC-B10-0476/2026 - Proposition de résolution (ensemble du texte)"
-    v = votes("199517")["199517"]
+    # 199517, 22 Oct 2026: label as first published, "RC-B10-0476/2026 - Proposition de résolution (ensemble du texte)",
+    # without an English subject (the EP API gave "RC-B10-0476/2026 – Motion for a resolution (as a whole)" and the
+    # vote item's English title on 23 Oct 2026)
+    first = {"title": "RC-B10-0476/2026 - Proposition de résolution (ensemble du texte)", "subject": None}
+    v = votes("199517")["199517"].model_copy(update=first)
     title, from_label = Builder.vote_display_title(None, v, None)  # type: ignore[arg-type]
     assert (title, from_label) == ("RC-B10-0476/2026 - Motion for a resolution (text as a whole)", True)
     assert english_procedural("Proposition de la Commission") == "Commission proposal"

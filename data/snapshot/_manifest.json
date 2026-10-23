@@ -42,16 +42,16 @@
   "status": "ok"
  },
  "ep_votes": {
-  "attempted_at": "2026-10-23T00:11:01Z",
-  "fetched_at": "2026-10-23T00:21:37Z",
-  "note": "window from 2026-08-23: 11/12 sittings fetched (1736 votes, 0 document lookups, 0 procedures by id); 1 sittings pending; resumes next run. Snapshot: 35465 votes (26267 roll-call, 2724 with ballots), 32375 linked to procedures; kinds {'amendment': 21019, 'final': 1239, 'mandate': 125, 'motion': 171, 'other': 32, 'procedural': 514, 'resolution': 2513, 'split_or_separate': 9852}; 0 fetched votes whose voter lists differ from the counts; 636s",
+  "attempted_at": "2026-10-23T11:51:04Z",
+  "fetched_at": "2026-10-23T11:51:55Z",
+  "note": "window from 2026-08-23: 12/12 sittings fetched (1884 votes, 0 document lookups, 0 procedures by id). Snapshot: 35465 votes (26267 roll-call, 2995 with ballots), 33843 linked to procedures; kinds {'amendment': 20770, 'final': 1305, 'mandate': 139, 'motion': 276, 'other': 76, 'procedural': 512, 'resolution': 2534, 'split_or_separate': 9853}; 0 fetched votes whose voter lists differ from the counts; 51s",
   "records": {
-   "ballots": 2724,
+   "ballots": 2995,
    "sittings": 359,
    "votes": 35465
   },
   "source": "ep_votes",
-  "status": "partial"
+  "status": "ok"
  },
  "eurlex": {
   "attempted_at": "2026-10-23T02:28:47Z",
