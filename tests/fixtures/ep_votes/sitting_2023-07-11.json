@@ -1,0 +1,88 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2023-07-11/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: ; others keep their first 3 ids (published counts unchanged).",
+ "sitting": "MTG-PL-2023-07-11",
+ "decisions": {
+  "data": [
+   {
+    "id": "eli/dl/event/MTG-PL-2023-07-11-DEC-156775",
+    "type": "Vote",
+    "activity_date": "2023-07-11",
+    "activity_id": "MTG-PL-2023-07-11-DEC-156775",
+    "activity_label": {
+     "en": "Management, conservation and control measures in the area covered under the Southern Indian Ocean Fisheries Agreement (SIOFA) – A9-0192/2023 – João Pimenta Lopes – Commission proposal",
+     "mul": "Mesures de gestion, de conservation et de contrôle applicables dans la zone couverte par l’accord relatif aux pêches dans le sud de l’océan Indien (APSOI) - Management, conservation and control measures in the area covered under the Southern Indian Ocean Fisheries Agreement (SIOFA) - Bewirtschaftungs-, Erhaltungs- und Kontrollmaßnahmen für den Bereich des Übereinkommens über die Fischerei im südlichen Indischen Ozean (SIOFA) - A9-0192/2023 - João Pimenta Lopes - Proposition de la Commission",
+     "fr": "Mesures de gestion, de conservation et de contrôle applicables dans la zone couverte par l’accord relatif aux pêches dans le sud de l’océan Indien (APSOI) - A9-0192/2023 - João Pimenta Lopes - Proposition de la Commission"
+    },
+    "activity_start_date": "2023-07-11T14:14:57+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197556",
+     "person/124701",
+     "person/197771"
+    ],
+    "had_voter_against": [
+     "person/197402",
+     "person/197483",
+     "person/197672"
+    ],
+    "had_voter_favor": [
+     "person/197586",
+     "person/132366",
+     "person/99283"
+    ],
+    "had_voter_intended_against": [
+     "person/238639",
+     "person/204443",
+     "person/124747",
+     "person/28586",
+     "person/197699",
+     "person/197743",
+     "person/197701",
+     "person/124770"
+    ],
+    "number_of_votes_abstention": 6,
+    "number_of_votes_against": 585,
+    "number_of_votes_favor": 48,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2023-07-11-RCV-ITM-070"
+    ],
+    "notation_votingId": "156775"
+   }
+  ]
+ },
+ "vote_results": {
+  "data": [
+   {
+    "id": "eli/dl/event/MTG-PL-2023-07-11-VOT-ITM-939390",
+    "type": "Activity",
+    "activity_date": "2023-07-11",
+    "activity_id": "MTG-PL-2023-07-11-VOT-ITM-939390",
+    "activity_label": {
+     "fr": "Mesures de gestion, de conservation et de contrôle applicables dans la zone couverte par l’accord relatif aux pêches dans le sud de l’océan Indien (APSOI)"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0192"
+    ],
+    "eli-dl:executed": "https://data.europarl.europa.eu/eli/dl/event/MTG-PL-2023-07-11-OJ-ITM-V-112",
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2023-07-11-VOT-ITM-016"
+    ],
+    "notation_dlvId": "939390",
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Mesures de gestion, de conservation et de contrôle applicables dans la zone couverte par l’accord relatif aux pêches dans le sud de l’océan Indien (APSOI)</title><label>Rapport: João Pimenta Lopes (A9-0192/2023)</label></structuredLabel>"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2023-07-11",
+     {
+      "id": "eli/dl/proc/2022-0348",
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2023-07-11-VOT-ITM-939390"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

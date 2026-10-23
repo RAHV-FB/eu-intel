@@ -13,7 +13,8 @@
  *   home.json                       HomeData
  *   dossiers/index.json             DossierSummary[]
  *   dossiers/<id>.json              DossierDetail            (id like "2021-0106")
- *   votes/index.json                EpVoteSummary[]          (final/resolution/motion votes + all votes linked to dossiers)
+ *   votes/index.json                EpVoteSummary[]          (roll-call votes on whole texts + final, mandate and
+ *                                                            negotiation-decision votes linked to procedures)
  *   votes/<id>.json                 EpVoteDetail
  *   council/index.json              CouncilVote[]
  *   people/meps.json                MepSummary[]
@@ -300,6 +301,13 @@ export type VoteKind =
   | 'motion'
   | 'procedural'
   | 'other';
+/** What a motion or procedural vote decides, where Parliament's published texts say so. */
+export type VoteKindDetail =
+  | 'reject_proposal' // motion to reject the Commission proposal: "adopted" = Parliament rejected the proposal
+  | 'reject_council_position' // second reading: motion to reject the Council's position
+  | 'censure' // motion of censure on the Commission
+  | 'objection' // objection to a delegated or implementing act: "adopted" = Parliament objects
+  | 'negotiation_decision'; // vote on a committee's decision to enter into interinstitutional negotiations
 export type VoteOutcome = 'adopted' | 'rejected' | 'lapsed' | 'unknown';
 
 export interface VoteMargin {
@@ -309,6 +317,7 @@ export interface VoteMargin {
   distance: number; // votes_for - threshold (signed)
   relative: number; // distance / votes counted towards the threshold
   label: string; // "Passed with 12 votes more than needed"
+  component_members?: number | null; // Members in office on the day, for rules based on component Members
 }
 
 export interface EpVoteSummary {
@@ -317,8 +326,10 @@ export interface EpVoteSummary {
   title: string; // EP label (may be technical); see `display_title`
   display_title: string; // human-readable: dossier title + what was voted
   kind: VoteKind;
+  kind_detail?: VoteKindDetail | null;
   kind_label: string; // "Final vote on the text", "Amendment", ...
   outcome: VoteOutcome;
+  outcome_note?: string | null; // what the outcome means, e.g. for a motion to reject or an objection
   // how the outcome was established: EP open data decision, the sitting's official minutes, or calculated from
   // the recorded counts under the applicable majority rule; null when unknown
   outcome_basis?: 'published' | 'minutes' | 'derived' | null;
@@ -327,6 +338,7 @@ export interface EpVoteSummary {
   abstain: number | null;
   dossier_id?: string | null;
   dossier_ref?: string | null;
+  procedure_ref?: string | null; // official procedure reference, also when the procedure is not a tracked file
   topics: string[];
   margin?: VoteMargin | null; // null when the applicable threshold cannot be established
   has_ballots: boolean;
@@ -361,13 +373,24 @@ export interface Ballot {
   intended?: BallotPosition | null; // correction recorded after the vote (does not change the result)
 }
 
+/** An MEP with no recorded vote who stated afterwards how they had intended to vote. */
+export interface VoteIntention {
+  mep: string;
+  intended: BallotPosition;
+  group?: string | null;
+  country?: string | null;
+}
+
 export interface EpVoteDetail extends EpVoteSummary {
+  subject?: string | null; // what was voted, as published in English (vote item or minutes block title)
+  procedure_url?: string | null; // Legislative Observatory (OEIL) file of procedure_ref
   reference_text?: string | null;
   doc_ids: string[];
   attendees?: number | null;
   groups: GroupBreakdown[];
   countries: CountryBreakdown[];
   ballots: Ballot[]; // empty when has_ballots = false
+  intentions?: VoteIntention[]; // stated intentions of MEPs without a recorded vote
   mep_names: Record<string, string>; // id -> display name for ballots
   reconciliation: { matches: boolean; note?: string | null }; // ballots vs official totals
 }

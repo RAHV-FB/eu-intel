@@ -279,6 +279,115 @@ def test_objection_to_delegated_act():
     v = votes["195361"]
     assert v.procedure_refs == ["2026/2680(DEA)"]
     assert (v.kind, v.majority_rule, v.outcome) == ("motion", "component_members", "adopted")
+    assert v.kind_detail == "objection"
+    # the English vote item title says what was objected to (the label is only "B10-0337/2026 – Motion …")
+    assert v.subject is not None and v.subject.startswith("Objection pursuant to Rule 114(3): Trajectory")
+    assert v.title == "B10-0337/2026 – Motion for a resolution (as a whole)"
+
+
+# ------------------------------------------------------------------- whole-text votes (audit regressions)
+@pytest.mark.parametrize(
+    "label,heading,ref,kind",
+    [
+        # old format: the agreement sits in the second-to-last segment, before its amendment number
+        ("Digital Services Act - A9-0356/2021 - Christel Schaldemose - Provisional agreement - Am 564", None, None,
+         "final"),
+        ("Framework for ensuring a secure and sustainable supply of critical raw materials – A9-0260/2023 – Nicola "
+         "Beer – Provisional agreement – Am 26", None, None, "final"),
+        ("A9-0214/2020 - Eider Gardiazabal Rubial - Joint Statement - Am 3", None, None, "amendment"),
+        # new format: a statement voted under the "Provisional agreement" heading is not the agreement
+        ("A9-0220/2023 – César Luena – Commission statement – Am 138", "Provisional agreement",
+         "Commission statement", "amendment"),
+        ("A9-0220/2023 – César Luena – Provisional agreement – Am 137", "Provisional agreement",
+         "Provisional agreement", "final"),
+    ],
+)  # fmt: skip
+def test_provisional_agreement_is_the_whole_text(label, heading, ref, kind):
+    docs = ["A-9-2023-0220-AM-138"] if ref == "Commission statement" else []
+    signals = ev.Signals(ref=ref or ev.label_tail(label), label=label, heading=heading, docs=docs)
+    assert ev.classify(signals) == kind
+
+
+def test_old_format_provisional_agreements_dsa_dma():
+    # 5 July 2022: Parliament's final votes on the DSA (Am 564) and the DMA (Am 256), old label format
+    votes, ballots = assemble("2022-07-05")
+    dsa, dma = votes["146649"], votes["146588"]
+    assert (dsa.kind, dsa.outcome, dsa.outcome_basis) == ("final", "adopted", "minutes")
+    assert (dsa.n_for, dsa.n_against, dsa.n_abstain) == (539, 54, 30)
+    assert dsa.procedure_refs == ["2020/0361(COD)"] and dma.procedure_refs == ["2020/0374(COD)"]
+    assert dma.kind == "final" and (dma.n_for, dma.n_against, dma.n_abstain) == (588, 11, 31)
+    assert dsa.has_ballots and len(ballots["146649"].favor) == 539  # whole-text roll call keeps its ballots
+    assert dsa.subject == "Digital Services Act ***I"  # block title of the English minutes
+
+
+def test_statement_under_the_agreement_heading_and_the_lapsed_proposal():
+    # Nature Restoration, 27 Feb 2024: the agreement (Am 137) is the final vote; the Commission statement
+    # (Am 138, voted under the same heading) is not; the "Commission proposal" decision lapsed unheld
+    votes, ballots = assemble("2024-02-27")
+    agreement, statement, lapsed = votes["164499"], votes["164800"], votes["164513"]
+    assert (agreement.kind, agreement.n_for, agreement.n_against) == ("final", 329, 275)
+    assert statement.kind == "amendment" and not statement.has_ballots and "164800" not in ballots
+    assert (lapsed.kind, lapsed.outcome, lapsed.n_for) == ("other", "lapsed", None)
+    assert all(v.procedure_refs == ["2022/0195(COD)"] for v in (agreement, statement, lapsed))
+
+
+def test_rejected_commission_proposal_stays_the_final_vote():
+    # SIOFA, 11 July 2023: the minutes record "Commission proposal — 48/585/6"; adopted text
+    # TA-9-2023-0265 reads "1. Rejects the Commission proposal; 2. Calls on the Commission to withdraw its
+    # proposal". Parliament rejected the proposal: a final vote, outcome rejected (not lapsed, not an amendment)
+    votes, _ = assemble("2023-07-11")
+    v = votes["156775"]
+    assert (v.kind, v.outcome, v.outcome_basis) == ("final", "rejected", "minutes")
+    assert (v.n_for, v.n_against, v.n_abstain) == (48, 585, 6)
+    assert v.procedure_refs == ["2022/0348(COD)"]
+    assert v.subject is not None and "(SIOFA)" in v.subject
+
+
+def test_urgent_procedure_items_link_through_their_structured_label():
+    # Deforestation Regulation revision, 17 Dec 2025: the vote item names its procedure only in
+    # structuredLabel "(COM(2025)0652 – C10-0263/2025 – 2025/0329(COD))"
+    votes, _ = assemble("2025-12-17")
+    agreement, rejection = votes["182886"], votes["182885"]
+    assert agreement.procedure_refs == rejection.procedure_refs == ["2025/0329(COD)"]
+    assert (agreement.kind, agreement.majority_rule) == ("final", "votes_cast")
+    assert (rejection.kind, rejection.kind_detail, rejection.outcome) == (
+        "motion",
+        "reject_proposal",
+        "rejected",
+    )
+    assert rejection.subject == "Deforestation Regulation: certain obligations of operators and traders ***I"
+    item = {"structuredLabel": "<structuredLabel><title>T</title><label>Proposal (COM(2025)0652 – "
+                               "C10-0263/2025 – 2025/0329(COD))</label></structuredLabel>"}  # fmt: skip
+    assert ev.structured_label_refs(item) == ["2025/0329(COD)"]
+
+
+def test_whole_text_amendment_is_an_amendment():
+    # urgent procedure, 14 Mar 2024: "Text as a whole" with amendment number 1 (by ECON, show of hands) is an
+    # amendment replacing the text; the vote on the "Commission proposal" is the final vote
+    votes, _ = assemble("2024-03-14")
+    assert votes["166652"].kind == "amendment"
+    assert (votes["166653"].kind, votes["166653"].procedure_refs) == ("final", ["2024/0019(COD)"])
+
+
+def test_motion_details():
+    votes, ballots = assemble("2025-07-10", "2026-07-09")
+    assert votes["178149"].kind_detail == "censure"
+    assert (
+        votes["195775"].kind_detail == "reject_council_position"
+    )  # ***II, "Proposal to reject the Council position"
+    assert votes["195783"].kind_detail is None  # an amendment
+    # the roll call confirming the committee's decision to negotiate (digital euro) keeps its ballots
+    neg = votes["195719"]
+    assert (neg.kind, neg.kind_detail, neg.outcome) == ("procedural", "negotiation_decision", "adopted")
+    assert (neg.n_for, neg.n_against, neg.n_abstain) == (416, 169, 22)
+    assert neg.procedure_refs == ["2023/0212(COD)"] and neg.has_ballots and "195719" in ballots
+
+
+def test_minutes_block_titles():
+    rows = ev.parse_minutes((FIX / "minutes_2023-07-11.xml").read_bytes())
+    siofa = [r for r in rows if r.counts == (48, 585, 6)]
+    assert [(r.outcome, r.symbol) for r in siofa] == [("rejected", "***I")]
+    assert siofa[0].title is not None and siofa[0].title.endswith("(SIOFA) ***I")
 
 
 # -------------------------------------------------------------------------------------- snapshot
@@ -300,7 +409,9 @@ def test_snapshot_votes():
         assert v.term == (9 if v.date <= "2024-07-15" else 10) and v.date >= ev.FIRST_SITTING
         assert all(ev.PROC_REF_RE.fullmatch(r) for r in v.procedure_refs)
         if v.has_ballots:
-            assert v.method == ev.ROLLCALL and v.kind in ev.BALLOT_KINDS
+            assert v.method == ev.ROLLCALL and ev.keeps_ballots(v.kind, v.kind_detail)
+        if v.kind in ("final", "mandate"):
+            assert v.outcome != "lapsed"  # a whole-text vote that fell was never held: kind "other"
 
 
 def test_snapshot_ballot_invariants():
@@ -428,11 +539,11 @@ def test_interrupted_fetch_keeps_completed_chunks_and_resumes(fetch_env, monkeyp
     checks = iter([False, True])  # the budget runs out after the first chunk
     monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: next(checks, True))
     first = ev.fetch(http)
-    assert first.status == "partial" and "6 sittings pending; resumes next run" in first.note
+    assert first.status == "partial" and "11 sittings pending; resumes next run" in first.note
     state = snapshot.read_state(ev.SOURCE_ID)
-    assert state["pass"] == "full" and len(state["pending"]) == 6
+    assert state["pass"] == "full" and len(state["pending"]) == 11
     done = {v.event_id[:17] for v in _stored().values()}
-    assert done == {"MTG-PL-2019-10-24", "MTG-PL-2020-07-08", "MTG-PL-2023-06-14"}  # 2020-07-09: no decisions
+    assert done == {"MTG-PL-2019-10-24", "MTG-PL-2020-07-08", "MTG-PL-2022-07-05"}  # 2020-07-09: no decisions
     assert state["doc_links"]["RC-9-2019-0118"] == ["2019-2854"]
 
     monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
@@ -471,7 +582,7 @@ def test_full_refresh_flag_refetches_everything(fetch_env, monkeypatch):
     monkeypatch.setenv("EU_INTEL_FULL_REFRESH", "1")
     http = FixtureHttp()
     status = ev.fetch(http)
-    assert status.note.startswith("full pass: 10/10 sittings")
+    assert status.note.startswith("full pass: 15/15 sittings")
     assert {p.split("/")[2] for p in http.requests if p.startswith("/meetings/MTG-PL-")} == set(http.sittings)
 
 
@@ -481,7 +592,7 @@ def test_pending_sittings_resume_when_the_listing_fails(fetch_env, monkeypatch):
 
     checks = iter([False, True])
     monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: next(checks, True))
-    ev.fetch(FixtureHttp())  # interrupted after the first chunk: 6 sittings pending
+    ev.fetch(FixtureHttp())  # interrupted after the first chunk: 11 sittings pending
 
     class NoListing(FixtureHttp):
         def get(self, url, params=None, **kw):

@@ -1,0 +1,235 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2024-02-27/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: ; others keep their first 3 ids (published counts unchanged).",
+ "sitting": "MTG-PL-2024-02-27",
+ "decisions": {
+  "data": [
+   {
+    "id": "eli/dl/event/MTG-PL-2024-02-27-DEC-164499",
+    "type": "Vote",
+    "activity_date": "2024-02-27",
+    "activity_id": "MTG-PL-2024-02-27-DEC-164499",
+    "activity_label": {
+     "fr": "A9-0220/2023 - César Luena - Accord provisoire - Am 137",
+     "mul": "A9-0220/2023 - César Luena - Accord provisoire - Am 137",
+     "en": "A9-0220/2023 – César Luena – Provisional agreement – Am 137"
+    },
+    "activity_order": "6.0",
+    "activity_start_date": "2024-02-27T12:28:30+01:00",
+    "decided_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0220-AM-137"
+    ],
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197840",
+     "person/24942",
+     "person/197458"
+    ],
+    "had_voter_against": [
+     "person/125004",
+     "person/192635",
+     "person/204368"
+    ],
+    "had_voter_favor": [
+     "person/40599",
+     "person/197698",
+     "person/197771"
+    ],
+    "had_voter_intended_against": [
+     "person/96933",
+     "person/124785"
+    ],
+    "had_voter_intended_favor": [
+     "person/197835",
+     "person/96812",
+     "person/124710"
+    ],
+    "number_of_attendees": 628,
+    "number_of_votes_abstention": 24,
+    "number_of_votes_against": 275,
+    "number_of_votes_favor": 329,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-02-27-RCV-ITM-035"
+    ],
+    "responsible_organization_label": {
+     "fr": "commission",
+     "en": "committee"
+    },
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "notation_votingId": "164499",
+    "decisionAboutId": "137",
+    "decisionAboutId_XMLLiteral": "<am><reference><number>137</number></reference></am>",
+    "headingLabel": {
+     "en": "Provisional agreement",
+     "fr": "Accord provisoire"
+    },
+    "referenceText": {
+     "en": "Provisional agreement",
+     "fr": "Accord provisoire"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-02-27-VOT-ITM-940092"
+    ]
+   },
+   {
+    "id": "eli/dl/event/MTG-PL-2024-02-27-DEC-164513",
+    "type": "Decision",
+    "activity_date": "2024-02-27",
+    "activity_id": "MTG-PL-2024-02-27-DEC-164513",
+    "activity_order": "23.0",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/LAPSED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "notation_votingId": "164513",
+    "headingLabel": {
+     "fr": "Projet d'acte législatif",
+     "en": "Draft legislative act"
+    },
+    "referenceText": {
+     "fr": "Proposition de la Commission",
+     "en": "Commission proposal"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-02-27-VOT-ITM-940092"
+    ]
+   },
+   {
+    "id": "eli/dl/event/MTG-PL-2024-02-27-DEC-164800",
+    "type": "Vote",
+    "activity_date": "2024-02-27",
+    "activity_id": "MTG-PL-2024-02-27-DEC-164800",
+    "activity_label": {
+     "mul": "A9-0220/2023 - César Luena - Déclaration de la Commission - Am 138",
+     "fr": "A9-0220/2023 - César Luena - Déclaration de la Commission - Am 138",
+     "en": "A9-0220/2023 – César Luena – Commission statement – Am 138"
+    },
+    "activity_order": "7.0",
+    "activity_start_date": "2024-02-27T12:29:18+01:00",
+    "decided_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0220-AM-138"
+    ],
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197767",
+     "person/197458",
+     "person/197765"
+    ],
+    "had_voter_against": [
+     "person/197519",
+     "person/243912",
+     "person/197829"
+    ],
+    "had_voter_favor": [
+     "person/197718",
+     "person/247122",
+     "person/197529"
+    ],
+    "had_voter_intended_against": [
+     "person/96787",
+     "person/124785"
+    ],
+    "number_of_attendees": 625,
+    "number_of_votes_abstention": 24,
+    "number_of_votes_against": 266,
+    "number_of_votes_favor": 335,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-02-27-RCV-ITM-036"
+    ],
+    "responsible_organization_label": {
+     "fr": "commission",
+     "en": "committee"
+    },
+    "was_motivated_by": [
+     "eli/dl/event/MTG-PL-2024-02-27-VOT-ITM-940092-RCV-1"
+    ],
+    "comment": {
+     "fr": "AN",
+     "en": "RCV"
+    },
+    "notation_votingId": "164800",
+    "decisionAboutId_XMLLiteral": "<am><reference><number>138</number></reference></am>",
+    "decisionAboutId": "138",
+    "headingLabel": {
+     "en": "Provisional agreement",
+     "fr": "Accord provisoire"
+    },
+    "referenceText": {
+     "fr": "Déclaration de la Commission",
+     "en": "Commission statement"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-02-27-VOT-ITM-940092"
+    ]
+   }
+  ]
+ },
+ "vote_results": {
+  "data": [
+   {
+    "id": "eli/dl/event/MTG-PL-2024-02-27-VOT-ITM-940092",
+    "type": "Activity",
+    "activity_date": "2024-02-27",
+    "activity_id": "MTG-PL-2024-02-27-VOT-ITM-940092",
+    "activity_label": {
+     "mul": "Restauration de la nature",
+     "en": "Nature restoration ***I",
+     "fr": "Restauration de la nature ***I"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2023-0220"
+    ],
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164813",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164809",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164811",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164798",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164810",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164802",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164806",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164801",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164805",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164808",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164800",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164814",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164513",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164799",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164804",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164803",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164807",
+     "eli/dl/event/MTG-PL-2024-02-27-DEC-164499"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2024-02-27-OJ-ITM-V-50"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2024-02-27-VOT-ITM-009"
+    ],
+    "notation_dlvId": "940092",
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Restauration de la nature ***I</title><label>Rapport: César Luena (A9-0220/2023)</label></structuredLabel>",
+     "en": "<structuredLabel><title>Nature restoration ***I</title><label>Report: César Luena (A9-0220/2023)</label></structuredLabel>"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2024-02-27",
+     {
+      "id": "eli/dl/proc/2022-0195",
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2024-02-27-VOT-ITM-940092"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

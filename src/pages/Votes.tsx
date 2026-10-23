@@ -79,7 +79,7 @@ export default function Votes() {
       if (dossier === 'unlinked' && v.dossier_id) return false;
       if (close && !isClose(v)) return false;
       if (needle) {
-        const hay = `${v.display_title} ${v.title} ${v.dossier_ref ?? ''} ${v.id}`.toLowerCase();
+        const hay = `${v.display_title} ${v.title} ${v.dossier_ref ?? ''} ${v.procedure_ref ?? ''} ${v.id}`.toLowerCase();
         if (!hay.includes(needle)) return false;
       }
       return true;

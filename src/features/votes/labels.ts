@@ -1,10 +1,10 @@
-import type { BallotPosition, EpVoteSummary, VoteKind, VoteOutcome } from '../../types/data';
+import type { BallotPosition, EpVoteSummary, VoteKind, VoteKindDetail, VoteOutcome } from '../../types/data';
 
 export const OUTCOME_LABEL: Record<VoteOutcome, string> = {
   adopted: 'Adopted',
   rejected: 'Rejected',
   lapsed: 'Lapsed',
-  unknown: 'Outcome not recorded',
+  unknown: 'Outcome not established',
 };
 
 export const OUTCOME_ICON: Record<VoteOutcome, string> = {
@@ -42,6 +42,20 @@ export const KIND_EXPLAINER: Record<VoteKind, string> = {
   procedural:
     'A vote about how Parliament handles a file (for example referring it back to committee or opening negotiations), not about the content of the law.',
   other: 'A plenary vote that does not fit the categories above.',
+};
+
+/** Explanations that replace the kind's when Parliament's texts say what a motion or procedural vote decides. */
+export const DETAIL_EXPLAINER: Record<VoteKindDetail, string> = {
+  reject_proposal:
+    'A motion to reject the Commission’s proposal outright. If the motion is adopted, Parliament rejects the proposal; if the motion is rejected, the proposal is not rejected.',
+  reject_council_position:
+    'At second reading, a motion to reject the Council’s position. It needs a majority of Parliament’s component Members; if it is adopted, the proposed act is deemed not to have been adopted (Article 294(7)(b) TFEU).',
+  censure:
+    'A motion of censure on the Commission (Article 234 TFEU). It needs two thirds of the votes cast, representing a majority of Parliament’s component Members; if it is carried, the Commission must resign as a body.',
+  objection:
+    'An objection to a measure the Commission adopts under powers given to it by a law. If the objection is adopted, Parliament objects. The effect depends on the procedure: a delegated act cannot enter into force (Article 290(2) TFEU); a measure under the regulatory procedure with scrutiny cannot be adopted; for a draft implementing act, the Commission must review it (Regulation (EU) No 182/2011, Article 11).',
+  negotiation_decision:
+    'A vote on whether the committee responsible may open negotiations with the Council on the basis of its report. Plenary votes on this only when political groups or enough MEPs ask for it after the committee’s decision is announced.',
 };
 
 export const POSITION_LABEL: Record<BallotPosition, string> = {

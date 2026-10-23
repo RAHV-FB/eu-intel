@@ -52,6 +52,9 @@
   gap: var(--sp-2) var(--sp-3);
   font-size: var(--fs-sm);
 }
+.vote-item__note {
+  margin: var(--sp-1) 0 0;
+}
 
 .margin {
   color: var(--text-2);
@@ -109,6 +112,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-2) var(--sp-4);
+}
+.vote-summary__note {
+  margin: 0;
+  font-weight: var(--fw-semibold);
 }
 .vote-summary .votebar__track {
   height: 20px;

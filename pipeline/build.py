@@ -164,6 +164,57 @@ VOTE_KIND_PHRASE: dict[str, str] = {
     "mandate": "vote on Parliament's negotiating mandate (text referred back to committee for negotiations)",
     "other": "vote",
 }
+# EpVote.kind_detail: what a motion or procedural vote decides (labels and phrases replace the kind's)
+VOTE_DETAIL_LABELS: dict[str, str] = {
+    "reject_proposal": "Vote on a motion to reject the Commission proposal",
+    "reject_council_position": "Vote on a motion to reject the Council's position",
+    "censure": "Vote on a motion of censure on the Commission",
+    "objection": "Vote on an objection to a Commission measure",
+    "negotiation_decision": "Vote on the committee's decision to enter into negotiations",
+}
+VOTE_DETAIL_PHRASE: dict[str, str] = {
+    "reject_proposal": "motion to reject the Commission proposal",
+    "reject_council_position": "motion to reject the Council's position (second reading)",
+    "censure": "vote on a motion of censure",
+    "objection": "vote on an objection",
+    "negotiation_decision": "vote on the committee's decision to enter into negotiations with the Council",
+}
+# What the official outcome means for these votes ("rejected" for a motion to reject is not a rejected law)
+VOTE_OUTCOME_NOTES: dict[tuple[str, str], str] = {
+    ("reject_proposal", "adopted"): "Parliament adopted the motion and so rejected the Commission proposal.",
+    ("reject_proposal", "rejected"): "The motion was rejected: Parliament did not reject the Commission proposal.",
+    ("reject_council_position", "adopted"): "Parliament adopted the motion and so rejected the Council's position.",
+    ("reject_council_position", "rejected"): "The motion was rejected: Parliament did not reject the Council's position.",
+    ("censure", "adopted"): "Parliament adopted the motion of censure.",
+    ("censure", "rejected"): "The motion of censure was rejected: Parliament did not censure the Commission.",
+    ("objection", "adopted"): "Parliament adopted the objection: it objects to the Commission measure.",
+    ("objection", "rejected"): "The objection was rejected: Parliament did not object to the Commission measure.",
+    ("negotiation_decision", "adopted"): "Parliament approved the committee's decision to enter into negotiations "
+                                         "with the Council.",
+    ("negotiation_decision", "rejected"): "Parliament rejected the committee's decision to enter into negotiations "
+                                          "with the Council.",
+}  # fmt: skip
+OEIL_PROCEDURE = "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference="
+NEGOTIATION_EVENT_TYPES = (
+    "def/ep-activities/PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+    "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+)
+_SUBJECT_SYMBOL = re.compile(r"\s*\*{1,3}\s*(?:I{1,3})?\s*$")
+_SUBJECT_NUMBER = re.compile(r"^\d{1,3}\.\s+")
+
+
+def vote_subject(subject: str | None) -> str | None:
+    """The published subject of a vote without its procedure symbol ("***I") or agenda number ("11. ")."""
+    if not subject:
+        return None
+    s = _SUBJECT_NUMBER.sub("", _SUBJECT_SYMBOL.sub("", subject)).strip()
+    return s or None
+
+
+def vote_held(v: EpVote) -> bool:
+    """False for a vote that lapsed without being held (no counts): it decided nothing and is not shown."""
+    return not (v.outcome == "lapsed" and v.n_for is None and not v.has_ballots)
+
 
 KEY_KINDS = {
     "proposal",
@@ -495,7 +546,8 @@ def _dedupe_sources(sources: list[dict | None]) -> list[dict]:
 
 def _vote_index_entry(v: dict) -> dict:
     """Compact EpVoteSummary for votes/index.json (full record in votes/<id>.json)."""
-    out = {k: x for k, x in v.items() if not (k in ("dossier_id", "dossier_ref", "margin") and x is None)}
+    optional = ("dossier_id", "dossier_ref", "margin", "kind_detail", "outcome_note", "procedure_ref")
+    out = {k: x for k, x in v.items() if not (k in optional and x is None)}
     src = v.get("source") or {}
     out["source"] = {k: src[k] for k in ("institution", "url") if src.get(k)}
     return out
@@ -993,11 +1045,20 @@ class Builder:
             self.vote_dossier_map[v.id] = ds
             for d in ds:
                 self.votes_of[d].append(v)
+        # votes on whole texts with roll-call results, every final / mandate vote linked to a procedure, and
+        # the votes on a committee's decision to enter into negotiations; never a vote that was not held
+        decisive = ("final", "mandate")
         idx = [
             v
             for v in s.votes
-            if (v.has_ballots and v.kind in ("final", "mandate", "resolution", "motion"))
-            or (v.kind in ("final", "mandate") and self.vote_dossier_map.get(v.id))
+            if vote_held(v)
+            and (
+                (v.has_ballots and (v.kind in (*decisive, "resolution", "motion") or v.kind_detail))
+                or (
+                    (v.kind in decisive or v.kind_detail == "negotiation_decision")
+                    and self.vote_dossier_map.get(v.id)
+                )
+            )
         ]
         idx.sort(key=lambda v: (v.date, v.id), reverse=True)
         self.indexed_votes = idx
@@ -1015,12 +1076,25 @@ class Builder:
             self.files[f"votes/{v.id}.json"] = det
         self.files["votes/index.json"] = [_vote_index_entry(self.vote_summary[v.id]) for v in idx]
 
+    def members_in_office(self, d: str) -> int:
+        """MEPs whose political-group membership (non-attached included) covers day `d` in the EP's
+        membership records (ep_people)."""
+        return sum(1 for spans in self.mep_groups.values() if any(_valid_on(a, b, d) for a, b, _ in spans))
+
     def component_members(self, d: str) -> int | None:
-        """Number of component Members for majority rules: the statutory number of seats documented in
-        pipeline.analysis.ep_margin (None when not covered; margins needing it are then not computed)."""
+        """Number of component Members for majority rules: the Members in office on the day of the vote.
+
+        Parliament counts the Members actually in office, not the statutory seats: for the election of the
+        Commission President on 18 July 2024 its press service gave "Parliament is currently composed of 719
+        MEPs, so the necessary majority was 360 votes" (720 seats). The count comes from the membership
+        records (members_in_office) and is used only when it is plausible against the statutory number of
+        seats in pipeline.analysis.ep_margin (at most that number, at least 95% of it); otherwise None, and
+        margins that need it are not computed."""
         if d not in self.component_cache:
-            seats = _lazy("pipeline.analysis.ep_margin", "statutory_seats")
-            self.component_cache[d] = seats(d) if seats else None
+            seats_fn = _lazy("pipeline.analysis.ep_margin", "statutory_seats")
+            seats = seats_fn(d) if seats_fn else None
+            n = self.members_in_office(d) if seats else 0
+            self.component_cache[d] = n if seats and seats * 0.95 <= n <= seats else None
         return self.component_cache[d]
 
     def ep_vote_summary(self, v: EpVote, margin_fn: Any) -> dict:
@@ -1052,38 +1126,60 @@ class Builder:
                         "relative": m["relative"],
                         "label": m["label"],
                     }
+                    if m["rule"] != "votes_cast" and isinstance(m.get("component_members"), int):
+                        margin["component_members"] = m["component_members"]
             except Exception as e:  # noqa: BLE001
                 log.debug("margin failed for %s: %r", v.id, e)
-        if p is not None:
-            display = f"{_truncate(self.dossier_title(p), 120)} — {VOTE_KIND_PHRASE.get(v.kind, 'vote')}"
-            if v.kind in ("amendment", "split_or_separate") and v.reference_text:
-                display += f" ({v.reference_text})"
-        else:
-            display = v.title
+        refs = sorted(set(v.procedure_refs))
+        proc_ref = p.reference if p else (refs[0] if len(refs) == 1 else None)
         return {
             "id": v.id,
             "date": v.date,
             "title": v.title,
-            "display_title": display,
+            "display_title": self.vote_display_title(v, p),
             "kind": v.kind,
-            "kind_label": VOTE_KIND_LABELS.get(v.kind, "Vote"),
+            "kind_detail": v.kind_detail,
+            "kind_label": VOTE_DETAIL_LABELS.get(v.kind_detail or "") or VOTE_KIND_LABELS.get(v.kind, "Vote"),
             "outcome": v.outcome,
             "outcome_basis": getattr(v, "outcome_basis", None),
+            "outcome_note": VOTE_OUTCOME_NOTES.get((v.kind_detail or "", v.outcome)),
             "for": n_for,
             "against": n_against,
             "abstain": n_abs,
             "dossier_id": did,
             "dossier_ref": p.reference if p else None,
+            # the official procedure reference, also for procedures that are not tracked as legislative files
+            "procedure_ref": proc_ref,
             "topics": self.topics_for(p) if p else [],
             "margin": margin,
             "has_ballots": bool(b is not None),
             "source": _src(v.source),
         }
 
+    def vote_display_title(self, v: EpVote, p: Procedure | None) -> str:
+        """Readable title: the file's title (or the published subject of the vote) + what was voted.
+
+        Falls back to Parliament's own label only when neither a tracked file nor an English subject exists."""
+        phrase = VOTE_DETAIL_PHRASE.get(v.kind_detail or "") or VOTE_KIND_PHRASE.get(v.kind, "vote")
+        if p is not None:
+            display = f"{_truncate(self.dossier_title(p), 120)} — {phrase}"
+            if v.kind in ("amendment", "split_or_separate") and v.reference_text:
+                display += f" ({v.reference_text})"
+            return display
+        subject = vote_subject(v.subject)
+        if not subject:
+            return v.title
+        # the subject already says what was voted: "Objection pursuant to Rule 114(3): …", "Motion of censure …"
+        says_it = {"objection": r"^objection\b", "censure": r"\bcensure\b"}.get(v.kind_detail or "")
+        if says_it and re.search(says_it, subject, re.I):
+            return _truncate(subject, 200)
+        return f"{_truncate(subject, 160)} — {phrase}"
+
     def ep_vote_detail(self, v: EpVote) -> dict:
         summ = self.vote_summary[v.id]
         b = self.ballots.get(v.id) if v.has_ballots else None
         ballots: list[dict] = []
+        intentions: list[dict] = []
         names: dict[str, str] = {}
         groups: dict[str, Counter] = defaultdict(Counter)
         countries: dict[str, Counter] = defaultdict(Counter)
@@ -1118,6 +1214,17 @@ class Builder:
                         countries[country][pos] += 1
                     self.mep_votes[mid].append({"vote_id": v.id, "pos": pos, "_d": v.date})
             ballots.sort(key=lambda x: (x["pos"], names.get(x["mep"], ""), x["mep"]))
+            # MEPs with no recorded vote who stated afterwards how they had intended to vote
+            for mid, it in intended.items():
+                if mid in seen:
+                    continue
+                m = self.mep.get(mid)
+                gid = self.group_at(mid, v.date)
+                entry = {"mep": mid, "intended": it, "group": self.org_slug.get(gid) if gid else None,
+                         "country": m.country if m else None}  # fmt: skip
+                intentions.append(entry)
+                names[mid] = m.name if m else mid
+            intentions.sort(key=lambda x: (x["intended"], names.get(x["mep"], ""), x["mep"]))
             rf, ra, rb = len(b.favor), len(b.against), len(b.abstain)
             if v.n_for is None:
                 recon = {
@@ -1157,14 +1264,18 @@ class Builder:
             {"country": k, "for": c["for"], "against": c["against"], "abstain": c["abstain"]}
             for k, c in sorted(countries.items())
         ]
+        proc_ref = summ.get("procedure_ref")
         return {
             **summ,
+            "subject": v.subject,
+            "procedure_url": f"{OEIL_PROCEDURE}{proc_ref}" if proc_ref else None,
             "reference_text": v.reference_text,
             "doc_ids": v.doc_ids,
             "attendees": v.attendees,
             "groups": gb,
             "countries": cb,
             "ballots": ballots,
+            "intentions": intentions,
             "mep_names": dict(sorted(names.items())),
             "reconciliation": recon,
         }
@@ -1376,7 +1487,7 @@ class Builder:
     def timeline(self, p: Procedure, acts: list[LegalAct], votes: list[EpVote]) -> list[dict]:
         votes_by_date: dict[str, list[EpVote]] = defaultdict(list)
         for v in votes:
-            if v.id in self.indexed_vote_ids:
+            if v.id in self.indexed_vote_ids and vote_held(v):
                 votes_by_date[v.date].append(v)
         # The Council's own voting results date its votes; the Legislative Observatory's Council steps are
         # aligned with them so the timeline and the Council vote cards cannot disagree.
@@ -1386,6 +1497,7 @@ class Builder:
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
         seen_ev: set[tuple[str, str, str]] = set()
+        negotiation: list[int] = []  # positions in `out` of Parliament's decisions on negotiations
         for e in p.events:
             if e.date > self.today:  # forecasts are not legally fixed dates
                 continue
@@ -1407,15 +1519,32 @@ class Builder:
                 docs = {d.id for d in e.docs}
                 cands = votes_by_date[e.date]
                 by_doc = [v for v in cands if docs & set(v.doc_ids)]
-                finals = [v for v in (by_doc or cands) if v.kind == "final"]
+                # the final vote whose official result is known comes first (stable: newest id first)
+                finals = sorted(
+                    (v for v in (by_doc or cands) if v.kind == "final"),
+                    key=lambda v: (v.outcome not in ("adopted", "rejected"), v.n_for is None),
+                )
                 pick = finals or by_doc or (cands if len(cands) == 1 else [])
                 vote_id = pick[0].id if pick else None
+            elif kind == "negotiation_mandate" and e.raw_type in NEGOTIATION_EVENT_TYPES:
+                negotiation.append(len(out))  # linked below, once every event of the day is linked
             out.append({
                 "id": e.id, "date": e.date, "kind": kind, "title": title, "detail": e.detail,
                 "institution": e.institution, "state": "done", "key": key,
                 "docs": [d.model_dump(mode="json") for d in e.docs], "source": _src(e.source), "vote_id": vote_id,
             })  # fmt: skip
             seen.add((kind, e.date))
+        # Parliament's own decision on negotiations (referral back to committee, or confirming the committee's
+        # decision): its mandate vote of that day, unless another event of the same day already links it
+        for i in negotiation:
+            day = out[i]["date"]
+            linked = {x["vote_id"] for x in out if x["date"] == day and x["vote_id"]}
+            pick = [
+                v
+                for v in votes_by_date.get(day, [])
+                if (v.kind == "mandate" or v.kind_detail == "negotiation_decision") and v.id not in linked
+            ]
+            out[i]["vote_id"] = pick[0].id if len(pick) == 1 else None
         out.extend(council_vote_event(cv) for cv in cvotes)
         for a in acts:
             src = _src(a.source)
@@ -1589,8 +1718,10 @@ class Builder:
                 docs=[DocRef(id=n.document, label=n.document, kind="proposal")] if replaced and n.document else [],
                 source=n.source,
             ))  # fmt: skip
-        # OEIL labels meaning Parliament adopted a position (a "rejected" final vote then contradicts it)
-        past_parliament = (p.stage_raw or "").startswith(("Awaiting Council", "Awaiting Parliament 2nd",
+        # OEIL stages after Parliament's first reading that a rejection would contradict. "Awaiting Council's 1st
+        # reading position" does not: OEIL shows it after a first-reading rejection too (SIOFA 2022/0348(COD),
+        # adopted text TA-9-2023-0265 "Rejects the Commission proposal").
+        past_parliament = (p.stage_raw or "").startswith(("Awaiting Parliament 2nd", "Awaiting Council's 2nd",
                                                            "Awaiting signature", "Procedure completed"))  # fmt: skip
         if EventKind.rejection not in have and not past_parliament:
             for v in sorted(self.votes_of.get(p.id, []), key=lambda v: (v.date, v.id)):
@@ -2207,13 +2338,22 @@ class Builder:
         close_votes = [{"vote_id": v["id"], "dossier_id": v["dossier_id"], "title": v["display_title"],
                         "subtitle": v["margin"].get("label"), "date": v["date"], "badge": v["outcome"]}
                        for v in close[:10]]  # fmt: skip
+        # A rejected motion to reject is not a rejection by Parliament: the adopted motion is. Other motions
+        # (objections, censure) are listed when rejected, with what that means.
+        rejecting = ("reject_proposal", "reject_council_position")
         rej_votes = [
             v
             for v in self.vote_summary.values()
-            if v["outcome"] == "rejected" and v["kind"] in ("final", "motion")
+            if (v["kind_detail"] in rejecting and v["outcome"] == "adopted")
+            or (
+                v["kind_detail"] not in rejecting
+                and v["outcome"] == "rejected"
+                and v["kind"] in ("final", "motion")
+            )
         ]
         rej_items = [{"vote_id": v["id"], "dossier_id": v["dossier_id"], "title": v["display_title"],
-                      "subtitle": v["kind_label"], "date": v["date"], "badge": "Rejected"} for v in rej_votes]  # fmt: skip
+                      "subtitle": v["outcome_note"] or v["kind_label"], "date": v["date"], "badge": "Rejected"}
+                     for v in rej_votes]  # fmt: skip
         rej_items += [{"dossier_id": d["id"], "title": d["title"], "subtitle": d["status_label"],
                        "date": self.dossier_detail[d["id"]]["status"].get("since") or d["last_event"], "badge": "Rejected"}
                       for d in summ.values() if d["stage"] == "rejected"]  # fmt: skip
@@ -2353,7 +2493,8 @@ class Builder:
                          "not in this release; their Parliament steps are not shown.")  # fmt: skip
         if avail("ep_votes"):
             notes.append(f"Parliament votes: {len(self.indexed_votes)} plenary votes are listed (votes on whole texts, "
-                         "resolutions and motions with roll-call results, and all final votes linked to a procedure). "
+                         "resolutions and motions with roll-call results, all final and negotiating-mandate votes "
+                         "linked to a procedure, and votes on a committee's decision to enter into negotiations). "
                          "Group and country breakdowns use each MEP's membership on the day of the vote. "
                          "MEPs who did not vote are not counted as abstentions.")  # fmt: skip
         else:

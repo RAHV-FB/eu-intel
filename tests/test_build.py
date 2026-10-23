@@ -636,3 +636,163 @@ def test_council_steps_dated_by_the_council_voting_result():
     assert [e.date for e in Builder.council_dated(me, p).events] == ["2026-09-28"]  # type: ignore[arg-type]
     me.council_of["2023-0131"][0]["date"] = "2025-01-01"  # too far apart: a different vote
     assert Builder.council_dated(me, p).events[0].date == "2026-10-01"  # type: ignore[arg-type]
+
+
+# ------------------------------------------------------------------------------- EP votes (audit regressions)
+def _vote(vid: str, date: str, kind: str, outcome: str, counts: tuple, refs: list[str], **kw) -> dict:
+    n_for, n_against, n_abstain = counts
+    return {
+        "attendees": None, "committee": None, "date": date, "doc_ids": [], "event_id": f"TEST-DEC-{vid}",
+        "has_ballots": False, "id": vid, "kind": kind, "majority_rule": "votes_cast",
+        "method": "VOTE_ELECTRONIC_ROLLCALL", "n_abstain": n_abstain, "n_against": n_against, "n_for": n_for,
+        "outcome": outcome, "outcome_basis": "published", "procedure_refs": refs, "reference_text": None,
+        "source": {"identifier": vid, "institution": "EP", "label": f"TEST ONLY {vid}", "published": None,
+                   "retrieved_at": "2099-01-01T00:00:00Z", "url": f"https://example.invalid/{vid}"},
+        "term": 9 if date <= "2024-07-15" else 10, "title": f"TEST label {vid}", **kw,
+    }  # fmt: skip
+
+
+@pytest.fixture(scope="module")
+def votes_out(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The build fixture plus TEST votes for the vote-accuracy rules (lapsed, motions, mandates, majorities)."""
+    import pipeline.build as B
+
+    base = tmp_path_factory.mktemp("build-votes")
+    shutil.copytree(FIX / "snapshot", base / "snapshot")
+    snap = base / "snapshot"
+    votes = json.loads((snap / "ep_votes/votes.json").read_text(encoding="utf-8"))
+    ballots = json.loads((snap / "ep_votes/ballots.json").read_text(encoding="utf-8"))
+    votes += [
+        # a whole-text decision that lapsed unheld, dated like the ep_position event and naming its document
+        _vote("V9", "2024-04-10", "final", "lapsed", (None, None, None), ["2099/0001(COD)"],
+              doc_ids=["TA-9-2099-0001"]),
+        # objection to a delegated act outside the tracked files, decided by a majority of component Members
+        _vote("V10", "2025-11-26", "motion", "rejected", (359, 188, 76), ["2025/2943(DEA)"],
+              majority_rule="component_members", has_ballots=True, kind_detail="objection",
+              subject="Objection pursuant to Rule 114(3): amending Delegated Regulation (EU) 2023/2429"),
+        # motions to reject the Commission proposal: adopted (the proposal is rejected) and rejected
+        _vote("V11", "2025-03-11", "motion", "adopted", (400, 200, 10), ["2099/0003(COD)"], has_ballots=True,
+              kind_detail="reject_proposal"),
+        _vote("V12", "2025-03-12", "motion", "rejected", (100, 500, 10), ["2099/0003(COD)"], has_ballots=True,
+              kind_detail="reject_proposal"),
+        # roll call confirming the committee's decision to enter into negotiations
+        _vote("V13", "2025-02-10", "procedural", "adopted", (300, 200, 10), ["2099/0003(COD)"], has_ballots=True,
+              kind_detail="negotiation_decision"),
+    ]  # fmt: skip
+    ballots += [{"abstain": [], "against": [], "favor": ["T1"], "intended_abstain": [], "intended_against": [],
+                 "intended_favor": [], "vote_id": vid} for vid in ("V10", "V11", "V12", "V13")]  # fmt: skip
+    for b in ballots:
+        if b["vote_id"] == "V3":
+            b["intended_abstain"] = ["T3"]  # T3 has no recorded vote on V3 but stated an intention
+    (snap / "ep_votes/votes.json").write_text(json.dumps(votes), encoding="utf-8")
+    (snap / "ep_votes/ballots.json").write_text(json.dumps(ballots), encoding="utf-8")
+    procs = json.loads((snap / "ep_procedures/procedures.json").read_text(encoding="utf-8"))
+    p3 = next(p for p in procs if p["id"] == "2099-0003")
+    p3["events"].append({
+        "date": "2025-02-10", "detail": None, "docs": [], "id": "2099-0003-ev-neg", "institution": "EP",
+        "kind": "negotiation_mandate",
+        "raw_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+        "source": {"identifier": "2099-0003-ev-neg", "institution": "EP", "label": "TEST ONLY", "published": None,
+                   "retrieved_at": "2099-01-01T00:00:00Z", "url": "https://example.invalid/2099-0003-ev-neg"},
+        "title": "Parliament confirmed the committee's mandate to negotiate with the Council",
+    })  # fmt: skip
+    (snap / "ep_procedures/procedures.json").write_text(json.dumps(procs), encoding="utf-8")
+    o = base / "public"
+    mp = pytest.MonkeyPatch()
+    # the fixture has four MEPs; stand in for Parliament's membership records on the day of V10
+    mp.setattr(B.Builder, "members_in_office", lambda self, d: 719)
+    try:
+        assert build(out=o, snapshot=snap, curated=FIX / "curated", state=base / "state", today=TODAY) == 0
+    finally:
+        mp.undo()
+    return o
+
+
+def test_lapsed_whole_text_vote_is_neither_listed_nor_linked(votes_out: Path):
+    idx = {v["id"] for v in load(votes_out, "votes/index.json")}
+    assert "V9" not in idx and not (votes_out / "votes/V9.json").exists()
+    d1 = load(votes_out, "dossiers/2099-0001.json")
+    assert [v["id"] for v in d1["ep_votes"]] == ["V1"]
+    assert next(e for e in d1["timeline"] if e["kind"] == "ep_position")["vote_id"] == "V1"
+
+
+def test_majority_of_component_members_counts_members_in_office(votes_out: Path):
+    v10 = load(votes_out, "votes/V10.json")
+    # 719 Members in office -> 360 needed (not 361 from the 720 statutory seats): fell 1 vote short
+    assert (v10["margin"]["threshold"], v10["margin"]["distance"]) == (360, -1)
+    assert v10["margin"]["component_members"] == 719 and v10["margin"]["label"] == "Fell 1 vote short"
+
+
+def test_component_members_is_withheld_when_membership_records_are_implausible(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import pipeline.build as B
+
+    b = B.Builder.__new__(B.Builder)
+    b.component_cache = {}
+    for n, expected in ((719, 719), (721, None), (600, None)):  # 720 seats from 2024-07-16
+        b.component_cache.clear()
+        monkeypatch.setattr(B.Builder, "members_in_office", lambda self, d, n=n: n)
+        assert b.component_members("2025-11-26") == expected
+
+
+def test_vote_titles_say_what_was_voted_and_name_the_procedure(votes_out: Path):
+    v10 = load(votes_out, "votes/V10.json")
+    assert (
+        v10["display_title"]
+        == "Objection pursuant to Rule 114(3): amending Delegated Regulation (EU) 2023/2429"
+    )
+    assert v10["kind_label"] == "Vote on an objection to a Commission measure"
+    assert (
+        v10["outcome_note"]
+        == "The objection was rejected: Parliament did not object to the Commission measure."
+    )
+    assert v10["dossier_id"] is None and v10["procedure_ref"] == "2025/2943(DEA)"
+    assert v10["procedure_url"].endswith("procedure-file?reference=2025/2943(DEA)")
+    v12 = load(votes_out, "votes/V12.json")
+    assert v12["display_title"].endswith("— motion to reject the Commission proposal")
+    assert v12["kind_label"] == "Vote on a motion to reject the Commission proposal"
+    assert (
+        v12["outcome_note"] == "The motion was rejected: Parliament did not reject the Commission proposal."
+    )
+
+
+def test_home_rejected_list_reads_rejection_motions_correctly(votes_out: Path):
+    lists = {x["id"]: x for x in load(votes_out, "home.json")["lists"]}
+    rejected = {i.get("vote_id"): i for i in lists["rejected"]["items"]}
+    assert "V12" not in rejected  # the motion to reject failed: the proposal was not rejected
+    assert (
+        rejected["V11"]["subtitle"]
+        == "Parliament adopted the motion and so rejected the Commission proposal."
+    )
+    assert "V10" in rejected and rejected["V10"]["subtitle"].startswith("The objection was rejected")
+    assert all(i.get("vote_id") != "V13" for i in lists["close_votes"]["items"])  # final votes only
+
+
+def test_negotiation_decision_vote_is_listed_and_linked(votes_out: Path):
+    v13 = load(votes_out, "votes/V13.json")
+    assert v13["kind"] == "procedural" and v13["kind_detail"] == "negotiation_decision"
+    assert v13["kind_label"] == "Vote on the committee's decision to enter into negotiations"
+    d3 = load(votes_out, "dossiers/2099-0003.json")
+    assert "V13" in [v["id"] for v in d3["ep_votes"]]
+    neg = next(e for e in d3["timeline"] if e["id"] == "2099-0003-ev-neg")
+    assert neg["vote_id"] == "V13"
+
+
+def test_stated_intentions_without_a_recorded_vote_are_kept(votes_out: Path):
+    v3 = load(votes_out, "votes/V3.json")
+    assert [(x["mep"], x["intended"]) for x in v3["intentions"]] == [("T3", "abstain")]
+    assert "T3" not in {b["mep"] for b in v3["ballots"]} and "T3" in v3["mep_names"]
+    assert load(votes_out, "votes/V1.json")["intentions"] == []
+
+
+def test_vote_outputs_match_the_contract(votes_out: Path):
+    ifs = _interfaces()
+    for v in load(votes_out, "votes/index.json"):
+        _check(v, "EpVoteSummary", ifs, "votes/index.json")
+        det = load(votes_out, f"votes/{v['id']}.json")
+        _check(det, "EpVoteDetail", ifs, f"votes/{v['id']}.json")
+        if det["margin"]:
+            _check(det["margin"], "VoteMargin", ifs, "vote.margin")
+        for x in det["intentions"]:
+            _check(x, "VoteIntention", ifs, "vote.intentions")

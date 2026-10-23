@@ -4,17 +4,17 @@ import type { EpVoteDetail, GroupSummary } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
-import { Disclosure, ErrorState, Loading, NotFound, PageHeader, SourceLink, Term, VoteBar } from '../components/ui';
+import { Disclosure, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term, VoteBar } from '../components/ui';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, MarginText, OutcomeBadge } from '../features/votes/components';
 import { BallotList, CountryBreakdownTable, GroupBreakdownTable } from '../features/votes/Breakdowns';
-import { KIND_EXPLAINER, KIND_LABEL, POSITION_LABEL } from '../features/votes/labels';
+import { DETAIL_EXPLAINER, KIND_EXPLAINER, KIND_LABEL, POSITION_LABEL } from '../features/votes/labels';
 
 const OUTCOME_BASIS_TEXT: Record<string, string> = {
   published: 'Outcome as published in Parliament’s open data',
   minutes: 'Outcome as recorded in the official minutes of the sitting',
   derived: 'Outcome calculated from the recorded counts under the applicable majority rule',
-  none: 'Outcome not recorded in the available official sources',
+  none: 'We could not establish the outcome from the official sources we use; see the official record',
 };
 
 export default function Vote() {
@@ -35,6 +35,17 @@ export default function Vote() {
   if (error || !v) return <div className="container page"><ErrorState error={error} title="This vote could not be loaded" /></div>;
 
   const corrections = v.ballots.filter((b) => b.intended && b.intended !== b.pos);
+  const intentions = v.intentions ?? [];
+  const decided = v.outcome === 'adopted' || v.outcome === 'rejected';
+  const explainer = v.kind_detail ? DETAIL_EXPLAINER[v.kind_detail] : KIND_EXPLAINER[v.kind];
+  const procedureRef = v.procedure_ref || v.dossier_ref;
+  const groupAndCountry = (group?: string | null, country?: string | null) =>
+    group || country ? (
+      <span className="meta">
+        {' '}
+        ({[group ? groupCodes.get(group) ?? group : null, country ? countryName(country) : null].filter(Boolean).join(', ')})
+      </span>
+    ) : null;
   const amendmentRejected = (v.kind === 'amendment' || v.kind === 'split_or_separate') && v.outcome === 'rejected';
   const ballotTotal = v.ballots.length;
 
@@ -53,11 +64,18 @@ export default function Vote() {
         lead={
           <>
             Voted on <time dateTime={v.date}>{formatDate(v.date, true)}</time>
-            {v.dossier_id && (
+            {v.dossier_id ? (
               <>
                 {' '}
                 · Part of <Link to={dossierPath(v.dossier_id)}>{v.dossier_ref || 'this legislative file'}</Link>
               </>
+            ) : (
+              procedureRef && (
+                <>
+                  {' '}
+                  · Procedure <span className="mono">{procedureRef}</span>
+                </>
+              )
             )}
           </>
         }
@@ -71,19 +89,30 @@ export default function Vote() {
           <OutcomeBadge outcome={v.outcome} />
           <span className="meta">{OUTCOME_BASIS_TEXT[v.outcome_basis ?? 'none']}</span>
         </div>
+        {v.outcome_note && <p className="vote-summary__note">{v.outcome_note}</p>}
         <VoteBar forCount={v.for} against={v.against} abstain={v.abstain} label="Official result" />
         <div className="margin-box">
-          {v.margin ? (
+          {v.margin && decided ? (
             <>
               <span className="margin-box__label">
-                <MarginText margin={v.margin} short />
+                <MarginText margin={v.margin} short outcome={v.outcome} />
               </span>
               <span className="meta">
-                Rule applied: {v.margin.rule_label}. Votes in favour needed: {formatNumber(v.margin.threshold)}.
+                Rule applied: {v.margin.rule_label}. Votes in favour needed: {formatNumber(v.margin.threshold)}
+                {v.margin.component_members != null && (
+                  <>
+                    {' '}
+                    (a majority of the {formatNumber(v.margin.component_members)} Members in office on the day of the vote, as
+                    recorded in Parliament’s membership data)
+                  </>
+                )}
+                .
               </span>
             </>
-          ) : (
+          ) : decided ? (
             <MarginText margin={null} />
+          ) : (
+            <span className="meta">No margin is shown because the outcome is not established.</span>
           )}
           {v.attendees != null && <span className="meta">MEPs recorded as present: {formatNumber(v.attendees)}</span>}
         </div>
@@ -110,12 +139,26 @@ export default function Vote() {
             <dt>Date</dt>
             <dd>{formatDate(v.date, true)}</dd>
           </div>
-          {v.dossier_ref && (
+          {v.subject && v.subject !== v.display_title && (
+            <div>
+              <dt>Subject</dt>
+              <dd>{v.subject}</dd>
+            </div>
+          )}
+          {procedureRef && (
             <div>
               <dt>
                 <Term id="procedure-reference">Procedure</Term>
               </dt>
-              <dd className="mono">{v.dossier_id ? <Link to={dossierPath(v.dossier_id)}>{v.dossier_ref}</Link> : v.dossier_ref}</dd>
+              <dd className="mono">
+                {v.dossier_id ? (
+                  <Link to={dossierPath(v.dossier_id)}>{procedureRef}</Link>
+                ) : v.procedure_url ? (
+                  <ExtLink href={v.procedure_url}>{procedureRef}</ExtLink>
+                ) : (
+                  procedureRef
+                )}
+              </dd>
             </div>
           )}
           {v.reference_text && (
@@ -131,7 +174,7 @@ export default function Vote() {
             </div>
           )}
         </dl>
-        <p className="note" style={{ marginTop: 'var(--sp-4)' }}>{KIND_EXPLAINER[v.kind]}</p>
+        <p className="note" style={{ marginTop: 'var(--sp-4)' }}>{explainer}</p>
         {v.title && v.title !== v.display_title && (
           <p className="note">
             Parliament’s own label for this vote: <q>{v.title}</q>
@@ -212,19 +255,31 @@ export default function Vote() {
                     {corrections.map((b) => (
                       <li key={b.mep}>
                         <Link to={`/people/meps/${encodeURIComponent(b.mep)}`}>{v.mep_names[b.mep] ?? `MEP ${b.mep}`}</Link>
-                        {b.group || b.country ? (
-                          <span className="meta">
-                            {' '}
-                            ({[b.group ? groupCodes.get(b.group) ?? b.group : null, b.country ? countryName(b.country) : null].filter(Boolean).join(', ')})
-                          </span>
-                        ) : null}
-                        : recorded {POSITION_LABEL[b.pos].toLowerCase()}; stated intention {POSITION_LABEL[b.intended!].toLowerCase()}.
+                        {groupAndCountry(b.group, b.country)}: recorded {POSITION_LABEL[b.pos].toLowerCase()}; stated intention{' '}
+                        {POSITION_LABEL[b.intended!].toLowerCase()}.
                       </li>
                     ))}
                   </ul>
                 </Disclosure>
-              ) : (
-                <p className="note">No vote corrections were recorded for this vote.</p>
+              ) : null}
+              {intentions.length > 0 && (
+                <Disclosure summary={`Stated intentions of MEPs with no recorded vote (${formatNumber(intentions.length)})`}>
+                  <p className="note">
+                    These MEPs have no vote recorded for this roll call. After the vote they stated how they had intended to vote. The
+                    statements do not change the official result and are not counted in the figures above.
+                  </p>
+                  <ul>
+                    {intentions.map((x) => (
+                      <li key={x.mep}>
+                        <Link to={`/people/meps/${encodeURIComponent(x.mep)}`}>{v.mep_names[x.mep] ?? `MEP ${x.mep}`}</Link>
+                        {groupAndCountry(x.group, x.country)}: no recorded vote; stated intention {POSITION_LABEL[x.intended].toLowerCase()}.
+                      </li>
+                    ))}
+                  </ul>
+                </Disclosure>
+              )}
+              {corrections.length === 0 && intentions.length === 0 && (
+                <p className="note">No vote corrections or stated voting intentions were recorded for this vote.</p>
               )}
             </div>
           </section>
