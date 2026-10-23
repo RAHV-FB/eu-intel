@@ -4,7 +4,7 @@ import { useEffect, type RefObject } from 'react';
  * Makes every `.table-wrap` inside `root` usable when its table is wider than the screen:
  *  - the wrapper becomes a named, keyboard-focusable region (arrow keys scroll it);
  *  - `data-overflow` turns on the edge shadows and the "scroll sideways" hint (see base.css);
- *  - `data-sticky` keeps a row-header first column in view while scrolling.
+ *  - `data-sticky` keeps a row-header first column in view while scrolling, and focus is kept clear of it.
  * Tables that fit are left untouched. Runs on any page, so feature components need no changes.
  */
 const MANAGED = 'data-scroll-managed';
@@ -52,10 +52,14 @@ function update(wrap: HTMLElement) {
     const first = wrap.querySelector<HTMLElement>('tbody tr > :first-child');
     const sticky = !!first && first.tagName === 'TH' && first.getAttribute('scope') === 'row' && first.offsetWidth <= wrap.clientWidth * 0.45;
     wrap.toggleAttribute('data-sticky', sticky);
+    // the width the sticky column covers (also for tables whose own styles make it sticky): see base.css
+    if (first && (sticky || getComputedStyle(first).position === 'sticky')) wrap.style.setProperty('--sticky-w', `${first.offsetWidth}px`);
+    else wrap.style.removeProperty('--sticky-w');
   } else {
     wrap.removeAttribute('data-overflow');
     wrap.removeAttribute('data-hint');
     wrap.removeAttribute('data-sticky');
+    wrap.style.removeProperty('--sticky-w');
     if (wrap.hasAttribute(MANAGED)) {
       wrap.removeAttribute('tabindex');
       wrap.removeAttribute('role');
@@ -63,6 +67,22 @@ function update(wrap: HTMLElement) {
       wrap.removeAttribute(MANAGED);
     }
   }
+}
+
+/**
+ * After the browser has scrolled a focused element into view, make sure all of it is in view: not under the sticky
+ * first column (the scroll-padding in base.css does this where the browser applies it to focus scrolling) and not
+ * cut off at the right edge (browsers leave a partly visible element where it is).
+ */
+function revealInWrap(wrap: HTMLElement, el: HTMLElement) {
+  const cell = el.closest<HTMLElement>('th, td');
+  if (!cell || !wrap.contains(cell) || getComputedStyle(cell).position === 'sticky') return;
+  const box = wrap.getBoundingClientRect();
+  const start = box.left + wrap.clientLeft + (parseFloat(wrap.style.getPropertyValue('--sticky-w')) || 0);
+  const end = box.left + wrap.clientLeft + wrap.clientWidth;
+  const r = el.getBoundingClientRect();
+  if (r.left < start) wrap.scrollLeft -= start - r.left + 4;
+  else if (r.right > end) wrap.scrollLeft += Math.min(r.right - end + 4, r.left - start);
 }
 
 export function useScrollableTables(root: RefObject<HTMLElement | null>) {
@@ -101,10 +121,19 @@ export function useScrollableTables(root: RefObject<HTMLElement | null>) {
     });
     mutations.observe(el, { childList: true, subtree: true });
     scan();
+    const onFocus = (ev: FocusEvent) => {
+      const target = ev.target instanceof HTMLElement ? ev.target : null;
+      const wrap = target?.closest<HTMLElement>('.table-wrap');
+      if (target && wrap && wrap !== target && wrap.hasAttribute('data-overflow')) {
+        requestAnimationFrame(() => revealInWrap(wrap, target));
+      }
+    };
+    el.addEventListener('focusin', onFocus);
     return () => {
       if (frame) cancelAnimationFrame(frame);
       mutations.disconnect();
       resize.disconnect();
+      el.removeEventListener('focusin', onFocus);
     };
   }, [root]);
 }

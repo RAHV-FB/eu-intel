@@ -211,6 +211,36 @@ def test_rapporteur_names_from_resolver():
     assert {r.name for r in p.rapporteurs if r.mep_id == "124867"} == {"Brando Benifei"}
 
 
+def test_rapporteur_appointment_dates_from_the_ep_participations():
+    # The build gives each rapporteur the group held on this date, not the MEP's current group: OEIL lists
+    # "KONEČNÁ Kateřina (The Left)" (shadow since 2021-12-01; PfE only from 2026-10-21) and "MADISON Jaak (ID)".
+    p = build("2021-0106")
+    by = {(r.mep_id, r.role): r for r in p.rapporteurs}
+    assert by[("23699", "shadow")].date == "2021-12-01"  # participation 2021-0106-NMSR-23699-2021-12-01
+    assert by[("197493", "shadow")].date == "2022-01-24"
+    assert by[("197784", "opinion_rapporteur")].date == "2021-09-15"  # ENVI, Susana Solís Pérez
+    assert all(r.date and r.group is None for r in p.rapporteurs)  # EP API entries: date, no printed group
+
+
+def test_shadow_rapporteur_for_an_opinion_has_its_own_role():
+    # EP API participation_role RAPPORTEUR_SHADOW_OPINION (was stored as the vague "other")
+    p = m.build_procedure(ep_proc("2023-0448"), RETRIEVED, oeil_info("2023-0448"), lambda i: f"MEP {i}")
+    roles = {r.role for r in p.rapporteurs}
+    assert "shadow_opinion" in roles and "other" not in roles
+
+
+def test_oeil_key_players_keep_the_group_printed_for_each_role():
+    info = oeil_info("2021-0106")
+    imco, libe = (next(pl for pl in info.players if pl.code == c) for c in ("IMCO", "LIBE"))
+    assert imco.groups == {"124867": "S&D"}  # BENIFEI Brando (S&D), rapporteur
+    # the joint committees' shadow rapporteurs are listed in the row after LIBE's
+    assert libe.groups["23699"] == "The Left" and libe.groups["197493"] == "ID"
+    # older files take their rapporteurs from OEIL, with the group printed next to the name
+    p = build("2012-0011")
+    lead = next(r for r in p.rapporteurs if r.role == "rapporteur")
+    assert (lead.mep_id, lead.group, lead.date) == ("96736", "Verts/ALE", None)
+
+
 def test_second_reading_gdpr():
     p = build("2012-0011")
     kinds = [(e.date, e.kind) for e in p.events]

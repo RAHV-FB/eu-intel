@@ -56,6 +56,20 @@ export function roleLabel(role: string | null | undefined): string | null {
   return role;
 }
 
+/** Rapporteur roles on a legislative file (Rapporteur.role in the snapshot). */
+const RAPPORTEUR_ROLE_LABEL: Record<string, string> = {
+  rapporteur: 'Rapporteur',
+  shadow: 'Shadow rapporteur',
+  opinion_rapporteur: 'Rapporteur for an opinion',
+  shadow_opinion: 'Shadow rapporteur for an opinion',
+};
+
+/** "Rapporteur for an opinion (ENVI)": the role in plain words, with the committee it was held in when recorded. */
+export function rapporteurRoleLabel(role: string, committee?: string | null): string {
+  const label = RAPPORTEUR_ROLE_LABEL[role] ?? roleLabel(role) ?? role;
+  return committee ? `${label} (${committee})` : label;
+}
+
 export function periodText(from?: string | null, to?: string | null): string {
   if (!from && !to) return 'Dates not recorded';
   if (from && !to) return `Since ${formatDate(from)}`;

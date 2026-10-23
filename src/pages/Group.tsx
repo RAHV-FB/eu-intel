@@ -11,6 +11,7 @@ import { termLabel } from '../features/people/labels';
 import { MiniBar, Pos } from '../features/votes/Breakdowns';
 import { SortTh, useSortable } from '../features/votes/sortable';
 import { VoteTitle } from '../features/votes/VoteTitle';
+import { RowTitle } from '../components/StackedTable';
 import { cohesionText } from '../features/votes/labels';
 import '../features/people/people.css';
 
@@ -181,7 +182,7 @@ export default function Group() {
                     <SortTh k="label" sort={p.sort} onSort={p.toggle}>
                       Party
                     </SortTh>
-                    <SortTh k="country" sort={p.sort} onSort={p.toggle}>
+                    <SortTh k="country" sort={p.sort} onSort={p.toggle} className="hide-narrow">
                       Country
                     </SortTh>
                     <SortTh k="members" sort={p.sort} onSort={p.toggle} num>
@@ -192,10 +193,14 @@ export default function Group() {
                 <tbody>
                   {p.sorted.map((r) => (
                     <tr key={r.id}>
-                      <th scope="row" style={{ fontWeight: 500 }}>
+                      <th scope="row" className="wrap-anywhere" style={{ fontWeight: 500 }}>
                         <Link to={`/people/parties/${encodeURIComponent(r.id)}`}>{r.label}</Link>
+                        {/* phones: the country column is hidden and shown here, so the MEP count stays on screen */}
+                        <span className="only-narrow meta" style={{ fontWeight: 400 }}>
+                          {countryName(r.country)}
+                        </span>
                       </th>
-                      <td>{countryName(r.country)}</td>
+                      <td className="hide-narrow">{countryName(r.country)}</td>
                       <td className="num">{formatNumber(r.members)}</td>
                     </tr>
                   ))}
@@ -244,24 +249,31 @@ export default function Group() {
         ) : (
           <>
             <div className="table-wrap table-card">
-              <table className="table">
+              <table className="table table--clamp">
                 <caption className="visually-hidden">Group members’ recorded votes. Select a column heading to sort.</caption>
                 <thead>
                   <tr>
-                    <SortTh k="date" sort={vs.sort} onSort={vs.toggle}>
+                    {/* phones: the vote and the group majority stay; date, counts and cohesion are shown inside them */}
+                    <SortTh k="date" sort={vs.sort} onSort={vs.toggle} className="hide-narrow">
                       Date
                     </SortTh>
                     <th scope="col">Vote</th>
-                    <th scope="col" className="num">For</th>
-                    <th scope="col" className="num">Against</th>
-                    <th scope="col" className="num">Abst.</th>
-                    <SortTh k="recorded" sort={vs.sort} onSort={vs.toggle} num>
+                    <th scope="col" className="num hide-narrow">
+                      For
+                    </th>
+                    <th scope="col" className="num hide-narrow">
+                      Against
+                    </th>
+                    <th scope="col" className="num hide-narrow">
+                      Abst.
+                    </th>
+                    <SortTh k="recorded" sort={vs.sort} onSort={vs.toggle} num className="hide-narrow">
                       Recorded
                     </SortTh>
                     {!isNi && (
                       <>
                         <th scope="col">Group majority</th>
-                        <SortTh k="cohesion" sort={vs.sort} onSort={vs.toggle}>
+                        <SortTh k="cohesion" sort={vs.sort} onSort={vs.toggle} className="hide-narrow">
                           Cohesion
                         </SortTh>
                       </>
@@ -271,19 +283,27 @@ export default function Group() {
                 <tbody>
                   {vs.sorted.slice(0, shown).map((r) => (
                     <tr key={r.vote_id}>
-                      <td className="nowrap">{r.v ? formatDate(r.v.date) : '—'}</td>
-                      <td style={{ minWidth: '14rem' }}>
-                        <Link to={`/votes/${encodeURIComponent(r.vote_id)}`}>{r.v ? <VoteTitle v={r.v} /> : `Vote ${r.vote_id}`}</Link>
+                      <td className="nowrap hide-narrow">{r.v ? formatDate(r.v.date) : '—'}</td>
+                      <td className="gv-vote">
+                        <span className="only-narrow meta">{r.v ? formatDate(r.v.date) : '—'}</span>
+                        <RowTitle to={`/votes/${encodeURIComponent(r.vote_id)}`}>{r.v ? <VoteTitle v={r.v} /> : `Vote ${r.vote_id}`}</RowTitle>
                         <MiniBar c={r.counts} />
+                        <span className="only-narrow meta">
+                          For {formatNumber(r.counts.for)} · Against {formatNumber(r.counts.against)} · Abstained{' '}
+                          {formatNumber(r.counts.abstain)} · Recorded {formatNumber(r.counts.for + r.counts.against + r.counts.abstain)}
+                        </span>
                       </td>
-                      <td className="num">{formatNumber(r.counts.for)}</td>
-                      <td className="num">{formatNumber(r.counts.against)}</td>
-                      <td className="num">{formatNumber(r.counts.abstain)}</td>
-                      <td className="num">{formatNumber(r.counts.for + r.counts.against + r.counts.abstain)}</td>
+                      <td className="num hide-narrow">{formatNumber(r.counts.for)}</td>
+                      <td className="num hide-narrow">{formatNumber(r.counts.against)}</td>
+                      <td className="num hide-narrow">{formatNumber(r.counts.abstain)}</td>
+                      <td className="num hide-narrow">{formatNumber(r.counts.for + r.counts.against + r.counts.abstain)}</td>
                       {!isNi && (
                         <>
-                          <td>{r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>}</td>
-                          <td>{r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>}</td>
+                          <td>
+                            {r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>}
+                            {r.cohesion != null && <span className="only-narrow meta">Cohesion {Math.round(r.cohesion * 100)}%</span>}
+                          </td>
+                          <td className="hide-narrow">{r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>}</td>
                         </>
                       )}
                     </tr>

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Ballot, BallotPosition, CountryBreakdown, GroupBreakdown, PositionCounts } from '../../types/data';
 import { countryName, formatNumber, pct } from '../../lib/format';
 import { SortTh, useSortable } from './sortable';
 import { POSITION_LABEL, cohesionText } from './labels';
+import './votes.css';
 
 /** Small proportional bar for table rows (numbers are always in adjacent cells). */
 export function MiniBar({ c }: { c: PositionCounts }) {
@@ -25,6 +26,18 @@ export function Pos({ pos }: { pos: BallotPosition | 'not_participating' | null 
   return <span className={`pos pos--${pos}`}>{POSITION_LABEL[pos]}</span>;
 }
 
+/** A heading shortened on the narrowest screens (below 22.5rem); screen readers always get the full word. */
+function ShortOnNarrow({ full, short }: { full: string; short: string }) {
+  return (
+    <>
+      <span className="label-full">{full}</span>
+      <span className="label-short" aria-hidden="true">
+        {short}
+      </span>
+    </>
+  );
+}
+
 type GroupKey = 'group' | 'for' | 'against' | 'abstain' | 'total' | 'cohesion';
 
 export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown[]; groupNames?: Map<string, string> }) {
@@ -41,9 +54,12 @@ export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown
     { key: 'total', dir: 'desc' },
     { for: 'desc', against: 'desc', abstain: 'desc', total: 'desc', cohesion: 'desc' },
   );
+  const idBase = useId();
+  // Phones (below 40rem): Group, For, Against and Abstained stay in columns; the other columns are hidden and their
+  // content is shown on a second line under the row (tr.row-more), so no column is cut off.
   return (
     <div className="table-wrap table-card">
-      <table className="table">
+      <table className="table table--breakdown">
         <caption className="visually-hidden">Recorded votes of MEPs by political group (membership on the day of the vote). Select a column heading to sort.</caption>
         <thead>
           <tr>
@@ -57,44 +73,71 @@ export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown
               Against
             </SortTh>
             <SortTh k="abstain" sort={sort} onSort={toggle} num>
-              Abstained
+              <ShortOnNarrow full="Abstained" short="Abst." />
             </SortTh>
-            <SortTh k="total" sort={sort} onSort={toggle} num>
+            <SortTh k="total" sort={sort} onSort={toggle} num className="hide-narrow">
               Recorded
             </SortTh>
-            <th scope="col">Split</th>
-            <th scope="col">Group majority</th>
-            <SortTh k="cohesion" sort={sort} onSort={toggle}>
+            <th scope="col" className="hide-narrow">
+              Split
+            </th>
+            <th scope="col" className="hide-narrow">
+              Group majority
+            </th>
+            <SortTh k="cohesion" sort={sort} onSort={toggle} className="hide-narrow">
               Cohesion
             </SortTh>
           </tr>
         </thead>
         <tbody>
-          {sorted.map((r) => (
-            <tr key={r.group}>
-              <th scope="row">
-                <Link to={`/people/groups/${encodeURIComponent(r.group)}`}>{r.group_code}</Link>
-                {groupNames?.get(r.group) && <span className="meta hide-sm" style={{ fontWeight: 400 }}>{groupNames.get(r.group)}</span>}
-              </th>
-              <td className="num">{formatNumber(r.for)}</td>
-              <td className="num">{formatNumber(r.against)}</td>
-              <td className="num">{formatNumber(r.abstain)}</td>
-              <td className="num">{formatNumber(r.for + r.against + r.abstain)}</td>
-              <td>
-                <MiniBar c={r} />
-              </td>
-              {r.group === 'ni' ? (
-                <td colSpan={2} className="muted">
-                  Not a group: non-attached MEPs do not act together
-                </td>
-              ) : (
-                <>
-                  <td>{r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>}</td>
-                  <td>{r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>}</td>
-                </>
-              )}
-            </tr>
-          ))}
+          {sorted.map((r) => {
+            const th = `${idBase}-${r.group}`;
+            const majority = r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>;
+            const cohesion = r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>;
+            return (
+              <Fragment key={r.group}>
+                <tr className="has-more">
+                  <th scope="row" id={th}>
+                    <Link to={`/people/groups/${encodeURIComponent(r.group)}`}>{r.group_code}</Link>
+                    {groupNames?.get(r.group) && <span className="meta hide-sm" style={{ fontWeight: 400 }}>{groupNames.get(r.group)}</span>}
+                  </th>
+                  <td className="num">{formatNumber(r.for)}</td>
+                  <td className="num">{formatNumber(r.against)}</td>
+                  <td className="num">{formatNumber(r.abstain)}</td>
+                  <td className="num hide-narrow">{formatNumber(r.for + r.against + r.abstain)}</td>
+                  <td className="hide-narrow">
+                    <MiniBar c={r} />
+                  </td>
+                  {r.group === 'ni' ? (
+                    <td colSpan={2} className="muted hide-narrow">
+                      Not a group: non-attached MEPs do not act together
+                    </td>
+                  ) : (
+                    <>
+                      <td className="hide-narrow">{majority}</td>
+                      <td className="hide-narrow">{cohesion}</td>
+                    </>
+                  )}
+                </tr>
+                <tr className="row-more">
+                  <td colSpan={4} headers={th}>
+                    <div className="row-more__items">
+                      <MiniBar c={r} />
+                      <span>Recorded: {formatNumber(r.for + r.against + r.abstain)}</span>
+                      {r.group === 'ni' ? (
+                        <span className="muted">Not a group: non-attached MEPs do not act together</span>
+                      ) : (
+                        <>
+                          <span>Group majority: {majority}</span>
+                          <span>Cohesion: {r.cohesion != null ? `${Math.round(r.cohesion * 100)}%` : '—'}</span>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -120,9 +163,11 @@ export function CountryBreakdownTable({ rows }: { rows: CountryBreakdown[] }) {
     { key: 'country', dir: 'asc' },
     { for: 'desc', against: 'desc', abstain: 'desc', total: 'desc', share: 'desc' },
   );
+  const idBase = useId();
+  // Phones: as in the group table, Recorded, Share for and Split move to a second line under the row.
   return (
     <div className="table-wrap table-card">
-      <table className="table">
+      <table className="table table--breakdown">
         <caption className="visually-hidden">Recorded votes of MEPs by the country they represent. Select a column heading to sort.</caption>
         <thead>
           <tr>
@@ -136,34 +181,48 @@ export function CountryBreakdownTable({ rows }: { rows: CountryBreakdown[] }) {
               Against
             </SortTh>
             <SortTh k="abstain" sort={sort} onSort={toggle} num>
-              Abstained
+              <ShortOnNarrow full="Abstained" short="Abst." />
             </SortTh>
-            <SortTh k="total" sort={sort} onSort={toggle} num>
+            <SortTh k="total" sort={sort} onSort={toggle} num className="hide-narrow">
               Recorded
             </SortTh>
-            <SortTh k="share" sort={sort} onSort={toggle} num>
+            <SortTh k="share" sort={sort} onSort={toggle} num className="hide-narrow">
               Share for
             </SortTh>
-            <th scope="col">Split</th>
+            <th scope="col" className="hide-narrow">
+              Split
+            </th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((r) => {
             const t = r.for + r.against + r.abstain;
+            const th = `${idBase}-${r.country}`;
             return (
-              <tr key={r.country}>
-                <th scope="row">
-                  <Link to={`/countries/${r.country}`}>{countryName(r.country)}</Link>
-                </th>
-                <td className="num">{formatNumber(r.for)}</td>
-                <td className="num">{formatNumber(r.against)}</td>
-                <td className="num">{formatNumber(r.abstain)}</td>
-                <td className="num">{formatNumber(t)}</td>
-                <td className="num">{pct(r.for, t)}</td>
-                <td>
-                  <MiniBar c={r} />
-                </td>
-              </tr>
+              <Fragment key={r.country}>
+                <tr className="has-more">
+                  <th scope="row" id={th}>
+                    <Link to={`/countries/${r.country}`}>{countryName(r.country)}</Link>
+                  </th>
+                  <td className="num">{formatNumber(r.for)}</td>
+                  <td className="num">{formatNumber(r.against)}</td>
+                  <td className="num">{formatNumber(r.abstain)}</td>
+                  <td className="num hide-narrow">{formatNumber(t)}</td>
+                  <td className="num hide-narrow">{pct(r.for, t)}</td>
+                  <td className="hide-narrow">
+                    <MiniBar c={r} />
+                  </td>
+                </tr>
+                <tr className="row-more">
+                  <td colSpan={4} headers={th}>
+                    <div className="row-more__items">
+                      <MiniBar c={r} />
+                      <span>Recorded: {formatNumber(t)}</span>
+                      <span>Share for: {pct(r.for, t)}</span>
+                    </div>
+                  </td>
+                </tr>
+              </Fragment>
             );
           })}
         </tbody>
@@ -274,10 +333,10 @@ export function BallotList({
                 <SortTh k="name" sort={sort} onSort={toggle}>
                   MEP
                 </SortTh>
-                <SortTh k="group" sort={sort} onSort={toggle}>
+                <SortTh k="group" sort={sort} onSort={toggle} className="hide-narrow">
                   Group
                 </SortTh>
-                <SortTh k="country" sort={sort} onSort={toggle}>
+                <SortTh k="country" sort={sort} onSort={toggle} className="hide-narrow">
                   Country
                 </SortTh>
                 <SortTh k="pos" sort={sort} onSort={toggle}>
@@ -290,9 +349,17 @@ export function BallotList({
                 <tr key={b.mep}>
                   <th scope="row" style={{ fontWeight: 500 }}>
                     <Link to={`/people/meps/${encodeURIComponent(b.mep)}`}>{names[b.mep] ?? `MEP ${b.mep}`}</Link>
+                    {/* phones: the group and country columns are hidden and shown here, so the vote stays beside the name */}
+                    {(b.group || b.country) && (
+                      <span className="only-narrow meta" style={{ fontWeight: 400 }}>
+                        {[b.group ? groupCodes.get(b.group) ?? b.group : null, b.country ? countryName(b.country) : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    )}
                   </th>
-                  <td>{b.group ? groupCodes.get(b.group) ?? b.group : <span className="muted">—</span>}</td>
-                  <td>{b.country ? countryName(b.country) : <span className="muted">—</span>}</td>
+                  <td className="hide-narrow">{b.group ? groupCodes.get(b.group) ?? b.group : <span className="muted">—</span>}</td>
+                  <td className="hide-narrow">{b.country ? countryName(b.country) : <span className="muted">—</span>}</td>
                   <td>
                     <Pos pos={b.pos} />
                     {b.intended && b.intended !== b.pos && (

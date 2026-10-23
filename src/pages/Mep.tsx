@@ -8,7 +8,7 @@ import { ballotScope } from '../lib/scope';
 import { EmptyState, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
-import { EP_MEP_URL, periodText, roleLabel, termShort, useGroups } from '../features/people/labels';
+import { EP_MEP_URL, periodText, rapporteurRoleLabel, roleLabel, termShort, useGroups } from '../features/people/labels';
 import { Pos } from '../features/votes/Breakdowns';
 import { VoteTitle } from '../features/votes/VoteTitle';
 import '../features/people/people.css';
@@ -169,14 +169,15 @@ export default function Mep() {
       </section>
 
       <section className="section" aria-labelledby="r-h">
-        <h2 id="r-h">Rapporteur roles on files we track</h2>
+        <h2 id="r-h">Rapporteur and shadow rapporteur roles on files we track</h2>
         {m.rapporteur_for.length === 0 ? (
-          <p className="meta">No rapporteur role recorded on a legislative file in our dataset.</p>
+          <p className="meta">No rapporteur or shadow rapporteur role recorded on a legislative file in our dataset.</p>
         ) : (
           <ul className="stack" style={{ paddingLeft: '1.1rem' }}>
             {m.rapporteur_for.map((r) => (
-              <li key={`${r.dossier_id}-${r.role}`}>
-                <Link to={dossierPath(r.dossier_id)}>{r.title}</Link> <span className="meta">· {roleLabel(r.role)}</span>
+              <li key={`${r.dossier_id}-${r.role}-${r.committee ?? ''}`}>
+                <Link to={dossierPath(r.dossier_id)}>{r.title}</Link>{' '}
+                <span className="meta">· {rapporteurRoleLabel(r.role, r.committee)}</span>
               </li>
             ))}
           </ul>

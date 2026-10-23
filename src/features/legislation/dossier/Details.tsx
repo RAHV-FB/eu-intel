@@ -4,6 +4,25 @@ import type { DossierDetail, LegalActSummary } from '../../../types/data';
 import { Disclosure, ExtLink, Term, institutionLabel } from '../../../components/ui';
 import { countryName, formatDate, formatDateTime, safeUrl } from '../../../lib/format';
 import { EURLEX_CELEX, INSTRUMENT_LABEL, dossierPath } from '../labels';
+import { rapporteurRoleLabel } from '../../people/labels';
+
+/**
+ * What SourceRef.published is for each source: Cellar's last modification of its record (not the Official Journal
+ * date, shown with the act), the Legislative Train page's update, a Council register document's date.
+ */
+const SOURCE_DATE_LABEL: Record<string, string> = {
+  'EUR-Lex': 'record updated',
+  LegislativeTrain: 'page updated',
+  Council: 'document dated',
+};
+
+/** Committee roles on a file (CommitteeRole.role in the snapshot). */
+const COMMITTEE_ROLE_LABEL: Record<string, string> = {
+  responsible: 'committee responsible',
+  joint: 'joint committee responsible',
+  opinion: 'committee for opinion',
+  other: 'other role',
+};
 
 function CelexList({ items, max = 8 }: { items: string[]; max?: number }) {
   const [all, setAll] = useState(false);
@@ -197,7 +216,7 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
               {d.committees.map((c) => (
                 <li key={`${c.code}-${c.role}`}>
                   <span className="mono">{c.code}</span>
-                  {c.name && <> — {c.name}</>} <span className="meta">({c.role})</span>
+                  {c.name && <> — {c.name}</>} <span className="meta">({COMMITTEE_ROLE_LABEL[c.role] ?? c.role})</span>
                 </li>
               ))}
             </ul>
@@ -207,14 +226,15 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
         {d.rapporteurs.length > 0 && (
           <div className="dz-sub">
             <h3>Rapporteurs and shadow rapporteurs</h3>
+            <p className="meta">Each MEP is shown with the political group they belonged to in that role, where the records establish it.</p>
             <ul className="dz-list">
               {d.rapporteurs.map((r, i) => (
                 <li key={`${r.mep_id ?? r.name}-${i}`}>
                   {r.mep_id ? <Link to={`/people/meps/${encodeURIComponent(r.mep_id)}`}>{r.name}</Link> : r.name}
                   <span className="meta">
                     {' '}
-                    — {r.role}
-                    {r.group ? ` · ${r.group}` : ''}
+                    — {rapporteurRoleLabel(r.role, r.committee)}
+                    {r.group_code ? ` · ${r.group_code}` : ''}
                     {r.country ? ` · ${countryName(r.country)}` : ''}
                   </span>
                 </li>
@@ -260,7 +280,9 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
                   <tr>
                     <th scope="col">Date</th>
                     <th scope="col">Document</th>
-                    <th scope="col">Reference</th>
+                    <th scope="col" className="hide-narrow">
+                      Reference
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -269,8 +291,10 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
                       <td className="nowrap">{doc.date ? formatDate(doc.date) : '—'}</td>
                       <td>
                         {safeUrl(doc.url) ? <ExtLink href={doc.url}>{doc.label || doc.kind || doc.id}</ExtLink> : doc.label || doc.kind || doc.id}
+                        {/* phones: the reference column is hidden and shown here */}
+                        <span className="only-narrow meta mono">{doc.id}</span>
                       </td>
-                      <td className="mono">{doc.id}</td>
+                      <td className="mono hide-narrow">{doc.id}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -291,7 +315,7 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
                   {' '}
                   — {institutionLabel(s.institution)}
                   {s.identifier ? ` · ${s.identifier}` : ''}
-                  {s.published ? ` · published ${formatDate(s.published)}` : ''}
+                  {s.published ? ` · ${SOURCE_DATE_LABEL[s.institution] ?? 'dated'} ${formatDate(s.published)}` : ''}
                   {s.retrieved_at ? ` · retrieved ${formatDateTime(s.retrieved_at)}` : ''}
                 </span>
               </li>

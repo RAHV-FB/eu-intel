@@ -78,6 +78,8 @@ export function SearchBox({
       e.preventDefault();
       setActive((a) => Math.max(a - 1, -1));
     } else if (e.key === 'Escape') {
+      // With suggestions open, Escape only closes them: the browser would also clear a search field.
+      if (open && hits.length > 0) e.preventDefault();
       setOpen(false);
       setActive(-1);
     }

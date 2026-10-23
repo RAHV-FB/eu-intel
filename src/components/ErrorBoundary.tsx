@@ -1,6 +1,11 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
+/** A lazily loaded page script that failed to download (messages differ between browsers). */
+function isCodeDownload(error: Error): boolean {
+  return /dynamically imported module|importing a module script failed|loading chunk|module script/i.test(`${error.name} ${error.message}`);
+}
+
 /**
  * Catches render errors in a page so the header, navigation and footer stay usable.
  * `resetKey` (the route) clears the error when the visitor navigates elsewhere.
@@ -27,7 +32,9 @@ export class ErrorBoundary extends Component<{ resetKey: string; children: React
         <header className="page-header">
           <h1>This page could not be displayed</h1>
           <p className="lead">
-            Something in the data for this page could not be shown. The rest of the site is not affected.
+            {isCodeDownload(this.state.error)
+              ? 'Part of the website’s code could not be downloaded, for example because the connection was interrupted. Reloading the page usually fixes this.'
+              : 'Something in the data for this page could not be shown. The rest of the site is not affected.'}
           </p>
         </header>
         <p>

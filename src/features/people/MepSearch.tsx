@@ -156,16 +156,19 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
                   <SortTh k="name" sort={sort} onSort={toggle}>
                     Name
                   </SortTh>
-                  <SortTh k="country" sort={sort} onSort={toggle}>
+                  {/* phones: country, national party and status are shown under the name, so the group stays on screen */}
+                  <SortTh k="country" sort={sort} onSort={toggle} className="hide-narrow">
                     Country
                   </SortTh>
                   <SortTh k="group" sort={sort} onSort={toggle}>
                     Group
                   </SortTh>
-                  <SortTh k="party" sort={sort} onSort={toggle}>
+                  <SortTh k="party" sort={sort} onSort={toggle} className="hide-narrow">
                     National party
                   </SortTh>
-                  <th scope="col">Status</th>
+                  <th scope="col" className="hide-narrow">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -173,8 +176,16 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
                   <tr key={m.id}>
                     <th scope="row" style={{ fontWeight: 500 }}>
                       <Link to={`/people/meps/${encodeURIComponent(m.id)}`}>{m.name}</Link>
+                      <span className="only-narrow meta" style={{ fontWeight: 400 }}>
+                        {countryName(m.country)} · {m.active ? 'Current' : 'Former'}
+                        {m.party_label && (
+                          <span style={{ display: 'block' }}>
+                            {m.party ? <Link to={`/people/parties/${encodeURIComponent(m.party)}`}>{m.party_label}</Link> : m.party_label}
+                          </span>
+                        )}
+                      </span>
                     </th>
-                    <td>{countryName(m.country)}</td>
+                    <td className="hide-narrow">{countryName(m.country)}</td>
                     <td>
                       {m.group ? (
                         <span title={groups.get(m.group)?.name}>{m.group_code ?? groups.get(m.group)?.code ?? m.group}</span>
@@ -182,14 +193,14 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
                         <span className="muted">—</span>
                       )}
                     </td>
-                    <td>
+                    <td className="hide-narrow">
                       {m.party && m.party_label ? (
                         <Link to={`/people/parties/${encodeURIComponent(m.party)}`}>{m.party_label}</Link>
                       ) : (
                         <span className="muted">{m.party_label ?? '—'}</span>
                       )}
                     </td>
-                    <td>
+                    <td className="hide-narrow">
                       <span className={`status-dot${m.active ? '' : ' status-dot--former'}`}>{m.active ? 'Current' : 'Former'}</span>
                     </td>
                   </tr>

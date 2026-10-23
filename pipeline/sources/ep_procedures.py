@@ -404,7 +404,7 @@ RAPPORTEUR_ROLE: dict[str, str] = {
     "RAPPORTEUR_SHADOW_REPORT": "shadow",
     "RAPPORTEUR_OPINION": "opinion_rapporteur",
     "RAPPORTEUR_CHAIR_OPINION": "opinion_rapporteur",
-    "RAPPORTEUR_SHADOW_OPINION": "other",
+    "RAPPORTEUR_SHADOW_OPINION": "shadow_opinion",
 }
 
 CORRIGENDUM_CELEX = re.compile(r"R\(\d+\)$", re.I)  # e.g. 32016R0679R(02) is a corrigendum
@@ -552,6 +552,7 @@ class OeilPlayer:
     role: str  # CommitteeRole.role
     rapporteurs: list[str] = field(default_factory=list)  # EP person ids
     shadows: list[str] = field(default_factory=list)
+    groups: dict[str, str] = field(default_factory=dict)  # EP person id -> group printed after the name
 
 
 # OEIL key-players table headers -> CommitteeRole.role
@@ -653,16 +654,22 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
         current: OeilPlayer | None = None
         for tr in tbl.xpath("./tbody/tr"):
             badge = tr.xpath('./th//span[contains(@class,"es_badge-committee")]')
-            ids = [
-                m[1]
+            links = [
+                (m[1], _text(a))
                 for a in tr.xpath('./td//a[contains(@href,"/meps/en/")]')
                 if (m := re.search(r"/meps/en/(\d+)", a.get("href", "")))
             ]
+            ids = [i for i, _ in links]
+            # "KONEČNÁ Kateřina (The Left)": the group the MEP is listed with for this role
+            groups = {i: g[1].strip() for i, t in links if (g := re.search(r"\(([^()]+)\)\s*$", t))}
             if badge:
                 current = OeilPlayer(code=_text(badge[0]), role=role, rapporteurs=ids)
                 info.players.append(current)
             elif current is not None:
                 current.shadows.extend(ids)
+            if current is not None:
+                for i, g in groups.items():
+                    current.groups.setdefault(i, g)
     for a in doc.xpath('//*[@id="section2"]//a[contains(@href,"/meps/en/")]'):
         m = re.search(r"/meps/en/(\d+)", a.get("href", ""))
         name = _text(a)
@@ -946,6 +953,8 @@ def build_participants(
                     )
             elif role in RAPPORTEUR_ROLE:
                 committee = last_segment(p.get("participation_in_name_of")) or None
+                day = p.get("activity_date")
+                day = day[:10] if isinstance(day, str) and re.match(r"\d{4}-\d{2}-\d{2}", day) else None
                 for person in as_list(p.get("had_participant_person")):
                     mep_id = last_segment(person)
                     name = names(mep_id)
@@ -953,10 +962,13 @@ def build_participants(
                         log.debug("no name for EP person %s (%s); skipped", mep_id, proc.get("process_id"))
                         continue
                     key = (mep_id, RAPPORTEUR_ROLE[role], committee)
-                    rapps.setdefault(
+                    r = rapps.setdefault(
                         key,
                         Rapporteur(mep_id=mep_id, name=name, committee=committee, role=RAPPORTEUR_ROLE[role]),
                     )
+                    # re-appointed (e.g. in a new term): the latest appointment is the current one
+                    if day and (r.date is None or day > r.date):
+                        r.date = day
     return _sorted_participants(committees.values(), rapps.values())
 
 
@@ -973,15 +985,16 @@ def oeil_participants(
         main = pl.role in ("responsible", "joint")
         groups = (
             (pl.rapporteurs, "rapporteur" if main else "opinion_rapporteur"),
-            (pl.shadows, "shadow" if main else "other"),
+            (pl.shadows, "shadow" if main else "shadow_opinion"),
         )
         for ids, role in groups:
             for mep_id in ids:
                 name = names(mep_id)
                 if name:
+                    group = pl.groups.get(mep_id)
                     rapps.setdefault(
                         (mep_id, role, pl.code),
-                        Rapporteur(mep_id=mep_id, name=name, committee=pl.code, role=role),
+                        Rapporteur(mep_id=mep_id, name=name, committee=pl.code, role=role, group=group),
                     )
     return _sorted_participants(committees.values(), rapps.values())
 
@@ -990,7 +1003,7 @@ def _sorted_participants(
     committees: Iterable[CommitteeRole], rapps: Iterable[Rapporteur]
 ) -> tuple[list[CommitteeRole], list[Rapporteur]]:
     role_order = {"responsible": 0, "joint": 1, "opinion": 2, "other": 3}
-    rrole_order = {"rapporteur": 0, "shadow": 1, "opinion_rapporteur": 2, "other": 3}
+    rrole_order = {"rapporteur": 0, "shadow": 1, "opinion_rapporteur": 2, "shadow_opinion": 3}
     cs = sorted(committees, key=lambda c: (role_order[c.role], c.code))
     rs = sorted(rapps, key=lambda r: (rrole_order[r.role], r.committee or "", r.name, r.mep_id or ""))
     return cs, rs

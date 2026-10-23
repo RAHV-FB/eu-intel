@@ -81,6 +81,10 @@ function SourceCard({ s }: { s: SourceStatusInfo }) {
         <details className="source-card__log">
           <summary>Technical details of the latest retrieval</summary>
           <p>{s.note}</p>
+          <p className="meta">
+            The counts in this log are those of that retrieval. Records corrected since then from the same official
+            answers can change them; the figures under “In this release” are the ones this site uses.
+          </p>
         </details>
       )}
     </article>

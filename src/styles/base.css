@@ -353,6 +353,19 @@ hr {
   box-shadow: inset -1px 0 0 var(--border);
 }
 
+/* In a padded card the sticky cells stick at the card's inner edge, not one padding width inside it (where the
+   scrolled cells would show through a strip on their left). */
+.table-wrap.table-card[data-sticky] tbody tr > th[scope='row']:first-child,
+.table-wrap.table-card[data-sticky] thead tr:first-child > :first-child {
+  left: calc(-1 * var(--sp-3));
+}
+
+/* Scrolling a focused cell or sort button into view keeps it clear of the sticky column (WCAG 2.4.11);
+   --sticky-w is the column's width, set by scrollableTables.ts. */
+.table-wrap[data-overflow] {
+  scroll-padding-inline-start: var(--sticky-w, 0px);
+}
+
 .num {
   font-variant-numeric: tabular-nums;
 }

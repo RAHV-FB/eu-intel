@@ -317,7 +317,16 @@ export interface DossierDetail extends DossierSummary {
   council_votes_in_parts?: { id: string; date: ISODate; dossier_id: string; dossier_ref: string }[];
   implementation?: DossierImplementation | null; // directives only
   committees: { code: string; name?: string | null; role: string }[];
-  rapporteurs: { mep_id?: string | null; name: string; group?: string | null; country?: string | null; role: string }[];
+  // group / group_code: the political group held in that role (not the MEP's current group); null when not established
+  rapporteurs: {
+    mep_id?: string | null;
+    name: string;
+    group?: string | null; // slug in people/groups.json
+    group_code?: string | null; // official code at the time, e.g. "The Left", "GUE/NGL", "ALDE"
+    country?: string | null;
+    role: string; // rapporteur | shadow | opinion_rapporteur | shadow_opinion
+    committee?: string | null;
+  }[];
   documents: DocRef[];
   related: { id: string; title: string; relation: string }[]; // only officially established relations
   dates_set_for?: { id: string; title: string; dates: ISODate[] }[]; // dates this file's act set for another act (checked)
@@ -537,7 +546,7 @@ export interface MepDetail extends MepSummary {
   groups: MembershipPeriod[];
   parties: MembershipPeriod[];
   committees: MembershipPeriod[];
-  rapporteur_for: { dossier_id: string; title: string; role: string }[];
+  rapporteur_for: { dossier_id: string; title: string; role: string; committee?: string | null }[];
   votes: { vote_id: string; pos: BallotPosition }[]; // positions on indexed votes with ballots, newest first
   official_url: string;
   source: SourceRef;
