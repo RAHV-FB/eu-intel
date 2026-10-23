@@ -212,7 +212,10 @@ MAX_SHRINK = 0.05  # meps.json / orgs.json are not rewritten if they would lose 
 def fetch(http: Http) -> SourceStatus:
     """An MEP or organization that a detail batch did not return (or that the time budget left out) keeps its
     stored record ("partial"); if the lists themselves come back short (more than MAX_SHRINK fewer records
-    than stored, e.g. an empty answer), nothing is written and the source fails, keeping its files."""
+    than stored, e.g. an empty answer), nothing is written and the source fails, keeping its files. The same
+    applies when /meps/show-current lists more than MAX_SHRINK fewer sitting MEPs than the snapshot marks as
+    active: every MEP missing from it would be shown as no longer sitting. (Its raw count stays near the
+    number of seats when a new term begins, so a change of term does not trip this.)"""
     attempted = now_iso()
     deadline = fetch_deadline()
     stored_meps = {m.id: m for m in read_records(SOURCE_ID, "meps", Mep)}
@@ -222,6 +225,12 @@ def fetch(http: Http) -> SourceStatus:
         for r in _list(http, "/meps", **{"parliamentary-term": term}):
             term_ids.setdefault(r["identifier"], set()).add(term)
     current = {r["identifier"]: r for r in _list(http, "/meps/show-current")}
+    stored_active = sum(m.active for m in stored_meps.values())
+    if len(current) < (1 - MAX_SHRINK) * stored_active:  # e.g. an empty or cut-short answer with HTTP 200
+        raise RuntimeError(
+            f"ep_people: /meps/show-current lists {len(current)} sitting MEPs against {stored_active} active in the "
+            "snapshot; not overwriting"
+        )
     people = _details(http, "/meps", list(term_ids), deadline)
     retrieved = now_iso()
     kept = " (previous record kept)"

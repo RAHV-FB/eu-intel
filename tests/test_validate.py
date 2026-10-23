@@ -136,6 +136,18 @@ def test_errors_are_attributed_to_their_source(tmp_path: Path):
     assert "validate: council: 1 errors" in out.getvalue()
 
 
+def test_sitting_meps_must_match_the_open_group_memberships(tmp_path: Path):
+    """An MEP list in which no Member is marked as sitting (a short /meps/show-current answer) used to pass, and
+    the site showed 0 current MEPs; it is now an error of ep_people, so a refresh restores that source."""
+    from pipeline.validate import validate_by_source
+
+    snap = _copy(tmp_path)
+    _edit(snap / "ep_people" / "meps.json", lambda r: [m.update(active=False) for m in r])
+    rep = check(snap, today=TODAY)
+    assert any("0 MEPs marked as sitting, but 3 of the 3 holding an open political-group" in e for e in rep.errors)
+    assert validate_by_source(snap, out=io.StringIO(), today=TODAY) == ["ep_people"]
+
+
 def test_unreadable_manifest_is_its_own_entry(tmp_path: Path):
     from pipeline.validate import MANIFEST_KEY, validate_by_source
 

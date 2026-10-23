@@ -191,6 +191,40 @@ def test_fetch_does_not_overwrite_with_a_short_list(tmp_path, monkeypatch, empty
     assert _files(tmp_path) == before
 
 
+@pytest.mark.parametrize("current", [[], ["1294"]], ids=["empty", "cut-short"])
+def test_fetch_does_not_overwrite_with_a_short_list_of_current_members(tmp_path, monkeypatch, current):
+    """/meps/show-current answering HTTP 200 with fewer sitting MEPs used to mark the missing ones as former
+    MEPs, with status "ok" (an empty answer: 0 sitting MEPs on the site); now the source fails, keeping its files."""
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S", raising=False)
+    E.fetch(FakeHttp())
+    before = _files(tmp_path)
+
+    class ShortCurrent(FakeHttp):
+        def get_json(self, url: str, params: dict | None = None):
+            d = super().get_json(url, params)
+            if url.endswith("/meps/show-current"):
+                d = {"data": [r for r in d["data"] if r["identifier"] in current]}
+            return d
+
+    with pytest.raises(RuntimeError, match="lists .* sitting MEPs against 2 active in the snapshot; not overwriting"):
+        E.fetch(ShortCurrent())
+    assert _files(tmp_path) == before
+
+
+def test_an_empty_list_of_current_members_is_not_an_empty_answer():
+    """The API answers an empty page with HTTP 204 (checked 2026-10-23: show-current at offset=1000); Http accepts
+    only 200, so it is a failure, never an empty list."""
+    import httpx
+
+    from pipeline.http import Http, HttpError
+
+    http = Http(cache_dir=None, min_interval_s=0.0, transport=httpx.MockTransport(lambda r: httpx.Response(204)))
+    with pytest.raises(HttpError) as e:
+        E._list(http, "/meps/show-current")
+    assert e.value.status == 204
+
+
 def test_fetch_starts_no_batch_after_its_time_budget(tmp_path, monkeypatch):
     monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
     monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S", raising=False)

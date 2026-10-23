@@ -6,7 +6,8 @@ Errors (exit code 1) are STRUCTURAL problems only: unreadable files, records tha
 the schema in pipeline/models/entities.py, duplicate ids, malformed dates; and, in the built output,
 claims that contradict the rules or the dossier's own dates (a veto outside unanimity, a withdrawn file
 with an adopted act or withdrawn before its proposal, an adoption after publication, a vote margin next to an
-outcome that is not established or on the other side of the threshold from it).
+outcome that is not established or on the other side of the threshold from it); and a count of sitting MEPs that
+a complete list of current Members cannot give (see the people checks).
 Everything else is reported as a warning: dangling references, official totals that differ from the
 recorded individual votes (official discrepancies are facts, not bugs), implausible dates,
 transposition data on non-directives, "veto" wording outside unanimity, odd act/procedure pairs.
@@ -35,6 +36,8 @@ MIN_DATE = {("implementation", "measures"): "1800-01-01"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 REF_RE = re.compile(r"^(\d{4})/(\d{4})\(([A-Z]{3})\)$")
 CELEX_TYPE = {"R": "regulation", "L": "directive", "D": "decision", "H": "recommendation"}
+MAX_SITTING = 751  # Members of the European Parliament (Article 14(2) TEU)
+MAX_NOT_SITTING = 0.05  # share of MEPs with an open political-group membership allowed not to be marked sitting
 PUBLIC_FILES = [
     "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "council/index.json",
     "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
@@ -230,6 +233,20 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
             if s2 <= e1:
                 rep.warn("group-overlap", f"MEP {m.id}: overlapping political-group memberships around {s2}")
                 break
+    # Sitting MEPs (`active`, from the EP's list of current Members): a short list would show the Members it
+    # lacks as no longer sitting. Members holding an open political-group membership are sitting, and no more
+    # than 751 can sit (Article 14(2) TEU: "seven hundred and fifty in number, plus the President").
+    in_group = [m for m in meps.values() if any(x.kind == "group" and x.end is None for x in m.memberships)]
+    not_sitting = [m.id for m in in_group if not m.active]
+    sitting = sum(1 for m in meps.values() if m.active)
+    if len(not_sitting) > MAX_NOT_SITTING * len(in_group) or sitting > MAX_SITTING:
+        rep.error(
+            f"ep_people/meps.json: {sitting} MEPs marked as sitting (at most {MAX_SITTING} seats)"
+            if sitting > MAX_SITTING
+            else f"ep_people/meps.json: {sitting} MEPs marked as sitting, but {len(not_sitting)} of the "
+            f"{len(in_group)} holding an open political-group membership are not (e.g. {not_sitting[:3]})",
+            "ep_people",
+        )
     # procedures
     for p in procs:
         if not REF_RE.match(p.reference):
