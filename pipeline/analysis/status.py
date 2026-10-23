@@ -10,7 +10,10 @@ Principles (each one is covered by tests/test_status.py):
   of application.
 - Only directives get a national-transposition next step; regulations apply directly.
 - A Commission withdrawal is not a rejection by Parliament; under the consultation procedure
-  (CNS) a negative Parliament opinion does not end the procedure.
+  (CNS) a negative Parliament opinion does not end the procedure. A recorded adoption after a
+  withdrawal notice (e.g. of an earlier text) outranks the withdrawal.
+- In a consent file the Council adopts the act after Parliament's consent, except for the acts that
+  Parliament adopts itself with the Council's consent (PARLIAMENT_ADOPTS).
 - Inactivity is reported as a number of days without a recorded update. A file is only
   described as blocked with the Legislative Train's "Blocked" label (verbatim, with its URL and
   update date), and only while the procedure's own stage is still active. Train statuses never
@@ -20,6 +23,7 @@ Principles (each one is covered by tests/test_status.py):
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import Literal
 
@@ -175,6 +179,19 @@ def _join_dates(ds: list[str]) -> str:
 
 
 ADOPTION_KINDS = (EventKind.signature, EventKind.publication, EventKind.council_adoption)
+
+# Consent files in which Parliament adopts the act and the Council gives its consent: the roles of the usual
+# consent procedure are reversed. Article 228(4) TFEU (Statute of the European Ombudsman: Regulation 2021/1163
+# "of the European Parliament ... Having regard to the consent of the Council"); Article 223(2) TFEU ("The
+# European Parliament, acting by means of regulations on its own initiative ... with the consent of the
+# Council", Statute for Members). Acts titled "... of the European Parliament of <date>" are detected as well.
+PARLIAMENT_ADOPTS: dict[str, str] = {"2019-0900": "Article 228(4) TFEU", "2026-0900": "Article 223(2) TFEU"}
+_PARLIAMENT_ACT = re.compile(r"(?:Regulation|Decision)\b[^/]*/\d{1,4} of the European Parliament of \d")
+
+
+def parliament_adopts(proc: Procedure, acts: list[LegalAct]) -> bool:
+    """A consent file whose act Parliament adopts with the Council's consent (see PARLIAMENT_ADOPTS)."""
+    return proc.type == "APP" and (proc.id in PARLIAMENT_ADOPTS or any(_PARLIAMENT_ACT.match(a.title) for a in acts))
 
 
 def relevant_acts(proc: Procedure, acts: list[LegalAct], events: list[Event], today: date) -> list[LegalAct]:
@@ -465,6 +482,7 @@ def _cod_stage(events: list[Event]) -> _S:
         # mandate decisions themselves (PLENARY_ENDORSE/REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS)
         # also contain the words but are not negotiations
         trilogues = [e for e in events if _code(e) == "INTERINSTITUTIONAL_NEGOTIATION" and e.date >= mandate.date]
+        # negotiating since the first recorded trilogue; holding a mandate since the mandate decision
         return _S(
             "negotiations",
             "Negotiations with the Council" if trilogues else "Mandate to negotiate with the Council",
@@ -474,7 +492,7 @@ def _cod_stage(events: list[Event]) -> _S:
                 else "Parliament has a mandate to negotiate the text with the Council. "
             )
             + "Any agreement must then be approved by Parliament and by the Council.",
-            mandate.date,
+            trilogues[0].date if trilogues else mandate.date,
             "derived",
         )
     report = _last(events, EventKind.committee_report)
@@ -496,6 +514,30 @@ def _cod_stage(events: list[Event]) -> _S:
         start.date if start else None,
         "derived",
     )
+
+
+_COUNCIL_DOC = re.compile(r"\d{5}/\d{2,4}")  # a numbered Council document, e.g. 06190/2026
+
+
+def _commission_proposal_only(events: list[Event]) -> bool:
+    """No Council text submitted to Parliament (a proposal event citing a Council document and no COM
+    document), and no referral, committee report or decision of Parliament: only the Commission's proposal
+    (which OEIL may list as a "Preparatory document")."""
+    com = False
+    for e in events:
+        if e.kind in (EventKind.referral, EventKind.committee_report, EventKind.ep_position):
+            return False
+        ids = [d.id for d in e.docs]
+        if e.kind == EventKind.proposal and (
+            e.institution == "Council"
+            or (any(_COUNCIL_DOC.fullmatch(i) for i in ids) and not any(i.startswith("COM(") for i in ids))
+        ):
+            return False
+        com = com or (
+            (e.kind == EventKind.proposal or e.raw_type == "oeil:Preparatory document")
+            and any(i.startswith("COM(") for i in ids)
+        )
+    return com
 
 
 def _cns_app_stage(ptype: str, events: list[Event]) -> _S:
@@ -560,6 +602,14 @@ def _cns_app_stage(ptype: str, events: list[Event]) -> _S:
             "Parliament is preparing its opinion. Under the consultation procedure the Council "
             "decides, but only after receiving Parliament's opinion."
         )
+    elif _commission_proposal_only(events):
+        # Parliament consents to the Council's draft, which comes later (2025/0571(APP), MFF 2028-2034: only
+        # COM(2025)0571 is recorded; Article 312(2) TFEU)
+        expl = (
+            "The Commission has made its proposal. Under the consent procedure the Council adopts the act only "
+            "after Parliament has given its consent to the Council's draft; no Council draft submitted to "
+            "Parliament is recorded in our data."
+        )
     else:
         expl = (
             "Parliament is examining the file. Under the consent procedure the Council can adopt "
@@ -572,6 +622,64 @@ def _cns_app_stage(ptype: str, events: list[Event]) -> _S:
         start.date if start else None,
         "derived",
     )
+
+
+def _ep_act_stage(proc: Procedure, events: list[Event]) -> _S:
+    """Acts that Parliament adopts with the Council's consent (PARLIAMENT_ADOPTS). OEIL records the Council's
+    consent as "Act adopted by Council after consultation of Parliament"."""
+    art = PARLIAMENT_ADOPTS.get(proc.id)
+    under = f"Under this special legislative procedure{f' ({art})' if art else ''}"
+    consent = _last(events, EventKind.council_adoption)
+    ep_pos = _last(events, EventKind.ep_position)
+    drafted = _last(events, EventKind.ep_position, EventKind.proposal)
+    if consent and ep_pos and ep_pos.date >= consent.date:
+        s = _S(
+            "adopted",
+            "Adopted by Parliament",
+            f"Parliament adopted the act after the Council gave its consent{f' ({art})' if art else ''}. It still "
+            "has to be published in the Official Journal.",
+            ep_pos.date,
+            "derived",
+        )
+        s.next_step = NextStep(text="Publication in the Official Journal of the EU.", institution="EUR-Lex", basis="derived")
+    elif consent:
+        s = _S(
+            "parliament_position",
+            "Council gave its consent",
+            f"The Council gave its consent. {under} Parliament adopts the act, with the Council's consent.",
+            consent.date,
+            "source",
+        )
+        s.next_step = NextStep(text="Parliament adopts the act.", institution="EP", basis="derived")
+    elif drafted and drafted.institution == "EP":
+        s = _S(
+            "parliament_position",
+            "Parliament adopted its proposal",
+            f"Parliament adopted its proposal for the act. {under} Parliament adopts the act only with the "
+            "Council's consent.",
+            drafted.date,
+            "derived",
+        )
+        s.next_step = NextStep(
+            text="The Council decides whether to give its consent; Parliament then adopts the act.",
+            institution="Council",
+            basis="derived",
+        )
+    else:
+        start = _last(events, EventKind.committee_report, EventKind.referral)
+        s = _S(
+            "proposed",
+            "Under examination in Parliament",
+            f"{under} Parliament adopts the act itself, on its own initiative, with the Council's consent.",
+            start.date if start else None,
+            "derived",
+        )
+        s.next_step = NextStep(
+            text="Parliament adopts its proposal for the act; the Council then decides whether to give its consent.",
+            institution="EP",
+            basis="derived",
+        )
+    return s
 
 
 def _reconcile_with_oeil(proc: Procedure, s: _S, events: list[Event]) -> _S:
@@ -587,6 +695,8 @@ def _reconcile_with_oeil(proc: Procedure, s: _S, events: list[Event]) -> _S:
     target = allowed[0]
     if RANK[target] <= RANK[s.stage]:
         return s  # label lags behind dated events; keep the recorded events
+    if s.since and any((e.raw_type or "").startswith("ep_vote:") and e.date == s.since for e in events):
+        return s  # a plenary vote that OEIL does not record yet (e.g. a referral back for negotiations)
     position = {
         "CNS": "Parliament has given its opinion; the Council takes the final decision.",
         "APP": "Parliament has decided on its consent; the Council takes the final decision.",
@@ -608,12 +718,18 @@ def _reconcile_with_oeil(proc: Procedure, s: _S, events: list[Event]) -> _S:
         ),
     }
     if proc.stage_raw == "Procedure completed":
-        label, expl = (
+        # no adoption, signature or act is recorded: OEIL's label alone does not say what was adopted, or
+        # whether it was published (2021/0415(CNS) ended as a Council recommendation that our data lacks)
+        return _S(
+            "unknown",
             "Procedure completed",
-            "The procedure is completed. Signature and publication details are not linked in our data.",
+            "Parliament's Legislative Observatory records the procedure as completed. No adoption, signature or "
+            "publication of a final act is recorded in our data, so this page cannot say what the procedure "
+            "produced. (Legislative Observatory status: “Procedure completed”.)",
+            None,
+            "source",
         )
-    else:
-        label, expl = labels.get(target, (proc.stage_raw or "", ""))
+    label, expl = labels.get(target, (proc.stage_raw or "", ""))
     return _S(
         target,
         label,
@@ -628,6 +744,10 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
     t = today.isoformat()
     ptype = proc.type
     stage = s.stage
+    if s.next_step is not None:  # set with the stage (acts that Parliament adopts)
+        return s.next_step
+    if stage == "unknown" and s.label == "Procedure completed":
+        return NextStep(text="Not determined: the procedure's final act is not linked in our data.", basis="unknown")
     if stage == "withdrawn" and s.label == "Replaced by a new Commission proposal":
         return NextStep(
             text="None: the procedure has ended. The Commission's new proposal is a separate legislative file.",
@@ -726,11 +846,6 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
             basis=basis if parts else "unknown",
         )
     if stage == "adopted":
-        if s.label == "Procedure completed":
-            return NextStep(
-                text="Not determined: signature and publication of the final act are not linked in our data.",
-                basis="unknown",
-            )
         if _last(events, EventKind.signature):
             return NextStep(
                 text="Publication in the Official Journal of the EU.", institution="EUR-Lex", basis="derived"
@@ -824,6 +939,13 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 institution="Council",
                 basis="derived",
             )
+        if stage == "proposed" and _commission_proposal_only(events):
+            return NextStep(
+                text="The Council agrees on its draft of the act and asks for Parliament's consent; Parliament "
+                "then decides whether to give it.",
+                institution="Council",
+                basis="derived",
+            )
         if stage == "proposed":
             return NextStep(
                 text="Parliament decides whether to give its consent.", institution="EP", basis="derived"
@@ -843,6 +965,11 @@ def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], toda
 
     s: _S | None = None
     withdrawal = _last(events, EventKind.withdrawal)
+    if withdrawal and (
+        any(e.kind in ADOPTION_KINDS and e.date > withdrawal.date for e in events)
+        or any((a.date_publication or a.date_document or "") > withdrawal.date for a in acts)
+    ):
+        withdrawal = None  # a recorded adoption after the withdrawal (e.g. of an earlier text) outranks it
     lapsed = _last(events, EventKind.lapsed)
     rejection = _last(events, EventKind.rejection)
     if withdrawal:
@@ -903,6 +1030,8 @@ def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], toda
     if s is None:
         if ptype in ("COD", "SYN"):
             s = _cod_stage(events)
+        elif parliament_adopts(proc, acts):
+            s = _ep_act_stage(proc, events)
         elif ptype in ("CNS", "APP", "AVC"):
             s = _cns_app_stage("APP" if ptype == "AVC" else ptype, events)
         else:
@@ -936,6 +1065,22 @@ def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], toda
             f"{_fmt(events[-1].date)}. The Council's public register may show whether it acted.",
             basis="unknown",
         )
+    if (
+        s.stage == "adopted"
+        and s.since
+        and not acts
+        and not _last(events, EventKind.publication)
+        and (today - date.fromisoformat(s.since)).days > STALE_DECISION_DAYS
+    ):
+        # adopted years ago and never recorded as published (2016/0810(CNS): Council 23 January 2017, OEIL still
+        # "awaiting publication"): publication is no longer a safe next step
+        if s.label == "Adopted by the Council":
+            s.explanation = "The Council has adopted the act. No publication in the Official Journal is recorded in our sources."
+        next_step = NextStep(
+            text=f"Not determined: no publication in the Official Journal has been recorded in the official sources "
+            f"since {_fmt(s.since)}.",
+            basis="unknown",
+        )
     return DossierStatus(
         stage=s.stage,  # type: ignore[arg-type]
         label=s.label,
@@ -943,7 +1088,7 @@ def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], toda
         since=s.since,
         basis=s.basis,
         next_step=next_step,
-        stall=_stall(s.stage, events, train, today),
+        stall=None if s.label == "Procedure completed" else _stall(s.stage, events, train, today),
         application=app,
     )
 

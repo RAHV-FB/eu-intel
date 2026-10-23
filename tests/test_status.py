@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from pipeline.analysis.status import DossierStatus, classify
+from pipeline.analysis.status import DossierStatus, classify, parliament_adopts
 from pipeline.models.entities import LegalAct, Procedure, TrainFile
 from pipeline.sources import ep_procedures as src
 
@@ -468,3 +468,80 @@ def test_stale_consultation_does_not_assert_a_pending_council_decision():
     assert s.next_step.basis == "unknown" and s.next_step.text.startswith("Not determined")
     recent = status("2023-0320", date(2024, 6, 1))
     assert "Council decides" in recent.next_step.text
+
+
+# ============================================================ real snapshot records (tests/fixtures/procedure_records.json)
+RECORDS = json.loads((Path(__file__).parent / "fixtures" / "procedure_records.json").read_text(encoding="utf-8"))
+
+
+def rec(pid: str) -> Procedure:
+    return Procedure.model_validate(next(p for p in RECORDS["procedures"] if p["id"] == pid))
+
+
+def rec_act(celex: str) -> LegalAct:
+    return LegalAct.model_validate(next(a for a in RECORDS["acts"] if a["celex"] == celex))
+
+
+def test_adoption_after_a_withdrawal_notice_outranks_it():
+    # 2010/0095(COD): Cellar WDW_byCOM of 7 March 2015, then the Council adopted Directive (EU) 2015/1535 on
+    # 13 July 2015 (signed 9 September, published 17 September 2015; in force)
+    p = _with_events(rec("2010-0095"), _event("withdrawal", "2015-03-07", "cellar:WDW_byCOM",
+                                              "Commission withdrew the proposal", "Commission"))  # fmt: skip
+    s = classify(p, [rec_act("32015L1535")], [], TODAY)
+    assert s.stage == "in_force" and "withdr" not in s.explanation
+    assert classify(p, [], [], TODAY).stage != "withdrawn"  # the recorded adoption steps alone outrank it
+    assert classify(p, [], [], date(2015, 5, 1)).stage == "withdrawn"  # before the adoption, the notice stands
+
+
+def test_negotiations_run_from_the_first_trilogue():
+    # 2022/0155(COD) (CSA Regulation): mandate confirmed in plenary on 22 November 2023, first trilogue
+    # (EP activity INTERINSTITUTIONAL_NEGOTIATION) on 9 December 2025
+    s = classify(rec("2022-0155"), [], [], TODAY)
+    assert (s.stage, s.label, s.since) == ("negotiations", "Negotiations with the Council", "2025-12-09")
+
+
+def test_consent_file_with_only_the_commission_proposal_waits_for_the_council_draft():
+    # 2025/0571(APP), MFF 2028-2034: OEIL lists only COM(2025)0571 ("Preparatory document"); Parliament's consent
+    # (Art. 312(2) TFEU) concerns the Council's draft, which is not recorded yet
+    s = classify(rec("2025-0571"), [], [], TODAY)
+    assert s.stage == "proposed"
+    assert "no Council draft submitted to Parliament is recorded" in s.explanation
+    assert s.next_step.text.startswith("The Council agrees on its draft") and s.next_step.institution == "Council"
+    # 2025/0313(APP): the Council's text 06190/2026 was submitted to Parliament on 21 May 2026
+    s = classify(rec("2025-0313"), [], [], date(2026, 6, 1))
+    assert s.next_step.text == "Parliament decides whether to give its consent."
+
+
+def test_act_adopted_by_parliament_with_the_councils_consent():
+    # Statute for Members (Art. 223(2) TFEU), no step recorded yet: Parliament adopts, the Council consents
+    s = classify(rec("2026-0900"), [], [], TODAY)
+    assert "Article 223(2) TFEU" in s.explanation and "Parliament adopts the act itself" in s.explanation
+    assert s.next_step.institution == "EP" and "Council then decides whether to give its consent" in s.next_step.text
+    # Statute of the Ombudsman (Art. 228(4) TFEU): Council consent 18 June 2021, Parliament's adoption 23 June 2021
+    p, act = rec("2019-0900"), rec_act("32021R1163")
+    s = classify(p, [act], [], date(2021, 6, 20))
+    assert (s.stage, s.label, s.since) == ("parliament_position", "Council gave its consent", "2021-06-18")
+    assert s.next_step.text == "Parliament adopts the act."
+    s = classify(p, [act], [], date(2021, 7, 1))
+    assert (s.stage, s.label, s.since) == ("adopted", "Adopted by Parliament", "2021-06-23")
+    # detected from the act's title ("Regulation (EU, Euratom) 2021/1163 of the European Parliament of 24 June 2021")
+    assert parliament_adopts(p.model_copy(update={"id": "2099-0900"}), [act])
+    assert not parliament_adopts(p.model_copy(update={"id": "2099-0900"}), [rec_act("32019L2121")])
+
+
+def test_council_act_never_recorded_as_published_has_no_pending_publication_step():
+    # 2016/0810(CNS) (Georgia-Europol): OEIL "Procedure completed, awaiting publication in Official Journal" and
+    # Council adoption of 23 January 2017; no publication recorded nine years later
+    s = classify(rec("2016-0810"), [], [], TODAY)
+    assert (s.stage, s.label) == ("adopted", "Adopted by the Council")
+    assert "only after publication" not in s.explanation and "No publication" in s.explanation
+    assert s.next_step.basis == "unknown" and "since 23 January 2017" in s.next_step.text
+    assert classify(rec("2016-0810"), [], [], date(2017, 2, 1)).next_step.text.startswith("Publication")
+
+
+def test_procedure_completed_without_any_recorded_act_is_not_called_adopted():
+    # 2021/0415(CNS): OEIL "Procedure completed", only the Commission proposal recorded (it ended as Council
+    # Recommendation (EU) 2022/915, which our data does not link)
+    s = classify(rec("2021-0415"), [], [], TODAY)
+    assert (s.stage, s.label, s.basis) == ("unknown", "Procedure completed", "source")
+    assert s.next_step.basis == "unknown" and s.stall is None

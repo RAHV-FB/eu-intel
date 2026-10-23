@@ -144,8 +144,18 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
       </span>
     ));
 
+  // no act and no pending step can be stated (a stale file, one reported adopted without a linked act, a stage
+  // the records do not determine): never "not law yet"
+  const noActRecorded = (ACTIVE_STAGES.has(d.stage) && d.next_step.basis === 'unknown') || d.stage === 'unknown';
   let body: React.ReactNode;
-  if (!adopted) {
+  if (!adopted && noActRecorded) {
+    body = (
+      <p className="dz-none">
+        No final act is linked to this file in our sources, so this page cannot show how it applies in the Member
+        States.
+      </p>
+    );
+  } else if (!adopted) {
     body = ACTIVE_STAGES.has(d.stage) ? (
       <p className="dz-none">
         This file is not law yet, so nothing applies in the Member States. Once adopted,{' '}

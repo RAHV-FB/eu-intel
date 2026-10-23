@@ -195,6 +195,10 @@ VOTE_OUTCOME_NOTES: dict[tuple[str, str], str] = {
                                           "with the Council.",
 }  # fmt: skip
 OEIL_PROCEDURE = "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference="
+# References for which OEIL has no procedure file (HTTP 404 "This procedure either does not exist", checked
+# 2026-10-23), with the file that covers the act when there is one. Split parents (e.g. 2016/0224(COD)) have
+# none either: OEIL files only the parts. Regulation (EU, Euratom) 2015/2422 is filed as 2011/0901B(COD).
+OEIL_NO_FILE: dict[str, str | None] = {"2011-0901": f"{OEIL_PROCEDURE}2011/0901B(COD)", "2020-3521": None}
 NEGOTIATION_EVENT_TYPES = (
     "def/ep-activities/PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
     "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
@@ -359,6 +363,7 @@ def vote_held(v: EpVote) -> bool:
 KEY_KINDS = {
     "proposal",
     "committee_report",
+    "negotiation_mandate",
     "ep_position",
     "provisional_agreement",
     "council_position",
@@ -374,6 +379,8 @@ KEY_KINDS = {
     "lapsed",
 }
 VOTE_EVENT_KINDS = {"ep_position", "plenary_vote", "rejection"}
+ADOPTION_EVENT_KINDS = (EventKind.council_adoption, EventKind.signature, EventKind.publication)
+MANDATE_ANNOUNCED = "oeil:Committee decision to enter into interinstitutional negotiations announced in plenary"
 ACTIVE_STAGES = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
 ADOPTED_STAGES = {"adopted", "published", "in_force", "no_longer_in_force"}
 
@@ -532,6 +539,29 @@ def short_names(title: str) -> list[str]:
 
 
 PARLIAMENT_REPORT_RE = re.compile(r"(\d{4}-\d{4})([RM])")
+EP_TEXT_RE = re.compile(r"T\d{1,2}-\d{4}/\d{4}")  # a text adopted by Parliament, as OEIL cites it: T9-0129/2022
+# Legislative proposals that OEIL lists under another institution than the Commission (documentation gateway)
+OEIL_PROPOSAL_AUTHORS: dict[str, tuple[str, str]] = {
+    # 2015/0906(COD): "CJEC - Legislative proposal", the Court's request under Article 281 TFEU
+    "N8-0110/2015": ("Court of Justice submitted its request (legislative proposal)", "CJEU"),
+    "N8-0050/2017": ("Council text submitted to Parliament", "Council"),  # 2016/0357B(COD): "Council of the EU"
+}
+# OEIL labels of the ordinary legislative procedure that do not fit consultation or consent (no readings there)
+SPECIAL_PROCEDURE_TITLES = {
+    "Parliament committee decided to open second-reading negotiations with the Council": (
+        "Parliament committee decided to open negotiations with the Council"
+    ),
+    "Parliament committee approved the agreement reached with the Council for an early second reading": (
+        "Parliament committee approved the text agreed with the Council"
+    ),
+}
+
+
+def _plenary_decision(e: Event) -> bool:
+    """Parliament's decision at a sitting; in consent files the EP API often records it as PLENARY_AMEND."""
+    return e.kind == EventKind.ep_position or (e.raw_type or "").endswith("/PLENARY_AMEND")
+
+
 ACT_NUMBER_RE = re.compile(
     r"^((?:Council |Commission )?(?:Implementing |Delegated )?(?:Regulation|Directive|Decision)"
     r"(?: \([A-Z][A-Za-z, ]*\))?(?: No)? \d{1,4}/\d{1,4}(?:/[A-Z]+)*)"
@@ -1101,6 +1131,12 @@ class Builder:
                 source=main.source,
             ))  # fmt: skip
         return out
+
+    def oeil_link(self, pid: str) -> str | None:
+        """The procedure's OEIL file, or None where OEIL has none (see OEIL_NO_FILE; split parents)."""
+        if pid in OEIL_NO_FILE:
+            return OEIL_NO_FILE[pid]
+        return None if self.split_children.get(pid) else self.proc[pid].oeil_url
 
     def resolve_ref(self, ref: str) -> Procedure | None:
         p = self.proc_by_ref.get(norm_ref(ref))
@@ -1698,6 +1734,11 @@ class Builder:
         cvotes = [cv for cv in self.council_of.get(p.id, []) if cv["date"] <= self.today]
         position_dates = {cv["date"] for cv in cvotes if cv.get("vote_on") == "first_reading_position"}
         act_adopted = any(cv.get("vote_on") == "act" and cv["outcome"] == "adopted" for cv in cvotes)
+        # A Council act bears the date of its adoption; OEIL's Council step is shown on that date when they differ
+        # (2024/0016(CNS): OEIL 17 July 2024, Council Regulation (EU) 2024/1732 of 17 June 2024, published 19 June)
+        adopts = _lazy("pipeline.analysis.status", "parliament_adopts")
+        council_acts = p.type not in ("COD", "SYN") and not (adopts and adopts(p, acts))
+        act_dates = sorted({a.date_document for a in acts if a.date_document and a.date_document <= self.today})
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
         seen_ev: set[tuple[str, str, str]] = set()
@@ -1709,7 +1750,8 @@ class Builder:
             if (kind, e.date, e.title) in seen_ev:  # same step recorded by two EP sources (API and OEIL)
                 continue
             seen_ev.add((kind, e.date, e.title))
-            title, key = e.title, kind in KEY_KINDS
+            # the announcement in plenary of a committee's decision to negotiate is a procedural step, not a decision
+            title, key = e.title, kind in KEY_KINDS and not (e.raw_type or "").startswith(MANDATE_ANNOUNCED)
             if e.institution == "Council" and kind == "council_position" and title == OEIL_POSITION_PUBLISHED:
                 # OEIL key event "Council position published": the date the position was published, which
                 # is not the date of the Council's vote adopting it.
@@ -1718,6 +1760,12 @@ class Builder:
                 title, key = "Council's first-reading position published", key and not position_dates
             elif e.institution == "Council" and kind == "council_adoption" and act_adopted:
                 continue  # the Council's voting result on the act (added below) dates this step
+            when, detail = e.date, e.detail
+            if e.institution == "Council" and kind == "council_adoption" and council_acts:
+                near = [d for d in act_dates if abs(_days_between(d, e.date)) <= 92]  # the act this step adopted
+                if len(near) == 1 and near[0] != e.date:
+                    when = near[0]
+                    detail = f"Date of the act (EUR-Lex); the Legislative Observatory gives {_long_date(e.date)}."
             vote_id = None
             if kind in VOTE_EVENT_KINDS and votes_by_date.get(e.date):
                 docs = {d.id for d in e.docs}
@@ -1733,11 +1781,11 @@ class Builder:
             elif kind == "negotiation_mandate" and e.raw_type in NEGOTIATION_EVENT_TYPES:
                 negotiation.append(len(out))  # linked below, once every event of the day is linked
             out.append({
-                "id": e.id, "date": e.date, "kind": kind, "title": title, "detail": e.detail,
+                "id": e.id, "date": when, "kind": kind, "title": title, "detail": detail,
                 "institution": e.institution, "state": "done", "key": key,
                 "docs": [d.model_dump(mode="json") for d in e.docs], "source": _src(e.source), "vote_id": vote_id,
             })  # fmt: skip
-            seen.add((kind, e.date))
+            seen.add((kind, when))
         # Parliament's own decision on negotiations (referral back to committee, or confirming the committee's
         # decision): its mandate vote of that day, unless another event of the same day already links it
         for i in negotiation:
@@ -1910,6 +1958,27 @@ class Builder:
         have = {e.kind for e in p.events}
         extra: list[Event] = []
         notices = sorted(self.notices_by_ref.get(norm_ref(p.reference), []), key=lambda n: n.date)
+        # A notice does not end a procedure that went on to adopt the act: 2010/0095(COD) has a Cellar withdrawal
+        # notice of 7 March 2015, then Directive (EU) 2015/1535 adopted by the Council on 13 July 2015
+        if notices:
+            acts = self.acts_of.get(p.id, [])
+            relevant = _lazy("pipeline.analysis.status", "relevant_acts")
+            if acts and relevant is not None:
+                acts = relevant(p, acts, sorted(p.events, key=lambda e: e.date), date.fromisoformat(self.today))
+            if (p.stage_raw or "").startswith("Procedure completed") or p.celex_refs or acts:
+                notices = []
+        notices = [n for n in notices if not any(e.date > n.date and (e.kind in ADOPTION_EVENT_KINDS or (
+            e.raw_type or "").endswith("PLENARY_APPROVE_COUNCIL_POSITION")) for e in p.events)]  # fmt: skip
+        withdrawn = [e for e in p.events if e.kind == EventKind.withdrawal]
+        first_proposal = min((e.date for e in p.events if e.kind == EventKind.proposal), default=None)
+        drop: set[str] = set()
+        if notices and withdrawn and (notices[0].kind == "replaced" or any(
+                first_proposal and e.date < first_proposal for e in withdrawn)):  # fmt: skip
+            # Cellar's notice replaces OEIL's withdrawal when it records the new proposal (RPL_byCOM) or when
+            # OEIL's date precedes the proposal itself (2018/0213(COD): OEIL 28 May 2018, proposal 31 May 2018,
+            # Cellar RPL_byCOM 28 May 2020)
+            drop = {e.id for e in withdrawn}
+            have.discard(EventKind.withdrawal)
         if notices and EventKind.withdrawal not in have:
             n = notices[0]
             replaced = n.kind == "replaced"
@@ -1929,18 +1998,23 @@ class Builder:
                                                            "Awaiting signature", "Procedure completed"))  # fmt: skip
         if EventKind.rejection not in have and not past_parliament:
             for v in sorted(self.votes_of.get(p.id, []), key=lambda v: (v.date, v.id)):
-                if v.kind == "final" and v.outcome == "rejected" and getattr(v, "outcome_basis", None) in (
-                    "published", "minutes"
-                ):
+                # a rejected final vote, or an adopted motion to reject the proposal (2023/0413(COD), vote 179804:
+                # "Proposal for rejection" adopted 370-264-9; TA-10-2025-0240 "Rejects the Commission proposal")
+                rejects = (v.kind == "final" and v.outcome == "rejected") or (
+                    v.kind_detail == "reject_proposal" and v.outcome == "adopted")  # fmt: skip
+                if rejects and getattr(v, "outcome_basis", None) in ("published", "minutes"):
                     extra.append(Event(
                         id=f"vote-{v.id}-rejected", date=v.date, kind=EventKind.rejection,
-                        raw_type="ep_vote:final:rejected", institution="EP",
+                        raw_type="ep_vote:final:rejected" if v.kind == "final" else "ep_vote:reject_proposal:adopted",
+                        institution="EP",
                         title="Parliament rejected the proposal in a plenary vote", source=v.source,
                     ))  # fmt: skip
                     break
         # a plenary vote that OEIL does not record yet (it lags by days): Parliament's position / mandate
         official = [v for v in self.votes_of.get(p.id, []) if v.outcome == "adopted" and v.date <= self.today
                     and getattr(v, "outcome_basis", None) in ("published", "minutes")]  # fmt: skip
+        adopts = _lazy("pipeline.analysis.status", "parliament_adopts")
+        ep_act = bool(adopts and adopts(p, self.acts_of.get(p.id, [])))  # Parliament adopts, the Council consents
         for vkind, ekind in (("final", EventKind.ep_position), ("mandate", EventKind.negotiation_mandate)):
             vs = sorted((v for v in official if v.kind == vkind), key=lambda v: (v.date, v.id))
             if vs and not past_parliament and not any(e.kind == ekind and e.date >= vs[-1].date for e in p.events):
@@ -1948,67 +2022,134 @@ class Builder:
                 title = {
                     EventKind.negotiation_mandate: "Parliament voted to open negotiations with the Council",
                     EventKind.ep_position: {"CNS": "Parliament delivered its opinion in a plenary vote",
-                                            "APP": "Parliament voted on consent"}.get(
+                                            "APP": "Parliament adopted a text in a plenary vote" if ep_act
+                                            else "Parliament voted on consent"}.get(
                         p.type, "Parliament adopted its position in a plenary vote"),
                 }[ekind]  # fmt: skip
                 extra.append(Event(
                     id=f"vote-{v.id}-{ekind.value}", date=v.date, kind=ekind, raw_type=f"ep_vote:{vkind}:adopted",
                     institution="EP", title=title, source=v.source,
                 ))  # fmt: skip
-        events = [self.procedure_event(p, e) for e in p.events]
+        events = [self.procedure_event(p, e, ep_act) for e in p.events if e.id not in drop]
+        # A final vote followed by a referral back to committee (a "mandate" vote): Parliament voted amendments
+        # but did not adopt its first-reading position, even where the EP API already records one (2025/0393(COD),
+        # 6 October 2026: PLENARY_AMEND_PROPOSAL, vote 197467, then the referral back in the same vote item)
+        referred = {v.date for v in official if v.kind == "mandate"} if p.type == "COD" else set()
+        events = [
+            e.model_copy(update={"kind": EventKind.plenary_vote, "title": "Parliament voted amendments to the proposal"})
+            if e.kind == EventKind.ep_position and e.date in referred
+            and (e.raw_type or "").endswith(("/PLENARY_AMEND_PROPOSAL", "/PLENARY_ADOPT_POSITION"))
+            else e
+            for e in events
+        ]  # fmt: skip
         if not extra and events == p.events:
             return p
         return p.model_copy(update={"events": sorted([*events, *extra], key=lambda e: (e.date, e.id))})
 
     @staticmethod
-    def procedure_event(p: Procedure, e: Event) -> Event:
+    def procedure_event(p: Procedure, e: Event, parliament_adopts: bool = False) -> Event:
         """Titles that fit the procedure: readings exist only in the ordinary legislative procedure,
         consent is not consultation, and a Council text submitted to Parliament is not a Commission
-        proposal."""
-        title, inst = e.title, e.institution
-        if p.type in ("CNS", "APP"):
-            if title == "Parliament took its decision (first reading)":
-                title = "Parliament delivered its opinion" if p.type == "CNS" else "Parliament voted on consent"
-            title = title.replace(" (first reading)", "")
-        if p.type == "APP" and title == "Council adopted the act after consulting Parliament":
-            title = "Council adopted the act after Parliament's consent"
-        if (
-            e.kind == EventKind.proposal
-            and e.docs
-            and not any(d.id.startswith("COM(") for d in e.docs)
-            and any(re.fullmatch(r"\d{5}/\d{2,4}", d.id) for d in e.docs)
+        proposal. The documents say who acted (OEIL files a COM proposal of a consent file as a "Preparatory
+        document" of the Council). Parliament's decision in an interim or accompanying report (R/M
+        procedure), or an earlier decision in a consent file, is a resolution, not its consent. When
+        Parliament adopts the act itself (`parliament_adopts`, Articles 223(2) and 228(4) TFEU), the
+        Council gives its consent."""
+        title, inst, kind = e.title, e.institution, e.kind
+        ids = [d.id for d in e.docs]
+        report = PARLIAMENT_REPORT_RE.fullmatch(p.id)
+        if p.type == "APP" and _plenary_decision(e) and (
+            report or any(_plenary_decision(x) and x.date > e.date for x in p.events)
         ):
-            title, inst = "Council text submitted to Parliament", "Council"
-        if (title, inst) == (e.title, e.institution):
+            # 2017/0333R(APP) "Interim report under consent procedure", 2023/0201M(APP) "Motion for a resolution
+            # under consent procedure" (OEIL); 2013/0255(APP): interim resolutions of 2014 and 2015, consent in 2017
+            title, kind = "Parliament adopted an interim resolution", EventKind.ep_position  # its plenary decision
+            if report and report.group(2) == "M":
+                title = "Parliament adopted a resolution accompanying the consent procedure"
+        elif p.type in ("CNS", "APP"):
+            if title == "Parliament took its decision (first reading)" and p.type == "CNS":
+                title = "Parliament delivered its opinion"
+            elif title == "Parliament took its decision (first reading)" and not parliament_adopts:
+                title = "Parliament voted on consent"
+            elif title == "Parliament took its decision (first reading)":
+                consented = any(x.kind == EventKind.council_adoption and x.date <= e.date for x in p.events)
+                title = "Parliament adopted the act" if consented else "Parliament adopted its proposal for the act"
+            title = SPECIAL_PROCEDURE_TITLES.get(title, title).replace(" (first reading)", "")
+        if p.type == "APP" and title == "Council adopted the act after consulting Parliament":
+            title = "Council gave its consent" if parliament_adopts else "Council adopted the act after Parliament's consent"
+        codes = {(x.raw_type or "").rsplit("/", 1)[-1] for x in p.events}
+        if title == "Council approved Parliament's second-reading position" and (
+            "PLENARY_APPROVE_COUNCIL_POSITION" in codes and "PLENARY_AMEND_COUNCIL_POSITION" not in codes
+        ):
+            # Parliament approved the Council's position unamended, which adopted the act (Art. 294(7)(a) TFEU);
+            # OEIL still lists "Act approved by Council, 2nd reading", dated on the signature day
+            title = "Recorded by the Legislative Observatory: “Act approved by Council, 2nd reading”"
+            inst, kind = "OEIL", EventKind.other
+        if e.kind == EventKind.proposal or e.raw_type == "oeil:Preparatory document":
+            prop = e.kind == EventKind.proposal
+            known = next((OEIL_PROPOSAL_AUTHORS[i] for i in ids if i in OEIL_PROPOSAL_AUTHORS), None)
+            if any(i.startswith("COM(") for i in ids):
+                if not prop:  # the Commission's proposal for the Council act (consent files)
+                    title, inst, kind = "Commission published its proposal", "Commission", EventKind.proposal
+            elif any(EP_TEXT_RE.fullmatch(i) for i in ids):  # a text adopted by Parliament
+                title = "Parliament adopted its proposal for the act" if prop else "Parliament adopted a text in plenary"
+                inst = "EP"
+            elif known:
+                title, inst = known
+            elif any(re.fullmatch(r"\d{5}/\d{2,4}", i) for i in ids):
+                title = "Council text submitted to Parliament" if prop else "Council preparatory document published"
+                inst = "Council"
+            elif any(re.match(r"N\d+-", i) for i in ids) or not prop:  # the author is not in our record
+                what = "Legislative proposal" if prop else "Preparatory document"
+                title, inst = f"{what} published (as recorded by the Legislative Observatory)", "OEIL"
+        if (title, inst, kind) == (e.title, e.institution, e.kind):
             return e
-        return e.model_copy(update={"title": title, "institution": inst})
+        return e.model_copy(update={"title": title, "institution": inst, "kind": kind})
 
     def adoption_dates(self, p: Procedure, acts: list[LegalAct]) -> tuple[str | None, str | None]:
-        """(adopted, published). The act is adopted when the Council adopts it or approves Parliament's
-        position (Art. 294 TFEU), or when Parliament approves the Council's position at second reading;
-        signature and publication come later. Without such a recorded step, the act's own date (EUR-Lex
-        date of the document: its adoption or, for acts of Parliament and Council, signature date), then a
-        recorded signature. Never the publication date."""
+        """(adopted, published), with the Council's steps dated as the timeline shows them. In the ordinary
+        procedure the act is adopted when Parliament approves the Council's position at second reading (Art.
+        294(7)(a) TFEU; OEIL's later "Act approved by Council, 2nd reading" is the signature day), else when
+        the Council adopts it or approves Parliament's position: the date of the Council's adopted voting
+        result on the act, else OEIL's Council step. A Council act (consultation, consent) is dated by that
+        voting result, else by the act itself, which bears its adoption date (OEIL's Council date can
+        contradict it). An act that Parliament adopts with the Council's consent is dated by Parliament's
+        decision. Without such a step, the act's own date (EUR-Lex date of the document: its adoption or,
+        for acts of Parliament and Council, signature date), then a recorded signature. Never the
+        publication date, and never a date after publication."""
         t = self.today
-        steps = [e.date for e in p.events if e.date <= t and (
-            e.kind == EventKind.council_adoption or (e.raw_type or "").endswith("PLENARY_APPROVE_COUNCIL_POSITION"))]  # fmt: skip
+        p = self.council_dated(p)
+        approved = sorted(e.date for e in p.events if e.date <= t and (e.raw_type or "").endswith(
+            "PLENARY_APPROVE_COUNCIL_POSITION"))  # fmt: skip
+        votes = sorted(cv["date"] for cv in self.council_of.get(p.id, [])
+                       if cv["date"] <= t and cv.get("vote_on") == "act" and cv["outcome"] == "adopted")  # fmt: skip
+        council = sorted(e.date for e in p.events if e.kind == EventKind.council_adoption and e.date <= t)
         docs = sorted(a.date_document for a in acts if a.date_document and a.date_document <= t)
         sigs = sorted(e.date for e in p.events if e.kind == EventKind.signature and e.date <= t)
-        adopted = max(steps) if steps else docs[0] if docs else sigs[0] if sigs else None
         pubs = sorted(a.date_publication for a in acts if a.date_publication and a.date_publication <= t)
         pubs = pubs or sorted(e.date for e in p.events if e.kind == EventKind.publication and e.date <= t)
-        return adopted, pubs[0] if pubs else None
+        published = pubs[0] if pubs else None
+        adopts = _lazy("pipeline.analysis.status", "parliament_adopts")
+        if adopts and adopts(p, acts):  # Parliament's decision after the Council's consent
+            ep = [e.date for e in p.events if e.kind == EventKind.ep_position and e.date <= t
+                  and any(c <= e.date for c in votes + council)]  # fmt: skip
+            cands = [ep[-1:], docs[:1]]
+        elif p.type in ("COD", "SYN"):
+            cands = [approved[-1:], votes[-1:], council[-1:], docs[:1], sigs[:1]]
+        else:
+            cands = [votes[-1:], docs[:1], council[-1:], sigs[:1]]
+        adopted = next((c[0] for c in cands if c and (not published or c[0] <= published)), None)
+        return adopted, published
 
     @staticmethod
     def proposal_date(p: Procedure) -> str | None:
-        """Date of the proposal: the first recorded proposal (Commission, or Council text submitted to
-        Parliament), else the date of a COM document of the procedure. Not the first event of another
-        kind (a referral or committee step is not the proposal)."""
-        props = sorted(e.date for e in p.events if e.kind == EventKind.proposal)
-        if props:
-            return props[0]
-        coms = sorted(d.date for d in p.documents if d.id.startswith("COM(") and d.date)
-        return coms[0] if coms else None
+        """Date of the proposal: the earliest recorded proposal (Commission, Council text submitted to
+        Parliament, Parliament's own proposal) or COM document of the procedure, so that a Commission proposal
+        recorded only as a document still dates a consent file whose Council draft came later. Not the first
+        event of another kind (a referral or committee step is not the proposal)."""
+        props = [e.date for e in p.events if e.kind == EventKind.proposal]
+        coms = [d.date for d in p.documents if d.id.startswith("COM(") and d.date]
+        return min(props + coms, default=None)
 
     def council_dated(self, p: Procedure) -> Procedure:
         """For the status: OEIL's Council steps dated by the Council's own voting results (OEIL dates the
@@ -2118,8 +2259,9 @@ class Builder:
             # the procedure record: the human-readable OEIL file first, the API's JSON-LD labelled as data
             psrc = _src(p.source)
             sources = []
-            if psrc and p.oeil_url and pid not in self.stub_ids:
-                sources.append({**psrc, "institution": "OEIL", "url": p.oeil_url,
+            oeil = self.oeil_link(pid)
+            if psrc and oeil and pid not in self.stub_ids:
+                sources.append({**psrc, "institution": "OEIL", "url": oeil,
                                 "label": f"Legislative Observatory (OEIL) – procedure file {p.reference}"})  # fmt: skip
                 if "data.europarl.europa.eu" in (psrc.get("url") or ""):
                     psrc = {**psrc, "label": f"Machine-readable data (EP Open Data API) – procedure {p.reference}"}
@@ -2139,7 +2281,7 @@ class Builder:
                 "rapporteurs": rapps,
                 "documents": [d.model_dump(mode="json") for d in p.documents],
                 "related": [],
-                "oeil_url": p.oeil_url,
+                "oeil_url": oeil,
                 # built from the EUR-Lex act alone: the procedure's own steps are not in our data
                 "eurlex_only": pid in self.stub_ids and pid not in self.split_children,
                 "sources": [x for x in sources if x],
@@ -2518,11 +2660,12 @@ class Builder:
                 "dossier": self.dossier_summary[pid], "what": str(c.get("what") or "").strip(),
                 "why": str(c.get("why") or "").strip(), "status": det["status"], "latest": self.latest_event(pid),
                 "next_step": det["next_step"], "source": _src(self.proc[pid].source),
-                "oeil_url": self.proc[pid].oeil_url,
+                "oeil_url": self.oeil_link(pid),
             })  # fmt: skip
         today = self.today
         summ = self.dossier_summary
-        # recently adopted (formal adoption = signature/publication of the final act)
+        # recently adopted, by the date of adoption (see adoption_dates: the Council's adoption or Parliament's
+        # second-reading approval, otherwise the act's own date; never the publication date)
         adopted = sorted(
             (d for d in summ.values() if d["stage"] in ADOPTED_STAGES and d["adopted"] and d["type"] in LEGISLATIVE_TYPES),
             key=lambda d: (d["adopted"], d["id"]), reverse=True,
@@ -2784,8 +2927,9 @@ class Builder:
             notes.append(
                 "Legislation: the European Parliament procedure data was not available for this release."
             )
-        if self.stub_ids:
-            notes.append(f"{len(self.stub_ids):,} adopted laws are shown from their EUR-Lex record only (procedure "
+        eurlex_only = [i for i in self.stub_ids if not self.split_children.get(i)]  # split parents have no act
+        if eurlex_only:
+            notes.append(f"{len(eurlex_only):,} adopted laws are shown from their EUR-Lex record only (procedure "
                          "reference, title and legal dates), because the European Parliament procedure record is "
                          "not in this release; their Parliament steps are not shown.")  # fmt: skip
         if avail("ep_votes"):

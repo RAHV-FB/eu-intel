@@ -146,9 +146,11 @@ export interface DossierSummary {
   topics: string[]; // topic slugs
   stage: LifecycleStage;
   status_label: string; // "Approved by Parliament", "In force", ...
-  started?: ISODate | null; // proposal date
+  started?: ISODate | null; // proposal date: the earliest recorded proposal or COM document (a consent file's Commission proposal precedes the Council draft)
   last_event?: ISODate | null;
-  adopted?: ISODate | null; // adoption: Council adoption / Parliament's second-reading approval, else the act's own date (never publication)
+  // adoption: Parliament's second-reading approval, else the Council's adoption dated by its voting result; a Council act's own date
+  // when no vote is linked; Parliament's decision for acts it adopts with the Council's consent (never after publication)
+  adopted?: ISODate | null;
   published?: ISODate | null; // publication of the final act in the Official Journal
   next_date?: ISODate | null; // earliest legally fixed future date (application / transposition deadline), if any
   instrument?: LegalInstrument | null; // final act type if adopted, or proposed instrument if known
@@ -297,7 +299,7 @@ export interface DossierDetail extends DossierSummary {
   rapporteurs: { mep_id?: string | null; name: string; group?: string | null; country?: string | null; role: string }[];
   documents: DocRef[];
   related: { id: string; title: string; relation: string }[]; // only officially established relations
-  oeil_url: string;
+  oeil_url: string | null; // null where OEIL has no file under this reference (e.g. a split procedure's parent)
   eurlex_only?: boolean; // built from the EUR-Lex act alone: the procedure's own steps are not in our data
   sources: SourceRef[];
   changes: ActivityItem[]; // verified changes detected between snapshots for this dossier

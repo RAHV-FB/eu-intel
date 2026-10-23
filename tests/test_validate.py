@@ -115,3 +115,27 @@ def test_public_output_veto_rule(tmp_path: Path):
     ]), encoding="utf-8")  # fmt: skip
     rep = check(FIX, public=pub, today=TODAY)
     assert any("single-state veto outside unanimity" in e for e in rep.errors)
+
+
+def test_public_dossier_contradicting_its_own_dates(tmp_path: Path):
+    # as published before the fix: 2010-0095 (in force since 2015, shown as withdrawn by a notice of 7 March 2015),
+    # 2018-0213 (withdrawn three days before its proposal, as OEIL dates it), 2024-0016 (adopted after publication)
+    pub = tmp_path / "public"
+    (pub / "dossiers").mkdir(parents=True)
+    dossiers = [
+        {"id": "2010-0095", "stage": "withdrawn", "status": {"since": "2015-03-07"}, "started": "2010-04-23",
+         "celex": ["32015L1535"], "adopted": "2015-07-13", "published": "2015-09-17",
+         "timeline": [{"kind": "council_adoption", "date": "2015-07-13"}, {"kind": "publication", "date": "2015-09-17"}]},
+        {"id": "2018-0213", "stage": "withdrawn", "status": {"since": "2018-05-28"}, "started": "2018-05-31",
+         "celex": [], "adopted": None, "published": None, "timeline": []},
+        {"id": "2024-0016", "stage": "in_force", "status": {"since": "2024-07-09"}, "started": "2024-01-24",
+         "celex": ["32024R1732"], "adopted": "2024-07-17", "published": "2024-06-19", "timeline": []},
+        {"id": "2018-0329", "stage": "withdrawn", "status": {"since": "2025-03-11"}, "started": "2018-09-12",
+         "celex": [], "adopted": None, "published": None, "timeline": []},
+    ]  # fmt: skip
+    for d in dossiers:
+        (pub / "dossiers" / f"{d['id']}.json").write_text(json.dumps(d), encoding="utf-8")
+    errors = check(FIX, public=pub, today=TODAY).errors
+    assert [e.split(":")[0] for e in errors] == [
+        "public dossiers/2010-0095.json", "public dossiers/2018-0213.json", "public dossiers/2024-0016.json"]  # fmt: skip
+    assert "before the proposal of 2018-05-31" in errors[1] and "after its publication" in errors[2]
