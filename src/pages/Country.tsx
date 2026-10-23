@@ -5,6 +5,7 @@ import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { COUNTRY_NAMES, formatDate, formatNumber, pct } from '../lib/format';
 import { ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Tag, Term } from '../components/ui';
+import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { useGroups } from '../features/people/labels';
 import { formatIndicator } from '../features/countries/CountryTable';
@@ -249,21 +250,25 @@ export default function Country() {
             </p>
             {c.council_votes.length > 0 && (
               <div className="table-wrap table-card" style={{ marginTop: 'var(--sp-4)' }}>
-                <table className="table">
+                {/* Explicit roles: on phones the rows are laid out as cards (table--stack), not as table cells. */}
+                <table className="table table--stack" role="table">
                   <caption className="visually-hidden">Council votes and {c.name}’s position, newest first</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Date</th>
-                      <th scope="col">Voted on</th>
-                      <th scope="col">{c.name}’s position</th>
+                  <thead role="rowgroup">
+                    <tr role="row">
+                      <th scope="col" role="columnheader">Date</th>
+                      <th scope="col" role="columnheader">Voted on</th>
+                      <th scope="col" role="columnheader">{c.name}’s position</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody role="rowgroup">
                     {votesShown.map((v) => (
-                      <tr key={v.vote_id}>
-                        <td className="nowrap">{formatDate(v.date)}</td>
-                        <td>
-                          {v.dossier_id ? <Link to={dossierPath(v.dossier_id)}>{v.title}</Link> : v.title}
+                      <tr key={v.vote_id} role="row">
+                        <td className="nowrap" role="cell">
+                          <StackLabel>Date</StackLabel>
+                          {formatDate(v.date)}
+                        </td>
+                        <td className="stack-title" role="cell">
+                          <RowTitle to={v.dossier_id ? dossierPath(v.dossier_id) : null}>{v.display_title ?? v.title}</RowTitle>
                           {v.vote_on && v.vote_on !== 'act' && (
                             <>
                               {' '}
@@ -271,7 +276,8 @@ export default function Country() {
                             </>
                           )}
                         </td>
-                        <td>
+                        <td role="cell">
+                          <StackLabel>{c.name}’s position</StackLabel>
                           <Pos pos={v.pos} />
                         </td>
                       </tr>
