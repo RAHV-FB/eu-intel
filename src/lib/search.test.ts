@@ -191,6 +191,12 @@ describe('normalize', () => {
     expect(normalize('Sánchez')).toBe(normalize('SANCHEZ'));
     expect(normalize('Straße Øresund')).toBe('strasse oresund');
   });
+
+  it('reads a session document number typed with another dash as the official one', () => {
+    expect(normalize('A10\u20130049/2025 \u2013 Gilles Boyer')).toBe('a10-0049/2025 gilles boyer');
+    expect(normalize('RC-B9\u20110107/2023')).toBe('rc-b9-0107/2023');
+    expect(normalize('2014\u20132020')).toBe('2014 2020'); // other dashes stay word separators
+  });
 });
 
 describe('search ranking', () => {

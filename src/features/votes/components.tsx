@@ -46,7 +46,7 @@ export function MarginText({
   if (outcome && outcome !== 'adopted' && outcome !== 'rejected') return null;
   if (!margin) {
     return short ? null : (
-      <span className="meta">No margin shown: the applicable threshold could not be established from the records.</span>
+      <span className="meta">No margin shown: we have not established which majority this vote required.</span>
     );
   }
   if (!outcome) return null; // a margin is shown only next to the outcome it measures

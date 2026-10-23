@@ -61,6 +61,8 @@ export function normalize(s: string): string {
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[ßæœøłđðþıħ]/g, (c) => SPECIAL[c] ?? c)
+    // a session document number typed with another dash is the official one with a hyphen: "A10–0049/2025"
+    .replace(/\b([abc]\d{1,2})[\u2010-\u2015\u2212](\d{4}\/\d{4})/g, '$1-$2')
     .replace(/[^\p{L}\p{N}/()-]+/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();

@@ -13,12 +13,17 @@ from types import SimpleNamespace
 import pytest
 
 from pipeline.build import (
+    DISCHARGE_NOTES,
+    FINAL_ROLE_LABELS,
     VOTE_DETAIL_LABELS,
     VOTE_OUTCOME_NOTES,
     Builder,
+    _vote_index_entry,
     build_search_docs,
     commission_cod_proposal,
     english_procedural,
+    final_role,
+    referred_back,
     rejection_title,
     search_subject,
     subject_procedure,
@@ -318,6 +323,98 @@ def test_first_reading_decision_whose_final_vote_was_rejected():
     assert next(e for e in tl2 if e["date"] == "2026-03-26" and e["kind"] == "ep_position")["title"] == (
         "Parliament took its decision (first reading)"
     )
+
+
+def test_decision_recorded_a_day_from_its_vote_links_that_vote():
+    # remote voting: 2020/0331(CNS), EP API DEC-134869 dated 6 Jul 2021 (561-43-88), procedure decision
+    # 2020-0331-DEC-DCPL-2021-07-07 (OEIL "07/07/2021 Decision by Parliament T9-0329/2021"); 2020/0065(COD),
+    # decision of 13 May 2020, final vote 114183 dated 15 May 2020; 2018/0228(COD) (Connecting Europe Facility),
+    # second-reading approval of 7 Jul 2021, motion to reject the Council's position 134544 dated 6 Jul 2021
+    for pid, vid, day in (("2020-0331", "134869", "2021-07-07"), ("2020-0065", "114183", "2020-05-13"),
+                          ("2018-0228", "134544", "2021-07-07")):  # fmt: skip
+        p, v = procs(pid)[pid], votes(vid)
+        me = SimpleNamespace(indexed_vote_ids=set(v), council_of={}, today="2026-10-22")
+        tl = Builder.timeline(me, p, [], list(v.values()))  # type: ignore[arg-type]
+        e = next(e for e in tl if e["date"] == day and e["kind"] == "ep_position")
+        assert e["vote_id"] == vid, pid
+        assert "its procedure record dates the decision" in e["detail"], pid
+    # a negotiating mandate is never taken for the decision
+    p, v = procs("2020-0331")["2020-0331"], votes("134869")
+    mandate = [v["134869"].model_copy(update={"kind": "mandate"})]
+    me = SimpleNamespace(indexed_vote_ids=set(v), council_of={}, today="2026-10-22")
+    tl = Builder.timeline(me, p, [], mandate)  # type: ignore[arg-type]
+    assert next(e for e in tl if e["date"] == "2021-07-07" and e["kind"] == "ep_position")["vote_id"] is None
+
+
+def test_mandate_vote_a_day_before_the_referral_links_it():
+    # 2021/0068(COD): vote 130712 on 28 Apr 2021 (amended proposal, 540-119-31), procedure event "Parliament sent the
+    # file back to committee to negotiate with the Council" on 29 Apr 2021; the decision of 8 Jun 2021 is 132421.
+    # The rejection motion 130538 of 28 Apr leaves that day's "Vote in Parliament" without a single vote to link.
+    p, v = procs("2021-0068")["2021-0068"], votes("130712", "130538", "132421")
+    me = SimpleNamespace(indexed_vote_ids=set(v), council_of={}, today="2026-10-22")
+    tl = Builder.timeline(me, p, [], list(v.values()))  # type: ignore[arg-type]
+    assert next(e for e in tl if e["date"] == "2021-04-29" and e["kind"] == "negotiation_mandate")["vote_id"] == "130712"
+    assert next(e for e in tl if e["date"] == "2021-06-08" and e["kind"] == "ep_position")["vote_id"] == "132421"
+
+
+def test_second_reading_amendments_are_named_in_the_decision():
+    # 2025/0429(COD), 9 Jul 2026, PLENARY_AMEND_COUNCIL_POSITION: EP API DEC-195778 "C10-0178/2026 – Article 1, after
+    # § 2 – Am 30" ADOPTED 369-236-6 and DEC-195787 "… – Article 3, § 1, point a – Am 26 CP3= 31 CP3= 6= 21=" ADOPTED
+    # 362-235-5 (at least 360 of 719 Members needed); both motions to reject the Council's position rejected
+    p = procs("2025-0429")["2025-0429"]
+    v = votes("195775", "195807", "195778", "195787")
+    me = SimpleNamespace(indexed_vote_ids={"195775", "195807"}, council_of={}, today="2026-10-22")
+    tl = Builder.timeline(me, p, [], list(v.values()))  # type: ignore[arg-type]
+    e = next(e for e in tl if e["date"] == "2026-07-09" and e["kind"] == "ep_position")
+    assert e["vote_id"] == "195775"
+    assert e["detail"] == (
+        "Parliament voted on 2 motions to reject the Council's position and rejected each of them; the vote link "
+        "opens the first. Parliament adopted 2 amendments to the Council's position with the votes of a majority of "
+        "its component Members: “Article 1, after § 2 – Am 30” (369 for) and “Article 3, § 1, point a – Am 26 CP3= "
+        "31 CP3= 6= 21=” (362 for). Votes on amendments are not listed on this site."
+    )
+
+
+def test_final_votes_say_what_they_decide():
+    v = votes("115405", "170611", "175931", "125901", "195415", "110686", "144283", "186119", "168353", "141902")
+    assert {k: final_role(x) for k, x in v.items()} == {
+        "115405": "parliament_decision",  # 2020/2681(RSO), setting up an ECON subcommittee
+        "170611": "commission_election",  # "Election of the Commission", 27 Nov 2024 (Art. 17(7) TEU)
+        "175931": "discharge",  # 2024/2021(DEC), "Proposal for a decision"
+        "125901": "consent",  # 2018/0166(APP), MFF 2021-2027
+        "195415": "consent",  # 2025/0271(NLE), "EU–Mexico Interim Agreement on Trade ***"
+        "110686": "consultation",  # 2018/0412(CNS), "Requirements for payment service providers *"
+        "144283": "legislative",  # 2021/0211A(COD)
+        "186119": None,  # an appointment linked to no procedure, no symbol
+        "168353": "budget",  # 2024/0003(BUD), an EGF mobilisation the records title "… ***I"
+        "141902": None,  # a negotiating mandate
+    }
+    assert FINAL_ROLE_LABELS["consent"] == "Vote on consent"
+    title, _ = Builder.vote_display_title(None, v["125901"], None)  # type: ignore[arg-type]
+    assert title == "Council regulation laying down the multiannual financial framework for the years 2021 to 2027 — vote on consent"
+    title, _ = Builder.vote_display_title(None, v["110686"], None)  # type: ignore[arg-type]
+    assert title == "Requirements for payment service providers — vote on Parliament's opinion"
+    assert DISCHARGE_NOTES["adopted"].startswith("Parliament adopted the proposal for a decision on discharge.")
+
+
+def test_rejected_text_referred_back_for_reconsideration_says_so():
+    # 8 Jun 2022, ETS revision: 144283 "A9-0162/2022 – Peter Liese – Commission proposal" rejected 265-340-34, then
+    # 144284 "… – Referral back (Rule 59(4))" adopted 495-120-16; 15 Sep 2021, ECDC: 135573 adopted, then referred
+    # back for negotiations (135574): a mandate
+    v = votes("144283", "144284", "135573", "135574")
+    assert referred_back(list(v.values())) == {"144283"}
+    me = SimpleNamespace(referred_back={"144283"})
+    assert Builder.referral_note(me, v["144283"]) == (  # type: ignore[arg-type]
+        "After this vote Parliament referred the file back to the committee responsible for reconsideration "
+        "(Rule 59(4) of its Rules of Procedure)."
+    )
+
+
+def test_vote_index_writes_document_numbers_with_a_hyphen():
+    # 175067's label prints its report as "A10–0049/2025" (en dash); the official number is A10-0049/2025
+    v = votes("175067")["175067"]
+    assert v.title.startswith("A10–0049/2025 – Gilles Boyer")
+    assert _vote_index_entry({"title": v.title, "source": {}})["title"].startswith("A10-0049/2025 – Gilles Boyer")
 
 
 def test_rejection_titles_fit_the_procedure():

@@ -361,6 +361,15 @@ export type VoteKindDetail =
   | 'no_objection' // recommendation to raise no objections to one: "adopted" = Parliament does not object
   | 'negotiation_decision'; // vote on a committee's decision to enter into interinstitutional negotiations
 export type VoteOutcome = 'adopted' | 'rejected' | 'lapsed' | 'unknown';
+/** What a final vote decides: by the procedure symbol of its subject ("***I", "***", "*"), else its procedure type. */
+export type FinalRole =
+  | 'legislative' // a proposed law (ordinary legislative procedure)
+  | 'consent' // Parliament gives or refuses its consent
+  | 'consultation' // Parliament's opinion on a proposal (consultation procedure)
+  | 'budget' // the budget, an amending budget or the mobilisation of a special instrument
+  | 'discharge' // a proposal for a decision on discharge
+  | 'commission_election' // the vote of consent on the Commission as a body (Art. 17(7) TEU)
+  | 'parliament_decision'; // Parliament's organisation, Rules of Procedure or interinstitutional agreements
 
 export interface VoteMargin {
   rule: 'votes_cast' | 'component_members' | 'two_thirds_cast';
@@ -384,7 +393,8 @@ export interface EpVoteSummary {
   display_title_parts?: LangRun[];
   kind: VoteKind;
   kind_detail?: VoteKindDetail | null;
-  kind_label: string; // "Final vote on the text", "Amendment", ...
+  kind_label: string; // "Final vote on the text", "Vote on consent", "Amendment", ...
+  final_role?: FinalRole | null; // final votes only: what the vote decides, where the procedure establishes it
   outcome: VoteOutcome;
   outcome_note?: string | null; // what the outcome means, e.g. for a motion to reject or an objection
   // how the outcome was established: EP open data decision, the sitting's official minutes, or calculated from

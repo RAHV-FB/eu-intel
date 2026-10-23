@@ -96,7 +96,7 @@ def is_discharge_vote(v: dict) -> bool:
     """A vote on a discharge decision (procedure type DEC, or a title "Discharge 2020: …"): Parliament grants,
     postpones or refuses discharge to an EU body for implementing its budget. It is not a law, and the vote's
     "adopted" or "rejected" does not say which of these Parliament decided without the proposal voted on."""
-    if "discharge" in (v.get("kind"), v.get("kind_detail")):
+    if "discharge" in (v.get("kind"), v.get("kind_detail"), v.get("final_role")):
         return True
     ref = v.get("procedure_ref") or v.get("dossier_ref") or ""
     return ref.endswith("(DEC)") or bool(_DISCHARGE_TITLE.match(v.get("display_title") or v.get("title") or ""))

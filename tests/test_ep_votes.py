@@ -606,6 +606,173 @@ def test_label_with_another_items_document_number():
     )
 
 
+# ----------------------------------- links through the minutes, mandates and rejections (fixtures in minutes_links/)
+MLINKS = FIX / "minutes_links"
+MLINK_LABELS = {
+    "2020-0362": "2020/0362(COD)", "2020-0363": "2020/0363(COD)", "2020-0364": "2020/0364(COD)",
+    "2020-0366": "2020/0366(COD)", "2020-0322": "2020/0322(COD)", "2020-0320": "2020/0320(COD)",
+    "2022-0090": "2022/0090(COD)", "2022-0096": "2022/0096(COD)", "2021-0068": "2021/0068(COD)",
+    "2021-0071": "2021/0071(COD)", "2018-0247": "2018/0247(COD)", "2018-0152A": "2018/0152A(COD)",
+    "2021-0211A": "2021/0211A(COD)", "2022-0369": "2022/0369(APP)", "2020-0055": "2020/0055(APP)",
+    "2019-0210": "2019/0210(NLE)", "2023-0226": "2023/0226(COD)", "2023-0232": "2023/0232(COD)",
+    "2025-0526": "2025/0526(COD)", "2026-0037": "2026/0037(BUD)",
+}  # fmt: skip
+
+
+def mlinks(day: str, links: dict | None = None, **kw) -> dict[str, EpVote]:
+    res = ev.assemble([load_sitting(day, base=MLINKS)], MLINK_LABELS, links or {}, RETRIEVED, **kw)
+    return {v.id: v for v in res.votes}
+
+
+def test_urgent_procedure_votes_link_through_the_minutes_block():
+    # 18 Dec 2020, Brexit contingency: labels "C9-0399/2020 - Commission proposal"; only the fisheries item
+    # (C9-0396/2020) is among the sitting's vote items. The minutes block with each vote's counts names its
+    # procedure: "Proposal for a regulation (COM(2020)0826 - C9-0399/2020 - 2020/0362(COD))" (PV-9-2020-12-18-VOT
+    # items 43-46). 126354 and 126355 have the same counts (680-3-4): the label's document tells them apart.
+    votes = mlinks("2020-12-18")
+    got = {vid: (votes[vid].procedure_refs, votes[vid].kind) for vid in ("126353", "126354", "126355", "126356")}
+    assert got == {
+        "126353": (["2020/0362(COD)"], "final"),
+        "126354": (["2020/0363(COD)"], "final"),
+        "126355": (["2020/0364(COD)"], "final"),
+        "126356": (["2020/0366(COD)"], "final"),  # through its vote item, as before
+    }
+    rows = ev.parse_minutes((MLINKS / "minutes_2020-12-18.xml").read_bytes())
+    assert {r.item: r.procs for r in rows if r.counts == (680, 4, 3)} == {"43.": frozenset({"2020/0362(COD)"})}
+    # without the minutes nothing official links them
+    alone = ev.assemble([load_sitting("2020-12-18", minutes=False, base=MLINKS)], MLINK_LABELS, {}, RETRIEVED)
+    assert {v.id for v in alone.votes if v.procedure_refs} == {"126356"}
+
+
+def test_agreement_vote_without_a_document_links_through_its_report():
+    # 4 Oct 2022, 148304 "Serious cross-border threats to health - Provisional Agreement - Am 278" (544-50-10):
+    # minutes block 2 "Serious cross-border threats to health ***I | Report: Véronique Trillet-Lenoir
+    # (A9-0247/2021)"; the report is the document of the vote items of 2020/0322(COD) (state index)
+    known = {"A-9-2021-0247": {"procs": ["2020-0322"], "symbols": ["***I"]}}
+    v = mlinks("2022-10-04", known_docs=known)["148304"]
+    assert (v.procedure_refs, v.kind, v.outcome, v.majority_rule) == (["2020/0322(COD)"], "final", "adopted", "votes_cast")
+    assert mlinks("2022-10-04")["148304"].procedure_refs == []  # a report no vote item names: no link
+    # 15 Mar 2023, 153312 "Law enforcement information exchange - A9-0247/2022 - Lena Düpont - …" (2021/0411(COD)):
+    # the minutes block prints the report as A9-0247/2023, an own-initiative report; the block's documents are not
+    # used when they do not include the label's
+    sitting = load_sitting("2023-03-15", base=MLINKS)
+    d = ev.draft(sitting.decisions[0], sitting)
+    assert d.label_docs == ["A-9-2022-0247"]
+    assert ev.minutes_procs(d, {"A-9-2023-0247": {"2022-2205"}}, {}) == []
+
+
+def test_misprinted_document_year_links_through_the_fitting_block():
+    # 7 Apr 2022: "Gas storage - C9-0126/2021 - Commission proposal" (516-25-15); the minutes print
+    # "C9-0126/2022 - 2022/0090(COD)". The file was referred back for negotiations the same day (procedure event
+    # 2022-0090-DEC-REFBAK-2022-04-07): a negotiating mandate
+    votes = mlinks("2022-04-07", referrals={"2022-0090": ["2022-04-07"]})
+    gas, react = votes["141902"], votes["141901"]
+    assert (gas.procedure_refs, gas.kind) == (["2022/0090(COD)"], "mandate")
+    assert (react.procedure_refs, react.kind) == (["2022/0096(COD)"], "final")  # "C9-0132/2021" for C9-0132/2022
+
+
+def test_same_sitting_referral_under_rule_59_4_makes_a_mandate():
+    # 28 Apr 2021, EU Digital COVID Certificate (French labels only): "… C9-0104/2021 - Proposition de la
+    # Commission" 540-119-31, then "… C9-0104/2021 - Renvoi (article 59, paragraphe 4 du règlement)" 569-95-26,
+    # adopted; OEIL 2021/0068(COD): "29/04/2021 Matter referred back to the committee responsible for
+    # interinstitutional negotiations", T9-0145/2021 "Amendments adopted …"
+    votes = mlinks("2021-04-28")
+    assert (votes["130712"].kind, votes["130712"].procedure_refs) == ("mandate", ["2021/0068(COD)"])
+    assert (votes["130714"].kind, votes["130714"].procedure_refs) == ("mandate", ["2021/0071(COD)"])
+    assert (votes["130713"].kind, votes["130713"].outcome) == ("procedural", "adopted")
+    # "… C9-0104/2021 - Am 11", minutes Subject "Rejection" (86-591-16): the proposal to reject
+    rejection = votes["130538"]
+    assert (rejection.kind, rejection.kind_detail, rejection.has_ballots) == ("motion", "reject_proposal", True)
+    # 15 Sep 2021: ECDC 135573 (598-84-13) and cross-border threats 135575 (594-85-16), each "Commission
+    # proposal" followed by "Referral (Rule 59(4))" on the same report (135574, 135576); OEIL lists T9-0376/2021
+    # and T9-0377/2021 as "partial vote at 1st reading"
+    links = {"A-9-2021-0253": (["2020-0320"], []), "A-9-2021-0247": (["2020-0322"], []),
+             "A-9-2021-0266": (["2018-0247"], [])}  # fmt: skip
+    votes = mlinks("2021-09-15", links)
+    assert {vid: votes[vid].kind for vid in ("135573", "135574", "135575", "135576")} == {
+        "135573": "mandate", "135574": "procedural", "135575": "mandate", "135576": "procedural",
+    }  # fmt: skip
+    # IPA III, "… - Rejection - Am 1" (94-577-19), item "… *** II": the proposal to reject the Council's position
+    ipa = votes["135500"]
+    assert (ipa.kind, ipa.kind_detail, ipa.majority_rule) == ("motion", "reject_council_position", "component_members")
+
+
+def test_rejected_text_then_referred_back_stays_the_final_vote():
+    # 8 Jun 2022, ETS revision: "A9-0162/2022 – Peter Liese – Commission proposal" rejected 265-340-34, then
+    # "Referral back (Rule 59(4))" adopted 495-120-16: referred back for reconsideration (Rule 59(4), fourth
+    # subparagraph), not a negotiating mandate
+    votes = mlinks("2022-06-08")
+    assert (votes["144283"].kind, votes["144283"].outcome) == ("final", "rejected")
+    assert (votes["144284"].kind, votes["144284"].outcome) == ("procedural", "adopted")
+
+
+def test_proposal_to_reject_tabled_as_an_amendment_is_a_motion():
+    # 7 Jul 2021, VIS: label "… – A9-0207/2021 – Paolo Rangel – Am 1"; minutes block 25 "Visa Information System
+    # (VIS): visa processing ***II", row "Rejection | 1 | The Left | RCV | - | 114 578 4"
+    v = mlinks("2021-07-07", {"A-9-2021-0207": (["2018-0152A"], [])})["134613"]
+    assert (v.kind, v.kind_detail, v.majority_rule, v.outcome) == (
+        "motion", "reject_council_position", "component_members", "rejected"
+    )  # fmt: skip
+    assert v.has_ballots and v.procedure_refs == ["2018/0152A(COD)"]
+    # new format: referenceText "Proposal to reject the Council position", decided on -AM-17 and -AM-25 (NGT,
+    # 17 Jun 2026, 201-431-29); "Proposal for rejection" on -AM-1/2/3 at the Soil Monitoring second reading
+    ngt = mlinks("2026-06-17")["194424"]
+    assert (ngt.kind, ngt.kind_detail, ngt.majority_rule, ngt.has_ballots) == (
+        "motion", "reject_council_position", "component_members", True
+    )  # fmt: skip
+    soil = mlinks("2025-10-23")
+    assert (soil["180520"].kind, soil["180520"].kind_detail) == ("motion", "reject_council_position")
+    assert (soil["180521"].kind, soil["180521"].kind_detail) == ("motion", "reject_proposal")  # as before
+    # a split vote on a rejection, or an amendment beside it, stays what it is
+    split = ev.Signals(ref="§ 3", label="A9-0001/2024 – X – Rejection – § 3", subject="Rejection")
+    assert ev.classify(split) == "split_or_separate"
+    assert ev.classify(ev.Signals(ref="Am 12", label="A9-0001/2024 – X – Am 12")) == "amendment"
+
+
+def test_whole_text_vote_labelled_only_by_its_title():
+    # 29 Jan 2020, Withdrawal Agreement 112101 (621-49-13): the label is the agreement's title only; the minutes
+    # row reads "Consent procedure | RCV | + | 621 49 13"
+    v = mlinks("2020-01-29")["112101"]
+    assert (v.kind, v.outcome, v.has_ballots) == ("final", "adopted", True)
+    assert v.procedure_refs == []  # the block's title differs from the label: no link
+
+
+def test_french_label_gives_the_item_or_the_document():
+    # 16 Apr 2020, 113149 "Regulation amending the Multiannual financial framework 2014-2020 - Consent" (464-11-4):
+    # no document in the label and no counts in the French minutes; the French label "Règlement modifiant le cadre
+    # financier pluriannuel 2014-2020 - Approbation" is the vote item titled "Règlement modifiant le cadre
+    # financier pluriannuel 2014-2020" (eli/dl/proc/2020-0055)
+    assert mlinks("2020-04-16")["113149"].procedure_refs == ["2020/0055(APP)"]
+    # 13 May 2020, 113700: English label "A9-0088/202 - Clara Aguilera - Consent procedure", French "A9-0088/2020"
+    v = mlinks("2020-05-13")["113700"]
+    assert (v.procedure_refs, v.kind, v.outcome) == (["2019/0210(NLE)"], "final", "adopted")
+    # two vote items with the label's title: no link
+    sitting = load_sitting("2020-04-16", base=MLINKS)
+    item = next(iter(sitting.items.values()))
+    sitting.items["MTG-PL-2020-04-16-VOT-ITM-X"] = ev.VoteItem(id="X", title=item.title, procs=["2020-9999"])
+    assert ev.titled_item_procs(ev.draft(sitting.decisions[0], sitting)) == []
+
+
+def test_majority_stated_in_the_record():
+    # 24 Nov 2022, MFF amendment 150407 (490-39-23): minutes "Draft regulation (… 2022/0369(APP)) (Majority of
+    # Parliament’s component Members required)" (Art. 312(2) TFEU)
+    assert mlinks("2022-11-24")["150407"].majority_rule == "component_members"
+    # 26 Mar 2026, EGF/2025/005 AT/KTM 189252: item label "Report: Janusz Lewandowski (A10-0060/2026) (Majority of
+    # votes cast required)"
+    assert mlinks("2026-03-26")["189252"].majority_rule == "votes_cast"
+    stated = [
+        ("(Majority of votes cast required)", "final", "votes_cast"),
+        ("(Majority of Parliament’s component Members and two thirds of votes cast required)", "final", "two_thirds_cast"),
+        ("(Majority of Parliament’s component Members + 3/5 of votes cast)", "final", None),  # another double rule
+        ("(Majority of Parliament’s component Members required to amend or reject the Council position)", "final", None),
+        ("(Majority of Parliament’s component Members to adopt motion for a resolution)", "resolution", "component_members"),
+        ("(Majority of Parliament’s component Members to adopt motion for a resolution)", "final", None),
+        ("(majority of Parliament’s component Members) (Majority of votes cast required)", "final", None),  # conflict
+    ]  # fmt: skip
+    for text, kind, rule in stated:
+        assert ev.stated_rule([f"Report: X (A9-0001/2022) {text}"], kind) == rule, text
+
+
 # -------------------------------------------------------------------------------------- snapshot
 def _snapshot() -> tuple[list[EpVote], list[EpBallots]]:
     votes = read_records(ev.SOURCE_ID, "votes", EpVote)

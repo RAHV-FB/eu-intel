@@ -9,7 +9,7 @@ import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, MarginText, OutcomeBadge } from '../features/votes/components';
 import { BallotList, CountryBreakdownTable, GroupBreakdownTable } from '../features/votes/Breakdowns';
 import { LangText, VoteTitle } from '../features/votes/VoteTitle';
-import { DETAIL_EXPLAINER, KIND_EXPLAINER, KIND_LABEL, POSITION_LABEL } from '../features/votes/labels';
+import { DETAIL_EXPLAINER, FINAL_ROLE_EXPLAINER, KIND_EXPLAINER, KIND_LABEL, POSITION_LABEL } from '../features/votes/labels';
 
 const OUTCOME_BASIS_TEXT: Record<string, string> = {
   published: 'Outcome as published in Parliament’s open data',
@@ -44,7 +44,11 @@ export default function Vote() {
   const corrections = v.ballots.filter((b) => b.intended && b.intended !== b.pos);
   const intentions = v.intentions ?? [];
   const decided = v.outcome === 'adopted' || v.outcome === 'rejected';
-  const explainer = v.kind_detail ? DETAIL_EXPLAINER[v.kind_detail] : KIND_EXPLAINER[v.kind];
+  const explainer = v.kind_detail
+    ? DETAIL_EXPLAINER[v.kind_detail]
+    : v.final_role
+      ? FINAL_ROLE_EXPLAINER[v.final_role]
+      : KIND_EXPLAINER[v.kind];
   const procedureRef = v.procedure_ref || v.dossier_ref;
   const groupAndCountry = (group?: string | null, country?: string | null) =>
     group || country ? (
