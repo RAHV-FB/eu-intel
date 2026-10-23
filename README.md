@@ -100,9 +100,14 @@ docs/                product, editorial policy, architecture, data sources, depl
 
 - **Code**: MIT — see [LICENSE](LICENSE).
 - **Data** remains subject to the reuse terms of its publishers, with attribution:
-  European Parliament — © European Union – Source: European Parliament, reuse authorised provided the source is
-  acknowledged ([European Parliament legal notice](https://www.europarl.europa.eu/legal-notice/en/); the EP Open
-  Data Portal labels many of its datasets CC BY 4.0);
+  European Parliament — © European Union – Source: European Parliament. The EP Open Data Portal publishes its
+  datasets of MEPs, of EU procedures involving the Parliament and of results of votes (2024 and 2025) under
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); for its other data and pages (Legislative
+  Observatory, Legislative Train, plenary minutes) the
+  [European Parliament legal notice](https://www.europarl.europa.eu/legal-notice/en/) authorises reuse provided
+  that the entire item is reproduced and the source is acknowledged, a partial reproduction citing the URL of the
+  complete item or of the web page it comes from. The site shows this data adapted (selected, combined with other
+  sources and reformatted) and links each item it takes data from;
   EUR-Lex / Publications Office (Cellar) — © European Union, https://eur-lex.europa.eu, reuse authorised under
   Commission Decision 2011/833/EU; Council and Commission content — reuse authorised with acknowledgement of the
   source. Details per source in [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md) and on the site's About page.

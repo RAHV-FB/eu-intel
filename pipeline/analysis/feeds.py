@@ -5,17 +5,21 @@
 
 Links point to the app routes under SITE_URL (default https://rahv-fb.github.io/eu-intel/); an item with no
 page on the site (e.g. a Council vote on no tracked file) links to its official source document.
-All text is XML-escaped; entry ids are stable tag URIs derived from the activity id.
+All text is XML-escaped; entry ids are stable tag URIs derived from the activity id. They do not depend on
+SITE_URL: an id must not change when the feed moves (RFC 4287, 4.2.6), e.g. to a custom domain.
 """
 
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import quote, urlparse
+from urllib.parse import quote
 from xml.sax.saxutils import escape, quoteattr
 
 FEED_LIMIT = 100
 TITLE = "EU Legislative Intelligence"
+# the authority of every feed and entry id (RFC 4151 tag URI): the site's host when the feeds were first
+# published, kept when the site moves
+TAG_BASE = "tag:rahv-fb.github.io,2026:eu-intel"
 
 
 def _ts(item: dict) -> str:
@@ -30,16 +34,11 @@ def _route(item: dict) -> str:
     return ""
 
 
-def _tag_base(site_url: str) -> str:
-    host = urlparse(site_url).netloc or "eu-intel"
-    return f"tag:{host},2026:eu-intel"
-
-
 def atom(
     title: str, subtitle: str, feed_path: str, items: list[dict], site_url: str, fallback_updated: str
 ) -> str:
     site = site_url if site_url.endswith("/") else site_url + "/"
-    tag = _tag_base(site)
+    tag = TAG_BASE
     items = items[:FEED_LIMIT]
     updated = max((_ts(i) for i in items), default=fallback_updated)
     lines = [

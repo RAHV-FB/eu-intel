@@ -70,9 +70,18 @@ the UI; every institutional fact on a page has a reachable origin.
   boosts. A query that is an identifier matches only through identifiers and names citing it.
 - Design tokens in `src/styles/tokens.css`; shared primitives in `src/components/ui.tsx`.
 - Strict CSP meta (`default-src 'self'`), no third-party fonts/scripts, no cookies. The optional watchlist writes
-  to `localStorage` only after an explicit click; pages that show what is followed only read the saved list.
-- Dates that the data states as still ahead (the home page's "Coming up", "Scheduled" timeline steps, next steps)
-  are compared with the visitor's date, since the data is rebuilt only weekly (`src/lib/format.ts`).
+  nothing to `localStorage` before the visitor's first "Follow" click (pages check for storage by reading only).
+  After that the list changes on clicks only, except that opening the page of a followed file records what the
+  visitor last saw there (`markSeen`: its stage, status label and latest event, when one of them changed), as
+  /privacy says ("when you last viewed it").
+- Dates that the data states as still ahead (the home page's "Coming up", "Scheduled" timeline steps, next steps,
+  status explanations) are compared with the visitor's date, since the data is rebuilt only weekly
+  (`src/lib/format.ts`): a date that has passed is restated as the build would state it on that day (past tense,
+  left out of a list of later dates, the step's past title, "Latest verified development"), and a transposition
+  deadline passes only once its day is over. The status label stays as built; when its explanation states a date
+  that has passed since, the dossier page says the status is as recorded at the last data refresh.
+  `format.test.ts` checks every built next step, status explanation and dated timeline step with the clock moved
+  forward, and fails on a dated wording it does not know.
 
 ## Operations
 

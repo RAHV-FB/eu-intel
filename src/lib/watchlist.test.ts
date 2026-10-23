@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { follow, storageAvailable, storageReadable } from './watchlist';
+import { follow, markSeen, storageAvailable, storageReadable, unfollow } from './watchlist';
 
 /** A localStorage stand-in that records every call; `full` makes writes throw (e.g. no quota left). */
 function fakeStorage(calls: string[], full = false): Storage {
@@ -51,5 +51,23 @@ describe('watchlist storage checks', () => {
     expect(storageReadable()).toBe(true); // reading works ...
     expect(storageAvailable()).toBe(false); // ... writing does not: the click handlers see it
     expect(follow({ id: '2021-0106', last_event: '2024-07-12', stage: 'in_force', status_label: 'In force' })).toBe(false);
+  });
+
+  it('writes nothing when a file page opens until the file is followed; then records what was last seen there', () => {
+    // the dossier page calls markSeen() when it loads (src/pages/Dossier.tsx)
+    const calls: string[] = [];
+    vi.stubGlobal('window', { localStorage: fakeStorage(calls) });
+    const writes = () => calls.filter((c) => !c.startsWith('get '));
+    const ai = { id: '2021-0106', last_event: '2024-07-12', stage: 'in_force' as const, status_label: 'In force' };
+    unfollow('none'); // start from an empty list (this also resets the module's cached copy of it)
+    calls.length = 0;
+    markSeen(ai);
+    expect(writes()).toEqual([]);
+    expect(follow(ai)).toBe(true); // the "Follow" click
+    calls.length = 0;
+    markSeen(ai); // nothing new since
+    expect(writes()).toEqual([]);
+    markSeen({ ...ai, last_event: '2026-10-20' });
+    expect(writes()).toEqual(['set eu-intel.following.v1']);
   });
 });

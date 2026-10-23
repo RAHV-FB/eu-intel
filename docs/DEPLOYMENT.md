@@ -25,7 +25,9 @@ All actions are pinned to full commit SHAs (with the version in a comment); Depe
 4. **Environment**: enabling Pages creates the `github-pages` environment, which by default only accepts
    deployments from `main`. Keep it that way (manual runs from other branches will build but not deploy).
 5. Optional: a custom domain (*Settings → Pages → Custom domain*). The base path then becomes `/` automatically,
-   and so do the absolute links in the Atom feeds (`SITE_URL`, see below) from the next deploy.
+   and so do the absolute links in the Atom feeds (`SITE_URL`, see below) from the next deploy. The feed and
+   entry ids stay the same (`tag:rahv-fb.github.io,2026:eu-intel/…`), so feed readers do not show old entries
+   again as new.
 
 The site will be at `https://rahv-fb.github.io/eu-intel/`.
 
@@ -37,7 +39,8 @@ builds with `BASE_PATH=<base_path>/`. `vite.config.ts` uses it as Vite's `base`,
 `basename`, and data is loaded from `${BASE_URL}data/`. The Atom feeds (`data/feeds/*.xml`) need absolute links:
 the data build takes them from `SITE_URL`, which `pages.yml` sets to the Pages URL
 (`steps.pages.outputs.base_url`, e.g. `https://rahv-fb.github.io/eu-intel` or the custom domain); without it
-(CI, local builds) they point at `https://rahv-fb.github.io/eu-intel/`.
+(CI, local builds) they point at `https://rahv-fb.github.io/eu-intel/`. `SITE_URL` sets the links only: the ids
+(`feeds.TAG_BASE`) never change with it, as an Atom id must not when a feed moves (RFC 4287, section 4.2.6).
 
 Pages has no server-side rewrites, so `scripts/prerender-routes.mjs` writes an `index.html` for every known route
 (`/legislation/2021-0106/`, `/votes/<id>/`, …) so that deep links return HTTP 200 with a route-specific

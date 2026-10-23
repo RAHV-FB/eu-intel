@@ -1087,7 +1087,8 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
             general = next((x.date for x in tr if x.kind == "deadline"), None)
             specific = [x.date for x in tr if x.kind == "further_deadline"]
             earlier = [x for x in specific if general and x < general]
-            further = [x for x in specific if general and x > general and x > t]
+            # a deadline ("by" that date) has passed only once its day is over
+            further = [x for x in specific if general and x > general and x >= t]
             start = application_start(dr, tr) if dr else None
             applies = [x.date for x in tr if x.kind == "application" and x.date > t and (not start or x.date > start)]
             # a directive binds the Member States to which it is addressed (Art. 288 TFEU): not those it is not
@@ -1096,7 +1097,7 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
             # transposing it (Directive (EU) 2016/798, Art. 33(2), (2a) and (4)): stated as checked against the text
             exceptions = dr.transposition_checked.exceptions if dr and dr.transposition_checked else None
             unless = ", except as its text provides" if exceptions else ""
-            if general and general > t:
+            if general and general >= t:
                 parts.append(
                     f"The Member States bound by the directive must transpose it into national law by "
                     f"{_fmt(general)}{unless}."
@@ -1126,14 +1127,14 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 parts.append(
                     f"The national measures {'are' if start > t else 'were'} to apply from {_fmt(start)}{latest}."
                 )
-            if earlier and general and general > t:
-                past = [x for x in earlier if x <= t]
+            if earlier and general and general >= t:
+                past = [x for x in earlier if x < t]
                 plural = len(earlier) > 1
                 what = "earlier transposition deadlines" if plural else "an earlier transposition deadline"
                 if len(past) == len(earlier):
                     tail = f", which {'have' if plural else 'has'} passed: {_join_dates(earlier)}"
                 else:
-                    marked = [_fmt(x) + (" (passed)" if x <= t else "") for x in earlier]
+                    marked = [_fmt(x) + (" (passed)" if x < t else "") for x in earlier]
                     tail = ": " + (marked[0] if len(marked) == 1 else ", ".join(marked[:-1]) + " and " + marked[-1])
                 parts.append(f"EUR-Lex records {what} for specific provisions{tail}.")
             if further:

@@ -320,6 +320,26 @@ def test_meta_sources_and_counts(out: Path):
     assert any("Country indicators" in n for n in meta["coverage_notes"])
 
 
+def test_parliaments_reuse_terms_are_stated_as_it_gives_them():
+    """The About page said only "Reuse is authorised provided the source is acknowledged". The EP Open Data Portal
+    gives its MEP, procedure and vote-result datasets the licence CC BY 4.0, which also asks for the licence's URI and
+    an indication of changes; the EP legal notice, which covers the Parliament's web pages (Legislative Observatory,
+    Legislative Train, minutes), asks for the entire item or, for a partial reproduction, the URL of the item."""
+    from pipeline.build import SOURCES
+
+    for sid in ("ep_people", "ep_procedures", "ep_votes", "train"):
+        assert SOURCES[sid]["licence"].startswith("© European Union – Source: European Parliament. "), sid
+    for sid in ("ep_people", "ep_procedures", "ep_votes"):
+        lic = SOURCES[sid]["licence"]
+        assert "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)" in lic and "adapted" in lic, sid
+    for sid in ("ep_procedures", "ep_votes", "train"):
+        lic = SOURCES[sid]["licence"]
+        assert "provided that the entire item is reproduced and the source is acknowledged" in lic, sid
+        assert "a partial reproduction must cite the URL of the complete item or of the web page" in lic, sid
+    assert "CC BY" not in SOURCES["train"]["licence"]
+    assert "(2024 and 2025)" in SOURCES["ep_votes"]["licence"]  # the only years of "Results of votes" datasets
+
+
 def test_snapshot_time_comes_from_a_listed_source(tmp_path: Path):
     # "Data refreshed" must be traceable to a source on the About page: a manifest entry with no SOURCES entry
     # (here a later retrieval) does not set it, and every source of the real snapshot is listed
@@ -487,6 +507,32 @@ def test_feeds_are_valid_atom(out: Path):
         assert e.find("a:link", ns).get("href").startswith("https://rahv-fb.github.io/eu-intel/")
     assert (out / "feeds/tech.xml").exists()
     ET.parse(out / "feeds/tech.xml")
+
+
+def test_feed_ids_stay_when_the_site_moves():
+    """pages.yml sets SITE_URL from the Pages URL, and the ids took their authority from its host: with a custom
+    domain every id would change, and readers would show each entry again as new (RFC 4287, 4.2.6: the id of a
+    relocated document must not change). Only the links follow the site."""
+    from pipeline.analysis.feeds import atom
+
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    items = [
+        {"id": "status:2099-0001:in_force", "date": "2026-10-20", "title": "Test Widgets Act: now in force",
+         "kind": "status_change", "dossier_id": "2099-0001", "detected_at": "2026-10-21T05:00:00Z"},
+        {"id": "vote:V1", "date": "2026-10-19", "title": "Parliament adopted its position", "kind": "ep_vote",
+         "vote_id": "V1", "detected_at": None},
+    ]  # fmt: skip
+
+    def read(site: str) -> tuple[list[str | None], list[str | None]]:
+        root = ET.fromstring(atom("t", "s", "feeds/updates.xml", items, site, "2026-10-22T00:00:00Z"))
+        ids = [root.findtext("a:id", namespaces=ns)] + [e.findtext("a:id", namespaces=ns) for e in root.findall("a:entry", ns)]
+        return ids, [e.find("a:link", ns).get("href") for e in root.findall("a:entry", ns)]
+
+    ids, links = read("https://rahv-fb.github.io/eu-intel/")
+    moved_ids, moved_links = read("https://eu-intel.example.org/")
+    assert ids == moved_ids and ids[0] == "tag:rahv-fb.github.io,2026:eu-intel/feeds/updates.xml"
+    assert all(i and i.startswith("tag:rahv-fb.github.io,2026:eu-intel/activity/") for i in ids[1:])
+    assert all(x.startswith("https://eu-intel.example.org/") for x in moved_links) and links != moved_links
 
 
 def test_missing_sources_build_empty_sections(tmp_path: Path):

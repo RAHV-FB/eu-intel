@@ -2,8 +2,9 @@
  * "Follow this legislation": a browser-local watchlist.
  *
  * Privacy contract (also explained on /following and /privacy):
- * - Nothing is written until the visitor explicitly clicks "Follow" (pages only read the saved list, to show
- *   what is followed; storageReadable() checks for storage without writing).
+ * - Nothing is written until the visitor explicitly clicks "Follow" (storageReadable() checks for storage
+ *   without writing). After that the list changes on clicks only, except that opening a followed file's page
+ *   records what was last seen there (markSeen, when it changed).
  * - Only dossier ids, when each was followed and last viewed (timestamps), and what the visitor last saw (last
  *   recorded event date, stage, status label) are stored, in this browser's localStorage. Nothing is ever sent
  *   anywhere; there are no notifications.

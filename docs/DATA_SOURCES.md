@@ -29,8 +29,9 @@ pipeline runs in CI without credentials). Details are refined from each ingestio
 
 ## Licences and attribution
 
-- European Parliament: "© European Union – Source: European Parliament"; reuse authorised provided the source is
-  acknowledged (European Parliament legal notice; details under "Licences" below).
+- European Parliament: "© European Union – Source: European Parliament"; CC BY 4.0 for the Open Data Portal's
+  datasets of MEPs, procedures and results of votes (2024 and 2025), the European Parliament legal notice for its
+  other data and web pages (details under "Licences" below).
 - EUR-Lex / Publications Office: reuse authorised under Commission Decision 2011/833/EU, with attribution.
 - Council and Commission websites: reuse authorised with acknowledgement of the source, unless stated otherwise.
 
@@ -305,7 +306,13 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   CSDDD, by 26 Jul 2028), else the amending directive's deadline only when it records a single one; an amending
   directive with several deadlines and no such check is named without dates. An amending directive that also
   repeals the directive names the repeal instead (AMLD4: Directive (EU) 2024/1640 repeals it with effect from
-  10 Jul 2027).
+  10 Jul 2027). A transposition deadline has passed only once its day is over: measures are due "by" it
+  (Product Liability Directive (EU) 2024/2853, Art. 22(1): "... necessary to comply with this Directive by
+  9 December 2026"), so the next step says it has passed from the next day; an entry into force or a date from
+  which provisions apply has come on its day. The site restates these dates on the visitor's date by the same
+  rules (`src/lib/format.ts`). A build run on a deadline's day still counts it as passed in `pipeline/build.py`:
+  in the timeline (state "done", title "(passed)"), which the dossier page restates on the visitor's date, in
+  "Coming up", which then lacks it, and for an amending directive's deadline, which the next step then leaves out.
 - Withdrawals and replacements: Cellar procedure events WDW_byCOM / RPL_byCOM (`procedure_notices.json`, 272
   since 2014). OEIL often never records them (CCTB/CCCTB, Return Directive recast, standard-essential patents).
   A notice is ignored when the procedure went on to adopt the act (a later Council adoption, signature or
@@ -537,9 +544,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 
 ### Opt-outs in directives' recitals (`optouts`) — ok
 - Denmark (Protocol No 22) and Ireland (Protocol No 21) are not bound by most justice and home affairs measures
-  unless they opt in; each directive says so in its recitals in standard wording ("… is not taking part in the
-  adoption of this Directive and is not bound by it"). The source reads the English text of every directive in
+  unless they opt in; each such directive says so in its recitals in standard wording ("… is not taking part in
+  the adoption of this Directive and is not bound by it"). The source reads the English text of every directive in
   the EUR-Lex snapshot once (again when the matcher changes) and records the countries and the sentences quoted.
+  Most directives contain no such statement: 36 of the 303 read in the 23 October snapshot do.
   Implementation tables then show "Not bound" instead of "No measures found" for those countries. The Council's
   voting results give the same fact for votes since 2019.
 - Ireland can still take part after adoption (Protocol No 21, Article 4); the Commission then confirms it in a
@@ -551,8 +559,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - A Commission decision confirming a participation stays in Cellar, so an opt-in recorded earlier that a later
   answer lacks means that answer was incomplete (Cellar can cut a query short and still answer HTTP 200): it is
   kept and the run is `partial`. A run that read no text and whose opt-in query failed keeps the previous
-  retrieval time. The source is listed on the About page like the others (`SOURCES["optouts"]`), with the number of
-  directives read and of those Denmark and Ireland are not bound by.
+  retrieval time. A directive due to be read again (the matcher changed) whose text cannot be fetched keeps its
+  earlier reading, "not bound" countries and quotes included; the run is `partial` until the text is read.
+- The source is listed on the About page like the others (`SOURCES["optouts"]`), with the number of directives
+  read, how many of them contain the statement, and how many Denmark and Ireland are not bound by.
 
 ### Council of the EU (`council`) — ok
 - The Council's voting-results web pages are behind a browser check (403), and the data.europa.eu dataset
@@ -641,15 +651,31 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 
 ### Licences
 - European Parliament (MEPs, procedures, votes, Legislative Train): "© European Union – Source: European
-  Parliament"; reuse authorised provided the source is acknowledged, as the site states. The European Parliament
-  legal notice (https://www.europarl.europa.eu/legal-notice/en/, read 2026-10-23): "the reuse ... of textual data
-  and multimedia items which are the property of the European Union ... is authorised ... provided that the
-  entire item is reproduced and the source is acknowledged. However, the reuse of certain data may be subject to
-  different conditions in some instances; in this case, the item concerned is accompanied by a mention of the
-  specific conditions". The EP Open Data Portal gives such a mention per dataset: "CC BY 4.0 - Attribution 4.0
-  International" for the MEP, procedure and vote-result datasets, "European Parliament's Legal Notice" for others
-  (e.g. the plenary session documents of sessions up to 9 November 2022). Both require the source to be
-  acknowledged.
+  Parliament", with the terms the Parliament gives for each kind of data (`build.SOURCES`, shown on the About page).
+  The European Parliament legal notice (https://www.europarl.europa.eu/legal-notice/en/, read 2026-10-23): "As a
+  general rule, the reuse (reproduction or use) of textual data and multimedia items which are the property of the
+  European Union ... is authorised, for personal use or for further non-commercial or commercial dissemination,
+  provided that the entire item is reproduced and the source is acknowledged. However, the reuse of certain data
+  may be subject to different conditions in some instances; in this case, the item concerned is accompanied by a
+  mention of the specific conditions relating to it. Any partial reproduction of data or multimedia items from this
+  website must also cite the URL link of the complete item or the web page from which it was sourced."
+  The EP Open Data Portal gives such a mention per dataset (`OdpDatasetService/DatasetsLight`, labels from
+  `OdpDatasetService/LabelSite/en`, read 2026-10-23): licence "CC BY 4.0 - Attribution 4.0 International"
+  (https://creativecommons.org/licenses/by/4.0/deed.en) for "Members of the European Parliament (MEPs)" (every
+  term, e.g. dataset 1886, term 10), "Corporate bodies of the European Parliament", "EU procedures involving the
+  European Parliament" (every year, e.g. 1909 and 1910, 2024 and 2025) and "Results of votes of the European
+  Parliament" (1980 and 1979, 2024 and 2025: no other year is listed); "European Parliament's Legal Notice" for
+  others (e.g. the plenary session documents of sessions up to 9 November 2022). CC BY 4.0, Section 3(a)(1): "If
+  You Share the Licensed Material (including in modified form), You must: retain ... identification of the
+  creator(s) ...; a copyright notice; a notice that refers to this Public License; ... a URI or hyperlink to the
+  Licensed Material to the extent reasonably practicable; indicate if You modified the Licensed Material ...; and
+  indicate the Licensed Material is licensed under this Public License, and include the text of, or the URI or
+  hyperlink to, this Public License." The site reads this data from the Open Data API rather than the datasets,
+  shows it adapted (selected, combined with other sources and reformatted, as the About page says) and links each
+  item it takes data from: a dossier its procedure file and Legislative Train page, a vote the minutes it comes
+  from. The Legislative Observatory, the Legislative Train and the minutes are Parliament web pages under the
+  legal notice; for the votes of years with no "Results of votes" dataset (2019–2023 and 2026) the About page
+  states the legal notice's terms, its general rule.
 - EUR-Lex / Cellar: reuse authorised with acknowledgement ("© European Union, https://eur-lex.europa.eu") under the
   EUR-Lex legal notice and Commission Decision 2011/833/EU. The live notice page is bot-protected for scripts and
   should be re-checked manually before any change of attribution text.
