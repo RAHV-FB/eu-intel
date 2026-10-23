@@ -49,4 +49,5 @@ everywhere. Detail pages (a law, a vote, an MEP, a group, a national party, a co
 ## What "done" means for the first release
 
 See the acceptance criteria in `docs/PLAN.md`. The release is honest about coverage: where a source was not
-accessible (e.g. Council voting results behind bot protection), the site says so instead of filling the gap.
+accessible (e.g. the Single Market Scoreboard indicators, whose host refuses scripted access), the site says so
+instead of filling the gap.

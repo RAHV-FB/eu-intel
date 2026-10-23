@@ -2,20 +2,23 @@
 
 EU Legislative Intelligence explains EU legislation using only official, verifiable data. Almost
 everything on the site is computed from official sources. The one exception is a small curated layer
-in `data/curated/`. This document covers what goes into that layer and how it is written and
-reviewed.
+in `data/curated/`: editorial selections and texts, and a few date corrections checked against the acts'
+texts. This document covers what goes into that layer and how it is written and reviewed.
 
 | File | Contents |
 |---|---|
 | `featured.yaml` | 20–30 major dossiers, each with a short title, two plain-language sentences (`what`, `why`), search aliases, topics and the sources behind the text. 5–6 of them are marked for the homepage. |
 | `topics.yaml` | The 10 browsing topics, mapped to the EP/OEIL subject classification, plus everyday search words. |
 | `aliases.yaml` | General search synonyms (standard, official abbreviations) and per-file names that the institutions themselves use, each with a cited source. |
+| `act_dates.yaml` | Corrections to the entry-into-force and application dates Cellar records for an act. Each date cites the provision that sets it (or the amending act), and the entry lists the official texts it was checked against. The correction applies in the build only; the snapshot keeps Cellar's values. |
+| `transposition.yaml` | Which of the transposition dates EUR-Lex records for a directive is its general deadline (one of the recorded dates), with the provision quoted verbatim, the text checked and a review date. |
 
 ## What the curated layer must not contain
 
 - **No procedural status or next steps.** Stage, votes, adoption, entry into force and upcoming
   steps are computed from the snapshot (EP Open Data, OEIL, Cellar/EUR-Lex, Council, Legislative
-  Train), so they cannot go stale in the YAML. Dates are allowed when they are part of the legal
+  Train), so they cannot go stale in the YAML. The one exception is the dates in `act_dates.yaml` and
+  `transposition.yaml`: corrections of recorded dates, each checked against the act's text. Dates are allowed when they are part of the legal
   content, such as a cut-off date ("land not deforested after 31 December 2020"), a target year,
   an application or transposition date ("from 30 December 2026"), or a deadline the act sets.
 - **Exceptions that change the substance.** Name, by act number, any later act that changes what
@@ -96,7 +99,9 @@ proposal. At most two items may come from the same topic.
   also lists Council/EP/Commission press releases or Legislative Train pages.
 
 `tests/test_curated.py` enforces the schema, the proposal wording, a list of banned words, the
-"no status wording" rule, word counts and the homepage rules.
+"no status wording" rule, word counts and the homepage rules. `act_dates.yaml` and `transposition.yaml` are
+checked by `python -m pipeline validate` and `tests/test_build.py`; their entries follow the same review
+process, including the re-review of their `reviewed` dates.
 
 ## Alias policy
 

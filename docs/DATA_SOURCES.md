@@ -6,7 +6,7 @@ pipeline runs in CI without credentials). Details are refined from each ingestio
 | Source | Interface | Reachable | Used for | Notes |
 | --- | --- | --- | --- | --- |
 | EP Open Data API v2 `data.europarl.europa.eu/api/v2` | JSON-LD REST | ✅ | MEPs, groups, national parties, committees, procedures + events, plenary decisions **with individual roll-call ballots** | Anonymous; paginated (`offset`/`limit`); stable ELI-style ids (`eli/dl/proc/2021-0106`, `person/197443`) |
-| EP Legislative Observatory (OEIL) | HTML | ✅ | Status label, subjects, COM references, Commission/Council key events, final-act CELEX | One procedure-file page per procedure, ≥1 s apart; fills what the EP API does not carry |
+| EP Legislative Observatory (OEIL) | HTML | ✅ | Status label, subjects, COM references, Commission/Council key events, final-act CELEX | One procedure-file page per procedure, at most 4 at a time; requests start at least 0.25 s apart, usually about 0.5–0.7 s; fills what the EP API does not carry |
 | EP Legislative Train Schedule | HTML | ✅ | Official status of major files incl. "blocked" monitoring | No API; controlled crawl of theme + file pages |
 | EP `doceo` documents (RCV XML/PDF) | HTML/XML | ⚠️ 202 bot challenge | — | Roll-calls come from the API instead |
 | Cellar SPARQL `publications.europa.eu/webapi/rdf/sparql` | SPARQL 1.1 | ✅ | Legal acts (CELEX, ELI, dates incl. phased entry-into-force/application, procedure links, amendments), national implementing measures | Batched queries; CDM ontology |
@@ -29,7 +29,8 @@ pipeline runs in CI without credentials). Details are refined from each ingestio
 
 ## Licences and attribution
 
-- European Parliament: open data reusable with attribution (EP legal notice / open data portal terms).
+- European Parliament: "© European Union – Source: European Parliament"; reuse authorised provided the source is
+  acknowledged (European Parliament legal notice; details under "Licences" below).
 - EUR-Lex / Publications Office: reuse authorised under Commission Decision 2011/833/EU, with attribution.
 - Council and Commission websites: reuse authorised with acknowledgement of the source, unless stated otherwise.
 
@@ -40,7 +41,9 @@ images that would expose visitors' IP addresses to another host).
 
 EP data changes after each plenary session and committee meeting; Cellar is updated daily; the Legislative Train
 monthly. A weekly scheduled refresh is sufficient for v1 and stays well within the free GitHub Actions allowance.
-Scheduled runs are best-effort; the site shows the real retrieval timestamp per source.
+Scheduled runs are best-effort; the site shows the real retrieval timestamp per source. The weekly run is
+incremental for EP procedures, EP votes and the Legislative Train; a full refresh re-reads every stored record
+(docs/DEPLOYMENT.md, "What a weekly run re-reads").
 
 ## Module findings
 
@@ -219,10 +222,10 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   directives from 1999, e.g. "Regulation 2026/2102"), followed by its file's short title when it has one; an
   act this file amends or repeals, or that repeals it, by its file's title too, unless that is an "Amending …"
   title.
-- Known gaps: 352 acts without signature date, 24 directives without transposition date, only explicit whole-act
-  repeals as repeal links (an implicit repeal is used only from the end-of-validity annotation), partial ends of
-  validity are described only for decisions that take effect on notification, acts whose procedure is only in
-  free text are unlinked.
+- Known gaps (snapshot of 23 October 2026): 372 of 1,269 acts without signature date, 24 of 303 directives without
+  transposition date, only explicit whole-act repeals as repeal links (an implicit repeal is used only from the
+  end-of-validity annotation), partial ends of validity are described only for decisions that take effect on
+  notification, acts whose procedure is only in free text are unlinked.
 
 ### Procedure steps as shown (`build.py` `procedure_event`, `proposal_date`, `adoption_dates`)
 - Who acted is read from the documents: OEIL lists a consent file's Commission proposal as a "Preparatory
@@ -264,9 +267,12 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   a new term). `group`: for OEIL entries, the group OEIL prints after the name ("KONEČNÁ Kateřina (The Left)").
 - The group shown is the one held in the role, never the MEP's current group: the MEP's group membership on
   `date`, else OEIL's printed group (PPE → EPP, Verts/ALE → Greens/EFA as for groups; groups before 2019 such as
-  ALDE, EFDD or ENF are shown by their code without a group page). Left out when neither establishes it: 143
-  API entries dated before the group memberships we hold (2 July 2019). Checked against the EP API's own
-  `politicalGroup` on each participation: the membership on `date` agrees on all 5,495 entries it covers.
+  ALDE, EFDD or ENF are shown by their code without a group page). Left out when neither establishes it: 152
+  of the 12,375 entries (snapshot of 23 October 2026): 144 API entries dated before the group memberships we hold
+  (2 July 2019), and 8 whose API date is earlier than the MEP's first group membership (e.g. Johan Nissinen on
+  2021/0379(COD), dated 9 December 2021, ECR member from 11 October 2022), so for them `date` is not the
+  appointment in a group. Checked against the EP API's own `politicalGroup` on each participation (the cached
+  API records of that snapshot): the membership on `date` agrees on all 5,494 entries it covers.
   2021/0106(COD): Konečná The Left, Madison ID, Solís Pérez Renew, as in OEIL.
 
 ### National implementation (`implementation`) — partial
@@ -295,6 +301,10 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   bound and the row links the decision (2 directives: 2023/2843 and 2024/1346).
 - The generic Denmark/Ireland caveat on a dossier is shown only where neither the recitals nor a Council voting
   result say whether the country took part.
+- A Commission decision confirming a participation stays in Cellar, so an opt-in recorded earlier that a later
+  answer lacks means that answer was incomplete (Cellar can cut a query short and still answer HTTP 200): it is
+  kept and the run is `partial`. A run that read no text and whose opt-in query failed keeps the previous
+  retrieval time. The source is listed on the About page like the others.
 
 ### Council of the EU (`council`) — ok
 - The Council's voting-results web pages are behind a browser check (403), and the data.europa.eu dataset
@@ -305,7 +315,9 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   fixed template, read deterministically (`pdftoppm` + pixel classification, no OCR). Every one of the slots must
   classify, otherwise positions are left empty ("fail closed"). The voting rule requires two agreeing signals, and
   the sheet's printed result is cross-checked against QMV arithmetic (0 contradictions).
-- 720 votes 2019-01 → 2026-10; 717 with positions (672 QMV, 43 unanimity, 5 unknown). Verified against the
+- 720 votes 2019-01 → 2026-10 (voting rule: 677 QMV, 43 unanimity, none unknown); 718 with positions. The 2
+  without are ST-7085-2020 (two voting sheets; which one records the vote is not established) and ST-7080-2024
+  (one Member State's vote unreadable): positions left empty (fail closed). Verified against the
   rendered sheets: AI Act (ST 10199/24, 27 in favour), Copyright Directive 2019 (6 against, 3 abstentions),
   Eurodac 2024 (DK/IE not participating) and random samples.
 - QMV population figures per year from the Council decisions amending Annex III of its Rules of Procedure
@@ -330,7 +342,16 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   facts, so EP/EUR-Lex records take precedence.
 
 ### Licences
-- EP open data: CC BY 4.0 (stated by the EP Open Data Portal).
+- European Parliament (MEPs, procedures, votes, Legislative Train): "© European Union – Source: European
+  Parliament"; reuse authorised provided the source is acknowledged, as the site states. The European Parliament
+  legal notice (https://www.europarl.europa.eu/legal-notice/en/, read 2026-10-23): "the reuse ... of textual data
+  and multimedia items which are the property of the European Union ... is authorised ... provided that the
+  entire item is reproduced and the source is acknowledged. However, the reuse of certain data may be subject to
+  different conditions in some instances; in this case, the item concerned is accompanied by a mention of the
+  specific conditions". The EP Open Data Portal gives such a mention per dataset: "CC BY 4.0 - Attribution 4.0
+  International" for the MEP, procedure and vote-result datasets, "European Parliament's Legal Notice" for others
+  (e.g. the plenary session documents of sessions up to 9 November 2022). Both require the source to be
+  acknowledged.
 - EUR-Lex / Cellar: reuse authorised with acknowledgement ("© European Union, https://eur-lex.europa.eu") under the
   EUR-Lex legal notice and Commission Decision 2011/833/EU. The live notice page is bot-protected for scripts and
   should be re-checked manually before any change of attribution text.
