@@ -340,6 +340,22 @@ council = [
         },
         source=src("Council", "C1"),
     ),
+    # Treaty opt-out: Denmark recorded as not participating -> not bound by the directive
+    E.CouncilVote(
+        id="C2",
+        date="2024-10-01",
+        title="TEST Directive on doohickeys",
+        procedure_refs=["2099/0009(COD)"],
+        voting_rule="qmv",
+        stage="TEST adoption of the legislative act",
+        written_procedure=False,
+        outcome="adopted",
+        positions={
+            c: ("not_participating" if c == "DK" else "for")
+            for c in "AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE".split()
+        },
+        source=src("Council", "C2"),
+    ),
 ]
 measures = [
     E.NationalMeasure(

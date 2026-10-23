@@ -5,7 +5,7 @@ import { ExtLink, SourceLink, Term } from '../../../components/ui';
 import { countryName, formatDate, formatNumber, safeUrl } from '../../../lib/format';
 import { ACTIVE_STAGES, ADOPTED_STAGES, TRANSPOSITION_LABEL } from '../labels';
 
-const STATUS_ORDER: TranspositionStatus[] = ['measures_notified', 'none_found', 'deadline_not_reached', 'unavailable'];
+const STATUS_ORDER: TranspositionStatus[] = ['measures_notified', 'none_found', 'deadline_not_reached', 'not_participating', 'unavailable'];
 
 const NIM_URL = (celex: string) => `https://eur-lex.europa.eu/legal-content/EN/NIM/?uri=CELEX:${encodeURIComponent(celex)}`;
 
@@ -88,6 +88,19 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
           </tbody>
         </table>
       </div>
+      {impl.countries.some((c) => (c.country === 'DK' || c.country === 'IE') && c.status === 'none_found') && (
+        <p className="meta tp-optout">
+          Denmark and Ireland do not take part in some justice and home affairs measures (Protocols 21 and 22 to
+          the Treaties). Where no Council voting record shows whether they took part in adopting this act, “no
+          measures found” may simply mean that it does not bind them.
+        </p>
+      )}
+      {impl.countries.some((c) => c.status === 'not_participating') && (
+        <p className="meta tp-optout">
+          “Not bound” means the Council’s official voting result records the country as not participating in the
+          adoption of this act, under its opt-out from this area of EU law.
+        </p>
+      )}
     </>
   );
 }

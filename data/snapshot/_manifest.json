@@ -40,9 +40,9 @@
   "status": "ok"
  },
  "ep_votes": {
-  "attempted_at": "2026-10-22T23:11:16Z",
-  "fetched_at": "2026-10-22T23:23:20Z",
-  "note": "full pass: 180/397 sittings fetched (14159 votes, 543 document lookups, 61 procedures by id); 217 sittings pending; resumes next run (stopped by HttpError('500 https://data.europarl.europa.eu/api/v2/procedures/2022-0371(COD),2022-2022,2022-2866,2022-2894,2022-2896: gave up after 6 attempts: retryable status 500')). Snapshot: 35465 votes (26267 roll-call, 2724 with ballots), 31633 linked to procedures; kinds {'amendment': 21019, 'final': 1330, 'mandate': 34, 'motion': 171, 'other': 32, 'procedural': 514, 'resolution': 2513, 'split_or_separate': 9852}; 0 fetched votes whose voter lists differ from the counts; 724s",
+  "attempted_at": "2026-10-22T23:28:15Z",
+  "fetched_at": "2026-10-22T23:57:12Z",
+  "note": "full pass: 200/217 sittings fetched (18799 votes, 66 document lookups, 62 procedures by id); 17 sittings pending; resumes next run (stopped by RuntimeError('1 sittings could not be fetched, e.g. MTG-PL-2026-10-22')). Snapshot: 35465 votes (26267 roll-call, 2724 with ballots), 32375 linked to procedures; kinds {'amendment': 21019, 'final': 1251, 'mandate': 113, 'motion': 171, 'other': 32, 'procedural': 514, 'resolution': 2513, 'split_or_separate': 9852}; 0 fetched votes whose voter lists differ from the counts; 1737s",
   "records": {
    "ballots": 2724,
    "sittings": 359,

@@ -473,3 +473,43 @@ def test_full_refresh_flag_refetches_everything(fetch_env, monkeypatch):
     status = ev.fetch(http)
     assert status.note.startswith("full pass: 10/10 sittings")
     assert {p.split("/")[2] for p in http.requests if p.startswith("/meetings/MTG-PL-")} == set(http.sittings)
+
+
+def test_pending_sittings_resume_when_the_listing_fails(fetch_env, monkeypatch):
+    from pipeline import snapshot
+    from pipeline.http import HttpError
+
+    checks = iter([False, True])
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: next(checks, True))
+    ev.fetch(FixtureHttp())  # interrupted after the first chunk: 6 sittings pending
+
+    class NoListing(FixtureHttp):
+        def get(self, url, params=None, **kw):
+            if url.endswith("/meetings"):
+                raise HttpError(url, 500, "listing unavailable")
+            return super().get(url, params, **kw)
+
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    status = ev.fetch(NoListing())
+    assert status.status == "ok" and snapshot.read_state(ev.SOURCE_ID)["pending"] == []
+    assert "195361" in _stored()  # 2026-07-08, fetched from the pending list alone
+
+
+def test_a_failing_sitting_stays_pending_without_blocking_its_chunk(fetch_env, monkeypatch):
+    from pipeline import snapshot
+    from pipeline.http import HttpError
+
+    class TodayNotPublished(FixtureHttp):
+        def get(self, url, params=None, **kw):
+            if "/meetings/MTG-PL-2026-07-09/" in url:
+                raise HttpError(url, 500, "not available")
+            return super().get(url, params, **kw)
+
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    monkeypatch.setattr(ev, "RETRY_WAIT_S", 0)
+    status = ev.fetch(TodayNotPublished())
+    assert status.status == "partial" and "1 sittings pending" in status.note
+    assert snapshot.read_state(ev.SOURCE_ID)["pending"] == ["MTG-PL-2026-07-09"]
+    stored = _stored()
+    assert "195361" in stored and "195775" not in stored  # 2026-07-08 kept, 2026-07-09 to be resumed
+    assert ev.fetch(FixtureHttp()).status == "ok" and "195775" in _stored()

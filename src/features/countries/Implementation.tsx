@@ -7,7 +7,7 @@ import { EURLEX_CELEX, TRANSPOSITION_LABEL, dossierPath } from '../legislation/l
 import { SortTh, useSortable } from '../votes/sortable';
 import './countries.css';
 
-const T_ORDER: TranspositionStatus[] = ['measures_notified', 'none_found', 'deadline_not_reached', 'unavailable'];
+const T_ORDER: TranspositionStatus[] = ['measures_notified', 'none_found', 'deadline_not_reached', 'not_participating', 'unavailable'];
 
 export const NIM_URL = (celex: string) => `https://eur-lex.europa.eu/legal-content/EN/NIM/?uri=CELEX:${encodeURIComponent(celex)}`;
 

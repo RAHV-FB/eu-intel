@@ -139,6 +139,13 @@ def _today() -> str:
     return datetime.now(UTC).date().isoformat()
 
 
+TERM_STARTS = ((10, "2024-07-16"), (9, "2019-07-02"))  # first day of each parliamentary term
+
+
+def term_of(day: str) -> int:
+    return next(term for term, start in TERM_STARTS if day >= start)
+
+
 def list_sittings(http: Http, today: str | None = None, from_year: int | None = None) -> list[dict]:
     """Plenary sittings of the 9th and 10th terms up to today: [{id, date, term}] sorted by date."""
     today = today or _today()
@@ -1000,7 +1007,13 @@ def ballot_issues(vote: EpVote, b: EpBallots) -> list[str]:
 
 
 # =============================================================================================== fetch
-def _fetch_sittings(http: Http, sittings: list[dict], today: str) -> list[Sitting]:
+RETRY_WAIT_S = 60.0  # pause before fetching failed sittings again
+
+
+def _fetch_sittings(http: Http, sittings: list[dict], today: str) -> tuple[list[Sitting], list[dict]]:
+    """(fetched sittings, sittings that still failed after 3 attempts — e.g. one whose results are not
+    published yet). The shared rate limit can exhaust Http's own retries, hence the extra attempts."""
+
     def one(s: dict) -> Sitting:
         decisions, items = fetch_sitting(http, s, today)
         minutes = fetch_minutes(http, s) if decisions and s["date"] < RICH_FORMAT_FROM else []
@@ -1008,7 +1021,7 @@ def _fetch_sittings(http: Http, sittings: list[dict], today: str) -> list[Sittin
 
     out: dict[str, Sitting] = {}
     pending = list(sittings)
-    for attempt in range(3):  # the shared rate limit can exhaust Http's retries; try failed ones again
+    for attempt in range(3):
         failed = []
         with ThreadPoolExecutor(WORKERS) as ex:
             futures = {s["id"]: ex.submit(one, s) for s in pending}
@@ -1018,13 +1031,12 @@ def _fetch_sittings(http: Http, sittings: list[dict], today: str) -> list[Sittin
                 except HttpError as e:
                     log.warning("sitting %s failed (attempt %d): %s", s["id"], attempt + 1, e)
                     failed.append(s)
-        if not failed:
-            break
         pending = failed
-        time.sleep(120)
-    else:
-        raise RuntimeError(f"{len(pending)} sittings could not be fetched, e.g. {pending[0]['id']}")
-    return [out[s["id"]] for s in sittings]
+        if not pending:
+            break
+        if attempt < 2:
+            time.sleep(RETRY_WAIT_S)
+    return [out[s["id"]] for s in sittings if s["id"] in out], pending
 
 
 @dataclass
@@ -1180,9 +1192,14 @@ def _fetch_chunk(
     proc_refs: dict[str, str],
     doc_links: dict[str, list[str]],
     known_docs: DocIndex,
-) -> tuple[Result, Counter[str]]:
-    """Fetch and assemble one chunk of sittings; updates proc_refs and doc_links in place."""
-    data = _fetch_sittings(http, chunk, today)
+) -> tuple[Result, Counter[str], set[str]]:
+    """Fetch and assemble one chunk of sittings; updates proc_refs and doc_links in place.
+
+    Returns the result, request statistics and the ids of the sittings fetched; sittings that could not be
+    fetched are left out (and stay pending)."""
+    data, failed = _fetch_sittings(http, chunk, today)
+    if not data:
+        raise RuntimeError(f"{len(failed)} sittings could not be fetched, e.g. {failed[0]['id']}")
     lookups = plan_lookups(data, proc_refs, known_docs, done=doc_links)
     with ThreadPoolExecutor(WORKERS) as ex:
         found = list(ex.map(lambda doc: fetch_document_links(http, doc), lookups))
@@ -1199,14 +1216,14 @@ def _fetch_chunk(
         res = assemble(data, proc_refs, links, now_iso(), known_docs, referrals)
     known_docs.update(item_doc_index(data, known_docs))
     stats: Counter[str] = Counter(
-        sittings=len(chunk),
+        sittings=len(data),
         votes=len(res.votes),
         lookups=len(lookups),
         proc_by_id=len(missing),
         procedures=len(finals),
         issues=len(res.issues),
     )
-    return res, stats
+    return res, stats, {x.id for x in data}
 
 
 def fetch(http: Http) -> SourceStatus:
@@ -1224,7 +1241,16 @@ def fetch(http: Http) -> SourceStatus:
         latest = max(v.date for v in existing)
         start = max(FIRST_SITTING, (date.fromisoformat(latest) - timedelta(days=WINDOW_DAYS)).isoformat())
     years = {int(start[:4])} | {int(sid[7:11]) for sid in pending_before}
-    sittings = list_sittings(http, today, from_year=min(years))
+    try:
+        sittings = list_sittings(http, today, from_year=min(years))
+    except HttpError as e:
+        if not pending_before:
+            raise
+        # the listing is unavailable: still work through the sittings pending from the previous run
+        log.warning("ep_votes: sitting list unavailable (%s); continuing with the pending sittings", e)
+        sittings = [
+            {"id": sid, "date": sid[7:17], "term": term_of(sid[7:17])} for sid in sorted(pending_before)
+        ]
     if not sittings:
         raise RuntimeError("no plenary sittings listed")
     targets = [s for s in sittings if full or s["date"] >= start or s["id"] in pending_before]
@@ -1263,14 +1289,13 @@ def fetch(http: Http) -> SourceStatus:
             break
         chunk = targets[i : i + CHUNK]
         try:
-            res, stats = _fetch_chunk(http, chunk, today, proc_refs, doc_links, known_docs)
+            res, stats, done = _fetch_chunk(http, chunk, today, proc_refs, doc_links, known_docs)
         except (HttpError, RuntimeError) as e:  # keep the completed chunks; resume next run
             log.warning("ep_votes: stopping after an error in chunk %s..: %s", chunk[0]["id"], e)
             error = repr(e)[:200]
             break
-        _, n_ballots = _merge_chunk({s["id"] for s in chunk}, res)
+        _, n_ballots = _merge_chunk(done, res)
         linked_ids |= {ref_to_process_id(r) for v in res.votes for r in v.procedure_refs}
-        done = {s["id"] for s in chunk}
         pending = [sid for sid in pending if sid not in done]
         if not pending and pass_kind == "full":
             last_full = now_iso()

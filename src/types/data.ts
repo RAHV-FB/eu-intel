@@ -477,6 +477,7 @@ export type TranspositionStatus =
   | 'measures_notified' // at least one national measure in the dataset
   | 'none_found' // no measures found in the available dataset (NOT proof of non-compliance)
   | 'deadline_not_reached'
+  | 'not_participating' // recorded as not participating in the Council's adoption (Treaty opt-out): not bound
   | 'unavailable';
 
 export interface InfringementInfo {

@@ -651,6 +651,29 @@ class Builder:
             for c in sorted({*(getattr(ic, "legal_basis", None) or []), *([ic.celex] if ic.celex else [])}):
                 self.infr_by_celex[c].append(ic)
             self.infr_by_country[ic.country].append(ic)
+        # Member States recorded as not participating in the Council's latest recorded vote on a procedure
+        # (Treaty opt-outs, e.g. Denmark and Ireland in justice and home affairs) are not bound by the act,
+        # so "no measures found" would be misleading for them.
+        latest_cv: dict[str, CouncilVote] = {}
+        for cv in sorted(s.council, key=lambda v: (v.date, v.id)):
+            if cv.positions:
+                for r in cv.procedure_refs:
+                    latest_cv[norm_ref(r)] = cv
+        self.not_participating_by_ref: dict[str, tuple[set[str], CouncilVote]] = {
+            ref: ({c for c, pos in cv.positions.items() if pos == "not_participating"}, cv)
+            for ref, cv in latest_cv.items()
+        }
+        self.act_refs: dict[str, list[str]] = {
+            a.celex: [norm_ref(r) for r in a.procedure_refs] for a in s.acts
+        }
+
+    def not_participating(self, celex: str, country: str) -> CouncilVote | None:
+        """The Council vote recording that `country` did not take part in adopting this act, if any."""
+        for ref in self.act_refs.get(celex, []):
+            countries, cv = self.not_participating_by_ref.get(ref, (set(), None))
+            if country in countries:
+                return cv
+        return None
 
     def _register(self, procs: list[Procedure]) -> None:
         for p in sorted(procs, key=lambda p: p.id):
@@ -1222,6 +1245,8 @@ class Builder:
             return "unavailable"
         if self.measures_by.get((celex, country)):
             return "measures_notified"
+        if self.not_participating(celex, country):
+            return "not_participating"
         if deadline and deadline > self.today:
             return "deadline_not_reached"
         return "none_found"

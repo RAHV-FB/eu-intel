@@ -83,6 +83,7 @@ export const TRANSPOSITION_LABEL: Record<TranspositionStatus, string> = {
   measures_notified: 'Measures notified',
   none_found: 'No measures found in the available dataset',
   deadline_not_reached: 'Deadline not yet reached',
+  not_participating: 'Not bound (did not take part in adoption)',
   unavailable: 'Data unavailable',
 };
 

@@ -443,3 +443,12 @@ def test_council_votes(out: Path):
     pl = load(out, "countries/PL.json")
     assert pl["council_positions"]["abstain"] == 1
     assert pl["council_votes"][0]["pos"] == "abstain" and pl["council_votes"][0]["dossier_id"] == "2099-0001"
+
+
+def test_opt_out_countries_are_not_bound_rather_than_missing_measures(out: Path):
+    # C2 records DK as not participating in the adoption of 32099L0009 (no measures notified by anyone):
+    # DK must read "not_participating", never "none_found"; other states keep the deadline-based status.
+    dk = {t["celex"]: t["status"] for t in load(out, "countries/DK.json")["transposition"]}
+    ie = {t["celex"]: t["status"] for t in load(out, "countries/IE.json")["transposition"]}
+    assert dk["32099L0009"] == "not_participating"
+    assert ie["32099L0009"] == "deadline_not_reached"
