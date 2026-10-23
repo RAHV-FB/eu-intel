@@ -61,6 +61,14 @@
      "activity_id": "MTG-PL-2023-07-11",
      "had_activity_type": "def/ep-activities/PLENARY_SITTING",
      "parliamentary_term": "org/ep-9"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2023-12-12",
+     "type": "Activity",
+     "activity_date": "2023-12-12",
+     "activity_id": "MTG-PL-2023-12-12",
+     "had_activity_type": "def/ep-activities/PLENARY_SITTING",
+     "parliamentary_term": "org/ep-9"
     }
    ]
   },

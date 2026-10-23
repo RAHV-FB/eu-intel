@@ -100,6 +100,13 @@
    "type": "Process"
   },
   {
+   "id": "eli/dl/proc/2023-0027",
+   "label": "2023/0027(CNS)",
+   "process_id": "2023-0027",
+   "process_type": "CNS",
+   "type": "Process"
+  },
+  {
    "id": "eli/dl/proc/2023-0129",
    "label": "2023/0129(COD)",
    "process_id": "2023-0129",
