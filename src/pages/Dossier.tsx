@@ -203,7 +203,7 @@ export default function Dossier() {
         <div className="dz-main">
           {active && <WhereIsIt d={d} today={today} />}
           <Timeline events={d.timeline} changes={d.changes ?? []} today={today} eurlexOnly={d.eurlex_only} oeilUrl={d.oeil_url} />
-          <ParliamentVotes votes={d.ep_votes} />
+          <ParliamentVotes votes={d.ep_votes} oeilUrl={d.oeil_url} />
           <CouncilVotes votes={d.council_votes} meta={meta} />
           <NationalApplication d={d} today={today} />
           <DossierDetails d={d} />

@@ -22,10 +22,11 @@ Legal basis (texts retrieved from the Publications Office, CELEX 12016E231 / 120
   AND for >= floor(M / 2) + 1.
 
 Number of component Members (M): the statutory composition is set by European Council decisions under
-Art. 14(2) TEU (see SEATS / statutory_seats()). The Treaty wording "component Members" may be applied by
-Parliament to the Members actually in office (vacant seats excluded); press reports of the 18 July 2024
-Commission-President vote give both 360 (719 in office) and 361 (720 seats). Callers therefore pass M
-explicitly; statutory_seats() is the documented official default, not a confirmed EP calculation.
+Art. 14(2) TEU (see SEATS / statutory_seats()). Parliament applies "component Members" to the Members actually
+in office (vacant seats excluded): its press release on the 18 July 2024 Commission-President vote gives the
+majority as 360, Parliament then having 719 Members. Callers therefore pass M explicitly - the build uses the
+Members in office on the vote date from the MEP snapshot when that count is plausible (95-100% of the seats),
+else statutory_seats().
 """
 
 from __future__ import annotations

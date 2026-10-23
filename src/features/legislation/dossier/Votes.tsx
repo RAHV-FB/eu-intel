@@ -1,12 +1,12 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CouncilVote, EpVoteSummary, Meta, VoteKind } from '../../../types/data';
-import { SourceLink, Term, VoteBar } from '../../../components/ui';
+import { ExtLink, SourceLink, Term, VoteBar } from '../../../components/ui';
 import { formatDate } from '../../../lib/format';
 import { CouncilVoteCard } from '../../council/CouncilVoteCard';
 import { MarginText, OutcomeBadge } from '../../votes/components';
 
-const PRIMARY: VoteKind[] = ['final', 'resolution', 'motion', 'other'];
+const PRIMARY: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'other'];
 
 function EpVoteCard({ v }: { v: EpVoteSummary }) {
   return (
@@ -23,6 +23,7 @@ function EpVoteCard({ v }: { v: EpVoteSummary }) {
         <OutcomeBadge outcome={v.outcome} />
         {v.margin && <MarginText margin={v.margin} />}
       </div>
+      {v.outcome_note && <p className="meta dz-vote__note">{v.outcome_note}</p>}
       <VoteBar forCount={v.for} against={v.against} abstain={v.abstain} label={v.display_title || v.title} />
       {v.margin && <p className="meta dz-vote__rule">Rule applied: {v.margin.rule_label}</p>}
       <p className="dz-vote__links">
@@ -59,7 +60,7 @@ function CompactVote({ v }: { v: EpVoteSummary }) {
   );
 }
 
-export function ParliamentVotes({ votes }: { votes: EpVoteSummary[] }) {
+export function ParliamentVotes({ votes, oeilUrl }: { votes: EpVoteSummary[]; oeilUrl?: string | null }) {
   const [showAll, setShowAll] = useState(false);
   const listId = useId();
   const primary = votes.filter((v) => PRIMARY.includes(v.kind));
@@ -82,8 +83,13 @@ export function ParliamentVotes({ votes }: { votes: EpVoteSummary[] }) {
       </p>
       {votes.length === 0 ? (
         <p className="dz-none">
-          No plenary vote is linked to this file in our data. Parliament may not have voted yet, may have decided without a
-          recorded roll-call vote, or the vote falls outside the period covered (see <Link to="/about#coverage">coverage</Link>).
+          No roll-call vote is matched to this file in our data (see <Link to="/about#coverage">coverage</Link>).
+          {oeilUrl && (
+            <>
+              {' '}
+              Parliament’s decisions on it are listed in its <ExtLink href={oeilUrl}>Legislative Observatory file</ExtLink>.
+            </>
+          )}
         </p>
       ) : (
         <>

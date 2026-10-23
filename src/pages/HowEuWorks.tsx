@@ -300,10 +300,10 @@ export default function HowEuWorks() {
                 </span>
               </div>
               <div className="threshold">
-                <span className="threshold__n">361 of 720</span>
+                <span className="threshold__n">Majority of all members</span>
                 <span className="threshold__l">
-                  A majority of all members, whoever is present — needed for example to reject or amend the Council’s position at second
-                  reading, or to elect the Commission President.
+                  More than half of all MEPs in office (360 when 719 of the 720 seats are filled), whoever is present — needed for example
+                  to reject or amend the Council’s position at second reading, or to elect the Commission President.
                 </span>
               </div>
               <div className="threshold">

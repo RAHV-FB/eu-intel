@@ -9,7 +9,7 @@ reviewed.
 |---|---|
 | `featured.yaml` | 20–30 major dossiers, each with a short title, two plain-language sentences (`what`, `why`), search aliases, topics and the sources behind the text. 5–6 of them are marked for the homepage. |
 | `topics.yaml` | The 10 browsing topics, mapped to the EP/OEIL subject classification, plus everyday search words. |
-| `aliases.yaml` | General search synonyms: standard, official abbreviations only. |
+| `aliases.yaml` | General search synonyms (standard, official abbreviations) and per-file names that the institutions themselves use, each with a cited source. |
 
 ## What the curated layer must not contain
 
@@ -103,6 +103,11 @@ proposal. At most two items may come from the same topic.
 - **`aliases.yaml`** contains only standard abbreviations and official short names that the
   institutions themselves use, such as GDPR, DSA, DMA, CSRD, ETS and CBAM. It does not include
   ambiguous everyday words (for example, plain "safe" or "red").
+- **Per-file names in `aliases.yaml`** (`{procedure: "2023/0083(COD)", names: [...]}`) attach a name
+  to one procedure for search only. Each entry needs a `# source:` comment citing a Commission,
+  Parliament or Council page that uses the name for that file (a test enforces the comment).
+  Names an act gives itself in its Official Journal title, and Legislative Train file names, are
+  added automatically from the snapshot.
 - **`featured.yaml` `aliases`** may also include common names that the public actually uses.
 - **Contested names.** A name that is contested, or used mainly by one side of a debate, may be
   attached only if it is verifiably in common use for that specific proposal. It must have a YAML
