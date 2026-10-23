@@ -21,11 +21,9 @@ import {
   applyFilters,
   buildHaystacks,
   countBy,
-  engineScores,
+  keywordScores,
   makePredicates,
-  queryTokens,
   readState,
-  simpleScore,
   sortRows,
   todayISO,
   type ExplorerState,
@@ -99,15 +97,8 @@ export default function Legislation() {
 
   const { matched, scores } = useMemo(() => {
     if (!hasQuery) return { matched: rows, scores: new Map<string, number>() };
-    const eng = engineScores(engine, state.q);
-    const tokens = queryTokens(state.q);
-    const combined = new Map<string, number>();
-    for (const d of rows) {
-      const e = eng.get(d.id) ?? 0;
-      const s = simpleScore(haystacks.get(d.id), tokens);
-      if (e > 0 || s > 0) combined.set(d.id, e * 10 + s);
-    }
-    return { matched: rows.filter((d) => combined.has(d.id)), scores: combined };
+    const keyword = keywordScores(rows, haystacks, engine, state.q);
+    return { matched: rows.filter((d) => keyword.has(d.id)), scores: keyword };
   }, [rows, haystacks, engine, state.q, hasQuery]);
 
   const preds = useMemo(() => makePredicates(state), [state]);

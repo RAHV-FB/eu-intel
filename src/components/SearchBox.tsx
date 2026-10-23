@@ -53,7 +53,8 @@ export function SearchBox({
       setHits([]);
       return;
     }
-    setHits(engine.search(q, { limit: 8 }));
+    // as-you-type: the last word may be unfinished ("artific"); whole-word matches still rank first
+    setHits(engine.search(q, { limit: 8, typing: true }));
     setActive(-1);
   }, [q, engine]);
 

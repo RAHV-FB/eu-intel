@@ -2,7 +2,7 @@
  * Filtering, ranking and sorting for the legislation explorer. All state lives in the URL query string.
  */
 import type { DossierSummary, LegalInstrument } from '../../types/data';
-import { normalize, type SearchEngine } from '../../lib/search';
+import { dossierScores, hasWord, keywordTokens, wordSet, type SearchEngine } from '../../lib/search';
 import { ADOPTED_STAGES, dossierYear, stagesFor } from './labels';
 
 export type SortKey = 'relevance' | 'updated' | 'newest' | 'adopted' | 'blocked' | 'deadline';
@@ -56,54 +56,69 @@ export type Facet = 'topic' | 'stage' | 'type' | 'instrument' | 'year' | 'blocke
 // ------------------------------------------------------------------ text matching
 
 export interface Haystack {
-  title: string;
-  all: string;
+  title: Set<string>;
+  all: Set<string>;
+}
+
+/** Act number from a CELEX number for acts from 2015 on ("32024R1689" -> "2024/1689"), as cited in the press. */
+function actNumber(celex: string): string | null {
+  const m = /^3(\d{4})[RLD]0*(\d+)$/.exec(celex);
+  return m && Number(m[1]) >= 2015 ? `${m[1]}/${m[2]}` : null;
 }
 
 export function buildHaystacks(rows: DossierSummary[]): Map<string, Haystack> {
   const m = new Map<string, Haystack>();
   for (const d of rows) {
+    const celex = d.celex ?? [];
     m.set(d.id, {
-      title: normalize(d.title),
-      all: normalize([d.title, d.official_title, d.short, d.ref, d.id, d.type, ...(d.celex ?? [])].filter(Boolean).join(' ')),
+      title: wordSet(d.title),
+      all: wordSet(d.title, d.official_title, d.short, d.ref, d.id, d.type, ...celex, ...celex.map(actNumber)),
     });
   }
   return m;
 }
 
-/** Simple fallback scoring: every query token must appear somewhere; title matches weigh more. */
+/** Fallback scoring while the search index loads: every query word must be a whole word of the file (or its
+ * singular/plural); title matches weigh more. "ai" does not match "Spain", "act" does not match "contracts". */
 export function simpleScore(h: Haystack | undefined, tokens: string[]): number {
   if (!h || !tokens.length) return 0;
   let score = 0;
   for (const t of tokens) {
-    if (h.title.includes(t)) score += 3;
-    else if (h.all.includes(t)) score += 1;
+    if (hasWord(h.title, t)) score += 3;
+    else if (hasWord(h.all, t)) score += 1;
     else return 0;
   }
   return score;
 }
 
 export function queryTokens(q: string): string[] {
-  return normalize(q).split(/\s+/).filter((t) => t.length > 0);
+  return keywordTokens(q);
 }
 
 /** Map search-engine dossier hits to dossier ids → normalised score (0..1]. */
 export function engineScores(engine: SearchEngine | null, q: string): Map<string, number> {
-  const m = new Map<string, number>();
-  if (!engine || !q.trim()) return m;
-  let hits;
-  try {
-    hits = engine.search(q, { kinds: ['dossier'], limit: 5000 });
-  } catch {
-    return m;
+  return engine ? dossierScores(engine, q) : new Map();
+}
+
+/**
+ * Files matching the keyword query, with their relevance. Once the search index is loaded only its matches
+ * count, so "N files match" agrees with the Legislation results on /search for the same query; until then a
+ * whole-word match on titles and references stands in.
+ */
+export function keywordScores(
+  rows: DossierSummary[],
+  haystacks: Map<string, Haystack>,
+  engine: SearchEngine | null,
+  q: string,
+): Map<string, number> {
+  if (engine) return engineScores(engine, q);
+  const tokens = queryTokens(q);
+  const out = new Map<string, number>();
+  for (const d of rows) {
+    const s = simpleScore(haystacks.get(d.id), tokens);
+    if (s > 0) out.set(d.id, s);
   }
-  const max = hits[0]?.score || 1;
-  for (const h of hits) {
-    const fromUrl = /^\/legislation\/([^/?#]+)/.exec(h.doc.u)?.[1];
-    const id = fromUrl ? decodeURIComponent(fromUrl) : h.doc.id;
-    if (!m.has(id)) m.set(id, h.score / max);
-  }
-  return m;
+  return out;
 }
 
 // ------------------------------------------------------------------ filters

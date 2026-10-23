@@ -115,3 +115,9 @@
   gap: var(--sp-2);
   margin: var(--sp-3) 0;
 }
+
+.sr-votes {
+  max-width: 52rem;
+  margin: var(--sp-6) 0 0;
+  color: var(--text-2);
+}
