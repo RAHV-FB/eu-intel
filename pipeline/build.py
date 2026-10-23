@@ -109,6 +109,13 @@ SOURCES: dict[str, dict[str, str]] = {
         "licence": "© European Union. Reuse authorised under Commission Decision 2011/833/EU, with "
         "acknowledgement of the source.",
     },
+    "optouts": {
+        "name": "EUR-Lex / Publications Office (Cellar) – texts of directives: Denmark's and Ireland's opt-outs",
+        "institution": "EUR-Lex",
+        "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+        "licence": "© European Union, https://eur-lex.europa.eu. Reuse authorised under Commission "
+        "Decision 2011/833/EU, with acknowledgement of the source.",
+    },
     "train": {
         "name": "European Parliament – Legislative Train Schedule",
         "institution": "LegislativeTrain",
@@ -116,6 +123,13 @@ SOURCES: dict[str, dict[str, str]] = {
         "licence": "© European Union, source: European Parliament. Reuse authorised with acknowledgement "
         "of the source.",
     },
+}
+
+# Short plain-language badge for a procedure type on the home "Under discussion" list (else TYPE_LABELS)
+HOME_PROCEDURE_BADGES: dict[str, str] = {
+    "COD": "Ordinary procedure",
+    "CNS": "Consultation",
+    "APP": "Consent",
 }
 
 TYPE_LABELS: dict[str, str] = {
@@ -941,6 +955,12 @@ def rejection_title(p: Procedure) -> str:
     return f"Parliament rejected {what}"
 
 
+# The Council's consent to a regulation Parliament adopts on its own initiative after seeking the Commission's
+# opinion (Article 228(4) TFEU, Ombudsman Statute: "with the consent of the Council"), e.g. ST 9947/21: the
+# Council does not act on a Commission proposal, so the 72% threshold of Article 238(2) TFEU applies.
+COUNCIL_CONSENT_TO_EP_ACT = re.compile(r"\bConsent\s+of\s+the\s+Council\s+\(Article\s+228\(4\)\s+TFEU\)", re.I)
+
+
 def council_vote_event(cv: dict) -> dict:
     """Timeline event for a Council vote, dated and sourced by the Council's voting-result document."""
     on, outcome = cv.get("vote_on"), cv["outcome"]
@@ -1111,6 +1131,25 @@ def council_display_title(title: str, vote_on: str | None = None) -> str:
     return f"{form[:1].upper()}{form[1:]} {rest}"
 
 
+_CV_ACT_ADOPTION = re.compile(r"^Adoption\s+of\s+(?:the\s+|a\s+)?legi\w*\s+act$", re.I)
+
+
+def council_vote_label(title: str, vote_on: str | None, stage: str | None) -> str:
+    """Title for lists of Council votes (country pages, activity): council_display_title, and for a vote on another
+    item than an act or the Council's first-reading position, the item(s) voted on as the voting-result document's
+    subject lists them, so that a Member State's "For" reads as support for that item: "Amendments of the European
+    Parliament to the Council's position on the draft budget for 2027 – Non-approval of the European Parliament's
+    amendment(s)" (ST 14700/26). "Adoption of the legislative act", which some budget notes add (ST 14735/24), is
+    left out there: the budget is not a legislative act."""
+    t = council_display_title(title, vote_on)
+    if vote_on != "other" or not stage:
+        return t
+    items = [i.strip() for i in stage.split(";") if i.strip()]
+    if re.search(r"\bbudget\b", title, re.I):
+        items = [i for i in items if not _CV_ACT_ADOPTION.match(i)]
+    return f"{t} – {'; '.join(items)}" if items else t
+
+
 # ------------------------------------------------------------------------------------------- curated
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -1159,6 +1198,57 @@ def act_date_source(e: dict, d: str) -> dict | None:
     item = next((x for x in e.get("application") or [] if x["date"] == d), {})
     s = srcs[item.get("source", 0)] if item.get("source", 0) < len(srcs) else None
     return s if isinstance(s, dict) else None
+
+
+# Treaty provisions under which the Council acts unanimously, quoted from the Treaty (Cellar 12016E019,
+# 12016E081, 12016E312). Only these can replace a voting sheet's "qualified majority" (data/curated/council_votes.yaml).
+UNANIMITY_BASES: dict[str, str] = {
+    "TFEU Art. 19(1)": "the Council, acting unanimously in accordance with a special legislative procedure and after "
+    "obtaining the consent of the European Parliament, may take appropriate action to combat discrimination",
+    "TFEU Art. 81(3)": "measures concerning family law with cross-border implications shall be established by the "
+    "Council, acting in accordance with a special legislative procedure. The Council shall act unanimously after "
+    "consulting the European Parliament",
+    "TFEU Art. 312(2)": "The Council shall act unanimously after obtaining the consent of the European Parliament",
+}
+
+
+def load_council_votes(curated: Path = CURATED) -> tuple[dict[str, dict], list[CouncilVote], dict[str, str]]:
+    """Checked Council vote corrections and records (data/curated/council_votes.yaml): corrections by vote id,
+    the records, and each record's note. An entry that does not validate is skipped whole."""
+    raw = _load_yaml("council_votes.yaml", curated)
+    raw = raw if isinstance(raw, dict) else {}
+    corrections: dict[str, dict] = {}
+    for e in raw.get("corrections") or []:
+        if not isinstance(e, dict) or not isinstance(e.get("vote"), str):
+            continue
+        if e.get("legal_basis") not in UNANIMITY_BASES or not e.get("citation"):
+            log.warning("curated council_votes.yaml: %s has no listed unanimity legal basis; ignored", e["vote"])
+            continue
+        if e.get("outcome") not in (None, "not_adopted") or (e.get("outcome") and not e.get("outcome_note")):
+            log.warning("curated council_votes.yaml: %s has an unsupported outcome; ignored", e["vote"])
+            continue
+        corrections[e["vote"]] = e
+    records: list[CouncilVote] = []
+    notes: dict[str, str] = {}
+    for e in raw.get("records") or []:
+        try:
+            cv = CouncilVote.model_validate({k: v for k, v in e.items() if k not in ("note", "reviewed")})
+        except (ValidationError, AttributeError, TypeError):
+            log.warning("curated council_votes.yaml: record %r invalid; ignored", e)
+            continue
+        records.append(cv)
+        notes[cv.id] = str(e.get("note") or "").strip()
+    return corrections, records, notes
+
+
+def council_rule_note(e: dict) -> str:
+    """What a vote's sheet prints and why the rule shown is unanimity (a council_votes.yaml correction)."""
+    article = e["legal_basis"].removeprefix("TFEU ").replace("Art.", "Article")
+    return (
+        "The Council's voting-result document labels the voting rule “qualified majority”. The act is based on "
+        f"{article} of the Treaty on the Functioning of the European Union (“{e['citation']}”), under which the "
+        f"Council acts unanimously: “{UNANIMITY_BASES[e['legal_basis']]}”. The rule is shown here as unanimity."
+    )
 
 
 def load_transposition_checks(curated: Path = CURATED) -> dict[str, dict]:
@@ -1280,6 +1370,7 @@ class Builder:
         self.act_dates = load_act_dates(curated)
         if self.act_dates:
             snap.acts = [apply_act_dates(a, self.act_dates.get(a.celex)) for a in snap.acts]
+        self.council_fixes, self.council_extra, self.council_extra_notes = load_council_votes(curated)
         self.transposition_checks = load_transposition_checks(curated)
         if self.transposition_checks:
             snap.acts = [apply_transposition_checks(a, self.transposition_checks.get(a.celex)) for a in snap.acts]
@@ -1949,23 +2040,34 @@ class Builder:
         self.council_public: list[dict] = []
         # split parent -> its Council votes, now listed on the part whose act each vote adopted
         self.council_in_parts: dict[str, list[dict]] = defaultdict(list)
-        for cv in sorted(self.s.council, key=lambda c: (c.date, c.id), reverse=True):
+        for cv in sorted(self.s.council + self.council_extra, key=lambda c: (c.date, c.id), reverse=True):
             ds = sorted({p.id for r in cv.procedure_refs if (p := self.resolve_ref(r))})
             moved = {d: part for d in ds if (part := self.council_split_part(cv, d))}
             ds = sorted({moved.get(d, d) for d in ds})
             did = ds[0] if len(ds) == 1 else None
             p = self.proc.get(did) if did else None
             vote_on, vote_on_note = self.council_vote_on(cv, p)
+            # a sheet's "qualified majority" where the act's legal basis requires unanimity (council_votes.yaml)
+            fix = self.council_fixes.get(cv.id) if cv.voting_rule == "qmv" else None
+            sheet = cv
+            if fix:
+                cv = cv.model_copy(update={"voting_rule": "unanimity", "outcome": fix.get("outcome") or cv.outcome})
             assessment = None
             if assess is not None and cv.voting_rule != "unknown" and cv.positions:
                 try:
                     assessment = self.council_rule_assessment(assess, cv, p)
                 except Exception as e:  # noqa: BLE001
                     log.warning("council assessment failed for %s: %r", cv.id, e)
+            if fix and (assessment is None or assessment["adopted_by_rule"] != (cv.outcome == "adopted")):
+                # the outcome must follow from the corrected rule; otherwise the sheet is shown as published
+                log.warning("curated council_votes.yaml: %s does not agree with its positions; ignored", cv.id)
+                fix, cv = None, sheet
+                assessment = self.council_rule_assessment(assess, cv, p) if assess is not None and cv.positions else None
             if assessment and cv.voting_rule != "unanimity":
                 assessment["single_state_veto_possible"] = False
             rec = {
-                "id": cv.id, "date": cv.date, "title": cv.title, "dossier_id": did,
+                "id": cv.id, "date": cv.date, "title": cv.title,
+                "display_title": council_vote_label(cv.title, vote_on, cv.stage), "dossier_id": did,
                 "dossier_ref": p.reference if p else None, "configuration": cv.configuration,
                 "stage": cv.stage, "vote_on": vote_on, "vote_on_note": vote_on_note, "meeting": cv.meeting,
                 "written_procedure": cv.written_procedure, "council_doc": cv.council_doc,
@@ -1973,6 +2075,12 @@ class Builder:
                 "positions_note": cv.positions_note if not cv.positions else None,
                 "assessment": assessment, "statements": cv.statements, "source": _src(cv.source),
             }  # fmt: skip
+            if fix:
+                rec |= {"sheet_voting_rule": sheet.voting_rule, "voting_rule_note": council_rule_note(fix)}
+                if fix.get("outcome"):
+                    rec |= {"sheet_outcome": sheet.outcome, "outcome_note": " ".join(fix["outcome_note"].split())}
+            if self.council_extra_notes.get(cv.id):
+                rec["source_note"] = self.council_extra_notes[cv.id]
             self.council_public.append(rec)
             for d in ds:
                 self.council_of[d].append(rec)
@@ -2050,6 +2158,9 @@ class Builder:
         year = int(cv.date[:4])
         if p is not None and (p.com_refs or commission_cod_proposal(p)):
             return council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, True, year=year)))
+        if COUNCIL_CONSENT_TO_EP_ACT.search(cv.stage or ""):
+            # the Council's consent to Parliament's own regulation is never given on a Commission proposal
+            return council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, False, year=year)))
         a = council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, True, year=year)))
         b = council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, False, year=year)))
         if a is None or b is None:
@@ -2065,8 +2176,10 @@ class Builder:
         a["blocking_minority_min_states"] = None
         a["states_required_alt"] = b["states_required"]  # 72% (not on a Commission proposal); a: 55%
         a["note"] = (a["note"] + " " if a["note"] else "") + (
-            "Whether the Council acted on a Commission proposal is not recorded in our data; the result is the "
-            "same under both qualified-majority thresholds (55% and 72% of Member States, 65% of the population)."
+            "Whether the Council acted on a Commission proposal is not established here: the voting sheet's footnote "
+            "on the threshold is part of an image we do not read, and the procedure record names no Commission "
+            "proposal. The result is the same under both qualified-majority thresholds (55% and 72% of Member "
+            "States, 65% of the population)."
         )
         return a
 
@@ -3147,8 +3260,8 @@ class Builder:
                 if pos:
                     cpos[pos] += 1
                     cvotes.append({"vote_id": cv["id"], "date": cv["date"], "title": cv["title"],
-                                   "display_title": council_display_title(cv["title"], cv["vote_on"]), "pos": pos,
-                                   "dossier_id": cv["dossier_id"], "vote_on": cv["vote_on"]})  # fmt: skip
+                                   "display_title": cv["display_title"], "pos": pos, "dossier_id": cv["dossier_id"],
+                                   "vote_on": cv["vote_on"], "stage": cv["stage"], "outcome": cv["outcome"]})  # fmt: skip
             indicators = [
                 {"indicator": i.indicator, "label": i.label, "value": i.value, "unit": i.unit, "period": i.period,
                  "definition": i.definition, "source": _src(i.source)}
@@ -3237,6 +3350,18 @@ class Builder:
                 and not e.get("after_end_of_validity")]  # fmt: skip
         return done[-1] if done else None
 
+    def undated_amendments_note(self, pid: str) -> str | None:
+        """The acts that EUR-Lex lists as amending the file's acts but that are not in our EUR-Lex data, so the
+        timeline has no dated step for them (2021/0366(COD): Delegated Regulation (EU) 2026/2102). Said next to
+        the latest step, which may be older than they are."""
+        cs = sorted({c for a in self.dossier_acts.get(pid, []) for c in a.amended_by if c not in self.act})
+        if not cs:
+            return None
+        names = [celex_act_label(c) or c for c in cs]
+        listed = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+        return (f"EUR-Lex also lists {listed} as amending this act; {'its' if len(cs) == 1 else 'their'} dates are not "
+                "in our data, so the step above may not be the latest.")
+
     def home_rejection_note(self, v: dict) -> str:
         """What a rejection on the home "Rejected" list meant, in the words of the file's timeline where the vote
         is its decision, and what became of the file after it (2025/0429(COD): rejected at first reading on
@@ -3276,6 +3401,7 @@ class Builder:
             featured.append({
                 "dossier": self.dossier_summary[pid], "what": str(c.get("what") or "").strip(),
                 "why": str(c.get("why") or "").strip(), "status": det["status"], "latest": self.latest_event(pid),
+                "latest_note": self.undated_amendments_note(pid),
                 "next_step": det["next_step"], "source": _src(self.proc[pid].source),
                 "oeil_url": self.oeil_link(pid),
             })  # fmt: skip
@@ -3295,11 +3421,18 @@ class Builder:
             key=lambda d: (d["last_event"], d["featured"], d["id"]), reverse=True,
         )[:12]  # fmt: skip
         under_debate = [{"dossier_id": d["id"], "title": d["title"], "subtitle": d["status_label"],
-                         "date": d["last_event"], "badge": d["type"]} for d in debate]  # fmt: skip
+                         "date": d["last_event"], "badge": HOME_PROCEDURE_BADGES.get(d["type"], d["type_label"])}
+                        for d in debate]  # fmt: skip
 
         def badge(v: dict, text: str) -> str:
             # an outcome we calculated from the counts says so, as on the vote's page
             return f"{text} (calculated from the recorded counts)" if v.get("outcome_basis") == "derived" else text
+
+        # A discharge decision grants, postpones or refuses discharge (Rules of Procedure, Annex V): its "adopted"
+        # or "rejected" says nothing about the discharge without the proposal voted on, and it is not a law, so
+        # it is in neither list of votes on texts below (vote 142787 rejected a proposal to postpone: discharge
+        # was granted; 149084 adopted a refusal).
+        from pipeline.analysis.activity import is_discharge_vote
 
         # close final votes as the /votes page defines them (CLOSE_RELATIVE), newest first; over all the votes
         # covered, as few final votes are that close (one in the 12 months to October 2026)
@@ -3307,6 +3440,7 @@ class Builder:
             v for v in self.vote_summary.values()
             if v["kind"] == "final" and v.get("margin") and v["outcome"] in ("adopted", "rejected")
             and isinstance(v["margin"].get("relative"), (int, float)) and abs(v["margin"]["relative"]) <= CLOSE_RELATIVE
+            and not is_discharge_vote(v)
         ]  # fmt: skip
         close.sort(key=lambda v: (v["date"], v["id"]), reverse=True)
         close_votes = [{"vote_id": v["id"], "dossier_id": v["dossier_id"], "title": v["display_title"],
@@ -3320,8 +3454,8 @@ class Builder:
         rej_votes = [
             v
             for v in self.vote_summary.values()
-            if (v["kind_detail"] in rejecting and v["outcome"] == "adopted")
-            or (v["kind"] == "final" and v["outcome"] == "rejected")
+            if ((v["kind_detail"] in rejecting and v["outcome"] == "adopted")
+                or (v["kind"] == "final" and v["outcome"] == "rejected")) and not is_discharge_vote(v)
         ]
         rej_items = [{"vote_id": v["id"], "dossier_id": v["dossier_id"], "title": v["display_title"],
                       "subtitle": self.home_rejection_note(v), "date": v["date"], "badge": badge(v, "Rejected")}
@@ -3393,13 +3527,15 @@ class Builder:
              "items": under_debate},
             {"id": "close_votes", "title": "Close votes",
              "description": "The most recent final Parliament votes on a whole text that were close: the votes in favour "
-                            f"were within {CLOSE_RELATIVE:.0%} of the votes counted towards the applicable majority.",
+                            f"were within {CLOSE_RELATIVE:.0%} of the votes counted towards the applicable majority. "
+                            "Decisions on discharge for the EU budget are not listed.",
              "items": close_votes},
             {"id": "rejected", "title": "Rejected",
              "description": "Proposals and texts Parliament rejected in plenary, newest first: final votes on a whole text "
                             "it voted down, and motions to reject a proposal or the Council's position that it adopted, "
                             "with what happened to the file next. A rejected amendment is not a rejected law, so "
-                            "amendments are not listed; nor are rejected objections or motions of censure.",
+                            "amendments are not listed; nor are rejected objections or motions of censure, or "
+                            "decisions on discharge for the EU budget.",
              "items": rej_items[:12]},
             {"id": "stalled", "title": "Stalled",
              "description": "Files officially reported as blocked (Legislative Train), then ordinary-procedure files "
@@ -3430,7 +3566,8 @@ class Builder:
                 "note": st.note if st else "Not yet retrieved in this release.",
                 "summary": self.source_summary(sid, st),
             })  # fmt: skip
-        fetched = [x.fetched_at for x in m.values() if x.fetched_at]
+        # only sources listed on the About page date "Data refreshed", so a reader can trace it to one of them
+        fetched = [x.fetched_at for sid, x in m.items() if sid in SOURCES and x.fetched_at]
         scope = self.coverage_scope()
         notes = self.coverage_notes(scope)
         self.files["meta.json"] = {
@@ -3515,6 +3652,15 @@ class Builder:
                 if len(s.council) > with_pos:
                     out.append(f"{len(s.council) - with_pos:,} voting-result documents could not be read and are "
                                "shown without positions.")  # fmt: skip
+                fixed = sum(1 for r in getattr(self, "council_public", []) if r.get("sheet_voting_rule"))
+                if fixed:
+                    out.append(f"For {fixed:,} votes the document prints “qualified majority” although the act's legal "
+                               "basis requires unanimity: they are shown under unanimity, with a note.")  # fmt: skip
+                if self.council_extra:
+                    n = len(self.council_extra)
+                    out.append(f"{n:,} {'adoption' if n == 1 else 'adoptions'} recorded only in another Council "
+                               "document (the outcome of a written procedure) "
+                               f"{'is' if n == 1 else 'are'} shown from that document.")  # fmt: skip
         elif sid == "implementation":
             with_m = len({x.directive_celex for x in s.measures})
             out.append(f"{len(s.measures):,} national transposition measures for {len(self.measure_celexes):,} "
@@ -3522,6 +3668,13 @@ class Builder:
                        "infringement cases.")  # fmt: skip
             if not s.indicators:
                 out.append("Country indicators (Single Market Scoreboard) could not be retrieved.")
+        elif sid == "optouts":
+            read = [o for o in s.optouts if o.status == "ok"]
+            dk = sum(1 for o in read if "DK" in o.not_bound and "DK" not in o.opted_in)
+            ie = sum(1 for o in read if "IE" in o.not_bound and "IE" not in o.opted_in)
+            out.append(f"The texts of {len(read):,} directives, read for the recitals that say Denmark or Ireland is "
+                       f"not bound (Protocols No 22 and No 21): {dk:,} for Denmark and {ie:,} for Ireland, after "
+                       "later opt-ins confirmed by the Commission.")  # fmt: skip
         elif sid == "train":
             blocked = sum(1 for t in s.train if t.status.strip().lower() == "blocked")
             out.append(f"{len(s.train):,} files on Parliament's Legislative Train Schedule, {blocked:,} of them "

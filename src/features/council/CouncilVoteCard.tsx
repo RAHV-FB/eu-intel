@@ -152,6 +152,8 @@ export function CouncilVoteCard({
             </div>
           )}
         </dl>
+        {vote.voting_rule_note && <p className="meta cvote__voteon-note">{vote.voting_rule_note}</p>}
+        {vote.outcome_note && <p className="meta cvote__voteon-note">{vote.outcome_note}</p>}
       </header>
 
       {recorded.length > 0 ? (
@@ -257,6 +259,12 @@ export function CouncilVoteCard({
                 <b className="num">{formatNumber(a.states_for)}</b> voted in favour. Abstaining does not prevent adoption.
               </li>
             )}
+            {a.rule === 'unanimity' && a.adopted_by_rule === false && (a.states_against ?? groups.against.length) > 0 && (
+              <li>
+                {groups.against.length > 0 ? listNames(groups.against) : `${formatNumber(a.states_against ?? 0)} Member States`}{' '}
+                voted against, so unanimity was not reached.
+              </li>
+            )}
             {a.rule === 'simple_majority' && (
               <li>
                 <b className="num">{formatNumber(a.states_for)}</b> Member States voted in favour; at least{' '}
@@ -300,6 +308,7 @@ export function CouncilVoteCard({
       )}
 
       <footer className="cvote__foot">
+        {vote.source_note && <p className="meta">{vote.source_note}</p>}
         <SourceLink source={vote.source} />
       </footer>
     </article>

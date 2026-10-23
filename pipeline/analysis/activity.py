@@ -77,6 +77,57 @@ VOTE_STEP_TITLES = {
 }
 _PROCEDURE_TYPE = re.compile(r"\(([A-Z]{3})\)$")
 _PROCEDURE_SYMBOL = re.compile(r"(?<![*])(\*{1,3})\s*$")
+# A motion to reject the proposal or the Council's position: what its outcome meant for that text (a rejected
+# motion is not a rejection by Parliament; see build.VOTE_OUTCOME_NOTES)
+REJECT_MOTION_TITLES = {
+    ("reject_proposal", "rejected"): "Parliament did not reject the Commission proposal",
+    ("reject_proposal", "adopted"): "Parliament rejected the Commission proposal",
+    ("reject_council_position", "rejected"): "Parliament did not reject the Council's position",
+    ("reject_council_position", "adopted"): "Parliament rejected the Council's position",
+}
+_KIND_TAIL = re.compile(r"\s+—\s+(?:motion to reject|final vote on the text)\b.*$")
+# "Discharge 2020: European Border and Coast Guard Agency", "2019 Discharge: …"
+_DISCHARGE_TITLE = re.compile(r"^(?:discharge\s+\d{4}|\d{4}\s+discharge)\b", re.I)
+# A consent decision as the timeline titles it when it does not state the outcome (build: Builder.procedure_event)
+CONSENT_DECISION_TITLE = "Parliament voted on consent"
+
+
+def is_discharge_vote(v: dict) -> bool:
+    """A vote on a discharge decision (procedure type DEC, or a title "Discharge 2020: …"): Parliament grants,
+    postpones or refuses discharge to an EU body for implementing its budget. It is not a law, and the vote's
+    "adopted" or "rejected" does not say which of these Parliament decided without the proposal voted on."""
+    if "discharge" in (v.get("kind"), v.get("kind_detail")):
+        return True
+    ref = v.get("procedure_ref") or v.get("dossier_ref") or ""
+    return ref.endswith("(DEC)") or bool(_DISCHARGE_TITLE.match(v.get("display_title") or v.get("title") or ""))
+
+
+def vote_headline(v: dict, step: str | None, dossier_title: str | None = None) -> str:
+    """Activity and feed headline for a Parliament vote: what it decided, then what it was on. A motion to reject
+    says what became of the proposal or the Council's position, then names the file."""
+    title = v["display_title"]
+    if (v.get("kind_detail"), v["outcome"]) in REJECT_MOTION_TITLES:
+        what = short_title(dossier_title) if dossier_title else _KIND_TAIL.sub("", title)
+        return f"{REJECT_MOTION_TITLES[(v['kind_detail'], v['outcome'])]}: {what}"
+    if is_discharge_vote(v):
+        return f"Parliament voted on a discharge decision: {_KIND_TAIL.sub('', title)}"
+    res = {"adopted": "adopted", "rejected": "rejected", "lapsed": "lapsed"}.get(v["outcome"], "voted on")
+    head = VOTE_STEP_TITLES.get((step or "", v["outcome"])) or f"Parliament {res}"
+    return f"{head}: {title}"
+
+
+def event_title(e: dict, b: Any) -> str:
+    """A timeline step's title for activity. A consent decision says whether Parliament gave its consent when the
+    final vote linked to it records the outcome officially (published, or in the minutes)."""
+    v = b.vote_summary.get(e["vote_id"]) if e.get("vote_id") else None
+    if e["title"] == CONSENT_DECISION_TITLE and v and v.get("outcome_basis") in ("published", "minutes"):
+        return VOTE_STEP_TITLES.get(("consent", v["outcome"]), e["title"])
+    return e["title"]
+
+
+def council_vote_title(cv: dict) -> str:
+    """A Council vote's list title (build: council_vote_label), else its official title."""
+    return cv.get("display_title") or cv["title"]
 
 
 def vote_step(v: dict, ptype: str | None, subject: str | None) -> str | None:
@@ -152,7 +203,7 @@ def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
                     f"ev:{e['id']}",
                     e["date"],
                     _event_kind(e["kind"]),
-                    f"{title}: {e['title']}",
+                    f"{title}: {event_title(e, b)}",
                     pid,
                     e.get("vote_id"),
                     e.get("source"),
@@ -163,18 +214,14 @@ def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
     milestone_ids = {i["id"] for i in out}
     subjects = {v.id: v.subject for v in getattr(b, "indexed_votes", [])}
     for v in b.vote_summary.values():
-        if v["kind"] in ("final", "motion") and cut <= v["date"] <= today and v["id"] not in milestone_votes:
-            res = {"adopted": "adopted", "rejected": "rejected", "lapsed": "lapsed"}.get(
-                v["outcome"], "voted on"
-            )
+        if v["kind"] in ("final", "motion", "discharge") and cut <= v["date"] <= today and v["id"] not in milestone_votes:
             d = b.dossier_summary.get(v["dossier_id"]) if v.get("dossier_id") else None
             step = vote_step(v, d["type"] if d else None, subjects.get(v["id"]))
-            head = VOTE_STEP_TITLES.get((step or "", v["outcome"])) or f"Parliament {res}"
-            out.append(_item(f"vote:{v['id']}", v["date"], "ep_vote", f"{head}: {v['display_title']}",
+            out.append(_item(f"vote:{v['id']}", v["date"], "ep_vote", vote_headline(v, step, d["title"] if d else None),
                              v.get("dossier_id"), v["id"], v.get("source")))  # fmt: skip
     for cv in b.council_public:
         if cut <= cv["date"] <= today and f"ev:council-{cv['id']}" not in milestone_ids:
-            out.append(_item(f"council:{cv['id']}", cv["date"], "council_vote", f"Council vote: {cv['title']}",
+            out.append(_item(f"council:{cv['id']}", cv["date"], "council_vote", f"Council vote: {council_vote_title(cv)}",
                              cv.get("dossier_id"), None, cv.get("source")))  # fmt: skip
     return out
 
@@ -316,7 +363,7 @@ def diff(
                 e = ev_by_id.get(eid)
                 if e:
                     kind = "milestone" if e["kind"] == "proposal" else _event_kind(e["kind"])
-                    items.append(_item(f"chg:{pid}:ev:{eid}", e["date"], kind, f"{title}: {e['title']}", pid,
+                    items.append(_item(f"chg:{pid}:ev:{eid}", e["date"], kind, f"{title}: {event_title(e, b)}", pid,
                                        e.get("vote_id"), e.get("source"), detected_at))  # fmt: skip
         if seen["ep_votes"]:
             votes = {v["id"]: v for v in det["ep_votes"]}
@@ -330,7 +377,8 @@ def diff(
             for cid in sorted(set(n["council"]) - set(o.get("council", []))):
                 c = cvs[cid]
                 items.append(_item(f"chg:{pid}:council:{cid}", c["date"], "council_vote",
-                                   f"Council vote: {c['title']}", pid, None, c.get("source"), detected_at))  # fmt: skip
+                                   f"Council vote: {council_vote_title(c)}", pid, None, c.get("source"),
+                                   detected_at))  # fmt: skip
         if seen["eurlex"]:
             acts = {a["celex"]: a for a in det["acts"]}
             for celex in sorted(set(n["acts"]) - set(o.get("acts", []))):

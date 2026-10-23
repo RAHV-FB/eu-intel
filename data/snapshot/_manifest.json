@@ -1,11 +1,11 @@
 {
  "council": {
-  "attempted_at": "2026-10-22T18:29:51Z",
-  "fetched_at": "2026-10-22T18:29:54Z",
-  "note": "720 Council voting results since 2019-01-01 from GSC 'Voting result' notes (Cellar list + data.consilium.europa.eu PDFs); 718 with per-country positions read from the annexed voting sheet; rules {'qmv': 677, 'unanimity': 43}. All 720 notes with a vote re-read from the downloaded PDFs after a parser update (2026-10-23). 2 notes without positions: ST-7085-2020 (two voting sheets, the one for this vote cannot be told apart) and ST-7080-2024 (one country's vote unreadable). The Council's open-data datasets were discontinued (2025) and its web voting-results pages are bot-protected.",
+  "attempted_at": "2026-10-23T09:16:26Z",
+  "fetched_at": "2026-10-23T09:16:29Z",
+  "note": "746 Council voting results since 2019-01-01 from GSC 'Voting result' notes (Cellar list + data.consilium.europa.eu PDFs); 744 with per-country positions read from the annexed voting sheet; rules {'qmv': 702, 'unanimity': 44}. 48 notes (re)processed, 719 unchanged and reused; 0 transient download failures. 2 notes with problems, e.g. ST-7080-2024: ST-7080-2024-INIT: p2: slot (390, row 13) unreadable: colour [0, 0, 0], grey 0; slot (658, row 13) unreadable: colour [0, 0, 0], grey 0; ST-7085-2020: ST-7085-2020-INIT: several voting sheets in one note. The Council's open-data datasets were discontinued (2025) and its web voting-results pages are bot-protected.",
   "records": {
-   "votes": 720,
-   "votes_with_positions": 718
+   "votes": 746,
+   "votes_with_positions": 744
   },
   "source": "council",
   "status": "ok"

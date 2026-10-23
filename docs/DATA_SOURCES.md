@@ -34,7 +34,9 @@ pipeline runs in CI without credentials). Details are refined from each ingestio
 - Council and Commission websites: reuse authorised with acknowledgement of the source, unless stated otherwise.
 
 The site footer and About page credit each source. MEP portraits are not used (avoids hot-linking third-party
-images that would expose visitors' IP addresses to another host).
+images that would expose visitors' IP addresses to another host). "Data refreshed" (`meta.json` `snapshot_at`) is
+the latest retrieval among the sources the About page lists (`SOURCES` in `build.py`, one per manifest entry), so
+a reader can trace it to one of them.
 
 ## Update frequency and refresh
 
@@ -128,11 +130,25 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   and adopted motions to reject the proposal or the Council's position, each with the file's decision as its
   timeline words it and what followed (adopted later, withdrawn; a consultation opinion is not binding), then
   files recorded as rejected without such a vote. Rejected objections and motions of censure are not listed: they
-  leave the Commission measure or the Commission in place.
+  leave the Commission measure or the Commission in place. Neither list holds decisions on discharge (procedure
+  type DEC, or titled "Discharge 2020: …" / "2019 Discharge: …"; `activity.is_discharge_vote`): a discharge vote
+  grants, postpones or refuses discharge, and its "adopted" or "rejected" does not say which without the proposal
+  voted on (vote 142787 rejected a proposal to postpone, so discharge was granted; 149084 adopted a refusal).
+  *Under discussion* badges name the procedure in plain words ("Ordinary procedure", "Consultation", "Consent",
+  else the procedure's type label), not its code. A featured card's `latest_note` names the amending acts EUR-Lex
+  lists for the file's act that are not in our EUR-Lex data (so the timeline cannot date them): the latest step
+  shown may be older than they are (2021/0366(COD): Delegated Regulation 2026/2102).
 - Feeds and activity: a final vote not already a file's milestone is titled by Parliament's step when the file is
   a consultation or consent procedure (CNS, APP, or the "*" / "***" symbol ending the vote's published subject):
   "Parliament delivered its opinion" / "a negative opinion", "Parliament gave its consent" / "did not give its
-  consent", rather than "Parliament adopted".
+  consent", rather than "Parliament adopted". A motion to reject says what became of the text, then names the
+  file: "Parliament did not reject the Commission proposal: <file>" for a rejected motion (vote 199567), "Parliament
+  rejected the Commission proposal" for an adopted one (179804), and likewise for the Council's position at second
+  reading (195807). A discharge decision is "Parliament voted on a discharge decision: …". A consent milestone
+  titled "Parliament voted on consent" says "Parliament gave its consent" (or "did not give …") when the final
+  vote linked to it records the outcome officially (published or in the minutes; 2025/0313(APP), vote 197472).
+  A Council vote is titled by its list title (`display_title`, below); an item with no page on the site links to
+  its official document instead of the site root.
 - `subject` in `votes/index.json`: the vote's published subject (vote item or minutes block title, without its
   procedure symbol), only when the display title and Parliament's label lack some of its words; the vote search
   matches it (vote 195775, titled after the act it amends, has the subject "Temporary derogation from the ePrivacy
@@ -295,23 +311,50 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   bound and the row links the decision (2 directives: 2023/2843 and 2024/1346).
 - The generic Denmark/Ireland caveat on a dossier is shown only where neither the recitals nor a Council voting
   result say whether the country took part.
+- Listed on the About page as its own source (`SOURCES["optouts"]`), with the number of directives read and of
+  those Denmark and Ireland are not bound by.
 
 ### Council of the EU (`council`) — ok
 - The Council's voting-results web pages are behind a browser check (403), and the data.europa.eu dataset
   "Council votes on legislative acts" is marked discontinued (its download returns 404).
-- Route used: Cellar lists the Council's official "Voting result" notes (ST documents); each PDF is downloadable
+- Route used: Cellar lists the Council's official "Voting result" notes (ST documents: English title starting
+  "Voting result", also after a dash or bullet as in "- Voting result -", "· Voting result ·", "− Voting result −",
+  26 notes of 2020–2025 such as ST 9887/25 on the wolf's protection status); each PDF is downloadable
   from `https://data.consilium.europa.eu/doc/document/ST-NNNNN-YYYY-INIT/EN/pdf`. Page 1 (text) gives the procedure,
   title, meeting or written procedure and statements; the per-country table in the annex is a raster image with a
   fixed template, read deterministically (`pdftoppm` + pixel classification, no OCR). Every one of the slots must
-  classify, otherwise positions are left empty ("fail closed"). The voting rule requires two agreeing signals, and
-  the sheet's printed result is cross-checked against QMV arithmetic (0 contradictions).
-- 720 votes 2019-01 → 2026-10; 717 with positions (672 QMV, 43 unanimity, 5 unknown). Verified against the
+  classify, otherwise positions are left empty ("fail closed"). The voting rule is read from two features of the
+  sheet that must agree (population column, footnote), and the sheet's printed result is cross-checked against the
+  arithmetic of that rule (0 contradictions). Both come from the same sheet, so they cannot catch a sheet that
+  prints the wrong rule: see the corrections below.
+- A note on a written procedure "initiated by CM 2163/21" without a completion date (ST 7108/21, 8502/21) is dated
+  by the Council event Cellar attaches it to (16 March and 7 September 2021), else by the note's own date.
+- 746 votes 2019-01 → 2026-10; 744 with positions; rules: 702 QMV, 44 unanimity (as the sheets print them); 2 notes
+  without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
+  unreadable). `meta.json` (`sources[council].note`) gives the counts of each release. Verified against the
   rendered sheets: AI Act (ST 10199/24, 27 in favour), Copyright Directive 2019 (6 against, 3 abstentions),
-  Eurodac 2024 (DK/IE not participating) and random samples.
+  Eurodac 2024 (DK/IE not participating), the wolf Directive 2025 (ST 9887/25: 24 in favour, Belgium, Spain and
+  Poland abstaining) and random samples.
 - QMV population figures per year from the Council decisions amending Annex III of its Rules of Procedure
   (CELEX 32018D2076, 32019D2209, 32020D2030, 32021D2320, 32022D2518, 32023D2827, 32024D3231, 32025D2427).
 - "Not participating" (opt-outs, e.g. DK/IE in justice and home affairs) is kept distinct from abstention.
-- Statements: the annex heading alone ("STATEMENTS") is not listed as a statement.
+- Statements: the headings of the texts in the note's annexes, in order: "Statement by …", "Declaration …",
+  "Explanation of vote …", "Explanation by Hungary of its vote", "Draft Joint Statement by the Council, …"
+  (ST 14020/20). A heading printed again for another text is numbered ("Statement by the Commission (2)"). The
+  annex heading alone ("STATEMENTS") is not listed. They are taken from the latest version of the note that prints
+  any: a REV replaces the INIT (ST 11580/20 INIT carried another act's statements; REV 1 has only Italy's).
+- Corrections (`data/curated/council_votes.yaml`): where the sheet prints "qualified majority" but the act's legal
+  basis, cited in the act, requires unanimity (Article 19(1), 81(3) or 312(2) TFEU, quoted in `UNANIMITY_BASES`),
+  the rule shown is unanimity, with `sheet_voting_rule` and a `voting_rule_note` saying what the sheet prints and
+  why (ST 9781/24, 5698/24, 7391/20, 15907/22). The outcome must then follow from the positions: ST 15907/22
+  (6 December 2022, MFF amendment, Hungary against) did not adopt the Regulation (`sheet_outcome` adopted,
+  `outcome_note`); the Council adopted it by written procedure on 15 December 2022 with Hungary abstaining, a
+  curated record (CM-5860-2022) taken from the Council's communication CM 5860/22, with a `source_note`.
+- `display_title` (lists: country pages, activity): the title without legal-form boilerplate, and for a vote on
+  another item than the act or the Council's first-reading position, the item voted on, as the subject lists it:
+  "Amendments of the European Parliament to the Council's position on the draft budget for 2027 – Non-approval of
+  the European Parliament's amendment(s)" (ST 14700/26), so that a country's "For" reads as support for the
+  non-approval. Country rows also carry `stage` and `outcome` ("Act not adopted by this vote").
 - Build-time checks against the procedure record (`vote_on_note` says when one applies): a note headed
   "Adoption of the legislative act" whose reference document is the Council's first-reading position (same
   number as OEIL's "Council position published"), followed by Parliament's second-reading decision, adopted
@@ -321,7 +364,10 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   the parent keeps a pointer (`council_votes_in_parts`).
 - QMV threshold: when it is not established whether the Council acted on a Commission proposal (an ordinary
   procedure opened by OEIL's "Legislative proposal published" without another initiator's document counts as
-  one), both numbers of Member States are given (`states_required` 55%, `states_required_alt` 72%).
+  one), both numbers of Member States are given (`states_required` 55%, `states_required_alt` 72%); the note says
+  that the sheet's footnote on the threshold is part of the image we do not read. The Council's consent to
+  Parliament's own regulation ("Consent of the Council (Article 228(4) TFEU)", ST 9947/21, the Ombudsman Statute)
+  is never on a Commission proposal: 72% of Member States, TFEU Art. 238(2).
 
 ### Legislative Train (`train`) — ok
 - 1,492 files across the 2014–19, 2019–24 and 2024–29 Commission terms; 663 carry procedure references. Statuses

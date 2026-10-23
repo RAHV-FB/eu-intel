@@ -182,6 +182,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.fcard__note {
+  display: block;
+  margin-top: var(--sp-1);
+}
+
 .fcard__foot {
   margin-top: auto;
   padding-top: var(--sp-2);

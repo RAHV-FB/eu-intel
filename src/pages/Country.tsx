@@ -17,17 +17,47 @@ import '../features/countries/countries.css';
 
 type GroupRow = { group: string; code: string; name: string; meps: number };
 type MepRow = CountryDetail['meps'][number];
+type CouncilRow = CountryDetail['council_votes'][number];
+
+/** Former Member States (the United Kingdom) have no country page; links to them land here. */
+const FORMER_MEMBER_STATES = new Set(['GB']);
+
+function FormerMemberState({ code }: { code: string }) {
+  const name = COUNTRY_NAMES[code];
+  return (
+    <div className="container page">
+      <p className="meta" style={{ marginBottom: 'var(--sp-3)' }}>
+        <Link to="/countries">← All countries</Link>
+      </p>
+      <PageHeader eyebrow="Former Member State" title={name} lead={`The ${name} was a Member State of the European Union until 31 January 2020.`} />
+      <p>
+        This site has country pages for the 27 current Member States only. Where the {name} took part in a vote recorded here before
+        it left, its government’s position in a Council vote is shown on that vote, and the votes of MEPs elected there on each MEP’s
+        page.
+      </p>
+    </div>
+  );
+}
+
+/** Tag on a Council vote row: what was voted on when it is not the act itself, or that the act was not adopted. */
+function CouncilRowTag({ v }: { v: CouncilRow }) {
+  if (v.vote_on === 'first_reading_position') return <Tag>{COUNCIL_VOTE_ON_SHORT.first_reading_position}</Tag>;
+  // an 'other' vote's title names the item voted on (Non-approval of the European Parliament's amendments, …)
+  if (v.vote_on === 'other' && !v.stage) return <Tag>{COUNCIL_VOTE_ON_SHORT.other}</Tag>;
+  if (v.vote_on === 'act' && v.outcome === 'not_adopted') return <Tag>Act not adopted by this vote</Tag>;
+  return null;
+}
 
 export default function Country() {
   const { code = '' } = useParams();
   const upper = code.toUpperCase();
-  const valid = upper in COUNTRY_NAMES && upper !== 'GB';
+  const valid = upper in COUNTRY_NAMES && !FORMER_MEMBER_STATES.has(upper);
   const { data: c, error, loading } = useData<CountryDetail>(valid ? `countries/${upper}.json` : null);
   const meta = useData<Meta>('meta.json');
   const groups = useGroups();
   const [allVotes, setAllVotes] = useState(false);
   const [showMeps, setShowMeps] = useState(false);
-  useDocumentTitle(c ? c.name : valid ? COUNTRY_NAMES[upper] : 'Country');
+  useDocumentTitle(c ? c.name : upper in COUNTRY_NAMES ? COUNTRY_NAMES[upper] : 'Country');
 
   const groupRows = useMemo<GroupRow[]>(
     () =>
@@ -43,6 +73,7 @@ export default function Country() {
     { key: 'name', dir: 'asc' },
   );
 
+  if (FORMER_MEMBER_STATES.has(upper)) return <FormerMemberState code={upper} />;
   if (!valid) return <NotFound what="country" />;
   if (loading) return <div className="container page"><Loading label="Loading country…" /></div>;
   if (isMissing(error)) return <NotFound what="country" />;
@@ -268,13 +299,8 @@ export default function Country() {
                           {formatDate(v.date)}
                         </td>
                         <td className="stack-title" role="cell">
-                          <RowTitle to={v.dossier_id ? dossierPath(v.dossier_id) : null}>{v.display_title ?? v.title}</RowTitle>
-                          {v.vote_on && v.vote_on !== 'act' && (
-                            <>
-                              {' '}
-                              <Tag>{COUNCIL_VOTE_ON_SHORT[v.vote_on]}</Tag>
-                            </>
-                          )}
+                          <RowTitle to={v.dossier_id ? dossierPath(v.dossier_id) : null}>{v.display_title ?? v.title}</RowTitle>{' '}
+                          <CouncilRowTag v={v} />
                         </td>
                         <td role="cell">
                           <StackLabel>{c.name}’s position</StackLabel>

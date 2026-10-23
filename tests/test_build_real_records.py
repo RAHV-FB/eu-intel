@@ -176,6 +176,118 @@ def test_both_qmv_thresholds_are_given_when_the_legal_basis_is_not_established()
     assert b and b["legal_basis"] == "TFEU Art. 238(3)(a)" and b["states_required_alt"] is None
 
 
+def test_council_consent_to_parliaments_ombudsman_statute_is_not_on_a_commission_proposal():
+    from pipeline.analysis.council_qmv import assess
+
+    # ST 9947/21, "Consent of the Council (Article 228(4) TFEU); Approval": the sheet prints "QMV without COM" and
+    # its footnote "72 % of members … (20 MS)"; the card said whether a Commission proposal existed was not recorded
+    cv = council("ST-9947-2021")["ST-9947-2021"]
+    a = Builder.council_rule_assessment(None, assess, cv, procs("2019-0900")["2019-0900"])  # type: ignore[arg-type]
+    assert a and (a["legal_basis"], a["states_required"], a["states_required_alt"]) == ("TFEU Art. 238(2)", 20, None)
+    assert "not established" not in a["note"]
+
+
+def _built_council(ids: list[str], dossiers: list[str], curated: Path | None = None) -> dict[str, dict]:
+    """Builder.build_council on the real records and data/curated/council_votes.yaml (or `curated`)."""
+    from pipeline.build import load_council_votes
+
+    fixes, extra, notes = load_council_votes(curated) if curated else load_council_votes()
+    p = procs(*dossiers)
+    by_ref = {x.reference: x for x in p.values()}
+    me = SimpleNamespace(
+        s=SimpleNamespace(council=list(council(*ids).values())), council_extra=extra, council_fixes=fixes,
+        council_extra_notes=notes, proc=p, files={}, resolve_ref=by_ref.get, council_split_part=lambda cv, d: None,
+        council_vote_on=lambda cv, p: (cv.vote_on, None),
+    )  # fmt: skip
+    me.council_rule_assessment = lambda assess, cv, p: Builder.council_rule_assessment(me, assess, cv, p)  # type: ignore[arg-type]
+    Builder.build_council(me)  # type: ignore[arg-type]
+    me.council_records = {r["id"]: r for r in me.council_public}
+    return me  # type: ignore[return-value]
+
+
+def test_council_rule_follows_a_legal_basis_that_requires_unanimity():
+    from pipeline.build import council_vote_event
+
+    # The sheets print "Voting Rule: qualified majority", but the acts' citations name Article 19(1) TFEU (ST 9781/24,
+    # Council Directive (EU) 2024/1499), 81(3) (ST 5698/24, Decision (EU) 2024/592) and 312 (ST 7391/20, Regulation
+    # 2020/538; ST 15907/22, Regulation 2022/2496), under which the Council acts unanimously. Protocol No 37,
+    # Article 2 (ST 10959/21, Decision (EU) 2021/1208) requires no unanimity: the sheet's rule stands.
+    ids = ["ST-9781-2024", "ST-5698-2024", "ST-7391-2020", "ST-15907-2022", "ST-10959-2021"]
+    me = _built_council(ids, ["2022-0401", "2023-0027", "2020-0055", "2022-0369", "2020-0142"])
+    r = me.council_records  # type: ignore[attr-defined]
+    for vid in ("ST-9781-2024", "ST-5698-2024", "ST-7391-2020"):
+        assert (r[vid]["voting_rule"], r[vid]["sheet_voting_rule"], r[vid]["outcome"]) == ("unanimity", "qmv", "adopted")
+        assert r[vid]["assessment"]["single_state_veto_possible"] is True
+        assert "labels the voting rule “qualified majority”" in r[vid]["voting_rule_note"]
+    assert "Article 81(3)" in r["ST-5698-2024"]["voting_rule_note"]
+    assert r["ST-5698-2024"]["assessment"]["legal_basis"] == "TFEU Art. 238(4) (participating Member States only)"
+    assert r["ST-10959-2021"]["voting_rule"] == "qmv" and "sheet_voting_rule" not in r["ST-10959-2021"]
+    # 6 December 2022: Hungary's vote against meant the MFF amendment was not adopted (the sheet marks it adopted);
+    # the Council adopted it by written procedure on 15 December 2022, Hungary abstaining (CM 5860/22)
+    mff = r["ST-15907-2022"]
+    assert (mff["voting_rule"], mff["outcome"], mff["sheet_outcome"]) == ("unanimity", "not_adopted", "adopted")
+    assert mff["assessment"]["adopted_by_rule"] is False and "CM 5860/22" in mff["outcome_note"]
+    assert council_vote_event(mff)["title"] == "Council did not adopt the act"
+    cm = r["CM-5860-2022"]
+    assert (cm["dossier_id"], cm["date"], cm["voting_rule"], cm["outcome"], cm["vote_on"]) == (
+        "2022-0369", "2022-12-15", "unanimity", "adopted", "act",
+    )  # fmt: skip
+    assert cm["positions"]["HU"] == "abstain" and sum(x == "for" for x in cm["positions"].values()) == 26
+    assert cm["source"]["identifier"] == "CM 5860/22" and "CM 5860/22" in cm["source_note"]
+    ev = council_vote_event(cm)
+    assert (ev["kind"], ev["title"]) == ("council_adoption", "Council adopted the act (written procedure)")
+    # the file is dated by that adoption, as the act itself is (Regulation 2022/2496 "of 15 December 2022")
+    me2 = SimpleNamespace(today="2026-10-23", council_of={"2022-0369": [cm, mff]})
+    me2.council_dated = lambda p: Builder.council_dated(me2, p)  # type: ignore[arg-type]
+    p = procs("2022-0369")["2022-0369"]
+    assert Builder.adoption_dates(me2, p, [acts("32022R2496")["32022R2496"]])[0] == "2022-12-15"  # type: ignore[arg-type]
+
+
+def test_council_rule_correction_is_dropped_when_the_outcome_does_not_follow(tmp_path: Path):
+    # without the outcome, the MFF correction would show an act adopted under unanimity over a vote against
+    (tmp_path / "council_votes.yaml").write_text(
+        "corrections:\n"
+        "  - {vote: ST-15907-2022, celex: 32022R2496, legal_basis: TFEU Art. 312(2), citation: x}\n"
+        "  - {vote: ST-9781-2024, celex: 32024L1499, legal_basis: TFEU Art. 352, citation: x}\n",
+        encoding="utf-8",
+    )
+    me = _built_council(["ST-15907-2022", "ST-9781-2024"], ["2022-0369", "2022-0401"], tmp_path)
+    r = me.council_records  # type: ignore[attr-defined]
+    assert (r["ST-15907-2022"]["voting_rule"], r["ST-15907-2022"]["outcome"]) == ("qmv", "adopted")
+    assert r["ST-9781-2024"]["voting_rule"] == "qmv"  # a legal basis not in UNANIMITY_BASES is not used
+
+
+def test_council_list_title_names_the_item_voted_on():
+    from pipeline.build import council_vote_label
+
+    # every Member State voted FOR the non-approval of Parliament's amendments to the draft budget (Art. 314(4)(c)
+    # TFEU); the country pages showed "Amendments of the European Parliament …" with "For"
+    cv = council("ST-14700-2026", "ST-14735-2024", "ST-9781-2024")
+    label = {k: council_vote_label(x.title, x.vote_on, x.stage) for k, x in cv.items()}
+    assert label["ST-14700-2026"] == (
+        "Amendments of the European Parliament to the Council's position on the draft budget for 2027 – "
+        "Non-approval of the European Parliament's amendment(s)"
+    )
+    # "Adoption of the legislative act" on a budget note (the budget is not a legislative act) is left out
+    assert cv["ST-14735-2024"].stage.endswith("; Adoption of the legislative act")
+    assert label["ST-14735-2024"].endswith("for 2025 – Non-approval of the European Parliament's amendment(s)")
+    assert label["ST-9781-2024"].startswith("Council Directive on standards for equality bodies")
+
+
+def test_featured_card_names_amending_acts_the_timeline_cannot_date():
+    # EUDR (2021/0366(COD)): EUR-Lex lists Delegated Regulation (EU) 2026/2102 as amending Regulation (EU) 2023/1115,
+    # but it is not in our EUR-Lex data; the card's latest step (23 December 2025) is older than it
+    a = acts("32023R1115", "32024R3234", "32025R2650")
+    me = SimpleNamespace(dossier_acts={"2021-0366": [a["32023R1115"]]}, act=a)
+    note = Builder.undated_amendments_note(me, "2021-0366")  # type: ignore[arg-type]
+    assert note == (
+        "EUR-Lex also lists Regulation 2026/2102 as amending this act; its dates are not in our data, so the step "
+        "above may not be the latest."
+    )
+    me.act = {**a, "32026R2102": a["32025R2650"]}
+    assert Builder.undated_amendments_note(me, "2021-0366") is None  # type: ignore[arg-type]
+
+
 # ------------------------------------------------------------------- Parliament's decisions in the timeline
 def test_first_reading_decision_whose_final_vote_was_rejected():
     # 2025/0429(COD), 26 Mar 2026: "Commission proposal" REJECTED 228-311-92 (EP API DEC-189270); OEIL summary

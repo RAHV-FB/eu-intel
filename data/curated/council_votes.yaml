@@ -1,0 +1,106 @@
+# Council votes: what the Treaties require where a Council voting-result document prints something else, and a
+# Council adoption recorded only in another official Council document. Checked against the act's text, the
+# Treaty and the Council's own documents; the snapshot keeps what the voting-result documents print.
+#
+# corrections: the voting sheet prints "Voting Rule: qualified majority" although the act's legal basis, cited in
+#   the act itself, requires the Council to act unanimously. The build shows the rule as unanimity (TFEU Art.
+#   238(4): abstentions do not prevent unanimity) and says on the vote what the sheet prints and why. It accepts
+#   only a legal basis listed in UNANIMITY_BASES in pipeline/build.py, which quotes each Treaty provision.
+#   The Council's sheets are not checked against legal bases automatically: neither the sheet nor our data
+#   records the act's legal basis. These four were found by reading the legal basis (Cellar, and the act's
+#   citations) of every act adopted by a Council vote recorded as qualified majority outside the ordinary
+#   legislative procedure. Of those 24 votes (snapshot of 2026-10-22), 9 are on the annual budget, 1 (ST 9252/19)
+#   adopts an ordinary-procedure act, these 4 need unanimity, and the other 10 rest on Articles 23, 122, 182,
+#   228(4) and 349 TFEU or Article 2 of Protocol No 37, under which the Council acts by qualified majority.
+#   Fields:
+#     vote          the Council vote (ST id)
+#     celex         the act adopted
+#     legal_basis   key of UNANIMITY_BASES: the Treaty provision under which the act was adopted
+#     citation      the act's citation of its legal basis, verbatim
+#     outcome       optional: not_adopted, when under unanimity the vote did not adopt the act (a Member State
+#                   voted against); outcome_note then says what the Council did instead, citing its documents
+#     sources       [{label, url}] the texts checked
+#     reviewed      date of the last check
+#
+# records: a Council adoption that no voting-result document records, as the Council's communication on the
+#   outcome of a written procedure states it (each delegation's vote in words). Shown like a voting result, with
+#   that document as its source. Fields as in data/snapshot/council/votes.json (CouncilVote), plus reviewed.
+#
+# Last full review: 2026-10-23.
+
+corrections:
+  - vote: "ST-15907-2022"  # 6 December 2022, ECOFIN: amendment of the 2021-2027 multiannual financial framework
+    celex: "32022R2496"
+    legal_basis: "TFEU Art. 312(2)"
+    citation: "Having regard to the Treaty on the Functioning of the European Union, and in particular Article 312 thereof"
+    outcome: not_adopted
+    outcome_note: >-
+      The voting-result document marks the result as adopted. Under unanimity, Hungary's vote against meant that
+      the Regulation was not adopted at this meeting. On 9 December 2022 the Council's General Secretariat noted
+      that under Article 312(2) TFEU the Council may adopt it only acting unanimously and proposed a written
+      procedure (ST 15179/1/22 REV 1). The Council adopted the Regulation by written procedure completed on
+      15 December 2022, all Member States voting in favour except Hungary, which abstained (CM 5860/22):
+      Council Regulation (EU, Euratom) 2022/2496 of 15 December 2022.
+    sources:
+      - {label: "Council Regulation (EU, Euratom) 2022/2496, citations", url: "https://eur-lex.europa.eu/eli/reg/2022/2496/oj"}
+      - {label: "Council of the EU – ST 15179/1/22 REV 1", url: "https://data.consilium.europa.eu/doc/document/ST-15179-2022-REV-1/EN/pdf"}
+      - {label: "Council of the EU – CM 5860/22", url: "https://data.consilium.europa.eu/doc/document/CM-5860-2022-INIT/EN/pdf"}
+    reviewed: "2026-10-23"
+
+  - vote: "ST-7391-2020"  # 17 April 2020, written procedure: 2014-2020 MFF, Global Margin for Commitments
+    celex: "32020R0538"
+    legal_basis: "TFEU Art. 312(2)"
+    citation: "Having regard to the Treaty on the Functioning of the European Union, and in particular Article 312 thereof"
+    sources:
+      - {label: "Council Regulation (EU, Euratom) 2020/538, citations", url: "https://eur-lex.europa.eu/eli/reg/2020/538/oj"}
+    reviewed: "2026-10-23"
+
+  - vote: "ST-5698-2024"  # 23 January 2024: France empowered to negotiate with Algeria on family law
+    celex: "32024D0592"
+    legal_basis: "TFEU Art. 81(3)"
+    citation: "Having regard to the Treaty on the Functioning of the European Union, and in particular Article 81(3) thereof"
+    sources:
+      - {label: "Council Decision (EU) 2024/592, citations", url: "https://eur-lex.europa.eu/eli/dec/2024/592/oj"}
+    reviewed: "2026-10-23"
+
+  - vote: "ST-9781-2024"  # 7 May 2024: Council Directive on standards for equality bodies
+    celex: "32024L1499"
+    legal_basis: "TFEU Art. 19(1)"
+    citation: "Having regard to the Treaty on the Functioning of the European Union, and in particular Article 19(1) thereof"
+    sources:
+      - {label: "Council Directive (EU) 2024/1499, citations", url: "https://eur-lex.europa.eu/eli/dir/2024/1499/oj"}
+    reviewed: "2026-10-23"
+
+records:
+  # CM 5860/22, point 1(a): "all delegations voted in favour of, except for Hungary that abstained, the adoption of
+  # the Council Regulation amending Regulation (EU, Euratom) 2020/2093 ... The required unanimity has been
+  # reached. Therefore, the above Regulation of the Council is adopted." Written procedure opened by CM 5842/22,
+  # "completed on 15 December 2022 at 22:11". Annex: "Commission unilateral declaration on the volume of the
+  # guarantee from the EU budget for macro-financial assistance to Ukraine".
+  - id: "CM-5860-2022"
+    date: "2022-12-15"
+    title: "Council Regulation amending Regulation (EU, Euratom) 2020/2093 laying down the multiannual financial framework for the years 2021 to 2027"
+    procedure_refs: ["2022/0369(APP)"]
+    stage: "Adoption"
+    vote_on: act
+    written_procedure: true
+    voting_rule: unanimity
+    act_type: regulation
+    outcome: adopted
+    positions: {AT: for, BE: for, BG: for, CY: for, CZ: for, DE: for, DK: for, EE: for, ES: for, FI: for, FR: for,
+                GR: for, HR: for, HU: abstain, IE: for, IT: for, LT: for, LU: for, LV: for, MT: for, NL: for, PL: for,
+                PT: for, RO: for, SE: for, SI: for, SK: for}
+    statements:
+      - "Commission unilateral declaration on the volume of the guarantee from the EU budget for macro-financial assistance to Ukraine"
+    source:
+      institution: Council
+      url: "https://data.consilium.europa.eu/doc/document/CM-5860-2022-INIT/EN/pdf"
+      label: "Council of the EU – Outcome of the written procedure, CM 5860/22"
+      identifier: "CM 5860/22"
+      retrieved_at: "2026-10-23T09:00:00Z"
+      published: "2022-12-15"
+    note: >-
+      Recorded from the Council's communication on the outcome of the written procedure (CM 5860/22), which states
+      each delegation's vote in words; no voting-result document with a voting sheet was published for this
+      adoption.
+    reviewed: "2026-10-23"

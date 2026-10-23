@@ -493,9 +493,12 @@ export interface CouncilAssessment {
 export type CouncilVoteOn = 'act' | 'first_reading_position' | 'other';
 
 export interface CouncilVote {
-  id: string;
+  id: string; // ST number of the voting-result note, or of another Council document for a curated record (CM-5860-2022)
   date: ISODate;
   title: string;
+  // For lists: the title without legal-form boilerplate, plus the item voted on when it is neither the act nor the
+  // Council's first-reading position (pipeline: council_vote_label)
+  display_title?: string;
   dossier_id?: string | null;
   dossier_ref?: string | null;
   configuration?: string | null;
@@ -509,6 +512,15 @@ export interface CouncilVote {
   council_doc?: string | null; // e.g. "PE-CONS 24/24"
   voting_rule: 'qmv' | 'unanimity' | 'simple_majority' | 'unknown';
   outcome: 'adopted' | 'not_adopted' | 'unknown';
+  // Set only where the act's legal basis requires unanimity but the voting sheet prints "qualified majority"
+  // (data/curated/council_votes.yaml): what the sheet prints, and why the rule shown differs
+  sheet_voting_rule?: 'qmv' | null;
+  voting_rule_note?: string | null;
+  // Set only where, under that rule, the vote did not adopt the act although the sheet marks it adopted
+  sheet_outcome?: 'adopted' | null;
+  outcome_note?: string | null;
+  // A curated record taken from another Council document than a voting-result note: what it is
+  source_note?: string | null;
   positions: Record<string, CouncilPosition>; // ISO2 -> position
   // Only when positions is empty: why we could not read them from the published voting sheet (the Council
   // does publish them). Plain language, specific.
@@ -614,10 +626,14 @@ export interface CountryDetail extends CountrySummary {
     vote_id: string;
     date: ISODate;
     title: string; // official title, as published
-    display_title?: string; // the official title without leading legal-form boilerplate (pipeline: council_display_title)
+    // the official title without leading legal-form boilerplate, and the item voted on for an 'other' vote
+    // (pipeline: council_vote_label)
+    display_title?: string;
     pos: CouncilPosition;
     dossier_id?: string | null;
     vote_on?: CouncilVoteOn | null;
+    stage?: string | null; // item(s) voted on, as the voting-result document lists them
+    outcome?: CouncilVote['outcome'];
   }[];
   transposition: {
     celex: string;
@@ -703,6 +719,8 @@ export interface FeaturedItem {
   why: string;
   status: DossierStatus;
   latest?: TimelineEvent | null;
+  // Amending acts EUR-Lex lists for the file's act that are not in our data, so `latest` may be older than they are
+  latest_note?: string | null;
   next_step: NextStep;
   source: SourceRef;
   oeil_url?: string | null; // the human-readable procedure file on the Legislative Observatory
