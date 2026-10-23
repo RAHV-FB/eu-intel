@@ -1493,10 +1493,15 @@ def load_transposition_checks(curated: Path = CURATED) -> dict[str, dict]:
         ex = e.get("exemption")
         if ex is not None and not (
             isinstance(ex, dict) and all(isinstance(ex.get(k), str) and ex[k] for k in ("provision", "quote"))
-            and isinstance(ex.get("countries") or [], list) and set(ex.get("countries") or []) <= set(MEMBER_STATES)
+            and all(isinstance(ex.get(k) or [], list) and set(ex.get(k) or []) <= set(MEMBER_STATES)
+                    for k in ("countries", "named"))
+            and isinstance(ex.get("country_note") or "", str)
         ):  # fmt: skip
             log.warning("curated transposition.yaml: entry %s has a malformed exemption; ignored", e["celex"])
             e = {k: v for k, v in e.items() if k != "exemption"}
+        if not isinstance(e.get("exceptions") or "", str):
+            log.warning("curated transposition.yaml: entry %s has malformed exceptions; ignored", e["celex"])
+            e = {k: v for k, v in e.items() if k != "exceptions"}
         out[e["celex"]] = e
     return out
 
@@ -1524,7 +1529,8 @@ def apply_transposition_checks(a: LegalAct, e: dict | None) -> LegalAct:
     if not {e["deadline"], e.get("applies_from") or e["deadline"], *(e.get("other") or [])} <= recorded:
         return a
     chk = entities.CheckedTransposition(
-        deadline=e["deadline"], applies_from=e.get("applies_from"), other=list(e.get("other") or [])
+        deadline=e["deadline"], applies_from=e.get("applies_from"), other=list(e.get("other") or []),
+        exceptions=_squash(e.get("exceptions")) or None,
     )
     return a.model_copy(update={"transposition_checked": chk})
 
@@ -2815,6 +2821,10 @@ class Builder:
                 )
             elif kind == "negotiation_mandate" and e.raw_type in NEGOTIATION_EVENT_TYPES:
                 negotiation.append(len(out))  # linked below, once every event of the day is linked
+            if title == "Parliament voted on consent" and (consent := _lazy("pipeline.analysis.status", "_consent_outcome")):
+                # the officially recorded outcome, as the status gives it (2025/0313(APP): vote 197472, adopted)
+                title = {"adopted": "Parliament gave its consent", "rejected": "Parliament did not give its consent"}.get(
+                    consent(votes, e.date) or "", title)  # fmt: skip
             src = _event_src(e.source)
             if (urgent := urgency_vote(e, votes, self.indexed_vote_ids)) is not None:
                 if e.date in urgency_at:  # the day's other record of the same vote: its documents only
@@ -2926,8 +2936,13 @@ class Builder:
                         doc |= {"label": _squash(cite.get("label")), "url": cite.get("url")}
                     elif a.amended_by:  # Cellar's current record, which may reflect later amendments
                         doc["label"] = f"EUR-Lex record, CELEX {a.celex}"
+                detail, chk = label, a.transposition_checked
+                if kind == "transposition_deadline" and chk and chk.exceptions and any(
+                    x.date == d and x.kind == "deadline" for x in tr
+                ):  # not every Member State had this deadline (Directive (EU) 2016/798, Art. 33(2), (2a) and (4))
+                    detail = f"{label}. Exceptions in its text: {chk.exceptions}"
                 out.append({
-                    "id": f"act-{a.celex}-{kind}-{d}", "date": d, "kind": kind, "title": title, "detail": label,
+                    "id": f"act-{a.celex}-{kind}-{d}", "date": d, "kind": kind, "title": title, "detail": detail,
                     "institution": "EP and Council" if kind == "signature" else "EUR-Lex",
                     "state": "scheduled" if future else "done",
                     "key": True, "docs": [doc], "source": src, "vote_id": None,
@@ -3036,9 +3051,20 @@ class Builder:
             # Denmark/Ireland without measures where neither the recitals nor a Council vote say whether they are bound
             "participation_unknown": [c for c in ("DK", "IE") if not self.participation_recorded(a.celex, c)],
             **({"infringements_from": INFRINGEMENTS_FROM} if older else {}),
-            # the directive's own exemption from transposition (data/curated/transposition.yaml), quoted
-            **({"exemption": {k: exemption.get(k) for k in ("provision", "quote", "countries")}} if exemption else {}),
+            # the directive's own exemption from transposition (data/curated/transposition.yaml), quoted; `named`: the
+            # countries it exempts from some provisions only (Directive (EU) 2016/797, Art. 57(5)), rows unchanged
+            **({"exemption": {k: exemption.get(k) for k in ("provision", "quote", "countries", "named")}}
+               if exemption else {}),
         }  # fmt: skip
+
+    def not_required_note(self, celex: str) -> str | None:
+        """What a country row marked not_required rests on: "Art. 33(4): for as long as no rail system is established
+        within its territory (...)", "Art. 40: the directive is not addressed to it" (data/curated/transposition.yaml,
+        exemption `country_note`)."""
+        ex = (self.transposition_checks.get(celex) or {}).get("exemption") or {}
+        if not ex.get("countries"):
+            return None
+        return f"{ex['provision']}: {_squash(ex['country_note'])}" if ex.get("country_note") else ex["provision"]
 
     def with_recorded_events(self, p: Procedure) -> Procedure:
         """The procedure with official facts that its EP/OEIL record lacks: a Commission withdrawal or
@@ -3183,6 +3209,18 @@ class Builder:
             # OEIL still lists "Act approved by Council, 2nd reading", dated on the signature day
             title = "Recorded by the Legislative Observatory: “Act approved by Council, 2nd reading”"
             inst, kind = "OEIL", EventKind.other
+        detail = e.detail
+        if p.type == "COD" and e.raw_type == "oeil:Act adopted by Council after Parliament's 1st reading" and (second := sorted(
+            x.date for x in p.events if x.date > e.date and SECOND_READING_DECISION_RE.search(x.raw_type or "")
+        )):  # fmt: skip
+            # a second reading followed, on the Council's first-reading position (Art. 294(5) to (7) TFEU): the Council
+            # did not adopt the act after Parliament's first reading (2018/0202(COD): OEIL 21 April 2021, the day of
+            # "Council position published"; Regulation (EU) 2021/691: "position of the Council at first reading of
+            # 19 April 2021 ... Position of the European Parliament of 27 April 2021")
+            title = "Recorded by the Legislative Observatory: “Act adopted by Council after Parliament's 1st reading”"
+            inst, kind = "OEIL", EventKind.other
+            detail = (f"Not the adoption of the act: Parliament decided on the Council's first-reading position at "
+                      f"second reading on {_long_date(second[0])} (Article 294(5) to (7) TFEU).")  # fmt: skip
         if e.kind == EventKind.proposal or e.raw_type == "oeil:Preparatory document":
             prop = e.kind == EventKind.proposal
             known = next((OEIL_PROPOSAL_AUTHORS[i] for i in ids if i in OEIL_PROPOSAL_AUTHORS), None)
@@ -3202,9 +3240,9 @@ class Builder:
             elif any(re.match(r"N\d+-", i) for i in ids) or not prop:  # the author is not in our record
                 what = "Legislative proposal" if prop else "Preparatory document"
                 title, inst = f"{what} published (as recorded by the Legislative Observatory)", "OEIL"
-        if (title, inst, kind) == (e.title, e.institution, e.kind):
+        if (title, inst, kind, detail) == (e.title, e.institution, e.kind, e.detail):
             return e
-        return e.model_copy(update={"title": title, "institution": inst, "kind": kind})
+        return e.model_copy(update={"title": title, "institution": inst, "kind": kind, "detail": detail})
 
     def adoption_dates(self, p: Procedure, acts: list[LegalAct]) -> tuple[str | None, str | None]:
         """(adopted, published), with the Council's steps dated as the timeline shows them. In the ordinary
@@ -3252,17 +3290,25 @@ class Builder:
 
     def council_step_dated(self, events: list[Event], cd: dict) -> list[Event]:
         """The Legislative Observatory's Council adoption step nearest to the date the act's text gives for the
-        Council's decision (data/curated/council_dates.yaml), moved to that date and citing the act."""
+        Council's decision (data/curated/council_dates.yaml), moved to that date and citing the act. The act records
+        one decision of the Council: OEIL's other adoption steps of the file near that date are the same adoption and
+        are merged into it (2014/0174(COD): OEIL 13 July and 6 October 2015, "decision of the Council of 18 September
+        2015", Regulation (EU) 2015/1843)."""
         steps = [e for e in events if e.kind == EventKind.council_adoption and (e.raw_type or "").startswith("oeil:")
                  and abs(_days_between(e.date, cd["date"])) <= 92]  # fmt: skip
         step = min(steps, key=lambda e: abs(_days_between(e.date, cd["date"])), default=None)
-        if step is None or step.date == cd["date"]:
+        merged = [e for e in steps if e is not step]
+        events = [e for e in events if not any(e is m for m in merged)]
+        if step is None or all(e.date == cd["date"] for e in steps):
             return events
         a = self.act[cd["celex"]]
         doc = DocRef(id=a.celex, label=a.oj_ref or a.celex, kind="act", date=a.date_document, url=a.eurlex_url)
+        oeil = [_long_date(d) for d in sorted({e.date for e in steps})]
+        given = oeil[0] if len(oeil) == 1 else f"{', '.join(oeil[:-1])} and {oeil[-1]}"
         detail = (f"Date of the Council's decision in the text of {act_label(a)}: “{_squash(cd['quote'])}” "
-                  f"The Legislative Observatory gives {_long_date(step.date)}.")  # fmt: skip
-        dated = step.model_copy(update={"date": cd["date"], "detail": detail, "docs": [*step.docs, doc]})
+                  f"The Legislative Observatory gives {given}.")  # fmt: skip
+        docs = [*step.docs, *(d for m in merged for d in m.docs), doc]
+        dated = step.model_copy(update={"date": cd["date"], "detail": detail, "docs": docs})
         return [dated if e is step else e for e in events]
 
     @staticmethod
@@ -3787,12 +3833,15 @@ class Builder:
                 title = self.dossier_summary[ds[0]]["title"] if len(ds) == 1 else a.title
                 if len(ds) == 1 and sum(x.act_type == "directive" for x in self.dossier_acts.get(ds[0], [])) > 1:
                     title = f"{act_label(a)}: {title}"  # one of the file's directives (2013/0400(CNS) has two)
+                status = self.transposition_status(a.celex, code, deadline)
                 trans.append({
                     "celex": a.celex, "title": title,
                     "act": act_names[a.celex][0], "names": act_names[a.celex][1],
                     "dossier_id": ds[0] if len(ds) == 1 else None, "deadline": deadline,
                     "measures": len(self.measures_by.get((a.celex, code), [])),
-                    "status": self.transposition_status(a.celex, code, deadline),
+                    "status": status,
+                    # the exemption and its condition (Directive (EU) 2016/798, Art. 33(4)), not the bare label
+                    **({"status_note": self.not_required_note(a.celex)} if status == "not_required" else {}),
                 })  # fmt: skip
             self.files[f"countries/{code}.json"] = {
                 **summ,

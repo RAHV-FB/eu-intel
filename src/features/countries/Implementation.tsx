@@ -157,6 +157,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                     {/* phones: the deadline and status columns are hidden and shown here */}
                     <span className="only-narrow impl-dir__more">
                       <TranspositionStatusLabel status={r.status} />
+                      {r.status_note && <span className="meta" style={{ display: 'block' }}>{r.status_note}</span>}
                       <span className="meta" style={{ display: 'block' }}>
                         Deadline: {r.deadline ? formatDate(r.deadline) : 'not recorded'}
                       </span>
@@ -177,6 +178,8 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                   </td>
                   <td className="hide-narrow">
                     <TranspositionStatusLabel status={r.status} />
+                    {/* the exemption's provision and condition (Directive (EU) 2016/798, Art. 33(4)) */}
+                    {r.status_note && <span className="meta" style={{ display: 'block' }}>{r.status_note}</span>}
                   </td>
                 </tr>
               ))}

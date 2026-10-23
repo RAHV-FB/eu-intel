@@ -274,6 +274,14 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   application date before the general deadline in a paragraph that sets no deadline (VAT in the digital age,
   Art. 6(1): Member States "may apply ... from 14 April 2025"), or one the curated file marks. A directive with no
   transposition date (e.g. a codification) is described as such, never as one EU countries must transpose. The
+  next step speaks of "the Member States bound by the directive" (Art. 288 TFEU: not those it is not addressed
+  to, Directive (EU) 2016/1629, Art. 40; nor Denmark or Ireland under a Treaty opt-out). Where the directive's own
+  text gives some Member States more time or exempts them, the next step adds "except as its text provides" and
+  says how (`exceptions` in the curated file, checked against the text; also the detail of the deadline's
+  timeline step): Directive (EU) 2016/798, Art. 33(2) and (2a), extensions to 16 June 2020 and 31 October 2020,
+  and Art. 33(4), Cyprus and Malta while they have no rail system; Directive (EU) 2016/797, Art. 57(2), (2a) and
+  (5); Directive (EU) 2017/2397, Art. 39(2) to (4); Directive (EU) 2021/1233, Art. 2(1). The site's pages put a
+  deadline that has passed by the visitor's date in the build's past wording (src/lib/format.ts). The
   next step of a directive also names what the directives that have since amended it still require: the deadline
   that covers their changes to it, as their transposition article sets it (`amends` in the curated file;
   Directive (EU) 2026/470, Art. 5(1): Article 3, which amends the CSRD, by 19 Mar 2027; Article 4, which amends the
@@ -344,7 +352,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   Parliament's adoption. Consultation and consent files show no readings. The status of a consent file says
   "Parliament gave its consent" (or "Consent refused by Parliament") when the final votes linked to the file on
   the day of Parliament's decision have that officially recorded outcome (decision or minutes): 2025/0313(APP),
-  vote 197472 of 6 October 2026, adopted 462-121-75. Otherwise it says only that Parliament voted on consent.
+  vote 197472 of 6 October 2026, adopted 462-121-75. Otherwise it says only that Parliament voted on consent. The
+  timeline step of that day says the same ("Parliament gave its consent", "Parliament did not give its consent").
 - Parliament's decision at a sitting that the EP API records as amendments (`PLENARY_AMEND`, OEIL "Decision by
   Parliament") is, in a consultation file, Parliament's opinion ("Parliament delivered its opinion", 2018/0173(CNS):
   T8-0415/2018 "Approves the Commission proposal as amended") and, in a consent file, its decision on consent: a
@@ -358,14 +367,32 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   shown on the act's date, with OEIL's date in the detail); never after publication.
 - The Council's adoption checked against the act's text: every act of the ordinary legislative procedure gives
   the date of the Council's decision in the footnote to "Acting in accordance with the ordinary legislative
-  procedure" ("… and decision of the Council of 24 May 2024", Directive (EU) 2024/1760). Where it differs from
-  the date we have, `data/curated/council_dates.yaml` gives it with the footnote quoted; the build then dates
-  OEIL's Council step (timeline, status, "Adopted", with OEIL's date in the detail and the act linked) or the
-  Council's voting result it names (a meeting held over several days, otherwise dated by its first day:
-  ST 10263/24, 23-24 May 2024) by it. Checked on 2026-10-23: the 58 ordinary-procedure acts dated from OEIL
-  alone whose date differs from Cellar's Council approval event (`APR_R1_byCONSIL`) or that have none; 35
-  differ from their text (by up to six weeks: 2015/0283(COD), OEIL 18 April 2017, "decision of the Council of
-  29 May 2017"). Acts dated from OEIL whose date Cellar confirms (341) were not read.
+  procedure" ("… and decision of the Council of 24 May 2024", Directive (EU) 2024/1760). That is the date as the
+  act records it, not the Council's own record of its vote, and the two can differ (Regulation (EU) 2018/1807:
+  "decision of the Council of 6 November 2018"; the Council's voting result ST 14173/18 is of 9 November 2018).
+  The Council's voting result therefore comes first; the footnote is used where we have none, in place of OEIL's
+  Council step; OEIL's step comes last. Where the footnote differs from the date we have,
+  `data/curated/council_dates.yaml` gives it with the footnote quoted; the build then dates OEIL's Council step
+  (timeline, status, "Adopted", with OEIL's date in the detail and the act linked) by it, and treats OEIL's other
+  Council adoption steps of the file within 92 days as the same decision, merged into that step (2014/0174(COD):
+  OEIL 13 July and 6 October 2015, "decision of the Council of 18 September 2015"). An entry names a Council
+  voting result only when its voting sheet's "Sitting date" is the footnote's day: a note for a meeting held over
+  several days gives the range and is otherwise dated by its first day (ST 10263/24 and ST 10264/24, 23-24 May
+  2024, "Sitting date: 24/05/2024"; the sheets of the other 150 such voting results in the snapshot give the date
+  shown, and OEIL's date, on another day of the meeting for six of them, would have been wrong). No entry is made
+  where the Council's own voting result gives another day than the footnote (2017/0228(COD) keeps 9 November
+  2018). Checked on 2026-10-23: the 58 ordinary-procedure acts dated from OEIL alone whose date differs from
+  Cellar's Council approval event (`APR_R1_byCONSIL`) or that have none; 35 differ from their text (by up to six
+  weeks: 2015/0283(COD), OEIL 18 April 2017, "decision of the Council of 29 May 2017"). Acts dated from OEIL whose
+  date Cellar confirms (341) were not read. Entries for acts adopted before 2019 rest on the footnote alone (the
+  Council source starts in 2019).
+- OEIL's "Act adopted by Council after Parliament's 1st reading" in a file where Parliament later decided at
+  second reading is not the act's adoption: the second reading was on the Council's first-reading position (Art.
+  294(5) to (7) TFEU). It is shown as "Recorded by the Legislative Observatory: …", not as a key step, with that
+  explanation (2018/0202(COD): OEIL 21 April 2021, the day the Council's position was published; Regulation (EU)
+  2021/691, "position of the Council at first reading of 19 April 2021", Parliament's second reading 27 April
+  2021). `validate` fails a build in which an ordinary-procedure file with one act shows Council adoption steps on
+  more than one day, or one before Parliament's second-reading decision.
 - Negotiations: "Negotiations with the Council" runs from the first recorded trilogue after Parliament's
   mandate; mandate decisions (not their announcement in plenary) are key timeline steps and activity items.
   Parliament holds a mandate from its own decision (a referral back to committee for negotiations, a plenary
@@ -461,13 +488,17 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   deadline and counts (`implementation` for the first, `implementation_more` for the others; 2013/0400(CNS):
   Directive 2014/86/EU and Directive (EU) 2015/121, whose Irish and Swedish measures concern the second only).
   Country pages name each directive's number in its row.
-- Exemptions written into a directive (`exemption` in `data/curated/transposition.yaml`, quoted): the countries a
-  provision exempts from the whole directive show "Not required by the directive" (`not_required`) instead of "No
-  measures found": Directive (EU) 2016/798, Art. 33(4), Cyprus and Malta "for as long as no rail system is
-  established within their territories"; Directive (EU) 2016/1629, Art. 40, addressed to all Member States except
-  eleven. A derogation that names no country (Directive (EU) 2017/2397, Art. 39(4), which Directive (EU) 2021/1233
-  applies) or covers some articles only (Directive (EU) 2016/797, Art. 57(5)) is quoted under the table. The next
-  step after a passed deadline speaks of "the Member States it binds" (Art. 288 TFEU).
+- Exemptions written into a directive (`exemption` in `data/curated/transposition.yaml`, quoted with every
+  subparagraph): the countries a provision exempts from the whole directive, or to which the directive is not
+  addressed, show "Not required by the directive" (`not_required`) instead of "No measures found", and their
+  country pages add the provision and its condition (`status_note`): Directive (EU) 2016/798, Art. 33(4), Cyprus
+  and Malta "for as long as no rail system is established within their territories" (with measures due within
+  two years of an official application to build a railway line); Directive (EU) 2016/1629, Art. 40, addressed to
+  all Member States except eleven. A derogation that names no country (Directive (EU) 2017/2397, Art. 39(4), which
+  Directive (EU) 2021/1233 applies) is quoted under the table, which says that "No measures found" may reflect it.
+  One that exempts named countries from some articles only (Directive (EU) 2016/797, Art. 57(5): Cyprus and Malta,
+  Article 13 and others; `named`) is quoted with those countries named, and their rows are not marked: they must
+  still transpose the rest.
 - Country indicators (Single Market Scoreboard): **unavailable** — host returns a CloudFront 403 to scripts;
   data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed. Country
   pages show an indicators section only when a release has indicators.
@@ -559,8 +590,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   Statute of the European Ombudsman) is shown as the Council's step ("Council gave its consent"), in place of
   OEIL's record of the same step.
 - `date_note`: a voting result of a meeting held over several days, which the note does not date to one day, is
-  dated by its first day unless `data/curated/council_dates.yaml` gives the day from the act's text (and, for
-  ST 10263/24, the voting sheet's "Sitting date: 24/05/2024"); the note then says so.
+  dated by its first day unless `data/curated/council_dates.yaml` gives the day from the act's text, which the
+  voting sheet's "Sitting date" confirms (ST 10263/24 and ST 10264/24: "Sitting date: 24/05/2024"); the note then
+  says so.
 - QMV threshold: when it is not established whether the Council acted on a Commission proposal (an ordinary
   procedure opened by OEIL's "Legislative proposal published" with its COM document and no other initiator's
   document counts as one), both numbers of Member States are given (`states_required` 55%,

@@ -4,27 +4,48 @@
 # Every act adopted under the ordinary legislative procedure gives the dates of the institutions' decisions in
 # the footnote to its citation "Acting in accordance with the ordinary legislative procedure", e.g. Directive
 # (EU) 2024/1760: "Position of the European Parliament of 24 April 2024 (not yet published in the Official
-# Journal) and decision of the Council of 24 May 2024." Without a Council voting result, the build dates the
-# Council's adoption by the Legislative Observatory's key event "Act adopted by Council after Parliament's 1st
-# reading", which is sometimes days or weeks off (the signature day, or a later meeting); a voting result of a
-# Council meeting held over several days is dated by its first day when nothing else in the record names the
-# day. Each entry dates, in the build only, the Council's adoption of one file: the Legislative Observatory's
-# step (timeline, status, "Adopted") and, when `vote` names it, the Council's voting result on the act; the
-# snapshot keeps the source values. An entry whose act is not the file's, or whose quote does not give the date,
-# is not applied (a warning is logged).
+# Journal) and decision of the Council of 24 May 2024." The footnote is the date of the Council's decision as the
+# act records it. It is not the Council's own record of its vote, and the two can differ: Regulation (EU)
+# 2018/1807 (2017/0228(COD)) gives "decision of the Council of 6 November 2018", while the Council's voting result
+# ST 14173/18 is for its meeting of "9 November 2018".
+#
+# Which date the build uses for the Council's adoption, first to last:
+# 1. The Council's voting result on the act: the Council's own record of the vote, dated by its note (the build
+#    cannot read the voting sheet's "Sitting date", which is part of an image). A note for a meeting held over
+#    several days gives the range, and the vote is dated by its first day unless Cellar's record of the note names
+#    the day. An entry here names such a vote (`vote`) only when the sheet's "Sitting date" is another day and the
+#    footnote gives that day too: ST 10263/24 and ST 10264/24, 23-24 May 2024. Of the 152 voting results in the
+#    snapshot whose note gives several days (all sheets read on 2026-10-23), these are the only two whose sheet
+#    differs from the date shown; the Legislative Observatory names another day of the meeting for eight of the
+#    152, and only for these two is it the sheet's day, so its date does not decide.
+# 2. Without a voting result in our data (the Council source starts in 2019), the footnote, given here where it
+#    differs from the date we have. It replaces the Legislative Observatory's key event "Act adopted by Council
+#    after Parliament's 1st reading", which is sometimes days or weeks off (the signature day, or a later meeting)
+#    or recorded twice for one decision (2014/0174(COD): 13 July and 6 October 2015, "decision of the Council of
+#    18 September 2015"; both are merged into one step). No entry is made where the Council's own voting result is
+#    known to give another day than the footnote (2017/0228(COD): the Legislative Observatory's 9 November 2018,
+#    the date of ST 14173/18, is kept). The entries for acts adopted before 2019 rest on the footnote alone.
+# 3. Otherwise the Legislative Observatory's step.
+#
+# Each entry dates, in the build only, the Council's adoption of one file: the Legislative Observatory's step
+# (timeline, status, "Adopted") and, when `vote` names it, the Council's voting result on the act; the snapshot
+# keeps the source values. An entry whose act is not the file's, or whose quote does not give the date, is not
+# applied (a warning is logged).
 #
 # Fields:
 #   procedure   the procedure reference, e.g. "2022/0051(COD)"
 #   celex       the act whose text gives the date
 #   date        the date of the Council's decision in that text
 #   quote       the footnote, verbatim
-#   vote        optional; the Council voting result (snapshot id) on the act that this date replaces
-#   reason      optional; why, when `vote` is given
+#   vote        optional; the Council voting result (snapshot id) on the act that this date replaces, only when its
+#               voting sheet's "Sitting date" is this date (see 1. above)
+#   reason      optional; why, when `vote` is given: the sheet's "Sitting date", quoted
 #   reviewed    date of the check
 #
 # Last full review: 2026-10-23. Checked: every file of the ordinary legislative procedure whose adoption date came
 # from the Legislative Observatory and differed from Cellar's Council approval event (APR_R1_byCONSIL) or had none
-# (58 acts; the 35 that differ from the text are listed), and the Corporate Sustainability Due Diligence Directive.
+# (58 acts; the 35 that differ from the text are listed), and every Council voting result in the snapshot whose
+# note gives a meeting of several days (152; the two of 23-24 May 2024 are listed).
 
 - procedure: "2022/0051(COD)"  # Directive (EU) 2024/1760 (CSDDD)
   celex: "32024L1760"
@@ -35,6 +56,18 @@
   vote: "ST-10263-2024"
   reason: >-
     The voting result ST 10263/24 is for the 4026th meeting of the Council of 23-24 May 2024; its voting sheet
+    gives "Sitting date: 24/05/2024".
+  reviewed: "2026-10-23"
+
+- procedure: "2021/0428(COD)"  # Regulation (EU) 2024/1717 (Schengen Borders Code)
+  celex: "32024R1717"
+  date: "2024-05-24"
+  quote: >-
+    Position of the European Parliament of 24 April 2024 (not yet published in the Official Journal) and
+    decision of the Council of 24 May 2024.
+  vote: "ST-10264-2024"
+  reason: >-
+    The voting result ST 10264/24 is for the 4026th meeting of the Council of 23-24 May 2024; its voting sheet
     gives "Sitting date: 24/05/2024".
   reviewed: "2026-10-23"
 

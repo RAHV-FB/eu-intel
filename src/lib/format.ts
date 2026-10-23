@@ -53,8 +53,14 @@ function isoFromLong(day: string, month: string, year: string): ISODate {
 const PAST_TENSE: [RegExp, (date: string) => string][] = [
   [new RegExp(`The act enters into force on ${LONG_DATE}\\.`, 'g'), (d) => `The act entered into force on ${d}.`],
   [
-    new RegExp(`EU countries must transpose the directive into national law by ${LONG_DATE}\\.`, 'g'),
-    (d) => `The transposition deadline (${d}) has passed: EU countries were required to adopt national measures by then.`,
+    new RegExp(`The Member States bound by the directive must transpose it into national law by ${LONG_DATE}\\.`, 'g'),
+    (d) => `The transposition deadline (${d}) has passed: the Member States bound by the directive were required to adopt national measures by then.`,
+  ],
+  [
+    // a directive whose own text gives some Member States more time or exempts them (Directive (EU) 2016/798)
+    new RegExp(`The Member States bound by the directive must transpose it into national law by ${LONG_DATE}, except as its text provides\\.`, 'g'),
+    (d) =>
+      `The transposition deadline (${d}) has passed: the Member States bound by the directive were required to adopt national measures by then, except as its text provides.`,
   ],
   [new RegExp(`The national measures are to apply from ${LONG_DATE}`, 'g'), (d) => `The national measures were to apply from ${d}`],
 ];

@@ -23,10 +23,23 @@
 #   provision     the provision setting the general deadline
 #   quote         that provision, verbatim (long lists of articles shortened with [...])
 #   note          optional; what the act's other recorded dates are
-#   exemption     optional: the directive's own provision exempting Member States from transposing it, quoted:
-#                 {provision, quote, countries} (countries: only when the provision names them and exempts them from the
-#                 whole directive; their rows show "Not required by the directive"); without countries (a condition, or
-#                 some articles only) the provision is quoted on the page
+#   exemption     optional: the directive's own provision exempting Member States from transposing it, quoted in full
+#                 (every subparagraph): {provision, quote, countries, country_note, named}.
+#                 countries: only when the provision names them and exempts them from the whole directive, or the
+#                 directive is not addressed to them; their rows show "Not required by the directive", and their country
+#                 pages add "<provision>: <country_note>" (the condition, e.g. "for as long as no rail system is
+#                 established within its territory", or "the directive is not addressed to it").
+#                 named: the countries a provision names but exempts from some articles only (Directive (EU) 2016/797,
+#                 Art. 57(5)); their rows are not marked, and the page says the exemption covers those articles only.
+#                 Without either (a condition that names no country) the provision is quoted on the page, which says
+#                 that "No measures found" may reflect it
+#   exceptions    optional: what the directive's own text provides for some Member States beside the general deadline
+#                 (an extension of the transposition period, an exemption, a lighter obligation), in plain words naming
+#                 each provision, checked against the text. The next step then reads "... by then, except as its text
+#                 provides. <exceptions>", and the deadline's timeline step gives it. A directive binds only the Member
+#                 States to which it is addressed (Art. 288 TFEU), but it can still exempt some of them or give them
+#                 more time: without this, "the Member States bound by the directive were required to adopt national
+#                 measures by then" would claim more than the text says (Directive (EU) 2016/798, Art. 33(2), (2a), (4))
 #   amends        optional, for an amending directive: which of its deadlines covers its changes to each directive it
 #                 amends, as its transposition article sets them: [{celex, provision (its article making the
 #                 changes), deadline, further: [{date, provisions}] (later deadlines for some of those changes)}];
@@ -86,13 +99,27 @@
     provisions.
   source: {label: "Directive (EU) 2016/797, Article 57; Directive (EU) 2020/700, Article 1", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016L0797"}
   reviewed: "2026-10-23"
+  # Art. 57(2): "Member States may extend the transposition period referred to in paragraph 1 by one year";
+  # Art. 57(2a) (Directive (EU) 2020/700, Art. 1(2)): "Member States that have extended the transposition period in
+  # accordance with paragraph 2 may further extend it until 31 October 2020"
+  exceptions: >-
+    Member States that extended the transposition period by one year under Art. 57(2) had until 16 June 2020, and
+    those that then extended it further under Art. 57(2a), inserted by Directive (EU) 2020/700, had until
+    31 October 2020. Under Art. 57(5), the obligation to transpose and implement the articles it lists does not
+    apply to Cyprus and Malta for as long as no rail system is established within their territories; once an
+    official application to build a railway line is submitted, they must put in place measures implementing those
+    articles within two years of its receipt.
   exemption:
+    named: ["CY", "MT"]
     provision: "Art. 57(5)"
     quote: >-
       The obligation to transpose and implement Article 13, Article 14(1) to (8), (11) and (12), Article 15(1) to
       (9), Article 16(1), Articles 19 to 26, Articles 45, 46 and 47, Article 49(1) to (4) and Article 54 of this
       Directive shall not apply to Cyprus and Malta for as long as no rail system is established within their
-      territories.
+      territories. However, as soon as a public or private entity submits an official application to build a
+      railway line with a view to its operation by one or more railway undertakings, the Member States concerned
+      shall put in place measures to implement the Articles referred to in the first subparagraph within two years
+      of receipt of the application.
 
 - celex: "32016L0798"  # Railway Safety Directive
   deadline: "2019-06-16"
@@ -108,12 +135,28 @@
     provisions.
   source: {label: "Directive (EU) 2016/798, Article 33; Directive (EU) 2020/700, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016L0798"}
   reviewed: "2026-10-23"
+  # Art. 33(2): "Member States may extend the transposition period referred to in paragraph 1 by 1 year";
+  # Art. 33(2a) (Directive (EU) 2020/700, Art. 2(5)): "Member States that have extended the transposition period in
+  # accordance with paragraph 2 may further extend it until 31 October 2020"
+  exceptions: >-
+    Member States that extended the transposition period by one year under Art. 33(2) had until 16 June 2020, and
+    those that then extended it further under Art. 33(2a), inserted by Directive (EU) 2020/700, had until
+    31 October 2020. Under Art. 33(4), the obligation to transpose and implement the directive does not apply to
+    Cyprus and Malta for as long as no rail system is established within their territories; once an official
+    application to build a railway line is submitted, they must put in place measures to implement it within two
+    years of its receipt.
   exemption:
     countries: ["CY", "MT"]
-    provision: "Art. 33(4), first subparagraph"
+    country_note: >-
+      for as long as no rail system is established within its territory (measures are due within two years of an
+      official application to build a railway line)
+    provision: "Art. 33(4)"
     quote: >-
       The obligation to transpose and implement this Directive shall not apply to Cyprus and Malta for as long as
-      no rail system is established within their territories.
+      no rail system is established within their territories. However, as soon as a public or private entity
+      submits an official application to build a railway line with a view to its operation by one or more railway
+      undertakings, the Member States concerned shall put in place measures to implement this Directive within 2
+      years of the receipt of the application.
 
 - celex: "32016L1629"  # Technical requirements for inland waterway vessels
   deadline: "2018-10-07"
@@ -124,6 +167,7 @@
     this date.
   exemption:
     countries: ["DK", "EE", "IE", "GR", "ES", "CY", "LV", "MT", "PT", "SI", "FI"]
+    country_note: "the directive is not addressed to it"
     provision: "Art. 40"
     quote: >-
       This Directive is addressed to the Member States except Denmark, Estonia, Ireland, Greece, Spain, Cyprus,
@@ -147,11 +191,22 @@
   quote: >-
     Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
     with this Directive by 17 January 2022.
+  # Art. 39(2) and (3): such a Member State "shall only be obliged to bring into force those measures which are
+  # necessary to ensure compliance with" the provisions listed, "by 17 January 2022"
+  exceptions: >-
+    A Member State in which all persons referred to in Articles 4(1), 5(1) and 6 operate exclusively on national
+    inland waterways not linked to the navigable network of another Member State (Art. 39(2)), or in which all
+    persons are exempted under Art. 2(3) (Art. 39(3)), had to bring into force by then only the measures those
+    paragraphs list. Under Art. 39(4), a Member State is not obliged to transpose the directive as long as inland
+    waterway navigation is not technically possible on its territory.
   exemption:
     provision: "Art. 39(4)"
     quote: >-
       By way of derogation from paragraph 1 of this Article, a Member State shall not be obliged to transpose this
-      Directive as long as inland waterway navigation is not technically possible on its territory.
+      Directive as long as inland waterway navigation is not technically possible on its territory. Such Member
+      State may not issue Union certificates of qualification or approve training programmes or simulators until it
+      has transposed and implemented the provisions of this Directive and informed the Commission that it has done
+      so.
   source: {label: "Directive (EU) 2017/2397, Article 39", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32017L2397"}
   reviewed: "2026-10-23"
 
@@ -245,6 +300,10 @@
   quote: >-
     Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
     with this Directive by 17 January 2022.
+  exceptions: >-
+    Under Art. 2(1), the derogation in Article 39(4) of Directive (EU) 2017/2397 applies to it, mutatis mutandis: a
+    Member State is not obliged to transpose it as long as inland waterway navigation is not technically possible
+    on its territory.
   exemption:
     provision: "Art. 2(1), third subparagraph, applying Article 39(4) of Directive (EU) 2017/2397"
     quote: >-

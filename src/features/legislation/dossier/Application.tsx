@@ -26,6 +26,12 @@ function earlierNotified(d: DossierDetail, impl: DossierImplementation): boolean
   return !!date && impl.countries.some((c) => !!c.latest_notification && c.latest_notification < date);
 }
 
+/** "Cyprus and Malta", "Denmark, Ireland and Malta". */
+function namesList(codes: string[]): string {
+  const names = codes.map(countryName);
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : (names[0] ?? '');
+}
+
 function StatusMark({ s }: { s: TranspositionStatus }) {
   return <span className={`tp tp--${s}`}>{TRANSPOSITION_LABEL[s]}</span>;
 }
@@ -151,7 +157,10 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
             ? '“Not required by the directive” follows the directive’s own text'
             : 'The directive provides a derogation from transposition'}{' '}
           ({impl.exemption.provision}): “{impl.exemption.quote}”
-          {!impl.exemption.countries?.length && ' It names no country, so “No measures found” may reflect it.'}
+          {!impl.exemption.countries?.length &&
+            (impl.exemption.named?.length
+              ? ` It exempts ${namesList(impl.exemption.named)} from the provisions it lists only, not from the rest of the directive, so their rows are not marked.`
+              : ' It names no country, so “No measures found” may reflect it.')}
         </p>
       )}
       {impl.countries.some((c) => c.status === 'not_participating') && (

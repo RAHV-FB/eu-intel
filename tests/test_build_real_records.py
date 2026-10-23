@@ -634,7 +634,7 @@ def test_council_adoption_is_dated_by_the_acts_own_text():
     from pipeline.build import load_council_dates
 
     cur = load_council_dates()
-    assert len(cur) == 36 and cur["2015/0283(COD)"]["date"] == "2017-05-29"
+    assert len(cur) == 37 and cur["2015/0283(COD)"]["date"] == "2017-05-29"
     for pid, celex, want, oeil in (("2015-0283", "32017L1132", "2017-05-29", "18 April 2017"),
                                    ("2016-0064", "32016R2030", "2016-09-20", "19 October 2016")):  # fmt: skip
         p, a = procs(pid)[pid], acts(celex)[celex]
@@ -664,6 +664,103 @@ def test_council_vote_of_a_meeting_over_several_days_is_dated_by_the_act():
     # a vote no entry names keeps the voting result's date (2022/0906: ST 8001/24)
     p2 = procs("2022-0906")["2022-0906"]
     assert Builder.council_vote_date(me, cv["ST-8001-2024"], p2, "act") == (cv["ST-8001-2024"].date, None)  # type: ignore[arg-type]
+
+
+def test_second_vote_of_the_same_meeting_is_dated_by_its_sheet_and_the_act():
+    # Schengen Borders Code: ST 10264/24, the same 4026th meeting of 23-24 May 2024 as ST 10263/24; its sheet reads
+    # "Item: 2021/0428(COD) (Document: 40/24)" and "Sitting date: 24/05/2024", and Regulation (EU) 2024/1717 "Position
+    # of the European Parliament of 24 April 2024 ... and decision of the Council of 24 May 2024"
+    from pipeline.build import council_vote_event
+
+    cv = council("ST-10264-2024")["ST-10264-2024"]
+    p, a = procs("2021-0428")["2021-0428"], acts("32024R1717")["32024R1717"]
+    me = stand_in(acts_of={"2021-0428": [a]}, act={a.celex: a})
+    assert cv.date == "2024-05-23"
+    when, note = Builder.council_vote_date(me, cv, p, "act")  # type: ignore[arg-type]
+    assert when == "2024-05-24" and note and "Sitting date: 24/05/2024" in note and "Regulation (EU) 2024/1717" in note
+    rec = council_rec(cv) | {"date": when}
+    me = stand_in(acts_of={"2021-0428": [a]}, act={a.celex: a}, council_of={"2021-0428": [rec]})
+    q = Builder.with_recorded_events(me, p)  # type: ignore[arg-type]
+    assert Builder.adoption_dates(me, q, [a])[0] == "2024-05-24"  # type: ignore[arg-type]
+    tl = Builder.timeline(me, q, [a], [])  # type: ignore[arg-type]
+    assert [(x["date"], x["id"]) for x in tl if x["kind"] == "council_adoption"] == [("2024-05-24", "council-ST-10264-2024")]
+    assert council_vote_event(rec)["date"] == "2024-05-24"
+
+
+def test_oeil_steps_of_one_council_decision_are_one_step():
+    # 2014/0174(COD): OEIL lists "Act adopted by Council after Parliament's 1st reading" on 13 July and 6 October 2015;
+    # Regulation (EU) 2015/1843 gives one decision: "Position of the European Parliament of 7 July 2015 ... and decision
+    # of the Council of 18 September 2015"
+    from pipeline.validate import dossier_contradictions
+
+    p, a = procs("2014-0174")["2014-0174"], acts("32015R1843")["32015R1843"]
+    assert sorted(e.date for e in p.events if e.kind.value == "council_adoption") == ["2015-07-13", "2015-10-06"]
+    me = stand_in(acts_of={"2014-0174": [a]}, act={a.celex: a})
+    q = Builder.with_recorded_events(me, p)  # type: ignore[arg-type]
+    steps = [e for e in q.events if e.kind.value == "council_adoption"]
+    assert [e.date for e in steps] == ["2015-09-18"]
+    assert steps[0].detail and steps[0].detail.endswith("The Legislative Observatory gives 13 July 2015 and 6 October 2015.")
+    tl = Builder.timeline(me, q, [a], [])  # type: ignore[arg-type]
+    assert [x["date"] for x in tl if x["kind"] == "council_adoption"] == ["2015-09-18"]
+    assert Builder.adoption_dates(me, q, [a])[0] == "2015-09-18"  # type: ignore[arg-type]
+    assert dossier_contradictions({"type": "COD", "celex": [a.celex], "timeline": tl}) == []
+    # without the act's date both OEIL steps are shown, which the validator reports
+    before = Builder.timeline(stand_in(), Builder.with_recorded_events(stand_in(), p), [], [])  # type: ignore[arg-type]
+    assert dossier_contradictions({"type": "COD", "celex": [a.celex], "timeline": before}) == [
+        "Council adoption steps on 2 days: 2015-07-13, 2015-10-06"
+    ]
+
+
+def test_council_adoption_recorded_before_a_second_reading_is_not_the_adoption():
+    # 2018/0202(COD) (EGF): OEIL "Act adopted by Council after Parliament's 1st reading" on 21 April 2021, the day of
+    # "Council position published"; Parliament approved the Council's position at second reading on 27 April 2021.
+    # Regulation (EU) 2021/691: "position of the Council at first reading of 19 April 2021 ... Position of the
+    # European Parliament of 27 April 2021"
+    from pipeline.validate import dossier_contradictions
+
+    p = procs("2018-0202")["2018-0202"]
+    me = stand_in()
+    q = Builder.with_recorded_events(me, p)  # type: ignore[arg-type]
+    day = [e for e in q.events if e.date == "2021-04-21" and e.raw_type == "oeil:Act adopted by Council after Parliament's 1st reading"]
+    assert [(e.kind.value, e.institution) for e in day] == [("other", "OEIL")]
+    assert day[0].title == "Recorded by the Legislative Observatory: “Act adopted by Council after Parliament's 1st reading”"
+    assert day[0].detail and "at second reading on 27 April 2021" in day[0].detail
+    tl = Builder.timeline(me, q, [], [])  # type: ignore[arg-type]
+    assert not [x for x in tl if x["kind"] == "council_adoption" and x["date"] < "2021-04-27"]
+    assert [x["key"] for x in tl if x["id"] == day[0].id] == [False]
+    assert Builder.adoption_dates(me, q, [])[0] == "2021-04-27"  # type: ignore[arg-type]
+    assert dossier_contradictions({"type": "COD", "celex": ["32021R0691"], "timeline": tl}) == []
+    # the step as it was shown is caught by the validator
+    shown = [*tl, {"date": "2021-04-21", "kind": "council_adoption", "title": "Council adopted the act after Parliament's first reading"}]
+    assert dossier_contradictions({"type": "COD", "celex": ["32021R0691"], "timeline": shown}) == [
+        "Council adoption step of 2021-04-21, before Parliament's second reading of 2021-04-27"
+    ]
+    # the same OEIL event without a later second reading is the adoption (2014/0174(COD))
+    q2 = Builder.with_recorded_events(me, procs("2014-0174")["2014-0174"])  # type: ignore[arg-type]
+    assert [e.title for e in q2.events if e.kind.value == "council_adoption"] == [
+        "Council adopted the act after Parliament's first reading"
+    ] * 2
+
+
+def test_consent_step_states_the_outcome_the_status_gives():
+    # 2025/0313(APP): decision MTG-PL-2026-10-06-DEC-197472, ADOPTED 462-121-75; the status says "Parliament gave its
+    # consent", and so does the timeline step of that day
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+
+    p, v = procs("2025-0313")["2025-0313"], votes("197472")
+    me = stand_in(votes_of={"2025-0313": list(v.values())}, indexed_vote_ids=set(v))
+    q = Builder.with_recorded_events(me, p)  # type: ignore[arg-type]
+    tl = Builder.timeline(me, q, [], list(v.values()))  # type: ignore[arg-type]
+    step = [(x["title"], x["vote_id"]) for x in tl if x["date"] == "2026-10-06" and x["kind"] == "ep_position"]
+    assert step == [("Parliament gave its consent", "197472")]
+    assert classify(q, [], [], date(2026, 10, 23), votes=list(v.values())).label == "Parliament gave its consent"
+    # without an officially recorded outcome the step only says that Parliament voted
+    tl = Builder.timeline(stand_in(), Builder.with_recorded_events(stand_in(), p), [], [])  # type: ignore[arg-type]
+    assert [x["title"] for x in tl if x["date"] == "2026-10-06" and x["kind"] == "ep_position"] == [
+        "Parliament voted on consent"
+    ]
 
 
 def test_every_curated_council_date_names_the_files_act():
@@ -897,6 +994,87 @@ def test_countries_the_directive_exempts_are_not_shown_as_missing_measures():
     boat = Builder.implementation_table(me, a["32021L1233"])  # type: ignore[arg-type]
     assert boat["exemption"]["countries"] is None and "Article 39(4)" in boat["exemption"]["quote"]
     assert not [c for c in boat["countries"] if c["status"] == "not_required"]
+    assert boat["exemption"]["named"] is None
+
+
+def test_exemptions_are_quoted_whole_and_rows_state_their_condition():
+    # Directive (EU) 2016/798, Art. 33(4), second subparagraph: "However, as soon as a public or private entity submits
+    # an official application to build a railway line ... within 2 years of the receipt of the application."
+    # Directive (EU) 2016/797, Art. 57(5) exempts Cyprus and Malta from the articles it lists only (Article 13, ...,
+    # Article 54), with the same second subparagraph: their rows are not marked, and the page names them
+    from pipeline.build import load_transposition_checks
+
+    checks = load_transposition_checks()
+    a = acts("32016L0797", "32016L0798", "32016L1629")
+    me = _impl_builder(_measures("32016L0797", "32016L0798", "32016L1629"), checks)
+    safety = Builder.implementation_table(me, a["32016L0798"])["exemption"]  # type: ignore[arg-type]
+    interop = Builder.implementation_table(me, a["32016L0797"])  # type: ignore[arg-type]
+    assert safety["provision"] == "Art. 33(4)" and safety["quote"].endswith("within 2 years of the receipt of the application.")
+    ex = interop["exemption"]
+    assert (ex["provision"], ex["countries"], ex["named"]) == ("Art. 57(5)", None, ["CY", "MT"])
+    assert ex["quote"].endswith("within two years of receipt of the application.")
+    assert not [c for c in interop["countries"] if c["status"] == "not_required"]
+    # country pages: the provision and its condition next to "Not required by the directive"
+    assert Builder.not_required_note(me, "32016L0798") == (  # type: ignore[arg-type]
+        "Art. 33(4): for as long as no rail system is established within its territory (measures are due within two "
+        "years of an official application to build a railway line)"
+    )
+    assert Builder.not_required_note(me, "32016L1629") == "Art. 40: the directive is not addressed to it"  # type: ignore[arg-type]
+    assert Builder.not_required_note(me, "32016L0797") is None  # type: ignore[arg-type]
+
+
+def test_next_step_after_the_deadline_states_the_directives_own_exceptions():
+    # Directive (EU) 2016/798 binds Cyprus and Malta (Art. 36: "addressed to the Member States") but Art. 33(4) exempts
+    # them while they have no rail system; Art. 33(2) and (2a) let Member States extend the period to 16 June 2020 and
+    # 31 October 2020 (Directive (EU) 2020/700, recital 2: "Seventeen Member States have notified ... an extension")
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import apply_transposition_checks, load_transposition_checks
+
+    checks = load_transposition_checks()
+    today = date(2026, 10, 23)
+    ids = {"2013-0016": "32016L0798", "2013-0015": "32016L0797", "2016-0050": "32017L2397", "2021-0039": "32021L1233",
+           "2013-0302": "32016L1629"}  # fmt: skip
+    p, a = procs(*ids), acts(*ids.values())
+    step = {pid: classify(p[pid], [apply_transposition_checks(a[c], checks.get(c))], [], today).next_step.text
+            for pid, c in ids.items()}  # fmt: skip
+    assert step["2013-0016"].startswith(
+        "The transposition deadline (16 June 2019) has passed: the Member States bound by the directive were required to "
+        "adopt national measures by then, except as its text provides. Member States that extended the transposition "
+        "period by one year under Art. 33(2) had until 16 June 2020"
+    )
+    assert "Under Art. 33(4), the obligation to transpose and implement the directive does not apply to Cyprus and Malta" in (
+        step["2013-0016"])  # fmt: skip
+    assert "Under Art. 57(5), the obligation to transpose and implement the articles it lists" in step["2013-0015"]
+    assert "Under Art. 39(4), a Member State is not obliged to transpose the directive" in step["2016-0050"]
+    assert "the derogation in Article 39(4) of Directive (EU) 2017/2397 applies to it" in step["2021-0039"]
+    # Directive (EU) 2016/1629 is not addressed to eleven Member States (Art. 40): they are not bound by it
+    assert step["2013-0302"] == (
+        "The transposition deadline (7 October 2018) has passed: the Member States bound by the directive were required "
+        "to adopt national measures by then."
+    )
+    # the general deadline's timeline step says it too
+    me = stand_in(today="2026-10-23")
+    rail = apply_transposition_checks(a["32016L0798"], checks.get("32016L0798"))
+    tl = Builder.timeline(me, p["2013-0016"], [rail], [])  # type: ignore[arg-type]
+    dl = [x for x in tl if x["kind"] == "transposition_deadline"]
+    assert [(x["date"], x["title"]) for x in dl] == [("2019-06-16", "Deadline for Member States to transpose the directive (passed)")]
+    assert dl[0]["detail"].startswith("Directive 32016L0798. Exceptions in its text: Member States that extended")
+
+
+def test_next_step_before_the_deadline_speaks_of_the_member_states_bound():
+    # Directive (EU) 2024/2842 (2023/0393(COD)): Denmark and Ireland are "Not bound" in its table; the deadline,
+    # 4 December 2026, is ahead
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import apply_transposition_checks, load_transposition_checks
+
+    p, a = procs("2023-0393")["2023-0393"], acts("32024L2842")["32024L2842"]
+    text = classify(p, [apply_transposition_checks(a, load_transposition_checks().get(a.celex))], [], date(2026, 10, 23))
+    assert text.next_step.text.startswith("The Member States bound by the directive must transpose it into national law by ")
+    assert "EU countries" not in text.next_step.text
 
 
 def test_infringement_cut_off_matches_the_source_module():
