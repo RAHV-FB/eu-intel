@@ -1579,3 +1579,23 @@ def test_the_eps_final_act_list_wins_when_eurlex_names_another_procedure(tmp_pat
     assert build(out=o, snapshot=base / "snapshot", curated=FIX / "curated", state=base / "state", today=TODAY) == 0
     assert load(o, "dossiers/2099-0001.json")["celex"] == ["32099R0001"]
     assert load(o, "dossiers/2099-0003.json")["celex"] == ["32099L0003"]
+
+
+def test_topics_exclusions_and_curated_order():
+    # tech covers 3.50 (research, space) but not 3.50.16 (industrial property: EU designs 2022/0391); a curated file's
+    # own topics come first (the AI Act's 3.40.06 also matches economy's 3.40, but its card shows Technology & AI)
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder, load_curated
+    from pipeline.models.entities import Subject
+
+    _, topics, _ = load_curated()
+
+    def proc(pid: str, codes: list[str]) -> SimpleNamespace:
+        return SimpleNamespace(id=pid, subjects=[Subject(scheme="ep", code=c, label=c) for c in codes])
+
+    me = SimpleNamespace(topics_cur=topics, curated_of={"2021-0106": {"topics": ["tech"]}})
+    assert Builder.topics_for(me, proc("2022-0391", ["3.50.16"])) == ["economy"]  # type: ignore[arg-type]
+    assert Builder.topics_for(me, proc("2023-0999", ["3.50.01"])) == ["tech"]  # type: ignore[arg-type]
+    assert Builder.topics_for(me, proc("2021-0106", ["3.40.06"])) == ["tech", "economy"]  # type: ignore[arg-type]
+    assert Builder.topics_for(me, proc("2021-0297", ["6.30.01"])) == ["economy"]  # type: ignore[arg-type]

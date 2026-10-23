@@ -222,11 +222,16 @@ def test_contested_alias_is_documented():
 def test_topics_exact(topics):
     assert {t["slug"]: t["label"] for t in topics} == TOPICS
     for t in topics:
-        assert set(t) == {"slug", "label", "description", "ep_subjects", "search_aliases"}
+        assert {"slug", "label", "description", "ep_subjects", "search_aliases"} <= set(t) <= {
+            "slug", "label", "description", "ep_subjects", "ep_subjects_exclude", "search_aliases",
+        }  # fmt: skip
         assert t["description"].strip() and "\n" not in t["description"]
         assert t["ep_subjects"] and t["search_aliases"]
-        for code in t["ep_subjects"]:
+        for code in t["ep_subjects"] + t.get("ep_subjects_exclude", []):
             assert re.match(r"^\d(\.\d{2}){0,3}$", code), (t["slug"], code)
+        # an exclusion narrows one of the topic's own prefixes (tech: 3.50 without 3.50.15 and 3.50.16)
+        for code in t.get("ep_subjects_exclude", []):
+            assert any(code.startswith(p + ".") for p in t["ep_subjects"]), (t["slug"], code)
 
 
 # ------------------------------------------------------------------------------- aliases.yaml

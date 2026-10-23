@@ -131,6 +131,7 @@ export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
           </p>
           <p>
             The European Parliament’s Legislative Train Schedule lists this file as: <q>{stall.official_label}</q>
+            {stall.official_label_date && <> (information updated as of {formatDate(stall.official_label_date, true)})</>}.
           </p>
           {stall.official_source_url && (
             <p className="meta">

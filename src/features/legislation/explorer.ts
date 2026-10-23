@@ -123,7 +123,7 @@ export function keywordScores(
 
 // ------------------------------------------------------------------ filters
 
-/** `?topic=none`: files that no topic covers (no subject codes in Parliament's record). */
+/** `?topic=none`: files that no topic covers (subject codes outside the topics, or no Parliament record). */
 export const NO_TOPIC = 'none';
 
 export function makePredicates(s: ExplorerState): Record<Facet, ((d: DossierSummary) => boolean) | null> {

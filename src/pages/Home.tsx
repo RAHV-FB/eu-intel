@@ -108,8 +108,8 @@ export default function Home() {
                 Each topic page is a shareable, filterable list. Topics follow Parliament’s subject codes
                 {meta.data?.scope?.dossiers_without_topic ? (
                   <>
-                    ; <Link to="/legislation?topic=none">{formatNumber(meta.data.scope.dossiers_without_topic)} files</Link> have
-                    none and are in no topic
+                    ; <Link to="/legislation?topic=none">{formatNumber(meta.data.scope.dossiers_without_topic)} files</Link> fall
+                    outside the ten topics
                   </>
                 ) : null}
                 . <Link to="/about#methodology">How topics are assigned</Link>.
@@ -143,7 +143,13 @@ function Freshness({ meta }: { meta: Meta | undefined }) {
     <p className="home-hero__fresh">
       <span className="home-hero__fresh-dot" aria-hidden="true" />
       Data refreshed {formatDateTime(meta.snapshot_at ?? meta.built_at)}
-      {c?.dossiers ? <> · {formatNumber(c.dossiers)} legislative files{fromYear ? <> from {fromYear} onwards</> : null}</> : null}
+      {c?.dossiers ? (
+        <>
+          {' '}
+          · {formatNumber(c.dossiers)} legislative files
+          {fromYear ? <> (proposed from {fromYear}, or adopted since {fromYear})</> : null}
+        </>
+      ) : null}
       {c?.ep_votes ? <> · {formatNumber(c.ep_votes)} Parliament votes{since ? <> since {since}</> : null}</> : null} ·{' '}
       <Link to="/about#coverage">What’s covered</Link>
     </p>

@@ -237,8 +237,9 @@ export default function About() {
           <h3>Topics</h3>
           <p>
             A file’s topics come from the subject codes in Parliament’s procedure record (the Legislative Observatory’s subject
-            classification), grouped into broad topics; for featured files our editors may add a topic. Files without
-            subject codes — mostly laws shown from their EUR-Lex record only — have no topic
+            classification), grouped into broad topics; for featured files our editors may add a topic. Files whose codes
+            fall outside the ten topics (mostly regional and cohesion funds, the EU’s institutions, development cooperation,
+            external relations and culture), and the few with no Parliament record of their own, have no topic
             {meta?.scope ? <> ({formatNumber(meta.scope.dossiers_without_topic)} files in this release)</> : null}. They are
             in the full list and in search, and the legislation explorer can list them under “No topic assigned”, but they do
             not appear on topic pages or in topic counts.

@@ -1563,16 +1563,20 @@ class Builder:
     def topics_for(self, p: Procedure) -> list[str]:
         out: set[str] = set()
         codes = [s.code for s in p.subjects if s.scheme == "ep"]
+
+        def under(code: str, pref: str) -> bool:
+            pref = pref.strip().rstrip(".")
+            return code == pref or code.startswith(pref + ".")
+
         for slug, t in self.topics_cur.items():
-            for pref in _as_list(t.get("ep_subjects")):
-                pref = pref.strip().rstrip(".")
-                if any(c == pref or c.startswith(pref + ".") for c in codes):
-                    out.add(slug)
-                    break
+            excluded = _as_list(t.get("ep_subjects_exclude"))
+            if any(under(c, pref) and not any(under(c, x) for x in excluded)
+                   for pref in _as_list(t.get("ep_subjects")) for c in codes):  # fmt: skip
+                out.add(slug)
         cur = self.curated_of.get(p.id)
-        if cur:
-            out.update(t for t in _as_list(cur.get("topics")) if t in self.topics_cur or not self.topics_cur)
-        return sorted(out)
+        # a curated file's own topics come first, in their curated order: the first is the one its card shows
+        first = [t for t in _as_list((cur or {}).get("topics")) if t in self.topics_cur or not self.topics_cur]
+        return list(dict.fromkeys(first)) + sorted(out - set(first))
 
     # ---------------------------------------------------------------- EP votes
     def build_votes(self) -> None:
@@ -3287,9 +3291,14 @@ class Builder:
             if d["officially_blocked"]:
                 stall = self.dossier_detail[d["id"]].get("stall") or {}
                 label = stall.get("official_label")
+                as_of = stall.get("official_label_date")
+                sub = f"Legislative Train: {label}" if label else "Officially reported as blocked"
                 stalled_items.append({"dossier_id": d["id"], "title": d["title"],
-                                      "subtitle": f"Legislative Train: {label}" if label else "Officially reported as blocked",
-                                      "date": d["last_event"], "badge": "Officially blocked", "_o": 0})  # fmt: skip
+                                      "subtitle": sub + (f" (information updated as of {_long_date(as_of)})" if as_of else ""),
+                                      "date": d["last_event"], "badge": "Officially blocked", "_o": 0,
+                                      "_as_of": as_of or ""})  # fmt: skip
+        # the most recently confirmed blockages first
+        stalled_items.sort(key=lambda x: (x["_as_of"], x["dossier_id"]), reverse=True)
         inactive = []
         for d in summ.values():
             # inactivity is only meaningful where both co-legislators must still act (ordinary procedure);
@@ -3302,13 +3311,16 @@ class Builder:
             if n >= 365:
                 inactive.append((n, d))
         inactive.sort(key=lambda x: (-x[0], x[1]["id"]))
-        stalled_items = stalled_items[:12]
-        for n, d in inactive[:6]:
+        # the home page shows six rows: both kinds, so that inactive files are visible too
+        n_inactive = min(3, len(inactive))
+        stalled_items = stalled_items[: 6 - n_inactive]
+        for n, d in inactive[:n_inactive]:
             stalled_items.append({"dossier_id": d["id"], "title": d["title"],
                                   "subtitle": f"No recorded procedural update in {n} days", "date": d["last_event"],
                                   "badge": d["status_label"], "_o": 1})  # fmt: skip
         for x in stalled_items:
             x.pop("_o", None)
+            x.pop("_as_of", None)
         horizon = _add_days(today, 365)
         upcoming = []
         for pid in self.dossier_ids:
@@ -3343,8 +3355,9 @@ class Builder:
                             "amendments are not listed; nor are rejected objections or motions of censure.",
              "items": rej_items[:12]},
             {"id": "stalled", "title": "Stalled",
-             "description": "Files officially reported as blocked (Legislative Train), then files with no recorded "
-                            "procedural update for a year or more.",
+             "description": "Files officially reported as blocked (Legislative Train), then ordinary-procedure files "
+                            "with no recorded procedural update for a year or more. Dates are each file's last "
+                            "recorded procedural step.",
              "items": stalled_items},
             {"id": "upcoming", "title": "Coming up",
              "description": "Legally fixed dates in the next 12 months: provisions starting to apply and transposition deadlines.",
@@ -3407,6 +3420,9 @@ class Builder:
             "ep_votes_to": vote_dates[-1] if vote_dates else None,
             "ep_roll_call_votes": sum(1 for v in s.votes if v.method == "VOTE_ELECTRONIC_ROLLCALL"),
             "dossiers_without_topic": sum(1 for d in self.dossier_summary.values() if not d["topics"]),
+            # files Parliament classes as non-legislative (NLE) that EUR-Lex records as consultation or consent
+            # procedures, e.g. 2006/0058(NLE), the EU-US Air Transport Agreement: shown, outside the stated types
+            "other_type_dossiers": sum(1 for d in self.dossier_summary.values() if d["type"] not in (types or ())),
         }
 
     def source_summary(self, sid: str, st: SourceStatus | None) -> str:

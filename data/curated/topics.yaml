@@ -7,7 +7,8 @@
 # (https://oeil.europarl.europa.eu/oeil/en/search/facets, retrieved 2026-10-22).
 #
 # Matching rule: a procedure belongs to a topic if any of its subject codes equals a listed prefix or
-# starts with the prefix followed by "." (so "3.30" matches "3.30.06" but not "3.300").
+# starts with the prefix followed by "." (so "3.30" matches "3.30.06" but not "3.300"), unless the code falls
+# under one of the topic's `ep_subjects_exclude` prefixes.
 # A procedure may belong to several topics; topics overlap on purpose where the official label fits
 # more than one everyday theme. Curated items (featured.yaml) set their topics explicitly.
 #
@@ -20,6 +21,9 @@
     - "3.30"      # Information and communications in general (incl. 3.30.06 ICT/digital, 3.30.07 Cybersecurity, 3.30.25 Internet)
     - "3.40.06"   # Electronics, electrotechnical industries, ICT, robotics
     - "3.50"      # Research and technological development and space
+  ep_subjects_exclude:
+    - "3.50.15"   # Intellectual property, copyright (Economy & Trade)
+    - "3.50.16"   # Industrial property, European patent, Community patent, design and pattern (Economy & Trade)
   search_aliases: ["AI", "artificial intelligence", "digital", "internet", "online", "platforms", "social media", "apps", "data", "cybersecurity", "telecoms", "tech", "algorithms", "chatbots", "robotics", "space"]
 
 - slug: economy
@@ -38,6 +42,7 @@
     - "3.50.16"   # Industrial property, European patent, Community patent, design and pattern
     - "5"         # Economic and monetary system
     - "6.20"      # Common commercial policy in general
+    - "6.30.01"   # Generalised scheme of tariff preferences (GSP), rules of origin
     - "8.70"      # Budget of the Union
   search_aliases: ["economy", "trade", "tariffs", "business", "companies", "banks", "finance", "taxes", "tax", "VAT", "euro", "competition", "industry", "investment", "budget", "single market", "SMEs", "red tape", "simplification"]
 

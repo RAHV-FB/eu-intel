@@ -189,7 +189,7 @@ export default function Legislation() {
         title={currentTopic ? currentTopic.label : noTopic ? 'Files without a topic' : 'Legislation'}
         lead={
           noTopic
-            ? 'Legislative files with no subject code in the European Parliament’s procedure record, so no topic covers them. Most are laws shown from their EUR-Lex record only.'
+            ? 'Legislative files that none of the ten topics covers. Most have Parliament subject codes outside them (regional and cohesion funds, the EU’s institutions, development cooperation, external relations, culture); a few have no Parliament record of their own (split procedures, laws known only from EUR-Lex).'
             : currentTopic?.description ||
               'Search and filter EU legislative files — from Commission proposals to laws in force. Status and dates come from the European Parliament’s Legislative Observatory and EUR-Lex.'
         }
@@ -198,7 +198,7 @@ export default function Legislation() {
           <p className="meta lx-scope">
             {currentTopic && (
               <>
-                Topics follow Parliament’s subject codes, so files without them are not listed here (
+                Topics follow Parliament’s subject codes, so files whose codes fall outside the ten topics are not listed here (
                 <Link to={`/legislation?topic=${NO_TOPIC}`}>files without a topic</Link>).{' '}
               </>
             )}

@@ -85,6 +85,7 @@ export interface CoverageScope {
   ep_votes_to?: ISODate | null;
   ep_roll_call_votes: number; // all roll-call votes in the source data (incl. amendments)
   dossiers_without_topic: number; // files that no topic covers
+  other_type_dossiers?: number; // files of another procedure type (NLE) shown because EUR-Lex records them as CNS/APP
 }
 
 export interface Meta {

@@ -35,7 +35,12 @@ export function legislationScope(scope: CoverageScope | undefined, short = false
     (actsYear ? `, and laws adopted under these procedures since ${actsYear}` : '') +
     '. Not included: delegated and implementing acts, non-legislative files' +
     (actsYear ? ` and laws adopted before ${actsYear}` : '') +
-    '.'
+    '.' +
+    (scope.other_type_dossiers
+      ? ` ${formatNumber(scope.other_type_dossiers)} file${scope.other_type_dossiers === 1 ? '' : 's'} that Parliament ` +
+        'classes as non-legislative (NLE) but EUR-Lex records under the consultation or consent procedure ' +
+        `${scope.other_type_dossiers === 1 ? 'is' : 'are'} shown as well.`
+      : '')
   );
 }
 
