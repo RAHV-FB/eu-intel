@@ -263,7 +263,7 @@ describe.skipIf(!built)('dated statements in the built data', () => {
         const kept = new Set(statedAhead(out).map(([d]) => d));
         for (const [d, deadline] of statedAhead(text)) if (aheadOn(d, day, deadline)) expect(kept.has(d), `${id} on ${day}: ${d} in ${out}`).toBe(true);
       }
-  });
+  }, 60_000); // every built text on every stated date and the day after: about 3 s on an idle machine
 
   it('gives every dated timeline step a title for both states, in the wording the build uses for passed steps', () => {
     const DATED = ['entry_into_force', 'application', 'transposition_deadline', 'transposition_application'];
