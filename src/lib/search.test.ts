@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { SearchDoc } from '../types/data';
-import { createSearchEngine, familyStems, hasWord, keywordTokens, normalize, singular, wordSet, type SearchHit } from './search';
+import {
+  createSearchEngine,
+  familyStems,
+  hasWord,
+  keywordTokens,
+  normalize,
+  similarWords,
+  singular,
+  wordSet,
+  type SearchHit,
+} from './search';
 
 // TEST-ONLY index: a small hand-written sample shaped like pipeline/build.py output
 // (`a` = " | "-separated alternative names, `x` = keywords/identifiers). Not real site data.
@@ -564,5 +574,170 @@ describe('identifier queries', () => {
 
   it('still completes an unfinished identifier while typing', () => {
     expect(all('2025/013', true)).toContain('2025-0134');
+    expect(all('2023/01', true)).toEqual(['2023-0134']); // the identifiers it begins, not files sharing "2023"
+  });
+
+  it('does not suggest files sharing parts of a reference no file has, while it is typed', () => {
+    // "2023" and "cod" are in 2023/0134(COD): all but one of the words, which an identifier is not
+    expect(all('2023/9999(COD)', true)).toEqual([]);
+    expect(all('COM(2008) 40', true)).toEqual([]); // "COM(2025)0101" and "Directive 2008/115/EC" of the Return Regulation
+  });
+
+  it('keeps the file while a procedure type is being typed, and does not call it approximate', () => {
+    for (const q of ['2023/0134(', '2023/0134(C', '2023/0134(CO', '2023/0134(COD']) {
+      const hits = e.search(q, { typing: true, limit: 8 });
+      expect(hits.map((h) => h.doc.id), q).toEqual(['2023-0134']);
+      expect(hits[0].approximate, q).toBeUndefined();
+    }
+  });
+});
+
+describe('split procedures', () => {
+  // TEST-ONLY documents shaped like pipeline/build.py output: a split procedure and its parts, which hold the acts
+  const docs: SearchDoc[] = [
+    {
+      id: '2016-0224', k: 'dossier', t: 'Common procedure for international protection in the Union',
+      s: '2016/0224(COD) · Split into separate procedures', x: '2016/0224(COD) 2016/0224', u: '/legislation/2016-0224', w: 0.4,
+      d: '2019-10-21',
+    },
+    {
+      id: '2016-0224A', k: 'dossier', t: 'Asylum Procedure Regulation', s: '2016/0224A(COD) · In force',
+      x: '2016/0224A(COD) 2016/0224 32024R1348 2024/1348 regulation', u: '/legislation/2016-0224A', w: 1.2, d: '2026-06-12',
+    },
+    {
+      id: '2016-0224B', k: 'dossier', t: 'Establishing a return border procedure', s: '2016/0224B(COD) · In force',
+      x: '2016/0224B(COD) 2016/0224 32024R1349 2024/1349 regulation', u: '/legislation/2016-0224B', w: 1.2, d: '2024-06-11',
+    },
+    {
+      id: '2016-0400', k: 'dossier', t: 'Proposal 2016/0400(COD), split into 2016/0400A(COD) and 2016/0400B(COD)',
+      s: '2016/0400(COD) · Split into separate procedures', x: '2016/0400(COD) 2016/0400', u: '/legislation/2016-0400', w: 0.4,
+    },
+    {
+      id: '2016-0400A', k: 'dossier', t: 'Adapting a number of legal acts to Articles 290 and 291 TFEU - part I',
+      s: '2016/0400A(COD) · In force', x: '2016/0400A(COD) 2016/0400 32019R1243 2019/1243 regulation',
+      u: '/legislation/2016-0400A', w: 1.2, d: '2022-12-23',
+    },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string, typing = false) =>
+    e.search(q, { limit: 50, typing }).map((h) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`);
+
+  it('finds a part by its number and letter, without the procedure type', () => {
+    for (const q of ['2016/0224A', '2016/0224 A', '2016/0224a', '2016/0224A(COD)', '2016/0224 A(COD)']) {
+      expect(all(q), q).toEqual(['2016-0224A']);
+    }
+    expect(all('2016/0224B')).toEqual(['2016-0224B']);
+    expect(all('2016/0400A')).toEqual(['2016-0400A', '2016-0400']); // and the parent, whose title names the part
+    expect(all('2016/0224')).toEqual(['2016-0224A', '2016-0224B', '2016-0224']);
+    expect(all('2016/0224C')).toEqual([]);
+  });
+
+  it('keeps the part while its reference is typed', () => {
+    for (const q of ['2016/0224A', '2016/0224A(', '2016/0224A(C', '2016/0224A(CO', '2016/0224A(COD', '2016/0224A(COD)']) {
+      expect(all(q, true), q).toEqual(['2016-0224A']);
+    }
+  });
+});
+
+describe('regular word forms', () => {
+  // TEST-ONLY documents with the titles of real files (and of the files a typo correction would find instead)
+  const docs: SearchDoc[] = [
+    { id: '2018-0186', k: 'dossier', t: 'EU Emergency Travel Document', s: '2018/0186(CNS) · In force', x: '2018/0186(CNS) 2018/0186', u: '/legislation/2018-0186', w: 1.2, d: '2019-06-20' },
+    { id: '2013-0246', k: 'dossier', t: 'Package travel and assisted travel arrangements', s: '2013/0246(COD) · In force', x: '2013/0246(COD) 2013/0246', u: '/legislation/2013-0246', w: 1.2, d: '2015-12-11' },
+    { id: '2012-0184', k: 'dossier', t: 'Periodic roadworthiness tests for motor vehicles and their trailers', s: '2012/0184(COD) · In force', x: '2012/0184(COD) 2012/0184', u: '/legislation/2012-0184', w: 1.2, d: '2014-04-29' },
+    { id: '2023-0435', k: 'dossier', t: 'Amending Directive (EU) 2015/2302 to make the protection of travellers more effective', s: '2023/0435(COD) · Proposed', x: '2023/0435(COD) 2023/0435', u: '/legislation/2023-0435', w: 1.2, d: '2024-04-23' },
+    { id: '2016-0287', k: 'dossier', t: 'Promotion of Internet connectivity in local communities', s: '2016/0287(COD) · In force', x: '2016/0287(COD) 2016/0287', u: '/legislation/2016-0287', w: 1.2, d: '2017-09-13' },
+    { id: '2023-0315', k: 'dossier', t: 'European cross-border associations', s: '2023/0315(COD) · Proposed', a: 'proposed directive on European cross-border associations', x: '2023/0315(COD) 2023/0315', u: '/legislation/2023-0315', w: 1.2, d: '2024-03-13' },
+    { id: '2013-0088', k: 'dossier', t: 'Community trade mark', s: '2013/0088(COD) · In force', x: '2013/0088(COD) 2013/0088', u: '/legislation/2013-0088', w: 1.2, d: '2015-12-24' },
+    { id: '2021-0366', k: 'dossier', t: 'EU Deforestation Regulation', s: '2021/0366(COD) · In force', a: 'Making available on the Union market of certain commodities', x: '2021/0366(COD) 2021/0366', u: '/legislation/2021-0366', w: 3, d: '2025-12-23' },
+    { id: '2021-0197', k: 'dossier', t: 'CO2 emission performance standards for new passenger cars and vans', s: '2021/0197(COD) · In force', a: 'EU ban on the sale of new petrol and diesel cars from 2035', x: '2021/0197(COD) 2021/0197', u: '/legislation/2021-0197', w: 1.2, d: '2023-05-15' },
+    { id: '2017-0326', k: 'dossier', t: 'Location of the seat of the European Banking Authority', s: '2017/0326(COD) · In force', x: '2017/0326(COD) 2017/0326', u: '/legislation/2017-0326', w: 1.2, d: '2018-11-14' },
+    { id: '2014-0136', k: 'dossier', t: 'Appliances burning gaseous fuels', s: '2014/0136(COD) · In force', x: '2014/0136(COD) 2014/0136', u: '/legislation/2014-0136', w: 1.2, d: '2016-03-31' },
+    { id: '2022-0396', k: 'dossier', t: 'Packaging and Packaging Waste Regulation', s: '2022/0396(COD) · In force', x: '2022/0396(COD) 2022/0396', u: '/legislation/2022-0396', w: 1.2, d: '2025-02-11' },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`);
+
+  it('undoes a doubled final consonant for the word family', () => {
+    expect(familyStems('banning')).toEqual(['banning', 'bann', 'ban']);
+    expect(familyStems('travelled')).toEqual(['travelled', 'travell', 'travel']);
+    expect(familyStems('missed')).toEqual(['missed', 'miss']); // not "mis"
+  });
+
+  it('does not take a regular form of index words for a typo, and lists its word family first', () => {
+    // "travelers" is one edit from "travellers", but it is "travel" + "ers"
+    expect(all('travelers').slice(0, 2).sort()).toEqual(['2013-0246*', '2018-0186*']);
+    expect(all('travelers')).toEqual(expect.arrayContaining(['2023-0435~', '2012-0184~'])); // listed last
+    expect(all('promoted')[0]).toBe('2016-0287*'); // "promotion", above "proposed"
+    expect(all('marking')[0]).toBe('2013-0088*'); // "mark", above "making"
+    expect(all('banning')[0]).toBe('2021-0197*'); // "ban", above "banking" and "burning"
+  });
+
+  it('still takes a misspelt form for a typo: a final "e" goes before an ending', () => {
+    expect(all('packageing')).toEqual(['2022-0396~']); // "packaging", not "package travel"
+  });
+
+  it('tells word starts from other forms of a word when nothing matches whole words', () => {
+    const fueled = e.search('fueled'); // "fuel" + "ed": the "fuels" of a title, another form of the word
+    expect(fueled.map((h) => h.doc.id)).toEqual(['2014-0136']);
+    expect(fueled[0].partial).toBe(true);
+    expect(fueled[0].wordStart).toBeUndefined();
+    const spa = engine.search('Spa'); // the start of "Spain"
+    expect(spa[0].doc.id).toBe('ES');
+    expect(spa.every((h) => h.wordStart)).toBe(true);
+    expect(engine.search('pharma package')[0].wordStart).toBe(true);
+    expect(engine.search('fish').some((h) => h.wordStart)).toBe(false); // whole words matched: no fallback
+  });
+});
+
+describe('act types', () => {
+  // TEST-ONLY documents: pipeline/build.py gives each file the types of its acts ("directive") among its keywords
+  const docs: SearchDoc[] = [
+    {
+      id: '2018-0106', k: 'dossier', t: 'Protection of persons reporting on breaches of Union law', s: '2018/0106(COD) · In force',
+      x: '2018/0106(COD) 2018/0106 32019L1937 2019/1937 whistleblower whistleblowers whistleblowing directive',
+      u: '/legislation/2018-0106', w: 1.2, d: '2024-12-12',
+    },
+    {
+      id: '2021-0291', k: 'dossier', t: 'Amending Directive 2014/53/EU on the making available on the market of radio equipment',
+      s: '2021/0291(COD) · In force', a: 'Common charger for electronic devices', x: '2021/0291(COD) 2021/0291 32022L2380 2022/2380 usb-c directive',
+      u: '/legislation/2021-0291', w: 1.2, d: '2024-12-28',
+    },
+    {
+      id: '2020-0353', k: 'dossier', t: 'Batteries and waste batteries', s: '2020/0353(COD) · In force', a: 'New Batteries Regulation',
+      x: '2020/0353(COD) 2020/0353 32023R1542 2023/1542 regulation', u: '/legislation/2020-0353', w: 1.2, d: '2025-08-18',
+    },
+    {
+      id: '2003-0282', k: 'dossier', t: 'Batteries and accumulators and waste batteries and accumulators', s: '2003/0282(COD) · Repealed',
+      a: 'Batteries Directive', x: '2003/0282(COD) 2003/0282 32006L0066 2006/66 directive', u: '/legislation/2003-0282', w: 1.2,
+      d: '2006-09-26',
+    },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`);
+
+  it('finds a file by a common name and the type of its act', () => {
+    expect(all('whistleblower directive')).toEqual(['2018-0106']);
+    expect(all('whistleblowing directive')).toEqual(['2018-0106']);
+    expect(all('EU whistleblower directive')).toEqual(['2018-0106']); // "EU": "Union"
+    expect(all('whistleblower rules')).toEqual(['2018-0106']);
+  });
+
+  it('lets one act type stand for another only when no file has the type typed', () => {
+    expect(all('USB-C regulation')).toEqual(['2021-0291']); // the common charger is a directive
+    expect(all('common charger regulation')).toEqual(['2021-0291']);
+    expect(all('batteries regulation')).toEqual(['2020-0353']); // not the Batteries Directive
+    expect(all('batteries directive')[0]).toBe('2003-0282');
+  });
+});
+
+describe('similar words in a summary', () => {
+  it('lists them in the order of the hits, best match first', () => {
+    expect(similarWords([['burning'], ['banking'], ['binding'], ['banking'], ['binding'], ['bunting']])).toEqual([
+      'burning',
+      'banking',
+      'binding',
+    ]);
+    expect(similarWords([undefined, ['macro', 'macron']], 1)).toEqual(['macro']);
   });
 });

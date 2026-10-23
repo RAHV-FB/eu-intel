@@ -134,8 +134,9 @@ export function matchVoteDetails(
   // the AI Act, on all but one word)
   const close = pass(false, only((id) => similar.has(id)));
   if (!close.size) return { ids: close, partial: false };
-  const linked = votes.filter((v) => close.has(v.id) && v.dossier_id).map((v) => similar.get(v.dossier_id!));
-  const alike = similarWords(linked);
+  // the files' similar words, best match first (`files` is in the search's order)
+  const linked = new Set(votes.filter((v) => close.has(v.id) && v.dossier_id).map((v) => v.dossier_id!));
+  const alike = similarWords([...files.keys()].filter((id) => linked.has(id)).map((id) => similar.get(id)));
   return { ids: close, partial: false, approximate: true, ...(alike.length ? { similar: alike } : {}) };
 }
 

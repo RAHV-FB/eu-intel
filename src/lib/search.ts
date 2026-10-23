@@ -2,30 +2,34 @@
  * Client-side search over public/data/search.json (SearchDoc[]).
  *
  * Ranking, strongest first (a weaker tier never outranks a stronger one):
- *   1. exact identifier      procedure "2021/0106(COD)" or "2021/0106", CELEX "32024R1689" or "CELEX:32024R1689",
- *                            "COM(2021)206", act number "2024/1689", "Regulation (EU) 2024/1689", "Directive 2014/24/EU"
+ *   1. exact identifier      procedure "2021/0106(COD)" or "2021/0106", a part of a split procedure "2016/0224A(COD)"
+ *                            or "2016/0224A", CELEX "32024R1689" or "CELEX:32024R1689", "COM(2021)206", act number
+ *                            "2024/1689", "Regulation (EU) 2024/1689", "Directive 2014/24/EU"
  *   2. exact name            title or alias equals the query ("AI Act", "EPP", "Spain", "Spanish")
  *   3. name starts with the query as whole words, or contains it as a phrase
  *   4. every meaningful word matches a whole word, exactly or as its singular/plural ("battery" ~ "batteries");
- *      only when no document matches that way, one word may match an everyday synonym ("ai law" -> "act").
+ *      only when no document matches that way, one word may match an everyday synonym ("ai law" -> "act"), or an
+ *      act type another ("USB-C regulation" -> the "directive" a file's entry has for its act).
  *      A generic word ("rules", "law") also matches through its synonyms one step below ("asylum rules" ->
  *      "asylum ... regulation"), unless the query is itself a name ("rule of law", "climate law")
  *   5. the last word matched only as the start of a longer word ("artific" -> "artificial", "Spa" -> "Spain"):
  *      in as-you-type suggestions (`typing`, 3+ letters), or on the results page when nothing matched whole words.
  *      On the results page, legislation, topics and guides also match related forms of query words of 4+
- *      letters that are not abbreviations ("fish" -> "fisheries", "farming" -> "farm"), below every whole-word
- *      match and flagged `partial`
+ *      letters that are not abbreviations ("fish" -> "fisheries", "farming" -> "farm", "banning" -> "ban"),
+ *      below every whole-word match and flagged `partial` (and `wordStart` for the word starts of the fallback)
  *   6. at least one word matched only approximately (typo tolerance): a word that is not in the index matches
  *      index words within one or two edits ("migraton" -> "migration"). A word one edit from an index word is
- *      taken as a typo and its word family is not used ("packageing" is "packaging", not "package"); a word two
- *      edits away keeps its word family, ranked above the approximate matches ("blocked": "blocking" first)
+ *      taken as a typo and its word family is not used ("packageing" is "packaging", not "package"), unless it
+ *      is a regular form of index words ("travelers": "travel"); a word two edits away keeps its word family.
+ *      A word family ranks above the approximate matches ("blocked": "blocking" first)
  *   7. all but one word matched exactly (queries of three or more meaningful words, name particles such as
  *      "von" or "der" and single letters not counted)
  * Tiers 6 and 7 are flagged `approximate` (with the `similar` index words of tier 6), below every other match.
  * A query that is an identifier or an act citation ("2023/0134(COD)", "COM(2016) 26", "Directive 2014/24/EU")
  * matches only through tiers 1-3, so a number fragment ("26", "2016") does not match other files; the names
- * citing the number ("... amending Regulation (EU) 2024/1689") still do. While typing, an identifier that no
- * file owns yet ("2023/01") still completes through the word tiers.
+ * citing the number ("... amending Regulation (EU) 2024/1689") still do. One that no file owns as typed matches
+ * the identifiers it begins, up to a word boundary; while typing, an identifier no file owns yet ("2023/01")
+ * completes to those it begins, and a reference whose type is not finished ("2021/0106(CO") is its number.
  * An identifier among other words ("GDPR 2016/679") ranks the file that owns it with tier 1 when that file
  * matches the other words too; an act citation naming the act type ("Council Decision No 376/2014/EU") ranks
  * the act of that type first.
@@ -52,6 +56,9 @@ export interface SearchHit {
   score: number;
   /** Matched only through the start of a longer word or a related word form (tier 5), not through whole words. */
   partial?: boolean;
+  /** With `partial`: found on the results page only because nothing matched whole words, through words starting
+   * with those typed ("Spa" -> "Spain"), not through another form of a word. */
+  wordStart?: boolean;
   /** Matched only approximately: through a similar word (tier 6, typo tolerance) or on all but one word (tier 7).
    * Ranked below every other match. */
   approximate?: boolean;
@@ -179,13 +186,17 @@ const FAMILY_ENDINGS = new Set([
 // Names (people, parties, groups, countries) have no word families: "olive" must not find Oliver Schenk.
 const FAMILY_KINDS = new Set<SearchKind>(['dossier', 'act', 'topic', 'page']);
 
-/** The stems whose word family a query word matches: the word itself and the word without a common ending. */
+/** The stems whose word family a query word matches: the word itself and the word without a common ending,
+ * also with a doubled final consonant undone ("banning" -> "bann", "ban"; "travelled" -> "travel"). */
 export function familyStems(w: string): string[] {
   const out = [w];
   const irregular = FAMILY_IRREGULAR[w];
   if (irregular) out.push(irregular);
   const s = w.replace(FAMILY_STRIP, '');
-  if (s !== w && s.length >= 4) out.push(s);
+  if (s !== w && s.length >= 4) {
+    out.push(s);
+    if (/([b-df-hj-np-rtv-z])\1$/.test(s)) out.push(s.slice(0, -1));
+  }
   return out;
 }
 
@@ -213,6 +224,15 @@ const SYNONYMS: Record<string, string[]> = {
 /** Generic words for a law: with another meaningful word they also match through their synonyms, one step
  * below the literal matches ("asylum rules" finds the asylum regulations, not only a file saying "rules"). */
 const GENERIC = new Set(['law', 'laws', 'legislation', 'rules', 'rule']);
+
+/** Act types, which each file's search entry carries ("directive" for a file that produced a directive): like a
+ * synonym, one may stand for another when no document matches all the words as typed ("USB-C regulation" finds
+ * the Directive on the common charger), but not in names ("Batteries Regulation" is not "Batteries Directive"). */
+const ACT_TYPES: Record<string, string[]> = {
+  regulation: ['directive', 'decision'],
+  directive: ['regulation', 'decision'],
+  decision: ['regulation', 'directive'],
+};
 
 // Words ending in "s" that are not plurals of a shorter word.
 const NOT_PLURAL = new Set(['news', 'means', 'series', 'species', 'lens', 'goods', 'arms', 'politics', 'economics']);
@@ -303,6 +323,7 @@ interface WordMatch {
   similar: Map<number, string[]>; // with `fuzzy`: doc -> the index words it matched approximately
   typo: boolean; // with `fuzzy`: an index word is one edit away
   prefixOnly: Set<number>; // docs in `base` matched only as the start of a longer word
+  formOnly: Set<number>; // of those, the docs matched only through another form of the word ("farming" -> "farm")
 }
 
 /** The scores of one pass, and the index words that tier-6 matches have in place of query words. */
@@ -310,6 +331,7 @@ interface RunResult {
   scores: Map<number, number>;
   similar: Map<number, Set<string>>; // doc -> index words it matched approximately
   typos: Set<string>; // query words that matched only approximately, one edit from an index word
+  forms: Set<number>; // docs matched only partly, through another form of a word (not a word starting with it)
 }
 
 /** Optimal string alignment distance, bounded by `max` (returns max + 1 when exceeded). */
@@ -398,8 +420,10 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
       const k = idKey(raw);
       if (ID_RE.test(k)) {
         add(byId, k, i);
-        const num = k.match(/^(\d{4}\/\d{4})[a-z]?\(/);
+        // a procedure by its number, and a part of a split procedure by its number and letter ("2016/0224A")
+        const num = k.match(/^(\d{4}\/\d{4})([a-z]?)\(/);
         if (num) add(byId, num[1], i);
+        if (num?.[2]) add(byId, num[1] + num[2], i);
         const act = celexActKey(k);
         if (act) {
           if (!actKeys.has(i)) actKeys.set(i, new Set());
@@ -411,6 +435,18 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     }
   });
   const vocab = [...postings.keys()].sort();
+  const idKeys = [...byId.keys()].sort();
+
+  /** The files with an identifier that continues `k`: at any point (`any`, while typing: "2025/013" ->
+   * "2025/0134(cod)"), or after a word boundary ("2016/0224a" -> "2016/0224a(cod)", not "2016/02241"). */
+  function idPrefixOwners(k: string, any: boolean): Set<number> {
+    const out = new Set<number>();
+    for (let j = lowerBound(idKeys, k); j < idKeys.length && idKeys[j].startsWith(k) && out.size < 400; j++) {
+      const next = idKeys[j].charAt(k.length);
+      if (next && (any || !/[\p{L}\p{N}]/u.test(next))) for (const i of byId.get(idKeys[j]) ?? []) out.add(i);
+    }
+    return out;
+  }
   const bySingular = new Map<string, string[]>(); // singular form -> index words with that form
   for (const w of vocab) {
     const s = singular(w);
@@ -419,10 +455,34 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     else bySingular.set(s, [w]);
   }
 
+  /** The index words of a stem's word family: the stem with a common ending, or (`compounds`) with a word of its
+   * own of 6+ letters ("cyber" + "security", not "safe" + "guard"). A stem left by undoing a doubled consonant
+   * ("ban", from "banning") is shorter than other stems: only it and its plural. */
+  function familyWords(stem: string, compounds: boolean): string[] {
+    const out: string[] = [];
+    let n = 0;
+    for (let j = lowerBound(vocab, stem); j < vocab.length && vocab[j].startsWith(stem) && n < 400; j++, n++) {
+      const rest = vocab[j].slice(stem.length);
+      const ending = stem.length >= 4 ? FAMILY_ENDINGS.has(rest) : rest === '' || rest === 's';
+      const compound = compounds && stem.length >= 4 && singular(rest).length >= 6 && bySingular.has(singular(rest));
+      if (ending || compound) out.push(vocab[j]);
+    }
+    return out;
+  }
+
+  /** A word missing from the index that is a regular form of index words ("travelers": "travel", "promoted":
+   * "promotion", "banning": "ban"), not a misspelling: a final "e" goes before an ending, so "packageing" is not
+   * "package" + "ing". */
+  const inflected = (qw: string) =>
+    familyStems(qw)
+      .slice(1)
+      .some((stem) => !/[^e]e$/.test(stem) && familyWords(stem, false).length > 0);
+
   function wordMatches(qw: string, allowPrefix: boolean, family = false): WordMatch {
     const base = new Map<number, number>();
     const syn = new Map<number, number>();
     const whole = new Set<number>();
+    const starts = new Set<number>(); // docs with a word starting with qw
     const put = (into: Map<number, number>, w: string, quality: number, only?: (i: number) => boolean) => {
       const p = postings.get(w);
       if (!p) return;
@@ -431,12 +491,13 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
         const s = fw * quality;
         if ((into.get(i) ?? 0) < s) into.set(i, s);
         if (into === base && quality > M_PREFIX) whole.add(i);
+        if (into === base && w.startsWith(qw)) starts.add(i);
       }
     };
     put(base, qw, M_EXACT);
     const notPerson = (i: number) => prepared[i].doc.k !== 'mep';
     for (const w of bySingular.get(singular(qw)) ?? []) if (w !== qw) put(base, w, M_PLURAL, notPerson);
-    for (const s of SYNONYMS[qw] ?? []) put(syn, s, M_SYN);
+    for (const s of [...(SYNONYMS[qw] ?? []), ...(ACT_TYPES[singular(qw)] ?? [])]) put(syn, s, M_SYN);
     if (allowPrefix) {
       let n = 0;
       for (let j = lowerBound(vocab, qw); j < vocab.length && vocab[j].startsWith(qw) && n < 400; j++, n++) {
@@ -446,23 +507,16 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     if (family) {
       const familyDoc = (i: number) => FAMILY_KINDS.has(prepared[i].doc.k);
       for (const stem of familyStems(qw)) {
-        let n = 0;
-        for (let j = lowerBound(vocab, stem); j < vocab.length && vocab[j].startsWith(stem) && n < 400; j++, n++) {
-          const rest = vocab[j].slice(stem.length);
-          // a common ending, or a word of its own of 6+ letters: "cyber" + "security", not "safe" + "guard"
-          const compound = singular(rest).length >= 6 && bySingular.has(singular(rest));
-          if (FAMILY_ENDINGS.has(rest) || compound) {
-            put(base, vocab[j], M_PREFIX, familyDoc);
-          }
-        }
+        for (const w of familyWords(stem, true)) put(base, w, M_PREFIX, familyDoc);
       }
     }
     const prefixOnly = new Set([...base.keys()].filter((i) => !whole.has(i)));
+    const formOnly = new Set([...prefixOnly].filter((i) => !starts.has(i)));
     const similar = new Map<number, string[]>();
     // a word of the index (if only in a person's name: "Costa", from "Costas") is not a typo
     const known = bySingular.has(singular(qw));
     if (base.size > 0 || syn.size > 0 || known || qw.length < 4 || /\d/.test(qw)) {
-      return { base, syn, fuzzy: false, similar, typo: false, prefixOnly };
+      return { base, syn, fuzzy: false, similar, typo: false, prefixOnly, formOnly };
     }
     const max = qw.length >= 7 ? 2 : 1;
     let typo = false;
@@ -475,7 +529,9 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
         if (d === 1) typo = true;
       }
     }
-    return { base, syn, fuzzy: base.size > 0, similar, typo, prefixOnly };
+    // a regular form of index words is not a typo ("travelers": "travel", not only "travellers")
+    if (typo && inflected(qw)) typo = false;
+    return { base, syn, fuzzy: base.size > 0, similar, typo, prefixOnly, formOnly };
   }
 
   /** prefix: "last" = the word being typed may be the start of a longer word (suggestions); "all" = any word
@@ -486,7 +542,7 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     const qWords = words(query);
     const scores = new Map<number, number>();
     const similar = new Map<number, Set<string>>();
-    const result: RunResult = { scores, similar, typos: new Set() };
+    const result: RunResult = { scores, similar, typos: new Set(), forms: new Set() };
     if (!qWords.length) return result;
     const phrase = qWords.join(' ');
     const phraseSing = singularPhrase(phrase);
@@ -504,16 +560,21 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
 
     // 1. identifiers; an act citation that names the act type puts the act of that type first
     const cited = citedActKeys(query);
-    for (const k of idCandidates(query)) {
+    // while typing, a procedure reference whose type is not finished ("2021/0106(CO") is the procedure's number
+    const unfinished = prefix === 'last' ? /^(\d{4}\/\d{4}[a-z]?)\([a-z]{0,3}$/.exec(idKey(query)) : null;
+    const candidates = unfinished ? [...idCandidates(query), unfinished[1]] : idCandidates(query);
+    for (const k of candidates) {
       for (const i of byId.get(k) ?? []) {
         const typed = cited.some((a) => actKeys.get(i)?.has(a)) ? ACT_TYPE_BONUS : 0;
         bump(i, TIER.id + boost(i) + typed);
       }
     }
+    const owned = scores.size > 0;
     // the whole query is an identifier or an act citation: only names citing it match besides its owner, by the
     // number as cited ("2024/1689" in "Amending Regulations (EU) 2017/745 and (EU) 2024/1689"); while typing, an
     // identifier no file owns may still be unfinished ("2023/01")
-    const identifier = isIdentifier(query) && (prefix !== 'last' || scores.size > 0);
+    const idQuery = isIdentifier(query) || unfinished !== null;
+    const identifier = idQuery && (prefix !== 'last' || owned);
     let named = false; // the query is (part of) a name: "rule of law", "climate law"
 
     // 2-3. names (title / aliases / multi-word keywords), singular/plural-insensitive
@@ -560,6 +621,14 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
           if (k >= 0) bump(i, TIER.phrase + (k === 0 ? 300 : 200) + boost(i));
         });
       }
+      if (owned) return result;
+    }
+    if (idQuery) {
+      // an identifier no file owns as typed: the files whose identifiers start with it, up to a word boundary
+      // ("2016/0224 A" -> "2016/0224A(COD)"), or anywhere while it is being typed ("2025/013" -> "2025/0134(COD)");
+      // never files that only share some of its numbers ("COM(2008) 40" is not "Directive 2008/115/EC ... COM(2025)0101")
+      const tier = prefix === 'last' ? TIER.prefix : TIER.starts;
+      for (const k of candidates) for (const i of idPrefixOwners(k, prefix === 'last')) bump(i, tier + boost(i));
       return result;
     }
 
@@ -589,6 +658,7 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
         n++;
         const fuzzy = per.some((m) => m.fuzzy);
         const partial = per.some((m, k) => m.prefixOnly.has(i) && !(k === expand && m.syn.has(i)));
+        if (partial && per.some((m, k) => m.formOnly.has(i) && !(k === expand && m.syn.has(i)))) result.forms.add(i);
         // every word is a whole word of the title ("battery" in "Batteries and waste batteries")
         const inTitle = per.every((m) => (m.base.get(i) ?? 0) >= W_TITLE * M_PLURAL) ? TITLE_BONUS : 0;
         bump(i, (fuzzy ? TIER.fuzzy : partial ? TIER.prefix : tier) + (sum + extra(i)) * 100 + inTitle + boost(i));
@@ -658,11 +728,14 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     const limit = opts.limit ?? 50;
     const kinds = opts.kinds?.length ? new Set(opts.kinds) : null;
     let res = run(query, opts.typing ? 'last' : 'none');
+    let fallback = false;
     // an identifier matches only as such (tiers 1-3): no word starts, no word families
     if (!opts.typing && !isIdentifier(query)) {
       // nothing matched whole words: fall back to words starting with those typed ("pharma package")
-      if (res.scores.size === 0) res = run(query, 'all');
-      else {
+      if (res.scores.size === 0) {
+        res = run(query, 'all');
+        fallback = true;
+      } else {
         // related word forms, below every whole-word match: "fish" -> "fisheries", "farming" -> "farm"; not of
         // a word that is a typo of an index word ("packageing": "packaging", not "package")
         for (const [i, s] of run(query, 'family', res.typos).scores) {
@@ -676,7 +749,10 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
       const doc = prepared[i].doc;
       if (kinds && !kinds.has(doc.k)) continue;
       const hit: SearchHit = { doc, score };
-      if (score >= TIER.prefix && score < TIER.syn) hit.partial = true;
+      if (score >= TIER.prefix && score < TIER.syn) {
+        hit.partial = true;
+        if (fallback && !res.forms.has(i)) hit.wordStart = true;
+      }
       if (score < TIER.prefix) {
         hit.approximate = true;
         const similar = res.similar.get(i);
@@ -697,14 +773,17 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
   return { search, size: docs.length };
 }
 
-/** The similar words of approximate hits (`SearchHit.similar`), most common first. */
+/** The similar words of approximate hits (`SearchHit.similar`), in the order of the hits given (best match
+ * first), so that a summary names the words of the first results shown. */
 export function similarWords(lists: Iterable<string[] | undefined>, max = 3): string[] {
-  const n = new Map<string, number>();
-  for (const l of lists) for (const w of l ?? []) n.set(w, (n.get(w) ?? 0) + 1);
-  return [...n.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, max)
-    .map(([w]) => w);
+  const out: string[] = [];
+  for (const l of lists) {
+    for (const w of l ?? []) {
+      if (out.length >= max) return out;
+      if (!out.includes(w)) out.push(w);
+    }
+  }
+  return out;
 }
 
 /** Dossier ids matched by the engine, with scores normalised to (0..1], in the engine's order. The legislation

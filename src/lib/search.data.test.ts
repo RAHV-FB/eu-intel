@@ -5,7 +5,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { DossierSummary, EpVoteSummary, SearchDoc } from '../types/data';
-import { createSearchEngine, type SearchHit } from './search';
+import { createSearchEngine, similarWords, type SearchHit } from './search';
 import { buildHaystacks, keywordScores } from '../features/legislation/explorer';
 import { matchVoteDetails, matchVotes, voteHaystacks } from '../features/votes/keyword';
 
@@ -311,9 +311,12 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(top('European Defense Fund')).toBe('dossier:2018-0254');
     expect(top('EP')).toBe('page:parliament');
     const fit55 = ids('Fit for 55', 50);
-    expect(fit55).toHaveLength(20);
-    for (const id of ['2021-0197', '2021-0211A', '2021-0211B', '2021-0213', '2021-0214', '2021-0424']) expect(fit55).toContain(`dossier:${id}`);
-    expect(read<{ known_as: { part_of?: string[] } }>('dossiers/2021-0213.json').known_as.part_of).toEqual(['Fit for 55 package']);
+    expect(fit55).toHaveLength(21); // the 20 carriages' files and 2021/0211(COD), which the ETS carriage names
+    for (const id of ['2021-0197', '2021-0211', '2021-0211A', '2021-0211B', '2021-0213', '2021-0214', '2021-0424']) expect(fit55).toContain(`dossier:${id}`);
+    expect(fit55[20]).toBe('dossier:2021-0211'); // the split parent, below the files holding acts
+    for (const id of ['2021-0213', '2021-0211']) {
+      expect(read<{ known_as: { part_of?: string[] } }>(`dossiers/${id}.json`).known_as.part_of, id).toEqual(['Fit for 55 package']);
+    }
     const vh = voteHaystacks(votes);
     expect(matchVotes(votes, vh, 'USB-C', engine)?.has('148323')).toBe(true); // common charger, final vote
     const sgp = matchVotes(votes, vh, 'stability and growth pact', engine);
@@ -336,6 +339,78 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(ids('2008/0028(COD)', 50)).toEqual([]); // "Food information to consumers", not in the data
     expect(ids('COM(2008) 40', 50)).toEqual([]);
     expect(ids('2024/1689', 10)).toEqual(expect.arrayContaining(['dossier:2021-0106', 'dossier:2025-0359'])); // cites it
+  });
+
+  it('finds the parts of a split procedure by number and letter, without the procedure type', () => {
+    const hay = buildHaystacks(rows);
+    // "2016/0224A" found nothing and the page said no file has the reference; "2016/0400A" only the split parent
+    for (const [q, id] of [
+      ['2016/0224A', '2016-0224A'],
+      ['2016/0224 A', '2016-0224A'],
+      ['2016/0224B', '2016-0224B'],
+      ['2016/0400A', '2016-0400A'],
+      ['2021/0211A', '2021-0211A'],
+      ['2016/0357B', '2016-0357B'],
+    ]) {
+      expect(top(q), q).toBe(`dossier:${id}`);
+      expect(typed(q)[0], q).toBe(`dossier:${id}`);
+      expect(keywordScores(rows, hay, engine, q).has(id), q).toBe(true);
+    }
+    expect(ids('2016/0400A', 10)).toEqual(['dossier:2016-0400A', 'dossier:2016-0400']);
+    // typing the reference keeps the file, never "all but one of the words"
+    for (const q of ['2021/0106(', '2021/0106(C', '2021/0106(CO', '2021/0106(COD', '2016/0224A(C', '2016/0224A(CO']) {
+      const hits = engine.search(q, { limit: 8, typing: true });
+      expect(hits[0]?.doc.id, q).toBe(q.startsWith('2021') ? '2021-0106' : '2016-0224A');
+      expect(hits.some((h) => h.approximate), q).toBe(false);
+    }
+    // a reference no file has: nothing, also while typing (it used to suggest files sharing "2023" and "COD")
+    for (const q of ['2023/9999(COD)', 'COM(2015) 26', 'COM(2008) 40', 'Regulation (EU) 2024/9999']) {
+      expect(ids(q, 50), q).toEqual([]);
+      expect(typed(q), q).toEqual([]);
+    }
+  });
+
+  it('keeps the word family of a regular word form that is one edit from another word', () => {
+    // these used to be taken for typos of "trailers", "proposed", "making", "fueleu" and "banking"
+    expect(top('travelers')).toBe('dossier:2018-0186'); // EU Emergency Travel Document
+    expect(ids('travelers', 16)).toContain('dossier:2013-0246'); // Package travel
+    expect(top('promoted')).toBe('dossier:2016-0287'); // Promotion of Internet connectivity
+    expect(top('marking')).toBe('dossier:2013-0088'); // Community trade mark
+    expect(engine.search('fueled', { limit: 100 }).filter((h) => h.partial).length).toBeGreaterThanOrEqual(10); // fuels
+    expect(top('banning')).toBe('dossier:2021-0197'); // "EU ban on the sale of new petrol and diesel cars"
+    for (const q of ['travelers', 'promoted', 'marking', 'banning']) {
+      const hits = engine.search(q, { limit: 5000 });
+      const rank = (h: SearchHit) => (h.approximate ? 2 : h.partial ? 1 : 0);
+      expect(hits.every((h, k) => k === 0 || rank(hits[k - 1]) <= rank(h)), q).toBe(true);
+    }
+    // the summary's similar words are those of the first results shown
+    const banning = engine.search('banning', { limit: 1000 }).filter((h) => h.approximate);
+    expect(similarWords(banning.map((h) => h.similar))[0]).toBe(banning[0].similar?.[0]);
+  });
+
+  it('says when results only start with the word typed', () => {
+    for (const q of ['Spa', 'mold', 'pharma package']) {
+      const hits = engine.search(q, { limit: 1000 });
+      expect(hits.length, q).toBeGreaterThan(0);
+      expect(hits.every((h) => h.partial && h.wordStart), q).toBe(true);
+    }
+  });
+
+  it('finds a file by its common name and the type of its act', () => {
+    for (const q of ['whistleblower directive', 'whistleblowing directive', 'whistleblower rules', 'EU whistleblower directive']) {
+      expect(top(q), q).toBe('dossier:2018-0106');
+      expect(engine.search(q)[0].approximate, q).toBeUndefined();
+    }
+    for (const q of ['USB-C regulation', 'USB-C directive', 'common charger regulation']) expect(top(q), q).toBe('dossier:2021-0291');
+    expect(top('batteries regulation')).toBe('dossier:2020-0353');
+  });
+
+  it('gives RED II, RED III and the NIS Directive their own files', () => {
+    expect(ids('RED II', 50)).toEqual(['dossier:2016-0382']); // Directive (EU) 2018/2001
+    expect(ids('RED III', 50)).toEqual(['dossier:2021-0218']); // Directive (EU) 2023/2413
+    expect(ids('NIS', 10).sort()).toEqual(['dossier:2013-0027', 'dossier:2020-0359']);
+    expect(top('NIS Directive')).toBe('dossier:2013-0027');
+    expect(read<{ known_as: { names?: string[] } }>('dossiers/2021-0218.json').known_as.names).toContain('RED III');
   });
 
   it('matches vote rapporteurs only as written: a first name has no plural', () => {

@@ -217,7 +217,9 @@
 # ------------------------------------------------------------------------------ Fit for 55 package
 # The package's other carriages (2021/0197(COD) and 2021/0210(COD) have entries above). The carriage "Revised regulatory
 # framework for competitive decarbonised gas markets" is only announced and names no procedure; the carriage "Revision
-# of the EU emission trading system (ETS)" names 2021/0211(COD), split into 2021/0211A(COD) and 2021/0211B(COD).
+# of the EU emission trading system (ETS)" names 2021/0211(COD), which was split into 2021/0211A(COD) and
+# 2021/0211B(COD): the procedure the carriage names and both of its parts carry the name.
+# source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-revision-of-the-eu-emission-trading-system-(ets) (the carriage, listed on the package page; its record in data/snapshot/train/files.json has "procedure_refs": ["2021/0211(COD)"])
 # source: https://publications.europa.eu/resource/celex/32023L2413 (Cellar, the English metadata of Directive (EU) 2023/2413, the act of 2021/0218(COD): short title, cdm:expression_title_short, "RED III, red iii, RED 3")
 # source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55 (EP Legislative Train, "Fit for 55 package under the European Green Deal (20 carriage(s) in this package)": each carriage names its procedure)
 # source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-revision-of-the-eu-emission-trading-system-for-aviation (the carriage of 2021/0207(COD))
@@ -230,6 +232,7 @@
 - {procedure: "2021/0205(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0206(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0207(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0211(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0211A(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0211B(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0213(CNS)", names: ["Fit for 55 package"]}

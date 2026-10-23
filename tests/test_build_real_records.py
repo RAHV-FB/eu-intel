@@ -118,6 +118,25 @@ def test_party_acronyms_written_with_dots_are_also_searchable_without_them():
     assert undotted_acronym("GRÜNE.") is None and undotted_acronym("Ind.") is None and undotted_acronym("PiS") is None
 
 
+def test_search_entries_carry_the_types_of_the_files_acts():
+    # "whistleblower directive" and "USB-C regulation" found nothing: the files of Directive (EU) 2019/1937 and
+    # Directive (EU) 2022/2380 had no word for the type of their act; a proposal (no act yet) has none
+    p = procs("2018-0106", "2021-0291")
+    a = acts("32019L1937", "32022L2380")
+    of = {"2018-0106": [a["32019L1937"]], "2021-0291": [a["32022L2380"]]}
+    summary = {pid: {"title": p[pid].title, "ref": p[pid].reference, "status_label": "In force", "featured": False,
+                     "type": "COD", "last_event": None, "celex": [x.celex for x in of[pid]]} for pid in p}  # fmt: skip
+    summary["2099-0001"] = {**summary["2018-0106"], "celex": []}
+    b = SimpleNamespace(
+        dossier_summary=summary, proc={**p, "2099-0001": p["2018-0106"]}, curated_of={}, acts_of={**of, "2099-0001": []},
+        train_of={}, split_children={}, alias_rules=[], mep_summary={}, group_summaries=[], party_summary={},
+        s=SimpleNamespace(meps=[]), topic_list=[], topics_cur={}, resolve_ref=lambda ref: None, org={}, unnamed_parties=set(),
+    )  # fmt: skip
+    x = {d["id"]: d["x"].split() for d in build_search_docs(b) if d["k"] == "dossier"}
+    assert "directive" in x["2018-0106"] and "directive" in x["2021-0291"]
+    assert not {"directive", "regulation", "decision"} & set(x["2099-0001"])
+
+
 def test_act_number_of_a_title_written_without_a_space_after_the_act_type():
     # Cellar's title of 32014L0063 reads "Directive2014/63/EU of the European Parliament ...": the country pages
     # wrote "Directive 2014/63" (from the CELEX id); 32022R0870 reads "Regulation(EU) 2022/870 ..."

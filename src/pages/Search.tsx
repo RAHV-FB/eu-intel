@@ -118,8 +118,8 @@ export default function Search() {
   }, []);
   const meta = useData<Meta>('meta.json');
 
-  const { grouped, partialCount, approx } = useMemo(() => {
-    if (!engine || !q.trim()) return { grouped: [], partialCount: 0, approx: [] };
+  const { grouped, partialCount, startCount, approx } = useMemo(() => {
+    if (!engine || !q.trim()) return { grouped: [], partialCount: 0, startCount: 0, approx: [] };
     let hits: SearchHit[] = [];
     try {
       hits = engine.search(q, { limit: 1000 });
@@ -132,7 +132,8 @@ export default function Search() {
       .filter((x) => x.hits.length > 0)
       .sort((a, b) => rank(a.g.kinds) - rank(b.g.kinds));
     const partialCount = hits.filter((h) => h.partial).length;
-    return { grouped: groups, partialCount, approx: hits.filter((h) => h.approximate) };
+    const startCount = hits.filter((h) => h.wordStart).length;
+    return { grouped: groups, partialCount, startCount, approx: hits.filter((h) => h.approximate) };
   }, [engine, q]);
   const total = grouped.reduce((n, x) => n + x.hits.length, 0);
   // matches on whole words (exact, or singular/plural) rank first, then other forms of a word, then approximate ones
@@ -182,7 +183,17 @@ export default function Search() {
           <p className="sr-summary" role="status">
             {formatNumber(total)} result{total === 1 ? '' : 's'}
             {total >= 1000 ? ' (showing the best 1,000)' : ''}
-            {partialCount > 0 && wholeCount === 0 && (
+            {partialCount > 0 && wholeCount === 0 && startCount === partialCount && (
+              <>
+                {' '}
+                · no whole-word matches for “{q}”, so{' '}
+                {partialCount === total
+                  ? 'these contain'
+                  : `${formatNumber(partialCount)} of them ${partialCount === 1 ? 'contains' : 'contain'}`}{' '}
+                words that start with it
+              </>
+            )}
+            {partialCount > 0 && wholeCount === 0 && startCount < partialCount && (
               <>
                 {' '}
                 · no whole-word matches for “{q}”, so {partialCount === total ? 'these match' : ofThem(partialCount)} only

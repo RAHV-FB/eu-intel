@@ -349,6 +349,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   act this file amends or repeals, or that repeals it, by its file's title too, unless that is an "Amending …"
   title. Cellar records two titles without the space after the act type ("Directive2014/63/EU of the European
   Parliament …", "Regulation(EU) 2022/870 …"); their numbers are read as if it were there ("Directive 2014/63/EU").
+- Search index (`search.json`): a file's keywords (`x`) hold its procedure reference and number, its acts' CELEX
+  ids and numbers, its COM references and the types of its acts as EUR-Lex records them (`act_type`:
+  "regulation", "directive", "decision"), so that "whistleblower directive" finds Directive (EU) 2019/1937.
 - Partial repeals: a repeal link that every Cellar annotation limits to a provision or marks as partial (role
   AP) is kept apart (`partly_repeals`, `partly_repealed_by`: 19 links on 13 acts, e.g. Decision 2014/335/EU,
   Euratom, partly repealed by Decision (EU, Euratom) 2020/2053, whose Art. 11(1) reads "Subject to paragraph 2,

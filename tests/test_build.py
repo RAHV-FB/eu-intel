@@ -406,6 +406,7 @@ def test_search_docs(out: Path):
     assert "2099/0001(COD)" in d1["x"] and "32099R0001" in d1["x"] and "COM(2099)1" in d1["x"]
     assert "TWA" in d1["a"]
     assert "2099/1" in d1["x"].split()  # act number, as cited in the Official Journal
+    assert "regulation" in d1["x"].split()  # the type of its act ("TWA regulation")
     # short title in the act's own title: a name of the file (here already its title, so not repeated)
     assert d1["t"] == "Test Widgets Act" and "Test Widgets Act" not in d1["a"].split(" | ")
     assert "gizmo" in by[("dossier", "2099-0003")]["x"]  # aliases.yaml rule embedded

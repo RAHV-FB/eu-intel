@@ -267,6 +267,15 @@ main:focus {
 .searchbox__list li:hover {
   background: var(--blue-pale);
 }
+/* on the highlight, the muted colours fall below 4.5:1: darker ones */
+.searchbox__list li.is-active .searchbox__sub,
+.searchbox__list li:hover .searchbox__sub {
+  color: var(--text-2);
+}
+.searchbox__list li.is-active .searchbox__kind,
+.searchbox__list li:hover .searchbox__kind {
+  color: var(--eu-blue);
+}
 .searchbox__kind {
   grid-row: span 2;
   font-size: var(--fs-xs);
