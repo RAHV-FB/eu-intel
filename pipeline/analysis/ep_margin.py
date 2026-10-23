@@ -1,9 +1,11 @@
 """Margin of a European Parliament plenary vote relative to the legally required majority.
 
-`margin(vote, component_members)` answers "by how many votes did this pass / fail?" for an EpVote whose
-`majority_rule` is established (pipeline/sources/ep_votes.py sets it only from the Treaty text applying to
-that kind of vote). It returns None when the rule is "unknown", the counts are missing, a rule that needs
-the number of component Members is given none, or the computed result contradicts the published outcome.
+`margin(vote, component_members)` answers "by how many votes was the required majority reached or missed?"
+for an EpVote whose `majority_rule` is established (pipeline/sources/ep_votes.py sets it only from the Treaty
+text applying to that kind of vote). It returns None when the outcome is not established as adopted or
+rejected (no "Majority reached" / "not reached" label may stand next to an unknown outcome), the rule is
+"unknown", the counts are missing, a rule that needs the number of component Members is given none, or the
+computed result contradicts the published outcome.
 
 Legal basis (texts retrieved from the Publications Office, CELEX 12016E231 / 12016E234 / 12016E294 /
 12016E290 / 12016E354, 62018CJ0650):
@@ -94,6 +96,8 @@ def threshold(rule: str, n_for: int, n_against: int, component_members: int | No
 
 def margin(vote: EpVote, component_members: int | None = None) -> Margin | None:
     rule = vote.majority_rule
+    if vote.outcome not in ("adopted", "rejected"):
+        return None  # the label would state a result that is not established
     if rule == "unknown" or vote.n_for is None or vote.n_against is None:
         return None
     need = threshold(rule, vote.n_for, vote.n_against, component_members)
@@ -104,12 +108,14 @@ def margin(vote: EpVote, component_members: int | None = None) -> Margin | None:
     reached = distance >= 0
     if (vote.outcome == "adopted" and not reached) or (vote.outcome == "rejected" and reached):
         return None  # contradicts the official result: the rule does not describe this vote
+    # the label is about the majority this vote needed, never about a law "passing": a final vote may be
+    # Parliament's opinion (consultation) or its position before the Council has acted
     if distance > 0:
-        label = f"Passed by {_plural(distance)} above the required majority"
+        label = f"Majority reached: {_plural(distance)} more than needed"
     elif distance == 0:
-        label = "Passed with exactly the required majority"
+        label = "Majority reached with exactly the votes needed"
     else:
-        label = f"Fell {_plural(-distance)} short"
+        label = f"Majority not reached: {_plural(-distance)} short"
     return Margin(
         rule=rule,
         threshold=need,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from pipeline.analysis.ep_margin import margin, statutory_seats, threshold
@@ -29,12 +31,12 @@ def test_ai_act_majority_of_votes_cast(votes):
     m = margin(votes["166051"])  # 523 for, 46 against, 49 abstentions (abstentions are not votes cast)
     assert (m.rule, m.votes_cast, m.threshold, m.distance) == ("votes_cast", 569, 285, 238)
     assert m.relative == round(238 / 569, 4)
-    assert m.label == "Passed by 238 votes above the required majority"
+    assert m.label == "Majority reached: 238 votes more than needed"
 
 
 def test_rejected_amendment(votes):
     m = margin(votes["166377"])  # 262 for, 351 against
-    assert (m.threshold, m.distance, m.label) == (307, -45, "Fell 45 votes short")
+    assert (m.threshold, m.distance, m.label) == (307, -45, "Majority not reached: 45 votes short")
 
 
 def test_one_vote_majority(votes):
@@ -42,7 +44,7 @@ def test_one_vote_majority(votes):
     assert (v.kind, v.method, v.procedure_refs) == ("final", "VOTE_ELECTRONIC_SECRET", ["2024/2086(IMM)"])
     m = margin(v)
     assert (m.threshold, m.distance) == (306, 0)
-    assert m.label == "Passed with exactly the required majority"
+    assert m.label == "Majority reached with exactly the votes needed"
 
 
 def test_budget_guidelines_rule_unknown(votes):
@@ -61,7 +63,7 @@ def test_motion_of_censure_needs_component_members(votes):
         "two_thirds_cast",
         361,
         -186,
-        "Fell 186 votes short",
+        "Majority not reached: 186 votes short",
     )
 
 
@@ -75,12 +77,29 @@ def test_second_reading_amendment(votes):
 def test_objection_to_delegated_act(votes):
     m = margin(votes["195361"], 720)  # 388 for: adopted
     assert (m.rule, m.threshold, m.distance) == ("component_members", 361, 27)
-    assert m.label == "Passed by 27 votes above the required majority"
+    assert m.label == "Majority reached: 27 votes more than needed"
 
 
 def test_unknown_rule_or_counts(votes):
     assert votes["166530"].outcome == "lapsed" and margin(votes["166530"]) is None  # no vote held
     assert margin(votes["166044"]) is None  # show of hands: no counts
+
+
+SNAP_VOTES = Path(__file__).resolve().parent.parent / "data" / "snapshot" / "ep_votes" / "votes.json"
+
+
+@pytest.mark.skipif(not SNAP_VOTES.exists(), reason="no snapshot")
+def test_no_margin_for_an_outcome_that_is_not_established():
+    from tests.test_build_real_records import votes as snapshot_votes
+
+    # 116204 (8 Jul 2020, motion to reject the Council's position, 218 for, 469 against): the open data gives no
+    # outcome and the sitting has no minutes XML, so "Majority not reached" would state a result not established
+    v = snapshot_votes("116204")["116204"]
+    assert (v.outcome, v.majority_rule) == ("unknown", "component_members")
+    assert margin(v, 705) is None
+    assert margin(v.model_copy(update={"outcome": "lapsed"}), 705) is None
+    m = margin(v.model_copy(update={"outcome": "rejected"}), 705)  # the same counts with an established outcome
+    assert m is not None and (m.threshold, m.distance) == (353, -135)
 
 
 def test_contradiction_with_official_result_gives_none(votes):

@@ -2,13 +2,14 @@ import { Link } from 'react-router-dom';
 import type { EpVoteSummary, VoteKind, VoteMargin, VoteOutcome } from '../../types/data';
 import { Term, VoteBar } from '../../components/ui';
 import { formatDate, formatNumber } from '../../lib/format';
-import { CLOSE_RELATIVE, KIND_EXPLAINER, KIND_LABEL, OUTCOME_ICON, OUTCOME_LABEL, isClose, outcomeTone } from './labels';
+import { CLOSE_RELATIVE, DERIVED_OUTCOME, KIND_EXPLAINER, KIND_LABEL, OUTCOME_ICON, OUTCOME_LABEL, isClose, outcomeTone } from './labels';
 import { VoteTitle } from './VoteTitle';
 import './common.css';
 import './votes.css';
 
-export function OutcomeBadge({ outcome }: { outcome: VoteOutcome }) {
-  return (
+/** The outcome; given its basis, an outcome we calculated from the counts says so next to the badge. */
+export function OutcomeBadge({ outcome, basis }: { outcome: VoteOutcome; basis?: EpVoteSummary['outcome_basis'] }) {
+  const badge = (
     <span className={`badge badge--${outcomeTone(outcome)}`}>
       <span aria-hidden="true" className="badge__icon">
         {OUTCOME_ICON[outcome]}
@@ -16,11 +17,22 @@ export function OutcomeBadge({ outcome }: { outcome: VoteOutcome }) {
       {OUTCOME_LABEL[outcome]}
     </span>
   );
+  if (basis !== 'derived' || (outcome !== 'adopted' && outcome !== 'rejected')) return badge;
+  return (
+    <>
+      {badge}
+      <span className="meta">
+        {DERIVED_OUTCOME}
+        <span className="visually-hidden">.</span>
+      </span>
+    </>
+  );
 }
 
 /**
- * "Passed by N votes" / "Fell N short". Given the outcome, nothing is shown unless it is adopted or rejected: a margin
- * is our calculation and must never stand next to an outcome that is not established.
+ * "Majority reached: N votes more than needed" / "Majority not reached: N votes short". Nothing is shown unless the outcome
+ * is given and is adopted or rejected: a margin is our calculation and must never stand next to an outcome that is not
+ * established.
  */
 export function MarginText({
   margin,
@@ -37,9 +49,10 @@ export function MarginText({
       <span className="meta">No margin shown: the applicable threshold could not be established from the records.</span>
     );
   }
+  if (!outcome) return null; // a margin is shown only next to the outcome it measures
   return (
     <span className="margin">
-      {isClose({ margin }) && (
+      {isClose({ margin, outcome }) && (
         <span className="margin__close">
           <span aria-hidden="true">◆ </span>Close vote
           <span className="visually-hidden">.</span>
@@ -82,7 +95,7 @@ export function VoteListItem({ v, showDossier = true }: { v: EpVoteSummary; show
           </Link>
         </h3>
         <div className="vote-item__outcome">
-          <OutcomeBadge outcome={v.outcome} />
+          <OutcomeBadge outcome={v.outcome} basis={v.outcome_basis} />
           <MarginText margin={v.margin} short outcome={v.outcome} />
         </div>
         {v.outcome_note && <p className="meta vote-item__note">{v.outcome_note}</p>}
@@ -127,8 +140,8 @@ export function CloseVoteMethod() {
       </p>
       <p>
         We call a vote <strong>close</strong> when the votes in favour were within {formatNumber(CLOSE_RELATIVE * 100)}% of the votes
-        counted towards the threshold. Votes without an established threshold are never labelled close and are left out of the
-        “close votes” filter and placed last when sorting by margin.
+        counted towards the threshold. Votes without an established threshold or outcome are never labelled close and are left out
+        of the “close votes” filter (and the homepage’s Close votes list) and placed last when sorting by margin.
       </p>
     </div>
   );

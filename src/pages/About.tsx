@@ -208,8 +208,10 @@ export default function About() {
             <li>
               The homepage lists are rule-based: <em>Recently adopted</em> (formally adopted acts, newest first);{' '}
               <em>Under discussion</em> (files not yet adopted with a recorded procedural step in the last 120 days);{' '}
-              <em>Close votes</em> (final Parliament votes of the last 12 months with the smallest margin against the applicable
-              majority); <em>Rejected</em> (whole texts or motions Parliament rejected, and files recorded as rejected — never amendments);{' '}
+              <em>Close votes</em> (the most recent final Parliament votes on a whole text that were close, as defined under “Votes and
+              margins” below); <em>Rejected</em> (final votes on a whole text that Parliament voted down,
+              and motions to reject a proposal or the Council’s position that it adopted, with what happened to the file next; then files
+              recorded as rejected — never amendments, rejected objections or motions of censure);{' '}
               <em>Stalled</em> (see below); <em>Coming up</em> (legally fixed dates in the next 12 months).
             </li>
           </ul>
@@ -255,11 +257,13 @@ export default function About() {
             <li>Totals are Parliament’s official results. Individual votes come from roll-call records.</li>
             <li>
               A margin is shown only when the threshold that applied can be established: a majority of votes cast, a majority of all
-              members, or two thirds of the votes cast. The margin is the number of votes in favour above or below that threshold.
+              members, or two thirds of the votes cast. The margin is the number of votes in favour above or below that threshold:
+              “Majority reached: 10 votes more than needed” means the text or motion voted on was adopted, not that a law was passed —
+              a final vote can be Parliament’s opinion, or its position before the Council has agreed.
             </li>
             <li>
-              In the vote explorer, a vote is marked <strong>close</strong> when the votes in favour were within{' '}
-              {formatNumber(CLOSE_RELATIVE * 100)}% of the votes counted towards the threshold.
+              In the vote explorer and the homepage’s <em>Close votes</em> list, a vote is marked <strong>close</strong> when the votes
+              in favour were within {formatNumber(CLOSE_RELATIVE * 100)}% of the votes counted towards the threshold.
             </li>
             <li>
               <strong>Group majority</strong> is the most common position among a political group’s members with a recorded vote, using

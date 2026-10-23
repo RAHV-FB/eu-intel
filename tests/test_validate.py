@@ -176,3 +176,33 @@ def test_public_dossier_contradicting_its_own_dates(tmp_path: Path):
     assert [e.split(":")[0] for e in errors] == [
         "public dossiers/2010-0095.json", "public dossiers/2018-0213.json", "public dossiers/2024-0016.json"]  # fmt: skip
     assert "before the proposal of 2018-05-31" in errors[1] and "after its publication" in errors[2]
+
+
+def test_public_vote_margin_must_agree_with_an_established_outcome(tmp_path: Path):
+    # as published before the guard in build.py ep_vote_summary, 1,102 index entries with no established outcome
+    # carried a margin label; a margin's sign or label can also disagree with the outcome (ids are illustrative)
+    pub = tmp_path / "public"
+    (pub / "votes").mkdir(parents=True)
+    (pub / "dossiers").mkdir(parents=True)
+
+    def margin(distance: int, label: str) -> dict:
+        return {"rule": "votes_cast", "threshold": 300, "distance": distance, "relative": distance / 600, "label": label}
+
+    ok = {"id": "162153", "outcome": "rejected", "margin": margin(-10, "Majority not reached: 10 votes short")}
+    index = [
+        ok,
+        {"id": "114470", "outcome": "unknown", "margin": margin(5, "Majority reached: 5 votes more than needed")},
+        {"id": "1", "outcome": "adopted", "margin": margin(-3, "Majority not reached: 3 votes short")},
+        {"id": "2", "outcome": "rejected", "margin": margin(-3, "Majority reached: 3 votes more than needed")},
+        {"id": "114367", "outcome": "unknown", "margin": None},
+    ]
+    (pub / "votes" / "index.json").write_text(json.dumps(index), encoding="utf-8")
+    (pub / "votes" / "162153.json").write_text(json.dumps(ok), encoding="utf-8")
+    (pub / "dossiers" / "2099-0001.json").write_text(json.dumps({"id": "2099-0001", "ep_votes": [index[1]]}), encoding="utf-8")
+    errors = check(FIX, public=pub, today=TODAY).errors
+    assert errors == [
+        "public dossiers/2099-0001.json: vote 114470: margin 'Majority reached: 5 votes more than needed' with outcome 'unknown'",
+        "public votes/index.json: vote 114470: margin 'Majority reached: 5 votes more than needed' with outcome 'unknown'",
+        "public votes/index.json: vote 1: margin distance -3 contradicts outcome 'adopted'",
+        "public votes/index.json: vote 2: margin label 'Majority reached: 3 votes more than needed' contradicts outcome 'rejected'",
+    ]

@@ -11,8 +11,8 @@ const MORE: Partial<Record<HomeList['id'], { to: string; label: string }>> = {
   under_debate: { to: '/legislation?stage=active&sort=updated', label: 'All files still being decided' },
   stalled: { to: '/legislation?blocked=1', label: 'Officially reported as blocked' },
   upcoming: { to: '/legislation?sort=deadline', label: 'All upcoming dates' },
-  close_votes: { to: '/votes', label: 'Explore Parliament votes' },
-  rejected: { to: '/votes', label: 'Explore Parliament votes' },
+  close_votes: { to: '/votes?kind=final&close=1', label: 'All close final votes' },
+  rejected: { to: '/votes?kind=final&outcome=rejected', label: 'All final votes Parliament rejected' },
 };
 
 function itemHref(it: HomeListItem): string | null {

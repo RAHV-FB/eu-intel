@@ -232,7 +232,7 @@ def test_vote_breakdowns_use_membership_on_vote_date(out: Path):
     idx = [v["id"] for v in load(out, "votes/index.json")]
     assert idx == ["V3", "V1", "V4"] and not (out / "votes/V2.json").exists()
     v4 = load(out, "votes/V4.json")
-    assert v4["outcome"] == "unknown" and v4["margin"] is None  # never "Passed by N" without a known outcome
+    assert v4["outcome"] == "unknown" and v4["margin"] is None  # never "Majority reached" without a known outcome
     assert v4["has_ballots"] is False and v4["ballots"] == [] and v4["for"] == 300
 
 
@@ -1342,7 +1342,7 @@ def test_majority_of_component_members_counts_members_in_office(votes_out: Path)
     v10 = load(votes_out, "votes/V10.json")
     # 719 Members in office -> 360 needed (not 361 from the 720 statutory seats): fell 1 vote short
     assert (v10["margin"]["threshold"], v10["margin"]["distance"]) == (360, -1)
-    assert v10["margin"]["component_members"] == 719 and v10["margin"]["label"] == "Fell 1 vote short"
+    assert v10["margin"]["component_members"] == 719 and v10["margin"]["label"] == "Majority not reached: 1 vote short"
 
 
 def test_component_members_is_withheld_when_membership_records_are_implausible(
@@ -1411,8 +1411,36 @@ def test_home_rejected_list_reads_rejection_motions_correctly(votes_out: Path):
         rejected["V11"]["subtitle"]
         == "Parliament adopted the motion and so rejected the Commission proposal."
     )
-    assert "V10" in rejected and rejected["V10"]["subtitle"].startswith("The objection was rejected")
+    # a rejected objection leaves the Commission measure in place: Parliament rejected nothing (as in the list's
+    # first six items on 22 Oct 2026, 198885 ... 195414, while the adopted motion 179804 ranked 18th)
+    assert "V10" not in rejected and "V11" in rejected
+    assert "objections" in lists["rejected"]["description"]
+    # each file once: the motion leads to 2099-0003, so its "Rejected by Parliament" status is not listed again
+    files = [i["dossier_id"] for i in lists["rejected"]["items"] if i["dossier_id"]]
+    assert len(files) == len(set(files)) and rejected["V11"]["dossier_id"] == "2099-0003"
     assert all(i.get("vote_id") != "V13" for i in lists["close_votes"]["items"])  # final votes only
+
+
+def test_home_close_votes_are_close_as_the_votes_page_defines_it(votes_out: Path):
+    import re
+
+    # the /votes page's rule (src/features/votes/labels.ts) and the home list's are the same number
+    labels = (Path(__file__).resolve().parent.parent / "src/features/votes/labels.ts").read_text(encoding="utf-8")
+    from pipeline.build import CLOSE_RELATIVE
+
+    assert float(re.search(r"export const CLOSE_RELATIVE = ([\d.]+);", labels).group(1)) == CLOSE_RELATIVE
+    lists = {x["id"]: x for x in load(votes_out, "home.json")["lists"]}
+    idx = {v["id"]: v for v in load(votes_out, "votes/index.json")}
+    close = lists["close_votes"]["items"]
+    assert [i["vote_id"] for i in close] == ["V1"]
+    # V16 (final, 600 for, 50 against) is 42% above the threshold: not close, so not listed
+    assert idx["V16"]["margin"]["relative"] > CLOSE_RELATIVE and all(i["vote_id"] != "V16" for i in close)
+    for i in close:
+        v = idx[i["vote_id"]]
+        assert v["kind"] == "final" and abs(v["margin"]["relative"]) <= CLOSE_RELATIVE
+        assert i["subtitle"] == v["margin"]["label"]
+    assert [i["date"] for i in close] == sorted((i["date"] for i in close), reverse=True)  # newest first
+    assert "within 5%" in lists["close_votes"]["description"]
 
 
 def test_negotiation_decision_vote_is_listed_and_linked(votes_out: Path):
