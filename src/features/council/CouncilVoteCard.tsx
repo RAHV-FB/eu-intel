@@ -127,6 +127,7 @@ export function CouncilVoteCard({
           <VoteOn vote={vote} />
         </p>
         {vote.vote_on_note && <p className="meta cvote__voteon-note">{vote.vote_on_note}</p>}
+        {vote.date_note && <p className="meta cvote__voteon-note">{vote.date_note}</p>}
         <dl className="cvote__facts">
           <div>
             <dt>Outcome</dt>

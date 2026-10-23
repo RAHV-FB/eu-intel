@@ -1,0 +1,66 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2018-0173",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2018-0173-ANPRO-2018-07-02",
+     "type": "Activity",
+     "activity_date": "2018-07-02",
+     "activity_id": "2018-0173-ANPRO-2018-07-02",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2018-0173-PUB-2020-08-05",
+     "type": "Activity",
+     "activity_date": "2020-08-05",
+     "activity_id": "2018-0173-PUB-2020-08-05",
+     "had_activity_type": "def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2018-10-24-VOT-ITM-741269-16",
+     "type": "Activity",
+     "activity_date": "2018-10-24",
+     "activity_id": "MTG-PL-2018-10-24-VOT-ITM-741269-16",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-8-2018-0307"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-8-2018-10-24-VOT-ITM-016"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2018-0173-DEC-DCPL-2018-10-24",
+     "type": "Decision",
+     "activity_date": "2018-10-24",
+     "activity_id": "2018-0173-DEC-DCPL-2018-10-24",
+     "had_activity_type": "def/ep-activities/PLENARY_AMEND",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/SP-2018-755-TA-8-2018-0415",
+    "eli/dl/doc/A-8-2018-0307",
+    "eli/dl/doc/TA-8-2018-0415"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "process_id": "2018-0173",
+   "process_title": {
+    "en": "Harmonisation of the structures of excise duties on alcohol and alcoholic beverages"
+   },
+   "process_type": "def/ep-procedure-types/CNS",
+   "label": "2018/0173(CNS)",
+   "identifierYear": "2018"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

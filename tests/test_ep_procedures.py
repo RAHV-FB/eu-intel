@@ -249,6 +249,82 @@ def test_second_reading_gdpr():
     assert [e.date for e in second] == ["2016-04-14"]
 
 
+def test_vote_records_keep_only_the_documents_of_the_file():
+    # 2020/0128(COD): MTG-PL-2020-07-08-PVCRE-ITM-18 ("Announcement of voting results") and the items folded into
+    # the 10 Jul decision list 20 documents of other files (A9-0131/2020 is Europol and New Zealand, 2020/2048);
+    # the file had no committee report: its documents are the proposal and the text adopted (OEIL)
+    p = build("2020-0128")
+    assert [d.id for d in p.documents] == ["COM(2020)0261", "TA-9-2020-0203"]
+    by = {e.id: [d.id for d in e.docs] for e in p.events}
+    assert by["MTG-PL-2020-07-08-PVCRE-ITM-18"] == ["PV-9-2020-07-08-ITM-018"]  # the item's own minutes
+    # an item based on a single document: the vote on urgent procedure for this file's proposal (C9-0185/2020)
+    assert by["MTG-PL-2020-07-08-VOT-ITM-20200708027"] == ["C-9-2020-0185", "PV-9-2020-07-08-VOT-ITM-027"]
+    assert not [d for d in by["2020-0128-DEC-DCPL-2020-07-10"] if d.startswith(("A-", "B-", "C-"))]
+    # an item of this file alone keeps the registered text it is based on: 2016/0139(COD), 18 Apr 2023, the
+    # Council's position C9-0047/2023 and the file's recommendation A9-0076/2023
+    second = next(e for e in build("2016-0139").events if e.id == "2016-0139-DEC-DCPL-2023-04-18")
+    assert {"C-9-2023-0047", "A-9-2023-0076", "TA-9-2023-0096"} <= {d.id for d in second.docs}
+
+
+def test_vote_records_fold_into_parliaments_decision_on_negotiations():
+    # 2016/0133(COD), 16 Nov 2017: the vote record of the day belongs to the vote confirming the committee's
+    # mandate; no separate "Results of vote in Parliament" entry
+    day = [e for e in build("2016-0133").events if e.date == "2017-11-16"]
+    assert [(e.id, e.kind) for e in day] == [("2016-0133-DEC-PLEIN1-2017-11-16", EventKind.negotiation_mandate)]
+    assert [d.id for d in day[0].docs] == ["A-8-2017-0345", "PV-8-2017-11-16-VOT-ITM-004"]
+
+
+def test_parse_oeil_reads_references_printed_as_text():
+    # 2018/0417(CNS): "<span>COM(2018)0825</span>" followed by a textless EUR-Lex flag link, in the key events and
+    # in the Commission's documentation gateway
+    info = oeil_info("2018-0417")
+    url = "https://eur-lex.europa.eu/smartapi/cgi/sga_doc?smartapi!celexplus!prod!DocNumber&lg=EN&type_doc=COMfinal&an_doc=2018&nu_doc=0825"  # noqa: E501
+    assert (info.events[0].label, info.events[0].refs) == ("Legislative proposal published", [("COM(2018)0825", url)])
+    assert [(d.id, d.url) for d in info.com_docs] == [("COM(2018)0825", url)]
+    p = build("2018-0417")
+    assert p.com_refs == ["COM(2018)0825"]
+    assert [d.id for e in p.events if e.kind == EventKind.proposal for d in e.docs] == ["COM(2018)0825"]
+    # 2016/0357A(COD): the agreed text's references, printed as text, on the committee's approval of it
+    approval = next(e for e in build("2016-0357A").events if e.date == "2018-04-25")
+    assert [d.id for d in approval.docs] == ["GEDA/A/(2018)003214", "PE622.103"]
+
+
+def test_proposal_of_another_initiator_named_by_the_documentation_gateway():
+    # 2022/0906(COD), amendment of the Statute of the Court of Justice: "CJEC | Legislative proposal | 07307/2022"
+    assert oeil_info("2022-0906").other_docs == [("CJEC", "Legislative proposal", "07307/2022")]
+    prop = [e for e in build("2022-0906").events if e.kind == EventKind.proposal]
+    assert [(e.institution, e.title, [d.id for d in e.docs]) for e in prop] == [
+        ("CJEU", "Court of Justice submitted its request (legislative proposal)", ["07307/2022"])
+    ]
+
+
+def test_committee_approval_of_a_text_agreed_in_2nd_reading_negotiations():
+    # 2016/0357A(COD) ETIAS: OEIL "25/04/2018 Approval in committee of the text agreed at 2nd reading
+    # interinstitutional negotiations"; the title names no reading (Parliament then decided at first reading)
+    p = build("2016-0357A")
+    e = next(e for e in p.events if e.date == "2018-04-25")
+    assert (e.kind, e.title) == (EventKind.provisional_agreement,
+                                 "Parliament committee approved the provisional agreement with the Council")  # fmt: skip
+    assert "Decision by Parliament, 1st reading" in [x.label for x in oeil_info("2016-0357A").events]
+
+
+def test_second_reading_committee_steps_are_a_recommendation():
+    # 2023/0112(COD): EP API stage RDG2; A10-0066/2026 is a "RECOMMENDATION FOR SECOND READING"
+    by = {e.id: e.title for e in build("2023-0112").events}
+    assert by["ECON-PR-785218-DEPOT-2026-03-10"] == "Draft recommendation for second reading presented in Parliament committee"
+    assert by["2023-0112-DEC-ADCP-2026-03-18"] == "Parliament committee adopted its recommendation for second reading"
+    assert by["2023-0112-DEPOT-2026-03-19"] == "Committee recommendation for second reading tabled for the plenary"
+    rdg1 = "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    assert m.activity_title("COMMITTEE_ADOPTING_REPORT", rdg1)[1] == "Parliament committee adopted its report"
+
+
+def test_consultation_decision_recorded_as_amendments_carries_the_text_adopted():
+    # 2018/0173(CNS), 24 Oct 2018: EP API PLENARY_AMEND without the text; OEIL "Decision by Parliament T8-0415/2018"
+    e = next(e for e in build("2018-0173").events if e.id == "2018-0173-DEC-DCPL-2018-10-24")
+    ta = next(d for d in e.docs if d.id == "TA-8-2018-0415")
+    assert (ta.label, ta.kind, ta.date) == ("T8-0415/2018", "adopted_text", "2018-10-24")
+
+
 # ---------------------------------------------------------------- fetch orchestration
 class FakeHttp:
     """Serves the captured fixtures in place of the network and counts requests."""

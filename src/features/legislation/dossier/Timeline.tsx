@@ -6,6 +6,7 @@ import { formatDate, formatDateTime, safeUrl } from '../../../lib/format';
 
 const INSTITUTION_SHORT: Record<string, string> = {
   EP: 'Parliament',
+  'EP and Council': 'Parliament and Council',
   Council: 'Council',
   'European Council': 'European Council',
   Commission: 'Commission',

@@ -126,5 +126,6 @@ export function isMissing(e: unknown): boolean {
 export function institutionSuffix(title: string, institution: string): string {
   const label = institutionLabel(institution);
   const t = title.toLowerCase();
-  return t.includes(label.toLowerCase()) || t.includes(institution.toLowerCase()) ? '' : label;
+  const named = institution === 'EP and Council' ? t.includes('parliament and council') : false;
+  return named || t.includes(label.toLowerCase()) || t.includes(institution.toLowerCase()) ? '' : label;
 }
