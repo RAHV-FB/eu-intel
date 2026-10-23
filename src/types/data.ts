@@ -111,6 +111,7 @@ export type LifecycleStage =
   | 'adopted' // formally adopted (signed); not yet published
   | 'published' // published in the Official Journal; not yet in force
   | 'in_force' // in force (some provisions may apply later)
+  | 'no_longer_in_force' // repealed, expired or otherwise no longer in force according to EUR-Lex
   | 'withdrawn'
   | 'rejected'
   | 'lapsed'

@@ -25,6 +25,7 @@ export const STAGE_LABEL: Record<LifecycleStage, string> = {
   adopted: 'Adopted – awaiting publication',
   published: 'Published – not yet in force',
   in_force: 'In force',
+  no_longer_in_force: 'No longer in force (repealed or expired)',
   withdrawn: 'Withdrawn',
   rejected: 'Rejected',
   lapsed: 'Lapsed',
@@ -39,6 +40,7 @@ export const STAGE_ORDER: LifecycleStage[] = [
   'adopted',
   'published',
   'in_force',
+  'no_longer_in_force',
   'withdrawn',
   'rejected',
   'lapsed',
@@ -51,7 +53,7 @@ export const STAGE_GROUPS: Record<string, { label: string; stages: LifecycleStag
     label: 'Still being decided (any stage)',
     stages: ['proposed', 'parliament_position', 'negotiations', 'provisional_agreement'],
   },
-  law: { label: 'Adopted (any stage)', stages: ['adopted', 'published', 'in_force'] },
+  law: { label: 'Adopted (any stage)', stages: ['adopted', 'published', 'in_force', 'no_longer_in_force'] },
   ended: { label: 'Ended without becoming law', stages: ['withdrawn', 'rejected', 'lapsed'] },
 };
 

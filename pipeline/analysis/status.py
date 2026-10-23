@@ -35,6 +35,7 @@ Stage = Literal[
     "adopted",
     "published",
     "in_force",
+    "no_longer_in_force",  # repealed, expired or otherwise no longer in force according to EUR-Lex
     "withdrawn",
     "rejected",
     "lapsed",
@@ -43,7 +44,7 @@ Stage = Literal[
 Basis = Literal["source", "derived"]
 StepBasis = Literal["source", "derived", "unknown"]
 
-TERMINAL: set[str] = {"published", "in_force", "withdrawn", "rejected", "lapsed"}
+TERMINAL: set[str] = {"published", "in_force", "no_longer_in_force", "withdrawn", "rejected", "lapsed"}
 # Stages in which the co-legislators still have to act (Train "Blocked" may be shown).
 ACTIVE_STAGES: set[str] = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
 
@@ -58,6 +59,7 @@ RANK: dict[str, int] = {
     "adopted": 5,
     "published": 6,
     "in_force": 7,
+    "no_longer_in_force": 8,
 }
 
 # OEIL "Stage reached in procedure" labels -> stages compatible with that label. The first
@@ -71,7 +73,7 @@ OEIL_STAGE: dict[str, tuple[str, ...]] = {
     "Awaiting final decision": ("parliament_position",),
     "Awaiting Parliament 2nd reading": ("negotiations",),
     "Procedure completed, awaiting publication in Official Journal": ("adopted",),
-    "Procedure completed": ("adopted", "published", "in_force"),
+    "Procedure completed": ("adopted", "published", "in_force", "no_longer_in_force"),
 }
 LAPSED_OR_WITHDRAWN = "Procedure lapsed or withdrawn"
 # Legislative Train statuses that are an official "stalled" assessment. The Train glossary
@@ -267,7 +269,7 @@ def _acts_stage(proc: Procedure, acts: list[LegalAct], events: list[Event], toda
             return _S("published", "Published, not yet in force", text, pub_date, "source")
         if act.end_of_validity and act.end_of_validity <= t:
             return _S(
-                "published",
+                "no_longer_in_force",
                 "No longer in force",
                 f"The act was adopted and published, but its validity ended on {_fmt(act.end_of_validity)}.",
                 act.end_of_validity,
@@ -275,7 +277,7 @@ def _acts_stage(proc: Procedure, acts: list[LegalAct], events: list[Event], toda
             )
         if act.in_force is False and not act.end_of_validity:
             return _S(
-                "published",
+                "no_longer_in_force",
                 "No longer in force",
                 "The act was adopted and published, but EUR-Lex records it as no longer in force.",
                 None,
@@ -584,6 +586,8 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
         )
     if stage == "lapsed":
         return NextStep(text="None: the procedure is closed.", basis="derived")
+    if stage == "no_longer_in_force":
+        return NextStep(text="None: the act is no longer in force.", basis="source")
     if stage in ("published", "in_force"):
         act = _main_act(proc, acts)
         app = application_of(acts, today)

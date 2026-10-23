@@ -334,3 +334,15 @@ def test_snapshot_invariants():
         if s.stage in ("in_force", "published", "withdrawn", "rejected", "lapsed"):
             assert s.stall is None, p.id
         assert "block" not in all_text(s).lower(), p.id
+
+
+def test_expired_or_repealed_act_is_no_longer_in_force_not_published():
+    # The same real act, as if its validity had ended (e.g. repealed by a recast): it must not be
+    # classified as "published, not yet in force".
+    p = proc("2021-0106")
+    expired = [a.model_copy(update={"end_of_validity": "2025-01-01", "in_force": False}) for a in acts_for(p)]
+    s = classify(p, expired, [], TODAY)
+    assert (s.stage, s.label) == ("no_longer_in_force", "No longer in force")
+    assert s.next_step.text.startswith("None")
+    no_date = [a.model_copy(update={"end_of_validity": None, "in_force": False}) for a in acts_for(p)]
+    assert classify(p, no_date, [], TODAY).stage == "no_longer_in_force"

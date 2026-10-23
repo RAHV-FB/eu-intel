@@ -176,7 +176,7 @@ KEY_KINDS = {
 }
 VOTE_EVENT_KINDS = {"ep_position", "plenary_vote", "rejection"}
 ACTIVE_STAGES = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
-ADOPTED_STAGES = {"adopted", "published", "in_force"}
+ADOPTED_STAGES = {"adopted", "published", "in_force", "no_longer_in_force"}
 
 RULE_LABELS = {
     "votes_cast": "Majority of votes cast (abstentions are not counted)",
@@ -199,6 +199,7 @@ STAGE_LABELS: dict[str, str] = {
     "adopted": "Adopted",
     "published": "Published",
     "in_force": "In force",
+    "no_longer_in_force": "No longer in force",
     "withdrawn": "Withdrawn",
     "rejected": "Rejected",
     "lapsed": "Lapsed",
