@@ -458,6 +458,10 @@ def _long_date(d: str) -> str:
     return f"{dd} {_MONTHS[m - 1]} {y}"
 
 
+def _ordinal(n: int) -> str:
+    return f"{n}{'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')}"
+
+
 def _dedupe_sources(sources: list[dict | None]) -> list[dict]:
     """Keep the first SourceRef per (institution, url, identifier)."""
     out, seen = [], set()
@@ -1816,6 +1820,7 @@ class Builder:
                 "dossier": self.dossier_summary[pid], "what": str(c.get("what") or "").strip(),
                 "why": str(c.get("why") or "").strip(), "status": det["status"], "latest": self.latest_event(pid),
                 "next_step": det["next_step"], "source": _src(self.proc[pid].source),
+                "oeil_url": self.proc[pid].oeil_url,
             })  # fmt: skip
         today = self.today
         summ = self.dossier_summary
@@ -1943,9 +1948,11 @@ class Builder:
                 "licence": info["licence"], "status": st.status if st else "unavailable",
                 "fetched_at": st.fetched_at if st else None, "records": dict(sorted(st.records.items())) if st else {},
                 "note": st.note if st else "Not yet retrieved in this release.",
+                "summary": self.source_summary(sid, st),
             })  # fmt: skip
         fetched = [x.fetched_at for x in m.values() if x.fetched_at]
-        notes = self.coverage_notes()
+        scope = self.coverage_scope()
+        notes = self.coverage_notes(scope)
         self.files["meta.json"] = {
             "built_at": os.environ.get("EU_INTEL_BUILT_AT") or now_iso(),
             "snapshot_at": max(fetched) if fetched else None,
@@ -1964,12 +1971,92 @@ class Builder:
                 "infringements": len(s.infringements),
             },
             "coverage_notes": notes,
+            "scope": scope,
         }
 
-    def coverage_notes(self) -> list[str]:
+    def coverage_scope(self) -> dict[str, Any]:
+        """The limits of the dataset as figures, so pages can state them next to lists and counts."""
+        s = self.s
+        vote_dates = sorted(v.date for v in self.indexed_votes)
+        types = _lazy("pipeline.sources.ep_procedures", "PROCEDURE_TYPES")
+        return {
+            "procedure_types": list(types) if types else [],
+            "procedures_from_year": _lazy("pipeline.sources.ep_procedures", "MIN_YEAR"),
+            "acts_from": _lazy("pipeline.sources.eurlex", "MIN_DOCUMENT_DATE"),
+            "ep_votes_from": vote_dates[0] if vote_dates else None,
+            "ep_votes_to": vote_dates[-1] if vote_dates else None,
+            "ep_roll_call_votes": sum(1 for v in s.votes if v.method == "VOTE_ELECTRONIC_ROLLCALL"),
+            "dossiers_without_topic": sum(1 for d in self.dossier_summary.values() if not d["topics"]),
+        }
+
+    def source_summary(self, sid: str, st: SourceStatus | None) -> str:
+        """A short plain-language note on what this release holds from one source and its known gaps.
+        (`note` keeps the retrieval log, which is technical detail.)"""
+        if not st or not st.fetched_at:
+            return "Not retrieved for this release; information from this source is not shown."
+        s, rec = self.s, st.records
+        out: list[str] = []
+        if sid == "ep_people":
+            # the terms the source retrieves (an MEP's own `terms` also lists earlier terms they served)
+            terms = [_ordinal(t) for t in sorted(_lazy("pipeline.sources.ep_people", "TERMS") or {})]
+            span = (f"the {', '.join(terms[:-1])} or {terms[-1]} parliamentary term" if len(terms) > 1
+                    else f"the {terms[0]} parliamentary term" if terms else "recent parliamentary terms")  # fmt: skip
+            out.append(f"{len(s.meps):,} Members of the European Parliament who sat in {span} "
+                       f"({sum(1 for x in s.meps if x.active):,} currently sitting), with their political group, "
+                       "national party and committee memberships.")  # fmt: skip
+        elif sid == "ep_procedures":
+            out.append(f"{len(s.procedures):,} legislative procedures with "
+                       f"{sum(len(p.events) for p in s.procedures):,} recorded procedural steps.")  # fmt: skip
+            if rec.get("unavailable"):
+                out.append(f"For {rec['unavailable']:,} further procedure references, Parliament's data had no "
+                           "usable record in the latest retrieval.")  # fmt: skip
+        elif sid == "ep_votes":
+            dates = sorted(v.date for v in s.votes)
+            rc = sum(1 for v in s.votes if v.method == "VOTE_ELECTRONIC_ROLLCALL")
+            with_b = sum(1 for v in s.votes if v.has_ballots)
+            if dates:
+                out.append(f"{len(s.votes):,} plenary votes from {_long_date(dates[0])} to {_long_date(dates[-1])}, "
+                           f"{rc:,} of them by roll call. How each MEP voted is kept for {with_b:,} roll-call votes "
+                           "on whole texts, resolutions, motions and negotiating mandates, not for votes on "
+                           "amendments or split and separate votes.")  # fmt: skip
+        elif sid == "eurlex":
+            out.append(f"{len(s.acts):,} adopted legal acts with their dates of signature, publication, entry into "
+                       "force and application.")  # fmt: skip
+        elif sid == "council":
+            if s.council:
+                dates = sorted(c.date for c in s.council)
+                with_pos = sum(1 for c in s.council if c.positions)
+                out.append(f"{len(s.council):,} voting results of the Council of the EU "
+                           f"({dates[0][:4]}–{dates[-1][:4]}), {with_pos:,} of them with each Member State's "
+                           "position.")  # fmt: skip
+                if len(s.council) > with_pos:
+                    out.append(f"{len(s.council) - with_pos:,} voting-result documents could not be read and are "
+                               "shown without positions.")  # fmt: skip
+        elif sid == "implementation":
+            with_m = len({x.directive_celex for x in s.measures})
+            out.append(f"{len(s.measures):,} national transposition measures for {len(self.measure_celexes):,} "
+                       f"directives ({with_m:,} with at least one measure) and {len(s.infringements):,} "
+                       "infringement cases.")  # fmt: skip
+            if not s.indicators:
+                out.append("Country indicators (Single Market Scoreboard) could not be retrieved.")
+        elif sid == "train":
+            blocked = sum(1 for t in s.train if t.status.strip().lower() == "blocked")
+            out.append(f"{len(s.train):,} files on Parliament's Legislative Train Schedule, {blocked:,} of them "
+                       "labelled as blocked.")  # fmt: skip
+        if st.status == "partial" and not (sid == "implementation" and not s.indicators):
+            out.append("The latest retrieval did not complete; records from earlier retrievals are kept, and the "
+                       "rest is added at the next update.")  # fmt: skip
+        elif st.status == "failed":
+            out.append(
+                "The latest retrieval failed; this release uses the records from the last successful one."
+            )
+        return " ".join(out)
+
+    def coverage_notes(self, scope: dict[str, Any] | None = None) -> list[str]:
         s = self.s
         m = s.manifest
         notes: list[str] = []
+        scope = scope or {}
 
         def avail(sid: str) -> bool:
             st = m.get(sid)
@@ -1993,8 +2080,16 @@ class Builder:
                          "reference, title and legal dates), because the European Parliament procedure record is "
                          "not in this release; their Parliament steps are not shown.")  # fmt: skip
         if avail("ep_votes"):
-            notes.append(f"Parliament votes: {len(self.indexed_votes)} plenary votes are listed (votes on whole texts, "
-                         "resolutions and motions with roll-call results, and all final votes linked to a procedure). "
+            period = ""
+            if scope.get("ep_votes_from") and scope.get("ep_votes_to"):
+                period = f" from {_long_date(scope['ep_votes_from'])} to {_long_date(scope['ep_votes_to'])}"
+            with_b = sum(1 for v in self.indexed_votes if v.id in self.ballots and v.has_ballots)
+            rc = scope.get("ep_roll_call_votes")
+            ballots = (f"How each MEP voted is shown for {with_b:,} of the {rc:,} roll-call votes in the source data; "
+                       "votes on amendments and split or separate votes are not included. ") if rc else ""  # fmt: skip
+            notes.append(f"Parliament votes: {len(self.indexed_votes):,} plenary votes{period} are listed (votes on "
+                         "whole texts, resolutions and motions with roll-call results, and all final votes linked to "
+                         "a procedure); earlier votes are not included. " + ballots +
                          "Group and country breakdowns use each MEP's membership on the day of the vote. "
                          "MEPs who did not vote are not counted as abstentions.")  # fmt: skip
         else:

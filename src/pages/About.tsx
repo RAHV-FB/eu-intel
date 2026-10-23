@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Meta, SourceStatusInfo } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDateTime, formatNumber } from '../lib/format';
+import { legislationScope, votesPeriod } from '../lib/scope';
 import { ErrorState, ExtLink, Loading, PageHeader, Term, institutionLabel } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { useHashScroll } from '../features/guide/useHashScroll';
@@ -22,19 +23,36 @@ const COUNT_LABEL: { key: keyof Meta['counts']; label: string }[] = [
   { key: 'meps', label: 'MEPs (current and former)' },
   { key: 'meps_active', label: 'Current MEPs' },
   { key: 'ep_votes', label: 'Parliament votes' },
-  { key: 'ep_votes_with_ballots', label: 'Parliament votes with individual (roll-call) results' },
+  { key: 'ep_votes_with_ballots', label: 'Parliament votes with each MEP’s recorded vote (whole texts, resolutions, motions and mandates)' },
   { key: 'council_votes', label: 'Council of the EU votes' },
   { key: 'national_measures', label: 'National transposition measures' },
   { key: 'infringements', label: 'Infringement cases' },
 ];
 
-function humanKey(k: string): string {
-  const s = k.replace(/_/g, ' ');
-  return s.charAt(0).toUpperCase() + s.slice(1);
+/**
+ * Public record counts, used only when a build has no plain-language summary. Other keys in `records`
+ * are per-run counters from the pipeline and are not shown.
+ */
+const RECORD_LABEL: Record<string, Record<string, string>> = {
+  ep_people: { meps: 'MEPs', orgs: 'groups, parties and committees' },
+  ep_procedures: { procedures: 'procedures', events: 'procedural steps' },
+  ep_votes: { votes: 'plenary votes', ballots: 'votes with individual results' },
+  eurlex: { acts: 'legal acts' },
+  council: { votes: 'voting results', votes_with_positions: 'with Member State positions' },
+  implementation: { measures: 'national measures', infringements: 'infringement cases' },
+  train: { files: 'files' },
+};
+
+function recordsText(s: SourceStatusInfo): string | null {
+  const labels = RECORD_LABEL[s.id] ?? {};
+  const parts = Object.entries(labels)
+    .filter(([k]) => typeof s.records?.[k] === 'number')
+    .map(([k, label]) => `${formatNumber(s.records[k])} ${label}`);
+  return parts.length ? parts.join(' · ') : null;
 }
 
 function SourceCard({ s }: { s: SourceStatusInfo }) {
-  const records = Object.entries(s.records ?? {});
+  const summary = s.summary || recordsText(s);
   return (
     <article className="source-card" aria-labelledby={`src-${s.id}`}>
       <div className="source-card__head">
@@ -44,27 +62,27 @@ function SourceCard({ s }: { s: SourceStatusInfo }) {
       <dl>
         <dt>Publisher</dt>
         <dd>{institutionLabel(s.institution)}</dd>
-        <dt>Last retrieved</dt>
+        <dt>Last successful retrieval</dt>
         <dd>{s.fetched_at ? formatDateTime(s.fetched_at) : 'Not retrieved'}</dd>
-        {records.length > 0 && (
+        {summary && (
           <>
-            <dt>Records</dt>
-            <dd>{records.map(([k, n]) => `${formatNumber(n)} ${humanKey(k).toLowerCase()}`).join(' · ')}</dd>
+            <dt>In this release</dt>
+            <dd>{summary}</dd>
           </>
         )}
         <dt>Licence</dt>
         <dd>{s.licence}</dd>
-        {s.note && (
-          <>
-            <dt>Note</dt>
-            <dd>{s.note}</dd>
-          </>
-        )}
         <dt>Source</dt>
         <dd>
           <ExtLink href={s.url}>Official documentation</ExtLink>
         </dd>
       </dl>
+      {s.note && s.note !== summary && (
+        <details className="source-card__log">
+          <summary>Technical details of the latest retrieval</summary>
+          <p>{s.note}</p>
+        </details>
+      )}
     </article>
   );
 }
@@ -127,6 +145,13 @@ export default function About() {
           <h2 id="coverage-h">What’s covered</h2>
           {meta ? (
             <>
+              {legislationScope(meta.scope) && (
+                <p>
+                  {legislationScope(meta.scope)}
+                  {votesPeriod(meta.scope) && <> Parliament votes are covered from {votesPeriod(meta.scope)}.</>} Lists and
+                  counts on this site refer to this dataset, not to all EU law.
+                </p>
+              )}
               {meta.coverage_notes.length > 0 && (
                 <ul>
                   {meta.coverage_notes.map((n, i) => (
@@ -205,6 +230,16 @@ export default function About() {
             A file’s stage is worked out from the events recorded by Parliament’s Legislative Observatory and from the adopted act recorded
             in EUR-Lex. Labels are deliberately precise: for example, “Approved by Parliament” is not “passed” when the Council has not yet
             agreed.
+          </p>
+
+          <h3>Topics</h3>
+          <p>
+            A file’s topics come from the subject codes in Parliament’s procedure record (the Legislative Observatory’s subject
+            classification), grouped into broad topics; for featured files our editors may add a topic. Files without
+            subject codes — mostly laws shown from their EUR-Lex record only — have no topic
+            {meta?.scope ? <> ({formatNumber(meta.scope.dossiers_without_topic)} files in this release)</> : null}. They are
+            in the full list and in search, and the legislation explorer can list them under “No topic assigned”, but they do
+            not appear on topic pages or in topic counts.
           </p>
 
           <h3>Stalled and blocked files</h3>

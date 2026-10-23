@@ -236,6 +236,25 @@ def test_meta_sources_and_counts(out: Path):
     assert any("Country indicators" in n for n in meta["coverage_notes"])
 
 
+def test_meta_scope_and_plain_source_summaries(out: Path):
+    meta = load(out, "meta.json")
+    scope = meta["scope"]
+    assert scope["procedure_types"] == ["COD", "CNS", "APP"] and scope["procedures_from_year"] == 2014
+    index = load(out, "dossiers/index.json")
+    assert scope["dossiers_without_topic"] == sum(1 for d in index if not d["topics"])
+    votes = load(out, "votes/index.json")
+    assert (scope["ep_votes_from"], scope["ep_votes_to"]) == (min(v["date"] for v in votes), max(v["date"] for v in votes))
+    vote_note = next(n for n in meta["coverage_notes"] if n.startswith("Parliament votes"))
+    assert scope["ep_votes_from"][:4] in vote_note and scope["ep_votes_to"][:4] in vote_note
+    assert ("amendments" in vote_note) == bool(scope["ep_roll_call_votes"])
+    # every source has a reader-facing summary with no pipeline log syntax in it
+    for s in meta["sources"]:
+        assert s["summary"] and not any(c in s["summary"] for c in "{}[]="), s["summary"]
+    home = load(out, "home.json")
+    for f in home["featured"]:  # the human-readable procedure file, not only the API record
+        assert f["oeil_url"] == load(out, f"dossiers/{f['dossier']['id']}.json")["oeil_url"]
+
+
 def test_search_docs(out: Path):
     docs = load(out, "search.json")
     by = {(d["k"], d["id"]): d for d in docs}
