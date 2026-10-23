@@ -1240,3 +1240,66 @@ def test_vote_outputs_match_the_contract(votes_out: Path):
             _check(det["margin"], "VoteMargin", ifs, "vote.margin")
         for x in det["intentions"]:
             _check(x, "VoteIntention", ifs, "vote.intentions")
+
+
+# ------------------------------------------------------------------------------- transposition dates
+def test_transposition_dates_without_an_established_role_stay_off_the_timeline(tmp_path: Path):
+    # As Cellar records VAT in the digital age (Directive (EU) 2025/516), Art. 6(1): Member States "may apply ...
+    # from 14 April 2025", labelled APPLICATION like a real application date, before the deadline of Art. 6(2)
+    base = tmp_path / "b"
+    shutil.copytree(FIX / "snapshot", base / "snapshot")
+    path = base / "snapshot" / "eurlex" / "acts.json"
+    recs = json.loads(path.read_text(encoding="utf-8"))
+    a = next(r for r in recs if r["celex"] == "32099L0009")
+    a["transposition_dates"] = [
+        {"date": "2025-04-14", "labels": ["APPLICATION"], "articles": ["6.1"]},
+        {"date": "2027-03-30", "labels": ["ADOPTION"], "articles": ["6.2"]},
+        {"date": "2027-04-01", "labels": ["APPLICATION"], "articles": ["6.2"]},
+        {"date": "2028-03-30", "labels": ["ADOPTION"], "articles": ["6.3"]},
+    ]
+    a["transposition_deadlines"] = [x["date"] for x in a["transposition_dates"]]
+    path.write_text(json.dumps(recs), encoding="utf-8")
+    o = base / "public"
+    assert build(out=o, snapshot=base / "snapshot", curated=FIX / "curated", state=base / "state", today=TODAY) == 0
+    d = load(o, "dossiers/2099-0009.json")
+    assert {x["date"]: x["kind"] for x in d["application"]["transposition"]} == {
+        "2025-04-14": "other", "2027-03-30": "deadline", "2027-04-01": "application", "2028-03-30": "further_deadline",
+    }  # fmt: skip
+    assert d["application"]["transposition_deadlines"] == ["2027-03-30", "2028-03-30"]
+    assert "2025-04-14" not in {e["date"] for e in d["timeline"]}  # never the "Latest verified development"
+    assert {e["date"]: e["title"] for e in d["timeline"] if e["kind"].startswith("transposition")} == {
+        "2027-03-30": "Deadline for Member States to transpose the directive",
+        "2027-04-01": "Application date for national transposition measures (Art. 6(2))",
+        "2028-03-30": "Transposition deadline for specific provisions (Art. 6(3))",
+    }
+    assert "The national measures are to apply from 1 April 2027." in d["next_step"]["text"]
+    assert d["implementation"]["deadline"] == "2027-03-30"
+
+
+def test_next_step_names_the_deadlines_of_amending_directives():
+    # CSRD (Directive (EU) 2022/2464) is amended by Directive (EU) 2026/470, whose Art. 5(1) requires its Articles 1
+    # to 3 (Article 3 amends the CSRD) to be transposed by 19 March 2027 and Article 4 by 26 July 2028 (real records)
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder, apply_transposition_checks, load_transposition_checks
+    from pipeline.models.entities import LegalAct
+
+    recs = json.loads((Path(__file__).parent / "fixtures" / "eurlex" / "transposition_acts.json").read_text("utf-8"))
+    checks = load_transposition_checks()
+    acts = {r["celex"]: apply_transposition_checks(LegalAct.model_validate(r), checks.get(r["celex"])) for r in recs}
+    passed = "The transposition deadline (6 July 2024) has passed."
+    det = {"stage": "in_force", "instrument": "directive", "next_step": {"text": passed, "basis": "source"}}
+
+    def step(celex: str, today: str = TODAY) -> str:
+        return Builder.amending_deadlines(SimpleNamespace(act=acts, today=today), det, [acts[celex]])["text"]  # type: ignore[arg-type]
+
+    assert step("32022L2464") == (
+        f"{passed} Directive (EU) 2026/470, which amends this directive, must be transposed by 19 March 2027 "
+        "(specific provisions by 26 July 2028)."
+    )
+    # a codification amended by the driving licences directive (Art. 29: 26 November 2028; Art. 9(2)(j), (k) by 2027)
+    assert step("32022L2561") == (
+        f"{passed} Directive (EU) 2025/2205, which amends this directive, must be transposed by 26 November 2028 "
+        "(specific provisions by 26 November 2027)."
+    )
+    assert step("32022L2464", today="2028-08-01") == passed  # the amending directive's deadlines have passed

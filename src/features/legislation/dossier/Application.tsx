@@ -162,6 +162,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
   const general: ISODate | null = impl?.deadline ?? tr.find((x) => x.kind === 'deadline')?.date ?? null;
   const further = tr.filter((x) => x.kind === 'further_deadline');
   const applies = tr.filter((x) => x.kind === 'application');
+  const other = tr.filter((x) => x.kind === 'other');
   const dateList = (xs: { date: ISODate; articles: string[] }[]) =>
     xs.map((x, i) => (
       <span key={x.date}>
@@ -214,12 +215,13 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
             {general > today && <span className="dz-upcoming">upcoming</span>}
           </p>
         )}
-        {further.length > 0 && <p className="meta">Further deadline{further.length > 1 ? 's' : ''} for specific provisions: {dateList(further)}</p>}
+        {further.length > 0 && <p className="meta">Deadline{further.length > 1 ? 's' : ''} for specific provisions: {dateList(further)}</p>}
         {applies.length > 0 && (
           <p className="meta">
             Application date{applies.length > 1 ? 's' : ''} for the national measures: {dateList(applies)}
           </p>
         )}
+        {other.length > 0 && <p className="meta">Other date{other.length > 1 ? 's' : ''} recorded by EUR-Lex: {dateList(other)}</p>}
         {impl && impl.countries.length > 0 ? (
           <>
             <ImplementationTable impl={impl} />

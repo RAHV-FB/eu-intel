@@ -406,6 +406,73 @@ def test_directive_next_step_uses_general_deadline_not_application_date():
     ]
 
 
+def _directive_step(celex: str, today: date = TODAY) -> str:
+    """Next step of the CSRD procedure if its act carried another directive's real transposition record
+    (tests/fixtures/eurlex/transposition_acts.json, with the checks of data/curated/transposition.yaml)."""
+    from pipeline.build import apply_transposition_checks, load_transposition_checks
+
+    recs = json.loads((FIX.parent / "eurlex" / "transposition_acts.json").read_text(encoding="utf-8"))
+    r = apply_transposition_checks(
+        LegalAct.model_validate(next(x for x in recs if x["celex"] == celex)), load_transposition_checks().get(celex)
+    )
+    keep = ("title", "transposition_deadlines", "transposition_dates", "transposition_checked")
+    p = proc("2021-0104")
+    acts = [a.model_copy(update={k: getattr(r, k) for k in keep}) for a in acts_for(p)]
+    return classify(p, acts, [], today).next_step.text
+
+
+def test_amld6_next_step_names_the_general_deadline_not_a_derogation():
+    # Directive (EU) 2024/1640, Art. 78(1): 10 July 2027 in general; 2025, 2026 and 2029 for specific articles
+    text = _directive_step("32024L1640")
+    assert text.startswith("EU countries must transpose the directive into national law by 10 July 2027.")
+    assert "earlier transposition deadlines for specific provisions, which have passed: 10 July 2025 and 10 July 2026" in text
+    assert "later transposition deadline for specific provisions: 10 July 2029" in text
+    assert "has passed: EU countries were required" not in text
+
+
+def test_driving_licences_next_step():
+    # Directive (EU) 2025/2205, Art. 29: adopt by 26 November 2028, apply from 26 November 2029; Art. 9(2)(j), (k)
+    # by 26 November 2027
+    text = _directive_step("32025L2205")
+    assert "must transpose the directive into national law by 26 November 2028." in text
+    assert "The national measures are to apply from 26 November 2029." in text
+    assert "an earlier transposition deadline for specific provisions: 26 November 2027" in text
+
+
+@pytest.mark.parametrize(
+    "celex, general, later",
+    [
+        ("32019L0882", "28 June 2025", "28 June 2027"),  # EAA Art. 31: 2027 is an optional derogation
+        ("32024L1619", "11 January 2026", "11 January 2027"),  # CRD VI Art. 2(1)
+        ("32024L0927", "16 April 2026", "16 April 2027"),  # AIFMD II Art. 3(1)
+        ("32023L2226", "1 January 2026", "1 January 2028 and 1 January 2030"),  # DAC8 Art. 2
+        ("32025L0872", "1 January 2026", "1 January 2028"),  # DAC9 Art. 2(1), (3)
+    ],
+)
+def test_general_application_date_is_stated_and_later_ones_are_for_specific_provisions(celex, general, later):
+    text = _directive_step(celex)
+    assert f"The national measures were to apply from {general}." in text
+    assert f"for specific provisions: {later}." in text
+    assert f"apply from {later}" not in text
+
+
+def test_application_date_still_ahead():
+    # Directive (EU) 2026/804, Art. 3(1): apply from 11 May 2028; Art. 11(3) and others from 11 May 2029
+    text = _directive_step("32026L0804")
+    assert "The national measures are to apply from 11 May 2028." in text
+    assert "later application date for specific provisions: 11 May 2029." in text
+
+
+def test_directives_without_a_transposition_date_are_not_told_to_transpose():
+    codification = _directive_step("32022L2561")  # Directive (EU) 2022/2561 (codification): no transposition article
+    assert codification == (
+        "This directive is a codification of earlier directives. EUR-Lex records no transposition deadline for it."
+    )
+    other = _directive_step("32024L1306")  # time limits for sustainability reporting standards: no such clause
+    assert other.startswith("EUR-Lex records no transposition deadline for this directive")
+    assert "must transpose" not in codification + other
+
+
 def _with_events(p: Procedure, *events) -> Procedure:
     return p.model_copy(update={"events": sorted([*p.events, *events], key=lambda e: e.date)})
 

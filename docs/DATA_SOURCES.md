@@ -72,9 +72,24 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   longer in force".
 - Transposition: `directive_date_transposition` holds deadlines and application dates under one property. Each
   value's `comment_on_date` label (ADOPTION = adopt and publish by, APPLICATION = apply from, AU+TARD = at the
-  latest, with the article) is kept: the general deadline is the earliest date that is not an application-only
-  date, later adopt-by dates are "further deadlines for specific provisions", and apply-from dates are never shown
-  as deadlines (Consumer Credit Directive: deadline 20 Nov 2025, application 20 Nov 2026).
+  latest, with the article) is kept (`pipeline/analysis/transposition.py`). Apply-from dates are never shown as
+  deadlines (Consumer Credit Directive: deadline 20 Nov 2025, application 20 Nov 2026). Cellar does not say which
+  deadline is the general one; it is the one checked against the text (`data/curated/transposition.yaml`), else
+  the deadline whose article reference comes first when no other shares it (Directive 2023/2864: Art. 17(1)
+  10 Jan 2026, Art. 17(2) 10 Jul 2025 for Article 3), else the earliest (`validate` lists these). The earliest
+  is often a derogation (AMLD6, Art. 78(1): 10 Jul 2027 in general, 10 Jul 2025 for Article 74 only), so every
+  directive with several deadlines that the article references do not decide is checked in the curated file. The
+  other deadlines are "deadlines for specific provisions", earlier or later. The general application date is the
+  deadline itself when Cellar labels it APPLICATION too and gives one article for it (AIFMD II, Art. 3(1)), else
+  the first application date after it; later ones are "application dates for specific provisions", never "the
+  date the measures apply from" (European Accessibility Act: 28 Jun 2025; the optional 28 Jun 2027 is for Article
+  4(8) only). Dates whose role the data do not establish are "other dates recorded by EUR-Lex", kept off the
+  timeline: a date from another article (Drinking Water Directive Art. 25, a transitional period), an
+  application date before the general deadline in a paragraph that sets no deadline (VAT in the digital age,
+  Art. 6(1): Member States "may apply ... from 14 April 2025"), or one the curated file marks. A directive with no
+  transposition date (e.g. a codification) is described as such, never as one EU countries must transpose. The
+  next step of a directive also names the transposition deadlines still ahead of the directives that have since
+  amended it (CSRD: Directive (EU) 2026/470 by 19 Mar 2027).
 - Withdrawals and replacements: Cellar procedure events WDW_byCOM / RPL_byCOM (`procedure_notices.json`, 350
   since 2014). OEIL often never records them (CCTB/CCCTB, Return Directive recast, standard-essential patents).
 - Corrections: where Cellar's date metadata is wrong or was not updated after an amendment, the build applies

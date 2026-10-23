@@ -25,7 +25,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from pipeline.analysis.transposition import article_label
+from pipeline.analysis.transposition import application_start, article_label
 from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models.entities import Event, EventKind, Institution, LegalAct, Procedure, TrainFile
 
@@ -105,9 +105,10 @@ class Stall(_M):
 
 class TranspositionDateInfo(_M):
     date: str
-    # deadline: general transposition deadline; further_deadline: a later deadline for specific
-    # provisions; application: a date from which national measures (must or may) apply
-    kind: Literal["deadline", "further_deadline", "application"]
+    # deadline: general transposition deadline; further_deadline: a deadline for specific provisions (earlier
+    # or later); application: a date from which national measures (must or may) apply; other: a date EUR-Lex
+    # records whose role the data do not establish (e.g. an optional "may apply" date)
+    kind: Literal["deadline", "further_deadline", "application", "other"]
     articles: list[str] = Field(default_factory=list)  # article setting the date, e.g. "Art. 48(1)"
 
 
@@ -220,7 +221,7 @@ def application_of(acts: list[LegalAct], today: date) -> Application | None:
         entry_into_force_pending=not eif and any(a.entry_into_force_pending for a in acts),
         application_dates=app,
         partial_application_dates=sorted({d for a in acts for d in a.partial_application_dates if d in app}),
-        transposition_deadlines=[x.date for x in tr if x.kind != "application"],
+        transposition_deadlines=[x.date for x in tr if x.kind in ("deadline", "further_deadline")],
         transposition=tr,
         future=future,
     )
@@ -671,10 +672,15 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 basis="source",
             )
         if act.act_type == "directive":
-            tr = app.transposition if app else []
+            # the same directive as application.transposition (see transposition.py for the date kinds)
+            dr = next((a for a in acts if a.act_type == "directive" and a.transposition_deadlines), None)
+            tr = classify_transposition(dr) if dr else []
             general = next((x.date for x in tr if x.kind == "deadline"), None)
-            further = [x.date for x in tr if x.kind == "further_deadline" and x.date > t]
-            applies = [x.date for x in tr if x.kind == "application" and x.date > t and general and x.date > general]
+            specific = [x.date for x in tr if x.kind == "further_deadline"]
+            earlier = [x for x in specific if general and x < general]
+            further = [x for x in specific if general and x > general and x > t]
+            start = application_start(dr, tr) if dr else None
+            applies = [x.date for x in tr if x.kind == "application" and x.date > t and (not start or x.date > start)]
             if general and general > t:
                 parts.append(f"EU countries must transpose the directive into national law by {_fmt(general)}.")
                 basis = "source"
@@ -684,26 +690,47 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                     "to adopt national measures by then."
                 )
                 basis = "source"
+            elif "(codification)" in act.title.lower():
+                parts.append(
+                    "This directive is a codification of earlier directives. EUR-Lex records no transposition "
+                    "deadline for it."
+                )
             else:
                 parts.append(
-                    "EU countries must transpose the directive into national law; the deadline is not "
-                    "recorded in our data."
+                    "EUR-Lex records no transposition deadline for this directive; its text says whether, and by "
+                    "when, national measures are needed."
                 )
+            if start and (start > t or applies):  # a past one only to set later dates apart from it
+                sx = next(x for x in tr if x.date == start)
+                latest = " at the latest" if "AU+TARD" in sx.labels and "ADOPTION" not in sx.labels else ""
+                parts.append(
+                    f"The national measures {'are' if start > t else 'were'} to apply from {_fmt(start)}{latest}."
+                )
+            if earlier and general and general > t:
+                past = [x for x in earlier if x <= t]
+                plural = len(earlier) > 1
+                what = "earlier transposition deadlines" if plural else "an earlier transposition deadline"
+                if len(past) == len(earlier):
+                    tail = f", which {'have' if plural else 'has'} passed: {_join_dates(earlier)}"
+                else:
+                    marked = [_fmt(x) + (" (passed)" if x <= t else "") for x in earlier]
+                    tail = ": " + (marked[0] if len(marked) == 1 else ", ".join(marked[:-1]) + " and " + marked[-1])
+                parts.append(f"EUR-Lex records {what} for specific provisions{tail}.")
             if further:
                 parts.append(
                     f"EUR-Lex records {'later transposition deadlines' if len(further) > 1 else 'a later transposition deadline'}"
                     f" for specific provisions: {_join_dates(further)}."
                 )
             if applies:
-                later = len(applies) - 1
+                # never "the measures apply from": a later date may be optional ("may decide to apply ... at
+                # the latest from", European Accessibility Act, Art. 31(3))
+                plural = len(applies) > 1
                 parts.append(
-                    f"The national measures are to apply from {_fmt(applies[0])}"
-                    + (
-                        f"; EUR-Lex records {later} later application date{'s' if later > 1 else ''} for "
-                        "specific provisions."
-                        if later
-                        else "."
-                    )
+                    f"EUR-Lex records {'later application dates' if plural else 'a later application date'} for "
+                    f"specific provisions: {_join_dates(applies)}."
+                    if start
+                    else f"EUR-Lex records {'dates' if plural else 'a date'} from which national measures are to "
+                    f"apply: {_join_dates(applies)}."
                 )
             return NextStep(text=" ".join(parts), institution=None, basis=basis)
         if act.act_type == "regulation":
