@@ -181,7 +181,10 @@ class Http:
         headers: dict[str, str] | None = None,
         use_cache: bool = True,
         ok_statuses: tuple[int, ...] = (200,),
+        retries: int | None = None,
     ) -> bytes:
+        """`retries` overrides max_retries for this call (0: a single attempt, e.g. when the caller has a
+        cheaper fallback than waiting, such as asking for a smaller page)."""
         key = json.dumps([method, url, params, data, json_body, headers], sort_keys=True, default=str)
         if use_cache:
             cached = self._cache_get(key)
@@ -189,7 +192,7 @@ class Http:
                 return cached
         if self._abort.is_set():
             raise HttpError(url, None, "fetch interrupted")
-        attempts = self.max_retries + 1
+        attempts = (self.max_retries if retries is None else retries) + 1
         # With a run deadline: `call_end` bounds this call, `retry_end` bounds the start of another attempt.
         call_end = retry_end = None
         if self.deadline is not None:

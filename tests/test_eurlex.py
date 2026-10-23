@@ -371,14 +371,25 @@ def test_discover_scope_pages_and_filters():
     class Pager:
         def sparql(self, query: str) -> list[dict[str, str]]:
             queries.append(query)
+            if query == E.scope_count_query():
+                return [{"n": str(len(rows))}]
             limit, offset = map(int, re.search(r"LIMIT (\d+) OFFSET (\d+)", query).groups())
             return rows[offset : offset + limit]
 
-    scope = E.discover_scope(Pager(), page=3)
-    assert len(queries) == len(rows) // 3 + 1
+    scope, gap = E.discover_scope(Pager(), page=3)
+    assert len(queries) == len(rows) // 3 + 1 + 1  # pages, then the count
+    assert gap is None  # the rows add up to Cellar's count
     assert "32024R1689" in scope.values() and "32016R0679" in scope.values()
     # 32019D1096 dropped: its reference contradicts the dossier type
     assert sorted(scope.values()) == sorted({r["celex"] for r in rows} - {"32019D1096"})
+
+    class Truncated(Pager):  # the second page answered short (a partial result): the paging ends there
+        def sparql(self, query: str) -> list[dict[str, str]]:
+            got = super().sparql(query)
+            return got[:1] if "OFFSET 3" in query else got
+
+    scope, gap = E.discover_scope(Truncated(), page=3)
+    assert gap == f"4 rows against {len(rows)} counted by Cellar" and len(scope) < len(rows) - 1
 
 
 def test_read_featured_celex(tmp_path):
@@ -565,3 +576,113 @@ def test_procedure_notices():
     ]
     assert got[0].id == "2016/0337(CNS):replaced:2023-09-12"
     assert got[0].source.url == "https://eur-lex.europa.eu/procedure/EN/2016_337"
+
+
+# ------------------------------------------------------------------------- fetch: incomplete answers
+def notice_rows(n: int) -> list[dict[str, str]]:
+    """n Commission withdrawals on made-up procedures 2016/0001/COD ... (rows as the notices query gives them)."""
+    return [
+        {"ref": f"2016/{i:04d}/COD", "type": E.AUTH + "event/WDW_byCOM", "date": "2020-01-01"}
+        for i in range(1, n + 1)
+    ]
+
+
+class Cellar:
+    """Answers fetch()'s queries: the scope pages and their count (scope_pages_trimmed), the batched act
+    queries (FixtureClient) and the procedure notices. `scope_rows` / `count` / `notices` change the answers."""
+
+    def __init__(self, scope_rows=None, count=None, notices=None):
+        self.rows = fixture_rows("scope_pages_trimmed") if scope_rows is None else scope_rows
+        self.count = count if count is not None else len(fixture_rows("scope_pages_trimmed"))
+        self.notices = notice_rows(21) if notices is None else notices
+        self.acts = FixtureClient()
+        self.queries: list[str] = []
+
+    def sparql(self, query: str) -> list[dict[str, str]]:
+        self.queries.append(query)
+        if query == E.scope_count_query():
+            if isinstance(self.count, Exception):
+                raise self.count
+            return [{"n": str(self.count)}]
+        if "LIMIT" in query and "OFFSET" in query:
+            limit, offset = map(int, re.search(r"LIMIT (\d+) OFFSET (\d+)", query).groups())
+            return self.rows[offset : offset + limit]
+        if query == E.procedure_notices_query():
+            if isinstance(self.notices, Exception):
+                raise self.notices
+            return self.notices
+        return self.acts.sparql(query)
+
+
+@pytest.fixture
+def eurlex_snapshot(tmp_path, monkeypatch):
+    import pipeline.snapshot as snap
+
+    monkeypatch.setattr(snap, "SNAPSHOT", tmp_path)
+    monkeypatch.setattr(E, "read_featured_celex", lambda: [])
+    monkeypatch.setattr(E, "procedure_celex_refs", lambda: [])
+    for var in ("EU_INTEL_FETCH_BUDGET_S", "EU_INTEL_FETCH_DEADLINE"):
+        monkeypatch.delenv(var, raising=False)
+    return tmp_path
+
+
+def stored(root: Path, name: str) -> list[str]:
+    return (root / "eurlex" / f"{name}.json").read_text(encoding="utf-8").splitlines()
+
+
+def unsettled(root: Path) -> dict:
+    return json.loads((root / "eurlex" / "_state.json").read_text(encoding="utf-8"))["unsettled"]
+
+
+def test_fetch_keeps_the_stored_notices_when_the_answer_is_empty_or_short(eurlex_snapshot):
+    """An empty or truncated notices answer (Virtuoso can answer a timed-out query with HTTP 200 and part of
+    the rows) used to rewrite procedure_notices.json, 272 -> 0, with status 'ok': the dossiers withdrawn or
+    replaced on these notices alone then changed status, permanently in the activity log."""
+    first = E.fetch(Cellar())
+    assert first.status == "ok" and "21 withdrawal/replacement notices" in first.note
+    assert unsettled(eurlex_snapshot) == {"attempted_at": first.attempted_at, "acts": [], "procedures": []}
+    before = stored(eurlex_snapshot, "procedure_notices")
+    for answer in ([], notice_rows(19), RuntimeError("SPARQL endpoint unavailable")):
+        status = E.fetch(Cellar(notices=answer))
+        assert stored(eurlex_snapshot, "procedure_notices") == before
+        assert status.status == "partial" and "previous file kept" in status.note
+        # every dossier resting on the stored notices waits for a refreshed answer (pipeline/analysis/activity.py)
+        assert len(unsettled(eurlex_snapshot)["procedures"]) == 21
+    # within 5%: written, and the procedure that lost its notice is named for change detection
+    status = E.fetch(Cellar(notices=notice_rows(20)))
+    assert len(stored(eurlex_snapshot, "procedure_notices")) == 20 + 2
+    assert status.status == "ok" and unsettled(eurlex_snapshot)["procedures"] == ["2016/0021(COD)"]
+
+
+def test_fetch_keeps_stored_acts_missing_from_an_incomplete_scope_answer(eurlex_snapshot, monkeypatch):
+    """discover_scope stops at the first short page, which a truncated answer also is: works missing from it
+    used to be dropped from acts.json while the run reported 'ok'."""
+    E.fetch(Cellar())
+    before = stored(eurlex_snapshot, "acts")
+    rows = fixture_rows("scope_pages_trimmed")
+    short = [r for r in rows if r["celex"] not in ("32016R0679", "32024R1689")]  # GDPR, AI Act
+    status = E.fetch(Cellar(scope_rows=short))  # Cellar still counts every row
+    assert stored(eurlex_snapshot, "acts") == before  # the two stored records are kept as they were
+    assert status.status == "partial" and "scope answer possibly incomplete (12 rows against 14" in status.note
+    assert "2 stored acts missing from this run's answers kept" in status.note
+    assert unsettled(eurlex_snapshot)["acts"] == ["32016R0679", "32024R1689"]
+    # the count cannot be read: not checked, so they are kept as well
+    status = E.fetch(Cellar(scope_rows=short, count=HttpError("u", 500, "count failed")))
+    assert stored(eurlex_snapshot, "acts") == before and status.status == "partial"
+    # a complete answer without them (its rows match the count): they left the scope and are removed
+    monkeypatch.setattr(E, "MAX_FAILED_SHARE", 0.2)  # (the fixture is small: 2 of 13 is more than 5%)
+    status = E.fetch(Cellar(scope_rows=short, count=len(short)))
+    celex = {json.loads(x.rstrip(","))["celex"] for x in stored(eurlex_snapshot, "acts") if x.startswith("{")}
+    assert len(celex) == 11 and not {"32016R0679", "32024R1689"} & celex
+    assert status.status == "ok" and unsettled(eurlex_snapshot)["acts"] == []
+
+
+def test_fetch_starts_no_query_after_its_time_budget(eurlex_snapshot, monkeypatch):
+    E.fetch(Cellar())
+    before = stored(eurlex_snapshot, "acts")
+    monkeypatch.setenv("EU_INTEL_FETCH_BUDGET_S", "0")
+    http = Cellar()
+    with pytest.raises(RuntimeError, match="no acts could be built"):  # the source fails: its files are kept
+        E.fetch(http)
+    assert not any("VALUES ?w" in q for q in http.queries)  # no act query was started
+    assert stored(eurlex_snapshot, "acts") == before

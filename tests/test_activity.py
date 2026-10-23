@@ -238,6 +238,105 @@ def test_classifier_is_stored_only_with_trusted_stages(base: Path, monkeypatch: 
     assert json.loads((base / "state" / "digest.json").read_text())["classifier"] != "test-next"
 
 
+# ---------------------------------------------------------------- per-dossier holds (unsettled files of a fetch)
+def _set_unsettled(base: Path, source: str, status: str, stamp: str | None = None, **unsettled) -> None:
+    """The source's fetch was `status` and recorded what it left unsettled (stamped with its manifest entry's
+    attempted_at unless `stamp` says otherwise)."""
+    _set_status(base, source, status)
+    m = json.loads((base / "snapshot" / "_manifest.json").read_text(encoding="utf-8"))
+    (base / "snapshot" / source).mkdir(exist_ok=True)
+    state = {"unsettled": {"attempted_at": stamp or m[source]["attempted_at"], **unsettled}}
+    (base / "snapshot" / source / "_state.json").write_text(json.dumps(state), encoding="utf-8")
+
+
+def test_a_pending_file_no_longer_suspends_every_status_change(
+    base: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """ep_procedures stays 'partial' while one file is pending (e.g. its OEIL page fails): the other dossiers'
+    status changes are still recorded; the pending one keeps its stored stage, with a warning."""
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    before = _stage(base, "2099-0002")
+    procs = base / "snapshot" / "ep_procedures" / "procedures.json"
+    _edit(procs, _withdraw)  # 2099-0003: a real change
+    _edit(procs, lambda r: _withdraw(r, "2099-0002"))  # 2099-0002: changed, but its fetch did not settle
+    _set_unsettled(base, "ep_procedures", "partial", ids=["2099-0002"])
+    with caplog.at_level("WARNING", logger="pipeline.analysis.activity"):
+        _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    assert [c["dossier_id"] for c in _status_changes(base)] == ["2099-0003"]
+    assert _stage(base, "2099-0002") == before
+    dig = json.loads((base / "state" / "digest.json").read_text())
+    assert dig["dossiers"]["2099-0002"]["held_since"] == "2026-10-23T10:00:00Z"
+    assert "Status changes held for 1 files" in caplog.text and "2099-0002" in caplog.text
+    # the next run refreshes it: its change is recorded then, once
+    _set_unsettled(base, "ep_procedures", "ok", ids=[])
+    _run(base, monkeypatch, record=True, now="2026-10-30T10:00:00Z")
+    changes = _status_changes(base)
+    assert [(c["dossier_id"], c["detected_at"]) for c in changes] == [
+        ("2099-0003", "2026-10-23T10:00:00Z"),
+        ("2099-0002", "2026-10-30T10:00:00Z"),
+    ]
+    assert "held_since" not in json.loads((base / "state" / "digest.json").read_text())["dossiers"]["2099-0002"]
+
+
+def test_a_degraded_act_held_by_eurlex_leaves_no_false_changes(base: Path, monkeypatch: pytest.MonkeyPatch):
+    """The audit replay for EUR-Lex: an act is missing from one run (e.g. a short answer) and back in the next.
+    The fetch names it as unsettled, so neither the loss nor the recovery is logged as a status change."""
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    acts = base / "snapshot" / "eurlex" / "acts.json"
+    saved = acts.read_bytes()
+    before = _stage(base, "2099-0001")
+    _edit(acts, lambda r: r.remove(next(a for a in r if a["celex"] == "32099R0001")))
+    _set_unsettled(base, "eurlex", "partial", acts=["32099R0001"], procedures=[])
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    assert _stage(base, "2099-0001") == before  # held: the stage without the act was not stored
+    acts.write_bytes(saved)
+    _set_unsettled(base, "eurlex", "ok", acts=[], procedures=[])
+    _run(base, monkeypatch, record=True, now="2026-10-30T10:00:00Z")
+    assert _status_changes(base) == []
+    # a notice or act change named by procedure reference is held the same way
+    _edit(acts, lambda r: r.remove(next(a for a in r if a["celex"] == "32099R0001")))
+    _set_unsettled(base, "eurlex", "partial", acts=[], procedures=["2099/0001(COD)"])
+    _run(base, monkeypatch, record=True, now="2026-11-06T10:00:00Z")
+    assert _status_changes(base) == []
+    _set_unsettled(base, "eurlex", "ok", acts=[], procedures=[])  # still without the act: now a real change
+    _run(base, monkeypatch, record=True, now="2026-11-13T10:00:00Z")
+    assert [c["dossier_id"] for c in _status_changes(base)] == ["2099-0001"]
+
+
+def test_an_unsettled_record_of_another_fetch_does_not_count(
+    base: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """A state file from an earlier fetch (e.g. restored after a failed validation) says nothing about the
+    current data: the partial source suspends status changes as before, and the build says since when."""
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    _edit(base / "snapshot" / "ep_procedures" / "procedures.json", _withdraw)
+    _set_unsettled(base, "ep_procedures", "partial", stamp="2026-10-15T00:00:00Z", ids=[])
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    with caplog.at_level("WARNING", logger="pipeline.analysis.activity"):
+        _run(base, monkeypatch, record=True, now="2026-10-30T10:00:00Z")
+    assert _status_changes(base) == []
+    assert "Status changes not recorded (suspended since 2026-10-23T10:00:00Z)" in caplog.text
+    assert "ep_procedures partial" in caplog.text
+    _set_unsettled(base, "ep_procedures", "partial", ids=[])  # this fetch's own record: trusted again
+    _run(base, monkeypatch, record=True, now="2026-11-06T10:00:00Z")
+    assert len(_status_changes(base)) == 1
+    assert json.loads((base / "state" / "digest.json").read_text())["status_suspended_since"] is None
+
+
+def test_held_dossier_is_rebaselined_after_a_classifier_change(base: Path, monkeypatch: pytest.MonkeyPatch):
+    from pipeline.analysis import activity
+
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    monkeypatch.setattr(activity, "CLASSIFIER_VERSION", "test-next")
+    _edit(base / "snapshot" / "ep_procedures" / "procedures.json", _withdraw)
+    _set_unsettled(base, "ep_procedures", "partial", ids=["2099-0003"])
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    assert _stage(base, "2099-0003") is None  # stored by the previous logic: not compared with the new one
+    _set_unsettled(base, "ep_procedures", "ok", ids=[])
+    _run(base, monkeypatch, record=True, now="2026-10-30T10:00:00Z")
+    assert _status_changes(base) == [] and _stage(base, "2099-0003") == "withdrawn"
+
+
 SNAP_VOTES = Path(__file__).resolve().parent.parent / "data" / "snapshot" / "ep_votes" / "votes.json"
 
 

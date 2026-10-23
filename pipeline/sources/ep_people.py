@@ -26,7 +26,7 @@ from typing import Any
 from pipeline.http import EP_API, Http
 from pipeline.models.countries import normalize_country
 from pipeline.models.entities import Membership, Mep, Organization, SourceRef, SourceStatus
-from pipeline.snapshot import now_iso, write_records
+from pipeline.snapshot import fetch_deadline, now_iso, past, read_records, write_records
 
 SOURCE_ID = "ep_people"
 FMT = {"format": "application/ld+json"}
@@ -64,12 +64,15 @@ def _list(http: Http, path: str, **params: Any) -> list[dict]:
             return out
 
 
-def _details(http: Http, path: str, ids: list[str]) -> dict[str, dict]:
-    """Fetch full records for ids in batches of BATCH (sorted, so requests are stable and cacheable)."""
+def _details(http: Http, path: str, ids: list[str], deadline: float | None = None) -> dict[str, dict]:
+    """Fetch full records for ids in batches of BATCH (sorted, so requests are stable and cacheable). No batch
+    is started after `deadline` (monotonic): its ids are left out, like ids a batch did not return."""
     ids = sorted(set(ids), key=lambda x: (len(x), x))
     chunks = [ids[i : i + BATCH] for i in range(0, len(ids), BATCH)]
 
     def one(chunk: list[str]) -> list[dict]:
+        if past(deadline):
+            return []
         return http.get_json(f"{EP_API}{path}/{','.join(chunk)}", params=FMT)["data"]
 
     with ThreadPoolExecutor(WORKERS) as ex:
@@ -203,24 +206,42 @@ def cross_check(meps: list[Mep], orgs: list[Organization], current: dict[str, di
 
 
 # ------------------------------------------------------------------------------------------- entry
+MAX_SHRINK = 0.05  # meps.json / orgs.json are not rewritten if they would lose more than this share of records
+
+
 def fetch(http: Http) -> SourceStatus:
+    """An MEP or organization that a detail batch did not return (or that the time budget left out) keeps its
+    stored record ("partial"); if the lists themselves come back short (more than MAX_SHRINK fewer records
+    than stored, e.g. an empty answer), nothing is written and the source fails, keeping its files."""
     attempted = now_iso()
+    deadline = fetch_deadline()
+    stored_meps = {m.id: m for m in read_records(SOURCE_ID, "meps", Mep)}
+    stored_orgs = {o.id: o for o in read_records(SOURCE_ID, "orgs", Organization)}
     term_ids: dict[str, set[int]] = {}
     for term in TERMS:
         for r in _list(http, "/meps", **{"parliamentary-term": term}):
             term_ids.setdefault(r["identifier"], set()).add(term)
     current = {r["identifier"]: r for r in _list(http, "/meps/show-current")}
-    people = _details(http, "/meps", list(term_ids))
+    people = _details(http, "/meps", list(term_ids), deadline)
     retrieved = now_iso()
-    problems = [f"MEP {i} not returned" for i in term_ids if i not in people]
+    kept = " (previous record kept)"
+    problems = [f"MEP {i} not returned" + (kept if i in stored_meps else "") for i in term_ids if i not in people]
     problems += [f"current MEP {i} not in term lists" for i in current.keys() - term_ids.keys()]
 
     meps = [parse_mep(people[i], i in current, term_ids[i], retrieved) for i in term_ids if i in people]
+    meps += [stored_meps[i] for i in term_ids if i not in people and i in stored_meps]
     org_ids = {m.org_id for mep in meps for m in mep.memberships}
-    raw_orgs = _details(http, "/corporate-bodies", list(org_ids))
+    raw_orgs = _details(http, "/corporate-bodies", list(org_ids), deadline)
     orgs = [parse_org(o, retrieved) for o in raw_orgs.values() if o["identifier"] in org_ids]
-    problems += [f"org {i} not returned" for i in sorted(org_ids - raw_orgs.keys())]
+    missing_orgs = sorted(org_ids - raw_orgs.keys())
+    orgs += [stored_orgs[i] for i in missing_orgs if i in stored_orgs]
+    problems += [f"org {i} not returned" + (kept if i in stored_orgs else "") for i in missing_orgs]
+    if past(deadline) and (len(people) < len(term_ids) or missing_orgs):
+        problems.insert(0, "time budget reached before every record was requested")
     problems += cross_check(meps, orgs, current)
+    for name, new, old in (("meps", meps, stored_meps), ("orgs", orgs, stored_orgs)):
+        if old and len(new) < (1 - MAX_SHRINK) * len(old):
+            raise RuntimeError(f"ep_people: {len(new)} {name} against {len(old)} in the snapshot; not overwriting")
 
     write_records(SOURCE_ID, "meps", meps, key=lambda m: int(m.id))
     write_records(SOURCE_ID, "orgs", orgs, key=lambda o: (o.kind, int(o.id)))

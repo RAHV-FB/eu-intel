@@ -840,3 +840,48 @@ def test_a_failing_sitting_stays_pending_without_blocking_its_chunk(fetch_env, m
     stored = _stored()
     assert "195361" in stored and "195775" not in stored  # 2026-07-08 kept, 2026-07-09 to be resumed
     assert ev.fetch(FixtureHttp()).status == "ok" and "195775" in _stored()
+
+
+def test_full_pass_procedure_list_halves_the_page_and_falls_back(fetch_env, monkeypatch):
+    """The /procedures list answered HTTP 500 to limit=1000 (the full pass asked for it) and, for COD, to 500
+    and 250; the HttpError used to fail the whole source."""
+    from pipeline import snapshot
+    from pipeline.http import HttpError
+
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    one_pass = {v.id: v.procedure_refs for v in assemble(*(p.stem.removeprefix("sitting_")
+                for p in sorted(FIX.glob("sitting_*.json"))))[0].values()}  # fmt: skip
+
+    class SmallPagesOnly(FixtureHttp):
+        def __init__(self):
+            super().__init__()
+            self.list_calls: list[tuple[str, int, int | None]] = []
+
+        def get(self, url, params=None, **kw):
+            if url.endswith("/procedures"):
+                self.list_calls.append((params["process-type"], params["limit"], kw.get("retries")))
+                if params["process-type"] == "COD" and params["limit"] > 125:
+                    raise HttpError(url, 500, "WebClientRequestException")
+            return super().get(url, params, **kw)
+
+    http = SmallPagesOnly()
+    assert ev.fetch(http).status == "ok"  # empty snapshot: a full pass, with the list
+    assert [c for c in http.list_calls if c[0] == "COD"] == [("COD", 500, 0), ("COD", 250, 0), ("COD", 125, None)]
+    assert snapshot.read_state(ev.SOURCE_ID)["list_page"]["COD"] == 125
+    assert {v.id: v.procedure_refs for v in _stored().values()} == one_pass
+
+    class ListDown(FixtureHttp):
+        def get(self, url, params=None, **kw):
+            if url.endswith("/procedures"):
+                self.requests.append("/procedures")
+                raise HttpError(url, 500, "WebClientRequestException")
+            return super().get(url, params, **kw)
+
+    monkeypatch.setenv("EU_INTEL_FULL_REFRESH", "1")
+    down = ListDown()
+    status = ev.fetch(down)
+    # the listing stops at the first type it cannot read; the known references and per-id requests do the rest
+    assert status.status == "ok"
+    assert f"procedure list unavailable for {len(ev.PROCESS_TYPES)} process types (ACI," in status.note
+    assert down.requests.count("/procedures") == 3  # 500 and 250 once each, then 125 (with Http's retries)
+    assert {v.id: v.procedure_refs for v in _stored().values()} == one_pass
