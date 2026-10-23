@@ -2,9 +2,11 @@
 
     python -m pipeline fetch [SOURCE ...]   # network: refresh data/snapshot/<source>/ (per-source, failure-safe)
     python -m pipeline build                # offline: data/snapshot + data/curated -> public/data
-    python -m pipeline validate             # offline: schema + invariant checks on the snapshot
+    python -m pipeline validate             # offline: schema + invariant checks on the snapshot, and on the
+                                            # built output (public/data) if there is one
+    python -m pipeline validate --built     # same; a missing built output is an error (run after build)
     python -m pipeline validate --list-failing
-                                            # same checks; prints the sources with structural errors
+                                            # the snapshot checks; prints the sources with structural errors
     python -m pipeline restore-manifest --previous FILE SOURCE ...
                                             # put back those sources' entries of a previous manifest
 
@@ -106,11 +108,11 @@ def cmd_fetch(names: list[str]) -> int:
     return 1 if failures else 0
 
 
-def cmd_validate(list_failing: bool) -> int:
+def cmd_validate(list_failing: bool, built: bool = False) -> int:
     from pipeline.validate import validate, validate_by_source
 
     if not list_failing:
-        return validate()
+        return validate(built)
     failing = validate_by_source(out=sys.stderr)
     bad = [s for s in failing if not SOURCE_NAME_RE.match(s)]
     if bad:  # cannot be restored per source (e.g. errors in the built public output)
@@ -151,7 +153,13 @@ def main(argv: list[str] | None = None) -> int:
     f.add_argument("sources", nargs="*")
     sub.add_parser("build")
     v = sub.add_parser("validate")
-    v.add_argument(
+    vmode = v.add_mutually_exclusive_group()
+    vmode.add_argument(
+        "--built",
+        action="store_true",
+        help="also require the built output (public/data): fail when it is missing instead of skipping its checks",
+    )
+    vmode.add_argument(
         "--list-failing",
         action="store_true",
         help="print the sources whose snapshot files have structural errors (one per line; report on stderr)",
@@ -168,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
 
         return build()
     if a.cmd == "validate":
-        return cmd_validate(a.list_failing)
+        return cmd_validate(a.list_failing, a.built)
     if a.cmd == "restore-manifest":
         return cmd_restore_manifest(a.previous, a.sources, a.reason)
     return 2

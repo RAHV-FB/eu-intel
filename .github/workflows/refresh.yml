@@ -1,4 +1,5 @@
-# Weekly data refresh: fetch official sources -> validate per source -> record activity -> commit the snapshot.
+# Weekly data refresh: fetch official sources -> validate per source -> build and record activity -> validate the
+# built data -> commit the snapshot.
 #
 # - Each source is failure-isolated by `python -m pipeline fetch`: a failed source keeps its previous
 #   snapshot files and is recorded in data/snapshot/_manifest.json; the job carries on.
@@ -12,6 +13,10 @@
 # - The snapshot, with the resumable _state.json checkpoints, is committed even if the activity build fails;
 #   data/state (the activity log) is committed only after a successful build. A failed build fails the job,
 #   so nothing is deployed until a later run succeeds.
+# - After a successful build, `python -m pipeline validate --built` checks the built data (pipeline/validate.py,
+#   e.g. a vote margin that contradicts its outcome, a withdrawn file with an act, a veto outside unanimity). If it
+#   fails, nothing is committed (neither the snapshot nor data/state) and the job fails: main keeps the last
+#   snapshot whose build passed, and the next run fetches again.
 # - The push survives concurrent commits on main: this run's data changes are re-applied on top of the
 #   current main (for the data files this run changed, its version wins; _manifest.json is merged per
 #   source). Do not commit data/snapshot or data/state by hand while a refresh is running.
@@ -174,11 +179,17 @@ jobs:
           EU_INTEL_RECORD_ACTIVITY: "1"
         run: python -m pipeline build
 
+      - name: Validate built data
+        id: validate_built
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: python -m pipeline validate --built
+
       - name: Commit and push snapshot
-        # Also after a failed build: the validated snapshot and its checkpoints must not be lost.
-        if: ${{ !cancelled() && steps.validate.outcome == 'success' }}
+        # Also after a failed build: the validated snapshot and its checkpoints must not be lost. Never after a
+        # build whose output failed validation.
+        if: ${{ !cancelled() && steps.validate.outcome == 'success' && steps.validate_built.outcome != 'failure' }}
         env:
-          BUILD_OK: ${{ steps.build.outcome == 'success' }}
+          BUILD_OK: ${{ steps.build.outcome == 'success' && steps.validate_built.outcome == 'success' }}
         run: |
           paths=(data/snapshot)
           if [ "$BUILD_OK" = "true" ]; then

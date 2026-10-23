@@ -1,6 +1,7 @@
-"""Offline checks of the normalized snapshot (data/snapshot/**).
+"""Offline checks of the normalized snapshot (data/snapshot/**) and, once built, of public/data.
 
-    python -m pipeline validate
+    python -m pipeline validate            # the snapshot, and the built output if there is one
+    python -m pipeline validate --built    # the same, but a missing built output is an error (CI, deploy, refresh)
 
 Errors (exit code 1) are STRUCTURAL problems only: unreadable files, records that do not match
 the schema in pipeline/models/entities.py, duplicate ids, malformed dates; and, in the built output,
@@ -495,9 +496,19 @@ def margin_contradictions(v: dict) -> list[str]:
     return []
 
 
-def validate() -> int:
-    rep = check(public=ROOT / "public" / "data")
-    rep.print()
+def validate(built: bool = False) -> int:
+    """The snapshot checks and the built-output checks. The built output is checked only if it exists, so the
+    workflows run this again after `python -m pipeline build` with built=True: without public/data that is an error
+    instead of a silent skip."""
+    from pipeline import snapshot as snapshot_module
+
+    public = ROOT / "public" / "data"
+    rep = check(snapshot_module.SNAPSHOT, public=public)
+    if built and not public.exists():
+        rep.error(f"no built output in {public}: run `python -m pipeline build` first", "public")
+    rep.print(sys.stdout)
+    if not built and not public.exists():
+        print("validate: built output not checked (no public/data; run `python -m pipeline build` first)")
     return 1 if rep.errors else 0
 
 

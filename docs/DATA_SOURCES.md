@@ -224,9 +224,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Margin (`analysis/ep_margin.py`, build): computed only for an adopted or rejected outcome under an established
   majority rule. Its label is about the majority that vote needed, "Majority reached: N votes more than needed" /
   "Majority not reached: N votes short", never about a law passing (a final vote can be a consultation opinion or
-  a position the Council has not yet agreed to). `python -m pipeline validate` fails a build in which a margin
-  stands next to another outcome or on the other side of the threshold. A vote is *close* when the distance is at
-  most 5% of the votes cast for and against (`CLOSE_RELATIVE` in `build.py` and `src/features/votes/labels.ts`).
+  a position the Council has not yet agreed to). `python -m pipeline validate` (run after the build in CI, the
+  deploy and the refresh, with `--built`) fails a build in which a margin stands next to another outcome or on the
+  other side of the threshold. A vote is *close* when the distance is at most 5% of the votes cast for and against
+  (`CLOSE_RELATIVE` in `build.py` and `src/features/votes/labels.ts`).
 - `outcome_basis` `derived` (calculated from the counts where they settle the result: under the votes-cast or
   component-Members rule that applies, or under every rule when none is known) is shown as such wherever the
   outcome is: vote pages, the /votes list, dossier vote cards and the home lists.
@@ -526,8 +527,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   decisions of the day, since negotiations open on Parliament's mandate (2025/0132(COD), 17 December 2025); a text
   tabled for the plenary follows the committee's approval of it (2024/0071(COD), 16 June 2025); a second-reading
   step follows the Council's first-reading position of the same day (2018/0136(COD), 14 December 2020: ST 14020/20,
-  then the referral and the committee's recommendation). `validate` reports a trilogue or a second-reading step
-  listed before what it follows.
+  then the referral and the committee's recommendation). `validate` fails a build in which a trilogue or a
+  second-reading step is listed before what it follows.
 - Rejection by Parliament: a final vote officially recorded as rejected, or an adopted motion to reject the
   proposal (2023/0413(COD), vote 179804), unless OEIL shows the file past Parliament's first reading.
 - Type of act (`instrument`): the type of the file's adopted act; for a file without a linked act of a known type,
