@@ -629,6 +629,9 @@ MANDATE_REFUSED = {
     "PLENARY_REJECT_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
     "PLENARY_REJECT_COMMITTEE_INTERINSTUTIONAL_NEGOTIATIONS",
 }
+# Parliament's referral of a file back to the committee responsible for reconsideration (OEIL "Matter referred back
+# to the committee responsible for reconsideration")
+REFERRED_BACK = {"PLENARY_REFER_COMMITTEE_RECONSIDERATION"}
 
 
 def _cod_stage(events: list[Event]) -> _S:
@@ -703,6 +706,60 @@ def _cod_stage(events: list[Event]) -> _S:
                 ep_pos.date,
                 "derived",
             )
+        # Negotiations after Parliament's first reading, before the Council's first-reading position, towards an
+        # agreement that the Council adopts as its position for Parliament to approve at second reading (Article
+        # 294(5) and (7)(a) TFEU): 2023/0210(COD), first reading 23 April 2024, OEIL 5 May 2026 "Approval in
+        # committee of the text agreed at early 2nd reading interinstitutional negotiations"
+        talks = [e for e in events if e.date > ep_pos.date and (
+            e.kind == EventKind.negotiation_mandate or _code(e) == "INTERINSTITUTIONAL_NEGOTIATION")]  # fmt: skip
+        trilogues = [e for e in talks if _code(e) == "INTERINSTITUTIONAL_NEGOTIATION"]
+        first = f"Parliament adopted its first-reading position on {_fmt(ep_pos.date)}."
+        aim = (
+            "an agreement that the Council would adopt as its first-reading position, for Parliament to approve at "
+            "second reading (an early second-reading agreement)"
+        )
+        s = None
+        if not council_pos and agreed:
+            s = _S(
+                "parliament_position",
+                "Early second-reading agreement reached",
+                f"{first} Parliament's committee approved, on {_fmt(agreed.date)}, the text agreed with the Council in "
+                "the negotiations that followed. It is not law yet: the Council adopts its first-reading position on "
+                "the agreed text, which Parliament then approves at second reading.",
+                agreed.date,
+                "derived",
+            )
+            s.next_step = NextStep(
+                text="The Council adopts its first-reading position on the agreed text; if Parliament approves that "
+                "position at second reading, the act is adopted (Article 294(7)(a) TFEU).",
+                institution="Council",
+                basis="derived",
+            )
+        elif not council_pos and talks:
+            s = _S(
+                "parliament_position",
+                "Negotiations with the Council after Parliament's first reading"
+                if trilogues
+                else "Committee decided to negotiate with the Council after Parliament's first reading",
+                f"{first} "
+                + (
+                    f"Parliament's negotiators and the Council have since negotiated (first recorded meeting: "
+                    f"{_fmt(trilogues[0].date)}), seeking {aim}."
+                    if trilogues
+                    else f"On {_fmt(talks[0].date)} the decision of Parliament's committee to negotiate with the "
+                    f"Council was recorded, with a view to {aim}."
+                )
+                + " It is not law yet.",
+                (trilogues or talks)[0].date,
+                "derived",
+            )
+            s.next_step = NextStep(
+                text="Parliament and Council negotiators seek an agreement, which the Council would then adopt as its "
+                "first-reading position for Parliament to approve at second reading.",
+                basis="derived",
+            )
+        if s is not None:
+            return s
         return _S(
             "parliament_position",
             "Parliament adopted its first-reading position",
@@ -722,6 +779,16 @@ def _cod_stage(events: list[Event]) -> _S:
             agreed.date,
             "source",
         )
+    # Parliament's referral of the file back to the committee responsible for reconsideration (Rule 198 of its Rules of
+    # Procedure): a decision to negotiate taken before it, or announced the same day, gives no mandate (2022/0135(COD),
+    # 12 Dec 2022: the committee's decision on report A9-0288/2022 announced, then "the referral back to committee
+    # under Rule 198 of the report ... The House agreed to the proposal", minutes PV-9-2022-12-12, item 5)
+    back = next((e for e in reversed(events) if _code(e) in REFERRED_BACK), None)
+    lapsed_mandate = False
+    if back:
+        kept = [e for e in events if e.kind != EventKind.negotiation_mandate or e.date > back.date or (
+            e.date == back.date and _code(e) in PLENARY_MANDATE)]  # fmt: skip
+        lapsed_mandate, events = len(kept) < len(events), kept
     mandate = _last(events, EventKind.negotiation_mandate)
     refused = [e for e in events if _code(e) in MANDATE_REFUSED]
     if mandate and refused and not [e for e in events if e.kind == EventKind.negotiation_mandate and (
@@ -782,6 +849,22 @@ def _cod_stage(events: list[Event]) -> _S:
             "derived",
         )
     report = _last(events, EventKind.committee_report)
+    if back and not (report and report.date > back.date):
+        s = _S(
+            "proposed",
+            "Referred back to committee",
+            f"On {_fmt(back.date)} Parliament referred the file back to the committee responsible for reconsideration"
+            + (", so it holds no mandate to negotiate with the Council." if lapsed_mandate else "."),
+            back.date,
+            "derived",
+        )
+        s.next_step = NextStep(
+            text="The committee reconsiders the file and reports again to Parliament; negotiations with the Council can "
+            "start only after a new committee decision to negotiate or a plenary vote.",
+            institution="EP",
+            basis="derived",
+        )
+        return s
     if report:
         return _S(
             "proposed",
@@ -882,6 +965,28 @@ def _cns_app_stage(ptype: str, events: list[Event]) -> _S:
             "derived",
         )
     report = _last(events, EventKind.committee_report)
+    drafted = _last(events, EventKind.proposal)
+    if ptype == "APP" and drafted and drafted.institution == "EP" and not any(
+        e.kind in (EventKind.referral, EventKind.committee_report) and e.date >= drafted.date for e in events
+    ):
+        # Parliament's own proposal, with no Council draft submitted to Parliament since (Article 223(1) TFEU:
+        # 2022/0902(APP), T9-0129/2022 of 3 May 2022, "Adopts the annexed proposal and submits it to the Council")
+        s = _S(
+            "proposed",
+            "Parliament adopted its proposal",
+            f"Parliament adopted its proposal for the act on {_fmt(drafted.date)}. Under this special legislative "
+            "procedure the Council adopts the act on Parliament's proposal, after obtaining Parliament's consent; no "
+            "Council draft submitted to Parliament for its consent is recorded in our data.",
+            drafted.date,
+            "derived",
+        )
+        s.next_step = NextStep(
+            text="The Council agrees on the text of the act and asks for Parliament's consent; Parliament then decides "
+            "whether to give it.",
+            institution="Council",
+            basis="derived",
+        )
+        return s
     start = report or _last(events, EventKind.referral) or _last(events, EventKind.proposal)
     if ptype == "CNS":
         expl = (
@@ -1486,7 +1591,8 @@ def _no_final_act(proc: Procedure) -> str:
     Regulation (EU) 2026/415 cites the documents of this file (ECB Recommendation ECB/2025/17, Commission Opinion
     C(2025)7526, "Opinion of 26 November 2025" of Parliament), but no official record links the two: Cellar records
     no procedure for the act, OEIL still gives "Awaiting final decision" and lists no final act, and the EP's
-    procedure record lists none. The site does not link them either."""
+    procedure record lists none. The site does not link them either: the build names the regulation and what it cites
+    in the file's status instead (data/curated/unlinked_acts.yaml, build.Builder.unlinked_act_status)."""
     oeil = (
         f"The Legislative Observatory gives the file's stage as “{proc.stage_raw}” and lists no final act, and no"
         if proc.stage_raw and not proc.celex_refs

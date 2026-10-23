@@ -876,6 +876,9 @@ SPECIAL_PROCEDURE_TITLES = {
     "Parliament committee decided to open second-reading negotiations with the Council": (
         "Parliament committee decided to open negotiations with the Council"
     ),
+    "Parliament committee decided to open negotiations with the Council after Parliament's first reading": (
+        "Parliament committee decided to open negotiations with the Council"
+    ),
     "Parliament committee approved the agreement reached with the Council for an early second reading": (
         "Parliament committee approved the text agreed with the Council"
     ),
@@ -885,6 +888,22 @@ SPECIAL_PROCEDURE_TITLES = {
 def _plenary_decision(e: Event) -> bool:
     """Parliament's decision at a sitting; in consent files the EP API often records it as PLENARY_AMEND."""
     return e.kind == EventKind.ep_position or (e.raw_type or "").endswith("/PLENARY_AMEND")
+
+
+def parliament_proposal_day(p: Procedure) -> str | None:
+    """The day of Parliament's own proposal for the act of a consent file with no COM document: the file opens
+    with a text adopted by Parliament (Article 223(1) TFEU, the Council acting "upon a proposal drawn up by the
+    European Parliament"). OEIL lists that text as a "Preparatory document" (2022/0902(APP): T9-0129/2022 of 3 May
+    2022, "Adopts the annexed proposal and submits it to the Council"; 2025/0900(APP): T10-0257/2025) or as the
+    legislative proposal (2019/0900(APP): T8-0080/2019)."""
+    if p.type != "APP" or p.com_refs or not p.events:
+        return None
+    first = min(e.date for e in p.events)
+    return first if any(
+        e.date == first and (e.kind == EventKind.proposal or e.raw_type == "oeil:Preparatory document")
+        and any(EP_TEXT_RE.fullmatch(d.id) for d in e.docs)
+        for e in p.events
+    ) else None  # fmt: skip
 
 
 ACT_NUMBER_RE = re.compile(
@@ -1706,6 +1725,25 @@ def load_council_dates(curated: Path = CURATED) -> dict[str, dict]:
     return out
 
 
+def load_unlinked_acts(curated: Path = CURATED) -> dict[str, dict]:
+    """Acts whose text cites a file's steps but which no official record links to the file
+    (data/curated/unlinked_acts.yaml), by normalized procedure reference. An entry whose dates are malformed, or
+    whose quote does not give the date of Parliament's opinion, is skipped."""
+    raw = _load_yaml("unlinked_acts.yaml", curated) or []
+    out: dict[str, dict] = {}
+    for e in raw if isinstance(raw, list) else []:
+        if not isinstance(e, dict) or not all(isinstance(e.get(k), str) for k in ("procedure", "celex", "label")):
+            continue
+        dates = [e.get(k) for k in ("date", "published", "opinion")]
+        if not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates) or (
+            f"Opinion of {_long_date(e['opinion'])}" not in _squash(e.get("quote"))
+        ):
+            log.warning("curated unlinked_acts.yaml: entry %s does not quote its dates; ignored", e["procedure"])
+            continue
+        out[norm_ref(e["procedure"])] = e
+    return out
+
+
 def load_curated(curated: Path = CURATED) -> tuple[dict[str, dict], dict[str, dict], list[dict]]:
     """Returns (featured by normalized reference/id, topics by slug, alias rules)."""
     featured_raw = _load_yaml("featured.yaml", curated) or []
@@ -1800,6 +1838,7 @@ class Builder:
         if self.transposition_checks:
             snap.acts = [apply_transposition_checks(a, self.transposition_checks.get(a.celex)) for a in snap.acts]
         self.council_dates = load_council_dates(curated)
+        self.unlinked_acts = load_unlinked_acts(curated)
         self.files: dict[str, Any] = {}
         self._index()
 
@@ -2732,11 +2771,48 @@ class Builder:
             try:
                 st = fn(p, acts, train, date.fromisoformat(self.today), others=self.act,  # others: to name acts
                         votes=self.votes_of.get(p.id, []))  # fmt: skip
-                return self._status_dict(_as_dict(st))
+                return self.unlinked_act_status(p, acts, self._status_dict(_as_dict(st)))
             except Exception as e:  # noqa: BLE001 - never let one dossier break the build
                 log.warning("classify failed for %s: %r", p.id, e)
                 self.s.issues.append(f"status.classify failed for {p.id}: {e!r}"[:300])
         return self.fallback_status(p, acts, train)
+
+    def unlinked_act_status(self, p: Procedure, acts: list[LegalAct], r: dict) -> dict:
+        """The status of a file still awaiting a decision in the official records, while an act whose text cites
+        Parliament's opinion on it is published (data/curated/unlinked_acts.yaml): the act is named with what it
+        cites, not linked, and the file is not shown as still being decided (2025/0806(CNS): Council Regulation (EU)
+        2026/415 cites "the Opinion of the European Parliament" of 26 November 2025; no official record links them).
+        Only while no act is linked to the file and Parliament's opinion is recorded on the day the act cites."""
+        e = self.unlinked_acts.get(norm_ref(p.reference))
+        if not e or acts or r["status"].get("stage") not in ACTIVE_STAGES:
+            return r
+        if not any(x.kind == EventKind.ep_position and x.date == e["opinion"] for x in p.events):
+            log.warning("curated unlinked_acts.yaml: %s records no opinion of Parliament on %s; ignored", p.reference,
+                        e["opinion"])  # fmt: skip
+            return r
+        opened = isinstance(e.get("initiative"), str) and any(
+            x.kind == EventKind.proposal and e.get("document") in {d.id for d in x.docs} for x in p.events
+        )  # the text the act cites that the file's proposal step transmitted (2025/0806(CNS): ECB/2025/17, 09737/2025)
+        text = (
+            f"Parliament delivered its opinion on {_long_date(e['opinion'])}. {e['label']} of {_long_date(e['date'])}, "
+            f"published in the Official Journal on {_long_date(e['published'])}, cites “the Opinion of the European "
+            f"Parliament” of {_long_date(e['opinion'])}, the day of Parliament's opinion on this file"
+            + (f", and the {e['initiative']}, which the file's proposal step, document {e['document']}, transmitted."
+               if opened else ".")
+            + " No official record links that act to this procedure: EUR-Lex records no procedure for it"
+            + (f" (checked on {_long_date(e['reviewed'])})" if ISO_DATE_RE.match(str(e.get("reviewed"))) else "")
+            + ", and the Legislative Observatory lists no final act for the file"
+            + (f" and gives its stage as “{p.stage_raw}”." if p.stage_raw else ".")
+        )  # fmt: skip
+        return self._status_dict({
+            "status": {"stage": "unknown", "label": "Final act not linked in the official records", "explanation": text,
+                       "since": None, "basis": "source"},
+            "next_step": {"text": "Not determined: no official record in our data links a final act to this procedure.",
+                          "institution": None, "basis": "unknown"},
+            "named_acts": [{"celex": e["celex"], "label": e["label"],
+                            "url": f"https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:{e['celex']}"}],
+            "application": r.get("application"),
+        })  # fmt: skip
 
     @staticmethod
     def _procedure_ref(p: Procedure) -> dict:
@@ -2924,12 +3000,19 @@ class Builder:
         # An act of Parliament and the Council is signed by both Presidents (Art. 297(1) TFEU) on the day the act
         # bears: the act dates the signature, not the EP's record of it (2017/0329(COD): the EP and OEIL give 11
         # April 2018, the day before the Council adopted the act; Directive (EU) 2018/597 "of 18 April 2018"). Without
-        # such an act in our data, the EP's record is shown as it is ("Final act signed", on the EP's date).
+        # such an act in our data, the EP's record is shown on the EP's date ("Final act signed"), as the signature of
+        # both Presidents in an ordinary legislative procedure.
         joint_acts = [a for a in acts if JOINT_ACT_RE.match(a.title or "") and (a.date_signature or a.date_document)]
+        # The Official Journal dates an act's publication: the EP's (and OEIL's) record of it on another day is not
+        # shown as a publication (2018/0069(COD): 25 July 2019 for Regulation (EU) 2019/982, OJ L 164, 20.6.2019; the
+        # EP gives that day to 2016/0074(COD), whose Regulation (EU) 2019/1241 is in OJ L 198, 25.7.2019)
+        act_pubs = {a.date_publication for a in acts if a.date_publication}
+        ep_pubs: set[str] = set()
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
         seen_ev: set[tuple[str, str, str]] = set()
         negotiation: list[int] = []  # positions in `out` of Parliament's decisions on negotiations
+        from_vote: list[int] = []  # positions in `out` of steps built from a vote (with_recorded_events)
         urgency_at: dict[str, int] = {}  # day -> position in `out` of Parliament's vote on urgent procedure
         for e in p.events:
             if e.date > self.today:  # forecasts are not legally fixed dates
@@ -2950,8 +3033,20 @@ class Builder:
                 continue  # the Council's voting result on the act (added below) dates this step
             elif kind == "signature" and joint_acts:
                 continue  # the act dates the signature (added below)
+            elif kind == "publication" and act_pubs and e.date not in act_pubs:
+                ep_pubs.add(e.date)  # noted on the act's publication (below)
+                continue
             inst = e.institution
             when, detail = e.date, e.detail
+            if kind == "signature" and p.type == "COD":
+                # "Legislative acts adopted under the ordinary legislative procedure shall be signed by the President
+                # of the European Parliament and by the President of the Council" (Art. 297(1) TFEU); the EP's date
+                # is kept, as it records it (2025/0106(COD): 21 October 2026, no act in our EUR-Lex data yet)
+                inst = "EP and Council"
+                detail = detail or (
+                    "Signed by the Presidents of Parliament and of the Council (Article 297(1) TFEU); date as the "
+                    "European Parliament's procedure record gives it."
+                )
             if e.institution == "Council" and kind == "council_adoption" and council_acts:
                 near = [d for d in act_dates if abs(_days_between(d, e.date)) <= 92]  # the act this step adopted
                 if len(near) == 1 and near[0] != e.date:
@@ -3019,6 +3114,8 @@ class Builder:
                 # the decision recording the vote on the amended text, Parliament's position for the negotiations (it
                 # is shown with the referral back that followed: 2021/0106(COD), 14 Jun 2023, vote 156022)
                 key = True
+            if (e.raw_type or "").endswith("/PLENARY_REFER_COMMITTEE_RECONSIDERATION"):
+                key = True  # the file went back to committee; a decision to negotiate taken before it lapsed (status)
             src = _event_src(e.source)
             if (urgent := urgency_vote(e, votes, self.indexed_vote_ids)) is not None:
                 if e.date in urgency_at:  # the day's other record of the same vote: its documents only
@@ -3027,6 +3124,8 @@ class Builder:
                     continue
                 urgency_at[e.date] = len(out)
                 title, detail, src, vote_id = urgent
+            if vote_id and _VOTE_EVENT_ID.match(e.id) and (e.raw_type or "").startswith("ep_vote:"):
+                from_vote.append(len(out))
             out.append({
                 "id": e.id, "date": when, "kind": kind, "title": title, "detail": detail,
                 "institution": inst, "state": "done", "key": key,
@@ -3046,6 +3145,13 @@ class Builder:
                 v for v in votes_by_date.get(day, []) if v.kind_detail == "negotiation_decision" and v.id not in linked
             ]
             out[i]["vote_id"] = pick[0].id if len(pick) == 1 else None
+        # A step built from a vote links it only when no other key step links it (2025/0393(COD), 6 Oct 2026: vote
+        # 197467 stays on "Parliament voted amendments to the proposal" and the mandate step built from it links none,
+        # as in 2021/0106(COD); 2026/0325(COD): 199592 is linked from that step alone)
+        others = {x["vote_id"] for i, x in enumerate(out) if x["key"] and x["vote_id"] and i not in from_vote}
+        for i in from_vote:
+            if out[i]["vote_id"] in others:
+                out[i]["vote_id"] = None
         # the rejection derived from the vote (with_recorded_events, used for the status) repeats Parliament's own
         # decision that day once that decision is titled as the rejection it was (2022/0196: 22 Nov 2023)
         decided = {x["date"] for x in out if x["kind"] == "ep_position" and "rejected" in x["title"]}
@@ -3127,6 +3233,9 @@ class Builder:
                     x.date == d and x.kind == "deadline" for x in tr
                 ):  # not every Member State had this deadline (Directive (EU) 2016/798, Art. 33(2), (2a) and (4))
                     detail = f"{label}. Exceptions in its text: {chk.exceptions}"
+                if kind == "publication" and ep_pubs and len(act_pubs) == 1:  # the EP's record gives another day
+                    detail = (f"{label}. The European Parliament's procedure record gives "
+                              f"{' and '.join(_long_date(x) for x in sorted(ep_pubs))} for its publication.")  # fmt: skip
                 out.append({
                     "id": f"act-{a.celex}-{kind}-{d}", "date": d, "kind": kind, "title": title, "detail": detail,
                     "institution": "EP and Council" if kind == "signature" else "EUR-Lex",
@@ -3415,8 +3524,16 @@ class Builder:
                 if not prop:  # the Commission's proposal for the Council act (consent files)
                     title, inst, kind = "Commission published its proposal", "Commission", EventKind.proposal
             elif any(EP_TEXT_RE.fullmatch(i) for i in ids):  # a text adopted by Parliament
+                if not prop and e.date == parliament_proposal_day(p):  # Parliament's own proposal for the act
+                    prop, kind = True, EventKind.proposal
                 title = "Parliament adopted its proposal for the act" if prop else "Parliament adopted a text in plenary"
                 inst = "EP"
+            elif prop and e.date == parliament_proposal_day(p):
+                # OEIL's "Legislative proposal published" of the day of Parliament's proposal, under a Council number
+                # (2022/0902(APP): 00129/2022, the number of Parliament's text T9-0129/2022). No Council text was
+                # submitted to Parliament: the Council received Parliament's proposal (ST 9333/22, 19 May 2022)
+                title = "Recorded by the Legislative Observatory: “Legislative proposal published”"
+                inst, kind = "OEIL", EventKind.other
             elif known:
                 title, inst = known
             elif prop and e.institution == "CJEU":
@@ -3424,11 +3541,21 @@ class Builder:
             elif prop and p.type == "COD" and any(re.fullmatch(r"\d{5}/\d{2,4}", i) for i in ids):
                 # the Council does not initiate an ordinary procedure: a Council document there is the initiative
                 # of Member States or the recommendation of the ECB (Art. 294(15) TFEU), which our record does not
-                # name (2010/0817(COD), 09288/2010, OEIL "Initiative Belgium, Bulgaria, …"; 2017/0810(COD))
+                # name (2017/0810(COD)); Member States' initiative where OEIL's title names it (ep_procedures:
+                # 2010/0817(COD), 09288/2010, "Initiative Belgium, Bulgaria, Estonia, Spain, Austria, Slovenia and
+                # Sweden"; Directive 2014/41/EU "Having regard to the initiative of the Kingdom of Belgium, …")
                 title, inst = "Legislative proposal published (as recorded by the Legislative Observatory)", "OEIL"
+                if (e.detail or "").startswith("Initiative "):
+                    title = "Member States' initiative published (as recorded by the Legislative Observatory)"
+                    detail = f"The Legislative Observatory names it: “{e.detail}”."
             elif any(re.fullmatch(r"\d{5}/\d{2,4}", i) for i in ids):
                 title = "Council text submitted to Parliament" if prop else "Council preparatory document published"
                 inst = "Council"
+                if prop and p.type == "CNS" and not p.com_refs:
+                    # the Council consults Parliament on a text it need not have drafted: the ECB's recommendation
+                    # (2025/0806(CNS), 09737/2025: ST 9737/25, cover note from the President of the ECB, "Recommendation
+                    # for a Council Regulation … (ECB/2025/17)"; Art. 129(4) TFEU), the EIB's request (Art. 308 TFEU)
+                    title = "Text submitted to Parliament by the Council"
                 if prop and p.type == "NLE":
                     # the Council's request for Parliament's consent or opinion, not the proposal it acts on
                     # (2008/0027(NLE): 13395/2014; Council Decision (EU) 2016/1218, "Having regard to the proposal

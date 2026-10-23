@@ -82,7 +82,7 @@ REGISTER_NOTE = "Council of the EU – Voting result {num}"
 RENDER_DPI = 100
 MAX_WORKERS = 4
 # Bump when parsing changes: every note is then re-processed on the next fetch.
-PARSER_VERSION = "2026-10-23.2"
+PARSER_VERSION = "2026-10-23.3"
 
 # Protocol order of the GSC voting sheet (Member States by their name in their own language).
 LEFT_COLUMN = ["BE", "BG", "CZ", "DK", "DE", "EE", "IE", "GR", "ES", "FR", "HR", "IT", "CY", "LV"]
@@ -591,6 +591,10 @@ def parse_note(page1: str) -> NoteMeta:
             meta.council_doc = f"PE-CONS {pc.group(1)}/{pc.group(2)}"
         elif st:
             meta.council_doc = f"ST {st.group(1)}/{st.group(2)}"
+    # a written procedure that the subject does not name: "date of decision to use the Written Procedure by Coreper,
+    # Part 2, 08.04.2020" (ST 7360/20, completed on a day the note does not give; that date is the launch, not the vote)
+    if not meta.meeting and re.search(r"date\s+of\s+decision\s+to\s+use\s+the\s+written\s+procedure", page1, re.I):
+        meta.written_procedure = True
     for m in re.finditer(
         r"ST\s+\d+/\d{2,4}\s+(INIT|REV\s*\d+)\s+should\s+be\s+considered\s+null\s+and\s+void", page1, re.I
     ):

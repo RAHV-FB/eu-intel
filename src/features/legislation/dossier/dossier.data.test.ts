@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { DossierDetail, TimelineEvent } from '../../../types/data';
 import { latestDone } from './Summary';
+import { currentStepKey } from './WhereIsIt';
 
 const DATA = new URL('../../../../public/data/', import.meta.url);
 const built = existsSync(new URL('dossiers/index.json', DATA));
@@ -71,6 +72,19 @@ describe.skipIf(!built)('dossiers on the built data', () => {
       // the two have the same title (2020/0112(APP) and 2020/0112R(APP)): each link gives the other's reference
       expect(back?.ref, d.id).toBe(d.ref);
       expect(d.related.find((r) => r.relation === 'Report on')?.ref, d.id).toBe(read<DossierDetail>(`dossiers/${main}.json`).ref);
+    }
+  });
+
+  it('never shows a recorded provisional agreement as not yet reached on the path (2023-0210, 2023-0134)', () => {
+    const at = (id: string) => currentStepKey(all.find((d) => d.id === id)!);
+    expect(at('2023-0210')).toBe('adopted'); // early second-reading agreement approved in committee on 5 May 2026
+    expect(at('2023-0134')).toBe('adopted'); // "Approved by Parliament" on the text agreed with the Council
+    expect(at('2018-0332')).toBe('deciding'); // negotiations after the first reading, no agreement recorded
+    const order = ['proposed', 'deciding', 'agreement', 'adopted', 'in_force'];
+    for (const d of all.filter((x) => x.type === 'COD')) {
+      const agreed = d.timeline.some((e) => e.state === 'done' && e.kind === 'provisional_agreement');
+      const key = currentStepKey(d);
+      if (agreed && key) expect(order.indexOf(key), d.id).toBeGreaterThanOrEqual(order.indexOf('agreement'));
     }
   });
 

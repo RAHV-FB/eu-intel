@@ -644,6 +644,24 @@ def test_written_procedure_initiated_by_cm_is_dated_by_the_council_event():
     assert C.build_vote([C.Parsed(v, [page1], m, None, "no voting sheet")], "t")[0].date == "2021-03-17"
 
 
+def test_written_procedure_named_in_the_reference_block_is_dated_by_the_council_event():
+    # ST 7360/20 (Taxonomy Regulation, 2018/0178(COD)), note of "Brussels, 16 April 2020": the subject names no written
+    # procedure; the reference block gives "date of decision to use the Written Procedure by Coreper, Part 2,
+    # 08.04.2020", the launch. Cellar attaches the note to ADP_R1_POS_byCONSIL of 15 April 2020, the date Regulation
+    # (EU) 2020/852 gives: "Position of the Council at first reading of 15 April 2020"
+    page1 = text("ST-7360-2020-INIT.page1.txt")
+    m = C.parse_note(page1)
+    assert (m.written_procedure, m.written_procedure_date, m.meeting) == (True, None, None)
+    assert m.council_doc == "ST 5639/20"
+    row = {"work": "w", "docid": "consil:ST_7360_2020_INIT", "date": "2020-04-16",
+           "title": "- Voting result - REGULATION …", "evdate": "2020-04-15", "evtype": "ADP_R1_POS_byCONSIL"}  # fmt: skip
+    (v,) = C._versions_from_rows([row])["ST-7360-2020"]
+    vote, _ = C.build_vote([C.Parsed(v, [page1], m, None, "no voting sheet")], "t")
+    assert (vote.date, vote.written_procedure, vote.meeting) == ("2020-04-15", True, None)
+    # a meeting note keeps its meeting date (ST 9841/24)
+    assert not C.parse_note(text("ST-9841-2024-INIT.page1.txt")).written_procedure
+
+
 def test_statements_include_explanations_by_a_state_and_draft_joint_statements():
     # ST 14020/20, Annex II (rule-of-law conditionality): five headed texts, the Commission's statement twice
     assert C.parse_statements(pages("ST-14020-2020-INIT.txt")) == [

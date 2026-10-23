@@ -36,7 +36,7 @@ export type ISODateTime = string;
 
 export type Institution =
   | 'EP'
-  | 'EP and Council' // timeline only: an act of Parliament and the Council, signed by both Presidents
+  | 'EP and Council' // timeline only: the signature of an ordinary-procedure act, by both Presidents (Art. 297(1) TFEU)
   | 'Council'
   | 'European Council'
   | 'Commission'

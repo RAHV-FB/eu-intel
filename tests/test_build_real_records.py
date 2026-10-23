@@ -232,19 +232,37 @@ def test_council_document_is_not_shown_as_the_councils_proposal():
     # Slovenia and Sweden", recorded with Council document 09288/2010; the Council does not initiate an ordinary
     # procedure. 2008/0027(NLE): 13395/2014 is the Council's request for consent; Council Decision (EU) 2016/1218
     # "Having regard to the proposal from the European Commission", so it does not date the proposal
-    p = procs("2010-0817", "2008-0027", "2014-0807")
+    p = procs("2010-0817", "2008-0027", "2014-0807", "2025-0806", "2017-0810", "2015-0804", "2011-0183")
     ini = next(e for e in p["2010-0817"].events if e.kind.value == "proposal")
     e = Builder.procedure_event(p["2010-0817"], ini)
-    assert (e.title, e.institution, e.kind.value) == (
-        "Legislative proposal published (as recorded by the Legislative Observatory)", "OEIL", "proposal")
+    # the initiative as OEIL's title names it (ep_procedures keeps it as the detail); Directive 2014/41/EU: "Having
+    # regard to the initiative of the Kingdom of Belgium, the Republic of Bulgaria, the Republic of Estonia, …"
+    assert ini.detail == "Initiative Belgium, Bulgaria, Estonia, Spain, Austria, Slovenia and Sweden"
+    assert (e.title, e.institution, e.kind.value, e.detail) == (
+        "Member States' initiative published (as recorded by the Legislative Observatory)", "OEIL", "proposal",
+        "The Legislative Observatory names it: “Initiative Belgium, Bulgaria, Estonia, Spain, Austria, Slovenia and "
+        "Sweden”.")  # fmt: skip
+    # an initiator OEIL does not name (2017/0810(COD), ECB recommendation): the Legislative Observatory's record
+    ecb = next(e for e in p["2017-0810"].events if e.kind.value == "proposal")
+    assert Builder.procedure_event(p["2017-0810"], ecb).title == (
+        "Legislative proposal published (as recorded by the Legislative Observatory)")
     req = next(e for e in p["2008-0027"].events if e.kind.value == "proposal")
     e = Builder.procedure_event(p["2008-0027"], req)
     assert (e.title, e.institution, e.kind.value) == ("Council text submitted to Parliament", "Council", "other")
     q = Builder.with_recorded_events(stand_in(), p["2008-0027"])  # type: ignore[arg-type]
     assert Builder.proposal_date(q) is None
-    # a consultation keeps the Council's text as its proposal step (2014/0807(CNS), 10896/2014)
-    cns = next(e for e in p["2014-0807"].events if e.kind.value == "proposal")
-    assert Builder.procedure_event(p["2014-0807"], cns).title == "Council text submitted to Parliament"
+    # a consultation without a COM document: the Council consults Parliament on a text it need not have drafted
+    # (2025/0806(CNS), 09737/2025: ST 9737/25, cover note of the President of the ECB, "Recommendation for a Council
+    # Regulation … (ECB/2025/17)"; 2014/0807(CNS), 10896/2014; 2015/0804(CNS), a Council implementing decision)
+    for pid in ("2025-0806", "2014-0807", "2015-0804"):
+        cns = next(e for e in p[pid].events if e.kind.value == "proposal")
+        e = Builder.procedure_event(p[pid], cns)
+        assert (e.title, e.institution, e.kind.value) == ("Text submitted to Parliament by the Council", "Council",
+                                                          "proposal"), pid  # fmt: skip
+    # with the Commission's proposal in the file, a Council document is the Council's text for reconsultation
+    # (2011/0183(CNS), 05602/2014)
+    re_cns = next(e for e in p["2011-0183"].events if [d.id for d in e.docs] == ["05602/2014"])
+    assert Builder.procedure_event(p["2011-0183"], re_cns).title == "Council text submitted to Parliament"
 
 
 def test_both_qmv_thresholds_are_given_when_the_legal_basis_is_not_established():
@@ -1155,9 +1173,20 @@ def test_signature_of_an_ordinary_procedure_act_is_both_presidents_on_the_acts_d
 
     joint = "Signed by the Presidents of Parliament and Council"
     assert sig(Builder.timeline(stand_in(), p, [a], [])) == [("2018-04-18", joint, "EP and Council")]  # type: ignore[arg-type]
-    # without the act in our data: the EP's record as it is, since its date can be a week early (here before the
-    # Council's adoption), not as both Presidents' signature
-    assert sig(Builder.timeline(stand_in(), p, [], [])) == [("2018-04-11", "Final act signed", "EP")]  # type: ignore[arg-type]
+    # without the act in our data: the EP's record on its date, which can be a week early (here before the Council's
+    # adoption), credited to both Presidents as every ordinary-procedure act is signed (Art. 297(1) TFEU: "shall be
+    # signed by the President of the European Parliament and by the President of the Council"), with that said
+    tl = Builder.timeline(stand_in(), p, [], [])  # type: ignore[arg-type]
+    assert sig(tl) == [("2018-04-11", "Final act signed", "EP and Council")]
+    assert next(x["detail"] for x in tl if x["kind"] == "signature") == (
+        "Signed by the Presidents of Parliament and of the Council (Article 297(1) TFEU); date as the European "
+        "Parliament's procedure record gives it.")  # fmt: skip
+    # the newest files, not yet in EUR-Lex (2025/0106(COD), 21 Oct 2026: EP API 2025-0106-SIGN-2026-10-21); a
+    # consultation's act is the Council's, signed by its President only, and keeps the EP's record as it is
+    q = procs("2025-0106")["2025-0106"]
+    assert sig(Builder.timeline(stand_in(), q, [], [])) == [("2026-10-21", "Final act signed", "EP and Council")]  # type: ignore[arg-type]
+    cns = p.model_copy(update={"type": "CNS"})
+    assert sig(Builder.timeline(stand_in(), cns, [], [])) == [("2018-04-11", "Final act signed", "EP")]  # type: ignore[arg-type]
     # a Council act that names an act of Parliament and the Council in its title is not one
     c = acts("32021R1696")["32021R1696"]
     assert JOINT_ACT_RE.match(a.title) and not JOINT_ACT_RE.match(c.title)
@@ -1518,3 +1547,168 @@ def test_split_parts_and_the_main_file_of_a_report_are_linked_from_the_status_te
     ]
     assert "2020/0112(APP)" in report["status"]["explanation"]
     assert report["next_step"]["text"] == "None for this report. See the main procedure 2020/0112(APP) for the proposal."
+
+
+def _classified(pid: str, today: str = "2026-10-23", **kw):
+    """(status, procedure as the build gives it to classify) of a snapshot file, without acts or train files."""
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+
+    q = Builder.with_recorded_events(stand_in(**kw), procs(pid)[pid])  # type: ignore[arg-type]
+    return classify(q, [], [], date.fromisoformat(today)), q
+
+
+def test_parliaments_own_proposal_opens_the_electoral_law_files():
+    # 2022/0902(APP): T9-0129/2022 of 3 May 2022, para. 38 "Adopts the annexed proposal and submits it to the Council"
+    # (Art. 223(1) TFEU: the Council acts "after obtaining the consent of the European Parliament" on Parliament's
+    # proposal); ST 9333/22: "PROPOSAL From: Roberta METSOLA, President of the European Parliament; date of receipt:
+    # 19 May 2022; To: … President of the Council". No Council text was submitted to Parliament
+    s, q = _classified("2022-0902")
+    assert (s.stage, s.label, s.since) == ("proposed", "Parliament adopted its proposal", "2022-05-03")
+    assert "no Council draft submitted to Parliament" in s.explanation
+    assert s.next_step.institution == "Council" and s.next_step.text.startswith("The Council agrees on the text")
+    assert Builder.proposal_date(q) == "2022-05-03"
+    tl = Builder.timeline(stand_in(), q, [], [])  # type: ignore[arg-type]
+    assert [(x["title"], x["institution"]) for x in tl if x["key"]] == [
+        ("Parliament adopted its proposal for the act", "EP")]  # fmt: skip
+    assert not any("Council text" in x["title"] for x in tl)
+    # 2025/0900(APP): Parliament's proposal T10-0257/2025 of 13 November 2025 dates the file; the Council's draft
+    # 06708/2026 of 17 March 2026 ("Having regard to the proposal from the European Parliament") is still its step
+    s, q = _classified("2025-0900", "2026-03-20")
+    assert Builder.proposal_date(q) == "2025-11-13"
+    steps = [(e.date, e.kind.value, e.title, e.institution) for e in q.events if e.kind.value == "proposal"]
+    assert steps == [("2025-11-13", "proposal", "Parliament adopted its proposal for the act", "EP"),
+                     ("2026-03-17", "proposal", "Council text submitted to Parliament", "Council")]  # fmt: skip
+    assert s.label == "Under examination in Parliament"
+
+
+def test_referral_back_for_reconsideration_ends_the_mandate():
+    # 2022/0135(COD), Kuwait/Qatar visas: committee decision of 1 Dec 2022 announced on 12 Dec 2022, and that day the
+    # report was referred back (minutes PV-9-2022-12-12, item 5: "the President proposed the referral back to
+    # committee under Rule 198 of the report … (A9-0288/2022). … The House agreed to the proposal"); OEIL "Matter
+    # referred back to the committee responsible for reconsideration", then only "Resumption of business"
+    s, q = _classified("2022-0135")
+    assert (s.stage, s.label, s.since) == ("proposed", "Referred back to committee", "2022-12-12")
+    assert "holds no mandate to negotiate" in s.explanation
+    assert s.next_step.institution == "EP" and s.next_step.text.startswith("The committee reconsiders the file")
+    tl = {x["id"]: x for x in Builder.timeline(stand_in(), q, [], [])}  # type: ignore[arg-type]
+    assert tl["2022-0135-DEC-REFBAK-2022-12-12"]["key"] is True
+    # 2025/0385(COD): mandate announced 6 Jul 2026, referral back for reconsideration 9 Jul, new committee report
+    # 8 Oct, referral back for negotiations 20 Oct 2026
+    for day, want in (("2026-07-08", ("negotiations", "Mandate to negotiate with the Council")),
+                      ("2026-07-10", ("proposed", "Referred back to committee")),
+                      ("2026-10-09", ("proposed", "Committee report adopted")),
+                      ("2026-10-23", ("negotiations", "Mandate to negotiate with the Council"))):  # fmt: skip
+        s, _ = _classified("2025-0385", day)
+        assert (s.stage, s.label) == want, day
+
+
+def test_agreement_after_parliaments_first_reading_is_an_early_second_reading_agreement():
+    # 2023/0210(COD), Payment Services Regulation: first reading 23 Apr 2024 (T9-0298/2024); OEIL 5 May 2026
+    # "Approval in committee of the text agreed at early 2nd reading interinstitutional negotiations"; the Council
+    # then adopts its first-reading position, which Parliament approves at second reading (Art. 294(5), (7)(a) TFEU)
+    s, _ = _classified("2023-0210")
+    assert (s.stage, s.label, s.since, s.basis) == (
+        "parliament_position", "Early second-reading agreement reached", "2026-05-05", "source")  # fmt: skip
+    assert "23 April 2024" in s.explanation and "5 May 2026" in s.explanation and "It is not law yet" in s.explanation
+    assert s.next_step.institution == "Council" and "Article 294(7)(a) TFEU" in s.next_step.text
+    assert "approves Parliament's position" not in s.next_step.text
+    # negotiations after the first reading without an agreement (2023/0085(COD), Green Claims: trilogues from 28 Jan
+    # 2025; 2018/0332(COD), clock changes: the committee's decision announced on 9 Oct 2019)
+    s, _ = _classified("2023-0085")
+    assert (s.label, s.since) == ("Negotiations with the Council after Parliament's first reading", "2025-01-28")
+    s, _ = _classified("2018-0332")
+    assert (s.label, s.since) == ("Committee decided to negotiate with the Council after Parliament's first reading",
+                                  "2019-10-09")  # fmt: skip
+    # an agreement before Parliament's first reading stays "Approved by Parliament" (2023/0134(COD))
+    assert _classified("2023-0134")[0].label == "Approved by Parliament"
+
+
+def test_negotiations_after_parliaments_first_reading_are_not_second_reading_negotiations():
+    # 2023/0226(COD), new genomic techniques: OEIL 8 Apr 2025 "Committee decision to open interinstitutional
+    # negotiations after 1st reading in Parliament", the Council's first-reading position 21 Apr 2026, the second
+    # reading only after it (Art. 294(7) TFEU); 2010/0208(COD), 11 Nov 2014: "… at 2nd reading"
+    from pipeline.sources.ep_procedures import OEIL_EVENT_MAP
+
+    after = "Parliament committee decided to open negotiations with the Council after Parliament's first reading"
+    label = "Committee decision to open interinstitutional negotiations after 1st reading in Parliament"
+    assert OEIL_EVENT_MAP[label][2] == after
+    p = procs("2023-0226", "2010-0208")
+    e = next(e for e in p["2023-0226"].events if e.raw_type == f"oeil:{label}")
+    assert (e.date, Builder.procedure_event(p["2023-0226"], e).title) == ("2025-04-08", after)
+    second = [e.title for e in p["2010-0208"].events if e.raw_type == (
+        "oeil:Committee decision to open interinstitutional negotiations at 2nd reading")]  # fmt: skip
+    assert second == ["Parliament committee decided to open second-reading negotiations with the Council"]
+    # no readings in a consultation
+    cns = p["2023-0226"].model_copy(update={"type": "CNS"})
+    assert Builder.procedure_event(cns, e).title == "Parliament committee decided to open negotiations with the Council"
+
+
+def test_publication_is_dated_by_the_official_journal():
+    # 2018/0069(COD): EP API 2018-0069-PUB-2019-07-25, but Regulation (EU) 2019/982 is headed "20.6.2019 … Official
+    # Journal of the European Union L 164/1"; the EP's date is that of 2016/0074(COD)'s Regulation (EU) 2019/1241
+    # ("25.7.2019 … L 198/105"), whose EP record gives 20 June 2019
+    for pid, celex, oj, ep in (("2016-0074", "32019R1241", "2019-07-25", "20 June 2019"),
+                               ("2018-0069", "32019R0982", "2019-06-20", "25 July 2019")):  # fmt: skip
+        p, a = procs(pid)[pid], acts(celex)[celex]
+        tl = Builder.timeline(stand_in(), p, [a], [])  # type: ignore[arg-type]
+        pubs = [x for x in tl if x["kind"] == "publication"]
+        assert [(x["date"], x["title"], x["institution"]) for x in pubs] == [
+            (oj, "Published in the Official Journal of the EU", "EUR-Lex")], pid  # fmt: skip
+        assert f"The European Parliament's procedure record gives {ep} for its publication." in pubs[0]["detail"]
+    # the latest step of 2018/0069 is the entry into force of 10 July 2019, not the EP's 25 July 2019
+    assert [x["date"] for x in tl if x["state"] == "done"][-1] == "2019-07-10"
+    # an EP record on the act's own publication day stays (2021/0106(COD), AI Act, 12 July 2024)
+    p, a = procs("2021-0106")["2021-0106"], acts("32024R1689")["32024R1689"]
+    tl = Builder.timeline(stand_in(), p, [a], [])  # type: ignore[arg-type]
+    assert [x["id"] for x in tl if x["kind"] == "publication"] == ["2021-0106-PUB-2024-07-12"]
+
+
+def test_a_mandate_vote_is_linked_once():
+    # 2025/0393(COD), 6 Oct 2026: vote 197467 on the amended text (515-108-35), then the referral back for
+    # negotiations (T10-0325/2026, Rule 60(4)); the vote is on "Parliament voted amendments to the proposal", and the
+    # mandate step built from it links none (as 2021/0106(COD) on 14 Jun 2023)
+    v = votes("197467")
+    me = stand_in(votes_of={"2025-0393": list(v.values())}, indexed_vote_ids=set(v))
+    q = Builder.with_recorded_events(me, procs("2025-0393")["2025-0393"])  # type: ignore[arg-type]
+    tl = {x["id"]: x for x in Builder.timeline(me, q, [], list(v.values()))}  # type: ignore[arg-type]
+    dcpl, mandate = tl["2025-0393-DEC-DCPL-2026-10-06"], tl["vote-197467-negotiation_mandate"]
+    assert (dcpl["vote_id"], dcpl["key"], mandate["vote_id"], mandate["key"]) == ("197467", True, None, True)
+
+
+def test_unlinked_act_is_named_in_the_status_not_linked():
+    # 2025/0806(CNS): Council Regulation (EU) 2026/415 of 16 December 2025 (OJ L, 2026/415, 20.2.2026), "Having regard
+    # to the Opinion of the European Parliament (2)", "(2) Opinion of 26 November 2025" (the file's T10-0297/2025), and
+    # "the Recommendation of the European Central Bank (1)", OJ C/2025/3224, ECB/2025/17 (ST 9737/25, the file's
+    # 09737/2025); Cellar records no procedure for the act, OEIL "Awaiting final decision"
+    from pipeline.build import _as_dict, load_unlinked_acts
+
+    s, q = _classified("2025-0806")
+    me = SimpleNamespace(unlinked_acts=load_unlinked_acts(), _status_dict=Builder._status_dict)
+    before = Builder._status_dict(_as_dict(s))
+    r = Builder.unlinked_act_status(me, q, [], before)  # type: ignore[arg-type]
+    st = r["status"]
+    assert (st["stage"], st["label"], st["since"]) == ("unknown", "Final act not linked in the official records", None)
+    assert st["explanation"].startswith(
+        "Parliament delivered its opinion on 26 November 2025. Council Regulation (EU) 2026/415 of 16 December 2025, "
+        "published in the Official Journal on 20 February 2026, cites “the Opinion of the European Parliament” of 26 "
+        "November 2025")  # fmt: skip
+    assert "Recommendation of the European Central Bank ECB/2025/17" in st["explanation"]
+    assert "09737/2025" in st["explanation"]
+    assert ("No official record links that act to this procedure: EUR-Lex records no procedure for it (checked on 23 "
+            "October 2026), and the Legislative Observatory lists no final act") in st["explanation"]  # fmt: skip
+    assert st["named_acts"][0]["celex"] == "32026R0415" and r["stall"] is None and r["next_step"]["basis"] == "unknown"
+    # not applied once an act is linked, nor without Parliament's opinion of the day the act cites
+    assert Builder.unlinked_act_status(me, q, [acts("32021R1163")["32021R1163"]], before) == before  # type: ignore[arg-type]
+    other = q.model_copy(update={"events": [e for e in q.events if e.kind.value != "ep_position"]})
+    assert Builder.unlinked_act_status(me, other, [], before) == before  # type: ignore[arg-type]
+
+
+def test_council_position_by_written_procedure_is_dated_by_cellar():
+    # ST 7360/20 (Taxonomy Regulation): note of 16 April 2020; Regulation (EU) 2020/852 "Position of the Council at
+    # first reading of 15 April 2020", Cellar ADP_R1_POS_byCONSIL 2020-04-15 (re-read with council.reprocess);
+    # ST 7236/20 and 7237/20: Regulations (EU) 2020/741 and 2020/1056, "first reading of 7 April 2020"
+    cv = council("ST-7360-2020", "ST-7236-2020", "ST-7237-2020")
+    assert [(cv[k].date, cv[k].written_procedure) for k in ("ST-7360-2020", "ST-7236-2020", "ST-7237-2020")] == [
+        ("2020-04-15", True), ("2020-04-07", True), ("2020-04-07", True)]  # fmt: skip

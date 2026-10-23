@@ -1107,8 +1107,13 @@ def test_event_titles_follow_the_documents_and_the_procedure():
     assert ("2017-06-30", "proposal", "Council text submitted to Parliament", "Council") in eppo
     # consultation has no readings (2018/0225(CNS), Horizon Europe specific programme)
     assert not [t for *_, t, _i in _steps(_rec("2018-0225")) if "reading" in t]
-    # Parliament's own texts (T9-0129/2022, electoral law) and other institutions' proposals (OEIL gateway)
-    assert ("2022-05-03", "other", "Parliament adopted a text in plenary", "EP") in _steps(_rec("2022-0902"))
+    # Parliament's own proposal (T9-0129/2022 of 3 May 2022, electoral law, para. 38: "Adopts the annexed proposal and
+    # submits it to the Council"; Art. 223(1) TFEU) and other institutions' proposals (OEIL gateway). OEIL's
+    # "Legislative proposal published 00129/2022" of that day is no Council text submitted to Parliament
+    assert _steps(_rec("2022-0902")) == [
+        ("2022-05-03", "other", "Recorded by the Legislative Observatory: “Legislative proposal published”", "OEIL"),
+        ("2022-05-03", "proposal", "Parliament adopted its proposal for the act", "EP"),
+    ]
     assert ("2015-11-17", "proposal", "Court of Justice submitted its request (legislative proposal)", "CJEU") in (
         _steps(_rec("2015-0906")))  # fmt: skip
     assert ("2017-07-07", "proposal", "Council text submitted to Parliament", "Council") in _steps(_rec("2016-0357B"))
