@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from pipeline.build import (
+    ALIAS_RULE_MAX_DOCS,
     act_number,
     act_short_name,
     build,
@@ -403,6 +404,32 @@ def test_search_docs_label_party_records_by_term():
     assert docs["5369"]["w"] < docs["6802"]["w"]
     assert docs["7000"]["s"] == "National party · Germany"
     assert ep_term_label({9, 10}) == "2019–2024 and 2024–2029 terms"
+
+
+def test_search_alias_rules_attach_keywords_or_warn_when_too_broad(caplog: pytest.LogCaptureFixture):
+    # a rule naming a CELEX number attaches its terms to the file holding that act only; a rule that would match
+    # more than ALIAS_RULE_MAX_DOCS files is not applied, and the build says so
+    from types import SimpleNamespace as NS
+
+    n = ALIAS_RULE_MAX_DOCS + 1
+    summary = {f"2099-{i:04d}": {"title": f"Widget file {i} of the European Parliament", "ref": f"2099/{i:04d}(COD)",
+                                 "status_label": "In force", "celex": [f"32099L{i:04d}"], "featured": False,
+                                 "type": "COD", "last_event": "2099-01-01"} for i in range(1, n + 1)}  # fmt: skip
+    proc = {pid: NS(id=pid, title=d["title"], reference=d["ref"], com_refs=[]) for pid, d in summary.items()}
+    rules = [
+        {"terms": ["whistleblower"], "expands_to": ["32099l0007"]},
+        {"terms": ["ep"], "expands_to": ["european parliament"]},
+    ]
+    b = NS(
+        dossier_summary=summary, proc=proc, curated_of={}, acts_of={}, train_of={}, alias_rules=rules, mep_summary={},
+        group_summaries=[], party_summary={}, s=NS(meps=[]), topic_list=[], topics_cur={}, resolve_ref=lambda ref: None,
+        split_children={},
+    )  # fmt: skip
+    with caplog.at_level("WARNING", logger="pipeline.build"):
+        docs = {d["id"]: d for d in build_search_docs(b) if d["k"] == "dossier"}
+    assert [pid for pid, d in docs.items() if "whistleblower" in d["x"].split()] == ["2099-0007"]
+    assert not any("ep" in d["x"].split() for d in docs.values())
+    assert any("['ep'] matches" in r.getMessage() and r.levelname == "WARNING" for r in caplog.records)
 
 
 def test_feeds_are_valid_atom(out: Path):

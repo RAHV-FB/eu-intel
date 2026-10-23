@@ -22,6 +22,7 @@ from pipeline.build import (
     rejection_title,
     search_subject,
     subject_procedure,
+    undotted_acronym,
     unnamed_parties,
     vote_label_document,
     vote_subject,
@@ -93,6 +94,22 @@ def test_search_subtitles_name_the_country_and_tell_same_term_party_records_apar
     assert docs[("party", "6478")] == "National party · Italy · 2019–2024 term · 6 December 2023 – 15 July 2024"
     assert docs[("party", "6913")] == "National party · Italy · 2024–2029 term"
     assert ("party", "5500") not in docs and ("party", "5719") not in docs
+
+
+def test_party_acronyms_written_with_dots_are_also_searchable_without_them():
+    # EP open data labels Nea Demokratia 6730 "N.D.", Democratic Rally 6764 "DI.SY.", Democratic Party 6766 "DI.KO."
+    # and EDEK 5190 "K.S. EDEK"; "SP.A" (5172) and "E.Verde" (6324) are not dotted acronyms: "SPA" would outrank Spain
+    o = orgs("6730", "6764", "6766", "5190", "5172", "6324")
+    party = {oid: {"label": x.label, "code": x.code, "country": x.country or "", "members_active": 0} for oid, x in o.items()}
+    b = SimpleNamespace(
+        dossier_summary={}, proc={}, curated_of={}, acts_of={}, train_of={}, alias_rules=[], mep_summary={},
+        group_summaries=[], party_summary=party, s=SimpleNamespace(meps=[]), topic_list=[], topics_cur={},
+        resolve_ref=lambda ref: None, org=o, unnamed_parties=set(),
+    )  # fmt: skip
+    docs = {d["id"]: d.get("a") for d in build_search_docs(b) if d["k"] == "party"}
+    assert docs == {"6730": "N.D. | ND", "6764": "DI.SY. | DISY", "6766": "DI.KO. | DIKO", "5190": "K.S. EDEK | KS EDEK",
+                    "5172": "SP.A", "6324": "E.Verde"}  # fmt: skip
+    assert undotted_acronym("GRÜNE.") is None and undotted_acronym("Ind.") is None and undotted_acronym("PiS") is None
 
 
 def test_vote_subject_is_kept_for_search_when_the_titles_lack_its_words():

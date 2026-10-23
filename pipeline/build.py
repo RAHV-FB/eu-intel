@@ -591,7 +591,7 @@ GUIDE_PAGES: list[dict[str, str]] = [
      "a": "European Commission | commission | commissioner | right of initiative | proposal",
      "u": "/how-the-eu-works#commission"},
     {"id": "parliament", "t": "The European Parliament",
-     "a": "European Parliament | parliament | MEP | MEPs | political group | political groups | plenary",
+     "a": "European Parliament | EP | parliament | MEP | MEPs | political group | political groups | plenary",
      "u": "/how-the-eu-works#parliament"},
     {"id": "council", "t": "The Council of the European Union",
      "a": "Council of the EU | Council of the European Union | council of ministers | ministers | presidency",
@@ -3738,6 +3738,18 @@ def curated_file_names(b: Builder) -> dict[str, list[str]]:
     return out
 
 
+_DOTTED_ACRONYM = re.compile(r"(?:[^\W\d_]{1,3}\.){2,}")
+
+
+def undotted_acronym(code: str) -> str | None:
+    """A party code that EP open data writes with dots, as it is usually typed: 'N.D.' -> 'ND', 'DI.KO.' ->
+    'DIKO', 'K.S. EDEK' -> 'KS EDEK'. Only words made entirely of dotted capitals change: 'SP.A' and 'E.Verde'
+    stay as they are ('SPA' would rank a party above Spain for 'Spa')."""
+    words = code.split()
+    out = [w.replace(".", "") if _DOTTED_ACRONYM.fullmatch(w) and w.isupper() else w for w in words]
+    return " ".join(out) if out != words else None
+
+
 def ep_term_label(terms: set[int]) -> str:
     """{9} -> '2019–2024 term', {9, 10} -> '2019–2024 and 2024–2029 terms' (EP terms run five years from 1979)."""
     spans = [f"{1979 + 5 * (t - 1)}–{1984 + 5 * (t - 1)}" for t in sorted(terms)]
@@ -3806,7 +3818,7 @@ def build_search_docs(b: Builder) -> list[dict]:
                 add = [w for t in terms for w in [re.sub(r"\s+", "-", t.strip())] if w and w not in have]
                 doc["x"] = " ".join([*(doc.get("x") or "").split(), *add]).strip() or None
         elif hits:
-            log.info("alias rule %s matches %d documents; not embedded", terms[:1], len(hits))
+            log.warning("alias rule %s matches %d documents; not embedded", terms[:1], len(hits))
     # country names as on the MEP and party pages, the former member state included ("United Kingdom")
     country_name = {**MEMBER_STATES, **FORMER_MEMBER_STATES}
     for m in sorted(b.mep_summary.values(), key=lambda m: m["id"]):
@@ -3848,7 +3860,8 @@ def build_search_docs(b: Builder) -> list[dict]:
                 w = 0.5
         doc = {"id": pid, "k": "party", "t": pt["label"], "s": sub, "u": f"/people/parties/{pid}", "w": w}
         if pt.get("code") and _norm_key(pt["code"]) != _norm_key(pt["label"]):
-            doc["a"] = pt["code"]
+            undotted = undotted_acronym(pt["code"])
+            doc["a"] = f"{pt['code']} | {undotted}" if undotted else pt["code"]
         docs.append(doc)
     for code, name in sorted(MEMBER_STATES.items()):
         docs.append({"id": code, "k": "country", "t": name, "s": "EU Member State",
