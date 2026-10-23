@@ -94,7 +94,7 @@ OEIL_FILE = "https://oeil.europarl.europa.eu/oeil/en/procedure-file"
 JSONLD = {"format": "application/ld+json"}
 DOCEO = "https://www.europarl.europa.eu/doceo/document/{id}_EN.html"
 
-MAX_WORKERS = 4  # team rule: at most 4 concurrent threads
+MAX_WORKERS = 4  # files in flight at once, to keep the load on the EP servers low (the pacers space requests)
 EP_API_GAP_S = 0.75  # EP API allows 500 requests / 5 min; stay well below (~400) as hosts are shared
 OEIL_GAP_S = 0.5
 FALLBACK_TERMS = (7, 8, 9, 10)  # parliamentary terms covering procedures from 2009 onwards
@@ -1367,6 +1367,8 @@ def has_oeil_data(p: Procedure) -> bool:
 SEQUENTIAL_RETRY_STOP = 3  # consecutive failed one-by-one retries that end a chunk's retry pass (outage)
 # Ids failing one after the other (EP API, or OEIL other than 404) after which no new id is started in this run:
 # an outage (with slow failures, up to Http's 240 s per call, it would otherwise use the whole run window).
+# Ids that already failed in an earlier run (_state.json `failing`) do not count: they are fetched last, so
+# a few files that keep failing cannot stop the others run after run.
 OUTAGE_STOP = 8
 # Runs in a row in which OEIL answered 404 for a file whose record has OEIL data, after which the id is no longer
 # kept pending: the stored record (as last read) stays, and the manifest note says so.
@@ -1385,6 +1387,7 @@ class _Run:
         deadline: float | None = None,
         hard_deadline: float | None = None,
         min_progress: int = CHUNK_SIZE,
+        failed_before: Iterable[str] = (),
     ):
         self.http = http
         self.wanted = wanted
@@ -1408,7 +1411,9 @@ class _Run:
         self.build_errors: list[str] = []
         self.requests = 0
         self.failing = 0  # ids that failed one after the other (see note_result)
-        self.outage = False  # OUTAGE_STOP ids failed in a row: no new id is started
+        self.failed_before = set(failed_before)  # ids whose fetch failed in an earlier run
+        self.new_failures = 0  # of the ids failing one after the other, those not in failed_before
+        self.outage = False  # OUTAGE_STOP new failures in a row: no new id is started
         self.lock = threading.Lock()
 
     def out_of_time(self) -> bool:
@@ -1417,13 +1422,18 @@ class _Run:
         # the first chunk always makes some progress, unless its ids keep failing (a slow outage)
         return past(self.deadline) and (self.started >= self.min_progress or self.failing >= SEQUENTIAL_RETRY_STOP)
 
-    def note_result(self, ok: bool) -> None:
-        """An id was answered (ok: the EP record, and the OEIL page or its 404) or failed."""
+    def note_result(self, ok: bool, pid: str | None = None) -> None:
+        """An id was answered (ok: the EP record, and the OEIL page or its 404) or failed. A failure of an id
+        that already failed in an earlier run does not count towards the outage stop."""
         with self.lock:
             self.failing = 0 if ok else self.failing + 1
-            if self.failing >= OUTAGE_STOP and not self.outage:
+            if ok:
+                self.new_failures = 0
+            elif pid not in self.failed_before:
+                self.new_failures += 1
+            if self.new_failures >= OUTAGE_STOP and not self.outage:
                 self.outage = True
-                log.warning("ep_procedures: %d ids failed in a row; no new id is started", self.failing)
+                log.warning("ep_procedures: %d ids failed in a row; no new id is started", self.new_failures)
 
 
 def _fetch_one(run: _Run, pid: str) -> tuple[dict[str, Any], str, OeilInfo | None, str | None] | None:
@@ -1454,12 +1464,12 @@ def _fetch_one(run: _Run, pid: str) -> tuple[dict[str, Any], str, OeilInfo | Non
                 run.not_found.append(pid)
             else:
                 run.errors[pid] = str(e)[:120]
-        run.note_result(e.status == 404)
+        run.note_result(e.status == 404, pid)
         return None
     except Exception as e:  # noqa: BLE001
         with run.lock:
             run.errors[pid] = str(e)[:120]
-        run.note_result(False)
+        run.note_result(False, pid)
         return None
     retrieved = now_iso()
     label = proc.get("label")
@@ -1485,7 +1495,7 @@ def _fetch_one(run: _Run, pid: str) -> tuple[dict[str, Any], str, OeilInfo | Non
         oeil_failure = str(e)[:120]
     with run.lock:
         run.errors.pop(pid, None)
-    run.note_result(oeil_failure is None or "(404)" in oeil_failure)
+    run.note_result(oeil_failure is None or "(404)" in oeil_failure, pid)
     return proc, retrieved, info, oeil_failure
 
 
@@ -1556,13 +1566,15 @@ def fetch(http: Http) -> SourceStatus:
     - EU_INTEL_FULL_REFRESH=1: fetch every id in scope.
     - Work is done in chunks of CHUNK_SIZE; after each chunk the records are upserted into the
       snapshot and data/snapshot/ep_procedures/_state.json lists the ids still pending. A new
-      run continues pending ids first. No new chunk (and, after the first chunk, no new id) starts after
-      fetch_deadline() (EU_INTEL_FETCH_BUDGET_S / EU_INTEL_FETCH_DEADLINE); nothing at all starts after
-      the run-wide EU_INTEL_FETCH_DEADLINE. The run then reports "partial".
+      run continues pending ids first, except ids whose fetch failed in an earlier run (`failing`, with
+      the date since when and the runs in a row): those come last. No new chunk (and, after the first
+      chunk, no new id) starts after fetch_deadline() (EU_INTEL_FETCH_BUDGET_S / EU_INTEL_FETCH_DEADLINE);
+      nothing at all starts after the run-wide EU_INTEL_FETCH_DEADLINE. The run then reports "partial".
     - A record that has OEIL data is only replaced by one that has it too (see _fetch_chunk).
     - If the EP list endpoint fails, the run works from the snapshot's ids, the pending ids and the ids
       referenced by other snapshots ("partial"). The page size that worked is kept in _state.json.
     - Once OUTAGE_STOP ids failed one after the other, no new id is started (an outage); the rest stays pending.
+      Ids that already failed in an earlier run do not count towards it.
     - _state.json `unsettled` lists the ids whose record this run did not refresh completely (pending, kept, or
       recorded without OEIL data because OEIL failed), for change detection (pipeline/analysis/activity.py).
     """
@@ -1614,6 +1626,8 @@ def fetch(http: Http) -> SourceStatus:
     skip = {k for k, v in unavailable.items() if "split procedure" in v or "merges several" in v}
     # enriched files whose OEIL page answers 404: {id: {"since": first run date, "runs": runs in a row}}
     oeil_gone: dict[str, dict] = dict(state.get("oeil_gone", {}))
+    # ids whose fetch failed (EP API, or OEIL other than 404): {id: {"since": first run date, "runs": runs in a row}}
+    failing: dict[str, dict] = dict(state.get("failing", {}))
 
     acts_by_ref: dict[str, list[LegalAct]] = {}
     try:
@@ -1623,7 +1637,8 @@ def fetch(http: Http) -> SourceStatus:
     except Exception as e:  # noqa: BLE001 - optional input for the terminal-state check
         log.info("eurlex snapshot not usable (%s)", e)
 
-    # Ids left over by an interrupted run come first (an interrupted full refresh stays "full").
+    # Ids left over by an interrupted run come first (an interrupted full refresh stays "full"), ids that
+    # failed in an earlier run last: they do not count towards the outage stop (see OUTAGE_STOP).
     resumed = [i for i in state.get("pending", []) if i in wanted]
     mode = "full" if full or (resumed and state.get("mode") == "full") else "incremental"
     selected, reasons = select_ids(
@@ -1635,6 +1650,7 @@ def fetch(http: Http) -> SourceStatus:
         full,
     )
     todo = list(dict.fromkeys(resumed + selected))
+    todo = [i for i in todo if i not in failing] + [i for i in todo if i in failing]
     if resumed:
         reasons["resumed"] += len(resumed)
     log.info(
@@ -1648,7 +1664,9 @@ def fetch(http: Http) -> SourceStatus:
 
     committees = {c.code: c.name for p in existing.values() for c in p.committees if c.name}
     enriched = [pid for pid, p in existing.items() if has_oeil_data(p)]
-    run = _Run(http, wanted, committees, enriched, deadline, hard_deadline, min_progress=CHUNK_SIZE)
+    run = _Run(
+        http, wanted, committees, enriched, deadline, hard_deadline, min_progress=CHUNK_SIZE, failed_before=failing
+    )
     started_at = state.get("started_at") if resumed else attempted
     done: list[str] = []
     built: set[str] = set()
@@ -1667,11 +1685,24 @@ def fetch(http: Http) -> SourceStatus:
         for pid in built:
             unavailable.pop(pid, None)
 
+    def failing_now(pending: list[str]) -> dict[str, dict]:
+        """Pending ids whose fetch failed in this run, with the runs in a row; those not tried keep their entry."""
+        out: dict[str, dict] = {}
+        for pid in pending:
+            kept = run.oeil_kept.get(pid)
+            if pid in run.errors or (kept and "(404)" not in kept):
+                prev = failing.get(pid) or {"since": today.isoformat(), "runs": 0}
+                out[pid] = {"since": prev["since"], "runs": prev["runs"] + 1}
+            elif pid in failing and pid not in run.oeil_kept:
+                out[pid] = failing[pid]
+        return out
+
     def save_state(pending: list[str]) -> None:
         base = {
             "unavailable": dict(sorted(unavailable.items())),
             "list_page": dict(sorted(list_page.items())),
             "oeil_gone": dict(sorted(oeil_gone.items())),
+            "failing": dict(sorted(failing_now(pending).items())),
             "unsettled": {"attempted_at": attempted, "ids": sorted(set(pending) | run.degraded)},
         }
         if pending:
@@ -1755,6 +1786,15 @@ def fetch(http: Http) -> SourceStatus:
         if run.outage
         else ""
     )
+    again = {k: v for k, v in failing_now(pending).items() if v["runs"] > 1}
+    failing_note = (
+        f" {len(again)} files failed in more than one run in a row; they are retried last in each run and do not "
+        "count towards the outage stop: "
+        + "; ".join(f"{k} (since {v['since']}, {v['runs']} runs)" for k, v in sorted(again.items()))[:600]
+        + "."
+        if again
+        else ""
+    )
     if todo and not done and (not stopped_early or run.outage):
         return SourceStatus(
             source=SOURCE_ID,
@@ -1762,6 +1802,7 @@ def fetch(http: Http) -> SourceStatus:
             attempted_at=attempted,
             note=f"0/{len(todo)} procedures fetched; snapshot unchanged; {len(pending)} pending."
             + outage_note
+            + failing_note
             + listing_note
             + kept_note
             + " "
@@ -1802,7 +1843,7 @@ def fetch(http: Http) -> SourceStatus:
             f" Failures: {len(run.errors)} EP API, {len(run.build_errors)} build, {len(run.oeil_errors)} OEIL. "
             + "; ".join((problems + run.oeil_errors)[:5])
         )
-    note += outage_note + kept_note + gone_note + listing_note
+    note += outage_note + failing_note + kept_note + gone_note + listing_note
     # "partial" whenever a previously enriched record could not be re-enriched (run.oeil_kept, pending)
     partial = bool(
         pending
