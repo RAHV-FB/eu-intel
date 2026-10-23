@@ -17,7 +17,20 @@ export function OutcomeBadge({ outcome }: { outcome: VoteOutcome }) {
   );
 }
 
-export function MarginText({ margin, short }: { margin: VoteMargin | null | undefined; short?: boolean }) {
+/**
+ * "Passed by N votes" / "Fell N short". Given the outcome, nothing is shown unless it is adopted or rejected: a margin
+ * is our calculation and must never stand next to an outcome that is not established.
+ */
+export function MarginText({
+  margin,
+  short,
+  outcome,
+}: {
+  margin: VoteMargin | null | undefined;
+  short?: boolean;
+  outcome?: VoteOutcome;
+}) {
+  if (outcome && outcome !== 'adopted' && outcome !== 'rejected') return null;
   if (!margin) {
     return short ? null : (
       <span className="meta">No margin shown: the applicable threshold could not be established from the records.</span>
@@ -45,13 +58,21 @@ export function VoteListItem({ v, showDossier = true }: { v: EpVoteSummary; show
           <time dateTime={v.date}>{formatDate(v.date)}</time>
           <span aria-hidden="true"> · </span>
           <span>{v.kind_label || KIND_LABEL[v.kind]}</span>
-          {showDossier && v.dossier_ref && v.dossier_id && (
+          {showDossier && v.dossier_ref && v.dossier_id ? (
             <>
               <span aria-hidden="true"> · </span>
               <Link to={`/legislation/${v.dossier_id}`} className="mono vote-item__ref">
                 {v.dossier_ref}
               </Link>
             </>
+          ) : (
+            showDossier &&
+            v.procedure_ref && (
+              <>
+                <span aria-hidden="true"> · </span>
+                <span className="mono vote-item__ref">{v.procedure_ref}</span>
+              </>
+            )
           )}
         </p>
         <h3 className="vote-item__title">
@@ -59,8 +80,9 @@ export function VoteListItem({ v, showDossier = true }: { v: EpVoteSummary; show
         </h3>
         <div className="vote-item__outcome">
           <OutcomeBadge outcome={v.outcome} />
-          <MarginText margin={v.margin} short />
+          <MarginText margin={v.margin} short outcome={v.outcome} />
         </div>
+        {v.outcome_note && <p className="meta vote-item__note">{v.outcome_note}</p>}
       </div>
       <div className="vote-item__bar">
         <VoteBar forCount={v.for} against={v.against} abstain={v.abstain} compact label={v.display_title || v.title} />
