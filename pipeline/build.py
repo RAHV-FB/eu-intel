@@ -4090,10 +4090,10 @@ class Builder:
     def build_activity(self) -> None:
         from pipeline.analysis import activity
 
-        snapshot_items = activity.snapshot_items(self)
+        snapshot = activity.snapshot_entries(self)
         record = os.environ.get("EU_INTEL_RECORD_ACTIVITY") == "1"
         recorded = activity.update_state(self, self.state_dir, record=record)
-        items = activity.merge(recorded, snapshot_items, today=self.today)
+        items = activity.merge(recorded, snapshot, today=self.today)
         self.activity_items = items
         self.files["activity.json"] = items
         by_dossier: dict[str, list[dict]] = defaultdict(list)

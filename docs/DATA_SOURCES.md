@@ -252,11 +252,27 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   consent", rather than "Parliament adopted". A motion to reject says what became of the text, then names the
   file: "Parliament did not reject the Commission proposal: <file>" for a rejected motion (vote 199567), "Parliament
   rejected the Commission proposal" for an adopted one (179804), and likewise for the Council's position at second
-  reading (195807). A discharge decision is "Parliament voted on a discharge decision: …". A consent milestone
+  reading (195807), followed by what the vote's title adds to tell it from another vote of the day ("(amendments 1,
+  2 and 7)": 195775, the same day as 195807); votes of a file and day still headlined alike add their counts. A
+  discharge decision is "Parliament voted on a discharge decision: …". A consent milestone
   titled "Parliament voted on consent" says "Parliament gave its consent" (or "did not give …") when the final
   vote linked to it records the outcome officially (published or in the minutes; 2025/0313(APP), vote 197472).
-  A Council vote is titled by its list title (`display_title`, below); an item with no page on the site links to
-  its official document instead of the site root.
+  A Council vote is titled by its list title (`display_title`, below); a Parliament vote links to its vote page;
+  an item with no page on the site links to its official document instead of the site root.
+- Activity ids (`activity.json`, Atom entry ids): a step's id is its event id, except Parliament's decision (kind
+  `ep_position` or `negotiation_mandate`) on a day an officially adopted vote of the deciding kind (final or mandate;
+  outcome published or in the minutes) was held, which is `vote-<id>-<kind>`, the id of the step the build makes
+  from that vote while the procedure record lacks it. The official event that replaces that step when the EP API or
+  OEIL catch up keeps the item (2025/0258(COD), 21 October 2026: vote 198325, then the REFBAK event). Introducing
+  this rule changed 30 of the 265 ids of October 2026, once.
+- Recorded activity (a refresh with `EU_INTEL_RECORD_ACTIVITY=1`, `data/state/`): the items the snapshot lists
+  (the same steps, votes and Council votes, in the same words, at any date) that rest on no record of their file
+  seen before (step id or key, vote, Council vote, act), status changes, and a "New file" item for a new file whose
+  recent items include no proposal. A refresh therefore records each Council vote, final vote and motion once, as
+  the snapshot lists it, and no minor step (amendments tabled, trilogues, debates, announcements). Simulated on the
+  October 2026 snapshot with a digest that had not seen anything dated from 12 October: 35 items recorded (107
+  before, 61 of them minor steps, 14 records listed twice), and the public list the same 265 items as without
+  recording (342 before).
 - `subject` in `votes/index.json`: the vote's published subject (vote item or minutes block title, without its
   procedure symbol), only when the display title and Parliament's label lack some of its words; the vote search
   matches it (vote 195775, titled after the act it amends, has the subject "Temporary derogation from the ePrivacy
