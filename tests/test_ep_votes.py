@@ -476,6 +476,136 @@ def test_minutes_block_titles():
     assert siofa[0].title is not None and siofa[0].title.endswith("(SIOFA) ***I")
 
 
+# ------------------------------------------------- kinds, outcomes and subjects (fixtures in kinds/, real records)
+KINDS = FIX / "kinds"
+
+
+def kinds(day: str, labels: dict[str, str], links: dict | None = None, **kw) -> dict[str, EpVote]:
+    res = ev.assemble([load_sitting(day, base=KINDS)], labels, links or {}, RETRIEVED, **kw)
+    return {v.id: v for v in res.votes}
+
+
+def test_recommendation_to_raise_no_objections_is_not_an_objection():
+    # 24 Nov 2022, B9-0490/2022, 2022/2899(DEA): vote item "Recommandation de décision de ne pas s'opposer à un
+    # acte délégué: …"; minutes PV-9-2022-11-24-VOT item 7 "Decision to raise no objections pursuant to Rule
+    # 111(6) | Recommendation for a decision | RCV | + | 445/102/24". Rule 111(6) only says the recommendation
+    # "shall be put to the vote" (Rule 111(5) and Art. 290(2) TFEU require component Members for the objection)
+    v = kinds("2022-11-24", {"2022-2899": "2022/2899(DEA)"})["150746"]
+    assert (v.kind, v.kind_detail, v.majority_rule) == ("motion", "no_objection", "votes_cast")
+    assert (v.outcome, v.outcome_basis, v.n_for, v.n_against, v.n_abstain) == ("adopted", "minutes", 445, 102, 24)
+    assert v.subject is not None and v.subject.startswith("Decision to raise no objections pursuant to Rule 111(6)")
+    # 23 Apr 2024, 168696: English item title "Recommendation for a decision not to oppose a delegated act: …"
+    sig = ev.Signals(ref="B9-0199/2024", label="B9-0199/2024 – Draft decision", proc_types=["DEA"],
+                     item_title="Recommendation for a decision not to oppose a delegated act: rules on the ratio")  # fmt: skip
+    assert ev.kind_detail("motion", sig, None) == "no_objection"
+    objection = ev.Signals(ref="Motion for a resolution", label="B10-0337/2026 – Motion for a resolution",
+                           proc_types=["DEA"], item_title="Objection pursuant to Rule 114(3): Trajectory …")  # fmt: skip
+    assert ev.kind_detail("motion", objection, None) == "objection"
+    assert ev.majority_rule("motion", None, None, ["DEA"], "objection") == "component_members"
+
+
+def test_own_initiative_single_vote_is_the_resolution():
+    # 18 May 2021, 2020/2042(INI): the label ends "Commission proposal", the minutes (PV-9-2021-05-18-VOT item
+    # 21) "Motion for a resolution (text as a whole) | RCV | − | 255/260/170": an own-initiative resolution
+    v = kinds("2021-05-18", {"2020-2042": "2020/2042(INI)"}, {"A-9-2021-0115": (["2020-2042"], [])})["131503"]
+    assert v.procedure_refs == ["2020/2042(INI)"]
+    assert (v.kind, v.outcome, v.outcome_basis) == ("resolution", "rejected", "minutes")
+    single = ev.Signals(ref="Single vote", label="LGBTIQ rights in the EU - B9-0431/2021 - Single vote",
+                        proc_types=["RSP"])  # fmt: skip
+    assert ev.classify(single) == "resolution"
+    decision = ev.Signals(ref="Proposal for a decision", label="… – Proposal for a decision", proc_types=["RSP"])
+    assert ev.classify(decision) == "final"  # a decision, not a resolution
+    legislative = ev.Signals(ref="Commission proposal", label="… - A9-0149/2021 - … - Commission proposal",
+                             proc_types=["INI"], symbol="***I")  # fmt: skip
+    assert ev.classify(legislative) == "final"  # the minutes title the item "***I": not a resolution
+
+
+def test_french_minutes_of_the_2020_remote_voting_sittings():
+    # 13 May 2020: the "Results of votes" exist only as PV-9-2020-05-13-VOT-FNL_fr.xml; item 1 "Accord sur le
+    # statut UE-Monténégro … *** | Procédure d'approbation | AN | + | 568/109/11", item 9 "Un filet de sécurité …
+    # | Vote unique | AN | + | 616/29/46" (A9-0099/2020, 2020/2051(INL), a resolution)
+    rows = ev.parse_minutes((KINDS / "minutes_2020-05-13.xml").read_bytes())
+    assert {(r.item, r.outcome, r.symbol, r.title) for r in rows} == {
+        ("1.", "adopted", "***", None),  # French block titles are not used as the English subject
+        ("9.", "adopted", None, None),
+    }
+    labels = {"2019-0043": "2019/0043(NLE)", "2020-2051": "2020/2051(INL)"}
+    links = {"A-9-2020-0018": (["2019-0043"], []), "A-9-2020-0099": (["2020-2051"], [])}
+    titles = {"2020-2051": "A safety net to protect the beneficiaries of EU programmes: setting up an MFF "
+                           "contingency plan"}  # fmt: skip
+    votes = kinds("2020-05-13", labels, links, proc_titles=titles)
+    consent, plan = votes["112779"], votes["113647"]
+    assert (consent.outcome, consent.outcome_basis, consent.n_for) == ("adopted", "minutes", 568)
+    assert consent.subject is None  # no English title and no procedure title given
+    assert (plan.kind, plan.outcome, plan.outcome_basis) == ("resolution", "adopted", "minutes")
+    assert plan.subject == titles["2020-2051"]  # the title of its only procedure (EP API process_title)
+
+
+def test_minutes_fall_back_to_the_french_expression():
+    class Http:
+        def __init__(self):
+            self.urls: list[str] = []
+
+        def get(self, url: str, **_kw) -> bytes:
+            self.urls.append(url)
+            if url.endswith("/documents/PV-9-2020-05-13-VOT"):
+                meta = {"data": [{"is_realized_by": [{"id": "eli/dl/doc/PV-9-2020-05-13-VOT/fr", "is_embodied_by": [
+                    {"format": "http://publications.europa.eu/resource/authority/file-type/XML",
+                     "is_exemplified_by": "distribution/doc/PV-9-2020-05-13-VOT-FNL_fr.xml"}]}]}]}  # fmt: skip
+                return json.dumps(meta).encode()
+            if url.endswith("PV-9-2020-05-13-VOT-FNL_fr.xml"):
+                return (KINDS / "minutes_2020-05-13.xml").read_bytes()
+            return b""  # the English XML: 404
+
+    http = Http()
+    rows = ev.fetch_minutes(http, {"id": "MTG-PL-2020-05-13", "date": "2020-05-13", "term": 9})  # type: ignore[arg-type]
+    assert len(rows) == 2 and http.urls[-1].endswith("PV-9-2020-05-13-VOT-FNL_fr.xml")
+
+
+def test_outcome_settled_by_the_counts_under_every_rule():
+    # 151201, 13 Dec 2022, early termination of a Vice-President's term (Eva Kaili), 625-1-2: not in the
+    # "Results of votes" annex; the main minutes (PV-9-2022-12-13, item 8.1) record "Approved by RCV (625 in
+    # favour, 1 against, 2 abstentions)" under "Majority of Parliament's component Members and two thirds of
+    # the votes cast required"
+    assert ev.derived_outcome("unknown", (625, 1, 2), "2022-12-13") == "adopted"
+    assert ev.derived_outcome("two_thirds_cast", (625, 1, 2), "2022-12-13") == "adopted"
+    # 8 Jul 2020, motions to reject the Council's position (Mobility Package), majority of component Members
+    assert ev.derived_outcome("component_members", (174, 513, 1), "2020-07-08") == "rejected"
+    assert ev.derived_outcome("component_members", (353, 300, 10), "2020-07-08") == "adopted"  # 705 seats
+    assert ev.derived_outcome("component_members", (352, 300, 10), "2020-07-08") is None  # depends on who sat
+    assert ev.derived_outcome("component_members", (376, 300, 10), "2019-10-24") == "adopted"  # 751 seats
+    assert ev.derived_outcome("component_members", (375, 300, 10), "2019-10-24") is None
+    # no established rule: only a result that holds under every rule
+    assert ev.derived_outcome("unknown", (626, 25, 40), "2020-10-20") == "adopted"  # 122258
+    assert ev.derived_outcome("unknown", (400, 300, 10), "2020-10-20") is None  # not two thirds
+    assert ev.derived_outcome("unknown", (300, 301, 10), "2020-10-20") == "rejected"
+    assert ev.derived_outcome("votes_cast", (300, 300, 10), "2020-10-20") is None  # a tie is not derived
+    assert ev.derived_outcome("two_thirds_cast", (400, 300, 0), "2025-07-10") == "rejected"
+
+
+def test_label_with_another_items_document_number():
+    # 27 Apr 2021: the Eurofound 2019 discharge (130628, 612-83-3) is labelled with A9-0074/2021, the European
+    # GNSS Agency report (block 76, "Report: Ryszard Czarnecki (A9-0074/2021)"); the minutes record its counts
+    # in block 59, "2019 discharge: European Foundation for the Improvement of Living and Working Conditions |
+    # Report: Joachim Stanisław Brudziński (A9-0094/2021)" (612-83-3 is also a count of block 49)
+    sitting = load_sitting("2021-04-27", base=LINKING)
+    decs = {str(d["notation_votingId"]): d for d in sitting.decisions}
+    eurofound, gnss = ev.draft(decs["130628"], sitting), ev.draft(decs["130645"], sitting)
+    assert eurofound.label_docs == ["A-9-2021-0094"] and gnss.label_docs == ["A-9-2021-0074"]
+    labels = {"2020-2151": "2020/2151(DEC)", "2020-2168": "2020/2168(DEC)"}
+    links = {"A-9-2021-0094": (["2020-2151"], []), "A-9-2021-0074": (["2020-2168"], [])}
+    votes = {v.id: v for v in ev.assemble([sitting], labels, links, RETRIEVED).votes}
+    assert votes["130628"].procedure_refs == ["2020/2151(DEC)"]
+    assert votes["130628"].subject == "2019 discharge: European Foundation for the Improvement of Living and Working Conditions"
+    assert (votes["130628"].outcome, votes["130628"].outcome_basis) == ("adopted", "minutes")
+    assert votes["130645"].procedure_refs == ["2020/2168(DEC)"]
+    assert votes["130645"].subject == "2019 discharge: European GNSS Agency"
+    assert ev.label_subject(eurofound.label) == (
+        "2019 discharge: European Foundation for the Improvement of Living and Working Conditions",
+        ["Joachim Stanisław Brudziński"],
+    )
+
+
 # -------------------------------------------------------------------------------------- snapshot
 def _snapshot() -> tuple[list[EpVote], list[EpBallots]]:
     votes = read_records(ev.SOURCE_ID, "votes", EpVote)

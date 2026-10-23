@@ -343,6 +343,7 @@ export type VoteKindDetail =
   | 'reject_council_position' // second reading: motion to reject the Council's position
   | 'censure' // motion of censure on the Commission
   | 'objection' // objection to a delegated or implementing act: "adopted" = Parliament objects
+  | 'no_objection' // recommendation to raise no objections to one: "adopted" = Parliament does not object
   | 'negotiation_decision'; // vote on a committee's decision to enter into interinstitutional negotiations
 export type VoteOutcome = 'adopted' | 'rejected' | 'lapsed' | 'unknown';
 
@@ -372,7 +373,8 @@ export interface EpVoteSummary {
   outcome: VoteOutcome;
   outcome_note?: string | null; // what the outcome means, e.g. for a motion to reject or an objection
   // how the outcome was established: EP open data decision, the sitting's official minutes, or calculated from
-  // the recorded counts under the applicable majority rule; null when unknown
+  // the recorded counts (under the applicable majority rule, or under every rule when none is established);
+  // null when unknown
   outcome_basis?: 'published' | 'minutes' | 'derived' | null;
   for: number | null;
   against: number | null;
@@ -424,9 +426,14 @@ export interface VoteIntention {
 
 export interface EpVoteDetail extends EpVoteSummary {
   title_parts?: LangRun[] | null; // `title` in runs by language when it has French or German passages
-  subject?: string | null; // what was voted, as published in English (vote item or minutes block title)
+  // what was voted, as published in English (vote item or minutes block title, else the title of its procedure),
+  // without Parliament's procedure symbol ("***I"), which subject_procedure gives in words
+  subject?: string | null;
+  subject_procedure?: string | null; // "ordinary legislative procedure, first reading"
   procedure_url?: string | null; // Legislative Observatory (OEIL) file of procedure_ref
-  reference_text?: string | null;
+  reference_text?: string | null; // the text voted on; Parliament's fixed French terms are given in English
+  reference_text_lang?: string; // "fr" when reference_text is still French
+  majority_rule?: 'votes_cast' | 'component_members' | 'two_thirds_cast' | 'unknown'; // established rule, if any
   doc_ids: string[];
   attendees?: number | null;
   groups: GroupBreakdown[];

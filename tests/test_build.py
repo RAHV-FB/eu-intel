@@ -1386,13 +1386,15 @@ def test_vote_titled_by_its_label_keeps_english_and_the_full_label(votes_out: Pa
     )
     assert v14["title"] == LABEL_199407 and "display_title_parts" not in v14
     assert [lang for lang, _ in v14["title_parts"]] == ["fr", None, "de", None, "fr"]
-    # a French label stays as published, with its French passage marked
+    # a French label: Parliament's fixed procedural term in its English wording; the label as published, with
+    # its French passage marked, stays in `title`
     v15 = load(votes_out, "votes/V15.json")
-    assert v15["display_title"] == v15["title"] == LABEL_198292
-    assert v15["display_title_parts"] == [[None, "A10-0264/2026 - Jacek Protas - "], ["fr", "Proposition de résolution"]]
+    assert v15["title"] == LABEL_198292
+    assert v15["display_title"] == "A10-0264/2026 - Jacek Protas - Motion for a resolution"
+    assert "display_title_parts" not in v15
+    assert v15["title_parts"] == [[None, "A10-0264/2026 - Jacek Protas - "], ["fr", "Proposition de résolution"]]
     idx = {v["id"]: v for v in load(votes_out, "votes/index.json")}
-    assert idx["V15"]["display_title_parts"] == v15["display_title_parts"]
-    assert "display_title_parts" not in idx["V14"]
+    assert "display_title_parts" not in idx["V15"] and "display_title_parts" not in idx["V14"]
     # a very long label is shortened for the heading; the full label stays in `title`
     v16 = load(votes_out, "votes/V16.json")
     assert v16["title"] == LABEL_113161

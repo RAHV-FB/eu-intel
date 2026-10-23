@@ -54,6 +54,8 @@ export const DETAIL_EXPLAINER: Record<VoteKindDetail, string> = {
     'A motion of censure on the Commission (Article 234 TFEU). It needs two thirds of the votes cast, representing a majority of Parliament’s component Members; if it is carried, the Commission must resign as a body.',
   objection:
     'An objection to a measure the Commission adopts under powers given to it by a law. If the objection is adopted, Parliament objects. The effect depends on the procedure: a delegated act cannot enter into force (Article 290(2) TFEU); a measure under the regulatory procedure with scrutiny cannot be adopted; for a draft implementing act, the Commission must review it (Regulation (EU) No 182/2011, Article 11).',
+  no_objection:
+    'A recommendation by the committee responsible that Parliament declare, before the deadline for objections ends, that it has no objections to a measure the Commission adopts under powers given to it by a law (Parliament’s Rules of Procedure, Rule 111(6) in the 9th term). It is decided by a majority of the votes cast. If it is adopted, any later proposal to object to the measure is inadmissible.',
   negotiation_decision:
     'A vote on whether the committee responsible may open negotiations with the Council on the basis of its report. Plenary votes on this only when political groups or enough MEPs ask for it after the committee’s decision is announced.',
 };

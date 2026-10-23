@@ -266,6 +266,7 @@ KindDetail = Literal[
     "reject_council_position",  # second reading: motion to reject the Council's position
     "censure",  # motion of censure on the Commission
     "objection",  # objection to a delegated or implementing act (adopted = Parliament objects)
+    "no_objection",  # recommendation to raise no objections to one (adopted = Parliament does not object)
     "negotiation_decision",  # vote on a committee's decision to enter into interinstitutional negotiations
 ]
 
@@ -282,14 +283,16 @@ class EpVote(Model):
     doc_ids: list[str] = Field(default_factory=list)  # decided_on_a_realization_of document ids
     procedure_refs: list[str] = Field(default_factory=list)  # linked only via official doc/procedure ids
     # What was voted, as published in English: the vote item title (from 2024-01-15) or the block title of
-    # the sitting's English minutes (before); None when no English title is published or it is ambiguous.
+    # the sitting's English minutes (before), else the English title of the vote's only linked procedure;
+    # None when no English title is published or it is ambiguous.
     subject: str | None = None
     kind: VoteKind
     kind_detail: KindDetail | None = None
     outcome: Literal["adopted", "rejected", "lapsed", "unknown"]
     # How `outcome` was established: "published" = decision_outcome of the API decision;
     # "minutes" = the sitting's official "Results of votes" minutes (PV-…-VOT), matched by document and
-    # counts; "derived" = from the counts under an established majority_rule (votes_cast only, never a tie).
+    # counts (also the French minutes of the 2020 remote-voting sittings); "derived" = from the counts, when
+    # they settle the result under the established majority_rule, or under every rule when it is unknown.
     outcome_basis: Literal["published", "minutes", "derived"] | None = None
     method: str | None = None  # e.g. "VOTE_ELECTRONIC_ROLLCALL", "SHOW_OF_HANDS"
     n_for: int | None = None

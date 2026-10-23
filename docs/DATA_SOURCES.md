@@ -69,6 +69,41 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   (European Climate Law, 24 Jun 2021, "Am 176"). A final vote is a negotiating mandate when the procedure's
   referral back for negotiations is recorded on the vote's day or up to two days later (remote voting in
   2020–21 recorded it the next day).
+- Minutes: the remote-voting sittings of April–November 2020 have their "Results of votes" in French only
+  (`PV-9-2020-05-13-VOT-FNL_fr.xml`); outcomes, documents and procedure symbols are read from them, block
+  titles are not (the subject must be English).
+- Subject: the vote item title (2024+) or the block title of the English minutes, else the title of the vote's
+  only linked procedure (`process_title` of the EP API procedure, kept in `_state.json` `proc_titles`): the vote
+  labelled "A9-0027/2020 - Tomáš Zdechovský - Resolution" is about "2018 discharge: General budget of the EU -
+  Court of Justice" (2019/2058(DEC)). Vote pages show the subject without Parliament's procedure symbol and give the symbol in
+  words, as the minutes' "Keys to symbols used" explain it (`***I` = ordinary legislative procedure, first
+  reading; `*` consultation; `***` consent).
+- Wrong document numbers in labels: a label naming a document whose block in the minutes has neither the
+  label's title nor its rapporteur, and none of the decision's counts, is linked through the one block that
+  records the counts and fits the label (130628 and 130862, Eurofound 2019 discharge, labelled with the GNSS
+  Agency report A9-0074/2021; minutes "Report: Joachim Stanisław Brudziński (A9-0094/2021)").
+- Kinds: a whole-text marker ("Single vote", or a mistaken "Commission proposal") on an own-initiative, topical
+  or legislative-initiative procedure (INI, RSP, INL) without a legislative procedure symbol is the vote on the
+  resolution, not a final vote on a law; a proposal for a decision stays a decision. A "Recommendation for a
+  decision" to raise no objections to a delegated act or measure (Rule 111(6) of the Rules of Procedure, 9th
+  term) has kind_detail `no_objection`: it is decided by a majority of the votes cast ("it shall be put to the
+  vote"; only the objection itself needs a majority of component Members, Rule 111(5) and Art. 290(2) TFEU), and
+  its adoption makes any later objection inadmissible.
+- Outcome `derived`: also when the counts settle the result under a component-Members rule (votes for above half
+  the statutory seats, or at most half of the MEPs who voted) or, with no established rule, under every rule
+  Parliament applies (two thirds of the votes cast and a majority of the seats; or fewer for than against).
+  Early termination of Eva Kaili's term as Vice-President (151201, 625-1-2) is recorded only in the main minutes
+  (PV-9-2022-12-13, item 8.1, "Approved by RCV (625 in favour, 1 against, 2 abstentions)"), not in the "Results
+  of votes" annex, and is derived.
+- Margins under component-Member rules are not given for votes from 2 July 2019 to 12 January 2020: the
+  membership records date three Spanish mandates from 2 July 2019 that Parliament took note of only on 13 January
+  2020 "with effect from 2 July 2019" (minutes PV-9-2020-01-13, item 6), while it counted 747 Members on 16 July
+  2019 (press release 20190711IPR56824) against the records' 751 (vote 109166).
+- Titles (build): same-day votes that would share a title get the text they are on ("motion B9-0069/2020",
+  "joint motion RC-B9-0073/2020"), else their amendment numbers, else the label's last part. Parliament's fixed
+  French procedural terms in a label used as title and in "Text voted on" are given in Parliament's English
+  wording ("Proposition de résolution (ensemble du texte)" → "Motion for a resolution (text as a whole)");
+  other French text keeps `lang="fr"`.
 - Timeline (build): Parliament's first-reading decision recorded only as "took its decision" is titled as a
   rejection when every final vote of that day linked to the file was officially rejected (2025/0429(COD),
   26 Mar 2026, OEIL: "the European Parliament rejected the proposal"). A rejected final vote on a file whose

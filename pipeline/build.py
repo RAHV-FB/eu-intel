@@ -170,6 +170,7 @@ VOTE_DETAIL_LABELS: dict[str, str] = {
     "reject_council_position": "Vote on a motion to reject the Council's position",
     "censure": "Vote on a motion of censure on the Commission",
     "objection": "Vote on an objection to a Commission measure",
+    "no_objection": "Vote on a recommendation to raise no objections to a Commission measure",
     "negotiation_decision": "Vote on the committee's decision to enter into negotiations",
 }
 VOTE_DETAIL_PHRASE: dict[str, str] = {
@@ -177,6 +178,7 @@ VOTE_DETAIL_PHRASE: dict[str, str] = {
     "reject_council_position": "motion to reject the Council's position (second reading)",
     "censure": "vote on a motion of censure",
     "objection": "vote on an objection",
+    "no_objection": "vote on a recommendation to raise no objections",
     "negotiation_decision": "vote on the committee's decision to enter into negotiations with the Council",
 }
 # What the official outcome means for these votes ("rejected" for a motion to reject is not a rejected law)
@@ -189,6 +191,10 @@ VOTE_OUTCOME_NOTES: dict[tuple[str, str], str] = {
     ("censure", "rejected"): "The motion of censure was rejected: Parliament did not censure the Commission.",
     ("objection", "adopted"): "Parliament adopted the objection: it objects to the Commission measure.",
     ("objection", "rejected"): "The objection was rejected: Parliament did not object to the Commission measure.",
+    ("no_objection", "adopted"): "Parliament adopted the recommendation: it declared that it has no objections to the "
+                                 "Commission measure, which makes any later objection to it inadmissible.",
+    ("no_objection", "rejected"): "The recommendation was rejected: Parliament did not declare that it has no "
+                                  "objections to the Commission measure.",
     ("negotiation_decision", "adopted"): "Parliament approved the committee's decision to enter into negotiations "
                                          "with the Council.",
     ("negotiation_decision", "rejected"): "Parliament rejected the committee's decision to enter into negotiations "
@@ -213,6 +219,50 @@ def vote_subject(subject: str | None) -> str | None:
         return None
     s = _SUBJECT_NUMBER.sub("", _SUBJECT_SYMBOL.sub("", subject)).strip()
     return s or None
+
+
+# Parliament's procedure symbols, as the "Keys to symbols used" of its minutes explain them (PV-9-2022-12-13)
+PROCEDURE_SYMBOLS: dict[str, str] = {
+    "*": "consultation procedure",
+    "***": "consent procedure",
+    "***I": "ordinary legislative procedure, first reading",
+    "***II": "ordinary legislative procedure, second reading",
+    "***III": "ordinary legislative procedure, third reading",
+}
+
+
+def subject_procedure(subject: str | None) -> str | None:
+    """The procedure symbol ending a vote's published subject, in words (PROCEDURE_SYMBOLS), else None."""
+    m = _SUBJECT_SYMBOL.search(subject or "")
+    return PROCEDURE_SYMBOLS.get(re.sub(r"\s+", "", m.group(0))) if m else None
+
+
+# Parliament's fixed procedural wording in French vote labels and referenceTexts, with the wording its English
+# labels use for the same step (e.g. 199517 "RC-B10-0476/2026 - Proposition de résolution (ensemble du texte)",
+# 153265 "RC-B9-0107/2023 – Motion for a resolution (text as a whole)")
+FR_PROCEDURAL_TERMS: dict[str, str] = {
+    "proposition de résolution (ensemble du texte)": "Motion for a resolution (text as a whole)",
+    "proposition de résolution": "Motion for a resolution",
+    "résolution": "Resolution",
+    "proposition de la commission": "Commission proposal",
+    "accord provisoire": "Provisional agreement",
+    "proposition de rejet": "Proposal for rejection",
+    "demande de renvoi en commission": "Request for referral back to committee",
+    "proposition de décision (ensemble du texte)": "Proposal for a decision (text as a whole)",
+    "proposition de décision": "Proposal for a decision",
+    "projet de décision du conseil": "Draft Council decision",
+    "vote unique": "Single vote",
+    "procédure d'approbation": "Consent procedure",
+}
+
+
+def english_procedural(text: str | None) -> str | None:
+    """`text` with every label segment that is one of FR_PROCEDURAL_TERMS in English; other text as published."""
+    if not text:
+        return text
+    segs, seps = _segments(text)
+    segs = [FR_PROCEDURAL_TERMS.get(seg.strip().replace("’", "'").casefold(), seg) for seg in segs]
+    return _joined(segs, seps, 0, len(segs))
 
 
 # Parliament publishes some vote labels with the title in French, English and German, in that order, joined by
@@ -374,6 +424,35 @@ def label_parts(label: str | None) -> list[list[str | None]] | None:
     return out
 
 
+_DOC_SERIES = (("RC-", "joint motion"), ("B", "motion"), ("A", "report"))
+_DOC_HYPHENS = str.maketrans({c: "-" for c in "\u2010\u2011\u2012\u2013\u2212"})  # in some document numbers
+
+
+def vote_label_document(v: EpVote) -> str | None:
+    """The text a vote's label names last, by its kind of document: "motion B9-0069/2020" (a motion for a
+    resolution), "joint motion RC-B9-0073/2020", "report A9-0355/2023"."""
+    refs = _LABEL_DOC_REF.findall(v.title.translate(_DOC_HYPHENS))
+    if not refs:
+        return None
+    return next((f"{what} {refs[-1]}" for prefix, what in _DOC_SERIES if refs[-1].startswith(prefix)), refs[-1])
+
+
+def vote_label_amendments(v: EpVote) -> str | None:
+    """The amendments a label ends with: "… – Proposal for rejection – Am 1= 2= 7=" -> "amendments 1, 2 and 7"."""
+    m = re.search(r"\bAms?\s+((?:\d+[A-Z]?=?[\s,]*)+)$", v.title)
+    nums = re.findall(r"\d+[A-Z]?", m.group(1)) if m else []
+    if not nums:
+        return None
+    return f"amendment {nums[0]}" if len(nums) == 1 else f"amendments {', '.join(nums[:-1])} and {nums[-1]}"
+
+
+def vote_label_last(v: EpVote) -> str | None:
+    """The last part of a vote's label when it is English text: "Proposal for a decision on discharge (EUAA)"."""
+    segs, _ = _segments(v.title)
+    last = segs[-1].strip() if len(segs) > 1 else ""
+    return last if last and not _french_segment(last) and not _LABEL_DOC_REF.fullmatch(last) else None
+
+
 def vote_held(v: EpVote) -> bool:
     """False for a vote that lapsed without being held (no counts): it decided nothing and is not shown."""
     return not (v.outcome == "lapsed" and v.n_for is None and not v.has_ballots)
@@ -403,6 +482,13 @@ MANDATE_ANNOUNCED = "oeil:Committee decision to enter into interinstitutional ne
 ACTIVE_STAGES = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
 ADOPTED_STAGES = {"adopted", "published", "in_force", "takes_effect_on_notification", "no_longer_in_force"}
 
+# Days for which the membership records do not give the number of Members Parliament counted. They date the
+# mandates of Oriol Junqueras i Vies, Carles Puigdemont i Casamajó and Antoni Comín i Oliveres from 2 July 2019,
+# but Parliament took note of their election only on 13 January 2020, after the CJEU judgment of 19 December
+# 2019, "with effect from 2 July 2019" (minutes PV-9-2020-01-13, item 6 "Composition of Parliament"). Until then
+# it did not count them: "Parliament currently comprises 747 MEPs as per the official notifications received by
+# member state authorities" (press release 20190711IPR56824, 16 July 2019), while the records give 751.
+MEMBERS_COUNT_UNKNOWN = (("2019-07-02", "2020-01-12"),)
 RULE_LABELS = {
     "votes_cast": "Majority of votes cast (abstentions are not counted)",
     "component_members": "Majority of Parliament's component Members (abstentions and absences count like votes against)",
@@ -1511,6 +1597,7 @@ class Builder:
         for v in idx:
             summ = self.ep_vote_summary(v, margin_fn)
             self.vote_summary[v.id] = summ
+        self.distinguish_vote_titles(idx)
         for v in idx:
             det = self.ep_vote_detail(v)
             self.files[f"votes/{v.id}.json"] = det
@@ -1529,7 +1616,9 @@ class Builder:
         MEPs, so the necessary majority was 360 votes" (720 seats). The count comes from the membership
         records (members_in_office) and is used only when it is plausible against the statutory number of
         seats in pipeline.analysis.ep_margin (at most that number, at least 95% of it); otherwise None, and
-        margins that need it are not computed."""
+        margins that need it are not computed. None also on the days of MEMBERS_COUNT_UNKNOWN."""
+        if any(a <= d <= b for a, b in MEMBERS_COUNT_UNKNOWN):
+            return None
         if d not in self.component_cache:
             seats_fn = _lazy("pipeline.analysis.ep_margin", "statutory_seats")
             seats = seats_fn(d) if seats_fn else None
@@ -1631,12 +1720,41 @@ class Builder:
             return display, False
         subject = vote_subject(v.subject) or english_title(v.title)
         if not subject:
-            return re.sub(r"\s+[-–]…$", "…", _truncate(v.title, VOTE_LABEL_TITLE_MAX)), True
-        # the subject already says what was voted: "Objection pursuant to Rule 114(3): …", "Motion of censure …"
-        says_it = {"objection": r"^objection\b", "censure": r"\bcensure\b"}.get(v.kind_detail or "")
+            label = english_procedural(v.title) or v.title
+            return re.sub(r"\s+[-–]…$", "…", _truncate(label, VOTE_LABEL_TITLE_MAX)), True
+        # the subject already says what was voted: "Objection pursuant to Rule 114(3): …", "Motion of censure …",
+        # "Decision to raise no objections pursuant to Rule 111(6): …"
+        says_it = {
+            "objection": r"^objection\b",
+            "censure": r"\bcensure\b",
+            "no_objection": r"\bno objections?\b|\bnot to (oppose|object)\b",
+        }.get(v.kind_detail or "")
         if says_it and re.search(says_it, subject, re.I):
             return _truncate(subject, 200), False
         return f"{_truncate(subject, 160)} — {phrase}", False
+
+    def distinguish_vote_titles(self, votes: list[EpVote]) -> None:
+        """Votes of one day that would share a display title (competing motions for a resolution, several
+        objections to one act, two motions to reject) get what tells them apart in their own label: the text
+        voted on ("motion B9-0069/2020", "joint motion RC-B9-0073/2020"), else the amendment numbers, else the
+        label's last part. One vote of the group may keep the bare title."""
+        groups: dict[tuple[str, str], list[EpVote]] = defaultdict(list)
+        for v in votes:
+            groups[(v.date, self.vote_summary[v.id]["display_title"])].append(v)
+        for (_day, title), group in groups.items():
+            if len(group) < 2:
+                continue
+            for distinction in (vote_label_document, vote_label_amendments, vote_label_last):
+                keys = [distinction(v) for v in group]
+                found = [k for k in keys if k]
+                if len(found) >= len(keys) - 1 and len(set(found)) == len(found):
+                    for v, key in zip(group, keys, strict=True):
+                        if key:
+                            summ = self.vote_summary[v.id]
+                            summ["display_title"] = f"{title} ({key})"
+                            if summ.get("display_title_parts"):
+                                summ["display_title_parts"].append([None, f" ({key})"])
+                    break
 
     def ep_vote_detail(self, v: EpVote) -> dict:
         summ = self.vote_summary[v.id]
@@ -1728,13 +1846,19 @@ class Builder:
             for k, c in sorted(countries.items())
         ]
         proc_ref = summ.get("procedure_ref")
+        reference = english_procedural(v.reference_text)
         return {
             **summ,
             # the full label, cut into French / German passages for lang attributes (None: nothing to mark)
             "title_parts": label_parts(v.title),
-            "subject": v.subject,
+            # the published subject without Parliament's procedure symbol, which subject_procedure gives in words
+            "subject": vote_subject(v.subject),
+            "subject_procedure": subject_procedure(v.subject),
             "procedure_url": f"{OEIL_PROCEDURE}{proc_ref}" if proc_ref else None,
-            "reference_text": v.reference_text,
+            # Parliament's fixed French terms in English (english_procedural); any other French text is marked
+            "reference_text": reference,
+            **({"reference_text_lang": "fr"} if reference and _french_segment(reference) else {}),
+            "majority_rule": v.majority_rule,
             "doc_ids": v.doc_ids,
             "attendees": v.attendees,
             "groups": gb,
