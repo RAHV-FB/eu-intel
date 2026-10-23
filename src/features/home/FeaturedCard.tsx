@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { FeaturedItem } from '../../types/data';
 import { BasisNote, ExtLink, StatusBadge } from '../../components/ui';
-import { formatDate } from '../../lib/format';
+import { asOfToday, formatDate } from '../../lib/format';
 import { EURLEX_CELEX, dossierPath } from '../legislation/labels';
 
 /** One editorially selected file on the homepage: what it is, where it stands, what's next. */
@@ -100,7 +100,7 @@ function NextStepText({ item }: { item: FeaturedItem }) {
   if (ns.basis === 'unknown') return <span className="meta">No next step recorded</span>;
   return (
     <>
-      {ns.text} <BasisNote basis={ns.basis} />
+      {asOfToday(ns.text, today)} <BasisNote basis={ns.basis} />
     </>
   );
 }

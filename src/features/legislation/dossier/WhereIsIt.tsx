@@ -1,6 +1,6 @@
 import type { DossierDetail, EventKind, ISODate, LifecycleStage, TimelineEvent } from '../../../types/data';
 import { ExtLink, Term, institutionLabel } from '../../../components/ui';
-import { formatDate, formatNumber } from '../../../lib/format';
+import { asOfToday, formatDate, formatNumber } from '../../../lib/format';
 import { institutionSuffix } from '../labels';
 
 interface Step {
@@ -100,7 +100,7 @@ export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
         <div>
           <dt>Next institutional step</dt>
           <dd>
-            {d.next_step.text}
+            {asOfToday(d.next_step.text, today)}
             {d.next_step.institution && <span className="meta"> ({institutionLabel(d.next_step.institution)})</span>}
             {d.next_step.basis !== 'source' && (
               <span className="meta"> — {d.next_step.basis === 'derived' ? 'derived from the stage reached' : 'not determinable from the records'}</span>

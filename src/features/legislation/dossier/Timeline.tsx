@@ -16,7 +16,7 @@ const INSTITUTION_SHORT: Record<string, string> = {
 };
 
 function EventItem({ e, today }: { e: TimelineEvent; today: ISODate }) {
-  const scheduled = e.state === 'scheduled' || e.date > today;
+  const scheduled = e.date > today; // the visitor's date: a date the build had ahead may have passed since
   const docs = e.docs ?? [];
   // Avoid repeating the same official link twice (document link and source often coincide).
   const sourceIsDoc = !!e.source && docs.some((doc) => doc.url && doc.url === e.source?.url);

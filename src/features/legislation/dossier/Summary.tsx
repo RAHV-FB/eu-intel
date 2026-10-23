@@ -1,7 +1,7 @@
 import type { ApplicationInfo, DossierDetail, ISODate, NamedAct, TimelineEvent, TranspositionDateInfo } from '../../../types/data';
 import { Link } from 'react-router-dom';
 import { BasisNote, ExtLink, SourceLink, StatusBadge, Term, institutionLabel } from '../../../components/ui';
-import { formatDate } from '../../../lib/format';
+import { asOfToday, formatDate } from '../../../lib/format';
 import { ADOPTED_STAGES, dossierPath, institutionSuffix } from '../labels';
 import { SplitLinks, splitParts } from './Split';
 
@@ -201,7 +201,7 @@ export function NextStep({ d, today }: { d: DossierDetail; today: ISODate }) {
   return (
     <>
       <p className="dz-fact__text">
-        {ns.text} <BasisNote basis={ns.basis} />
+        {asOfToday(ns.text, today)} <BasisNote basis={ns.basis} />
       </p>
       {ns.institution && <p className="meta">{institutionLabel(ns.institution)}</p>}
     </>
