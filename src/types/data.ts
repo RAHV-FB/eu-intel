@@ -318,13 +318,15 @@ export interface DossierDetail extends DossierSummary {
   acts: LegalActSummary[];
   ep_votes: EpVoteSummary[]; // votes linked to this dossier via official ids, newest first
   // Parliament's latest approval of the Council's position at second reading to which no vote is linked (no vote on the
-  // text is held at second reading; Art. 294(7)(a) TFEU): Parliament's "Approval without vote" record when it has one,
-  // whether proposals to amend or reject the position were voted, and a first-reading decision before the votes covered
+  // text as a whole is needed; Art. 294(7)(a) TFEU): Parliament's "Approval without vote" record when it has one, whether
+  // proposals to amend or reject the position, or parts of the text, were voted, and a first-reading decision before the
+  // votes covered
   ep_approval_without_vote?: {
     date: ISODate;
     record: SourceRef | null;
     amendments_voted: boolean;
     rejection_voted: boolean;
+    parts_voted: boolean; // split or separate votes on parts of the Council's position
     first_reading: ISODate | null;
   } | null;
   council_votes: CouncilVote[];

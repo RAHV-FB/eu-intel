@@ -242,12 +242,14 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   component Members, counting votes, not amendments (one vote may cover "Am 1-243": 2013/0072(COD), 21 Jan 2026),
   since votes on amendments are not listed.
 - `ep_approval_without_vote` (dossiers, build): the file's latest second-reading approval of the Council's position
-  (since the first vote listed) to which no vote is linked. At second reading Parliament votes only on proposals to
-  reject or amend the Council's position; when none is adopted the act is adopted in the wording of that position
-  (Art. 294(7)(a) TFEU), so there is no vote on the text to show. It gives Parliament's record of that decision when
+  (since the first vote listed) to which no vote is linked. When Parliament approves the Council's position or takes
+  no decision, the act is deemed adopted in the wording of that position (Art. 294(7)(a) TFEU); only a rejection or
+  amendments need a vote, so there is no vote on the text as a whole to show. It gives Parliament's record of that decision when
   the EP API has one ("Approval without vote", 10th term: 176082, 2018/0198(COD), 6 May 2025), whether proposals to
   amend (`amendments_voted`: 2017/0237(COD), 29 Apr 2021, ten amendments) or to reject (`rejection_voted`, by show
-  of hands) the position were voted on the file from one day before to two days after it, and the file's
+  of hands) the position were voted on the file from one day before to two days after it (none was adopted, or the
+  decision would not be an approval), whether split or separate votes on parts of the text were held then
+  (`parts_voted`, no outcome stated: 2018/0190(COD), 19 May 2021), and the file's
   first-reading decision when it precedes the votes covered (`first_reading`). The file's votes section says so in
   place of "No roll-call vote is matched", or under the votes listed (a first-reading vote, 2023/0288(COD)).
 - Final votes (`final_role`, build): what a final vote decides, from the type of its one linked procedure (COD

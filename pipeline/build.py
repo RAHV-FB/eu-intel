@@ -3206,9 +3206,9 @@ class Builder:
 
     def approval_without_vote(self, p: Procedure, tl: list[dict], votes: list[EpVote]) -> dict | None:
         """Parliament's latest approval of the Council's position at second reading (PLENARY_APPROVE_COUNCIL_POSITION)
-        when the timeline links no vote to it: at second reading Parliament votes only on proposals to reject or amend the
-        Council's position, and when none of them is adopted the act is adopted in the wording of that position (Art.
-        294(7)(a) TFEU), so no vote on the text is held. With Parliament's record of the approval, "Approval without vote"
+        when the timeline links no vote to it: when Parliament approves the Council's position or takes no decision, the act
+        is deemed adopted in the wording of that position (Art. 294(7)(a) TFEU); only a rejection or amendments need a vote,
+        so no vote on the text as a whole is held. With Parliament's record of the approval, "Approval without vote"
         (EP API decisions from the 10th term: 176082, 2018/0198(COD), 6 May 2025), whether proposals to amend or reject
         the position were voted on the file within DECISION_VOTE_DAYS of it (2017/0237(COD), 29 Apr 2021: 10 amendments),
         and the date of the file's first-reading decision when it precedes the votes this site covers."""
@@ -3225,8 +3225,10 @@ class Builder:
         return {
             "date": e.date,
             "record": _src(record.source) if record else None,
-            "amendments_voted": any(v.kind in ("amendment", "split_or_separate") for v in near),
+            "amendments_voted": any(v.kind == "amendment" for v in near),
             "rejection_voted": any(v.kind_detail == "reject_council_position" for v in near),
+            # split or separate votes on parts of the text, no outcome stated (2018/0190(COD), 19 May 2021: 17, adopted)
+            "parts_voted": any(v.kind == "split_or_separate" for v in near),
             "first_reading": first if first and first < self.votes_from else None,
         }
 

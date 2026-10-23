@@ -78,9 +78,9 @@ function ApprovalWithoutVote({ a }: { a: NonNullable<DossierDetail['ep_approval_
           : null;
   return (
     <p className="dz-none">
-      On {formatDate(a.date)} Parliament approved the Council’s position at second reading without a vote on the text: at second
-      reading Parliament votes only on proposals to reject or amend the Council’s position, and when none of them is adopted the act
-      is adopted in the wording of that position (Article 294(7)(a) TFEU).
+      On {formatDate(a.date)} Parliament approved the Council’s position at second reading without a vote on the text as a whole:
+      when Parliament approves the Council’s position, or takes no decision on it, the act is deemed adopted in the wording of that
+      position (Article 294(7)(a) TFEU); a vote is needed only to reject or amend it.
       {a.record && (
         <>
           {' '}
@@ -89,6 +89,7 @@ function ApprovalWithoutVote({ a }: { a: NonNullable<DossierDetail['ep_approval_
         </>
       )}
       {voted && <> {voted}; these votes are not listed here.</>}
+      {a.parts_voted && <> Split or separate votes on parts of the text were also held; these votes are not listed here.</>}
       {a.first_reading && (
         <>
           {' '}

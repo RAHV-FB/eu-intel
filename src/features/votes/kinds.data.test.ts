@@ -72,6 +72,8 @@ describe.skipIf(!built)('votes on the built data', () => {
       first_reading: '2019-02-14',
     });
     expect(dossier('2017-0237').ep_approval_without_vote?.amendments_voted).toBe(true); // ten amendments, 29 Apr 2021
+    // 17 split votes on parts of the text, adopted: not proposals to amend
+    expect(dossier('2018-0190').ep_approval_without_vote).toMatchObject({ amendments_voted: false, parts_voted: true });
     expect(dossier('2023-0288').ep_approval_without_vote?.record?.identifier).toBe('MTG-PL-2025-05-06-DEC-176084');
   });
 
