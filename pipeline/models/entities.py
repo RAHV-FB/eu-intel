@@ -175,6 +175,8 @@ class LegalAct(Model):
     # Further dates recorded by Cellar as entry-into-force/application of provisions, ascending.
     # Cellar does not say which provisions; label them neutrally in the UI.
     other_application_dates: list[str] = Field(default_factory=list)
+    # those of other_application_dates that Cellar marks as partial application (MA/PART, PE/PART)
+    partial_application_dates: list[str] = Field(default_factory=list)
     end_of_validity: str | None = None  # None if open-ended (Cellar "9999-12-31")
     in_force: bool | None = None
     transposition_deadlines: list[str] = Field(default_factory=list)  # directives only: every value

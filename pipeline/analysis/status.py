@@ -115,6 +115,7 @@ class Application(_M):
     entry_into_force: str | None = None
     entry_into_force_pending: bool = False  # EUR-Lex: takes effect on a condition not yet recorded
     application_dates: list[str] = Field(default_factory=list)
+    partial_application_dates: list[str] = Field(default_factory=list)  # only some provisions apply from
     transposition_deadlines: list[str] = Field(default_factory=list)  # directives: deadlines only
     transposition: list[TranspositionDateInfo] = Field(default_factory=list)  # directives: every date
     future: bool = False  # any of the above dates is after `today`
@@ -216,6 +217,7 @@ def application_of(acts: list[LegalAct], today: date) -> Application | None:
         entry_into_force=eif,
         entry_into_force_pending=not eif and any(a.entry_into_force_pending for a in acts),
         application_dates=app,
+        partial_application_dates=sorted({d for a in acts for d in a.partial_application_dates if d in app}),
         transposition_deadlines=[x.date for x in tr if x.kind != "application"],
         transposition=tr,
         future=future,
@@ -702,7 +704,10 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
             )
             pending = [d for d in (app.application_dates if app else []) if d > t]
             if pending:
-                parts.append(f"Later application date(s) recorded in EUR-Lex: {_join_dates(pending)}.")
+                parts.append(
+                    f"Later date{'s' if len(pending) > 1 else ''} from which (parts of) the act apply: "
+                    f"{_join_dates(pending)}."
+                )
                 basis = "source"
             return NextStep(text=" ".join(parts), basis=basis)
         if act.act_type == "decision":

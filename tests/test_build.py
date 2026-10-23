@@ -472,3 +472,57 @@ def test_court_ruling_wording_never_overstates_scope():
     assert (
         inv["kind_label"] == "Preliminary ruling on validity" and "declared the act invalid" in inv["summary"]
     )
+
+
+def test_curated_act_dates_replace_cellar_dates(tmp_path: Path):
+    """data/curated/act_dates.yaml: dates checked against the act's text replace Cellar's in the build."""
+    cur = tmp_path / "curated"
+    shutil.copytree(FIX / "curated", cur)
+    (cur / "act_dates.yaml").write_text(
+        """
+- celex: "32099R0001"
+  reason: "Cellar records 1 June 2025; Article 99 sets 1 June 2026."
+  application:
+    - {date: "2026-06-01", partial: false, provisions: "The Regulation in general (Art. 99(2))"}
+    - {date: "2027-01-01", partial: true, provisions: "Article 5 (Art. 99(3))"}
+  sources:
+    - {label: "Regulation 2099/1, Article 99", url: "https://eur-lex.europa.eu/eli/reg/2099/1/oj"}
+  reviewed: "2026-10-01"
+- celex: "32099L0003"
+  application:
+    - {date: 2026-01-01}
+""",
+        encoding="utf-8",
+    )
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    o = tmp_path / "public"
+    assert build(out=o, snapshot=tmp_path / "snapshot", curated=cur, state=tmp_path / "state", today=TODAY) == 0
+    d = load(o, "dossiers/2099-0001.json")
+    app = d["application"]
+    assert app["application_dates"] == ["2026-06-01", "2027-01-01"]
+    assert app["partial_application_dates"] == ["2027-01-01"]
+    assert [(x["date"], x["partial"]) for x in app["application_detail"]] == [("2026-06-01", False), ("2027-01-01", True)]
+    assert app["dates_note"]["reason"].startswith("Cellar records 1 June 2025")
+    titles = {e["date"]: (e["title"], e["docs"][0]["label"]) for e in d["timeline"] if e["kind"] == "application"}
+    assert titles["2026-06-01"] == ("Started to apply: The Regulation in general (Art. 99(2))", "Regulation 2099/1, Article 99")
+    assert titles["2027-01-01"][0] == "Starts to apply: Article 5 (Art. 99(3))"
+    assert "2025-06-01" not in titles
+    # an entry with an unquoted (non-string) date is ignored whole
+    assert load(o, "dossiers/2099-0003.json")["application"].get("application_detail") in (None, [])
+
+
+def test_act_number_from_title():
+    from pipeline.build import act_number
+    from pipeline.models.entities import LegalAct
+
+    def a(title: str) -> LegalAct:
+        return LegalAct(celex="32026R1744", act_type="regulation", title=title, eurlex_url="u",
+                        source={"institution": "EUR-Lex", "url": "u", "retrieved_at": "2026-10-22T00:00:00Z"})  # fmt: skip
+
+    assert act_number(a("Regulation (EU) 2026/1744 of the European Parliament and of the Council of 8 July 2026")) == (
+        "Regulation (EU) 2026/1744"
+    )
+    assert act_number(a("Council Decision (EU, Euratom) 2018/994 of 13 July 2018 amending")) == (
+        "Council Decision (EU, Euratom) 2018/994"
+    )
+    assert act_number(a("Something else")) == "32026R1744"

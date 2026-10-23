@@ -193,6 +193,9 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
     votes = {v.id: v for v in data.get(("ep_votes", "votes"), [])}
     ballots = data.get(("ep_votes", "ballots"), [])
     acts = {a.celex: a for a in data.get(("eurlex", "acts"), [])}
+    from pipeline.build import load_act_dates  # curated, checked corrections of act dates
+
+    act_dates = load_act_dates()
 
     # people
     for m in meps.values():
@@ -273,6 +276,15 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
             )
         if a.other_application_dates != sorted(a.other_application_dates):
             rep.warn("date-order", f"{a.celex}: other_application_dates not ascending")
+        # Retroactive application exists (e.g. from 1 January of a budget year), but a date a year or
+        # more before the act is more often a Cellar error (DSA: 2022-02-17 for 2024-02-17): check the
+        # act's text and, if wrong, correct it in data/curated/act_dates.yaml.
+        signed = a.date_signature or a.date_document
+        if signed and a.celex not in act_dates:
+            for d in a.other_application_dates:
+                if d < f"{int(signed[:4]) - 1}{signed[4:]}":
+                    rep.warn("application-before-act", f"{a.celex}: applies from {d}, a year or more before "
+                             f"the act ({signed}); check the act's text")  # fmt: skip
         for r in a.procedure_refs:
             rm = REF_RE.match(r)
             if not rm:

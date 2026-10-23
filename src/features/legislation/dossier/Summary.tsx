@@ -51,8 +51,19 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
       items: [],
       text: 'Not yet: EUR-Lex records no date. The act takes effect once a condition it sets is met.',
     });
-  if (app.application_dates.length)
-    rows.push({ label: app.application_dates.length > 1 ? 'Rules apply (in phases) from' : 'Rules apply from', items: plain(app.application_dates) });
+  if (app.application_detail?.length) {
+    const general = app.application_detail.filter((x) => !x.partial);
+    const partial = app.application_detail.filter((x) => x.partial);
+    const items = (xs: typeof general) => xs.map((x) => ({ date: x.date, note: x.provisions ?? undefined }));
+    if (general.length) rows.push({ label: 'Rules apply from', items: items(general) });
+    if (partial.length) rows.push({ label: 'Some provisions apply from', items: items(partial) });
+  } else if (app.application_dates.length) {
+    const partialSet = new Set(app.partial_application_dates ?? []);
+    const general = app.application_dates.filter((d) => !partialSet.has(d));
+    const partial = app.application_dates.filter((d) => partialSet.has(d));
+    if (general.length) rows.push({ label: general.length > 1 ? 'Rules apply (in phases) from' : 'Rules apply from', items: plain(general) });
+    if (partial.length) rows.push({ label: 'Some provisions apply from', items: plain(partial) });
+  }
   const tr = transpositionDates(app);
   const general = tr.filter((x) => x.kind === 'deadline');
   const further = tr.filter((x) => x.kind === 'further_deadline');
@@ -93,6 +104,18 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
         </div>
       ))}
     </dl>
+    {app.dates_note && (
+      <p className="dz-dates__note meta">
+        <strong>Dates checked against the act’s text.</strong> {app.dates_note.reason}{' '}
+        {app.dates_note.sources.map((s, i) => (
+          <span key={s.url}>
+            {i > 0 && ' · '}
+            <ExtLink href={s.url}>{s.label}</ExtLink>
+          </span>
+        ))}
+        {app.dates_note.reviewed && <> (checked {formatDate(app.dates_note.reviewed)})</>}
+      </p>
+    )}
     {(further.length > 0 || applies.length > 0) && (
       <p className="dz-dates__note meta">
         Transposition dates as recorded by EUR-Lex, with the article that sets each one. The directive’s text says which
@@ -148,6 +171,13 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
   const ed = d.editorial;
   const latest = latestDone(d.timeline, today);
   const adopted = ADOPTED_STAGES.has(d.stage);
+  const amendedBy = d.related.filter((r) => r.relation === 'Amended by');
+  const amendedLinks = amendedBy.slice(0, 3).map((r, i) => (
+    <span key={r.id}>
+      {i > 0 && ', '}
+      {/^\d{4}-\d{4}/.test(r.id) ? <Link to={dossierPath(r.id)}>{r.title}</Link> : r.title}
+    </span>
+  ));
 
   return (
     <section className="dz-summary" aria-labelledby="summary-title">
@@ -203,6 +233,12 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
               {d.status.explanation} <BasisNote basis={d.status.basis} />
             </p>
             {d.status.since && <p className="meta">Since {formatDate(d.status.since)}</p>}
+            {adopted && amendedBy.length > 0 && (
+              <p className="meta">
+                Amended since by {amendedLinks}
+                {amendedBy.length > 3 && <> and {amendedBy.length - 3} more</>}.
+              </p>
+            )}
           </dd>
         </div>
         <div className="dz-fact">
@@ -238,20 +274,10 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
         <div className="dz-block dz-when">
           <h3 className="dz-label">When it applies</h3>
           <KeyDates app={d.application} today={today} instrument={d.instrument} />
-          {d.related.some((r) => r.relation === 'Amended by') && (
+          {amendedBy.length > 0 && !d.application.dates_note && (
             <p className="meta dz-amended-note">
-              This act has since been amended (see{' '}
-              {d.related
-                .filter((r) => r.relation === 'Amended by')
-                .slice(0, 3)
-                .map((r, i) => (
-                  <span key={r.id}>
-                    {i > 0 && ', '}
-                    {/^\d{4}-\d{4}/.test(r.id) ? <Link to={dossierPath(r.id)}>{r.title}</Link> : r.title}
-                  </span>
-                ))}
-              ). The dates above are those EUR-Lex records for the act as first adopted; amendments may have
-              changed some of them.
+              This act has since been amended (see {amendedLinks}). The dates above are those EUR-Lex currently records
+              for it; they may not yet reflect every change made by the amending acts.
             </p>
           )}
         </div>

@@ -172,6 +172,9 @@ export interface ApplicationInfo {
   entry_into_force?: ISODate | null;
   entry_into_force_pending?: boolean; // EUR-Lex gives no entry-into-force date: the act takes effect on a condition not yet met
   application_dates: ISODate[]; // further dates recorded by EUR-Lex for (parts of) the act
+  partial_application_dates?: ISODate[]; // those of application_dates from which only some provisions apply
+  application_detail?: { date: ISODate; partial: boolean; provisions?: string | null }[]; // checked against the act's text
+  dates_note?: { reason: string; sources: { label: string; url: string }[]; reviewed?: ISODate | null } | null; // why dates were corrected
   transposition_deadlines: ISODate[]; // directives only: deadlines to transpose (general and further), not application dates
   transposition?: TranspositionDateInfo[]; // directives only: every recorded date, classified
   future: boolean; // true if any of the above lies in the future

@@ -54,8 +54,8 @@
   "status": "partial"
  },
  "eurlex": {
-  "attempted_at": "2026-10-23T02:11:10Z",
-  "fetched_at": "2026-10-23T02:11:59Z",
+  "attempted_at": "2026-10-23T02:19:24Z",
+  "fetched_at": "2026-10-23T02:19:30Z",
   "note": "1248 acts in scope (COD/CNS/APP procedures, date >= 2014-01-01); 24 featured; 22 more recorded by OEIL as final acts of procedures in the EP snapshot; 1249 with procedure reference",
   "records": {
    "acts": 1270

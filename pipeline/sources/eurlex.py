@@ -34,7 +34,8 @@ Source facts relied on (checked against the live endpoint, see tests/test_eurlex
   (decisions taking effect on notification), MA / MA/PART / APPLICATION = (partial) application.
   The earliest value is often NOT the entry into force (retroactive application dates, and the
   placeholder 1001-01-01), so entry_into_force is the EV date (else PE); other values become
-  other_application_dates. Values without any annotation fall back to "earliest".
+  other_application_dates, and those marked MA/PART or PE/PART (application of some provisions; in
+  the type or in the comment_on_date annotation) are also listed in partial_application_dates. Values without any annotation fall back to "earliest".
 - 1001-01-01 (unknown/undetermined) and 9999-12-31 (open-ended) are Cellar placeholder dates.
 - Publication: acts in the act-by-act OJ (from Oct 2023) carry `official-journal-act_*`
   properties on the work; older acts link to an OJ issue via
@@ -357,11 +358,12 @@ def oj_query(works: list[str]) -> str:
 def eif_types_query(works: list[str]) -> str:
     return (
         PREFIXES
-        + f"""SELECT ?w ?d ?type WHERE {{ {_values(works)}
+        + f"""SELECT ?w ?d ?type ?comment WHERE {{ {_values(works)}
   ?ax owl:annotatedSource ?w ;
       owl:annotatedProperty cdm:resource_legal_date_entry-into-force ;
       owl:annotatedTarget ?d ;
       ann:type_of_date ?type .
+  OPTIONAL {{ ?ax ann:comment_on_date ?comment }}
 }}"""
     )
 
@@ -493,6 +495,10 @@ def add_eif_types(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
         d = _date(r["d"])
         if d:
             facts[r["w"]].eif_types[d].add(_annotation_code(r["type"]))
+            # partial application is sometimes only in the comment: type MA, comment "{MA/PART|...} ..."
+            for code in ANNOTATION_CODE_RE.findall(r.get("comment") or ""):
+                if code.endswith("/PART"):
+                    facts[r["w"]].eif_types[d].add(code)
 
 
 def add_transposition_notes(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
@@ -724,6 +730,7 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
     act_type = act_type_for(_one(p.get("resource_type", set())), celex)
     eif, other_dates = split_eif(p.get("eif", set()), f.eif_types)
     eif_pending = eif is None and any(_date(v) == UNKNOWN_DATE for v in p.get("eif", set()))
+    partial = [d for d in other_dates if any(c.endswith("/PART") for c in f.eif_types.get(d, ()))]
     eov_values = {d for v in p.get("end_of_validity", set()) if (d := _date(v))}
     end_of_validity = None if not eov_values or OPEN_END in eov_values else max(eov_values)
     in_force_raw = _one(p.get("in_force", set()))
@@ -747,6 +754,7 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         entry_into_force=eif,
         entry_into_force_pending=eif_pending,
         other_application_dates=other_dates,
+        partial_application_dates=partial,
         end_of_validity=end_of_validity,
         in_force=in_force,
         transposition_deadlines=transposition,

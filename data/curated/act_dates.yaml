@@ -1,0 +1,92 @@
+# Corrections to the dates EUR-Lex (Cellar) records for an act, checked against the act's own text.
+#
+# Cellar's date metadata is usually right, but a few values are wrong (e.g. a wrong year) and Cellar
+# does not always update a base act's dates after an amending act changes them. Each entry replaces,
+# in the build only, the dates of one act; the snapshot keeps the source values. Every date must cite
+# the provision that sets it, and the entry the text it was checked against.
+#
+# Fields:
+#   celex             the act (sector-3 base CELEX)
+#   entry_into_force  optional; replaces Cellar's entry-into-force date
+#   application       optional; replaces Cellar's further application dates. Each item:
+#                       date, provisions (plain description with the article), partial (true when
+#                       only some provisions apply from that date)
+#   reason            one or two sentences, shown on the page
+#   sources           [{label, url}] the official texts checked
+#   reviewed          date of the last check
+#
+# Last full review: 2026-10-23.
+
+- celex: "32022R2065"  # Digital Services Act
+  reason: >-
+    EUR-Lex records an application date of 17 February 2022, which is not in the Regulation. Article 93(2)
+    sets 17 February 2024 for the Regulation in general and 16 November 2022 (its entry into force) for
+    the provisions it lists.
+  application:
+    - date: "2022-11-16"
+      partial: true
+      provisions: >-
+        Art. 24(2), (3) and (6), Art. 33(3) to (6), Art. 37(7), Art. 40(13), Art. 43 and Sections 4, 5
+        and 6 of Chapter IV (Art. 93(2))
+    - date: "2024-02-17"
+      partial: false
+      provisions: "The Regulation in general (Art. 93(2))"
+  sources:
+    - {label: "Regulation (EU) 2022/2065, Article 93", url: "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32024R1689"  # AI Act
+  reason: >-
+    Regulation (EU) 2026/1744 (Digital Omnibus on AI), in force since 27 July 2026, amended Article 113:
+    it moved the high-risk rules to 2 December 2027 and 2 August 2028 and added new dates. EUR-Lex still
+    records the dates as first adopted, including 2 August 2027, which no longer applies.
+  application:
+    - date: "2025-02-02"
+      partial: true
+      provisions: "Chapters I and II (Art. 113(3)(a))"
+    - date: "2025-08-02"
+      partial: true
+      provisions: "Chapter III Section 4, Chapters V, VII and XII and Art. 78, except Art. 101 (Art. 113(3)(b))"
+    - date: "2026-07-27"
+      partial: true
+      provisions: "Articles 102 to 110 (Art. 113(3)(d), added by Regulation (EU) 2026/1744)"
+    - date: "2026-08-02"
+      partial: false
+      provisions: "The Regulation in general (Art. 113)"
+    - date: "2026-12-02"
+      partial: true
+      provisions: >-
+        The prohibitions added to Art. 5(1), first subparagraph, points (ba) and (bb), and Art. 5(1a) and
+        (1b) (Art. 113(3)(a) as amended by Regulation (EU) 2026/1744)
+    - date: "2027-12-02"
+      partial: true
+      provisions: >-
+        Chapter III Sections 1 to 3 for high-risk AI systems under Art. 6(2) and Annex III (Art. 113(3)(c)(i)
+        as amended)
+    - date: "2028-08-02"
+      partial: true
+      provisions: >-
+        Chapter III Sections 1 to 3 for high-risk AI systems under Art. 6(1) and Annex I (Art. 113(3)(c)(ii)
+        as amended)
+  sources:
+    - {label: "Regulation (EU) 2024/1689, Article 113", url: "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"}
+    - {label: "Regulation (EU) 2026/1744, Article 1, point (40)", url: "https://eur-lex.europa.eu/eli/reg/2026/1744/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32026R2280"  # Return Regulation
+  reason: >-
+    EUR-Lex records entry into force on 15 October 2026, the day of publication. Article 50(1) provides for
+    entry into force on the day following publication, i.e. 16 October 2026.
+  entry_into_force: "2026-10-16"
+  application:
+    - date: "2026-10-16"
+      partial: true
+      provisions: >-
+        Art. 1, Art. 2(1) to (3), Art. 3, point (3), Art. 4, Art. 5(13) and (15), and Arts 14, 15, 16, 34,
+        35, 41, 43, 47, 48 and 49 (Art. 50(2))
+    - date: "2027-10-17"
+      partial: false
+      provisions: "The remaining provisions (Art. 50(3))"
+  sources:
+    - {label: "Regulation (EU) 2026/2280, Article 50", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2280"}
+  reviewed: "2026-10-23"
