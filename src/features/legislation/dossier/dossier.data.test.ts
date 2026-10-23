@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { DossierDetail, TimelineEvent } from '../../../types/data';
 import { latestDone } from './Summary';
+import { rapporteurRoleLabel } from '../../people/labels';
 
 const DATA = new URL('../../../../public/data/', import.meta.url);
 const built = existsSync(new URL('dossiers/index.json', DATA));
@@ -80,5 +81,38 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     expect(committee('2025-0045', '204332')).toBe('AFET'); // EP API DROI; OEIL: AFET, ANDREWS Barry
     expect(all.find((d) => d.id === '2023-0187')!.rapporteurs.filter((r) => r.role === 'rapporteur').map((r) => r.committee)).toEqual(['ECON']);
     for (const d of all) for (const r of d.rapporteurs) expect(r.committee, `${d.id} ${r.mep_id}`).not.toBe('null');
+  });
+
+  it('calls a file joint only when two committees lead it now, and labels earlier-term roles former', () => {
+    for (const d of all) {
+      const joint = new Set(d.committees.filter((c) => c.role === 'joint' && !c.former).map((c) => c.code));
+      expect(joint.size === 0 || joint.size > 1, d.id).toBe(true);
+    }
+    const roles = (id: string) => all.find((d) => d.id === id)!.committees.map((c) => [c.code, c.role, !!c.former]);
+    expect(roles('2023-0226')).toEqual([['ENVI', 'responsible', false], ['AGRI', 'opinion', true]]); // MHE-ENVI and MAIN-ENVI
+    expect(roles('2023-0131').slice(0, 2)).toEqual([['SANT', 'responsible', false], ['ENVI', 'responsible', true]]);
+    expect(roles('2013-0072').slice(0, 2)).toEqual([['LEGI', 'responsible', false], ['TRAN', 'responsible', true]]);
+    expect(rapporteurRoleLabel('rapporteur', 'TRAN', true)).toBe('Former rapporteur (TRAN)');
+    expect(rapporteurRoleLabel('shadow', null)).toBe('Shadow rapporteur');
+    const shadows = all.find((d) => d.id === '2025-0313')!.rapporteurs.filter((r) => r.role === 'shadow');
+    expect(shadows.map((r) => r.group_code).sort()).toEqual(['ECR', 'Greens/EFA', 'PfE', 'Renew', 'The Left']); // OEIL's key players
+  });
+
+  it('shows on a joint debate this file’s documents only, and names the other files', () => {
+    const reports = new Map(all.map((d) => [d.id, new Set(d.documents.filter((x) => x.kind === 'report').map((x) => x.id))]));
+    let joint = 0;
+    for (const d of all)
+      for (const e of d.timeline.filter((x) => x.kind === 'plenary_debate')) {
+        const others = e.docs.filter((x) => /^A-/.test(x.id) && !reports.get(d.id)!.has(x.id));
+        expect(others.map((x) => x.id), `${d.id} ${e.id}`).toEqual([]);
+        if (e.joint_with?.length) joint += 1;
+        expect(e.title === 'Joint debate in Parliament', `${d.id} ${e.id}`).toBe(!!e.joint_with?.length);
+      }
+    expect(joint).toBeGreaterThan(100);
+    const step = all.find((d) => d.id === '2023-0112')!.timeline.find((e) => e.id === 'MTG-PL-2026-03-25-PVCRE-ITM-15')!;
+    expect(step.joint_with!.map((j) => [j.ref, j.report?.label])).toEqual([
+      ['2023/0111(COD)', 'A10-0067/2026'],
+      ['2023/0115(COD)', 'A10-0065/2026'],
+    ]);
   });
 });

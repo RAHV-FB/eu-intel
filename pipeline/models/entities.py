@@ -105,6 +105,8 @@ class CommitteeRole(Model):
     code: str  # "ENVI"
     name: str | None = None
     role: Literal["responsible", "opinion", "joint", "other"] = "responsible"
+    # in that role in an earlier parliamentary term only (OEIL "Former committee responsible"); written only when true
+    former: bool = Field(default=False, exclude_if=lambda v: not v)
 
 
 class Rapporteur(Model):
@@ -115,6 +117,9 @@ class Rapporteur(Model):
     role: Literal["rapporteur", "shadow", "opinion_rapporteur", "shadow_opinion"] = "rapporteur"
     date: str | None = None  # EP API participation activity_date (the appointment); latest if several
     group: str | None = None  # political group printed next to the name in the OEIL file, e.g. "The Left"
+    # an appointment of an earlier parliamentary term (OEIL "Former rapporteur", or an EP API participation of an
+    # earlier term than the file's latest ones); written only when true
+    former: bool = Field(default=False, exclude_if=lambda v: not v)
 
 
 class Procedure(Model):

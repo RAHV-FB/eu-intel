@@ -456,6 +456,47 @@ def test_featured_card_names_amending_acts_the_timeline_cannot_date():
 
 
 # ------------------------------------------------------------------- Parliament's decisions in the timeline
+def test_steps_of_one_day_are_kept_apart_unless_they_record_the_same_step():
+    # 2025/0545(COD): the EP API records 10 committee opinions, FEMM's of 14 July 2026 (FEMM-AD-786992) on the day of
+    # AGRI's, REGI's of 1 September on the day of ITRE's and TRAN's of 2 September on the day of EMPL's
+    me = SimpleNamespace(indexed_vote_ids=set(), council_of={}, today="2026-10-23")
+    p = procs("2025-0545")["2025-0545"]
+    opinions = [(e["date"], e["detail"]) for e in Builder.timeline(me, p, [], []) if e["kind"] == "committee_opinion"]  # type: ignore[arg-type]
+    assert len(opinions) == 10
+    assert {("2026-07-14", "Committee: AGRI"), ("2026-07-14", "Committee: FEMM"), ("2026-09-01", "Committee: REGI"),
+            ("2026-09-02", "Committee: TRAN")} <= set(opinions)  # fmt: skip
+    # 2016/0131(COD), 7 Oct 2021: EP items 3 "European Union Agency for Asylum ***I (debate)" and 5 "(continuation of
+    # debate)" are one debate: one step, with the verbatim report and minutes of both items
+    p = procs("2016-0131")["2016-0131"]
+    day = [e for e in Builder.timeline(me, p, [], []) if e["date"] == "2021-10-07" and e["kind"] == "plenary_debate"]  # type: ignore[arg-type]
+    assert len(day) == 1
+    assert {"CRE-9-2021-10-07-ITM-003", "CRE-9-2021-10-07-ITM-005", "A-8-2016-0392"} <= {d["id"] for d in day[0]["docs"]}
+
+
+def test_a_joint_debate_names_the_other_files_and_keeps_this_files_documents():
+    # EP item MTG-PL-2026-03-25-PVCRE-ITM-15, "Deposit protection and early intervention measures (joint debate)",
+    # cites A10-0067/2026 (2023/0111(COD)), A10-0065/2026 (2023/0115(COD)) and A10-0066/2026 (2023/0112(COD)), with
+    # their registered texts; OEIL's 2023/0112(COD) shows "Debate in Parliament" with none of the others
+    ps = procs("2023-0111", "2023-0112", "2023-0115")
+    me = SimpleNamespace(indexed_vote_ids=set(), council_of={}, today="2026-10-23", procedures=list(ps.values()), proc=ps,
+                         curated_of={})  # fmt: skip
+    me.dossier_title = lambda p: Builder.dossier_title(me, p)  # type: ignore[arg-type]
+    Builder.index_file_documents(me)  # type: ignore[arg-type]
+    tl = Builder.joint_debates(me, ps["2023-0112"], Builder.timeline(me, ps["2023-0112"], [], []))  # type: ignore[arg-type]
+    step = next(e for e in tl if e["id"] == "MTG-PL-2026-03-25-PVCRE-ITM-15")
+    assert step["title"] == "Joint debate in Parliament"
+    assert [d["id"] for d in step["docs"]] == ["A-10-2026-0066", "CRE-10-2026-03-25-ITM-015", "PV-10-2026-03-25-ITM-015"]
+    assert [(j["id"], j["report"]["label"]) for j in step["joint_with"]] == [
+        ("2023-0111", "A10-0067/2026"), ("2023-0115", "A10-0065/2026")]  # fmt: skip
+    # a debate of this file alone is left as it is (2016/0131(COD), 7 Oct 2021: its report A8-0392/2016 and C8-0174/2016)
+    p = procs("2016-0131")["2016-0131"]
+    me.procedures, me.proc = [*ps.values(), p], {**ps, p.id: p}
+    Builder.index_file_documents(me)  # type: ignore[arg-type]
+    day = [e for e in Builder.joint_debates(me, p, Builder.timeline(me, p, [], [])) if e["date"] == "2021-10-07"]  # type: ignore[arg-type]
+    assert [(e["title"], "joint_with" in e) for e in day if e["kind"] == "plenary_debate"] == [("Debate in Parliament", False)]
+    assert "C-8-2016-0174" in {d["id"] for e in day for d in e["docs"]}
+
+
 def test_first_reading_decision_whose_final_vote_was_rejected():
     # 2025/0429(COD), 26 Mar 2026: "Commission proposal" REJECTED 228-311-92 (EP API DEC-189270); OEIL summary
     # of T10-0095/2026: "the European Parliament rejected the proposal". 9 Jul 2026: two motions to reject the
@@ -1185,7 +1226,7 @@ def test_trilogue_tabling_and_second_reading_steps_follow_the_decision_they_depe
     # 2025/0359(COD), 26 Mar 2026: after the referral back to committee to negotiate; 2024/0071(COD), 16 Jun 2025:
     # the agreed text tabled for the plenary after the committee approved it; 2018/0136(COD), 14 Dec 2020: the
     # Council's first-reading position (ST 14020/20, written procedure), then the second-reading referral and the
-    # committee's recommendation
+    # committee's recommendation, adopted and tabled
     p = procs("2025-0132", "2025-0359", "2024-0071", "2018-0136")
     cv = council("ST-14020-2020")["ST-14020-2020"]
     me = stand_in(council_of={"2018-0136": [council_rec(cv)]})
@@ -1205,6 +1246,7 @@ def test_trilogue_tabling_and_second_reading_steps_follow_the_decision_they_depe
         "Council adopted its position at first reading (written procedure)",
         "Announced in Parliament and referred to committee (second reading)",
         "Parliament committee adopted its recommendation for second reading",
+        "Committee recommendation for second reading tabled for the plenary",  # OEIL's key event, A9-0262/2020
     ]
 
 

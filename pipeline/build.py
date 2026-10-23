@@ -635,6 +635,8 @@ DAY_ORDER = {k: i for i, k in enumerate((
 # ST 14020/20, then the referral and the committee's recommendation for second reading)
 TRILOGUE_TITLE = "Negotiation meeting with the Council (trilogue)"
 TABLED_RE = re.compile(r"\btabled for the plenary$")
+SITTING_RECORD_RE = re.compile(r"(?:CRE|PV)-")  # the sitting's verbatim report and minutes (EP document ids)
+EP_REPORT_ID_RE = re.compile(r"A-\d+-\d{4}-\d{4}")  # a committee report (EP document id A-10-2026-0067)
 SECOND_READING_RE = re.compile(r"(?<!early )\bsecond[ -]reading\b")
 
 
@@ -643,10 +645,10 @@ def day_rank(x: dict, position_days: set[str]) -> tuple[int, int]:
     rank = DAY_ORDER.get(x["kind"], 99)
     if x["kind"] == "other" and x["title"] == TRILOGUE_TITLE:
         return DAY_ORDER["ep_position"], 1
+    if x["date"] in position_days and rank < DAY_ORDER["council_position"] and SECOND_READING_RE.search(x["title"]):
+        return DAY_ORDER["council_position"], 1 + rank  # (also a recommendation tabled that day: 2018/0136(COD))
     if x["kind"] == "other" and TABLED_RE.search(x["title"]):
         return DAY_ORDER["provisional_agreement"], 1
-    if x["date"] in position_days and rank < DAY_ORDER["council_position"] and SECOND_READING_RE.search(x["title"]):
-        return DAY_ORDER["council_position"], 1 + rank
     return rank, 0
 
 
@@ -2009,6 +2011,7 @@ class Builder:
             out.append({
                 "mep_id": r.mep_id, "name": r.name, "group": slug, "group_code": code,
                 "country": m.country if m else None, "role": r.role, "committee": r.committee,
+                **({"former": True} if r.former else {}),
             })  # fmt: skip
         return out
 
@@ -2928,16 +2931,24 @@ class Builder:
         joint_acts = [a for a in acts if JOINT_ACT_RE.match(a.title or "") and (a.date_signature or a.date_document)]
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
-        seen_ev: set[tuple[str, str, str]] = set()
+        # (kind, date, title, detail) -> the day's steps so far: position in `out`, documents other than the sitting's
+        # records. Two records of one step are shown once, with the documents of both: a debate continued later in the
+        # sitting (2016/0131(COD), 7 Oct 2021, items 3 "(debate)" and 5 "(continuation of debate)"), or two
+        # announcements of voting results; steps of different committees or documents stay apart (2025/0545(COD),
+        # 14 Jul 2026: the opinions of AGRI and FEMM)
+        seen_ev: dict[tuple[str, str, str, str | None], list[tuple[int, set[str]]]] = defaultdict(list)
         negotiation: list[int] = []  # positions in `out` of Parliament's decisions on negotiations
         urgency_at: dict[str, int] = {}  # day -> position in `out` of Parliament's vote on urgent procedure
         for e in p.events:
             if e.date > self.today:  # forecasts are not legally fixed dates
                 continue
             kind = e.kind.value
-            if (kind, e.date, e.title) in seen_ev:  # same step recorded by two EP sources (API and OEIL)
+            papers = {d.id for d in e.docs if not SITTING_RECORD_RE.match(d.id)}
+            same = seen_ev[(kind, e.date, e.title, e.detail)]
+            if (twin := next((i for i, ids in same if ids & papers or not (ids or papers)), None)) is not None:
+                x = out[twin]
+                x["docs"] += [d.model_dump(mode="json") for d in e.docs if d.id not in {y["id"] for y in x["docs"]}]
                 continue
-            seen_ev.add((kind, e.date, e.title))
             # the announcement in plenary of a committee's decision to negotiate is a procedural step, not a decision
             title, key = e.title, kind in KEY_KINDS and not (e.raw_type or "").startswith(MANDATE_ANNOUNCED)
             if e.institution == "Council" and kind == "council_position" and title == OEIL_POSITION_PUBLISHED:
@@ -3032,6 +3043,7 @@ class Builder:
                 "institution": inst, "state": "done", "key": key,
                 "docs": [d.model_dump(mode="json") for d in e.docs], "source": src, "vote_id": vote_id,
             })  # fmt: skip
+            same.append((len(out) - 1, papers))
             seen.add((kind, when))
         # Parliament's confirmation of the committee's decision to negotiate: the vote on that decision, unless another
         # event of the same day already links it. A referral back to committee for negotiations is a decision of its
@@ -3166,6 +3178,42 @@ class Builder:
         positions = {x["date"] for x in out if x["kind"] == "council_position"}
         out.sort(key=lambda x: (x["date"], x["state"] == "scheduled", *day_rank(x, positions), x["id"]))
         return out
+
+    def index_file_documents(self) -> None:
+        """Which files' own records list each EP document: among their documents or on a step other than a debate
+        (a joint debate cites the documents of every file debated), the sitting's records left out."""
+        self.files_of_doc: dict[str, set[str]] = defaultdict(set)
+        self.docs_of_file: dict[str, set[str]] = {}
+        for p in self.procedures:
+            ids = {d.id for d in p.documents} | {
+                d.id for e in p.events if not (e.raw_type or "").endswith("/PLENARY_DEBATE") for d in e.docs}  # fmt: skip
+            self.docs_of_file[p.id] = {i for i in ids if not SITTING_RECORD_RE.match(i)}
+            for i in self.docs_of_file[p.id]:
+                self.files_of_doc[i].add(p.id)
+
+    def joint_debates(self, p: Procedure, tl: list[dict]) -> list[dict]:
+        """A debate whose item cites another file's documents, or a report no file in our data lists, was a joint
+        debate (the EP's item 15 of 25 March 2026, "Deposit protection and early intervention measures (joint debate)",
+        cites the reports of 2023/0111, 2023/0112 and 2023/0115(COD)). Its step keeps this file's documents and the
+        sitting's records, and names the other files (`joint_with`): each file in our data with its report on the item,
+        and each report of a file that is not, as OEIL's own procedure file shows the debate without them."""
+        mine = self.docs_of_file.get(p.id, set())
+        for x in tl:
+            if x["kind"] != "plenary_debate":
+                continue
+            others = [d for d in x["docs"] if not SITTING_RECORD_RE.match(d["id"]) and d["id"] not in mine]
+            files = sorted({f for d in others for f in self.files_of_doc.get(d["id"], ()) if f != p.id})
+            unlisted = [d for d in others if not self.files_of_doc.get(d["id"]) and EP_REPORT_ID_RE.fullmatch(d["id"])]
+            if not files and not unlisted:
+                continue
+            x["title"] = "Joint debate in Parliament"
+            x["docs"] = [d for d in x["docs"] if SITTING_RECORD_RE.match(d["id"]) or d["id"] in mine]
+            x["joint_with"] = [{
+                "id": f, "ref": self.proc[f].reference, "title": _truncate(self.dossier_title(self.proc[f]), 160),
+                "report": next((d for d in others if EP_REPORT_ID_RE.fullmatch(d["id"])
+                                and f in self.files_of_doc.get(d["id"], ())), None),
+            } for f in files] + [{"id": None, "ref": None, "title": None, "report": d} for d in unlisted]  # fmt: skip
+        return tl
 
     def act_summary(self, a: LegalAct) -> dict:
         return {
@@ -3540,6 +3588,7 @@ class Builder:
         relevant = _lazy("pipeline.analysis.status", "relevant_acts")
         self.dossier_acts: dict[str, list[LegalAct]] = {}
         self.proposed_type: set[str] = set()  # files whose type of act is the one proposed (no typed act linked)
+        self.index_file_documents()
         for pid in self.dossier_ids:
             p = self.proc[pid] = self.with_recorded_events(self.proc[pid])
             acts = self.acts_of.get(pid, [])
@@ -3549,7 +3598,7 @@ class Builder:
             self.dossier_acts[pid] = acts
             votes = sorted(self.votes_of.get(pid, []), key=lambda v: (v.date, v.id), reverse=True)
             st = self.classify(p)
-            tl = mark_after_end_of_validity(self.timeline(p, acts, votes), acts)
+            tl = mark_after_end_of_validity(self.joint_debates(p, self.timeline(p, acts, votes)), acts)
             cur = self.curated_of.get(pid)
             done = [e for e in tl if e["state"] == "done" and not e.get("after_end_of_validity")]
             instrument = None
@@ -3645,7 +3694,8 @@ class Builder:
                 **({"council_votes_in_parts": self.council_in_parts[pid]} if pid in self.council_in_parts else {}),
                 "implementation": tables[0] if tables else None,
                 **({"implementation_more": tables[1:]} if len(tables) > 1 else {}),
-                "committees": [{"code": c.code, "name": c.name, "role": c.role} for c in p.committees],
+                "committees": [{"code": c.code, "name": c.name, "role": c.role, **({"former": True} if c.former else {})}
+                               for c in p.committees],  # fmt: skip
                 "rapporteurs": rapps,
                 "documents": [d.model_dump(mode="json") for d in p.documents],
                 "related": [],
@@ -3827,7 +3877,8 @@ class Builder:
             for r in self.proc[pid].rapporteurs:
                 if r.mep_id:
                     rapp_for[r.mep_id].append({"dossier_id": pid, "title": self.dossier_summary[pid]["title"],
-                                               "role": r.role, "committee": r.committee})  # fmt: skip
+                                               "role": r.role, "committee": r.committee,
+                                               **({"former": True} if r.former else {})})  # fmt: skip
         self.mep_summary: dict[str, dict] = {}
         for m in sorted(s.meps, key=lambda m: m.id):
             gid = self.current_or_last(self.mep_groups.get(m.id, []))

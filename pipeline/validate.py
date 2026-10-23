@@ -414,6 +414,11 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
                 d = json.loads(f.read_text(encoding="utf-8"))
                 for msg in dossier_contradictions(d):
                     rep.error(f"public dossiers/{f.name}: {msg}", "public")
+                # a key report that no step carries has no tabling or vote of its own on the timeline
+                steps = {x["id"] for e in d.get("timeline", []) for x in e.get("docs", [])}
+                for doc in d.get("documents") or []:
+                    if doc.get("kind") == "report" and doc["id"] not in steps:
+                        rep.warn("report-off-timeline", f"dossier {d['id']}: key document {doc['id']} is on no timeline step")
                 for c in d.get("celex") or []:
                     owners.setdefault(c, []).append(d["id"])
                 for v in d.get("ep_votes") or []:

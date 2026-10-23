@@ -242,9 +242,13 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
             <h3>Parliament committees</h3>
             <ul className="dz-list">
               {d.committees.map((c) => (
-                <li key={`${c.code}-${c.role}`}>
+                <li key={`${c.code}-${c.role}-${c.former ? 'former' : ''}`}>
                   <span className="mono">{c.code}</span>
-                  {c.name && <> — {c.name}</>} <span className="meta">({COMMITTEE_ROLE_LABEL[c.role] ?? c.role})</span>
+                  {c.name && <> — {c.name}</>}{' '}
+                  <span className="meta">
+                    ({c.former ? 'former ' : ''}
+                    {COMMITTEE_ROLE_LABEL[c.role] ?? c.role})
+                  </span>
                 </li>
               ))}
             </ul>
@@ -254,14 +258,18 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
         {d.rapporteurs.length > 0 && (
           <div className="dz-sub">
             <h3>Rapporteurs and shadow rapporteurs</h3>
-            <p className="meta">Each MEP is shown with the political group they belonged to in that role, where the records establish it.</p>
+            <p className="meta">
+              From Parliament’s open data and, where available, the key players of its Legislative Observatory file. Each MEP is shown with the
+              political group they belonged to in that role, where the records establish it; “former” marks an appointment
+              in an earlier parliamentary term.
+            </p>
             <ul className="dz-list">
               {d.rapporteurs.map((r, i) => (
                 <li key={`${r.mep_id ?? r.name}-${i}`}>
                   {r.mep_id ? <Link to={`/people/meps/${encodeURIComponent(r.mep_id)}`}>{r.name}</Link> : r.name}
                   <span className="meta">
                     {' '}
-                    — {rapporteurRoleLabel(r.role, r.committee)}
+                    — {rapporteurRoleLabel(r.role, r.committee, r.former)}
                     {r.group_code ? ` · ${r.group_code}` : ''}
                     {r.country ? ` · ${countryName(r.country)}` : ''}
                   </span>

@@ -436,6 +436,16 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   (Art. 281 TFEU), not a Commission proposal. OEIL prints some references as plain text next to a EUR-Lex flag link
   ("COM(2018)0825", 2018/0417(CNS)); they are read like linked ones, so every recorded proposal step carries its
   document.
+- Document links are those OEIL and the EP API give, except: a Commission document OEIL links in the EP's old
+  register (`/registre/docs_autres_institutions/…`, of which some answer 404: COM(2012)0643 of 2012/0305(COD)) takes
+  the EUR-Lex link OEIL prints next to it (EUR-Lex `smartapi` by COM number; 187 documents on 182 files); all 291
+  COM documents linked that way on 23 October 2026 exist in Cellar (287 as CELEX 5YYYYPCNNNN, the 4 of 2006–2008 by
+  their COM number). A link OEIL leaves as an unfilled template ("CELEX:[%SECTOR]2015[%DESCRIPTOR]0110",
+  "DocumentNumber=[%no]") is not kept (4 links). The EP's own links (`/RegData/` committee documents such as the
+  provisional agreement texts OEIL links, `doceo` pages) could not be checked from our build environment, which
+  www.europarl.europa.eu answered with 403 or a bot challenge on 23 October 2026; one agreement text reported as
+  answering 404 (`…/econ/inag/2022/12-13/ECON_AG(2022)739667_EN.pdf`, 2021/0407(COD)) is still linked, as no other
+  address for it is established.
 - Consent files: Parliament's decision in an interim or accompanying report (R/M procedure) and any earlier
   plenary decision in a file that has a later one (2013/0255(APP), 2013/0361(APP)) are interim resolutions, not
   its consent. Statutes adopted by Parliament with the Council's consent (Articles 223(2) and 228(4) TFEU,
@@ -509,9 +519,17 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   C-9-2020-0430 of 2020/0378(COD)). The labels are read from the ep_votes snapshot of the previous fetch (ep_votes
   is fetched after this source). Re-derived offline on 23 October 2026 from the cached EP API and OEIL answers: 34
   records gained such a document on 56 steps (files of 2020–2022), in 2 the documents of one step changed order,
-  and every other record came out unchanged. A joint debate keeps the reports of every file debated with this one
-  on its own step, but they are not this file's "Key documents" (the asylum files 2016/0132-0225(COD) were debated
-  together). A vote record whose only votes on the file that day are on a request for urgent procedure is titled by
+  and every other record came out unchanged. A debate item of the EP API cites the documents of every file debated
+  with this one; they are not this file's "Key documents". A debate step that cites a document another file in our
+  data lists as its own (among its documents or on one of its steps other than a debate), or a report no file in
+  our data lists, is titled "Joint debate in Parliament" (`build.py` `joint_debates`): it keeps this file's
+  documents and the sitting's verbatim report and minutes, as OEIL's procedure file shows the debate, and
+  `joint_with` names the other files, each linked with its report on the item, and each report of a file we do not
+  hold (the EP's item 15 of 25 March 2026, "Deposit protection and early intervention measures (joint debate)",
+  cites A10-0067/2026 of 2023/0111(COD), A10-0065/2026 of 2023/0115(COD) and A10-0066/2026 of 2023/0112(COD)). 139
+  of the 922 debate steps of 23 October 2026 are joint (before, 132 listed another file's report without saying
+  so). A debate step citing only this file's documents, registered texts (C) or motions (B) is shown as it is. A
+  vote record whose only votes on the file that day are on a request for urgent procedure is titled by
   that vote, in the EP's wording ("Parliament approved the request for urgent procedure", "… for an urgent
   decision"), with its counts or "By show of hands", and sourced to the decision; the day's records are shown as
   one step.
@@ -526,8 +544,28 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   decisions of the day, since negotiations open on Parliament's mandate (2025/0132(COD), 17 December 2025); a text
   tabled for the plenary follows the committee's approval of it (2024/0071(COD), 16 June 2025); a second-reading
   step follows the Council's first-reading position of the same day (2018/0136(COD), 14 December 2020: ST 14020/20,
-  then the referral and the committee's recommendation). `validate` reports a trilogue or a second-reading step
-  listed before what it follows.
+  then the referral and the committee's recommendation, adopted and tabled). `validate` reports a trilogue or a
+  second-reading step listed before what it follows.
+- Two records of one step: steps of one day with the same kind, title and detail (a committee's opinion names its
+  committee) are shown once, with the documents of both, when they cite a document in common other than the
+  sitting's records, or neither cites one: a debate continued later in the sitting (2016/0131(COD), 7 October 2021,
+  EP items 3 "European Union Agency for Asylum ***I (debate)" and 5 "(continuation of debate)"), two "Announcement
+  of voting results" items of a day of remote voting (2018/0216(COD), 21 October 2020, items 9 and 17). Steps of
+  different committees or documents are all shown: before, a second committee opinion adopted on the same day was
+  left out (72 opinions on 36 files, e.g. FEMM's of 14 July 2026 on 2025/0545(COD), the day AGRI adopted its own),
+  as were 2 draft opinions (BUDG and FEMM on 2017/0336(COD), 19 June 2018).
+- Committee texts tabled for the plenary: where no EP API `TABLING_PLENARY` carries a report, OEIL's key event
+  (`OEIL_TABLING_RE`: "Committee report tabled for plenary, 1st reading", "…, 1st reading/single reading", "…,
+  reconsultation", "Committee interim report tabled for plenary", "Committee recommendation tabled for plenary, 2nd
+  reading", "Report tabled for plenary, 3rd reading") is a step of Parliament, "Committee report tabled for the
+  plenary" (or "Committee interim report …", "Committee recommendation for second reading …", "Third-reading report
+  … tabled for the plenary"), with the report as the EP API names it (A7-0471/2013 = A-7-2013-0471) and OEIL's
+  date. 1,088 such steps on 958 files on 23 October 2026 (2011/0196(COD): the second-reading recommendation
+  A7-0471/2013, tabled 19 December 2013, was on no step). A file's "Key documents" date a report by its tabling for
+  the plenary (that step), no longer by the first step citing it, often the vote (2021/0058(COD): A9-0312/2021, 4
+  November 2021, as the EP API's `document_date`, instead of 4 October 2022); a report with no tabling step is
+  undated (3). `validate` warns about a key report on no timeline step (52 before, 1 now: the split parent
+  2016/0224(COD)).
 - Rejection by Parliament: a final vote officially recorded as rejected, or an adopted motion to reject the
   proposal (2023/0413(COD), vote 179804), unless OEIL shows the file past Parliament's first reading.
 - Type of act (`instrument`): the type of the file's adopted act; for a file without a linked act of a known type,
@@ -558,11 +596,48 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   its status text and next step the same way; the main file lists it among its related files ("Parliament's
   interim report", "Parliament's report").
 
+### Committees (`ep_procedures` `build_participants`, `oeil_committees`)
+- Roles: responsible, joint (two or more committees responsible), opinion (incl. associated committees and
+  opinions on the legal basis or the recast technique), other (budgetary assessment). From the EP API's committee
+  participations and, where the file has an OEIL procedure file, its key players, whose headers are the roles: a
+  committee OEIL lists keeps the role(s) OEIL gives it, and a committee only the API names keeps the API's role.
+- `former`: the committee is listed in that role only under OEIL's "Former …" headers, i.e. in an earlier
+  parliamentary term (2023/0131(COD): "Committee responsible SANT", "Former committee responsible ENVI"; the EP API
+  gives both as committee leads, 2023-0131-MAIN-SANT and 2023-0131-MHE-ENVI). A committee also listed in that role
+  for the current term is shown once, as current. The page says "former committee responsible", "former committee
+  for opinion".
+- Joint: only two or more distinct committees responsible in the current term. One committee can lead a file in two
+  terms (2023/0226(COD): participations 2023-0226-MHE-ENVI and 2023-0226-MAIN-ENVI; OEIL "Committee responsible
+  ENVI", "Former committee responsible ENVI"), which was shown as "joint committee responsible" on 12 files with a
+  single committee (2023-0008, -0124, -0129, -0156, -0226, -0227, -0228, -0232, -0288, -0290, -0373, -0441); and a
+  committee that succeeded another was shown as joint with it (2023/0131 and 2023/0132(COD), ENVI then SANT;
+  2013/0072(COD), TRAN then the delegation to the Conciliation Committee, LEGI; 2024/0061(COD), where OEIL lists
+  SEDE and ITRE as joint committees and AFET, which the EP API also gives as a lead, as a committee for opinion
+  only). Committees OEIL lists and the EP API lacks are added (2021/0213(COD): ENVI, former committee for opinion;
+  2022/0068(COD): the joint committees AFET, INTA and AFCO, where the API has only IMCO's opinion).
+- Re-derived offline on 23 October 2026 (with the rapporteurs below and the tabling steps above) by replaying
+  `build_procedure` over the cached EP API and OEIL answers with the network blocked: the previous module reproduces
+  all 1,564 stored records; 1,096 changed (committees of 214, rapporteurs of 232, steps of 961, documents of 962)
+  and the other 468 came out unchanged. 195 files now show a former committee; 104 files have joint committees (118
+  before).
+
 ### Rapporteurs (`ep_procedures` participants, `build.py` `rapporteur_entries`)
 - Roles: rapporteur (EP `RAPPORTEUR`, `_CO`, `_CHAIR`), shadow (`RAPPORTEUR_SHADOW`, `_SHADOW_REPORT`),
   opinion_rapporteur (`RAPPORTEUR_OPINION`, `_CHAIR_OPINION`) and shadow_opinion (`RAPPORTEUR_SHADOW_OPINION`;
-  stored as "other" before October 2026). Files without EP API participations (mostly older ones) take them from
-  OEIL's key players: the rapporteur of a committee responsible or for opinion, then the shadow rapporteurs.
+  stored as "other" before October 2026). The EP API participations, with those OEIL's key players list and the API
+  lacks (`oeil_rapporteurs`): the rapporteur of a committee responsible or for opinion, then the shadow
+  rapporteurs, with the group OEIL prints and no date (OEIL's "Appointed" is not read). 224 entries were added on 23
+  October 2026, e.g. 2025/0313(APP) the shadows KELLEHER Billy (Renew) and ANDRESEN Rasmus (Greens/EFA), 2026/0163(CNS)
+  four shadows, 2017/0290(COD) "Former rapporteur DANIELSSON Johan (S&D)", 2021/0213(COD) the rapporteurs for the
+  opinions of TRAN, AGRI and JURI. Shadow rapporteurs taken into a record with EP API rapporteurs name no committee,
+  as the API's own do (OEIL lists the shadows of joint committees after the last of them); a file without EP API
+  rapporteurs (mostly older ones) takes OEIL's committee for each entry.
+- `former` (shown "Former rapporteur", "Former shadow rapporteur", …): an appointment that OEIL lists only under
+  a "Former …" header, or, for one OEIL does not list, an EP API participation of an earlier parliamentary term
+  than the file's latest participations (2023/0290(COD): the shadows of the 9th term, Basso, Mazurek, Kouloglou and
+  Botoş, beside those of the 10th; 2013/0072(COD): the TRAN rapporteurs before the file went to conciliation). An
+  appointment OEIL lists for the current term is never former. 790 of the 12,598 entries are former. The page says
+  that the list combines both sources.
 - `committee`: the committee the participation is `participation_in_name_of`. Where the EP API names none
   ("org/null"), or one that is not among the file's committees, the rapporteur (or rapporteur for an opinion)
   takes the committee OEIL's key players list the MEP under in that role, when they list exactly one: 2021/0240(COD)
@@ -577,8 +652,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - The group shown is the one held in the role, never the MEP's current group: the MEP's group membership on
   `date`, else OEIL's printed group (PPE → EPP, Verts/ALE → Greens/EFA as for groups; groups before 2019 such as
   ALDE, EFDD or ENF are shown by their code without a group page). Left out when neither establishes it: 152
-  of the 12,375 entries (snapshot of 23 October 2026): 144 API entries dated before the group memberships we hold
-  (2 July 2019), and 8 whose API date is earlier than the MEP's first group membership (e.g. Johan Nissinen on
+  of the 12,598 entries (snapshot of 23 October 2026; the 224 OEIL entries merged that day all have OEIL's group):
+  144 API entries dated before the group memberships we hold (2 July 2019), and 8 whose API date is earlier than the MEP's first group membership (e.g. Johan Nissinen on
   2021/0379(COD), dated 9 December 2021, ECR member from 11 October 2022), so for them `date` is not the
   appointment in a group. Checked against the EP API's own `politicalGroup` on each participation (the cached
   API records of that snapshot): the membership on `date` agrees on all 5,494 entries it covers.

@@ -261,6 +261,9 @@ export interface TimelineEvent {
   source?: SourceRef | null;
   vote_id?: string | null; // EP vote linked to this event, if any
   after_end_of_validity?: ISODate | null; // an act's date recorded for after its validity ended (that end date)
+  // a joint debate: the other files debated with this one, each with its report on the item when cited; a file not
+  // in our data has id/ref/title null and is named by its report
+  joint_with?: { id: string | null; ref: string | null; title: string | null; report: DocRef | null }[];
 }
 
 export interface LegalActSummary {
@@ -322,7 +325,8 @@ export interface DossierDetail extends DossierSummary {
   council_votes_in_parts?: { id: string; date: ISODate; dossier_id: string; dossier_ref: string }[];
   implementation?: DossierImplementation | null; // directives only (the file's first directive)
   implementation_more?: DossierImplementation[]; // the file's further directives, one table each (2013/0400(CNS))
-  committees: { code: string; name?: string | null; role: string }[];
+  // former: in that role in an earlier parliamentary term only (OEIL "Former committee responsible"); set only when true
+  committees: { code: string; name?: string | null; role: string; former?: boolean }[];
   // group / group_code: the political group held in that role (not the MEP's current group); null when not established
   rapporteurs: {
     mep_id?: string | null;
@@ -332,6 +336,7 @@ export interface DossierDetail extends DossierSummary {
     country?: string | null;
     role: string; // rapporteur | shadow | opinion_rapporteur | shadow_opinion
     committee?: string | null;
+    former?: boolean; // an appointment of an earlier parliamentary term; set only when true
   }[];
   documents: DocRef[];
   related: { id: string; title: string; relation: string; ref?: string; status_label?: string }[]; // only officially established relations; "Split into" parts also carry their reference and status
@@ -591,7 +596,7 @@ export interface MepDetail extends MepSummary {
   groups: MembershipPeriod[];
   parties: MembershipPeriod[];
   committees: MembershipPeriod[];
-  rapporteur_for: { dossier_id: string; title: string; role: string; committee?: string | null }[];
+  rapporteur_for: { dossier_id: string; title: string; role: string; committee?: string | null; former?: boolean }[];
   votes: { vote_id: string; pos: BallotPosition }[]; // positions on indexed votes with ballots, newest first
   official_url: string;
   source: SourceRef;

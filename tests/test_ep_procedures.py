@@ -13,6 +13,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+from lxml import html as lxml_html
 
 from pipeline.models.entities import EventKind, Procedure
 from pipeline.sources import ep_procedures as m
@@ -282,6 +283,109 @@ def test_rapporteur_listed_for_a_subcommittee_and_its_committee_is_one_appointme
     # 2023/0187(CNS): Herbert Dorfmann for FISC (2023-06-27) and for ECON (2024-09-12); OEIL lists him for ECON
     # (rapporteur appointed 12/09/2024, former rapporteur 27/06/2023): one rapporteur entry, the later date
     assert participants_with_oeil("2023-0187") == [("96787", "rapporteur", "ECON", "2024-09-12")]
+
+
+def built_participants(pid: str, with_oeil: bool = True) -> Procedure:
+    """build_procedure on the real EP API participations and OEIL key players of `pid` (fixtures trimmed to those)."""
+    proc = json.loads((FIX / f"participants_{pid}.json").read_text(encoding="utf-8"))["data"][0]
+    oeil = m.parse_oeil((FIX / f"players_{pid}.html").read_bytes()) if with_oeil else None
+    return m.build_procedure({**proc, "process_title": {"en": "Test"}}, RETRIEVED, oeil, lambda i: f"MEP {i}")
+
+
+def committees_of(p: Procedure) -> list[tuple[str, str, bool]]:
+    return [(c.code, c.role, c.former) for c in p.committees]
+
+
+def test_one_committee_leading_a_file_in_two_terms_is_not_joint():
+    # 2023/0226(COD), new genomic techniques: participations 2023-0226-MHE-ENVI and 2023-0226-MAIN-ENVI, both
+    # COMMITTEE_LEAD; OEIL "Committee responsible ENVI", "Former committee responsible ENVI",
+    # "Former committee for opinion AGRI"
+    assert committees_of(built_participants("2023-0226", with_oeil=False)) == [
+        ("ENVI", "responsible", False), ("AGRI", "opinion", False)]  # fmt: skip
+    assert committees_of(built_participants("2023-0226")) == [("ENVI", "responsible", False), ("AGRI", "opinion", True)]
+
+
+def test_a_committee_succeeded_by_another_is_former_not_joint():
+    # 2023/0131(COD), pharmaceutical package: the EP API gives ENVI (MHE) and SANT (MAIN) as leads; OEIL "Committee
+    # responsible SANT – WÖLKEN Tiemo (S&D) 19/02/2025", "Former committee responsible ENVI – WÖLKEN Tiemo (S&D)
+    # 11/05/2023", the opinions under "Former committee for opinion"
+    p = built_participants("2023-0131")
+    assert committees_of(p)[:2] == [("SANT", "responsible", False), ("ENVI", "responsible", True)]
+    assert not any(c.role == "joint" for c in p.committees)
+    assert {c.code for c in p.committees if c.role == "opinion" and c.former} == {"AGRI", "BUDG", "CONT", "IMCO", "ITRE", "LIBE"}
+    wolken = {(r.committee, r.former) for r in p.rapporteurs if r.mep_id == "185619"}
+    assert wolken == {("SANT", False), ("ENVI", True)}
+    # 2013/0072(COD), air passenger rights: TRAN, then Parliament's delegation to the Conciliation Committee (LEGI)
+    p = built_participants("2013-0072")
+    assert committees_of(p)[:2] == [("LEGI", "responsible", False), ("TRAN", "responsible", True)]
+    # OEIL's former rapporteur ARIAS ECHEVERRÍA Pablo (PPE), whom the EP API does not list
+    arias = [r for r in p.rapporteurs if r.mep_id == "96808"]
+    assert [(r.role, r.committee, r.former, r.group) for r in arias] == [("rapporteur", "TRAN", True, "PPE")]
+
+
+def test_a_lead_that_oeil_lists_only_for_an_opinion_is_a_committee_for_opinion():
+    # 2024/0061(COD), EDIP: the EP API also gives AFET as a lead (2024-0061-MAIN-AFET); OEIL "Joint committee
+    # responsible SEDE / ITRE", "Committee for opinion AFET"
+    p = built_participants("2024-0061")
+    assert {(c.code, c.role) for c in p.committees if not c.former} == {
+        ("SEDE", "joint"), ("ITRE", "joint"), ("AFET", "opinion"), ("CONT", "opinion"), ("IMCO", "opinion"), ("BUDG", "other")}  # fmt: skip
+
+
+def test_appointments_of_an_earlier_term_are_former():
+    # 2023/0290(COD), toy safety: shadow rapporteurs appointed in the 9th term (ECR Beata Mazurek 2023-11-15, The Left
+    # Stelios Kouloglou 2024-02-16) beside those of the 10th (ECR Piotr Müller, The Left Luke Ming Flanagan)
+    p = built_participants("2023-0290", with_oeil=False)
+    shadows = {r.mep_id: r.former for r in p.rapporteurs if r.role == "shadow"}
+    assert shadows["197538"] and shadows["130833"]
+    assert not shadows["257080"] and not shadows["124985"]
+    assert not next(r for r in p.rapporteurs if r.role == "rapporteur").former  # Marion Walsmann, 10th term
+    assert [r.former for r in p.rapporteurs] == sorted(r.former for r in p.rapporteurs)  # current ones first
+
+
+def test_shadow_rapporteurs_that_only_oeil_lists_are_added():
+    # 2025/0313(APP): OEIL lists the shadows GYŐRI, NESCI, KELLEHER Billy (Renew), ANDRESEN Rasmus (Greens/EFA) and
+    # TRIDICO; the EP API record has 96830, 239260 and 257133 only
+    p = build("2025-0313")
+    shadows = {r.mep_id: r for r in p.rapporteurs if r.role == "shadow"}
+    assert set(shadows) == {"96830", "239260", "257133", "197818", "197448"}
+    assert (shadows["197818"].group, shadows["197818"].committee, shadows["197818"].date) == ("Renew", None, None)
+    assert (shadows["197448"].group, shadows["197448"].former) == ("Greens/EFA", False)
+    assert shadows["96830"].date == "2025-12-15" and shadows["96830"].group is None  # the API's entry, as it was
+
+
+def test_oeil_tabling_steps_where_the_ep_api_records_none():
+    # 2012/0011(COD), GDPR: no EP API TABLING_PLENARY; OEIL "Committee report tabled for plenary, 1st reading"
+    # 22/11/2013 A7-0402/2013 and "Committee recommendation tabled for plenary, 2nd reading" 12/04/2016 A8-0139/2016
+    p = build("2012-0011")
+    tabled = [(e.date, e.title, e.institution, [d.id for d in e.docs]) for e in p.events if "tabled for the plenary" in e.title]
+    assert tabled == [
+        ("2013-11-22", "Committee report tabled for the plenary", "EP", ["A-7-2013-0402"]),
+        ("2016-04-12", "Committee recommendation for second reading tabled for the plenary", "EP", ["A-8-2016-0139"]),
+    ]
+    docs = {d.id: d for d in p.documents}
+    # a key report is dated by its tabling, not by the vote that also cites it (14 April 2016)
+    assert (docs["A-8-2016-0139"].label, docs["A-8-2016-0139"].date) == ("A8-0139/2016", "2016-04-12")
+    # where the EP API records the tabling, OEIL's is not repeated (2023/0112(COD): A9-0153/2024, A10-0066/2026)
+    p = build("2023-0112")
+    tabled = [e for e in p.events if "tabled for the plenary" in e.title]
+    assert [(e.source.institution, [d.id for d in e.docs]) for e in tabled] == [
+        ("EP", ["A-9-2024-0153"]), ("EP", ["A-10-2026-0066"])]  # fmt: skip
+
+
+def test_commission_document_in_the_old_ep_register_links_eur_lex():
+    # OEIL links COM(2012)0011 to /registre/docs_autres_institutions/... (COM(2012)0643 answers 404 there) and gives
+    # the EUR-Lex link next to it
+    p = build("2012-0011")
+    com = next(d for d in p.documents if d.id == "COM(2012)0011")
+    assert com.url == ("https://eur-lex.europa.eu/smartapi/cgi/sga_doc?smartapi!celexplus!prod!DocNumber&lg=EN"
+                       "&type_doc=COMfinal&an_doc=2012&nu_doc=0011")  # fmt: skip
+    assert not any("/registre/" in (d.url or "") for e in p.events for d in e.docs)
+    # an unfilled template is not a link (2015/0906(COD): "CELEX:[%SECTOR]2015[%DESCRIPTOR]0110")
+    cell = lxml_html.fromstring(
+        '<td><a href="https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=CELEX:[%SECTOR]2015[%DESCRIPTOR]0110:EN:NOT">'
+        "N8-0110/2015</a></td>"
+    )
+    assert m._cell_refs(cell) == [("N8-0110/2015", None)]
 
 
 def test_second_reading_gdpr():
