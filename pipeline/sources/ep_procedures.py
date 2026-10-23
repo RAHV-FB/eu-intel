@@ -30,8 +30,8 @@ Event normalization (deterministic, nothing invented):
 - PLENARY_VOTE / PLENARY_VOTE_RESULTS records of a sitting are folded (with their minutes,
   verbatim and vote-result documents) into that day's plenary decision event, if any (else into
   Parliament's decision on negotiations or on a referral back that day); a vote record keeps only
-  the documents the procedure itself references, not those of the other files voted under the
-  same item;
+  the documents the procedure itself references, or that an EP vote on this file alone names, not those
+  of the other files voted under the same item;
 - amendment tablings (committee or plenary) are grouped per day into one event;
 - OEIL key events listed in OEIL_EVENT_MAP are added (Commission proposal and withdrawal,
   Council positions/adoption, ...) unless the EP API already has an event of the same kind and
@@ -817,9 +817,14 @@ def _src(
 
 
 def build_events(
-    proc: dict[str, Any], retrieved_at: str, oeil: OeilInfo | None, reference: str
+    proc: dict[str, Any],
+    retrieved_at: str,
+    oeil: OeilInfo | None,
+    reference: str,
+    vote_refs: set[tuple[str, str]] | frozenset[tuple[str, str]] = frozenset(),
 ) -> list[Event]:
-    """EP API activities -> Events (+ OEIL-only key events). Sorted by (date, id)."""
+    """EP API activities -> Events (+ OEIL-only key events). Sorted by (date, id). `vote_refs`: the registered
+    texts (term, number) that EP votes on this file alone name (vote_label_refs)."""
     pid = proc["process_id"]
     raw_events: list[dict[str, Any]] = []
     for e in as_list(proc.get("consists_of")):
@@ -840,12 +845,15 @@ def build_events(
         return out
 
     # A vote record is an item of the sitting, which may cover every file voted under it ("Announcement of
-    # voting results": MTG-PL-2020-07-08-PVCRE-ITM-18 lists 20 documents of other files on 2020/0128(COD)).
-    # Its documents are kept only when the procedure itself references them: its own documents, those of its
-    # other activities, of its OEIL key events and EP documentation (and amendments to them); the item's own
-    # minutes and verbatim record; and every document of an item of this file alone: one based on a single
+    # voting results": MTG-PL-2020-07-08-PVCRE-ITM-18 lists 20 documents on 2020/0128(COD), 19 of them of other
+    # files). Its documents are kept only when the procedure itself references them: its own documents, those of
+    # its other activities, of its OEIL key events and EP documentation (and amendments to them); the item's own
+    # minutes and verbatim record; every document of an item of this file alone: one based on a single
     # document, or on documents of this file and registered texts (C) only, such as the Council's position
-    # (2016/0139(COD), 18 Apr 2023: C9-0047/2023 and the file's recommendation A9-0076/2023).
+    # (2016/0139(COD), 18 Apr 2023: C9-0047/2023 and the file's recommendation A9-0076/2023); and the registered
+    # text that an EP vote on this file alone names, when the item lists one text of that number (2020/0127(COD):
+    # vote 117279 "C9-0186/2020 - Commission Proposal", C-9-2020-0186, which the procedure record cites only in
+    # items of several files).
     own = {last_segment(d) for d in as_list(proc.get("created_a_realization_of")) if isinstance(d, str)}
     for e in raw_events:
         if last_segment(activity_type(e)) not in VOTE_RECORD_TYPES | {"PLENARY_DEBATE"}:  # a debate may be joint
@@ -857,13 +865,20 @@ def build_events(
         base = re.sub(r"-AM-\d+-\d+$", "", did)
         return base in own or (ep_docref(base).label or base) in own_refs
 
+    def named_by_vote(did: str, based_on: list[str]) -> bool:
+        # by term and number: a vote label can misprint the year (vote 128850, "C9-0430/2021" for C-9-2020-0430)
+        m = re.fullmatch(r"C-(\d+)-\d{4}-(\d{4})", did)
+        if not m or (m[1], m[2]) not in vote_refs:
+            return False
+        return sum(1 for x in based_on if re.fullmatch(rf"C-{m[1]}-\d{{4}}-{m[2]}", x)) == 1
+
     def own_doc(d: DocRef, e: dict[str, Any]) -> bool:
         based_on = [last_segment(x) for x in as_list(e.get("based_on_a_realization_of")) if isinstance(x, str)]
         recorded = {last_segment(x) for x in as_list(e.get("recorded_in_a_realization_of")) if isinstance(x, str)}
         this_file = len(based_on) == 1 or (
             any(proven(x) for x in based_on) and all(proven(x) or x.startswith("C-") for x in based_on)
         )
-        return proven(d.id) or d.id in recorded or this_file
+        return proven(d.id) or d.id in recorded or this_file or named_by_vote(d.id, based_on)
 
     # 1) fold vote records into the same-day plenary decision event (else another decision of Parliament that day)
     decisions_by_date: dict[str, list[dict[str, Any]]] = {}
@@ -1139,9 +1154,10 @@ def build_procedure(
     names: Callable[[str], str | None],
     committee_names: dict[str, str] | None = None,
     reference: str | None = None,
+    vote_refs: set[tuple[str, str]] | None = None,
 ) -> Procedure:
     """`reference` = the procedure reference under which the id was discovered (used only when
-    the EP record itself has none, and only if it matches the id)."""
+    the EP record itself has none, and only if it matches the id). `vote_refs`: see build_events."""
     pid = proc.get("process_id") or ""
     label = _single(proc.get("label"), "labels", pid)
     if not label and reference and normalize_proc_id(reference) == pid and PROC_REF_RE.match(reference):
@@ -1160,7 +1176,7 @@ def build_procedure(
         title = oeil.title  # OEIL procedure-file title (official EP page); never translated or invented
     if not title:
         raise InvalidRecord(f"no English title for {reference} in the EP record or OEIL")
-    events = build_events(proc, retrieved_at, oeil, reference)
+    events = build_events(proc, retrieved_at, oeil, reference, vote_refs or frozenset())
     committee_names = {**(committee_names or {}), **(oeil.committee_names if oeil else {})}
 
     def name_of(mep_id: str) -> str | None:
@@ -1468,6 +1484,27 @@ def discover_refs() -> dict[str, tuple[str, str]]:
     return out
 
 
+# A registered text (C) named in an EP vote's label: "C9-0186/2020 - Commission Proposal" (term, number)
+VOTE_LABEL_C_RE = re.compile(r"\bC(\d{1,2})[-\u2010-\u2013\u2212](\d{4})/\d{4}\b")
+
+
+def vote_label_refs() -> dict[str, set[tuple[str, str]]]:
+    """Procedure id -> the registered texts (term, number) that the labels of the EP votes on that file alone
+    name, from the ep_votes snapshot (that of the previous fetch: ep_votes is fetched after this source)."""
+    out: dict[str, set[tuple[str, str]]] = {}
+    try:
+        votes = read_records("ep_votes", "votes", EpVote)
+    except Exception as e:  # noqa: BLE001 - another source's snapshot may be absent/invalid
+        log.info("ep_votes snapshot not usable for the documents of vote records (%s)", e)
+        return out
+    for v in votes:
+        pids = {normalize_proc_id(r) for r in v.procedure_refs}
+        refs = {(m[1], m[2]) for m in VOTE_LABEL_C_RE.finditer(v.title)}
+        if len(pids) == 1 and None not in pids and refs:
+            out.setdefault(str(pids.pop()), set()).update(refs)
+    return out
+
+
 def split_parts(pid: str, ids: Iterable[str]) -> list[str]:
     """'2021-0211' -> ['2021-0211A', '2021-0211B'] if those split procedures are known."""
     return sorted(i for i in ids if re.fullmatch(re.escape(pid) + r"[A-Z]", i))
@@ -1512,6 +1549,7 @@ class _Run:
         self.wanted = wanted
         self.ep_pacer, self.oeil_pacer = _Pacer(EP_API_GAP_S), _Pacer(OEIL_GAP_S)
         self.names = MepNames(http)
+        self.vote_refs = vote_label_refs()  # registered texts named by the votes on one file (build_events)
         self.committees = committees  # code -> name, grows with every OEIL page seen
         self.enriched = set(enriched)  # ids whose snapshot record has OEIL data
         # No new id is started after `hard_deadline` (run-wide), nor after `deadline` (this source's budget)
@@ -1664,7 +1702,8 @@ def _fetch_chunk(run: _Run, ids: list[str]) -> list[Procedure]:
                 run.degraded.add(pid)
         try:
             out.append(
-                build_procedure(proc, retrieved, info, run.names.get, run.committees, run.wanted.get(pid))
+                build_procedure(proc, retrieved, info, run.names.get, run.committees, run.wanted.get(pid),
+                                run.vote_refs.get(pid))  # fmt: skip
             )
         except InvalidRecord as e:
             if oeil_failure is not None and "(404)" not in oeil_failure:
