@@ -160,3 +160,20 @@ a.group-chip:hover {
     margin: var(--sp-1) 0;
   }
 }
+
+/* party pages: which record of the party this is, and where a sitting MEP who left it is listed now */
+.party-record {
+  margin-bottom: var(--sp-4);
+}
+
+.party-record p {
+  margin: 0;
+}
+
+.party-record p + p {
+  margin-top: var(--sp-2);
+}
+
+.party-now {
+  display: block;
+}

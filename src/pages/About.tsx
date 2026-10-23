@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { Meta, SourceStatusInfo } from '../types/data';
+import type { CountrySummary, Meta, SourceStatusInfo } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDateTime, formatNumber } from '../lib/format';
 import { legislationScope, votesPeriod } from '../lib/scope';
@@ -94,6 +94,8 @@ function SourceCard({ s }: { s: SourceStatusInfo }) {
 export default function About() {
   useDocumentTitle('About & methodology');
   const { data: meta, error, loading } = useData<Meta>('meta.json');
+  const countries = useData<CountrySummary[]>('countries/index.json');
+  const hasIndicators = !!countries.data?.some((c) => c.indicators.length > 0);
   useHashScroll(!loading);
 
   return (
@@ -308,8 +310,10 @@ export default function About() {
               published. An open case is not a court ruling.
             </li>
             <li>
-              Published indicators are shown with their period, definition and source. We never combine different measures into a single
-              score or ranking.
+              {hasIndicators
+                ? 'Published indicators are shown with their period, definition and source.'
+                : 'Country indicators (Single Market Scoreboard) could not be retrieved for this release, so none are shown.'}{' '}
+              We never combine different measures into a single score or ranking.
             </li>
           </ul>
 

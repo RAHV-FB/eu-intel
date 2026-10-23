@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { EpVoteSummary, MembershipPeriod, MepDetail, Meta } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
+import { shownParam, useParamState } from '../lib/urlState';
 import { ballotScope } from '../lib/scope';
 import { EmptyState, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { RowTitle, StackLabel } from '../components/StackedTable';
@@ -46,8 +47,10 @@ export default function Mep() {
   const votesIndex = useData<EpVoteSummary[]>(m && m.votes.length > 0 ? 'votes/index.json' : null);
   const meta = useData<Meta>('meta.json');
   const noVoteData = meta.data ? meta.data.counts.ep_votes_with_ballots === 0 : false;
-  const [shown, setShown] = useState(VOTES_PAGE);
-  useDocumentTitle(m ? m.name : 'MEP');
+  // votes shown: kept in the address, so that Back from a vote returns to the same list
+  const [params, patch] = useParamState();
+  const shown = shownParam(params, 'show', VOTES_PAGE);
+  useDocumentTitle(m ? m.name : isMissing(error) ? 'MEP not found' : 'MEP');
 
   const voteById = useMemo(() => new Map((votesIndex.data ?? []).map((v) => [v.id, v])), [votesIndex.data]);
 
@@ -242,7 +245,7 @@ export default function Mep() {
             </div>
             {m.votes.length > shown && (
               <div className="more">
-                <button type="button" className="btn" onClick={() => setShown((n) => n + VOTES_PAGE)}>
+                <button type="button" className="btn" onClick={() => patch({ show: String(shown + VOTES_PAGE) })}>
                   Show more votes
                 </button>
                 <span className="meta">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { splitParts } from './Split';
 import type { DossierDetail, LegalActSummary } from '../../../types/data';
 import { Disclosure, ExtLink, Term, institutionLabel } from '../../../components/ui';
 import { countryName, formatDate, formatDateTime, safeUrl } from '../../../lib/format';
@@ -144,7 +145,13 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
         <dl className="dz-kv dz-kv--wide">
           <div>
             <dt>Official title</dt>
-            <dd>{d.official_title}</dd>
+            <dd>
+              {d.official_title ?? (
+                <span className="meta">
+                  Not recorded{splitParts(d).length > 0 ? ': this is the file the proposal was split from (see the separate files below)' : ''}
+                </span>
+              )}
+            </dd>
           </div>
           <div>
             <dt>
@@ -176,7 +183,15 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
             <dt>
               <Term id="celex">CELEX number{d.celex.length === 1 ? '' : 's'}</Term>
             </dt>
-            <dd>{d.celex.length ? <CelexList items={d.celex} /> : <span className="meta">None recorded (no adopted act yet, or not linked)</span>}</dd>
+            <dd>
+              {d.celex.length ? (
+                <CelexList items={d.celex} />
+              ) : splitParts(d).length > 0 ? (
+                <span className="meta">None on this file: each separate file lists its own act</span>
+              ) : (
+                <span className="meta">None recorded (no adopted act yet, or not linked)</span>
+              )}
+            </dd>
           </div>
           {comRefs.length > 0 && (
             <div>
@@ -261,7 +276,17 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
                 <li key={`${r.id}-${r.relation}`}>
                   <span className="meta">{r.relation}: </span>
                   {/^\d{4}-\d{4}/.test(r.id) ? (
-                    <Link to={dossierPath(r.id)}>{r.title}</Link>
+                    <>
+                      <Link to={dossierPath(r.id)}>
+                        {r.ref && (
+                          <>
+                            <span className="mono">{r.ref}</span> –{' '}
+                          </>
+                        )}
+                        {r.title}
+                      </Link>
+                      {r.status_label && <span className="meta"> ({r.status_label})</span>}
+                    </>
                   ) : (
                     <ExtLink href={EURLEX_CELEX(r.id)}>{r.title}</ExtLink>
                   )}

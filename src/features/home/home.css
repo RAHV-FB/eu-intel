@@ -84,6 +84,7 @@
 /* ---------- featured cards ---------- */
 .fcards {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* a card never grows wider than the screen, e.g. with larger text spacing */
   gap: var(--sp-4);
 }
 
@@ -120,6 +121,11 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-2);
+}
+
+/* a long stage badge ("Negotiations with the Council") wraps instead of widening the card on narrow screens */
+.fcard__top .badge {
+  white-space: normal;
 }
 
 .fcard__topic {

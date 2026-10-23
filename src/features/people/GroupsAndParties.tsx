@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { GroupSummary, PartySummary } from '../../types/data';
 import { countryName, formatNumber } from '../../lib/format';
+import { shownParam } from '../../lib/urlState';
 import { Disclosure, EmptyState } from '../../components/ui';
 import { CollapsibleFilters, PHONE_WIDTH } from '../../components/CollapsibleFilters';
 import { useMediaQuery } from '../../components/useMediaQuery';
 import { SortTh, useSortable } from '../votes/sortable';
-import { termLabel } from './labels';
+import { termLabel, termYears } from './labels';
 import './people.css';
 
 type GKey = 'code' | 'name' | 'members' | 'countries';
@@ -97,7 +98,8 @@ type PKey = 'label' | 'country' | 'active' | 'total';
 
 export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; groups: Map<string, GroupSummary> }) {
   const [params, setParams] = useSearchParams();
-  const [shown, setShown] = useState(PAGE);
+  // rows shown: kept in the address like the filters, so that Back from a party returns to the same list
+  const shown = shownParam(params, 'pshow', PAGE);
   const q = params.get('pq') ?? '';
   const country = params.get('pcountry') ?? '';
   const scope = params.get('pscope') ?? 'current';
@@ -105,15 +107,25 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
     const next = new URLSearchParams(params);
     if (value && value !== dflt) next.set(key, value);
     else next.delete(key);
+    next.delete('pshow'); // a new filter starts from the first page
     setParams(next, { replace: true });
   };
-  const filterKey = params.toString();
-  useEffect(() => setShown(PAGE), [filterKey]);
+  const setShown = (n: number) => {
+    const next = new URLSearchParams(params);
+    next.set('pshow', String(n));
+    setParams(next, { replace: true, preventScrollReset: true });
+  };
 
   const countries = useMemo(
     () => [...new Set(parties.map((p) => p.country))].sort((a, b) => countryName(a).localeCompare(countryName(b))),
     [parties],
   );
+  // records of the same party in different terms share a name: those rows say which term they cover
+  const sharedName = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const p of parties) n.set(`${p.country}|${p.label}`, (n.get(`${p.country}|${p.label}`) ?? 0) + 1);
+    return n;
+  }, [parties]);
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return parties.filter(
@@ -133,6 +145,7 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
     },
     { key: 'country', dir: 'asc' },
     { active: 'desc', total: 'desc' },
+    'psort',
   );
 
   return (
@@ -201,6 +214,9 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
                     <th scope="row" style={{ fontWeight: 500 }}>
                       <Link to={`/people/parties/${encodeURIComponent(p.id)}`}>{p.label}</Link>
                       {p.code && p.code !== p.label && <span className="meta"> ({p.code})</span>}
+                      {(sharedName.get(`${p.country}|${p.label}`) ?? 0) > 1 && p.terms?.length ? (
+                        <span className="meta"> · {termYears(p.terms)}</span>
+                      ) : null}
                     </th>
                     <td>{countryName(p.country)}</td>
                     <td className="num">{formatNumber(p.members_active)}</td>
@@ -223,7 +239,7 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
           </div>
           {sorted.length > shown && (
             <div className="more">
-              <button type="button" className="btn" onClick={() => setShown((n) => n + PAGE)}>
+              <button type="button" className="btn" onClick={() => setShown(shown + PAGE)}>
                 Show {formatNumber(Math.min(PAGE, sorted.length - shown))} more
               </button>
               <span className="meta">

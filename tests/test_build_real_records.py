@@ -367,3 +367,26 @@ def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
     )  # fmt: skip
     durand = [r for r in Builder.rapporteur_entries(me, p["2016-0107"]) if r["mep_id"] == "124693"]  # type: ignore[arg-type]
     assert [(r["group"], r["group_code"]) for r in durand] == [("greens-efa", "Greens/EFA")]
+
+
+# ------------------------------------------------------------------- split parents and Parliament reports
+def test_split_parts_and_the_main_file_of_a_report_are_linked_from_the_status_text():
+    # 2016/0400(COD) was split into 2016/0400A(COD) (Regulation (EU) 2019/1243) and 2016/0400B(COD) (withdrawn);
+    # OEIL has no file for the parent. 2020/0112R(APP) is Parliament's interim report on 2020/0112(APP).
+    p = procs("2016-0400A", "2016-0400B", "2020-0112", "2020-0112R")
+    me = SimpleNamespace(
+        proc=p, split_children={"2016-0400": ["2016-0400A", "2016-0400B"]},
+        _status_dict=Builder._status_dict, _procedure_ref=Builder._procedure_ref,
+    )  # fmt: skip
+    split = Builder.classify(me, SimpleNamespace(id="2016-0400"))  # type: ignore[arg-type]
+    assert split["status"]["named_acts"] == [
+        {"celex": "", "label": "2016/0400A(COD)", "url": p["2016-0400A"].oeil_url, "dossier": "2016-0400A"},
+        {"celex": "", "label": "2016/0400B(COD)", "url": p["2016-0400B"].oeil_url, "dossier": "2016-0400B"},
+    ]
+    assert all(a["label"] in split["status"]["explanation"] for a in split["status"]["named_acts"])
+    report = Builder.classify(me, p["2020-0112R"])  # type: ignore[arg-type]
+    assert report["status"]["named_acts"] == [
+        {"celex": "", "label": "2020/0112(APP)", "url": p["2020-0112"].oeil_url, "dossier": "2020-0112"},
+    ]
+    assert "2020/0112(APP)" in report["status"]["explanation"]
+    assert report["next_step"]["text"] == "None for this report. See the main procedure 2020/0112(APP) for the proposal."

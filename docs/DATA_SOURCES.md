@@ -60,6 +60,16 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   6478, both 2019–2024) by the period of each record (`temporal`: 20 November 2019 – 8 November 2022 and
   6 December 2023 – 15 July 2024). Search subtitles name the former member state as "United Kingdom", as the MEP
   and party pages do.
+- An MEP's membership data cites the API record it was read from (`source.url`
+  `…/api/v2/meps/<id>?format=application%2Fld%2Bjson`); `official_url` is the profile page on the EP website.
+- Party pages (`people/parties/<id>.json`): `terms` are the terms the record's memberships fall in (also in
+  `parties.json`), `start`/`end` the record's `temporal`. Per MEP, `active` means still in this record and
+  sitting; `mep_active` is the MEP's own status (Current MEP / Former MEP on the page), and `now_party` the party
+  record a sitting MEP who left this one is in now (open membership), e.g. the 2024–2029 record of the same party
+  (5494 → 6848) or a new party (Platforma Obywatelska 6703 → Koalicja Obywatelska 7979: 18 MEPs, most from
+  1 December 2025). `same_name` lists the records with the same name and country, `now_parties` the records of
+  `now_party` with how many of this record's MEPs sit under each. A record whose `temporal` has ended and has no
+  current member shows its period instead of "Current MEPs 0".
 
 ### EP plenary votes (`ep_votes`) — ok
 - Fields are documented in `pipeline/sources/ep_votes.py`; the points below are where we read more than one
@@ -255,6 +265,15 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   `cmr:lastModificationDate` (shown as "record updated", not the Official Journal date), a Legislative Train
   page's update, a Council register document's date.
 
+### Split procedures and Parliament reports (`build.py` `classify`, related files)
+- A split procedure's parent known only from EUR-Lex (10 of the 12, e.g. 2016/0400(COD)) has no title of its own
+  in the sources: its page title says what it was split into and `official_title` is null ("Not recorded" on the
+  page). Its "Split into" relations carry each part's `ref` and `status_label`, and its status text links the
+  parts (`status.named_acts` entries with an empty `celex`: a procedure reference linked to its file).
+- An R/M file (Parliament's interim or accompanying report, e.g. 2020/0112R(APP)) links the main procedure in
+  its status text and next step the same way; the main file lists it among its related files ("Parliament's
+  interim report", "Parliament's report").
+
 ### Rapporteurs (`ep_procedures` participants, `build.py` `rapporteur_entries`)
 - Roles: rapporteur (EP `RAPPORTEUR`, `_CO`, `_CHAIR`), shadow (`RAPPORTEUR_SHADOW`, `_SHADOW_REPORT`),
   opinion_rapporteur (`RAPPORTEUR_OPINION`, `_CHAIR_OPINION`) and shadow_opinion (`RAPPORTEUR_SHADOW_OPINION`;
@@ -280,7 +299,14 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   plus all cases with a decision since 2019 — 7,195 cases, 2,006 open, 1,067 open non-communication cases. Stage is
   the register's latest decision type, verbatim. An act is linked only when the register names it.
 - Country indicators (Single Market Scoreboard): **unavailable** — host returns a CloudFront 403 to scripts;
-  data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed.
+  data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed. Country
+  pages show an indicators section only when a release has indicators.
+- Country pages' directive rows (`countries/<cc>.json` `transposition`) carry the directive's own number as its
+  official title cites it (`act`: "Directive (EU) 2022/2555", "Directive 2014/35/EU"; from the CELEX id only when
+  the title has none) and the names its file is known by (`names`, as `known_as.names` on the file's page, else
+  the act's own short title). The page's directive search matches the title, `act`, `names`, the CELEX id and the
+  files the site search finds for the query; a directive whose own number is searched for is listed first, and
+  rows found only because their title cites that number (amending acts) say so.
 
 ### Opt-outs in directives' recitals (`optouts`) — ok
 - Denmark (Protocol No 22) and Ireland (Protocol No 21) are not bound by most justice and home affairs measures

@@ -45,7 +45,8 @@ function DossierPage({ id }: { id: string }) {
   const malformed = !!raw && !d;
   const { data: meta } = useData<Meta>('meta.json');
   const { data: topics } = useData<Topic[]>('topics.json');
-  useDocumentTitle(d?.title ?? (error || malformed ? 'Legislative file not found' : 'Legislation'));
+  const notFound = !valid || malformed || isMissing(error);
+  useDocumentTitle(d?.title ?? (notFound ? 'Legislative file not found' : 'Legislation'));
 
   // "Changed since you last looked" for followed files; then record that the visitor has now seen it.
   const [change, setChange] = useState<ChangeInfo | null>(null);
@@ -59,7 +60,7 @@ function DossierPage({ id }: { id: string }) {
     markSeen(d);
   }, [d]);
 
-  if (!valid || malformed || isMissing(error)) return <NotFound what="legislative file" />;
+  if (notFound) return <NotFound what="legislative file" />;
   if (error)
     return (
       <div className="container page">
@@ -110,7 +111,7 @@ function DossierPage({ id }: { id: string }) {
         <h1 className={`dz-title${d.title.length > 110 ? ' dz-title--long' : ''}`}>{d.title}</h1>
         {d.known_as && <KnownAs k={d.known_as} />}
         {/* Without an editorial summary, "What is it?" below already shows the official title in full. */}
-        {d.editorial && !isSameTitle(d.title, d.official_title) && <OfficialTitle text={d.official_title} />}
+        {d.editorial && d.official_title && !isSameTitle(d.title, d.official_title) && <OfficialTitle text={d.official_title} />}
         {change && (
           <p className="dz-changed" role="status">
             <span className="lx-changed">Updated since you last looked</span>{' '}

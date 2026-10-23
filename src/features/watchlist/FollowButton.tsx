@@ -7,7 +7,9 @@ import './watchlist.css';
 type Snap = Pick<DossierSummary, 'id' | 'last_event' | 'stage' | 'status_label'>;
 
 /**
- * Toggle button for the browser-local watchlist. Writes to localStorage only when clicked.
+ * Toggle button for the browser-local watchlist. Writes to localStorage only when clicked. Its name stays "Follow
+ * this legislation" whatever the state, which aria-pressed (and the filled star) carries, as the toggle-button
+ * pattern requires; the hint below says when the file is followed.
  */
 export function FollowButton({ dossier, showHint = true }: { dossier: Snap; showHint?: boolean }) {
   const list = useWatchlist();
@@ -30,13 +32,13 @@ export function FollowButton({ dossier, showHint = true }: { dossier: Snap; show
         <span aria-hidden="true" className="follow__icon">
           {following ? '★' : '☆'}
         </span>
-        {following ? 'Following' : 'Follow this legislation'}
+        Follow this legislation
       </button>
       {showHint && (
         <p className="follow__hint meta">
           {following ? (
             <>
-              Saved in this browser only. <Link to="/following">See everything you follow</Link>.
+              You follow this file; it is saved in this browser only. <Link to="/following">See everything you follow</Link>.
             </>
           ) : (
             <>Saved only in this browser. No account, nothing sent anywhere.</>

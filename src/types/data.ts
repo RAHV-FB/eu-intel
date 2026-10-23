@@ -143,7 +143,7 @@ export interface DossierSummary {
   type: string; // "COD" | "CNS" | "APP" | ...
   type_label: string; // "Ordinary legislative procedure"
   title: string; // human-readable: curated short title if any, else cleaned official title
-  official_title: string;
+  official_title: string | null; // null for a split procedure's parent known only from EUR-Lex: no title of its own is recorded
   short?: string | null; // one-sentence curated description (only for curated dossiers)
   topics: string[]; // topic slugs
   stage: LifecycleStage;
@@ -175,8 +175,9 @@ export interface DossierStatus {
 /** An act named in a status explanation. */
 export interface NamedAct {
   celex: string;
-  label: string; // "Directive (EU) 2021/555" (official title), "Regulation 2017/1430" (from the CELEX id), or the CELEX id
-  url: string; // EUR-Lex
+  label: string; // "Directive (EU) 2021/555" (official title), "Regulation 2017/1430" (from the CELEX id), or the CELEX id;
+  // or a procedure reference ("2016/0400A(COD)", celex ''): a split procedure's part, the main file of a Parliament report
+  url: string; // EUR-Lex (OEIL for a procedure)
   dossier?: string | null; // its legislative file on this site, if any
 }
 
@@ -328,7 +329,7 @@ export interface DossierDetail extends DossierSummary {
     committee?: string | null;
   }[];
   documents: DocRef[];
-  related: { id: string; title: string; relation: string }[]; // only officially established relations
+  related: { id: string; title: string; relation: string; ref?: string; status_label?: string }[]; // only officially established relations; "Split into" parts also carry their reference and status
   dates_set_for?: { id: string; title: string; dates: ISODate[] }[]; // dates this file's act set for another act (checked)
   oeil_url: string | null; // null where OEIL has no file under this reference (e.g. a split procedure's parent)
   eurlex_only?: boolean; // built from the EUR-Lex act alone: the procedure's own steps are not in our data
@@ -577,11 +578,35 @@ export interface PartySummary {
   members_active: number;
   members_total: number; // all MEPs in our dataset ever recorded in this party
   groups: string[]; // group slugs its MEPs belonged to (all periods in dataset)
+  terms?: number[]; // parliamentary terms this record covers (EP open data has one record per party per term)
+}
+
+/** Another party record, linked from a party page. */
+export interface PartyRef {
+  id: string;
+  label: string;
+  terms: number[];
+  start?: ISODate | null; // the record's period (EP corporate body `temporal`)
+  end?: ISODate | null;
+  members_active: number;
+  meps?: number; // in now_parties: how many of this record's MEPs sit under that record today
 }
 
 export interface PartyDetail extends PartySummary {
-  meps: { id: string; name: string; active: boolean; from?: ISODate | null; to?: ISODate | null }[];
+  start?: ISODate | null; // the record's period (EP corporate body `temporal`); end null while it is open
+  end?: ISODate | null;
+  meps: {
+    id: string;
+    name: string;
+    active: boolean; // still in this party record and a sitting MEP
+    mep_active?: boolean; // the MEP sits in Parliament today (whatever their party)
+    now_party?: string | null; // for a sitting MEP who left this record: the party record they are in now
+    from?: ISODate | null;
+    to?: ISODate | null;
+  }[];
   group_history: { group: string; from?: ISODate | null; to?: ISODate | null; meps: number }[];
+  same_name?: PartyRef[]; // records with the same name and country (the same party in other terms)
+  now_parties?: PartyRef[]; // the records this record's sitting MEPs are in now, most MEPs first
   source: SourceRef;
 }
 
@@ -622,6 +647,8 @@ export interface CountryDetail extends CountrySummary {
   transposition: {
     celex: string;
     title: string;
+    act?: string | null; // the directive's own number as its official title cites it: "Directive (EU) 2022/2555", "Directive 2014/35/EU"
+    names?: string[]; // names its file is known by (official short titles, curated common names): "NIS 2 Directive"
     dossier_id?: string | null;
     deadline?: ISODate | null;
     measures: number; // notified measures in the dataset

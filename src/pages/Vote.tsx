@@ -27,7 +27,8 @@ export default function Vote() {
   const validId = /^\d+$/.test(id);
   const { data: v, error, loading } = useData<EpVoteDetail>(validId ? `votes/${encodeURIComponent(id)}.json` : null);
   const groupsState = useData<GroupSummary[]>('people/groups.json');
-  useDocumentTitle(v ? v.display_title || v.title : 'Parliament vote');
+  const notFound = !validId || (!!v && !Array.isArray(v.ballots)) || isMissing(error);
+  useDocumentTitle(notFound ? 'Vote not found' : v ? v.display_title || v.title : 'Parliament vote');
 
   const groupNames = useMemo(() => new Map((groupsState.data ?? []).map((g) => [g.id, g.name])), [groupsState.data]);
   const groupCodes = useMemo(() => {
