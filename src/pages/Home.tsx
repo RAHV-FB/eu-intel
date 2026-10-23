@@ -110,7 +110,8 @@ export default function Home() {
                 <h2 id="lists-title">What’s moving</h2>
               </div>
               <p className="lx-head__note">
-                Generated automatically from Parliament, Council and EUR-Lex data. Each item links to its source.
+                Generated automatically from Parliament, Council and EUR-Lex data. Each item opens a page on this site that links to
+                the official records.
               </p>
             </div>
             <HomeLists lists={lists} />

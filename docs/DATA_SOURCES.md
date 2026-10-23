@@ -254,11 +254,27 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   consent", rather than "Parliament adopted". A motion to reject says what became of the text, then names the
   file: "Parliament did not reject the Commission proposal: <file>" for a rejected motion (vote 199567), "Parliament
   rejected the Commission proposal" for an adopted one (179804), and likewise for the Council's position at second
-  reading (195807). A discharge decision is "Parliament voted on a discharge decision: …". A consent milestone
+  reading (195807), followed by what the vote's title adds to tell it from another vote of the day ("(amendments 1,
+  2 and 7)": 195775, the same day as 195807); votes of a file and day still headlined alike add their counts. A
+  discharge decision is "Parliament voted on a discharge decision: …". A consent milestone
   titled "Parliament voted on consent" says "Parliament gave its consent" (or "did not give …") when the final
   vote linked to it records the outcome officially (published or in the minutes; 2025/0313(APP), vote 197472).
-  A Council vote is titled by its list title (`display_title`, below); an item with no page on the site links to
-  its official document instead of the site root.
+  A Council vote is titled by its list title (`display_title`, below); a Parliament vote links to its vote page;
+  an item with no page on the site links to its official document instead of the site root.
+- Activity ids (`activity.json`, Atom entry ids): a step's id is its event id, except Parliament's decision (kind
+  `ep_position` or `negotiation_mandate`) on a day an officially adopted vote of the deciding kind (final or mandate;
+  outcome published or in the minutes) was held, which is `vote-<id>-<kind>`, the id of the step the build makes
+  from that vote while the procedure record lacks it. The official event that replaces that step when the EP API or
+  OEIL catch up keeps the item (2025/0258(COD), 21 October 2026: vote 198325, then the REFBAK event). Introducing
+  this rule changed 30 of the 265 ids of October 2026, once.
+- Recorded activity (a refresh with `EU_INTEL_RECORD_ACTIVITY=1`, `data/state/`): the items the snapshot lists
+  (the same steps, votes and Council votes, in the same words, at any date) that rest on no record of their file
+  seen before (step id or key, vote, Council vote, act), status changes, and a "New file" item for a new file whose
+  recent items include no proposal. A refresh therefore records each Council vote, final vote and motion once, as
+  the snapshot lists it, and no minor step (amendments tabled, trilogues, debates, announcements). Simulated on the
+  October 2026 snapshot with a digest that had not seen anything dated from 12 October: 35 items recorded (107
+  before, 61 of them minor steps, 14 records listed twice), and the public list the same 265 items as without
+  recording (342 before).
 - `subject` in `votes/index.json`: the vote's published subject (vote item or minutes block title, without its
   procedure symbol), only when the display title and Parliament's label lack some of its words; the vote search
   matches it (vote 195775, titled after the act it amends, has the subject "Temporary derogation from the ePrivacy
@@ -668,9 +684,18 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   prints the wrong rule: see the corrections below.
 - A note on a written procedure "initiated by CM 2163/21" without a completion date (ST 7108/21, 8502/21) is dated
   by the Council event Cellar attaches it to (16 March and 7 September 2021), else by the note's own date.
+- `written_procedure`: true when the subject gives the outcome of a written procedure, and also when the note names
+  no meeting but gives the date of the decision to use the written procedure ("date of decision to use the Written
+  Procedure by Coreper, Part 1, 20.03.2020": ST 7236/20 and 7237/20; ST 7360/20, Part 2, 08.04.2020); false when a
+  meeting is named. Such a note is dated like the others above: ST 7360/20 (note of 16 April 2020) by its Cellar
+  event ADP_R1_POS_byCONSIL, 15 April 2020, the date of Position (EU) No 8/2020 ("Adopted by the Council on
+  15 April 2020", CELEX 52020AG0008(01)).
+- `procedure_refs`: the interinstitutional files on page 1, a split part also when written with a space or slash
+  before its letter ("2016/0360 A (COD)" in ST 9252/19, the adoption of Regulation (EU) 2019/876; "2016/0224/A(COD)").
 - 746 voting results 2019-01 → 2026-10 (747 Council votes listed and counted on the About page, with the curated
-  record CM-5860-2022); 744 with positions; rules: 702 QMV, 44 unanimity (as the sheets print them); 2 notes
-  without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
+  record CM-5860-2022, 745 of them with positions, as the country pages count them; the About page's source card
+  and coverage note give these figures and how they divide); 744 with positions; rules: 702 QMV, 44 unanimity (as
+  the sheets print them); 2 notes without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
   unreadable). `meta.json` (`sources[council].note`) gives the counts of each release. Verified against the
   rendered sheets: AI Act (ST 10199/24, 27 in favour), Copyright Directive 2019 (6 against, 3 abstentions),
   Eurodac 2024 (DK/IE not participating), the wolf Directive 2025 (ST 9887/25: 24 in favour, Belgium, Spain and
@@ -695,7 +720,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Parser changes: `PARSER_VERSION` is part of each note's fingerprint (notes.json), so after a change the next
   fetch re-reads every note. On 23 October 2026 (parser 2026-10-23.2: the statement and reference-document rules
   above) every note was re-derived offline from the cached PDFs: 18 records changed (statements of 8 notes, the
-  reference document of 10) and the other 749 came out unchanged.
+  reference document of 10) and the other 749 came out unchanged. With parser 2026-10-23.3 (the written-procedure
+  and split-part rules above) 4 records changed (ST 9252/19 `procedure_refs`; ST 7236/20, 7237/20
+  `written_procedure`; ST 7360/20 `written_procedure` and `date`) and the other 763 came out unchanged.
 - Corrections (`data/curated/council_votes.yaml`): where the sheet prints "qualified majority" but the act's legal
   basis, cited in the act, requires unanimity (Article 19(1), 81(3) or 312(2) TFEU, quoted in `UNANIMITY_BASES`),
   the rule shown is unanimity, with `sheet_voting_rule` and a `voting_rule_note` saying what the sheet prints and
@@ -721,8 +748,17 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   "Adoption of the legislative act" first); in the budget procedure (a budget title or a BUD reference) without
   "Adoption of the legislative act", which some notes add (ST 14735/24), as a Council vote there does not by itself
   adopt the budget: Parliament and the Council establish it together and the President of Parliament declares it
-  adopted (Art. 314(1) and (9) TFEU). A row whose vote names no other item is tagged "Other Council decision".
-  Country rows also carry `stage` and `outcome` ("Act not adopted by this vote").
+  adopted (Art. 314(1) and (9) TFEU). On country pages such a row is tagged with that item, shown outside the title
+  (which phones clamp to three lines) and not repeated at its end, so that the derogation's row (ST 8160/20) does
+  not read like the act's row of the same day (ST 8159/20); a row whose vote names no other item is tagged "Other
+  Council decision". Country rows also carry `stage` and `outcome` ("Act not adopted by this vote").
+- A file with no Council vote says why from its timeline: its latest Council step (the act's adoption or the
+  Council's first-reading position), else its adoption date, set against the first and last Council vote listed
+  (`meta.json` `scope.council_votes_from` / `council_votes_to`). Within that period it says that none of the
+  voting-result documents we read is linked to the file (the documents Cellar lists do not include every Council
+  vote: CM 5860/22 records adoptions that none of them does); before or after it, that the step falls outside it;
+  with neither a step nor an adoption, that files still under discussion or adopted outside the period have no
+  record. That last reason was given for every such file, also for 2021/0433(CNS), adopted 14 December 2022.
 - Build-time checks against the procedure record (`vote_on_note` says when one applies): a note headed
   "Adoption of the legislative act" whose reference document is the Council's first-reading position (same
   number as OEIL's "Council position published"), followed by Parliament's second-reading decision, adopted

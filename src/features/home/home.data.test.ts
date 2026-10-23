@@ -52,6 +52,15 @@ describe.skipIf(!built)('home lists and feed on the built data', () => {
       if (asOf(blocked[k]) === asOf(blocked[k - 1])) expect(blocked[k - 1].date! <= blocked[k].date!, blocked[k].dossier_id!).toBe(true);
   });
 
+  it('gives no two activity items the same date and headline (motions 195775 and 195807 of 9 July 2026)', () => {
+    const seen = new Map<string, string>();
+    for (const it of activity) {
+      const key = `${it.date} ${it.title}`;
+      expect(seen.get(key), it.id).toBeUndefined();
+      seen.set(key, it.id);
+    }
+  });
+
   it('headlines a motion to reject by what became of the text', () => {
     for (const it of activity.filter((i) => i.kind === 'ep_vote' && i.vote_id)) {
       const v = votes.get(it.vote_id!);

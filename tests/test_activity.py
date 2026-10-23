@@ -477,3 +477,167 @@ def test_council_vote_feed_item_names_the_item_voted_on_and_links_its_document()
     xml = atom("t", "s", "feeds/updates.xml", [item], "https://example.org/eu-intel/", "2026-10-22T00:00:00Z")
     entry = ET.fromstring(xml).find(f"{ATOM}entry")
     assert entry.find(f"{ATOM}link[@rel='alternate']").get("href") == url
+
+
+# ---------------------------------------------------------------- a recorded refresh lists what the snapshot lists
+def _bench(files: dict[str, dict], votes: list[dict], council: list[dict]):
+    """A build stand-in holding what activity reads: files {pid: {title, timeline}}, their votes and Council votes."""
+    from types import SimpleNamespace
+
+    detail = {pid: {"title": f["title"], "stage": "negotiations", "status_label": "x", "timeline": f["timeline"],
+                    "ep_votes": [v for v in votes if v["dossier_id"] == pid],
+                    "council_votes": [c for c in council if c["dossier_id"] == pid], "acts": [], "sources": []}
+              for pid, f in files.items()}  # fmt: skip
+    return SimpleNamespace(
+        today="2026-10-23", dossier_ids=sorted(files), dossier_detail=detail, council_public=council,
+        dossier_summary={pid: {"type": "COD", "title": f["title"]} for pid, f in files.items()},
+        vote_summary={v["id"]: v for v in votes}, indexed_votes=[],
+        s=SimpleNamespace(procedures=[1], acts=[1], votes=[1], council=[1], manifest={}, root=None),
+    )  # fmt: skip
+
+
+def _ev(id: str, date: str, kind: str, title: str, key: bool = True, vote_id: str | None = None) -> dict:
+    return {"id": id, "date": date, "kind": kind, "title": title, "key": key, "state": "done", "vote_id": vote_id,
+            "source": None, "institution": "EP"}  # fmt: skip
+
+
+def _vote(id: str, pid: str, date: str, kind: str, outcome: str, title: str, kind_detail: str | None = None) -> dict:
+    return {"id": id, "dossier_id": pid, "date": date, "kind": kind, "kind_detail": kind_detail, "outcome": outcome,
+            "outcome_basis": "published", "display_title": title, "procedure_ref": None, "source": None}  # fmt: skip
+
+
+# 2025/0232(COD) (carcinogens directive): final vote 197460 on 6 October 2026, the decision linking it, ST 14697/26
+# adopting the act on 19 October; 2026/0325(COD) (methane): referral announced 19 October, the urgent-procedure vote,
+# then on 22 October the mandate vote 199592 (its step built from the vote) and the motion to reject 199567, rejected
+CARCINOGENS = "Amending Directive 2004/37/EC as regards the addition of substances and setting limit values in its Annexes I, III and IIIa"
+METHANE = "Reduction of methane emissions in the energy sector: postponement of certain obligations"
+FILES = {
+    "2025-0232": {"title": CARCINOGENS, "timeline": [
+        _ev("A-10-2026-0100-AM-001-045-DEPOT-2026-09-30+1", "2026-09-30", "other", "Amendments tabled for the plenary", False),
+        _ev("2025-0232-DEC-DCPL-2026-10-06", "2026-10-06", "ep_position", "Parliament took its decision (first reading)",
+            vote_id="197460"),
+        _ev("council-ST-14697-2026", "2026-10-19", "council_adoption", "Council adopted the act"),
+    ]},
+    "2026-0325": {"title": METHANE, "timeline": [
+        _ev("2026-0325-ANPRO-2026-10-19", "2026-10-19", "referral",
+            "Announced in Parliament and referred to committee (first reading)", False),
+        _ev("MTG-PL-2026-10-20-PVCRE-ITM-6-1", "2026-10-20", "plenary_vote",
+            "Parliament approved the request for an urgent decision", False),
+        _ev("vote-199592-negotiation_mandate", "2026-10-22", "negotiation_mandate",
+            "Parliament voted to open negotiations with the Council", vote_id="199592"),
+    ]},
+}  # fmt: skip
+VOTES = [
+    _vote("197460", "2025-0232", "2026-10-06", "final", "adopted", f"{CARCINOGENS} — final vote on the text"),
+    _vote("199592", "2026-0325", "2026-10-22", "mandate", "adopted", f"{METHANE} — vote on Parliament's negotiating mandate"),
+    _vote("199567", "2026-0325", "2026-10-22", "motion", "rejected", f"{METHANE} — motion to reject the Commission proposal",
+          "reject_proposal"),
+]  # fmt: skip
+COUNCIL = [{"id": "ST-14697-2026", "date": "2026-10-19", "dossier_id": "2025-0232", "source": None,
+            "title": "Directive amending Directive 2004/37/EC", "display_title": "Directive amending Directive 2004/37/EC"}]  # fmt: skip
+
+
+def test_a_recorded_refresh_records_each_item_once_as_the_snapshot_lists_it():
+    from pipeline.analysis.activity import diff, digest, merge, snapshot_entries, snapshot_items
+
+    # the weekly refresh recorded through diff() every new id of any kind, in its own words: the Council vote twice
+    # ("…: Council adopted the act" and "Council vote: …"), the mandate vote beside its step ("New Parliament vote: …"),
+    # the motion as "New Parliament vote: … — motion to reject …", and the referral and urgent-procedure steps
+    b = _bench(FILES, VOTES, COUNCIL)
+    new = digest(b)
+    old = {pid: {**d, "events": [], "votes": [], "council": []} for pid, d in new.items()}  # seen, but empty
+    rec = diff(old, new, b, "2026-10-26T05:17:00Z", True)
+    assert sorted(r["id"] for r in rec) == [
+        "chg:2025-0232:ev:council-ST-14697-2026",
+        "chg:2025-0232:ev:vote-197460-ep_position",  # the decision, keyed by the vote that decided it
+        "chg:2026-0325:ev:vote-199592-negotiation_mandate",
+        "chg:2026-0325:vote:199567",
+    ]
+    by = {r["id"].split(":", 2)[2]: r for r in rec}
+    assert by["vote:199567"]["title"] == f"Parliament did not reject the Commission proposal: {METHANE}"
+    # the same items, words and sources as the snapshot lists them
+    snap = {i["id"]: i for i in snapshot_items(b)}
+    assert {k: {**v, "detected_at": None, "id": k} for k, v in by.items()} == snap
+    # and the public list is the snapshot's, each item once
+    pub = merge(rec, snapshot_entries(b), b.today)
+    assert sorted(i["id"] for i in pub) == sorted(r["id"] for r in rec)
+    # the same snapshot again: nothing new
+    assert diff(new, new, b, "2026-11-02T05:17:00Z", True) == []
+
+
+def _decision_runs(steps: list[tuple[bool, bool]], state: Path, monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    """Recorded runs on 2025/0258(COD), 21 October 2026: mandate vote 198325 (`vote`) and, until the EP API records
+    the decision, the step built from it (with_recorded_events); then the official REFBAK and DCPL events (`official`)."""
+    from pipeline.analysis.activity import merge, snapshot_entries, snapshot_items, update_state
+
+    pid, title = "2025-0258", "Establishing the 'Pericles V' programme"
+    out = []
+    for i, (vote, official) in enumerate(steps):
+        tl = [_ev("2025-0258-DEC-ADCP-2026-09-28", "2026-09-28", "committee_report", "Parliament committee adopted its report")]
+        if vote and not official:
+            tl.append(_ev("vote-198325-negotiation_mandate", "2026-10-21", "negotiation_mandate",
+                          "Parliament voted to open negotiations with the Council", vote_id="198325"))  # fmt: skip
+        if official:
+            tl += [_ev("2025-0258-DEC-DCPL-2026-10-21", "2026-10-21", "plenary_vote",
+                       "Parliament voted amendments to the proposal", False, "198325" if vote else None),
+                   _ev("2025-0258-DEC-REFBAK-2026-10-21", "2026-10-21", "negotiation_mandate",
+                       "Parliament sent the file back to committee to negotiate with the Council")]  # fmt: skip
+        votes = [_vote("198325", pid, "2026-10-21", "mandate", "adopted", f"{title} — vote on Parliament's negotiating "
+                       "mandate")] if vote else []  # fmt: skip
+        b = _bench({pid: {"title": title, "timeline": tl}}, votes, [])
+        monkeypatch.setenv("EU_INTEL_NOW", f"2026-10-{19 + 7 * i:02d}T05:17:00Z")
+        rec = update_state(b, state, record=True)
+        out.append({
+            "recorded": [r["id"] for r in rec],
+            "public": [r["id"] for r in merge(rec, snapshot_entries(b), b.today) if r["date"] == "2026-10-21"],
+            "snapshot": [r["id"] for r in snapshot_items(b) if r["date"] == "2026-10-21"],
+        })  # fmt: skip
+    return out
+
+
+def test_a_plenary_decision_keeps_its_item_when_the_procedure_record_catches_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # the vote first, then the EP API's REFBAK replaces the step built from it: the entry id changed
+    # (ev:vote-198325-negotiation_mandate -> ev:2025-0258-DEC-REFBAK-2026-10-21) and a refresh recorded both
+    runs = _decision_runs([(False, False), (True, False), (True, True)], tmp_path / "a", monkeypatch)
+    item = "ev:vote-198325-negotiation_mandate"
+    assert runs[1]["snapshot"] == runs[2]["snapshot"] == [item]
+    assert runs[2]["recorded"] == [f"chg:2025-0258:{item}"] and runs[2]["public"] == [f"chg:2025-0258:{item}"]
+    # the official event first, then the vote: recorded once, and the public list keeps that one item
+    runs = _decision_runs([(False, False), (False, True), (True, True)], tmp_path / "b", monkeypatch)
+    assert runs[2]["recorded"] == ["chg:2025-0258:ev:2025-0258-DEC-REFBAK-2026-10-21"]
+    assert runs[2]["public"] == runs[2]["recorded"]
+
+
+def test_two_motions_to_reject_on_one_file_that_day_are_told_apart():
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import snapshot_items
+    from pipeline.analysis.feeds import atom
+
+    # 195775 ("Proposal for rejection – Am 1= 2= 7=", rejected 314-276-17) and 195807 (rejected 276-286-30), both on
+    # 2025/0429(COD) on 9 July 2026, were both "Parliament did not reject the Council's position: Amending Regulation
+    # (EU) 2021/1232 …" and linked to the file; display titles as in votes/index.json
+    t = "Amending Regulation (EU) 2021/1232 as regards the extension of its period of application"
+    kind = "motion to reject the Council's position (second reading)"
+    summary = {vid: {"id": vid, "date": "2026-07-09", "kind": "motion", "kind_detail": "reject_council_position",
+                     "outcome": "rejected", "dossier_id": "2025-0429", "procedure_ref": "2025/0429(COD)",
+                     "display_title": f"{t} — {kind}{tail}", "source": None, "for": n[0], "against": n[1],
+                     "abstain": n[2]}
+               for vid, tail, n in (("195775", " (amendments 1, 2 and 7)", (314, 276, 17)), ("195807", "", (276, 286, 30)))}  # fmt: skip
+    b = SimpleNamespace(today="2026-07-20", dossier_ids=[], dossier_detail={}, council_public=[], vote_summary=summary,
+                        dossier_summary={"2025-0429": {"type": "COD", "title": t}}, indexed_votes=[])  # fmt: skip
+    items = {i["vote_id"]: i for i in snapshot_items(b)}
+    assert items["195775"]["title"] == f"Parliament did not reject the Council's position: {t} (amendments 1, 2 and 7)"
+    assert items["195807"]["title"] == f"Parliament did not reject the Council's position: {t}"
+    # each entry opens its own vote
+    xml = atom("t", "s", "feeds/updates.xml", list(items.values()), "https://example.org/eu-intel/", "x")
+    links = [e.find(f"{ATOM}link[@rel='alternate']").get("href") for e in ET.fromstring(xml).findall(f"{ATOM}entry")]
+    assert sorted(links) == ["https://example.org/eu-intel/votes/195775", "https://example.org/eu-intel/votes/195807"]
+    # two votes of the day whose titles tell them apart by nothing say how each was carried
+    summary["195775"]["display_title"] = summary["195807"]["display_title"]
+    assert sorted(i["title"] for i in snapshot_items(b)) == [
+        f"Parliament did not reject the Council's position: {t} (276 in favour, 286 against, 30 abstentions)",
+        f"Parliament did not reject the Council's position: {t} (314 in favour, 276 against, 17 abstentions)",
+    ]

@@ -398,6 +398,21 @@ def test_council_vote_in_the_budget_procedure_is_not_the_adoption_of_an_act():
     assert council_vote_label(cv.title, on, cv.stage, cv.procedure_refs) == cv.title
 
 
+def test_council_summary_counts_every_vote_listed():
+    # the About page's source card said "746 voting results …, 744 of them with each Member State's position", its
+    # records table 747 Council votes, and the country pages count 745 with positions: CM-5860-2022 (curated, from the
+    # Council's communication on the written procedure) is listed and counted, so the summary counts it too
+    me = _built_council(["ST-15907-2022", "ST-7085-2020"], ["2022-0369"])
+    assert len(me.council_public) == 3  # type: ignore[attr-defined]
+    st = SimpleNamespace(fetched_at="2026-10-23T00:00:00Z", records={}, status="ok")
+    summary = Builder.source_summary(me, "council", st)  # type: ignore[arg-type]
+    assert summary.startswith(
+        "3 votes of the Council of the EU (2020–2022), 2 of them with each Member State's position: 2 from the "
+        "Council's voting-result documents and 1 adoption by written procedure from the Council's communication on "
+        "its outcome (CM 5860/22). 1 voting-result document could not be read and is shown without positions."
+    )
+
+
 def test_council_rule_correction_links_the_texts_it_was_checked_against(tmp_path: Path):
     from pipeline.build import council_vote_event
 

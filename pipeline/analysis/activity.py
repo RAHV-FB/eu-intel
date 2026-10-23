@@ -8,8 +8,10 @@ State (committed, data/state/):
                    for the first time are a baseline, not changes.
     activity.json  append-only list of verified changes, each with `detected_at`.
 
-What counts as a change (substantive only — never a metadata refresh such as a new retrieved_at):
-    new_dossier     a procedure id not seen before
+What counts as a change (substantive only — never a metadata refresh such as a new retrieved_at): an activity item
+the snapshot lists (the same selection and wording, any date; see _entries) that rests on no record of the file seen
+before, a status change, and a new file:
+    new_dossier     a procedure id not seen before, when none of its recent items is its proposal
     status_change   the derived lifecycle stage changed. Recorded only when procedure AND act data are
                     present, the manifest says this snapshot's ep_procedures and eurlex fetches were
                     complete ("ok"; a failed or partial fetch may carry degraded records, so the stored
@@ -19,10 +21,10 @@ What counts as a change (substantive only — never a metadata refresh such as a
                     data/snapshot/<source>/_state.json, stamped with the manifest entry's attempted_at:
                     pending, kept or degraded records) is trusted for every other dossier: only the
                     dossiers it names keep their stored stage ("held") until a later run refreshes them
-    milestone       a new recorded procedural event id
-    publication     a new legal act linked to the dossier
-    ep_vote         a new indexed EP vote linked to the dossier
-    council_vote    a new Council vote linked to the dossier
+    milestone       a listed procedural step whose event id (or item key, see event_keys) was not seen before
+    publication     a listed step (signature, publication, entry into force) of a legal act newly linked to the dossier
+    ep_vote         a final vote, motion or discharge decision not seen before that no listed step records
+    council_vote    a Council vote not seen before that no listed step records
 
 Without recorded history, the public activity.json lists recent dated events from the snapshot
 itself, with detected_at = null (we did not observe *when* they appeared).
@@ -34,6 +36,7 @@ import json
 import logging
 import os
 import re
+from collections import Counter
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -86,6 +89,8 @@ REJECT_MOTION_TITLES = {
     ("reject_council_position", "adopted"): "Parliament rejected the Council's position",
 }
 _KIND_TAIL = re.compile(r"\s+—\s+(?:motion to reject|final vote on the text)\b.*$")
+# what a motion's title adds after its kind to tell it apart from another vote of the day (build.distinguish_vote_titles)
+_MOTION_TAIL = re.compile(r"\s+—\s+motion to reject the (?:Commission proposal|Council's position \(second reading\))(.*)$")
 # "Discharge 2020: European Border and Coast Guard Agency", "2019 Discharge: …"
 _DISCHARGE_TITLE = re.compile(r"^(?:discharge\s+\d{4}|\d{4}\s+discharge)\b", re.I)
 # A consent decision as the timeline titles it when it does not state the outcome (build: Builder.procedure_event)
@@ -108,7 +113,10 @@ def vote_headline(v: dict, step: str | None, dossier_title: str | None = None) -
     title = v["display_title"]
     if (v.get("kind_detail"), v["outcome"]) in REJECT_MOTION_TITLES:
         what = short_title(dossier_title) if dossier_title else _KIND_TAIL.sub("", title)
-        return f"{REJECT_MOTION_TITLES[(v['kind_detail'], v['outcome'])]}: {what}"
+        # with what tells it apart from another motion on the file that day, as its title gives it: 195775 "(amendments
+        # 1, 2 and 7)" and 195807, both on 2025/0429(COD) on 9 July 2026, were headlined alike
+        tail = m.group(1) if (m := _MOTION_TAIL.search(title)) else ""
+        return f"{REJECT_MOTION_TITLES[(v['kind_detail'], v['outcome'])]}: {what}{tail}"
     if is_discharge_vote(v):
         return f"Parliament voted on a discharge decision: {_KIND_TAIL.sub('', title)}"
     res = {"adopted": "adopted", "rejected": "rejected", "lapsed": "lapsed"}.get(v["outcome"], "voted on")
@@ -181,49 +189,131 @@ def _event_kind(kind: str) -> str:
 
 
 # --------------------------------------------------------------------------------------- snapshot items
-def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
-    """Recent dated events present in the current snapshot (detected_at = None)."""
-    today = b.today
-    cut = (date.fromisoformat(today) - timedelta(days=days)).isoformat()
-    out: list[dict] = []
+# Parliament's decisions that build.with_recorded_events also builds from the vote that decided them ("vote-<id>-<kind>")
+# while its procedure record (EP API, OEIL) lacks them: the kind of vote that decides each
+DECISION_VOTE_KINDS = {"ep_position": "final", "negotiation_mandate": "mandate"}
+_VOTE_KEY = re.compile(r"^vote-(\d+)-")  # a step built from a vote, or keyed by it (event_keys)
+_ACT_EVENT = re.compile(r"^act-([^-]+)-")  # a step of a legal act (build: "act-<celex>-<kind>-<date>")
+# the digest list, and the source, of the record an item id names ("ev:<event id or key>", "vote:<id>", ...)
+REF_LISTS = {"ev": "events", "vote": "votes", "council": "council", "act": "acts"}
+REF_SOURCES = {"ev": "ep_procedures", "vote": "ep_votes", "council": "council", "act": "eurlex"}
+
+
+def is_listed(e: dict) -> bool:
+    """A timeline step that is an activity item: done, of a kind in SNAPSHOT_EVENT_KINDS, not recorded for after the
+    act's validity ended, and for a negotiating mandate the decision, not its announcement in plenary."""
+    return (
+        e["state"] == "done"
+        and e["kind"] in SNAPSHOT_EVENT_KINDS
+        and not e.get("after_end_of_validity")
+        and not (e["kind"] == "negotiation_mandate" and not e["key"])
+    )
+
+
+def event_keys(det: dict, today: str) -> dict[str, str]:
+    """Event id -> the id of its activity item, for a file's listed steps: the step's own id, except that Parliament's
+    decision on a day when an officially adopted vote of the deciding kind was held (outcome published or in the
+    minutes) is keyed by that vote, "vote-<id>-<kind>", the id of the step built from it, whichever record supplies the
+    step. The official event that replaces that step when the EP API or OEIL catch up is then the same item, not a new
+    one (2025/0258(COD), 21 October 2026: vote 198325, then 2025-0258-DEC-REFBAK-2026-10-21)."""
+    decided: dict[tuple[str, str], str] = {}
+    for v in sorted(det.get("ep_votes") or [], key=lambda v: (v["date"], v["id"])):  # the last vote of the day wins
+        if v["outcome"] == "adopted" and v["date"] <= today and v.get("outcome_basis") in ("published", "minutes"):
+            for kind, vkind in DECISION_VOTE_KINDS.items():
+                if v["kind"] == vkind:
+                    decided[(kind, v["date"])] = v["id"]
+    out: dict[str, str] = {}
+    for e in det["timeline"]:
+        if is_listed(e):
+            vid = decided.get((e["kind"], e["date"]))
+            key = f"vote-{vid}-{e['kind']}" if vid else e["id"]
+            out[e["id"]] = e["id"] if key in out.values() else key  # a second such step that day keeps its own id
+    return out
+
+
+def item_refs(raw: str) -> list[str]:
+    """The records an item id rests on, as item ids: itself, a Council vote and its step, and the vote a step was
+    built from or is keyed by."""
+    out = [raw]
+    if raw.startswith("ev:council-"):
+        out.append(f"council:{raw[len('ev:council-'):]}")
+    elif raw.startswith("council:"):
+        out.append(f"ev:council-{raw[len('council:'):]}")
+    if raw.startswith("ev:") and (m := _VOTE_KEY.match(raw[3:])):
+        out.append(f"vote:{m.group(1)}")
+    return out
+
+
+def _event_refs(e: dict, key: str) -> list[str]:
+    """What a step's item rests on: the act it is a step of (digest `acts`), else the step (its id and key), its
+    Council vote and the vote it links."""
+    if m := _ACT_EVENT.match(e["id"]):
+        return [f"act:{m.group(1)}"]
+    refs = item_refs(f"ev:{e['id']}") + (item_refs(f"ev:{key}") if key != e["id"] else [])
+    if e.get("vote_id"):
+        refs.append(f"vote:{e['vote_id']}")
+    return list(dict.fromkeys(refs))
+
+
+def _counts(v: dict) -> str:
+    n = v.get("abstain")
+    return f"{v.get('for')} in favour, {v.get('against')} against, {n} abstention{'' if n == 1 else 's'}"
+
+
+def _entries(b: Any, cut: str | None) -> list[tuple[dict, list[str]]]:
+    """The activity items the snapshot gives for the steps, Parliament votes and Council votes dated from `cut` (any
+    date when None) to today, each with the records it rests on (item ids, see item_refs). The snapshot list and the
+    changes a recorded refresh detects (diff) are both drawn from these, so that each is listed once and in the same
+    words, however it was found."""
+    today, lo = b.today, cut or ""
+    out: list[tuple[dict, list[str]]] = []
     for pid in b.dossier_ids:
         det = b.dossier_detail[pid]
         title = short_title(det["title"])
+        keys = event_keys(det, today)
         for e in det["timeline"]:
-            if (
-                e["state"] != "done"
-                or not (cut <= e["date"] <= today)
-                or e["kind"] not in SNAPSHOT_EVENT_KINDS
-                or e.get("after_end_of_validity")  # recorded for after the act's validity ended
-                or (e["kind"] == "negotiation_mandate" and not e["key"])  # announced in plenary: not a decision
-            ):
+            if e["id"] not in keys or not (lo <= e["date"] <= today):
                 continue
-            out.append(
-                _item(
-                    f"ev:{e['id']}",
-                    e["date"],
-                    _event_kind(e["kind"]),
-                    f"{title}: {event_title(e, b)}",
-                    pid,
-                    e.get("vote_id"),
-                    e.get("source"),
-                )  # fmt: skip
-            )
-    # a vote that is already a dossier milestone (its timeline event) is listed once, as that milestone
-    milestone_votes = {i["vote_id"] for i in out if i.get("vote_id")}
-    milestone_ids = {i["id"] for i in out}
+            key = keys[e["id"]]
+            out.append((
+                _item(f"ev:{key}", e["date"], _event_kind(e["kind"]), f"{title}: {event_title(e, b)}", pid,
+                      e.get("vote_id"), e.get("source")),
+                _event_refs(e, key),
+            ))  # fmt: skip
+    # a vote that is already a dossier milestone (its timeline event, or the step keyed by it) is listed once, as that
+    # milestone; so is a Council vote that its own step records
+    covered = {r for _, refs in out for r in refs}
     subjects = {v.id: v.subject for v in getattr(b, "indexed_votes", [])}
+    votes: list[tuple[dict, list[str]]] = []
     for v in b.vote_summary.values():
-        if v["kind"] in ("final", "motion", "discharge") and cut <= v["date"] <= today and v["id"] not in milestone_votes:
+        if v["kind"] in ("final", "motion", "discharge") and lo <= v["date"] <= today and f"vote:{v['id']}" not in covered:
             d = b.dossier_summary.get(v["dossier_id"]) if v.get("dossier_id") else None
             step = vote_step(v, d["type"] if d else None, subjects.get(v["id"]))
-            out.append(_item(f"vote:{v['id']}", v["date"], "ep_vote", vote_headline(v, step, d["title"] if d else None),
-                             v.get("dossier_id"), v["id"], v.get("source")))  # fmt: skip
+            votes.append((_item(f"vote:{v['id']}", v["date"], "ep_vote", vote_headline(v, step, d["title"] if d else None),
+                                v.get("dossier_id"), v["id"], v.get("source")), [f"vote:{v['id']}"]))  # fmt: skip
+    # votes of one day on a file still headlined alike (their titles tell them apart by nothing) say how each went
+    same = Counter((it["dossier_id"], it["date"], it["title"]) for it, _ in votes)
+    for it, _ in votes:
+        v = b.vote_summary[it["vote_id"]]
+        if same[(it["dossier_id"], it["date"], it["title"])] > 1 and v.get("for") is not None:
+            it["title"] += f" ({_counts(v)})"
+    out += votes
     for cv in b.council_public:
-        if cut <= cv["date"] <= today and f"ev:council-{cv['id']}" not in milestone_ids:
-            out.append(_item(f"council:{cv['id']}", cv["date"], "council_vote", f"Council vote: {council_vote_title(cv)}",
-                             cv.get("dossier_id"), None, cv.get("source")))  # fmt: skip
+        if lo <= cv["date"] <= today and f"council:{cv['id']}" not in covered:
+            out.append((_item(f"council:{cv['id']}", cv["date"], "council_vote", f"Council vote: {council_vote_title(cv)}",
+                              cv.get("dossier_id"), None, cv.get("source")), item_refs(f"council:{cv['id']}")))  # fmt: skip
     return out
+
+
+def snapshot_entries(b: Any, days: int = RECENT_DAYS) -> list[tuple[dict, list[str]]]:
+    """Recent dated activity present in the current snapshot (detected_at = None), with the records each item rests
+    on (for merge)."""
+    return _entries(b, (date.fromisoformat(b.today) - timedelta(days=days)).isoformat())
+
+
+def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
+    """Recent dated events present in the current snapshot (detected_at = None)."""
+    return [it for it, _ in snapshot_entries(b, days)]
 
 
 # --------------------------------------------------------------------------------------- digest + diff
@@ -231,11 +321,15 @@ def digest(b: Any) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for pid in b.dossier_ids:
         det = b.dossier_detail[pid]
+        keys = event_keys(det, b.today)
+        ids = [e["id"] for e in det["timeline"] if not e["id"].startswith("act-")]
         out[pid] = {
             "stage": det["stage"],
             "label": det["status_label"],
             "title": det["title"],
-            "events": sorted(e["id"] for e in det["timeline"] if not e["id"].startswith("act-")),
+            # with the keys of the steps' activity items (event_keys): a step keyed by its vote is not new when the
+            # official event replaces the step built from the vote, nor when the vote arrives after the official event
+            "events": sorted(set(ids) | {keys[i] for i in ids if i in keys}),
             "votes": sorted(v["id"] for v in det["ep_votes"]),
             "council": sorted(c["id"] for c in det["council_votes"]),
             "acts": sorted(a["celex"] for a in det["acts"]),
@@ -324,7 +418,9 @@ def diff(
     seen: dict[str, bool] | None = None,
     held: set[str] | frozenset[str] = frozenset(),
 ) -> list[dict]:
-    """Verified substantive changes from `old` to `new` digests.
+    """Verified substantive changes from `old` to `new` digests: the activity items the snapshot gives (_entries, any
+    date), as it gives them, that rest on no record of their file seen before; status changes; new files (with their
+    recent items, as the snapshot lists them, and a "New file" item when none of them is the file's proposal).
 
     `seen` says which sources were already present when `old` was recorded: records of a source that
     was absent then are the first observation of that source (a baseline), not changes. Dossiers in `held`
@@ -334,6 +430,15 @@ def diff(
     stubs = getattr(b, "stub_ids", set())
     items: list[dict] = []
     today = b.today
+    cut = (date.fromisoformat(today) - timedelta(days=RECENT_DAYS)).isoformat()
+    of: dict[str, list[tuple[dict, list[str]]]] = {}
+    for it, refs in _entries(b, None):
+        if it["dossier_id"] in new and all(seen.get(REF_SOURCES[r.split(":", 1)[0]]) for r in refs):
+            of.setdefault(it["dossier_id"], []).append((it, refs))
+
+    def recorded(it: dict) -> dict:
+        return {**it, "id": f"chg:{it['dossier_id']}:{it['id']}", "detected_at": detected_at}
+
     for pid in sorted(new):
         n = new[pid]
         det = b.dossier_detail[pid]
@@ -342,8 +447,11 @@ def diff(
         o = old.get(pid)
         if o is None:
             if seen["eurlex" if pid in stubs else "ep_procedures"]:
-                items.append(_item(f"chg:{pid}:new", det.get("started") or det.get("last_event") or today,
-                                   "new_dossier", f"New file: {title}", pid, None, src, detected_at))  # fmt: skip
+                fresh = [it for it, _ in of.get(pid, []) if it["date"] >= cut]
+                if not any(it["kind"] == "new_dossier" for it in fresh):
+                    items.append(_item(f"chg:{pid}:new", det.get("started") or det.get("last_event") or today,
+                                       "new_dossier", f"New file: {title}", pid, None, src, detected_at))  # fmt: skip
+                items += [recorded(it) for it in fresh]
             continue
         # a stored stage of None was recorded from incomplete inputs: the first stage seen is a baseline
         if (
@@ -357,36 +465,8 @@ def diff(
             items.append(_item(f"chg:{pid}:stage:{n['stage']}:{since}", since, "status_change",
                                f"{title}: status now “{n['label']}” (previously “{o.get('label', o.get('stage'))}”)",
                                pid, None, src, detected_at))  # fmt: skip
-        if seen["ep_procedures"]:
-            ev_by_id = {e["id"]: e for e in det["timeline"]}
-            for eid in sorted(set(n["events"]) - set(o.get("events", []))):
-                e = ev_by_id.get(eid)
-                if e:
-                    kind = "milestone" if e["kind"] == "proposal" else _event_kind(e["kind"])
-                    items.append(_item(f"chg:{pid}:ev:{eid}", e["date"], kind, f"{title}: {event_title(e, b)}", pid,
-                                       e.get("vote_id"), e.get("source"), detected_at))  # fmt: skip
-        if seen["ep_votes"]:
-            votes = {v["id"]: v for v in det["ep_votes"]}
-            for vid in sorted(set(n["votes"]) - set(o.get("votes", []))):
-                v = votes[vid]
-                items.append(_item(f"chg:{pid}:vote:{vid}", v["date"], "ep_vote",
-                                   f"New Parliament vote: {v['display_title']}", pid, vid, v.get("source"),
-                                   detected_at))  # fmt: skip
-        if seen["council"]:
-            cvs = {c["id"]: c for c in det["council_votes"]}
-            for cid in sorted(set(n["council"]) - set(o.get("council", []))):
-                c = cvs[cid]
-                items.append(_item(f"chg:{pid}:council:{cid}", c["date"], "council_vote",
-                                   f"Council vote: {council_vote_title(c)}", pid, None, c.get("source"),
-                                   detected_at))  # fmt: skip
-        if seen["eurlex"]:
-            acts = {a["celex"]: a for a in det["acts"]}
-            for celex in sorted(set(n["acts"]) - set(o.get("acts", []))):
-                a = acts[celex]
-                items.append(_item(f"chg:{pid}:act:{celex}",
-                                   a.get("date_publication") or a.get("date_document") or today, "publication",
-                                   f"{title}: legal act {celex} recorded by EUR-Lex", pid, None, None,
-                                   detected_at))  # fmt: skip
+        known = {f"{ns}:{x}" for ns, k in REF_LISTS.items() for x in o.get(k, [])}
+        items += [recorded(it) for it, refs in of.get(pid, []) if not known.intersection(refs)]
     return items
 
 
@@ -493,18 +573,19 @@ def update_state(b: Any, state_dir: Path, record: bool = False) -> list[dict]:
     return recorded
 
 
-def merge(recorded: list[dict], snapshot: list[dict], today: str, limit: int = PUBLIC_LIMIT) -> list[dict]:
-    """Recorded changes first-class; snapshot-derived recent events fill in (dedup by underlying id)."""
+def merge(
+    recorded: list[dict], snapshot: list[tuple[dict, list[str]]], today: str, limit: int = PUBLIC_LIMIT
+) -> list[dict]:
+    """Recorded changes first-class; the snapshot's items (snapshot_entries) fill in, except those resting on a record
+    that a recorded change names: its step (by id or key), its vote or its Council vote."""
     seen: set[str] = set()
     out: list[dict] = []
     for it in recorded:
         key = it["id"].split(":", 2)[-1] if it["id"].startswith("chg:") else it["id"]
-        seen.add(key)
-        seen.add(it["id"])
+        seen.update(item_refs(key), [it["id"]], [f"vote:{it['vote_id']}"] if it.get("vote_id") else [])
         out.append(it)
-    for it in snapshot:
-        raw = it["id"].split(":", 1)[-1]
-        if it["id"] in seen or f"ev:{raw}" in seen or raw in seen:
+    for it, refs in snapshot:
+        if it["id"] in seen or seen.intersection(refs):
             continue
         out.append(it)
     out = [it for it in out if it["date"] <= today]

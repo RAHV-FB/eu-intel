@@ -3,8 +3,9 @@
     public/data/feeds/updates.xml       all recent activity
     public/data/feeds/<topic>.xml       activity on dossiers in that topic
 
-Links point to the app routes under SITE_URL (default https://rahv-fb.github.io/eu-intel/); an item with no
-page on the site (e.g. a Council vote on no tracked file) links to its official source document.
+Links point to the app routes under SITE_URL (default https://rahv-fb.github.io/eu-intel/): a Parliament vote to
+its vote page, another item to its file's page; an item with no page on the site (e.g. a Council vote on no
+tracked file) links to its official source document.
 All text is XML-escaped; entry ids are stable tag URIs derived from the activity id. They do not depend on
 SITE_URL: an id must not change when the feed moves (RFC 4287, 4.2.6), e.g. to a custom domain.
 """
@@ -27,6 +28,10 @@ def _ts(item: dict) -> str:
 
 
 def _route(item: dict) -> str:
+    # a Parliament vote opens its own page, which links its file: two motions voted on one file that day are two
+    # entries with two links (195775 and 195807, 2025/0429(COD), 9 July 2026)
+    if item.get("kind") == "ep_vote" and item.get("vote_id"):
+        return f"votes/{quote(item['vote_id'])}"
     if item.get("dossier_id"):
         return f"legislation/{quote(item['dossier_id'])}"
     if item.get("vote_id"):

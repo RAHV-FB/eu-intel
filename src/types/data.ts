@@ -84,6 +84,8 @@ export interface CoverageScope {
   acts_from?: ISODate | null; // adopted acts dated on or after this
   ep_votes_from?: ISODate | null; // first and last Parliament vote listed
   ep_votes_to?: ISODate | null;
+  council_votes_from?: ISODate | null; // first and last Council vote listed (council/index.json)
+  council_votes_to?: ISODate | null;
   ep_roll_call_votes: number; // all roll-call votes in the source data (incl. amendments)
   dossiers_without_topic: number; // files that no topic covers
   other_type_dossiers?: number; // files of another procedure type (NLE) shown because EUR-Lex records them as CNS/APP
