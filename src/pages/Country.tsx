@@ -33,8 +33,9 @@ function FormerMemberState({ code }: { code: string }) {
       <PageHeader eyebrow="Former Member State" title={name} lead={`The ${name} was a Member State of the European Union until 31 January 2020.`} />
       <p>
         This site has country pages for the 27 current Member States only. Where the {name} took part in a vote recorded here before
-        it left, its government’s position in a Council vote is shown on that vote, and the votes of MEPs elected there on each MEP’s
-        page.
+        it left, its government’s position in a Council vote is shown with that vote on the page of the legislative file the vote is
+        linked to (Council votes not linked to a file are listed only on the pages of the current Member States), and the votes of
+        MEPs elected there on each MEP’s page.
       </p>
     </div>
   );
@@ -43,8 +44,9 @@ function FormerMemberState({ code }: { code: string }) {
 /** Tag on a Council vote row: what was voted on when it is not the act itself, or that the act was not adopted. */
 function CouncilRowTag({ v }: { v: CouncilRow }) {
   if (v.vote_on === 'first_reading_position') return <Tag>{COUNCIL_VOTE_ON_SHORT.first_reading_position}</Tag>;
-  // an 'other' vote's title names the item voted on (Non-approval of the European Parliament's amendments, …)
-  if (v.vote_on === 'other' && !v.stage) return <Tag>{COUNCIL_VOTE_ON_SHORT.other}</Tag>;
+  // an 'other' vote's list title names the item voted on (Non-approval of the European Parliament's amendments, …)
+  // when there is one (vote_on_label); otherwise the row says it is another Council decision
+  if (v.vote_on === 'other' && !v.vote_on_label) return <Tag>{COUNCIL_VOTE_ON_SHORT.other}</Tag>;
   if (v.vote_on === 'act' && v.outcome === 'not_adopted') return <Tag>Act not adopted by this vote</Tag>;
   return null;
 }

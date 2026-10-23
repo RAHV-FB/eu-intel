@@ -52,6 +52,28 @@ describe.skipIf(!built)('Council votes on the built data', () => {
     expect(hu.council_votes.find((r) => r.vote_id === 'ST-15907-2022')?.outcome).toBe('not_adopted');
   });
 
+  it('names the derogation from the eight-week period as the item of ST 8160/20, on the card and in country rows', () => {
+    const derog = votes.get('ST-8160-2020')!;
+    expect(derog.vote_on).toBe('other');
+    expect(derog.vote_on_label).toMatch(/^Derogation from the eight-week period for national parliaments/);
+    const pt = read<CountryDetail>('countries/PT.json').council_votes.find((r) => r.vote_id === 'ST-8160-2020')!;
+    expect([pt.pos, pt.vote_on_label]).toEqual(['abstain', derog.vote_on_label]);
+    expect(pt.display_title).not.toContain('Adoption of the legislative act');
+  });
+
+  it('does not show the Council’s position on a draft amending budget as an act adopted (ST 10354/25)', () => {
+    const dab = votes.get('ST-10354-2025')!;
+    expect([dab.vote_on, dab.vote_on_label ?? null]).toEqual(['other', null]);
+    expect(dab.vote_on_note ?? '').toContain('2025/0091(BUD)');
+  });
+
+  it('links the texts a rule or outcome correction was checked against, on the vote and its timeline step', () => {
+    for (const v of votes.values()) if (v.sheet_voting_rule) expect(v.correction_sources?.length ?? 0, v.id).toBeGreaterThan(0);
+    const step = read<DossierDetail>('dossiers/2022-0369.json').timeline.find((e) => e.id === 'council-ST-15907-2022')!;
+    expect(step.title).toBe('Council did not adopt the act');
+    expect(step.docs.map((d) => d.label)).toContain('Council of the EU – ST 15179/22');
+  });
+
   it('lists every statement heading of ST 14020/20, numbering a repeated one', () => {
     expect(votes.get('ST-14020-2020')!.statements).toEqual([
       'Explanation by Hungary of its vote',

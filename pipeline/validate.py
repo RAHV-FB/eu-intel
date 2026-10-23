@@ -454,6 +454,16 @@ def dossier_contradictions(d: dict) -> list[str]:
     signed = [e["date"] for e in d.get("timeline", []) if e.get("kind") == "signature"]
     if signed and adoptions and min(signed) < max(adoptions):
         out.append(f"signed on {min(signed)}, before the Council's adoption step of {max(adoptions)}")
+    # steps of one day in procedural order (build.day_rank): a trilogue after Parliament's decisions of the day
+    # (2025/0132(COD), 17 Dec 2025), a second-reading step after the Council's first-reading position (2018/0136(COD))
+    tl = d.get("timeline", [])
+    for i, e in enumerate(tl):
+        later = {x.get("kind") for x in tl[i + 1 :] if x.get("date") == e.get("date")}
+        if e.get("title") == "Negotiation meeting with the Council (trilogue)" and later & {
+            "negotiation_mandate", "plenary_vote", "ep_position"}:  # fmt: skip
+            out.append(f"trilogue listed before Parliament's decision of {e['date']}")
+        if "council_position" in later and re.search(r"(?<!early )\bsecond[ -]reading\b", e.get("title") or ""):
+            out.append(f"second-reading step listed before the Council's position of {e['date']}")
     return out
 
 

@@ -300,6 +300,12 @@ def test_home_lists_only_from_real_data(out: Path):
     upcoming = lists["upcoming"]["items"]
     assert upcoming and all(TODAY < i["date"] <= "2027-10-22" for i in upcoming)
     assert "discharge" in lists["rejected"]["description"] and "discharge" in lists["close_votes"]["description"]
+    # agency discharges are excluded too (149084, Frontex 2020), not only the EU's general budget
+    assert "budgets of EU agencies and bodies" in lists["close_votes"]["description"]
+    # a bare "Consent" next to a file under discussion could read as consent given
+    from pipeline.build import HOME_PROCEDURE_BADGES
+
+    assert (HOME_PROCEDURE_BADGES["APP"], HOME_PROCEDURE_BADGES["CNS"]) == ("Consent procedure", "Consultation procedure")
 
 
 def test_meta_sources_and_counts(out: Path):
@@ -316,6 +322,8 @@ def test_meta_sources_and_counts(out: Path):
     }
     assert all(s["licence"] for s in meta["sources"])
     assert meta["counts"]["dossiers"] == 4 and meta["counts"]["ep_votes"] == 3
+    # the About page's count is the number of Council votes listed (curated records included: 746 against 747)
+    assert meta["counts"]["council_votes"] == len(load(out, "council/index.json"))
     assert meta["snapshot_at"] == "2099-01-01T00:00:00Z"
     assert any("Country indicators" in n for n in meta["coverage_notes"])
 
