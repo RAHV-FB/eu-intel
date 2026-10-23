@@ -21,6 +21,7 @@ from pipeline.build import (
     _vote_index_entry,
     build_search_docs,
     commission_cod_proposal,
+    discharge_note,
     english_procedural,
     final_role,
     referred_back,
@@ -332,8 +333,8 @@ def test_first_reading_decision_whose_final_vote_was_rejected():
     tl = {e["date"]: e for e in Builder.timeline(me, p, [], list(v.values())) if e["kind"] == "ep_position"}  # type: ignore[arg-type]
     assert (tl["2026-03-26"]["title"], tl["2026-03-26"]["vote_id"]) == ("Parliament rejected the proposal at first reading", "189270")
     assert tl["2026-07-09"]["title"] == "Parliament amended the Council's position at second reading"
-    assert tl["2026-07-09"]["vote_id"] == "195775"
-    assert tl["2026-07-09"]["detail"].startswith("Parliament voted on 2 motions to reject the Council's position")
+    # its amendments decided it, not the rejected motions to reject the Council's position (listed on their own)
+    assert tl["2026-07-09"]["vote_id"] is None
     # an adopted final vote on the same day: the event keeps its source title
     adopted = {**v, "189270": v["189270"].model_copy(update={"outcome": "adopted"})}
     tl2 = Builder.timeline(me, p, [], list(adopted.values()))  # type: ignore[arg-type]
@@ -363,15 +364,48 @@ def test_decision_recorded_a_day_from_its_vote_links_that_vote():
     assert next(e for e in tl if e["date"] == "2021-07-07" and e["kind"] == "ep_position")["vote_id"] is None
 
 
-def test_mandate_vote_a_day_before_the_referral_links_it():
-    # 2021/0068(COD): vote 130712 on 28 Apr 2021 (amended proposal, 540-119-31), procedure event "Parliament sent the
-    # file back to committee to negotiate with the Council" on 29 Apr 2021; the decision of 8 Jun 2021 is 132421.
-    # The rejection motion 130538 of 28 Apr leaves that day's "Vote in Parliament" without a single vote to link.
-    p, v = procs("2021-0068")["2021-0068"], votes("130712", "130538", "132421")
+def _steps(pid: str, *vote_ids: str) -> dict[str, dict]:
+    """Timeline steps of a file by event id, built with the given votes all listed."""
+    p, v = procs(pid)[pid], votes(*vote_ids)
     me = SimpleNamespace(indexed_vote_ids=set(v), council_of={}, today="2026-10-22")
-    tl = Builder.timeline(me, p, [], list(v.values()))  # type: ignore[arg-type]
-    assert next(e for e in tl if e["date"] == "2021-04-29" and e["kind"] == "negotiation_mandate")["vote_id"] == "130712"
-    assert next(e for e in tl if e["date"] == "2021-06-08" and e["kind"] == "ep_position")["vote_id"] == "132421"
+    return {e["id"]: e for e in Builder.timeline(me, p, [], list(v.values()))}  # type: ignore[arg-type]
+
+
+def test_mandate_vote_links_the_vote_on_the_text_not_the_referral():
+    # 2021/0068(COD): vote 130712 on 28 Apr 2021 (amended proposal, 540-119-31), then 130713 "… C9-0104/2021 - Renvoi
+    # (article 59, paragraphe 4 du règlement)" 569-95-26, a procedural vote that is not listed; procedure events of 29
+    # Apr 2021 "Parliament voted amendments to the proposal" (PLENARY_AMEND) and "Parliament sent the file back to
+    # committee to negotiate with the Council"; the decision of 8 Jun 2021 is 132421. The rejected motion to reject
+    # the proposal 130538 (86-591-16) of 28 Apr decides no step.
+    tl = _steps("2021-0068", "130712", "130538", "132421")
+    assert tl["MTG-PL-2021-04-28-PVCRE-ITM-13"]["vote_id"] == "130712"
+    assert tl["2021-0068-DEC-DCPL-2021-04-29"]["vote_id"] == "130712"
+    assert "its procedure record dates the decision 29 April 2021" in tl["2021-0068-DEC-DCPL-2021-04-29"]["detail"]
+    assert tl["2021-0068-DEC-REFBAK-2021-04-29"]["vote_id"] is None
+    assert tl["2021-0068-DEC-DCPL-2021-06-08"]["vote_id"] == "132421"
+    # the twin file 2021/0071(COD) the same way (130714, referral 130715)
+    tl = _steps("2021-0071", "130714", "132423")
+    assert [tl[k]["vote_id"] for k in ("MTG-PL-2021-04-28-PVCRE-ITM-13", "2021-0071-DEC-DCPL-2021-04-29",
+                                        "2021-0071-DEC-REFBAK-2021-04-29")] == ["130714", "130714", None]  # fmt: skip
+    # 2021/0197(COD), 8 Jun 2022: the mandate vote 144009 and the rejected motion to reject the proposal 144352
+    tl = _steps("2021-0197", "144009", "144352")
+    assert (tl["2021-0197-DEC-DCPL-2022-06-08"]["vote_id"], tl["2021-0197-DEC-REFBAK-2022-06-08"]["vote_id"]) == (
+        "144009", None
+    )  # fmt: skip
+    # 2021/0008(COD): mandate vote 135241 dated 15 Sep 2021 (then 135242 "Referral (Rule 59(4))"), decision on the
+    # amendments and referral recorded on 16 Sep 2021
+    tl = _steps("2021-0008", "135241")
+    assert (tl["2021-0008-DEC-DCPL-2021-09-16"]["vote_id"], tl["2021-0008-DEC-REFBAK-2021-09-16"]["vote_id"]) == (
+        "135241", None
+    )  # fmt: skip
+
+
+def test_rejected_motion_to_reject_decides_no_other_step():
+    # 2021/0206(COD), 8 Jun 2022: 144420 "Social Climate Fund – … – Proposal for rejection" rejected 91-512-27, then
+    # committee amendments adopted (PV-9-2022-06-08-VOT); the vote on the text came on 22 Jun 2022 (145868)
+    tl = _steps("2021-0206", "144420", "145868")
+    assert tl["2021-0206-DEC-DCPL-2022-06-08"]["vote_id"] is None
+    assert tl["2021-0206-DEC-DCPL-2022-06-22"]["vote_id"] == "145868"
 
 
 def test_second_reading_amendments_are_named_in_the_decision():
@@ -383,12 +417,23 @@ def test_second_reading_amendments_are_named_in_the_decision():
     me = SimpleNamespace(indexed_vote_ids={"195775", "195807"}, council_of={}, today="2026-10-22")
     tl = Builder.timeline(me, p, [], list(v.values()))  # type: ignore[arg-type]
     e = next(e for e in tl if e["date"] == "2026-07-09" and e["kind"] == "ep_position")
-    assert e["vote_id"] == "195775"
+    assert e["vote_id"] is None
     assert e["detail"] == (
-        "Parliament voted on 2 motions to reject the Council's position and rejected each of them; the vote link "
-        "opens the first. Parliament adopted 2 amendments to the Council's position with the votes of a majority of "
-        "its component Members: “Article 1, after § 2 – Am 30” (369 for) and “Article 3, § 1, point a – Am 26 CP3= "
-        "31 CP3= 6= 21=” (362 for). Votes on amendments are not listed on this site."
+        "Parliament amended the Council's position in 2 votes, each adopted with the votes of a majority of its "
+        "component Members: “Article 1, after § 2 – Am 30” (369 for) and “Article 3, § 1, point a – Am 26 CP3= 31 CP3= "
+        "6= 21=” (362 for). Votes on amendments are not listed on this site."
+    )
+    # 2013/0072(COD), 21 Jan 2026: no listed vote that day; EP API DEC-183557 "A10-0001/2026 – Andrey Novakov –
+    # Amendments by the committee responsible – put to the vote collectively – Am 1-243" ADOPTED 632-15-9
+    p, v = procs("2013-0072")["2013-0072"], votes("183557", "195007")
+    me = SimpleNamespace(indexed_vote_ids={"195007"}, council_of={}, today="2026-10-22")
+    tl = Builder.timeline(me, p, [], list(v.values()))  # type: ignore[arg-type]
+    e = next(e for e in tl if e["date"] == "2026-01-21" and e["kind"] == "ep_position")
+    assert e["vote_id"] is None
+    assert e["detail"] == (
+        "Parliament amended the Council's position in one vote, adopted with the votes of a majority of its component "
+        "Members: “Andrey Novakov – Amendments by the committee responsible – put to the vote collectively – Am 1-243” "
+        "(632 for). Votes on amendments are not listed on this site."
     )
 
 
@@ -412,6 +457,52 @@ def test_final_votes_say_what_they_decide():
     title, _ = Builder.vote_display_title(None, v["110686"], None)  # type: ignore[arg-type]
     assert title == "Requirements for payment service providers — vote on Parliament's opinion"
     assert DISCHARGE_NOTES["adopted"].startswith("Parliament adopted the proposal for a decision on discharge.")
+
+
+def test_consent_named_by_the_label_of_a_vote_without_a_symbol():
+    # 13 May 2020 and 11 Nov 2020, French-only minutes: subjects without "***"; labels "A9-0088/202 - Clara Aguilera -
+    # Consent procedure" (2019/0210(NLE)) and "A9-0199/2020 - Iuliu Winkler - Consent procedure" (2020/0089(NLE)).
+    # 124727 "A9-0182/2020 - … - Consent procedure" is linked to 2019/0226M(NLE), a resolution procedure: no role
+    v = votes("113700", "124729", "124727", "152545")
+    assert {k: final_role(x) for k, x in v.items()} == {
+        "113700": "consent", "124729": "consent", "124727": None, "152545": "consultation",
+    }  # fmt: skip
+
+
+def test_discharge_votes_say_what_the_outcome_decided():
+    # 4 May 2022, minutes PV-9-2022-05-04-VOT: Court of Auditors (142787, 291-333-8, "-") and Council (142821,
+    # 555-60-13, "+") under "Proposal for a decision to postpone the discharge"; Court of Justice (142809) under
+    # "Decision on discharge". 18 Oct 2022, Frontex 2020 (149084): "Decision to refuse discharge" (Decision (EU)
+    # 2023/325 "Refuses to grant … discharge"). Rules of Procedure, 9th term, Annex V, Article 5(1)(b): "If a proposal
+    # to postpone discharge fails to secure a majority, discharge shall be deemed to have been granted"
+    v = votes("142787", "142821", "142809", "149084", "175931", "191886")
+    assert {k: x.kind_detail for k, x in v.items()} == {
+        "142787": "postpone_discharge", "142821": "postpone_discharge", "142809": None, "149084": "refuse_discharge",
+        "175931": None, "191886": "postpone_discharge",
+    }  # fmt: skip
+    assert discharge_note(v["142787"]) == (
+        "Parliament rejected the proposal to postpone discharge. Under its Rules of Procedure, discharge is therefore "
+        "deemed to have been granted (Annex V, Article 5(1)(b))."
+    )
+    assert discharge_note(v["142821"]) == "Parliament adopted the proposal and so postponed its decision on discharge."
+    assert discharge_note(v["149084"]) == "Parliament adopted the proposal and so refused discharge."
+    assert discharge_note(v["142809"]) == DISCHARGE_NOTES["adopted"]
+    # the Rules of a later term are not checked: a rejection is stated as such only
+    rejected = v["191886"].model_copy(update={"outcome": "rejected"})
+    assert discharge_note(rejected) == "Parliament rejected the proposal to postpone discharge."
+    assert final_role(v["191886"]) == "discharge"
+    assert VOTE_DETAIL_LABELS["postpone_discharge"] == "Vote on a proposal to postpone discharge"
+    title, _ = Builder.vote_display_title(None, v["142787"], None)  # type: ignore[arg-type]
+    assert title == "Discharge 2020: EU general budget - Court of Auditors — vote on a proposal to postpone discharge"
+
+
+def test_misprinted_label_vote_on_its_file():
+    # 28 Apr 2021, bluefin tuna 130719 (643-11-47): linked to 2019/0272(COD) through its French label and minutes
+    # (see test_ep_votes); OEIL 2019/0272(COD): "28/04/2021 Decision by Parliament, 1st reading T9-0142/2021"
+    v = votes("130719")
+    assert v["130719"].procedure_refs == ["2019/0272(COD)"]
+    tl = _steps("2019-0272", "130719")
+    assert next(e for e in tl.values() if e["date"] == "2021-04-28" and e["kind"] == "ep_position")["vote_id"] == "130719"
 
 
 def test_rejected_text_referred_back_for_reconsideration_says_so():

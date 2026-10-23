@@ -79,9 +79,11 @@ Subject (EpVote.subject) — what was voted, in English, as published: the vote 
 (earlier items are titled in French only), else the block title of the sitting's English minutes, else the
 title of the vote's only linked procedure (EP API process_title; see procedure_subject).
 Document numbers: an old-format label whose document number the minutes contradict is linked through the
-minutes block that records its counts (minutes_docs).
+minutes block that records its counts (minutes_docs), or takes the number of its French label when that block
+gives the French label's (french_label_docs).
 Kind detail (EpVote.kind_detail) — see kind_detail(): rejection motions, censure, objections and
-recommendations to raise no objections, decisions to enter into negotiations.
+recommendations to raise no objections, decisions to enter into negotiations, and what a discharge decision voted
+on proposes (grant, postpone or refuse discharge) where the minutes heading or headingLabel says so.
 
 Mandates — a vote classified "final" becomes "mandate" when Parliament referred the file back to committee
 for interinstitutional negotiations right after it: an adopted referral-back decision in the same vote item
@@ -344,6 +346,8 @@ class MinutesRow:
     description: str | None = None  # the block's description ("Report: Petri Sarvamaa (A9-0044/2021)")
     # procedure references of the block title and description ("… C9-0399/2020 - 2020/0362(COD))")
     procs: frozenset[str] = frozenset()
+    # the heading row above the row ("Proposal for a decision to postpone the discharge", "Decision on discharge")
+    heading: str | None = None
 
 
 def parse_minutes(xml: bytes) -> list[MinutesRow]:
@@ -367,6 +371,7 @@ def parse_minutes(xml: bytes) -> list[MinutesRow]:
         block_symbol = m.group(0).replace(" ", "") if m else None
         block_title = clean_subject(texts[0]) if english else None
         heading: frozenset[str] = frozenset()
+        heading_text: str | None = None
         for tr in block.iter("TR"):
             tds = tr.findall("TD")
             total_for = tr.find(".//Vote.Result.Table.TotalVote.For")
@@ -374,6 +379,7 @@ def parse_minutes(xml: bytes) -> list[MinutesRow]:
                 if len(tds) == 1 or any(td.get("COLSPAN") for td in tds):
                     found = _doc_ids(" ".join("".join(td.itertext()) for td in tds))
                     heading = found or heading
+                    heading_text = clean_subject(" ".join("".join(td.itertext()) for td in tds))
                 continue
             against = tr.find(".//Vote.Result.Table.TotalVote.Against")
             abstain = tr.find(".//Vote.Result.Table.TotalVote.Abstention")
@@ -398,6 +404,7 @@ def parse_minutes(xml: bytes) -> list[MinutesRow]:
                     clean_subject("".join(tds[0].itertext())) if tds else None,
                     description,
                     block_procs,
+                    heading_text,
                 )
             )
     return out
@@ -702,6 +709,9 @@ _PROCEDURAL = re.compile(
     r"decision by the \S+ committee)",
     re.I,
 )
+# A heading naming a discharge report's proposal to postpone discharge ("Proposal for a decision to postpone the
+# discharge", 168778; "Decision to postpone discharge", 191886): a decision on discharge, not a procedural postponement
+_POSTPONE_DISCHARGE = re.compile(r"^(proposal for a )?decision to postpone (the )?discharge\b", re.I)
 # Old labels that are procedural by their opening words ("Wednesday's agenda – …", "Request for urgent …")
 _PROCEDURAL_LABEL = re.compile(
     r"^((\S+[’']s )?agenda\b|agenda for|ordre du jour|demande d.application de la procédure d.urgence|"
@@ -751,6 +761,7 @@ class Signals:
     proc_types: list[str] = field(default_factory=list)
     symbol: str | None = None  # procedure symbol of the vote item or minutes block ("***I"), see symbol_of
     subject: str | None = None  # before 2024: the "Subject" column of the minutes row ("Rejection"), see minutes_subject
+    section: str | None = None  # before 2024: the heading row above it ("Decision to refuse discharge"), see minutes_section
 
 
 def label_parts(label: str | None) -> list[str]:
@@ -791,10 +802,14 @@ def is_provisional_agreement(ref: str, heading: str, label: str) -> bool:
 
 
 def _is_objection(s: Signals) -> bool:
-    """Objections to delegated / implementing acts: the item or heading says so, or every linked procedure
-    is an objection procedure (DEA, RPS), whose whole-text vote is always the objection."""
-    return bool(re.search(r"\bobjection\b", f"{s.item_title or ''} {s.heading or ''}", re.I)) or (
-        bool(s.proc_types) and set(s.proc_types) <= OBJECTION_TYPES
+    """Objections to delegated / implementing acts: the item or heading says so, the label opens with it (157978, an
+    old-format vote without a vote item: "Objection pursuant to Rule 112(2) and (3): Genetically modified maize MON
+    87419 – Motion for a resolution (text as a whole)"), or every linked procedure is an objection procedure (DEA,
+    RPS), whose whole-text vote is always the objection."""
+    return (
+        bool(re.search(r"\bobjection\b", f"{s.item_title or ''} {s.heading or ''}", re.I))
+        or bool(re.match(r"objection pursuant to rule\b", s.label or "", re.I))
+        or (bool(s.proc_types) and set(s.proc_types) <= OBJECTION_TYPES)
     )
 
 
@@ -817,13 +832,16 @@ def classify(s: Signals) -> VoteKind:
     is_split_doc = any("-SPLIT-" in d for d in s.docs)
     whole_marker = bool(_FINAL.match(ref) or _RESOLUTION.match(ref))
     legislative = bool(set(s.proc_types) & LEGISLATIVE_TYPES) and not set(s.proc_types) - LEGISLATIVE_TYPES
-    # no legislative symbol: the minutes title the tuna plan vote of 28 Apr 2021 "***I" although its label's
-    # document number (A9-0149/2021 for A9-0149/2020) leads to an own-initiative report
+    # no legislative symbol: a label's misprinted document number can lead to an own-initiative report (the tuna plan
+    # vote of 28 Apr 2021, minutes "***I", English label A9-0149/2021 for A9-0149/2020; see french_label_docs)
     resolution_file = bool(s.proc_types) and set(s.proc_types) <= RESOLUTION_TYPES and not s.symbol
     is_objection = _is_objection(s)
 
-    # 1. procedural decisions (referral back, urgency, agenda, adjournment, negotiation mandates)
-    if _PROCEDURAL.search(ref) or _PROCEDURAL.search(heading) or _PROCEDURAL_LABEL.match(label):
+    # 1. procedural decisions (referral back, urgency, agenda, adjournment, negotiation mandates); a discharge report's
+    # proposal for a decision to postpone discharge is the decision on discharge (heading "Decision to postpone
+    # discharge", 191886)
+    procedural_heading = _PROCEDURAL.search(heading) and not _POSTPONE_DISCHARGE.match(heading)
+    if _PROCEDURAL.search(ref) or procedural_heading or _PROCEDURAL_LABEL.match(label):
         return "procedural"
     # 2. a provisional agreement is tabled as one amendment but is the vote on the whole text
     if is_provisional_agreement(ref, heading, label):
@@ -891,8 +909,33 @@ _NO_OBJECTION = re.compile(
 )
 
 
+# What a discharge report's proposal for a decision proposes: to grant or postpone discharge at the first vote, to
+# grant or refuse it at the second (Rules of Procedure, 9th term, Annex V, Articles 3(1)(a) and 5). Read where
+# Parliament's record says it: the minutes heading above the row ("Proposal for a decision to postpone the
+# discharge", "Decision to refuse discharge", "Décision d'ajournement de la décharge", "Refusal of discharge") or its
+# Subject ("Proposal for a decision to grant discharge"), or the headingLabel from 2024 ("Decision to refuse
+# discharge", 179920). "Decision on discharge" or "Proposal for a decision" alone does not say which.
+_DISCHARGE = re.compile(r"discharge|décharge", re.I)
+_DISCHARGE_PROPOSALS: tuple[tuple[re.Pattern[str], KindDetail], ...] = (
+    (re.compile(r"postpone|ajournement", re.I), "postpone_discharge"),
+    (re.compile(r"refus", re.I), "refuse_discharge"),  # before "grant": "refusing to grant"
+    (re.compile(r"\bgrant|octroi", re.I), "grant_discharge"),
+)
+
+
+def discharge_proposal(s: Signals) -> KindDetail | None:
+    """What the proposal for a decision on discharge voted on proposes (see _DISCHARGE_PROPOSALS), else None."""
+    found = {
+        next((detail for rx, detail in _DISCHARGE_PROPOSALS if rx.search(text)), None)
+        for text in (s.heading, s.section, s.subject)
+        if text and _DISCHARGE.search(text)
+    } - {None}
+    return found.pop() if len(found) == 1 else None
+
+
 def kind_detail(kind: str, s: Signals, symbol: str | None) -> KindDetail | None:
-    """What a motion or procedural vote decides, where the published texts say so (else None).
+    """What a motion or procedural vote, or a final vote on discharge, decides, where the published texts say so
+    (else None).
 
     - "reject_proposal" / "reject_council_position": a motion to reject the Commission proposal (first
       reading, heading "Proposal to reject the Commission proposal") or the Council's position (second
@@ -903,9 +946,13 @@ def kind_detail(kind: str, s: Signals, symbol: str | None) -> KindDetail | None:
       measure (see _NO_OBJECTION; adopted = Parliament does not object, and a later objection is inadmissible).
     - "negotiation_decision": the plenary vote on a committee's decision to enter into interinstitutional
       negotiations (Rule 71 of the 9th-term, Rule 72 of the 10th-term Rules of Procedure).
+    - "grant_discharge" / "postpone_discharge" / "refuse_discharge": a final vote on a discharge report's proposal
+      for a decision to grant, postpone or refuse discharge (see discharge_proposal).
     """
     ref = (s.ref or "").strip()
     heading = s.heading or ""
+    if kind == "final":
+        return discharge_proposal(s)
     if kind == "procedural":
         return "negotiation_decision" if _NEGOTIATION_DECISION.search(f"{ref} {s.label or ''}") else None
     if kind != "motion":
@@ -1155,6 +1202,32 @@ def minutes_docs(sitting: Sitting, dec: dict, label_docs: list[str]) -> list[str
     return sorted(blocks.pop()) if len(blocks) == 1 else None
 
 
+def french_label_docs(sitting: Sitting, dec: dict, label_docs: list[str]) -> list[str] | None:
+    """The documents the French label names, when the English label names others that no minutes block and no vote
+    item of the sitting lists, and the minutes rows with the decision's counts lie in one block that lists the French
+    label's documents (old format); else None. Two of Parliament's records against one: the bluefin tuna vote of
+    28 Apr 2021 (130719) is labelled "… - A9-0149/2021 - Giuseppe Ferrandino - …" (an own-initiative report on the
+    digital future of Europe, 2020/2216(INI)), its French label and its minutes block "Report: Giuseppe Ferrandino
+    (A9-0149/2020)" (2019/0272(COD)). A number misprinted in the minutes alone changes nothing (153312, see
+    minutes_docs), nor does a French label naming another item of the sitting (26 Mar 2020: 112990 "Request for
+    urgency procedure: … - C9-0083/2020", French label "C9-0082/2020 - Am 1")."""
+    lab = dec.get("activity_label")
+    counts = vote_counts(dec)
+    if sitting.rich or not sitting.minutes or not label_docs or not isinstance(lab, dict) or counts[1] is None:
+        return None
+    fr = ascii_hyphens(_text(lab.get("fr")) or "")
+    fr_docs = list(dict.fromkeys(d for m in DOC_REF_RE.finditer(fr) if (d := doc_ref_to_id(m.group(0)))))
+    if not fr_docs or set(fr_docs) == set(label_docs) or counts[0] is None:
+        return None
+    if any(r.docs & set(label_docs) for r in sitting.minutes) or any(d in sitting.doc_items for d in label_docs):
+        return None  # the English label's document is an item of the sitting
+    key = (counts[0], counts[1], counts[2] or 0)
+    rows = [r for r in sitting.minutes if r.counts == key]
+    if len({r.item for r in rows}) != 1:
+        return None
+    return fr_docs if all(set(fr_docs) <= r.docs for r in rows) else None
+
+
 def minutes_procs(d: Draft, docs_procs: dict[str, set[str]], ref_to_id: dict[str, str]) -> list[str]:
     """Process ids of the minutes block that records an old-format decision no vote item, label or document
     links (else []): the one block with a row of the decision's counts that fits its label, i.e. lists a
@@ -1236,7 +1309,7 @@ def draft(dec: dict, sitting: Sitting) -> Draft:
             # ("A9-0088/202 - Clara Aguilera - Consent procedure", 113700: "A9-0088/2020 - … - Procédure d'approbation")
             fr = ascii_hyphens(_text(lab.get("fr")) or "")
             label_docs = [d for m in DOC_REF_RE.finditer(fr) if (d := doc_ref_to_id(m.group(0)))]
-        label_docs = minutes_docs(sitting, dec, label_docs) or label_docs
+        label_docs = french_label_docs(sitting, dec, label_docs) or minutes_docs(sitting, dec, label_docs) or label_docs
         if not items:  # old format: the voted document is the vote item's document
             for d in label_docs:
                 items += [it for it in sitting.doc_items.get(d, []) if it not in items]
@@ -1428,6 +1501,13 @@ def minutes_subject(d: Draft, counts: tuple[int | None, int | None, int | None])
     return subjects.pop() if len(subjects) == 1 else None
 
 
+def minutes_section(d: Draft, counts: tuple[int | None, int | None, int | None]) -> str | None:
+    """The heading row above the decision's minutes row(s), when there is one ("Proposal for a decision to postpone
+    the discharge", 142787, 4 May 2022)."""
+    headings = {r.heading for r in minutes_rows(d, counts)}
+    return headings.pop() if len(headings) == 1 else None
+
+
 REFERRAL_DAYS = 2  # remote voting (2020-21): results, and the referral back, are recorded the next day
 
 
@@ -1563,6 +1643,7 @@ def build_records(
         proc_types=proc_types,
         symbol=symbol,
         subject=None if s.rich else minutes_subject(d, counts),
+        section=None if s.rich else minutes_section(d, counts),
     )
     kind = classify(sig)
     if kind in ("amendment", "other") and not s.rich and minutes_agreement(d, counts):
@@ -1579,12 +1660,20 @@ def build_records(
     ):
         kind = "mandate"  # followed by a referral back to committee for interinstitutional negotiations
     rule = majority_rule(kind, item.title if item else None, symbol, proc_types, kind_detail(kind, sig, symbol))
-    if rule == "unknown" and kind in BALLOT_KINDS:
-        # what Parliament's record says the item requires (stated_rule), where the Treaties alone do not settle it
+    if kind in BALLOT_KINDS:
+        # what Parliament's record says the item requires (stated_rule), where the Treaties alone do not settle it;
+        # a record stating another rule than the one majority_rule assumes leaves it unknown (125373 and 125374,
+        # 25 Nov 2020, objections under Rule 112 on RSP files, which majority_rule gives the votes cast: minutes
+        # "Motion for a resolution: B9-0367/2020 (majority of Parliament's component Members)")
         rows = minutes_rows(d, counts) if not s.rich else []
         texts = [x for it in d.items for x in it.labels] if s.rich else [r.description or "" for r in rows[:1]]
-        if s.rich or len({r.item for r in rows}) == 1:
-            rule = stated_rule(texts, kind) or rule
+        stated = stated_rule(texts, kind) if s.rich or len({r.item for r in rows}) == 1 else None
+        if stated and rule not in ("unknown", stated):
+            log.info("vote %s: the record states %s, not %s: majority rule left unknown",
+                     dec.get("notation_votingId"), stated, rule)  # fmt: skip
+            rule = "unknown"
+        elif rule == "unknown":
+            rule = stated or rule
 
     outcome, basis = resolve_outcome(dec, d, rule, counts)
     num = _int(dec.get("notation_votingId"))

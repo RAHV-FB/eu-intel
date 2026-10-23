@@ -124,9 +124,10 @@ export default function Votes() {
         title="Votes in Parliament"
         lead={
           <>
-            How the European Parliament voted in plenary: final votes on whole texts (laws and Parliament’s other decisions),
-            resolutions and motions, and every recorded vote linked
-            to a legislative file we track. Each vote links to the official record.
+            How the European Parliament voted in plenary: roll-call votes on whole texts (laws and Parliament’s other
+            decisions), resolutions, motions and committees’ decisions to open negotiations, and every final or
+            negotiating-mandate vote on a legislative file we track. Votes on amendments and on parts of a text are not
+            listed. Each vote links to the official record.
           </>
         }
       />

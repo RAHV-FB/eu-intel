@@ -54,7 +54,7 @@ export const FINAL_ROLE_EXPLAINER: Record<FinalRole, string> = {
   consent:
     'Parliament gives or refuses its consent to the proposed act in a single vote, without amendments. Without its consent the act cannot be adopted (for example the decision concluding an international agreement, Article 218(6)(a) TFEU).',
   consultation:
-    'Parliament gives its opinion on the proposal. The Council must have Parliament’s opinion before it decides, but is not bound by it.',
+    'Parliament gives its opinion on the proposed act. The institution that adopts the act, usually the Council, consults Parliament before it decides, but is not bound by Parliament’s opinion.',
   budget:
     'Parliament’s vote, as one arm of the budgetary authority with the Council, on a budget text as a whole: the EU’s annual budget or an amending budget (Article 314 TFEU), or a decision to mobilise a special instrument such as the European Globalisation Adjustment Fund, the Solidarity Fund or the Flexibility Instrument.',
   discharge:
@@ -79,6 +79,12 @@ export const DETAIL_EXPLAINER: Record<VoteKindDetail, string> = {
     'A recommendation by the committee responsible that Parliament declare, before the deadline for objections ends, that it has no objections to a measure the Commission adopts under powers given to it by a law (Parliament’s Rules of Procedure, Rule 111(6) in the 9th term). It is decided by a majority of the votes cast. If it is adopted, any later proposal to object to the measure is inadmissible.',
   negotiation_decision:
     'A vote on whether the committee responsible may open negotiations with the Council on the basis of its report. Plenary votes on this only when political groups or enough MEPs ask for it after the committee’s decision is announced.',
+  grant_discharge:
+    'A vote on the proposal in a discharge report to grant discharge for how a budget was implemented in a given year: the EU general budget (Article 319 TFEU), including its sections for the other institutions, or the budget of an EU agency or other body. If the proposal is adopted, discharge is granted.',
+  postpone_discharge:
+    'A vote on the proposal in a discharge report to postpone Parliament’s decision on discharge for how a budget was implemented in a given year: the EU general budget (Article 319 TFEU), including its sections for the other institutions, or the budget of an EU agency or other body. If the proposal is adopted, the decision on discharge is postponed.',
+  refuse_discharge:
+    'A vote on the proposal in a discharge report to refuse discharge for how a budget was implemented in a given year: the EU general budget (Article 319 TFEU), including its sections for the other institutions, or the budget of an EU agency or other body. If the proposal is adopted, discharge is refused.',
 };
 
 export const POSITION_LABEL: Record<BallotPosition, string> = {
