@@ -4,7 +4,7 @@ import type { DossierSummary, LegalInstrument, Meta, Topic } from '../types/data
 import { useData, DATA_BASE } from '../lib/data';
 import { formatNumber } from '../lib/format';
 import { legislationScope } from '../lib/scope';
-import { loadSearch, type SearchEngine } from '../lib/search';
+import { loadSearch, similarWords, type SearchEngine } from '../lib/search';
 import { useWatchlist } from '../lib/watchlist';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../components/ui';
 import { useMediaQuery } from '../components/useMediaQuery';
@@ -105,16 +105,21 @@ export default function Legislation() {
   const rows = index.data ?? [];
   const haystacks = useMemo(() => buildHaystacks(rows), [rows]);
 
-  const { matched, scores, related } = useMemo(() => {
+  const { matched, scores, related, approximate } = useMemo(() => {
     const related = new Set<string>(); // files matching only another form of a query word
-    if (!hasQuery) return { matched: rows, scores: new Map<string, number>(), related };
-    const keyword = keywordScores(rows, haystacks, engine, state.q, related);
-    return { matched: rows.filter((d) => keyword.has(d.id)), scores: keyword, related };
+    const approximate = new Map<string, string[]>(); // files matching only approximately, with the similar words
+    if (!hasQuery) return { matched: rows, scores: new Map<string, number>(), related, approximate };
+    const keyword = keywordScores(rows, haystacks, engine, state.q, related, approximate);
+    return { matched: rows.filter((d) => keyword.has(d.id)), scores: keyword, related, approximate };
   }, [rows, haystacks, engine, state.q, hasQuery]);
 
   const preds = useMemo(() => makePredicates(state), [state]);
   const filtered = useMemo(() => applyFilters(matched, preds), [matched, preds]);
   const relatedShown = useMemo(() => filtered.filter((d) => related.has(d.id)).length, [filtered, related]);
+  const approxShown = useMemo(() => filtered.filter((d) => approximate.has(d.id)), [filtered, approximate]);
+  const similar = similarWords(approxShown.map((d) => approximate.get(d.id)))
+    .map((w) => `“${w}”`)
+    .join(', ');
   const sorted = useMemo(() => sortRows(filtered, state.sort, scores, today), [filtered, state.sort, scores, today]);
 
   // ---- facet counts (each facet counted with all *other* filters applied)
@@ -391,6 +396,20 @@ export default function Legislation() {
               )}
               {relatedShown > 0 && relatedShown === sorted.length && (
                 <span className="meta"> · only through other forms of the words (longer words built on them)</span>
+              )}
+              {approxShown.length > 0 && approxShown.length < sorted.length && (
+                <span className="meta">
+                  {' '}
+                  · {formatNumber(approxShown.length)} of them only approximately (
+                  {similar ? <>a similar word: {similar}</> : 'all but one of the words'})
+                </span>
+              )}
+              {approxShown.length > 0 && approxShown.length === sorted.length && (
+                <span className="meta">
+                  {' '}
+                  · no exact matches for “{state.q.trim()}”, so these{' '}
+                  {similar ? <>contain a similar word: {similar}</> : 'match all but one of the words'}
+                </span>
               )}
               {sorted.length > 0 && <span className="meta"> · sorted by {SORT_LABEL[state.sort].toLowerCase()}</span>}
             </p>

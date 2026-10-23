@@ -90,6 +90,10 @@
   font-weight: var(--fw-semibold);
 }
 
+.sr-item__approx {
+  font-style: italic;
+}
+
 .sr-group__foot {
   display: flex;
   flex-wrap: wrap;

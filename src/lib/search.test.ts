@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SearchDoc } from '../types/data';
-import { createSearchEngine, familyStems, hasWord, keywordTokens, normalize, singular, wordSet } from './search';
+import { createSearchEngine, familyStems, hasWord, keywordTokens, normalize, singular, wordSet, type SearchHit } from './search';
 
 // TEST-ONLY index: a small hand-written sample shaped like pipeline/build.py output
 // (`a` = " | "-separated alternative names, `x` = keywords/identifiers). Not real site data.
@@ -197,6 +197,18 @@ describe('normalize', () => {
     expect(normalize('RC-B9\u20110107/2023')).toBe('rc-b9-0107/2023');
     expect(normalize('2014\u20132020')).toBe('2014 2020'); // other dashes stay word separators
   });
+
+  it('leaves no one-letter words from apostrophes, and keeps "S&D" whole', () => {
+    expect(normalize("children's rights")).toBe('children rights');
+    expect(normalize('Ukraine’s accession')).toBe('ukraine accession');
+    expect(normalize("Fratelli d'Italia")).toBe('fratelli italia');
+    expect(normalize('Décision d’engager des négociations')).toBe('decision engager des negociations');
+    expect(normalize("O'Sullivan")).toBe('o sullivan');
+    expect(normalize('S&D')).toBe('s&d');
+    expect(normalize('Rights & Justice')).toBe('rights justice');
+    expect(keywordTokens('S&D')).toEqual(['s&d']);
+    expect([...wordSet("A9-0038/2019 - Bernd Lange - procédure d'approbation")]).not.toContain('d');
+  });
 });
 
 describe('search ranking', () => {
@@ -342,6 +354,7 @@ describe('singular and plural', () => {
     expect(singular('status')).toBe('status');
     expect(singular('news')).toBe('news');
     expect(singular('gas')).toBe('gas');
+    expect(singular('crises')).toBe('crisis');
   });
 });
 
@@ -435,5 +448,121 @@ describe('act citations', () => {
 
   it('ranks the file that owns a number above files that cite it, also next to its name', () => {
     expect(ids('GDPR 2016/679', 2)).toEqual(['dossier:2012-0011', 'dossier:2025-0360']);
+  });
+});
+
+describe('approximate matches', () => {
+  // TEST-ONLY documents shaped like real ones: typo tolerance must be labelled and ranked last
+  const docs: SearchDoc[] = [
+    {
+      id: '2022-0396', k: 'dossier', t: 'Packaging and Packaging Waste Regulation', s: '2022/0396(COD) · In force',
+      x: '2022/0396(COD) 2022/0396', u: '/legislation/2022-0396', w: 1.2, d: '2025-02-11',
+    },
+    {
+      id: '2013-0246', k: 'dossier', t: 'Package travel and assisted travel arrangements', s: '2013/0246(COD) · In force',
+      x: '2013/0246(COD) 2013/0246', u: '/legislation/2013-0246', w: 1.2, d: '2015-12-11',
+    },
+    {
+      id: '2016-0039', k: 'dossier', t: 'Macro-financial assistance to Tunisia', s: '2016/0039(COD) · In force',
+      x: '2016/0039(COD) 2016/0039', u: '/legislation/2016-0039', w: 1.2, d: '2016-07-06',
+    },
+    {
+      id: 'council-voting', k: 'page', t: 'How the Council votes: qualified majority and unanimity', s: 'How the EU works',
+      a: 'blocking minority', u: '/how-the-eu-works#council-voting', w: 2,
+    },
+    {
+      id: '2018-0171', k: 'dossier', t: 'Sovereign bond-backed securities', s: '2018/0171(COD) · Proposed',
+      x: '2018/0171(COD) 2018/0171', u: '/legislation/2018-0171', w: 1.2, d: '2019-04-16',
+    },
+    {
+      id: '2019-0273', k: 'dossier', t: "Exercise of the Union's rights for the application and enforcement of international trade rules",
+      s: '2019/0273(COD) · In force', x: '2019/0273(COD) 2019/0273', u: '/legislation/2019-0273', w: 1.2, d: '2021-02-12',
+    },
+    {
+      id: 'rights', k: 'topic', t: 'Rights & Justice', s: 'Topic · 161 files', a: 'fundamental rights', u: '/legislation?topic=rights', w: 3,
+    },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const flagged = (h: SearchHit) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`;
+  const all = (q: string) => e.search(q, { limit: 50 }).map(flagged);
+
+  it('flags typo matches and names the similar words: "Macron" is not a name in the data', () => {
+    const hits = e.search('Macron');
+    expect(hits.map(flagged)).toEqual(['2016-0039~']);
+    expect(hits[0].similar).toEqual(['macro']);
+    expect(e.search('Macron', { typing: true }).every((h) => h.approximate)).toBe(true);
+  });
+
+  it('takes a word one edit from an index word as a typo, without its word family ("packageing")', () => {
+    expect(all('packageing')).toEqual(['2022-0396~']); // not "Package travel"
+    expect(e.search('packageing', { typing: true })[0].doc.id).toBe('2022-0396');
+  });
+
+  it('keeps the word family of a word two edits away, above the approximate matches ("blocked")', () => {
+    expect(all('blocked')).toEqual(['council-voting*', '2018-0171~']); // "blocking minority", then "backed"
+  });
+
+  it('does not count a possessive as a matched word ("children\'s rights")', () => {
+    expect(all("children's rights")).toEqual(all('children rights'));
+    expect(all("children's rights")).not.toContain('2019-0273~');
+    expect(all("children's rights")).not.toContain('2019-0273');
+  });
+});
+
+describe('identifier queries', () => {
+  // TEST-ONLY documents: two files share number fragments with the identifier of a third
+  const docs: SearchDoc[] = [
+    {
+      id: '2016-0011', k: 'dossier', t: 'Rules against tax avoidance practices', s: '2016/0011(CNS) · In force',
+      x: '2016/0011(CNS) 2016/0011 32016L1164 2016/1164 COM(2016)0026 COM(2016)26 COM/2016/26', u: '/legislation/2016-0011',
+      w: 1.2, d: '2016-07-12',
+    },
+    {
+      id: '2013-0013', k: 'dossier', t: 'Amending Directive 98/26/EC and Directive (EU) 2016/2337', s: '2013/0013(COD) · In force',
+      x: '2013/0013(COD) 2013/0013 COM(2013)0026 COM(2013)26 COM/2013/26', u: '/legislation/2013-0013', w: 1.2, d: '2017-01-01',
+    },
+    {
+      id: '2023-0134', k: 'dossier', t: 'Amending Directive 1999/62/EC as regards weights and dimensions', s: '2023/0134(COD) · Proposed',
+      x: '2023/0134(COD) 2023/0134', u: '/legislation/2023-0134', w: 1.2, d: '2026-01-01',
+    },
+    {
+      id: '2025-0134', k: 'dossier', t: 'Amending Regulations (EU) 2016/424 and (EU) 2023/1230 as regards digitalisation',
+      s: '2025/0134(COD) · Proposed', x: '2025/0134(COD) 2025/0134', u: '/legislation/2025-0134', w: 1.2, d: '2026-07-14',
+    },
+    {
+      id: '2021-0106', k: 'dossier', t: 'Artificial Intelligence Act', s: '2021/0106(COD) · In force',
+      x: '2021/0106(COD) 2021/0106 32024R1689 2024/1689', u: '/legislation/2021-0106', w: 3, d: '2026-08-02',
+    },
+    {
+      id: '2025-0404', k: 'dossier', t: 'Amending Regulations (EU) 2017/745 and (EU) 2024/1689 as regards medical devices',
+      s: '2025/0404(COD) · Proposed', x: '2025/0404(COD) 2025/0404', u: '/legislation/2025-0404', w: 1.2, d: '2026-09-01',
+    },
+    {
+      id: '2025-0059', k: 'dossier', t: 'Return Regulation', s: '2025/0059(COD) · In force',
+      a: 'Common system for returns, repealing Directive 2008/115/EC', x: '2025/0059(COD) 2025/0059 COM(2025)0101',
+      u: '/legislation/2025-0059', w: 3, d: '2026-06-01',
+    },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string, typing = false) => e.search(q, { limit: 50, typing }).map((h) => h.doc.id);
+
+  it('lists only the owner, not files sharing number fragments', () => {
+    expect(all('COM(2016) 26')).toEqual(['2016-0011']);
+    expect(all('2023/0134(COD)')).toEqual(['2023-0134']);
+    expect(all('2023/0134(COD)', true)).toEqual(['2023-0134']);
+  });
+
+  it('still lists the files whose names cite an act number', () => {
+    expect(all('2024/1689')).toEqual(['2021-0106', '2025-0404']);
+    expect(all('Regulation 2024/1689')).toEqual(['2021-0106', '2025-0404']);
+  });
+
+  it('finds nothing for a reference no file has', () => {
+    expect(all('2008/0028(COD)')).toEqual([]);
+    expect(all('COM(2008) 40')).toEqual([]);
+  });
+
+  it('still completes an unfinished identifier while typing', () => {
+    expect(all('2025/013', true)).toContain('2025-0134');
   });
 });

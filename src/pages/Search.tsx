@@ -1,9 +1,11 @@
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import type { SearchDoc, SearchKind } from '../types/data';
-import { loadSearch, type SearchEngine, type SearchHit } from '../lib/search';
+import type { Meta, SearchKind } from '../types/data';
+import { isIdentifier, loadSearch, similarWords, type SearchEngine, type SearchHit } from '../lib/search';
+import { useData } from '../lib/data';
+import { legislationScope } from '../lib/scope';
 import { formatDate, formatNumber } from '../lib/format';
-import { kindLabel } from '../components/SearchBox';
+import { approximateNote, kindLabel } from '../components/SearchBox';
 import { EmptyState, ErrorState, Loading } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import '../features/legislation/common.css';
@@ -38,8 +40,10 @@ const PER_GROUP = 8;
 /** What the date on a result means (search.json `d`: the latest recorded procedural step of a file). */
 const DATE_LABEL: Partial<Record<SearchKind, string>> = { dossier: 'Latest recorded step', act: 'Latest recorded step' };
 
-function ResultItem({ doc, showKind }: { doc: SearchDoc; showKind: boolean }) {
+function ResultItem({ hit, showKind }: { hit: SearchHit; showKind: boolean }) {
+  const { doc } = hit;
   const dateLabel = DATE_LABEL[doc.k];
+  const note = approximateNote(hit);
   return (
     <li className="sr-item">
       <Link to={doc.u} className="sr-item__title">
@@ -54,6 +58,7 @@ function ResultItem({ doc, showKind }: { doc: SearchDoc; showKind: boolean }) {
             <time dateTime={doc.d}>{formatDate(doc.d)}</time>
           </span>
         )}
+        {note && <span className="sr-item__approx">{note}</span>}
       </span>
     </li>
   );
@@ -80,7 +85,7 @@ function GroupSection({ g, hits, q }: { g: Group; hits: SearchHit[]; q: string }
       </h2>
       <ol className="sr-list" id={listId}>
         {shown.map((h) => (
-          <ResultItem key={`${h.doc.k}:${h.doc.id}`} doc={h.doc} showKind={mixed} />
+          <ResultItem key={`${h.doc.k}:${h.doc.id}`} hit={h} showKind={mixed} />
         ))}
       </ol>
       <div className="sr-group__foot">
@@ -111,9 +116,10 @@ export default function Search() {
   useEffect(() => {
     loadSearch().then(setEngine, (e: Error) => setError(e));
   }, []);
+  const meta = useData<Meta>('meta.json');
 
-  const { grouped, partialOnly, partialCount } = useMemo(() => {
-    if (!engine || !q.trim()) return { grouped: [], partialOnly: false, partialCount: 0 };
+  const { grouped, partialCount, approx } = useMemo(() => {
+    if (!engine || !q.trim()) return { grouped: [], partialCount: 0, approx: [] };
     let hits: SearchHit[] = [];
     try {
       hits = engine.search(q, { limit: 1000 });
@@ -126,9 +132,15 @@ export default function Search() {
       .filter((x) => x.hits.length > 0)
       .sort((a, b) => rank(a.g.kinds) - rank(b.g.kinds));
     const partialCount = hits.filter((h) => h.partial).length;
-    return { grouped: groups, partialOnly: hits.length > 0 && partialCount === hits.length, partialCount };
+    return { grouped: groups, partialCount, approx: hits.filter((h) => h.approximate) };
   }, [engine, q]);
   const total = grouped.reduce((n, x) => n + x.hits.length, 0);
+  // matches on whole words (exact, or singular/plural) rank first, then other forms of a word, then approximate ones
+  const wholeCount = total - partialCount - approx.length;
+  const similar = similarWords(approx.map((h) => h.similar))
+    .map((w) => `“${w}”`)
+    .join(', ');
+  const ofThem = (n: number) => `${formatNumber(n)} of them ${n === 1 ? 'matches' : 'match'}`;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -170,12 +182,33 @@ export default function Search() {
           <p className="sr-summary" role="status">
             {formatNumber(total)} result{total === 1 ? '' : 's'}
             {total >= 1000 ? ' (showing the best 1,000)' : ''}
-            {partialOnly && <> · no whole-word matches for “{q}”, so these contain words that start with it</>}
-            {!partialOnly && partialCount > 0 && (
+            {partialCount > 0 && wholeCount === 0 && (
               <>
                 {' '}
-                · {formatNumber(partialCount)} of them match only another form of a word (a longer word built on it,
-                or another ending) and are listed after the exact matches
+                · no whole-word matches for “{q}”, so {partialCount === total ? 'these match' : ofThem(partialCount)} only
+                another form of a word (a longer word built on it, or another ending)
+              </>
+            )}
+            {partialCount > 0 && wholeCount > 0 && (
+              <>
+                {' '}
+                · {ofThem(partialCount)} only another form of a word (a longer word built on it, or another ending) and{' '}
+                {partialCount === 1 ? 'is' : 'are'} listed after the exact matches
+              </>
+            )}
+            {approx.length > 0 && approx.length === total && (
+              <>
+                {' '}
+                · no exact matches for “{q}”, so these{' '}
+                {similar ? <>contain a similar word instead: {similar}</> : 'match all but one of the words'}
+              </>
+            )}
+            {approx.length > 0 && approx.length < total && (
+              <>
+                {' '}
+                · {ofThem(approx.length)} only approximately (
+                {similar ? <>a similar word: {similar}</> : 'all but one of the words'}) and {approx.length === 1 ? 'is' : 'are'}{' '}
+                listed last
               </>
             )}
           </p>
@@ -199,6 +232,11 @@ export default function Search() {
 
       {engine && q.trim() && total === 0 && (
         <EmptyState title={`No results for “${q}”`}>
+          {isIdentifier(q) && (
+            <p>
+              No file in our data has this reference or number. {legislationScope(meta.data?.scope, true)}
+            </p>
+          )}
           <p>
             Check the spelling, try a shorter or more general word, or search an official reference such as{' '}
             <span className="mono">2021/0106(COD)</span> or a CELEX number such as <span className="mono">32016R0679</span>.

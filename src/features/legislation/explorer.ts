@@ -96,15 +96,21 @@ export function queryTokens(q: string): string[] {
 }
 
 /** Map search-engine dossier hits to dossier ids → normalised score (0..1]. */
-export function engineScores(engine: SearchEngine | null, q: string, partial?: Set<string>): Map<string, number> {
-  return engine ? dossierScores(engine, q, { partial }) : new Map();
+export function engineScores(
+  engine: SearchEngine | null,
+  q: string,
+  partial?: Set<string>,
+  approximate?: Map<string, string[]>,
+): Map<string, number> {
+  return engine ? dossierScores(engine, q, { partial, approximate }) : new Map();
 }
 
 /**
  * Files matching the keyword query, with their relevance. Once the search index is loaded only its matches
  * count, so "N files match" agrees with the Legislation results on /search for the same query (including the
- * files that match only related word forms, which `partial` collects); until then a whole-word match on titles
- * and references stands in.
+ * files that match only related word forms, which `partial` collects, and those matched only approximately,
+ * which `approximate` collects with their similar words); until then a whole-word match on titles and
+ * references stands in.
  */
 export function keywordScores(
   rows: DossierSummary[],
@@ -112,8 +118,9 @@ export function keywordScores(
   engine: SearchEngine | null,
   q: string,
   partial?: Set<string>,
+  approximate?: Map<string, string[]>,
 ): Map<string, number> {
-  if (engine) return engineScores(engine, q, partial);
+  if (engine) return engineScores(engine, q, partial, approximate);
   const tokens = queryTokens(q);
   const out = new Map<string, number>();
   for (const d of rows) {

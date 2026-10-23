@@ -15,15 +15,24 @@
  *      On the results page, legislation, topics and guides also match related forms of query words of 4+
  *      letters that are not abbreviations ("fish" -> "fisheries", "farming" -> "farm"), below every whole-word
  *      match and flagged `partial`
- *   6. at least one word matched only approximately (typo tolerance)
+ *   6. at least one word matched only approximately (typo tolerance): a word that is not in the index matches
+ *      index words within one or two edits ("migraton" -> "migration"). A word one edit from an index word is
+ *      taken as a typo and its word family is not used ("packageing" is "packaging", not "package"); a word two
+ *      edits away keeps its word family, ranked above the approximate matches ("blocked": "blocking" first)
  *   7. all but one word matched exactly (queries of three or more meaningful words, name particles such as
- *      "von" or "der" not counted)
+ *      "von" or "der" and single letters not counted)
+ * Tiers 6 and 7 are flagged `approximate` (with the `similar` index words of tier 6), below every other match.
+ * A query that is an identifier or an act citation ("2023/0134(COD)", "COM(2016) 26", "Directive 2014/24/EU")
+ * matches only through tiers 1-3, so a number fragment ("26", "2016") does not match other files; the names
+ * citing the number ("... amending Regulation (EU) 2024/1689") still do. While typing, an identifier that no
+ * file owns yet ("2023/01") still completes through the word tiers.
  * An identifier among other words ("GDPR 2016/679") ranks the file that owns it with tier 1 when that file
  * matches the other words too; an act citation naming the act type ("Council Decision No 376/2014/EU") ranks
  * the act of that type first.
  * Inside a tier: field weight (title > alias > keyword), match quality, then the static boost `w`
  * (featured dossiers, active MEPs, countries, groups), then shorter titles and newer dates.
  * People's names are not singularised ("Carlos" is not "Carlo").
+ * Apostrophes do not leave one-letter words: "children's" is "children", "d'Italia" is "italia"; "S&D" is one word.
  *
  * Input conventions (pipeline/build.py): `a` = alternative names separated by " | ";
  * `x` = space-separated keywords and identifiers (multi-word keywords joined by "-").
@@ -43,6 +52,11 @@ export interface SearchHit {
   score: number;
   /** Matched only through the start of a longer word or a related word form (tier 5), not through whole words. */
   partial?: boolean;
+  /** Matched only approximately: through a similar word (tier 6, typo tolerance) or on all but one word (tier 7).
+   * Ranked below every other match. */
+  approximate?: boolean;
+  /** The index words a tier-6 match has in place of a query word ("macro" for "Macron"). */
+  similar?: string[];
 }
 
 export interface SearchEngine {
@@ -54,7 +68,13 @@ const SPECIAL: Record<string, string> = {
   ß: 'ss', æ: 'ae', œ: 'oe', ø: 'o', ł: 'l', đ: 'd', ð: 'd', þ: 'th', ı: 'i', ħ: 'h',
 };
 
-/** Lowercase, strip accents and punctuation (keeps "/", "(", ")" and "-" for identifiers). */
+const APOSTROPHE = "['’‘`ʼ´]";
+// "children's", "Union’s": the word itself; elided articles before a word ("d'Italia", "l’Union", "dell'Unione")
+const POSSESSIVE = new RegExp(`(\\p{L})${APOSTROPHE}s(?![\\p{L}\\p{N}])`, 'gu');
+const ELISION = new RegExp(`(?<![\\p{L}\\p{N}])(?:d|l|qu|n|s|j|c|m|t|dell|dall|all|nell|sull|un)${APOSTROPHE}(?=\\p{L})`, 'gu');
+
+/** Lowercase, strip accents and punctuation (keeps "/", "(", ")" and "-" for identifiers, and "&" between letters:
+ * "S&D"). A possessive "'s" and an elided article ("d'", "l'") are dropped, so they leave no one-letter words. */
 export function normalize(s: string): string {
   return s
     .normalize('NFD')
@@ -62,16 +82,19 @@ export function normalize(s: string): string {
     .toLowerCase()
     .replace(/[ßæœøłđðþıħ]/g, (c) => SPECIAL[c] ?? c)
     // a session document number typed with another dash is the official one with a hyphen: "A10–0049/2025"
-    .replace(/\b([abc]\d{1,2})[\u2010-\u2015\u2212](\d{4}\/\d{4})/g, '$1-$2')
-    .replace(/[^\p{L}\p{N}/()-]+/gu, ' ')
+    .replace(/\b([abc]\d{1,2})[‐-―−](\d{4}\/\d{4})/g, '$1-$2')
+    .replace(POSSESSIVE, '$1')
+    .replace(ELISION, '')
+    .replace(/[^\p{L}\p{N}/()&-]+/gu, ' ')
+    .replace(/&(?!\p{L})|(?<!\p{L})&/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-/** Words of a normalized string. */
-function words(s: string): string[] {
+/** Words of a normalized string ("s&d" is one word). */
+export function words(s: string): string[] {
   return normalize(s)
-    .split(/[^\p{L}\p{N}]+/u)
+    .split(/[^\p{L}\p{N}&]+/u)
     .filter(Boolean);
 }
 
@@ -88,11 +111,19 @@ const ACT_CITATION_HEAD =
   /^(?:celex\s*)?(?:(?:commission|council)\s+)?(?:(?:implementing|delegated)\s+)?(?:(?:regulation|directive|decision)s?\s*)?(?:\((?:eu|ec|eec|euratom)(?:\s+euratom)?\)\s*)?(?:(?:no|nr|n)\s+)?/;
 const ACT_CITATION_TAIL = /(\d)\/(?:eu|ec|eec|euratom|jha|cfsp)(?:\s+euratom)?$/;
 
+/** An act citation reduced to its number: "Regulation (EU) 2024/1689" -> "2024/1689". */
+function bareCitation(query: string): string {
+  return normalize(query).replace(ACT_CITATION_HEAD, '').replace(ACT_CITATION_TAIL, '$1');
+}
+
 /** Identifier forms of a query: as typed, and with an act citation reduced to its number ("2024/1689"). */
 function idCandidates(query: string): string[] {
-  const n = normalize(query);
-  const bare = n.replace(ACT_CITATION_HEAD, '').replace(ACT_CITATION_TAIL, '$1');
-  return [...new Set([idKey(n), idKey(bare)])].filter(Boolean);
+  return [...new Set([idKey(normalize(query)), idKey(bareCitation(query))])].filter(Boolean);
+}
+
+/** The whole query is an identifier or an act citation ("2023/0134(COD)", "COM(2016) 26", "Directive 2014/24/EU"). */
+export function isIdentifier(query: string): boolean {
+  return idCandidates(query).some((k) => ID_RE.test(k));
 }
 
 const CELEX_TYPE: Record<string, string> = { regulation: 'r', directive: 'l', decision: 'd' };
@@ -125,7 +156,7 @@ function celexActKey(k: string): string | null {
  * are matched as whole words only. */
 export function typedAbbreviations(query: string): Set<string> {
   const out = new Set<string>();
-  for (const raw of query.split(/[^\p{L}\p{N}]+/u)) if (/\p{Lu}/u.test(raw.slice(1))) out.add(normalize(raw));
+  for (const raw of query.split(/[^\p{L}\p{N}&]+/u)) if (/\p{Lu}/u.test(raw.slice(1))) out.add(normalize(raw));
   return out;
 }
 
@@ -185,11 +216,16 @@ const GENERIC = new Set(['law', 'laws', 'legislation', 'rules', 'rule']);
 
 // Words ending in "s" that are not plurals of a shorter word.
 const NOT_PLURAL = new Set(['news', 'means', 'series', 'species', 'lens', 'goods', 'arms', 'politics', 'economics']);
+// Plurals in "-es" of words in "-is"
+const PLURAL_IS: Record<string, string> = {
+  crises: 'crisis', analyses: 'analysis', diagnoses: 'diagnosis', hypotheses: 'hypothesis', syntheses: 'synthesis',
+}; // prettier-ignore
 
 /** Light English singular form, applied to index and query words alike: batteries -> battery, cars -> car,
- * taxes -> tax, processes -> process. Not a full stemmer: other inflections are left alone. */
+ * taxes -> tax, processes -> process, crises -> crisis. Not a full stemmer: other inflections are left alone. */
 export function singular(w: string): string {
   if (w.length <= 3 || /\d/.test(w) || NOT_PLURAL.has(w)) return w;
+  if (PLURAL_IS[w]) return PLURAL_IS[w];
   if (w.endsWith('ies') && w.length > 4) return `${w.slice(0, -3)}y`;
   if (/(?:ss|sh|ch|x)es$/.test(w)) return w.slice(0, -2);
   if (w.endsWith('s') && !/(?:ss|us|is)$/.test(w)) return w.slice(0, -1);
@@ -264,7 +300,16 @@ interface WordMatch {
   base: Map<number, number>; // doc -> best weighted quality (exact, singular/plural, or prefix)
   syn: Map<number, number>; // doc -> best weighted quality through a synonym
   fuzzy: boolean; // base holds approximate matches only
+  similar: Map<number, string[]>; // with `fuzzy`: doc -> the index words it matched approximately
+  typo: boolean; // with `fuzzy`: an index word is one edit away
   prefixOnly: Set<number>; // docs in `base` matched only as the start of a longer word
+}
+
+/** The scores of one pass, and the index words that tier-6 matches have in place of query words. */
+interface RunResult {
+  scores: Map<number, number>;
+  similar: Map<number, Set<string>>; // doc -> index words it matched approximately
+  typos: Set<string>; // query words that matched only approximately, one edit from an index word
 }
 
 /** Optimal string alignment distance, bounded by `max` (returns max + 1 when exceeded). */
@@ -413,26 +458,36 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
       }
     }
     const prefixOnly = new Set([...base.keys()].filter((i) => !whole.has(i)));
+    const similar = new Map<number, string[]>();
     // a word of the index (if only in a person's name: "Costa", from "Costas") is not a typo
     const known = bySingular.has(singular(qw));
     if (base.size > 0 || syn.size > 0 || known || qw.length < 4 || /\d/.test(qw)) {
-      return { base, syn, fuzzy: false, prefixOnly };
+      return { base, syn, fuzzy: false, similar, typo: false, prefixOnly };
     }
     const max = qw.length >= 7 ? 2 : 1;
+    let typo = false;
     for (const w of vocab) {
       if (Math.abs(w.length - qw.length) > max || w[0] !== qw[0]) continue;
-      if (editDistance(qw, w, max) <= max) put(base, w, M_FUZZY);
+      const d = editDistance(qw, w, max);
+      if (d <= max) {
+        put(base, w, M_FUZZY);
+        for (const i of postings.get(w)?.keys() ?? []) similar.set(i, [...(similar.get(i) ?? []), w]);
+        if (d === 1) typo = true;
+      }
     }
-    return { base, syn, fuzzy: base.size > 0, prefixOnly };
+    return { base, syn, fuzzy: base.size > 0, similar, typo, prefixOnly };
   }
 
   /** prefix: "last" = the word being typed may be the start of a longer word (suggestions); "all" = any word
    * may (results page, only once nothing matched whole words). Never for words under 3 letters. "family" (and
-   * "all") = words of 4+ letters that are not abbreviations also match their word family (tier 5). */
-  function run(query: string, prefix: 'none' | 'last' | 'all' | 'family'): Map<number, number> {
+   * "all") = words of 4+ letters that are not abbreviations also match their word family (tier 5), except the
+   * `typos` (words that the first pass took as typos of an index word). */
+  function run(query: string, prefix: 'none' | 'last' | 'all' | 'family', typos?: Set<string>): RunResult {
     const qWords = words(query);
     const scores = new Map<number, number>();
-    if (!qWords.length) return scores;
+    const similar = new Map<number, Set<string>>();
+    const result: RunResult = { scores, similar, typos: new Set() };
+    if (!qWords.length) return result;
     const phrase = qWords.join(' ');
     const phraseSing = singularPhrase(phrase);
     const lastTyped = qWords[qWords.length - 1];
@@ -441,7 +496,7 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     const prefixWord = (w: string) => w.length >= 3 && (prefix === 'all' || (prefix === 'last' && w === lastTyped));
     const abbreviations = typedAbbreviations(query);
     const familyWord = (w: string) =>
-      (prefix === 'family' || prefix === 'all') && w.length >= 4 && !/\d/.test(w) && !abbreviations.has(w);
+      (prefix === 'family' || prefix === 'all') && w.length >= 4 && !/\d/.test(w) && !abbreviations.has(w) && !typos?.has(w);
     const bump = (i: number, s: number) => {
       if ((scores.get(i) ?? -Infinity) < s) scores.set(i, s);
     };
@@ -455,6 +510,10 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
         bump(i, TIER.id + boost(i) + typed);
       }
     }
+    // the whole query is an identifier or an act citation: only names citing it match besides its owner, by the
+    // number as cited ("2024/1689" in "Amending Regulations (EU) 2017/745 and (EU) 2024/1689"); while typing, an
+    // identifier no file owns may still be unfinished ("2023/01")
+    const identifier = isIdentifier(query) && (prefix !== 'last' || scores.size > 0);
     let named = false; // the query is (part of) a name: "rule of law", "climate law"
 
     // 2-3. names (title / aliases / multi-word keywords), singular/plural-insensitive
@@ -492,6 +551,17 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
         if (best >= TIER.phrase) named = true;
       });
     }
+    if (identifier) {
+      // an act citation: also the names citing the act by its number ("Regulation 2024/1689" finds "... (EU) 2024/1689")
+      const bare = words(bareCitation(query)).join(' ');
+      if (bare !== phrase) {
+        prepared.forEach((p, i) => {
+          const k = p.names.findIndex((n) => ` ${n} `.includes(` ${bare} `));
+          if (k >= 0) bump(i, TIER.phrase + (k === 0 ? 300 : 200) + boost(i));
+        });
+      }
+      return result;
+    }
 
     // 4-7. words
     const required = qWords.filter((w) => !STOP.has(w));
@@ -522,9 +592,17 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
         // every word is a whole word of the title ("battery" in "Batteries and waste batteries")
         const inTitle = per.every((m) => (m.base.get(i) ?? 0) >= W_TITLE * M_PLURAL) ? TITLE_BONUS : 0;
         bump(i, (fuzzy ? TIER.fuzzy : partial ? TIER.prefix : tier) + (sum + extra(i)) * 100 + inTitle + boost(i));
+        if (fuzzy) {
+          const set = similar.get(i) ?? new Set<string>();
+          for (const m of per) for (const w of m.similar.get(i) ?? []) set.add(w);
+          similar.set(i, set);
+        }
       }
       return n;
     };
+    per.forEach((m, k) => {
+      if (m.fuzzy && m.typo) result.typos.add(req[k]);
+    });
     let anyFull = full(-1) > 0;
     // no document has all the words: let one word match a synonym ("ai law" -> "act"), never two at once
     if (!anyFull) {
@@ -553,12 +631,14 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
       }
     }
 
-    // all but one word: name particles do not count ("von der Leyen" is not "von der Schulenburg")
-    const content = req.filter((w) => !PARTICLES.has(w));
+    // all but one word: name particles and single letters do not count ("von der Leyen" is not "von der
+    // Schulenburg", "Plan B rules" is not every file with a "b")
+    const counted = (w: string) => !PARTICLES.has(w) && w.length > 1;
+    const content = req.filter(counted);
     if (!anyFull && scores.size === 0 && content.length >= 3) {
       const counts = new Map<number, { exactN: number; sum: number }>();
       per.forEach(({ base, fuzzy, prefixOnly }, k) => {
-        if (fuzzy || PARTICLES.has(req[k])) return;
+        if (fuzzy || !counted(req[k])) return;
         for (const [i, s] of base) {
           if (s < W_KEY * M_PLURAL || prefixOnly.has(i)) continue;
           const c = counts.get(i) ?? { exactN: 0, sum: 0 };
@@ -571,30 +651,37 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
         if (c.exactN >= content.length - 1) bump(i, TIER.partial + c.sum * 100 + boost(i));
       }
     }
-    return scores;
+    return result;
   }
 
   function search(query: string, opts: SearchOptions = {}): SearchHit[] {
     const limit = opts.limit ?? 50;
     const kinds = opts.kinds?.length ? new Set(opts.kinds) : null;
-    let scores = run(query, opts.typing ? 'last' : 'none');
-    if (!opts.typing) {
+    let res = run(query, opts.typing ? 'last' : 'none');
+    // an identifier matches only as such (tiers 1-3): no word starts, no word families
+    if (!opts.typing && !isIdentifier(query)) {
       // nothing matched whole words: fall back to words starting with those typed ("pharma package")
-      if (scores.size === 0) scores = run(query, 'all');
+      if (res.scores.size === 0) res = run(query, 'all');
       else {
-        // related word forms, below every whole-word match: "fish" -> "fisheries", "farming" -> "farm"
-        for (const [i, s] of run(query, 'family')) {
-          if (!scores.has(i) && s >= TIER.prefix && s < TIER.syn) scores.set(i, s);
+        // related word forms, below every whole-word match: "fish" -> "fisheries", "farming" -> "farm"; not of
+        // a word that is a typo of an index word ("packageing": "packaging", not "package")
+        for (const [i, s] of run(query, 'family', res.typos).scores) {
+          if (!res.scores.has(i) && s >= TIER.prefix && s < TIER.syn) res.scores.set(i, s);
         }
       }
     }
 
     const hits: SearchHit[] = [];
-    for (const [i, score] of scores) {
+    for (const [i, score] of res.scores) {
       const doc = prepared[i].doc;
       if (kinds && !kinds.has(doc.k)) continue;
       const hit: SearchHit = { doc, score };
       if (score >= TIER.prefix && score < TIER.syn) hit.partial = true;
+      if (score < TIER.prefix) {
+        hit.approximate = true;
+        const similar = res.similar.get(i);
+        if (similar?.size) hit.similar = [...similar];
+      }
       hits.push(hit);
     }
     hits.sort(
@@ -610,14 +697,25 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
   return { search, size: docs.length };
 }
 
+/** The similar words of approximate hits (`SearchHit.similar`), most common first. */
+export function similarWords(lists: Iterable<string[] | undefined>, max = 3): string[] {
+  const n = new Map<string, number>();
+  for (const l of lists) for (const w of l ?? []) n.set(w, (n.get(w) ?? 0) + 1);
+  return [...n.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, max)
+    .map(([w]) => w);
+}
+
 /** Dossier ids matched by the engine, with scores normalised to (0..1], in the engine's order. The legislation
  * explorer and the votes list use this so that their keyword matches agree with the search page. `partial`
- * collects the ids matched only through related word forms; `identifiers` keeps only the matches on an identifier
- * or on a name holding the query as a phrase (a number: a title citing "Directive (EU) 2022/2464"). */
+ * collects the ids matched only through related word forms, `approximate` those matched only approximately (with
+ * their similar words); `wholeWords` leaves both out; `identifiers` keeps only the matches on an identifier or on
+ * a name holding the query as a phrase (a number: a title citing "Directive (EU) 2022/2464"). */
 export function dossierScores(
   engine: SearchEngine,
   query: string,
-  opts: { wholeWords?: boolean; identifiers?: boolean; partial?: Set<string> } = {},
+  opts: { wholeWords?: boolean; identifiers?: boolean; partial?: Set<string>; approximate?: Map<string, string[]> } = {},
 ): Map<string, number> {
   const m = new Map<string, number>();
   if (!query.trim()) return m;
@@ -629,13 +727,14 @@ export function dossierScores(
   }
   const max = hits[0]?.score || 1;
   for (const h of hits) {
-    if (opts.wholeWords && h.partial) continue;
+    if (opts.wholeWords && (h.partial || h.approximate)) continue;
     if (opts.identifiers && h.score < TIER.phrase) continue;
     const fromUrl = /^\/legislation\/([^/?#]+)/.exec(h.doc.u)?.[1];
     const id = fromUrl ? decodeURIComponent(fromUrl) : h.doc.id;
     if (!m.has(id)) {
       m.set(id, h.score / max);
       if (h.partial) opts.partial?.add(id);
+      if (h.approximate) opts.approximate?.set(id, h.similar ?? []);
     }
   }
   return m;

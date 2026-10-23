@@ -19,6 +19,12 @@ export function kindLabel(k: SearchKind): string {
   return KIND_LABEL[k];
 }
 
+/** How an approximate match matched (search.ts tiers 6-7): "Similar word: macro", or "All but one of the words". */
+export function approximateNote(h: SearchHit): string | null {
+  if (!h.approximate) return null;
+  return h.similar?.length ? `Similar word: ${h.similar.slice(0, 2).join(', ')}` : 'All but one of the words';
+}
+
 /**
  * Global search field with keyboard-navigable suggestions (ARIA combobox pattern).
  * Enter without a highlighted suggestion opens the full results page (/search?q=…).
@@ -146,6 +152,7 @@ export function SearchBox({
               <span className="searchbox__kind">{KIND_LABEL[h.doc.k]}</span>
               <span className="searchbox__title">{h.doc.t}</span>
               {h.doc.s && <span className="searchbox__sub">{h.doc.s}</span>}
+              {h.approximate && <span className="searchbox__sub searchbox__approx">{approximateNote(h)}</span>}
             </li>
           ))}
           <li
