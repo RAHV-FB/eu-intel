@@ -83,6 +83,30 @@ def test_act_procedure_mismatch_warning(tmp_path: Path):
     assert rep.errors == []
 
 
+def test_errors_are_attributed_to_their_source(tmp_path: Path):
+    from pipeline.validate import validate_by_source
+
+    snap = _copy(tmp_path)
+    assert validate_by_source(snap, out=io.StringIO(), today=TODAY) == []
+    _edit(snap / "ep_votes" / "votes.json", lambda r: r.append(dict(r[0])))  # duplicate id
+    _edit(snap / "eurlex" / "acts.json", lambda r: r[0].update(date_publication="2024-13-01"))
+    (snap / "council" / "votes.json").write_text("[{", encoding="utf-8")
+    m = json.loads((snap / "_manifest.json").read_text())
+    m["train"]["status"] = "bogus"
+    (snap / "_manifest.json").write_text(json.dumps(m), encoding="utf-8")
+    out = io.StringIO()
+    assert validate_by_source(snap, out=out, today=TODAY) == ["council", "ep_votes", "eurlex", "train"]
+    assert "validate: council: 1 errors" in out.getvalue()
+
+
+def test_unreadable_manifest_is_its_own_entry(tmp_path: Path):
+    from pipeline.validate import MANIFEST_KEY, validate_by_source
+
+    snap = _copy(tmp_path)
+    (snap / "_manifest.json").write_text("{", encoding="utf-8")
+    assert validate_by_source(snap, out=io.StringIO(), today=TODAY) == [MANIFEST_KEY]
+
+
 def test_public_output_veto_rule(tmp_path: Path):
     pub = tmp_path / "public"
     (pub / "council").mkdir(parents=True)
