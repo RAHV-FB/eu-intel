@@ -6,6 +6,7 @@ import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
 import { ballotScope } from '../lib/scope';
 import { EmptyState, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
+import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { EP_MEP_URL, periodText, roleLabel, termShort, useGroups } from '../features/people/labels';
 import { Pos } from '../features/votes/Breakdowns';
@@ -199,30 +200,38 @@ export default function Mep() {
         ) : (
           <>
             <div className="table-wrap table-card">
-              <table className="table">
+              {/* Explicit roles: on phones the rows are laid out as cards (table--stack), not as table cells. */}
+              <table className="table table--stack" role="table">
                 <caption className="visually-hidden">Recorded votes, newest first</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Date</th>
-                    <th scope="col">Vote</th>
-                    <th scope="col">Recorded vote</th>
-                    <th scope="col">Result</th>
+                <thead role="rowgroup">
+                  <tr role="row">
+                    <th scope="col" role="columnheader">Date</th>
+                    <th scope="col" role="columnheader">Vote</th>
+                    <th scope="col" role="columnheader">Recorded vote</th>
+                    <th scope="col" role="columnheader">Result</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   {m.votes.slice(0, shown).map((b) => {
                     const v = voteById.get(b.vote_id);
                     return (
-                      <tr key={b.vote_id}>
-                        <td className="nowrap">{v ? formatDate(v.date) : '—'}</td>
-                        <td>
-                          <Link to={`/votes/${encodeURIComponent(b.vote_id)}`}>{v ? v.display_title || v.title : `Vote ${b.vote_id}`}</Link>
+                      <tr key={b.vote_id} role="row">
+                        <td className="nowrap" role="cell">
+                          <StackLabel>Date</StackLabel>
+                          {v ? formatDate(v.date) : '—'}
+                        </td>
+                        <td className="stack-title" role="cell">
+                          <RowTitle to={`/votes/${encodeURIComponent(b.vote_id)}`}>{v ? v.display_title || v.title : `Vote ${b.vote_id}`}</RowTitle>
                           {v && <span className="meta" style={{ display: 'block' }}>{v.kind_label}</span>}
                         </td>
-                        <td>
+                        <td role="cell">
+                          <StackLabel>Recorded vote</StackLabel>
                           <Pos pos={b.pos} />
                         </td>
-                        <td className="nowrap">{v ? (v.outcome === 'adopted' ? 'Adopted' : v.outcome === 'rejected' ? 'Rejected' : v.outcome === 'lapsed' ? 'Lapsed' : '—') : '—'}</td>
+                        <td className="nowrap" role="cell">
+                          <StackLabel>Result</StackLabel>
+                          {v ? (v.outcome === 'adopted' ? 'Adopted' : v.outcome === 'rejected' ? 'Rejected' : v.outcome === 'lapsed' ? 'Lapsed' : '—') : '—'}
+                        </td>
                       </tr>
                     );
                   })}

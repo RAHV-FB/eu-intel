@@ -559,7 +559,8 @@ export interface CountryDetail extends CountrySummary {
   council_votes: {
     vote_id: string;
     date: ISODate;
-    title: string;
+    title: string; // official title, as published
+    display_title?: string; // the official title without leading legal-form boilerplate (pipeline: council_display_title)
     pos: CouncilPosition;
     dossier_id?: string | null;
     vote_on?: CouncilVoteOn | null;

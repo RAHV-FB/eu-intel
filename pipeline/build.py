@@ -669,6 +669,57 @@ def clean_title(title: str) -> str:
     return t[:1].upper() + t[1:] if t else t
 
 
+# Council voting-result documents name each item by its full legal form before the subject, often in capitals.
+_CV_FORM_AHEAD = r"(?=(?:council\s+)?(?:implementing\s+|delegated\s+)?(?:regulation|directive|decision)\b)"
+_CV_POSITION = re.compile(
+    r"^position\s+of\s+the\s+council\s+at\s+first\s+reading\s+(?:with|in)\s+a\s+view\s+to\s+(?:the\s+)?"
+    r"adoption\s+of\s+(?:an?\s+|the\s+)?" + _CV_FORM_AHEAD,
+    re.IGNORECASE,
+)
+_CV_PROPOSAL = re.compile(r"^(?:amended\s+)?proposal\s+for\s+an?\s+" + _CV_FORM_AHEAD, re.IGNORECASE)
+_CV_FORM = re.compile(
+    r"^(?P<form>(?:council\s+)?(?:implementing\s+|delegated\s+)?(?:regulation|directive|decision))\b"
+    r"(?P<joint>\s+(?:of\s+)?the\s+european\s+parliament\s+and\s+(?:of\s+)?the\s+council\b"
+    # "... of the Council Council establishing": a doubled word in the published title
+    r"(?:\s+council\b(?!\s+(?:implementing\s+|delegated\s+)?(?:regulation|directive|decision)\b))?)?",
+    re.IGNORECASE,
+)
+
+
+def council_display_title(title: str, vote_on: str | None = None) -> str:
+    """Shorter title for lists of Council votes; the official title itself is always kept as well.
+
+    Deterministic rules, applied only at the start of the title:
+      - "of the European Parliament and of the Council" after the kind of act is dropped, and a kind of act
+        written in capitals is written normally: "REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL on X"
+        -> "Regulation on X", "COUNCIL DIRECTIVE amending Y" -> "Council Directive amending Y". The kind of
+        act (regulation, directive, decision; Council-only or not) is kept: it is information.
+      - a leading "Proposal for a" before the kind of act is dropped;
+      - "Position of the Council at first reading with a view to the adoption of a" is dropped only when the
+        vote is recorded as being on that position (vote_on), which lists show separately;
+      - a legal form printed twice in a row, or a doubled "Council", counts as one.
+    Anything else, or a title that would keep fewer than two words after the kind of act, is returned as
+    published (with runs of whitespace collapsed)."""
+    official = re.sub(r"\s+", " ", (title or "").strip())
+    t = official
+    if vote_on == "first_reading_position":
+        t = _CV_POSITION.sub("", t, count=1)
+    t = _CV_PROPOSAL.sub("", t, count=1)
+    m = _CV_FORM.match(t)
+    if not m:
+        return official
+    rest = t[m.end() :].strip()
+    again = _CV_FORM.match(rest)  # the whole legal form printed twice
+    if m.group("joint") and again and again.group("joint") and again["form"].lower() == m["form"].lower():
+        rest = rest[again.end() :].strip()
+    if len(rest.split()) < 2:
+        return official
+    form = re.sub(r"\s+", " ", m.group("form"))
+    if form.isupper():
+        form = " ".join(w.capitalize() for w in form.split())
+    return f"{form[:1].upper()}{form[1:]} {rest}"
+
+
 # ------------------------------------------------------------------------------------------- curated
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -2213,7 +2264,8 @@ class Builder:
                 pos = cv["positions"].get(code)
                 if pos:
                     cpos[pos] += 1
-                    cvotes.append({"vote_id": cv["id"], "date": cv["date"], "title": cv["title"], "pos": pos,
+                    cvotes.append({"vote_id": cv["id"], "date": cv["date"], "title": cv["title"],
+                                   "display_title": council_display_title(cv["title"], cv["vote_on"]), "pos": pos,
                                    "dossier_id": cv["dossier_id"], "vote_on": cv["vote_on"]})  # fmt: skip
             indicators = [
                 {"indicator": i.indicator, "label": i.label, "value": i.value, "unit": i.unit, "period": i.period,

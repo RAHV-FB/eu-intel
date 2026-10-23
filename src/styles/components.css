@@ -266,3 +266,103 @@
 .dot--abstain {
   background: var(--vote-abstain);
 }
+
+/* ---------- tables that stack into cards on phones ---------- */
+/*
+ * .table--stack (helpers in src/components/StackedTable.tsx): below 40rem each row becomes a card. The
+ * .stack-title cell comes first, its .row-title clamped to three lines; every other cell is a line labelled
+ * by its .stack-label, which is hidden from screen readers because the column headings stay in the markup
+ * (visually hidden). The markup carries explicit table roles, so screen readers keep rows, cells and headings
+ * even where a browser drops table semantics for cells that no longer use table display.
+ * Not for tables with sort buttons in their headings: those buttons would be hidden too.
+ */
+.stack-label {
+  display: none;
+}
+
+.row-title__toggle {
+  display: block;
+  min-height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.row-title__toggle:hover {
+  color: var(--eu-blue-hover);
+  text-decoration-thickness: 2px;
+}
+
+@media (max-width: 39.99rem) {
+  .table--stack,
+  .table--stack tbody,
+  .table--stack td {
+    display: block;
+  }
+
+  .table--stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .table--stack tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    padding: var(--sp-3) 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table--stack tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .table--stack td {
+    padding: 0;
+    border: 0;
+  }
+
+  .table--stack td.stack-title {
+    order: -1; /* the title leads the card; in the table it follows the date */
+    margin-bottom: var(--sp-1);
+  }
+
+  .table--stack td:not(.stack-title) {
+    display: grid;
+    grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+    gap: var(--sp-3);
+    align-items: baseline;
+  }
+
+  .table--stack .stack-label {
+    display: block;
+    color: var(--text-2);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .table--stack .row-title {
+    font-weight: var(--fw-medium);
+    overflow-wrap: anywhere;
+  }
+
+  .table--stack .row-title:not(.is-open) {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

@@ -15,6 +15,7 @@ from pipeline.build import (
     build,
     build_search_docs,
     clean_title,
+    council_display_title,
     ep_term_label,
     group_slug,
     instrument_from_title,
@@ -73,6 +74,68 @@ def test_clean_title_strips_boilerplate_only_when_meaningful():
     )
     assert clean_title("Artificial Intelligence Act") == "Artificial Intelligence Act"
     assert instrument_from_title("Proposal for a Directive on test") == "directive"
+
+
+def test_council_display_title_drops_legal_form_boilerplate():
+    ep_and_council = "REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL"
+    assert council_display_title(f"{ep_and_council} on asset recovery and confiscation", "act") == (
+        "Regulation on asset recovery and confiscation"
+    )
+    assert council_display_title(
+        "Directive of the European Parliament and of the Council amending Directive 2011/36/EU on preventing "
+        "trafficking in human beings (first reading)",
+        "act",
+    ) == "Directive amending Directive 2011/36/EU on preventing trafficking in human beings (first reading)"
+    # the kind of act is kept, also for Council-only acts; capitals are written normally
+    assert council_display_title("COUNCIL DIRECTIVE amending Directive 2006/112/EC as regards VAT rules", "act") == (
+        "Council Directive amending Directive 2006/112/EC as regards VAT rules"
+    )
+    assert council_display_title("COUNCIL IMPLEMENTING REGULATION amending Implementing Regulation (EU) No 282/2011") == (
+        "Council Implementing Regulation amending Implementing Regulation (EU) No 282/2011"
+    )
+    assert council_display_title("REGULATION (EU) temporarily suspending autonomous tariff duties", "act") == (
+        "Regulation (EU) temporarily suspending autonomous tariff duties"
+    )
+    assert council_display_title(
+        "Proposal for a regulation of the European Parliament and of the Council on   detergents and surfactants"
+    ) == "Regulation on detergents and surfactants"
+    # doubled legal form or doubled "Council" in the published title
+    assert council_display_title(
+        "Regulation of the European Parliament and of the Council Regulation of the European Parliament and of "
+        "the Council amending Protocol No 3 on the Statute"
+    ) == "Regulation amending Protocol No 3 on the Statute"
+    assert council_display_title(
+        "Regulation of the European Parliament and of the Council Council establishing a screening framework"
+    ) == "Regulation establishing a screening framework"
+
+
+def test_council_display_title_first_reading_position_prefix_only_for_that_vote():
+    title = (
+        "Position of the Council at first reading with a view to the adoption of a REGULATION OF THE EUROPEAN "
+        "PARLIAMENT AND OF THE COUNCIL on preventing plastic pellet losses"
+    )
+    # the list shows "Council position at first reading" separately for these votes
+    assert council_display_title(title, "first_reading_position") == "Regulation on preventing plastic pellet losses"
+    # otherwise the prefix says what was voted on, so it stays
+    assert council_display_title(title, "act") == title
+    assert council_display_title(title, None) == title
+
+
+def test_council_display_title_keeps_titles_it_cannot_shorten_safely():
+    for title in (
+        "REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL",  # nothing would be left
+        "Council Directive on fees",  # nothing to drop: unchanged
+        "Joint text on the general budget of the European Union for 2026",
+        "Amendments of the European Parliament to the Council's position on the draft budget for 2027",
+        "EGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL on economic coercion",  # garbled: not guessed
+        "Regulation of the European Parliament and of the Coucil amending Regulation (EU) 2018/1806",
+        "Decisions on the budget",
+    ):
+        assert council_display_title(title, "act") == title
+    assert council_display_title("  Council Decision\n on  the  signing of an agreement ") == (
+        "Council Decision on the signing of an agreement"
+    )
+    assert council_display_title("") == ""
 
 
 def test_short_names_skip_names_of_other_acts():
@@ -529,6 +592,9 @@ def test_council_votes(out: Path):
     pl = load(out, "countries/PL.json")
     assert pl["council_positions"]["abstain"] == 1
     assert pl["council_votes"][0]["pos"] == "abstain" and pl["council_votes"][0]["dossier_id"] == "2099-0001"
+    # the official title is kept next to the display title
+    assert pl["council_votes"][0]["title"] == cv["title"] == "TEST Regulation on widgets"
+    assert pl["council_votes"][0]["display_title"] == "TEST Regulation on widgets"
 
 
 def test_council_population_share_is_of_participating_states(out: Path):
