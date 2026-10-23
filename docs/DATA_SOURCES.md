@@ -122,7 +122,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   "… + 3/5 of votes cast") leave the rule unknown. A statement that contradicts the rule assumed for the vote
   leaves it unknown, so no margin is shown: the objections under Rule 112 of 25 Nov 2020 on RSP files (125373,
   125374), whose minutes say "(majority of Parliament’s component Members)" where RSP files are given the votes
-  cast.
+  cast. A negotiating mandate on an ordinary-procedure file is a first-reading vote (majority of the votes cast)
+  also when its item's title carries no procedure symbol (142178, 3 May 2022; the latest sitting's items, first
+  published with French titles only).
 - Minutes: the remote-voting sittings of April–November 2020 have their "Results of votes" in French only
   (`PV-9-2020-05-13-VOT-FNL_fr.xml`); outcomes, documents and procedure symbols are read from them, block
   titles are not (the subject must be English).
@@ -191,7 +193,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   decision of its own, voted after the text (Rule 59(4) of the 9th-term Rules of Procedure: "Parliament decides to
   refer the matter back"; 2025/0524(COD), 13 Nov 2025: 181375 on the text, 181446 "Request for referral back (Rule
   60(4))"); referral votes are not listed, so that step links no vote, and the mandate vote stays on the step that
-  records the vote on the text. Parliament's confirmation of a committee's decision to negotiate links the vote on
+  records the vote on the text, which is then a key step shown by default (2021/0106(COD), 14 Jun 2023, vote
+  156022); a step built from a vote that the procedure record does not show yet links that vote (2026/0325(COD),
+  "Parliament voted to open negotiations with the Council", 199592). Parliament's confirmation of a committee's decision to negotiate links the vote on
   that decision, if one was held. A second-reading approval links the motions to reject the Council's position that
   decided it; a decision amending the Council's position links none (its amendments decided it: 2025/0429(COD), 9 Jul
   2026, motion 195775 rejected) and names, on any day, the votes on amendments adopted by a majority of the

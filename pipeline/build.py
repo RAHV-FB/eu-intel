@@ -620,6 +620,7 @@ JOINT_ACT_RE = re.compile(
 VOTE_EVENT_KINDS = {"ep_position", "plenary_vote", "rejection"}
 REJECTION_MOTIONS = ("reject_proposal", "reject_council_position")  # EpVote.kind_detail of motions to reject the text
 EP_VOTE_RECORDS = ("PLENARY_VOTE", "PLENARY_VOTE_RESULTS")  # an item of the sitting, not a decision
+_VOTE_EVENT_ID = re.compile(r"^vote-(\d+)-")  # a step built from a vote (with_recorded_events: "vote-199592-…")
 # a vote on a request to deal with a file by urgent procedure, as the EP labels it (the 2020 remote sittings only in
 # French: "Demande d'application de la procédure d'urgence")
 URGENCY_RE = re.compile(
@@ -2783,6 +2784,7 @@ class Builder:
         for v in votes:
             if v.id in self.indexed_vote_ids and vote_held(v):
                 votes_by_date[v.date].append(v)
+        listed = {v.id: v for vs in votes_by_date.values() for v in vs}
         # The Council's own voting results date its votes; the Legislative Observatory's Council steps are
         # aligned with them so the timeline and the Council vote cards cannot disagree.
         cvotes = [cv for cv in self.council_of.get(p.id, []) if cv["date"] <= self.today]
@@ -2885,6 +2887,13 @@ class Builder:
             if (e.raw_type or "").endswith("PLENARY_AMEND_COUNCIL_POSITION"):
                 # also on a day without a listed vote (2013/0072(COD), 21 Jan 2026: only amendment votes)
                 detail = " ".join(x for x in (detail, second_reading_amendments(votes, e.date)) if x) or None
+            if (m := _VOTE_EVENT_ID.match(e.id)) and (e.raw_type or "").startswith("ep_vote:") and m.group(1) in listed:
+                vote_id = m.group(1)  # a step built from the vote itself (with_recorded_events: 199592, 2026/0325(COD))
+            record = (e.raw_type or "").rsplit("/", 1)[-1] in EP_VOTE_RECORDS
+            if kind == "plenary_vote" and not record and vote_id in listed and listed[vote_id].kind == "mandate":
+                # the decision recording the vote on the amended text, Parliament's position for the negotiations (it
+                # is shown with the referral back that followed: 2021/0106(COD), 14 Jun 2023, vote 156022)
+                key = True
             src = _event_src(e.source)
             if (urgent := urgency_vote(e, votes, self.indexed_vote_ids)) is not None:
                 if e.date in urgency_at:  # the day's other record of the same vote: its documents only

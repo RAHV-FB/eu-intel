@@ -1011,7 +1011,9 @@ def majority_rule(
         return "unknown"
     (ptype,) = types
     if ptype == "COD":
-        return "votes_cast" if symbol in ("***I", "***III") else "unknown"  # Art. 294(3), 294(13)
+        # Art. 294(3), 294(13); a negotiating mandate is the vote on the draft act at first reading, before the
+        # referral back of Rule 59(4) (9th term), also where the item's title has no symbol yet (142178, 3 May 2022)
+        return "votes_cast" if symbol in ("***I", "***III") or kind == "mandate" else "unknown"
     if ptype in OBJECTION_TYPES:
         if detail == "no_objection":
             return "votes_cast"

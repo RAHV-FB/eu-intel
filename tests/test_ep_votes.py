@@ -851,6 +851,14 @@ def test_stated_majority_that_contradicts_the_assumed_one_is_not_used():
     assert roles("2020-11-25")["125373"].majority_rule == "component_members"
 
 
+def test_negotiating_mandate_needs_the_votes_cast_without_a_symbol():
+    # 3 May 2022, 142178 (POPs, 2021/0340(COD)): a mandate whose subject has no "***I"; also the votes of the latest
+    # sitting before their vote items get English titles (22 Oct 2026, 199592, first answered in French without one)
+    assert ev.majority_rule("mandate", None, None, ["COD"]) == "votes_cast"
+    assert ev.majority_rule("final", None, None, ["COD"]) == "unknown"  # could be a second-reading text
+    assert ev.majority_rule("amendment", None, "***II", ["COD"]) == "component_members"
+
+
 def test_old_format_objection_label_without_a_vote_item():
     # 12 Sep 2023, 157978 "Objection pursuant to Rule 112(2) and (3): Genetically modified maize MON 87419 – Motion
     # for a resolution (text as a whole)" (426-180-21), no vote item; minutes block 12, B9-0362/2023

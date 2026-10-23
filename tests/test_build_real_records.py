@@ -400,6 +400,27 @@ def test_mandate_vote_links_the_vote_on_the_text_not_the_referral():
     )  # fmt: skip
 
 
+def test_mandate_vote_link_is_on_a_milestone_shown_by_default():
+    # 2021/0106(COD), AI Act: 14 Jun 2023, "Parliament voted amendments to the proposal" (2021-0106-DEC-DCPL-
+    # 2023-06-14) links mandate vote 156022 (499-28-93) and is a key step, beside the referral back
+    tl = _steps("2021-0106", "156022", "166051")
+    dcpl, ref = tl["2021-0106-DEC-DCPL-2023-06-14"], tl["2021-0106-DEC-REFBAK-2023-06-14"]
+    assert (dcpl["vote_id"], dcpl["key"], ref["vote_id"], ref["key"]) == ("156022", True, None, True)
+    # 2026/0325(COD): no procedure event yet for the vote of 22 Oct 2026; the step built from mandate vote 199592
+    # ("C10-0258/2026 – Commission proposal", 341-225-6) links it
+    p, v = procs("2026-0325")["2026-0325"], votes("199592", "199567")
+    me = SimpleNamespace(notices_by_ref={}, acts_of={}, votes_of={"2026-0325": list(v.values())}, today="2026-10-23",
+                         procedure_event=Builder.procedure_event, checked_council_date=lambda p: None,
+                         indexed_vote_ids=set(v), council_of={})  # fmt: skip
+    p = Builder.with_recorded_events(me, p)  # type: ignore[arg-type]
+    tl = {e["id"]: e for e in Builder.timeline(me, p, [], list(v.values()))}  # type: ignore[arg-type]
+    assert tl["vote-199592-negotiation_mandate"]["vote_id"] == "199592"
+    # a record of the sitting ("Vote in Parliament") linking the mandate vote stays a detail
+    tl = _steps("2021-0068", "130712", "130538", "132421")
+    assert tl["MTG-PL-2021-04-28-PVCRE-ITM-13"]["key"] is False
+    assert tl["2021-0068-DEC-DCPL-2021-04-29"]["key"] is True
+
+
 def test_rejected_motion_to_reject_decides_no_other_step():
     # 2021/0206(COD), 8 Jun 2022: 144420 "Social Climate Fund – … – Proposal for rejection" rejected 91-512-27, then
     # committee amendments adopted (PV-9-2022-06-08-VOT); the vote on the text came on 22 Jun 2022 (145868)
