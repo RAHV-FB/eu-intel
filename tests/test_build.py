@@ -452,3 +452,23 @@ def test_opt_out_countries_are_not_bound_rather_than_missing_measures(out: Path)
     ie = {t["celex"]: t["status"] for t in load(out, "countries/IE.json")["transposition"]}
     assert dk["32099L0009"] == "not_participating"
     assert ie["32099L0009"] == "deadline_not_reached"
+
+
+def test_court_ruling_wording_never_overstates_scope():
+    from types import SimpleNamespace
+
+    from pipeline.build import provision_label, ruling_summary
+
+    assert provision_label("A05P1") == "Article 5(1)"
+    assert provision_label("A01PT3") == "Article 1, point 3"
+    assert provision_label("A10A") == "Article 10a"
+    r = SimpleNamespace(
+        effect="annulment", provisions=["A05P1", "A05P2"], case_number="C-19/23", celex="62023CJ0019",
+        date="2025-11-11", ecli=None, url="https://example.invalid/j",
+    )  # fmt: skip
+    s = ruling_summary(r)["summary"]
+    assert "all or part of Article 5(1), Article 5(2)" in s and "temporal effects" in s
+    inv = ruling_summary(SimpleNamespace(**{**vars(r), "effect": "invalidity", "provisions": []}))
+    assert (
+        inv["kind_label"] == "Preliminary ruling on validity" and "declared the act invalid" in inv["summary"]
+    )

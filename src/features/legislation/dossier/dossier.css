@@ -1112,3 +1112,23 @@
 .dz-sources li {
   overflow-wrap: anywhere;
 }
+
+.dz-amended-note {
+  margin: var(--sp-3) 0 0;
+}
+
+.dz-rulings {
+  border-left: 3px solid var(--st-alert);
+  background: var(--st-alert-bg);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius);
+}
+
+.dz-rulings ul {
+  margin: 0;
+  padding-left: var(--sp-4);
+}
+
+.dz-rulings li + li {
+  margin-top: var(--sp-2);
+}

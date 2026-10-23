@@ -227,6 +227,19 @@ export interface LegalActSummary {
   amended_by: string[];
   repeals: string[];
   repealed_by: string[];
+  court_rulings: CourtRulingInfo[]; // Court of Justice judgments recorded by EUR-Lex as annulling / invalidating
+}
+
+export interface CourtRulingInfo {
+  case_number?: string | null; // "C-19/23"
+  celex: string;
+  date?: ISODate | null;
+  ecli?: string | null;
+  effect: 'annulment' | 'invalidity';
+  kind_label: string; // "Action for annulment" | "Preliminary ruling on validity"
+  provisions: string[]; // "Article 5(1)"; empty when EUR-Lex does not record specific provisions
+  summary: string;
+  url: string;
 }
 
 export interface EditorialInfo {

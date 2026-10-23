@@ -328,6 +328,32 @@ def short_names(title: str) -> list[str]:
     return out
 
 
+def provision_label(code: str) -> str:
+    """Cellar location code to a readable provision: "A05P1" -> "Article 5(1)", "A01PT3" -> "Article 1, point 3"."""
+    m = re.fullmatch(r"A0*(\d+)([A-Z]?)(?:P0*(\d+))?(?:PT0*(\d+))?", code)
+    if not m:
+        return code
+    art, letter, par, point = m.groups()
+    out = f"Article {art}{letter.lower()}" + (f"({par})" if par else "")
+    return out + (f", point {point}" if point else "")
+
+
+def ruling_summary(r) -> dict:
+    """A court ruling on an act, described without overstating its scope (the judgment is linked)."""
+    kind = "Action for annulment" if r.effect == "annulment" else "Preliminary ruling on validity"
+    provs = [provision_label(c) for c in r.provisions]
+    # EUR-Lex records which provisions are affected but not whether in whole or in part, so say both.
+    if r.effect == "annulment":
+        outcome = f"annulled all or part of {', '.join(provs)}" if provs else "annulled the act or part of it"
+    else:
+        outcome = f"declared all or part of {', '.join(provs)} invalid" if provs else "declared the act invalid"
+    return {
+        "case_number": r.case_number, "celex": r.celex, "date": r.date, "ecli": r.ecli,
+        "effect": r.effect, "kind_label": kind, "provisions": provs, "url": r.url,
+        "summary": f"The Court of Justice {outcome}. The judgment sets out the exact scope and any temporal effects.",
+    }  # fmt: skip
+
+
 def norm_ref(ref: str) -> str:
     return re.sub(r"\s+", "", ref or "").upper()
 
@@ -1253,6 +1279,20 @@ class Builder:
                                            "url": a.eurlex_url}],
                     "source": src, "vote_id": None,
                 })  # fmt: skip
+            for r in getattr(a, "court_rulings", []):
+                if not r.date:
+                    continue
+                rs = ruling_summary(r)
+                out.append({
+                    "id": f"act-{a.celex}-ruling-{r.celex}", "date": r.date, "kind": "other",
+                    "title": f"Court of Justice judgment ({r.case_number or r.celex})",
+                    "detail": rs["summary"], "institution": "CJEU", "state": "done", "key": True,
+                    "docs": [{"id": r.case_number or r.celex, "label": r.case_number or r.celex, "kind": "judgment",
+                              "date": r.date, "url": r.url}],
+                    "source": {"institution": "EUR-Lex", "url": r.url, "label": f"Judgment {r.case_number or r.celex}",
+                               "identifier": r.ecli or r.celex, "retrieved_at": None, "published": r.date},
+                    "vote_id": None,
+                })  # fmt: skip
         out.sort(key=lambda x: (x["date"], x["state"] == "scheduled", x["id"]))
         return out
 
@@ -1264,6 +1304,7 @@ class Builder:
             "transposition_deadlines": a.transposition_deadlines if a.act_type == "directive" else [],
             "in_force": a.in_force, "end_of_validity": a.end_of_validity, "eurlex_url": a.eurlex_url,
             "amends": a.amends, "amended_by": a.amended_by, "repeals": a.repeals, "repealed_by": a.repealed_by,
+            "court_rulings": [ruling_summary(r) for r in getattr(a, "court_rulings", [])],
         }  # fmt: skip
 
     def transposition_status(self, celex: str, country: str, deadline: str | None) -> str:

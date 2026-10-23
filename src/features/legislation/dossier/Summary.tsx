@@ -1,7 +1,8 @@
 import type { ApplicationInfo, DossierDetail, ISODate, TimelineEvent } from '../../../types/data';
+import { Link } from 'react-router-dom';
 import { BasisNote, ExtLink, SourceLink, StatusBadge, Term, institutionLabel } from '../../../components/ui';
 import { formatDate } from '../../../lib/format';
-import { ADOPTED_STAGES, institutionSuffix } from '../labels';
+import { ADOPTED_STAGES, dossierPath, institutionSuffix } from '../labels';
 
 /** Most recent recorded (done) event on or before today. */
 export function latestDone(timeline: TimelineEvent[], today: ISODate): TimelineEvent | null {
@@ -202,8 +203,50 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
         <div className="dz-block dz-when">
           <h3 className="dz-label">When it applies</h3>
           <KeyDates app={d.application} today={today} instrument={d.instrument} />
+          {d.related.some((r) => r.relation === 'Amended by') && (
+            <p className="meta dz-amended-note">
+              This act has since been amended (see{' '}
+              {d.related
+                .filter((r) => r.relation === 'Amended by')
+                .slice(0, 3)
+                .map((r, i) => (
+                  <span key={r.id}>
+                    {i > 0 && ', '}
+                    {/^\d{4}-\d{4}/.test(r.id) ? <Link to={dossierPath(r.id)}>{r.title}</Link> : r.title}
+                  </span>
+                ))}
+              ). The dates above are those EUR-Lex records for the act as first adopted; amendments may have
+              changed some of them.
+            </p>
+          )}
         </div>
       )}
+
+      <CourtRulings d={d} />
     </section>
+  );
+}
+
+/** Court of Justice judgments that EUR-Lex records as annulling or invalidating (part of) the act. */
+function CourtRulings({ d }: { d: DossierDetail }) {
+  const rulings = d.acts.flatMap((a) => a.court_rulings ?? []);
+  if (!rulings.length) return null;
+  return (
+    <div className="dz-block dz-rulings" role="note">
+      <h3 className="dz-label">Court ruling on this law</h3>
+      <ul>
+        {rulings.map((r) => (
+          <li key={r.celex}>
+            <strong>
+              {r.case_number ?? r.celex}
+              {r.date && <>, {formatDate(r.date)}</>}
+            </strong>{' '}
+            <span className="meta">({r.kind_label})</span>
+            <br />
+            {r.summary} <ExtLink href={r.url}>Read the judgment</ExtLink>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
