@@ -20,8 +20,10 @@ Sources (both official European Parliament publications):
    (HTML), used to fill exactly those gaps: the official status label ("Stage reached in
    procedure"), EP subject codes, COM references, the Commission/Council key events,
    withdrawal, and the final act's CELEX number. OEIL data is recorded with
-   ``SourceRef(institution="OEIL")``. If an OEIL page cannot be fetched or parsed, the
-   record is kept with EP API data only (stage_raw/subjects/com_refs/celex_refs empty).
+   ``SourceRef(institution="OEIL")``. If an OEIL page cannot be fetched or parsed (an HTTP 200
+   page without the procedure file counts as a failure), a file without earlier OEIL data is
+   recorded with EP API data only (stage_raw/subjects/com_refs/celex_refs empty); a file whose
+   snapshot record has OEIL data keeps that record unchanged and is retried next run.
 
 Event normalization (deterministic, nothing invented):
 - one Event per EP activity, kind/title from ACTIVITY_MAP (unknown types -> "other");
@@ -72,7 +74,9 @@ from pipeline.models.entities import (
 from pipeline.snapshot import (
     CURATED,
     fetch_deadline,
+    global_deadline,
     now_iso,
+    past,
     read_records,
     read_state,
     upsert_records,
@@ -579,6 +583,21 @@ class OeilInfo:
     com_docs: list[DocRef] = field(default_factory=list)
     final_acts: list[DocRef] = field(default_factory=list)  # id = CELEX
     players: list[OeilPlayer] = field(default_factory=list)  # EP committees + rapporteurs
+    has_basic_info: bool = False  # the page has the procedure file's "Basic information" section
+    reference: str | None = None  # procedure reference shown in that section
+
+
+class OeilPageError(ValueError):
+    """An OEIL answer (HTTP 200) that is not the procedure file asked for (error/maintenance/WAF page)."""
+
+
+def check_oeil_page(info: OeilInfo, reference: str) -> None:
+    """Raise OeilPageError unless the parsed page is the procedure file of `reference`."""
+    if not info.has_basic_info:
+        raise OeilPageError(f"OEIL page for {reference} has no procedure file (no 'Basic information')")
+    wanted = normalize_proc_id(reference)
+    if info.reference and wanted and normalize_proc_id(info.reference) != wanted:
+        raise OeilPageError(f"OEIL page for {reference} shows procedure {info.reference}")
 
 
 def _text(el: Any) -> str:
@@ -599,6 +618,11 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
     sec1 = doc.xpath('//*[@id="section1"]')
     if sec1:
         s1 = sec1[0]
+        info.has_basic_info = True
+        for p in s1.xpath('.//p[contains(@class,"font-weight-bold")]'):
+            if PROC_REF_RE.match(_text(p)):
+                info.reference = _text(p)
+                break
         st = s1.xpath('.//p[normalize-space()="Status"]/following-sibling::p[1]')
         if st:
             info.status = _text(st[0]) or None
@@ -1090,14 +1114,32 @@ class _Pacer:
                     self._next = max(self._next, time.monotonic()) + self.gap_s
 
 
-def list_procedure_ids(http: Http, ptype: str, page: int = 1000) -> list[tuple[str, str]]:
+LIST_PAGE = 500  # the list endpoint answered HTTP 500 to limit=1000 (2026-10-22) and sometimes to 500
+MIN_LIST_PAGE = 125
+
+
+def list_procedure_ids(http: Http, ptype: str, page: int = LIST_PAGE) -> list[tuple[str, str]]:
+    """(process id, label) pairs of one procedure type. A server error halves the page size (down to
+    MIN_LIST_PAGE) before giving up with HttpError."""
     out: list[tuple[str, str]] = []
     offset = 0
     while True:
-        d = http.get_json(
-            f"{EP_API}/procedures",
-            params={"process-type": ptype, "format": "application/ld+json", "offset": offset, "limit": page},
-        )
+        try:
+            d = http.get_json(
+                f"{EP_API}/procedures",
+                params={
+                    "process-type": ptype,
+                    "format": "application/ld+json",
+                    "offset": offset,
+                    "limit": page,
+                },
+            )
+        except HttpError as e:
+            if e.status not in (500, 502, 503, 504) or page // 2 < MIN_LIST_PAGE:
+                raise
+            page //= 2
+            log.warning("ep_procedures: list %s failed (%s); retrying with limit=%d", ptype, e, page)
+            continue
         items = as_list(d.get("data"))
         for x in items:
             if isinstance(x, dict) and x.get("process_id"):
@@ -1292,26 +1334,67 @@ def split_parts(pid: str, ids: Iterable[str]) -> list[str]:
     return sorted(i for i in ids if re.fullmatch(re.escape(pid) + r"[A-Z]", i))
 
 
+def has_oeil_data(p: Procedure) -> bool:
+    """The record carries data taken from its OEIL procedure file."""
+    return (
+        p.stage_raw is not None
+        or bool(p.subjects)
+        or bool(p.celex_refs)
+        or any(e.source.institution == "OEIL" for e in p.events)
+    )
+
+
+SEQUENTIAL_RETRY_STOP = 3  # consecutive failed one-by-one retries that end a chunk's retry pass (outage)
+
+
 class _Run:
     """State shared by the chunks of one fetch run."""
 
-    def __init__(self, http: Http, wanted: dict[str, str], committees: dict[str, str]):
+    def __init__(
+        self,
+        http: Http,
+        wanted: dict[str, str],
+        committees: dict[str, str],
+        enriched: Iterable[str] = (),
+        deadline: float | None = None,
+        hard_deadline: float | None = None,
+        min_progress: int = CHUNK_SIZE,
+    ):
         self.http = http
         self.wanted = wanted
         self.ep_pacer, self.oeil_pacer = _Pacer(EP_API_GAP_S), _Pacer(OEIL_GAP_S)
         self.names = MepNames(http)
         self.committees = committees  # code -> name, grows with every OEIL page seen
+        self.enriched = set(enriched)  # ids whose snapshot record has OEIL data
+        # No new id is started after `hard_deadline` (run-wide), nor after `deadline` (this source's budget)
+        # once `min_progress` ids were started (a run always makes some progress).
+        self.deadline, self.hard_deadline, self.min_progress = deadline, hard_deadline, min_progress
+        self.started = 0
         self.errors: dict[str, str] = {}  # transient/unexpected failures (stay pending)
         self.not_found: list[str] = []  # GET /procedures/{id} answers 404
         self.invalid: dict[str, str] = {}  # records that cannot be built without guessing
         self.oeil_errors: list[str] = []
         self.oeil_missing: list[str] = []  # OEIL answers 404 (no procedure file)
+        # previously enriched ids whose OEIL page could not be read: record kept as is, id stays pending
+        self.oeil_kept: dict[str, str] = {}
+        self.deferred: set[str] = set()  # not started: time budget reached (stay pending)
         self.build_errors: list[str] = []
         self.requests = 0
         self.lock = threading.Lock()
 
+    def out_of_time(self) -> bool:
+        return past(self.hard_deadline) or (self.started >= self.min_progress and past(self.deadline))
 
-def _fetch_one(run: _Run, pid: str) -> tuple[dict[str, Any], str, OeilInfo | None] | None:
+
+def _fetch_one(run: _Run, pid: str) -> tuple[dict[str, Any], str, OeilInfo | None, str | None] | None:
+    """(EP record, retrieved_at, OEIL info, OEIL failure or None), or None if the EP record could not be
+    fetched (the reason is in run.errors / run.not_found / run.deferred)."""
+    with run.lock:
+        if run.out_of_time():
+            run.deferred.add(pid)
+            return None
+        run.started += 1
+        run.deferred.discard(pid)
     try:
         with run.lock:
             run.requests += 1
@@ -1340,47 +1423,81 @@ def _fetch_one(run: _Run, pid: str) -> tuple[dict[str, Any], str, OeilInfo | Non
     label = proc.get("label")
     reference = (label if isinstance(label, str) else None) or run.wanted.get(pid) or pid
     info: OeilInfo | None = None
+    oeil_failure: str | None = None
     try:
         with run.lock:
             run.requests += 1
         page = run.oeil_pacer.call(lambda: run.http.get(OEIL_FILE, params={"reference": reference}))
         info = parse_oeil(page)
+        check_oeil_page(info, reference)
     except HttpError as e:  # keep the EP API record without OEIL enrichment
-        with run.lock:
-            if e.status == 404:
+        info = None
+        if e.status == 404:
+            oeil_failure = "no OEIL procedure file (404)"
+            with run.lock:
                 run.oeil_missing.append(reference)  # no OEIL page for this reference
-            else:
-                run.oeil_errors.append(f"{reference}: {str(e)[:120]}")
-    except Exception as e:  # noqa: BLE001 - keep the EP API record without OEIL enrichment
-        with run.lock:
-            run.oeil_errors.append(f"{reference}: {str(e)[:120]}")
+        else:
+            oeil_failure = str(e)[:120]
+    except Exception as e:  # noqa: BLE001 - unreadable/foreign page: treated like an unavailable OEIL
+        info = None
+        oeil_failure = str(e)[:120]
     with run.lock:
         run.errors.pop(pid, None)
-    return proc, retrieved, info
+    return proc, retrieved, info, oeil_failure
 
 
 def _fetch_chunk(run: _Run, ids: list[str]) -> list[Procedure]:
-    """Fetch and build one chunk. Failed ids are left in run.errors (they stay pending)."""
+    """Fetch and build one chunk. Failed ids are left in run.errors / run.oeil_kept / run.deferred (they
+    stay pending). A record that had OEIL data is never replaced by one without it: if its OEIL page cannot
+    be read now, the stored record is kept unchanged and the id is retried next run."""
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
         got = dict(zip(ids, ex.map(lambda i: _fetch_one(run, i), ids), strict=True))
-    for pid in [i for i in ids if got[i] is None and i in run.errors]:  # one retry (e.g. HTTP 429 burst)
-        got[pid] = _fetch_one(run, pid)
+
+    def failed(pid: str) -> bool:
+        """EP API failed transiently, or OEIL failed for another reason than 404."""
+        r = got[pid]
+        if r is None:
+            return pid in run.errors
+        return r[3] is not None and "(404)" not in r[3]
+
+    # One sequential retry (e.g. after an HTTP 429 burst), within the time budget; consecutive failures
+    # mean an outage, so the pass stops early instead of spending the budget one id at a time.
+    misses = 0
+    for pid in [i for i in ids if failed(i)]:
+        if misses >= SEQUENTIAL_RETRY_STOP or past(run.deadline) or past(run.hard_deadline):
+            break
+        retry = _fetch_one(run, pid)
+        if retry is not None and (got[pid] is None or retry[3] is None):
+            got[pid] = retry
+        if got[pid] is not None:  # the first answer still stands if the retry did worse
+            run.errors.pop(pid, None)
+            run.deferred.discard(pid)
+        misses = misses + 1 if failed(pid) else 0
     fetched = [(pid, r) for pid, r in got.items() if r is not None]
-    people = _people_from(proc for _, (proc, _, _) in fetched)
-    for _, (_, _, info) in fetched:
+    people = _people_from(proc for _, (proc, _, _, _) in fetched)
+    for _, (_, _, info, _) in fetched:
         if info:
             people |= {(i, None) for pl in info.players for i in pl.rapporteurs + pl.shadows}
             for code, name in info.committee_names.items():
                 run.committees.setdefault(code, name)
     run.names.ensure(people)
     out: list[Procedure] = []
-    for pid, (proc, retrieved, info) in fetched:
+    for pid, (proc, retrieved, info, oeil_failure) in fetched:
+        if oeil_failure is not None:
+            if pid in run.enriched:  # never replace an enriched record by a stripped one
+                run.oeil_kept[pid] = oeil_failure
+                continue
+            if "(404)" not in oeil_failure:
+                run.oeil_errors.append(f"{pid}: {oeil_failure}")
         try:
             out.append(
                 build_procedure(proc, retrieved, info, run.names.get, run.committees, run.wanted.get(pid))
             )
         except InvalidRecord as e:
-            run.invalid[pid] = str(e)
+            if oeil_failure is not None and "(404)" not in oeil_failure:
+                run.errors[pid] = f"OEIL unavailable and EP record incomplete: {e}"[:160]  # retry
+            else:
+                run.invalid[pid] = str(e)
         except Exception as e:  # noqa: BLE001
             run.build_errors.append(f"{pid}: {e!r}"[:160])
     return out
@@ -1395,23 +1512,42 @@ def fetch(http: Http) -> SourceStatus:
     - EU_INTEL_FULL_REFRESH=1: fetch every id in scope.
     - Work is done in chunks of CHUNK_SIZE; after each chunk the records are upserted into the
       snapshot and data/snapshot/ep_procedures/_state.json lists the ids still pending. A new
-      run continues pending ids first. No new chunk starts after fetch_deadline()
-      (EU_INTEL_FETCH_BUDGET_S); the run then reports "partial".
+      run continues pending ids first. No new chunk (and, after the first chunk, no new id) starts after
+      fetch_deadline() (EU_INTEL_FETCH_BUDGET_S / EU_INTEL_FETCH_DEADLINE); nothing at all starts after
+      the run-wide EU_INTEL_FETCH_DEADLINE. The run then reports "partial".
+    - A record that has OEIL data is only replaced by one that has it too (see _fetch_chunk).
+    - If the EP list endpoint fails, the run works from the snapshot's ids, the pending ids and the ids
+      referenced by other snapshots ("partial").
     """
     attempted = now_iso()
     deadline = fetch_deadline()
+    hard_deadline = global_deadline()
     today = _today()
     state = read_state(SOURCE_ID)
     full = os.environ.get("EU_INTEL_FULL_REFRESH") == "1"
+    existing = {p.id: p for p in read_records(SOURCE_ID, "procedures", Procedure)}
 
     wanted: dict[str, str] = {}  # pid -> reference (label)
     by_type: dict[str, int] = {}
-    for ptype in PROCEDURE_TYPES:
-        items = list_procedure_ids(http, ptype)
-        by_type[ptype] = len(items)
-        for pid, label in items:
-            if int(pid[:4]) >= MIN_YEAR:
-                wanted[pid] = label
+    listing_error: str | None = None
+    try:
+        for ptype in PROCEDURE_TYPES:
+            items = list_procedure_ids(http, ptype)
+            by_type[ptype] = len(items)
+            for pid, label in items:
+                if int(pid[:4]) >= MIN_YEAR:
+                    wanted[pid] = label
+    except HttpError as e:
+        if not existing and not state.get("pending"):
+            raise
+        # The list is unavailable: keep working on what is known (snapshot ids, pending ids, ids referenced
+        # by other snapshots) instead of blocking every pending id for the whole outage.
+        listing_error = str(e)[:200]
+        log.warning("ep_procedures: procedure list unavailable (%s); using the snapshot and pending ids", e)
+        wanted = {pid: p.reference for pid, p in existing.items()}
+        for pid in state.get("pending", []):
+            wanted.setdefault(pid, "")
+        by_type = {}
     listed = len(wanted)
     # The paged list is incomplete: add in-scope ids referenced by EUR-Lex acts and EP votes.
     discovered: Counter[str] = Counter()
@@ -1427,7 +1563,6 @@ def fetch(http: Http) -> SourceStatus:
     unavailable: dict[str, str] = {} if full else dict(state.get("unavailable", {}))
     skip = {k for k, v in unavailable.items() if "split procedure" in v or "merges several" in v}
 
-    existing = {p.id: p for p in read_records(SOURCE_ID, "procedures", Procedure)}
     acts_by_ref: dict[str, list[LegalAct]] = {}
     try:
         for a in read_records("eurlex", "acts", LegalAct):
@@ -1460,7 +1595,8 @@ def fetch(http: Http) -> SourceStatus:
     )
 
     committees = {c.code: c.name for p in existing.values() for c in p.committees if c.name}
-    run = _Run(http, wanted, committees)
+    enriched = [pid for pid, p in existing.items() if has_oeil_data(p)]
+    run = _Run(http, wanted, committees, enriched, deadline, hard_deadline, min_progress=CHUNK_SIZE)
     started_at = state.get("started_at") if resumed else attempted
     done: list[str] = []
     built: set[str] = set()
@@ -1497,8 +1633,9 @@ def fetch(http: Http) -> SourceStatus:
             )
 
     for i in range(0, len(todo), CHUNK_SIZE):
-        # at least one chunk per run (progress even with a tiny budget), then respect the budget
-        if i and deadline is not None and time.monotonic() > deadline:
+        # at least one chunk per run (progress even with a tiny budget), then respect the budget;
+        # nothing starts after the run-wide deadline
+        if (i and past(deadline)) or past(hard_deadline):
             stopped_early = True
             break
         chunk = todo[i : i + CHUNK_SIZE]
@@ -1512,7 +1649,12 @@ def fetch(http: Http) -> SourceStatus:
             write_records(SOURCE_ID, "procedures", keep, key=lambda r: r.id)
             for pid in dropped:
                 existing.pop(pid, None)
-        done += [pid for pid in chunk if pid not in run.errors]
+        done += [
+            pid
+            for pid in chunk
+            if pid not in run.errors and pid not in run.oeil_kept and pid not in run.deferred
+        ]
+        stopped_early = stopped_early or bool(run.deferred)
         note_unavailable()
         save_state([pid for pid in todo if pid not in done])
         log.info("ep_procedures: %d/%d fetched (%d requests)", len(done), len(todo), run.requests)
@@ -1520,12 +1662,29 @@ def fetch(http: Http) -> SourceStatus:
     save_state(pending)
 
     final = read_records(SOURCE_ID, "procedures", Procedure)
+    kept_note = (
+        f" {len(run.oeil_kept)} files that had OEIL data were kept unchanged because their OEIL page could "
+        "not be read (retried next run): "
+        + "; ".join(f"{k}: {v}" for k, v in sorted(run.oeil_kept.items())[:5])
+        + "."
+        if run.oeil_kept
+        else ""
+    )
+    listing_note = (
+        f" The EP procedure list was unavailable ({listing_error}); worked from the snapshot, pending and "
+        "referenced ids, so new files may be missing."
+        if listing_error
+        else ""
+    )
     if todo and not done and not stopped_early:
         return SourceStatus(
             source=SOURCE_ID,
             status="failed",
             attempted_at=attempted,
-            note=f"0/{len(todo)} procedures fetched; snapshot unchanged; {len(pending)} pending. "
+            note=f"0/{len(todo)} procedures fetched; snapshot unchanged; {len(pending)} pending."
+            + listing_note
+            + kept_note
+            + " "
             + "; ".join(f"{k}: {v}" for k, v in sorted(run.errors.items())[:5]),
         )
     counts: dict[str, int] = {"procedures": len(final)}
@@ -1563,7 +1722,15 @@ def fetch(http: Http) -> SourceStatus:
             f" Failures: {len(run.errors)} EP API, {len(run.build_errors)} build, {len(run.oeil_errors)} OEIL. "
             + "; ".join((problems + run.oeil_errors)[:5])
         )
-    partial = bool(pending or problems or len(run.oeil_errors) > 0.02 * max(len(done), 1))
+    note += kept_note + listing_note
+    # "partial" whenever a previously enriched record could not be re-enriched (run.oeil_kept, pending)
+    partial = bool(
+        pending
+        or problems
+        or run.oeil_kept
+        or listing_error
+        or len(run.oeil_errors) > 0.02 * max(len(done), 1)
+    )
     return SourceStatus(
         source=SOURCE_ID,
         status="partial" if partial else "ok",
