@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { BasisNote, ExtLink, SourceLink, StatusBadge, Term, institutionLabel } from '../../../components/ui';
 import { formatDate } from '../../../lib/format';
 import { ADOPTED_STAGES, dossierPath, institutionSuffix } from '../labels';
+import { SplitLinks, splitParts } from './Split';
 
 /** Most recent recorded (done) event on or before today. */
 export function latestDone(timeline: TimelineEvent[], today: ISODate): TimelineEvent | null {
@@ -233,6 +234,11 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
               {d.status.explanation} <BasisNote basis={d.status.basis} />
             </p>
             {d.status.since && <p className="meta">Since {formatDate(d.status.since)}</p>}
+            {splitParts(d).length > 0 && (
+              <p className="meta">
+                Separate files: <SplitLinks parts={splitParts(d)} />.
+              </p>
+            )}
             {adopted && amendedBy.length > 0 && (
               <p className="meta">
                 Amended since by {amendedLinks}

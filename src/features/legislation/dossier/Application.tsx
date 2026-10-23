@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { DossierDetail, DossierImplementation, ISODate, LegalInstrument, TranspositionStatus } from '../../../types/data';
 import { ExtLink, SourceLink, Term } from '../../../components/ui';
+import { StackLabel } from '../../../components/StackedTable';
 import { countryName, formatDate, formatNumber, safeUrl } from '../../../lib/format';
 import { ACTIVE_STAGES, ADOPTED_STAGES, TRANSPOSITION_LABEL } from '../labels';
+import { SplitLinks, splitParts } from './Split';
 import { transpositionDates } from './Summary';
 
 const STATUS_ORDER: TranspositionStatus[] = [
@@ -16,6 +18,12 @@ const STATUS_ORDER: TranspositionStatus[] = [
 ];
 
 const NIM_URL = (celex: string) => `https://eur-lex.europa.eu/legal-content/EN/NIM/?uri=CELEX:${encodeURIComponent(celex)}`;
+
+/** Whether a country's latest notified measure predates the directive (EUR-Lex links measures notified earlier). */
+function earlierNotified(d: DossierDetail, impl: DossierImplementation): boolean {
+  const date = d.acts.find((a) => a.celex === impl.celex)?.date_document;
+  return !!date && impl.countries.some((c) => !!c.latest_notification && c.latest_notification < date);
+}
 
 function StatusMark({ s }: { s: TranspositionStatus }) {
   return <span className={`tp tp--${s}`}>{TRANSPOSITION_LABEL[s]}</span>;
@@ -47,36 +55,54 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
         ))}
       </ul>
       <div className="table-wrap">
-        <table className="table tp-table">
+        {/* Explicit roles: on phones the rows are laid out as cards (table--stack), not as table cells. */}
+        <table className="table tp-table table--stack" role="table">
           <caption className="visually-hidden">National measures notified for {impl.celex}, by Member State</caption>
-          <thead>
-            <tr>
-              <th scope="col">Member State</th>
-              <th scope="col">Status in the dataset</th>
-              <th scope="col" className="num">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th scope="col" role="columnheader">Member State</th>
+              <th scope="col" role="columnheader">Status in the dataset</th>
+              <th scope="col" role="columnheader" className="num">
                 Measures notified
               </th>
-              <th scope="col">Latest notification</th>
-              <th scope="col">
-                <Term id="infringement">Infringement cases</Term>
-              </th>
+              <th scope="col" role="columnheader">Latest notification</th>
+              <th scope="col" role="columnheader">Infringement cases</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             {rows.map((c) => (
-              <tr key={c.country}>
-                <th scope="row">
+              <tr key={c.country} role="row">
+                <th scope="row" role="rowheader" className="stack-title">
                   <Link to={`/countries/${encodeURIComponent(c.country)}`}>{countryName(c.country)}</Link>
                 </th>
-                <td>
-                  <StatusMark s={c.status} />
-                  {c.infringements.some((i) => i.status === 'open' && i.non_communication) && (
-                    <span className="tp-case meta">Commission case open for incomplete notification</span>
-                  )}
+                <td role="cell">
+                  <StackLabel>Status</StackLabel>
+                  <span>
+                    <StatusMark s={c.status} />
+                    {c.opted_in && (
+                      <span className="tp-case meta">
+                        Took part after adoption (
+                        <ExtLink href={`https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:${c.opted_in}`}>
+                          Commission decision
+                        </ExtLink>
+                        )
+                      </span>
+                    )}
+                    {c.infringements.some((i) => i.status === 'open' && i.non_communication) && (
+                      <span className="tp-case meta">Commission case open for incomplete notification</span>
+                    )}
+                  </span>
                 </td>
-                <td className="num">{formatNumber(c.measures)}</td>
-                <td>{c.latest_notification ? formatDate(c.latest_notification) : <span className="meta">—</span>}</td>
-                <td>
+                <td role="cell" className="num">
+                  <StackLabel>Measures</StackLabel>
+                  {formatNumber(c.measures)}
+                </td>
+                <td role="cell">
+                  <StackLabel>Last notified</StackLabel>
+                  {c.latest_notification ? formatDate(c.latest_notification) : <span className="meta">—</span>}
+                </td>
+                <td role="cell">
+                  <StackLabel>Cases</StackLabel>
                   {c.infringements.length === 0 ? (
                     <span className="meta">None in the dataset</span>
                   ) : (
@@ -99,11 +125,13 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
           </tbody>
         </table>
       </div>
-      {impl.countries.some((c) => (c.country === 'DK' || c.country === 'IE') && c.status === 'none_found') && (
+      {impl.countries.some(
+        (c) => c.status === 'none_found' && (impl.participation_unknown ?? []).includes(c.country),
+      ) && (
         <p className="meta tp-optout">
           Denmark and Ireland do not take part in some justice and home affairs measures (Protocols 21 and 22 to
-          the Treaties). Where no Council voting record shows whether they took part in adopting this act, “no
-          measures found” may simply mean that it does not bind them.
+          the Treaties). Neither the directive’s recitals nor a Council voting record in our data show whether they
+          took part in adopting this act, so “no measures found” may simply mean that it does not bind them.
         </p>
       )}
       {impl.countries.some((c) => c.status === 'no_deadline') && (
@@ -161,6 +189,12 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
           <>its legal form determines how it applies nationally.</>
         )}
       </p>
+    ) : splitParts(d).length > 0 ? (
+      <p className="dz-none">
+        This proposal was split into separate files; each shows how its own act applies: <SplitLinks parts={splitParts(d)} />.
+      </p>
+    ) : d.related.some((r) => r.relation === 'Report on') ? (
+      <p className="dz-none">This is a resolution of Parliament, not a legislative act, so nothing applies in the Member States.</p>
     ) : (
       <p className="dz-none">This file did not become law, so nothing applies in the Member States.</p>
     );
@@ -194,7 +228,10 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
               <strong>not</strong> show that transposition is complete or correct, and the Commission may still have a case
               open. “No measures found in the available dataset” is <strong>not</strong> proof that a country has failed to act: the
               dataset can be incomplete, and existing national law may already meet the directive’s requirements. Whether a country has
-              breached EU law is for the Commission to pursue and, ultimately, for the Court of Justice to decide. {impl.note}
+              breached EU law is for the Commission to pursue (<Term id="infringement">infringement cases</Term>) and,
+              ultimately, for the Court of Justice to decide. {impl.note}
+              {earlierNotified(d, impl) &&
+                ' Some notification dates are earlier than the directive: EUR-Lex can list, for a new directive, national measures notified for an earlier act.'}
             </p>
             <p className="meta">
               <ExtLink href={impl.nim_url}>National transposition measures on EUR-Lex</ExtLink> · <SourceLink source={impl.source} />

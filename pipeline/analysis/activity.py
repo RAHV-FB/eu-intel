@@ -122,15 +122,18 @@ def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
                     e.get("source"),
                 )  # fmt: skip
             )
+    # a vote that is already a dossier milestone (its timeline event) is listed once, as that milestone
+    milestone_votes = {i["vote_id"] for i in out if i.get("vote_id")}
+    milestone_ids = {i["id"] for i in out}
     for v in b.vote_summary.values():
-        if v["kind"] in ("final", "motion") and cut <= v["date"] <= today:
+        if v["kind"] in ("final", "motion") and cut <= v["date"] <= today and v["id"] not in milestone_votes:
             res = {"adopted": "adopted", "rejected": "rejected", "lapsed": "lapsed"}.get(
                 v["outcome"], "voted on"
             )
             out.append(_item(f"vote:{v['id']}", v["date"], "ep_vote", f"Parliament {res}: {v['display_title']}",
                              v.get("dossier_id"), v["id"], v.get("source")))  # fmt: skip
     for cv in b.council_public:
-        if cut <= cv["date"] <= today:
+        if cut <= cv["date"] <= today and f"ev:council-{cv['id']}" not in milestone_ids:
             out.append(_item(f"council:{cv['id']}", cv["date"], "council_vote", f"Council vote: {cv['title']}",
                              cv.get("dossier_id"), None, cv.get("source")))  # fmt: skip
     return out

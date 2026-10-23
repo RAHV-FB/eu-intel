@@ -101,9 +101,15 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
 - Denmark (Protocol No 22) and Ireland (Protocol No 21) are not bound by most justice and home affairs measures
   unless they opt in; each directive says so in its recitals in standard wording ("… is not taking part in the
   adoption of this Directive and is not bound by it"). The source reads the English text of every directive in
-  the EUR-Lex snapshot once and records the countries and the sentences quoted. Implementation tables then show
-  "Not bound" instead of "No measures found" for those countries. The Council's voting results give the same
-  fact for votes since 2019.
+  the EUR-Lex snapshot once (again when the matcher changes) and records the countries and the sentences quoted.
+  Implementation tables then show "Not bound" instead of "No measures found" for those countries. The Council's
+  voting results give the same fact for votes since 2019.
+- Ireland can still take part after adoption (Protocol No 21, Article 4); the Commission then confirms it in a
+  decision ("The participation of Ireland in Directive (EU) 2024/1346 is confirmed", Commission Decision (EU)
+  2024/2087). One Cellar query per run finds such decisions by title; for those directives Ireland is treated as
+  bound and the row links the decision (2 directives: 2023/2843 and 2024/1346).
+- The generic Denmark/Ireland caveat on a dossier is shown only where neither the recitals nor a Council voting
+  result say whether the country took part.
 
 ### Council of the EU (`council`) — ok
 - The Council's voting-results web pages are behind a browser check (403), and the data.europa.eu dataset

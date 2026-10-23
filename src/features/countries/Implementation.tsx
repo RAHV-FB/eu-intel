@@ -99,13 +99,13 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                 <SortTh k="title" sort={sort} onSort={toggle}>
                   Directive
                 </SortTh>
-                <SortTh k="deadline" sort={sort} onSort={toggle}>
+                <SortTh k="deadline" sort={sort} onSort={toggle} className="hide-narrow">
                   Transposition deadline
                 </SortTh>
                 <SortTh k="measures" sort={sort} onSort={toggle} num>
                   Measures notified
                 </SortTh>
-                <SortTh k="status" sort={sort} onSort={toggle}>
+                <SortTh k="status" sort={sort} onSort={toggle} className="hide-narrow">
                   Status in the dataset
                 </SortTh>
               </tr>
@@ -113,15 +113,24 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
             <tbody>
               {sorted.slice(0, shown).map((r) => (
                 <tr key={r.celex}>
-                  <td style={{ minWidth: '15rem' }}>
+                  <td className="impl-dir">
                     {r.dossier_id ? <Link to={dossierPath(r.dossier_id)}>{r.title}</Link> : r.title}
                     <span className="meta" style={{ display: 'block' }}>
                       <ExtLink href={EURLEX_CELEX(r.celex)}>
                         <span className="mono">{r.celex}</span>
                       </ExtLink>
                     </span>
+                    {/* phones: the deadline and status columns are hidden and shown here */}
+                    <span className="only-narrow impl-dir__more">
+                      <TranspositionStatusLabel status={r.status} />
+                      <span className="meta" style={{ display: 'block' }}>
+                        Deadline: {r.deadline ? formatDate(r.deadline) : 'not recorded'}
+                      </span>
+                    </span>
                   </td>
-                  <td className="nowrap">{r.deadline ? formatDate(r.deadline) : <span className="muted">Not recorded</span>}</td>
+                  <td className="nowrap hide-narrow">
+                    {r.deadline ? formatDate(r.deadline) : <span className="muted">Not recorded</span>}
+                  </td>
                   <td className="num">
                     {r.status === 'unavailable' ? (
                       <span className="muted">—</span>
@@ -132,7 +141,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                       </ExtLink>
                     )}
                   </td>
-                  <td>
+                  <td className="hide-narrow">
                     <TranspositionStatusLabel status={r.status} />
                   </td>
                 </tr>
@@ -222,13 +231,15 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
                   Case
                 </SortTh>
                 <th scope="col">Subject</th>
-                <SortTh k="stage" sort={sort} onSort={toggle}>
+                <SortTh k="stage" sort={sort} onSort={toggle} className="hide-narrow">
                   Latest stage (as published)
                 </SortTh>
-                <SortTh k="date" sort={sort} onSort={toggle}>
+                <SortTh k="date" sort={sort} onSort={toggle} className="hide-narrow">
                   Decision date
                 </SortTh>
-                <th scope="col">Status</th>
+                <th scope="col" className="hide-narrow">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -240,10 +251,16 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
                   <td className="wrap-cell">
                     {r.title}
                     {r.non_communication && <span className="meta" style={{ display: 'block' }}>Non-communication of transposition measures</span>}
+                    {/* phones: the stage, date and status columns are hidden and shown here */}
+                    <span className="only-narrow meta">
+                      <span className={r.status === 'open' ? 'status-open' : undefined}>{STATUS_LABEL[r.status]}</span>
+                      {r.latest_stage ? ` · ${r.latest_stage}` : ''}
+                      {r.latest_decision_date ? ` · ${formatDate(r.latest_decision_date)}` : ''}
+                    </span>
                   </td>
-                  <td className="wrap-cell">{r.latest_stage ?? <span className="muted">Not recorded</span>}</td>
-                  <td className="nowrap">{r.latest_decision_date ? formatDate(r.latest_decision_date) : '—'}</td>
-                  <td className={r.status === 'open' ? 'status-open' : undefined}>{STATUS_LABEL[r.status]}</td>
+                  <td className="wrap-cell hide-narrow">{r.latest_stage ?? <span className="muted">Not recorded</span>}</td>
+                  <td className="nowrap hide-narrow">{r.latest_decision_date ? formatDate(r.latest_decision_date) : '—'}</td>
+                  <td className={`hide-narrow${r.status === 'open' ? ' status-open' : ''}`}>{STATUS_LABEL[r.status]}</td>
                 </tr>
               ))}
             </tbody>

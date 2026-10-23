@@ -10,6 +10,7 @@ import { todayISO } from '../features/legislation/explorer';
 import { DossierSummaryPanel } from '../features/legislation/dossier/Summary';
 import { WhereIsIt } from '../features/legislation/dossier/WhereIsIt';
 import { Timeline } from '../features/legislation/dossier/Timeline';
+import { splitParts } from '../features/legislation/dossier/Split';
 import { CouncilVotes, ParliamentVotes } from '../features/legislation/dossier/Votes';
 import { NationalApplication } from '../features/legislation/dossier/Application';
 import { DossierDetails } from '../features/legislation/dossier/Details';
@@ -21,6 +22,14 @@ import '../features/legislation/dossier/dossier.css';
 const DOSSIER_ID = /^\d{4}-\d{4}[A-Z]{0,2}$/;
 /** A CELEX number, e.g. "32017R1550": a legal act, which may have no legislative file in this dataset. */
 const CELEX_ID = /^[0-9][0-9]{4}[A-Z]{1,2}[0-9]{4}(\(\d{2}\))?$/;
+
+/** "Directive (EU) 2022/2555 · also known as NIS 2 Directive · part of the Pact on Migration and Asylum" */
+function KnownAs({ k }: { k: NonNullable<DossierDetail['known_as']> }) {
+  const parts: string[] = [...k.acts];
+  if (k.names.length > 0) parts.push(`${parts.length ? 'also' : 'Also'} known as ${k.names.join(', ')}`);
+  if (k.part_of?.length) parts.push(`${parts.length ? 'part' : 'Part'} of the ${k.part_of[0]}`);
+  return <p className="dz-known">{parts.join(' · ')}</p>;
+}
 
 export default function Dossier() {
   const { id = '' } = useParams();
@@ -99,6 +108,7 @@ function DossierPage({ id }: { id: string }) {
 
       <header className="dz-head" id="summary">
         <h1 className={`dz-title${d.title.length > 110 ? ' dz-title--long' : ''}`}>{d.title}</h1>
+        {d.known_as && <KnownAs k={d.known_as} />}
         {/* Without an editorial summary, "What is it?" below already shows the official title in full. */}
         {d.editorial && !isSameTitle(d.title, d.official_title) && <OfficialTitle text={d.official_title} />}
         {change && (
@@ -216,8 +226,8 @@ function DossierPage({ id }: { id: string }) {
         <div className="dz-main">
           {active && <WhereIsIt d={d} today={today} />}
           <Timeline events={d.timeline} changes={d.changes ?? []} today={today} eurlexOnly={d.eurlex_only} oeilUrl={d.oeil_url} />
-          <ParliamentVotes votes={d.ep_votes} oeilUrl={d.oeil_url} />
-          <CouncilVotes votes={d.council_votes} meta={meta} />
+          <ParliamentVotes votes={d.ep_votes} oeilUrl={d.oeil_url} split={splitParts(d)} />
+          <CouncilVotes votes={d.council_votes} meta={meta} split={splitParts(d)} />
           <NationalApplication d={d} today={today} />
           <DossierDetails d={d} />
         </div>

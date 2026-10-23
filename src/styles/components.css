@@ -270,7 +270,7 @@
 /* ---------- tables that stack into cards on phones ---------- */
 /*
  * .table--stack (helpers in src/components/StackedTable.tsx): below 40rem each row becomes a card. The
- * .stack-title cell comes first, its .row-title clamped to three lines; every other cell is a line labelled
+ * .stack-title cell (a td, or the row's th) comes first, its .row-title clamped to three lines; every other cell is a line labelled
  * by its .stack-label, which is hidden from screen readers because the column headings stay in the markup
  * (visually hidden). The markup carries explicit table roles, so screen readers keep rows, cells and headings
  * even where a browser drops table semantics for cells that no longer use table display.
@@ -307,10 +307,24 @@
   }
 }
 
+/* columns folded into the first cell on phones (tables with sort buttons in their headings, which cannot stack) */
+.only-narrow {
+  display: none;
+}
+
 @media (max-width: 39.99rem) {
+  .table .hide-narrow {
+    display: none;
+  }
+
+  .table .only-narrow {
+    display: block;
+  }
+
   .table--stack,
   .table--stack tbody,
-  .table--stack td {
+  .table--stack td,
+  .table--stack tbody th {
     display: block;
   }
 
@@ -335,17 +349,24 @@
     border-bottom: 0;
   }
 
-  .table--stack td {
+  .table--stack td,
+  .table--stack tbody th {
     padding: 0;
     border: 0;
+    text-align: left;
   }
 
-  .table--stack td.stack-title {
+  .table--stack .stack-title {
     order: -1; /* the title leads the card; in the table it follows the date */
     margin-bottom: var(--sp-1);
   }
 
-  .table--stack td:not(.stack-title) {
+  .table--stack td.num {
+    text-align: left;
+  }
+
+  .table--stack td:not(.stack-title),
+  .table--stack tbody th:not(.stack-title) {
     display: grid;
     grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
     gap: var(--sp-3);

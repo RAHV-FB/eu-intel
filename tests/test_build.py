@@ -261,7 +261,10 @@ def test_countries_and_transposition_status(out: Path):
     impl = load(out, "dossiers/2099-0003.json")["implementation"]
     fr_row = next(c for c in impl["countries"] if c["country"] == "FR")
     assert fr_row["infringements"][0]["id"] == "INFR(2099)0001"  # linked via legal_basis
-    assert "not, by itself, evidence" in impl["note"]
+    assert impl["note"].startswith("Counts are national measures notified")  # the caveat itself is on the page
+    # no recitals read and no Council position for Denmark or Ireland in the fixture: participation unsettled
+    assert impl["participation_unknown"] == ["DK", "IE"]
+    assert fr_row["opted_in"] is None
     assert load(out, "dossiers/2099-0001.json")["implementation"] is None  # regulations: none
 
 

@@ -166,6 +166,10 @@ class DirectiveOptOut(Model):
     status: Literal["ok", "unavailable"]  # unavailable: the text could not be fetched (retried next run)
     not_bound: list[str] = Field(default_factory=list)  # "DK", "IE"
     quotes: list[str] = Field(default_factory=list)  # the recital sentences, verbatim (whitespace normalized)
+    # countries that took part after adoption (Protocol No 21, Article 4): country -> CELEX of the Commission
+    # decision confirming the participation, e.g. {"IE": "32024D2087"} for Directive (EU) 2024/1346
+    opted_in: dict[str, str] = Field(default_factory=dict)
+    parser: int = 1  # version of the recital matcher that read the text; older records are read again
     url: str
     source: SourceRef
 

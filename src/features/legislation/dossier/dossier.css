@@ -56,6 +56,13 @@
   line-height: 1.2;
 }
 
+.dz-known {
+  margin: calc(-1 * var(--sp-2)) 0 var(--sp-3);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+}
+
 .dz-official {
   margin: 0;
   color: var(--text-2);

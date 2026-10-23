@@ -1,11 +1,12 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { CouncilVote, EpVoteSummary, Meta, VoteKind } from '../../../types/data';
+import type { CouncilVote, DossierDetail, EpVoteSummary, Meta, VoteKind } from '../../../types/data';
 import { ExtLink, SourceLink, Term, VoteBar } from '../../../components/ui';
 import { formatDate } from '../../../lib/format';
 import { CouncilVoteCard } from '../../council/CouncilVoteCard';
 import { MarginText, OutcomeBadge } from '../../votes/components';
 import { VoteTitle } from '../../votes/VoteTitle';
+import { SplitLinks } from './Split';
 
 const PRIMARY: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'other'];
 
@@ -65,7 +66,15 @@ function CompactVote({ v }: { v: EpVoteSummary }) {
   );
 }
 
-export function ParliamentVotes({ votes, oeilUrl }: { votes: EpVoteSummary[]; oeilUrl?: string | null }) {
+export function ParliamentVotes({
+  votes,
+  oeilUrl,
+  split = [],
+}: {
+  votes: EpVoteSummary[];
+  oeilUrl?: string | null;
+  split?: DossierDetail['related'];
+}) {
   const [showAll, setShowAll] = useState(false);
   const listId = useId();
   const primary = votes.filter((v) => PRIMARY.includes(v.kind));
@@ -86,7 +95,11 @@ export function ParliamentVotes({ votes, oeilUrl }: { votes: EpVoteSummary[]; oe
         individually, usually with their political group. Member State governments vote separately, in the Council of the EU
         (see the next section).
       </p>
-      {votes.length === 0 ? (
+      {votes.length === 0 && split.length > 0 ? (
+        <p className="dz-none">
+          This proposal was split into separate files; Parliament’s votes are shown on them: <SplitLinks parts={split} />.
+        </p>
+      ) : votes.length === 0 ? (
         <p className="dz-none">
           No roll-call vote is matched to this file in our data (see <Link to="/about#coverage">coverage</Link>).
           {oeilUrl && (
@@ -123,7 +136,15 @@ export function ParliamentVotes({ votes, oeilUrl }: { votes: EpVoteSummary[]; oe
   );
 }
 
-export function CouncilVotes({ votes, meta }: { votes: CouncilVote[]; meta: Meta | undefined }) {
+export function CouncilVotes({
+  votes,
+  meta,
+  split = [],
+}: {
+  votes: CouncilVote[];
+  meta: Meta | undefined;
+  split?: DossierDetail['related'];
+}) {
   const src = meta?.sources.find((s) => s.id === 'council');
   const unavailable = src && (src.status === 'failed' || src.status === 'unavailable');
   return (
@@ -139,6 +160,10 @@ export function CouncilVotes({ votes, meta }: { votes: CouncilVote[]; meta: Meta
             <CouncilVoteCard key={v.id} vote={v} headingLevel={3} />
           ))}
         </div>
+      ) : split.length > 0 ? (
+        <p className="dz-none">
+          This proposal was split into separate files; the Council’s votes are shown on them: <SplitLinks parts={split} />.
+        </p>
       ) : unavailable ? (
         <p className="dz-none">
           Council voting results are not available in this release, so we cannot show how Member States voted on this file.

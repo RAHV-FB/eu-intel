@@ -283,6 +283,8 @@ export interface EditorialInfo {
 }
 
 export interface DossierDetail extends DossierSummary {
+  // act numbers, verified common names, and the package a file belongs to ("Pact on Migration and Asylum")
+  known_as?: { acts: string[]; names: string[]; part_of?: string[] } | null;
   editorial?: EditorialInfo | null;
   status: DossierStatus;
   next_step: NextStep;
@@ -610,11 +612,13 @@ export interface DossierImplementation {
     measures: number;
     status: TranspositionStatus;
     latest_notification?: ISODate | null; // latest date a measure was notified to the Commission
+    opted_in?: string | null; // CELEX of the Commission decision confirming the country took part after adoption
     infringements: InfringementInfo[];
   }[];
   nim_url: string; // EUR-Lex national transposition page
   source: SourceRef;
   note: string;
+  participation_unknown?: string[]; // DK/IE: neither the recitals nor a Council vote say whether they are bound
 }
 
 // ---------------------------------------------------------------- home & activity

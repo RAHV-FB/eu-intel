@@ -175,3 +175,19 @@
   white-space: normal !important;
   min-width: 14rem;
 }
+
+/* the directive column of the transposition table */
+.impl-dir {
+  min-width: 15rem;
+}
+
+.impl-dir__more {
+  margin-top: var(--sp-1);
+}
+
+@media (max-width: 39.99rem) {
+  .impl-dir,
+  .wrap-cell {
+    min-width: 0;
+  }
+}

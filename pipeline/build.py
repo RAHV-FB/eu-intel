@@ -1080,6 +1080,8 @@ class Builder:
         """The record showing that `country` did not take part in adopting this act and is not bound by it:
         the directive's own recitals (Protocols 21 / 22), else the Council's voting result; None if neither."""
         oo = self.optouts.get(celex)
+        if oo and country in oo.opted_in:  # took part after adoption (Protocol No 21, Article 4)
+            return None
         if oo and country in oo.not_bound:
             return oo
         for ref in self.act_refs.get(celex, []):
@@ -1087,6 +1089,41 @@ class Builder:
             if country in countries:
                 return cv
         return None
+
+    def known_as(self, p: Procedure, acts: list[LegalAct]) -> dict | None:
+        """What the file is called besides its title: the number of each act it produced and verified common
+        names (official short titles in the procedure's and the acts' titles, aliases.yaml names with a cited
+        source). featured.yaml `aliases` are search keywords ("ESG reporting"), not names, and are not shown."""
+        if not hasattr(self, "_file_names"):
+            self._file_names = curated_file_names(self)
+            # a name given to several files is the name of a package ("Pact on Migration and Asylum")
+            n_files = Counter(n.casefold() for names in self._file_names.values() for n in set(names))
+            self._package_names = {n for n, k in n_files.items() if k > 1}
+        numbers = [n for a in acts if (n := act_label(a)) != a.celex]
+        names = short_names(p.title) + [n for a in acts if (n := act_short_name(a.title))]  # official first
+        part_of = [n for n in self._file_names.get(p.id, []) if n.casefold() in self._package_names]
+        # short names only: a descriptive phrase used as a search name ("EU ban on the sale of new petrol and
+        # diesel cars from 2035") is not what the file is called
+        names += [n for n in self._file_names.get(p.id, [])
+                  if n.casefold() not in self._package_names and len(n.split()) <= 5]  # fmt: skip
+        seen = [self.dossier_title(p).casefold()]
+        unique = []
+        for n in names:
+            k = n.casefold()
+            # the title or a name already listed says it ("EU AI Act" after "AI Act")
+            if not any(k in t or (t in k and t != seen[0]) for t in seen):
+                seen.append(k)
+                unique.append(n)
+        out = {"acts": numbers[:4], "names": unique[:2], "part_of": part_of[:1]}
+        return out if numbers or unique or part_of else None
+
+    def participation_recorded(self, celex: str, country: str) -> bool:
+        """Whether a record settles if `country` is bound by the act: the directive's recitals were read
+        (they name every opt-out), or a Council voting result on it gives the country's position."""
+        if celex in self.optouts:
+            return True
+        return any(country in cv.positions for r in self.act_refs.get(celex, [])
+                   for cv in [self.not_participating_by_ref.get(r, (set(), None))[1]] if cv)  # fmt: skip
 
     def _register(self, procs: list[Procedure]) -> None:
         for p in sorted(procs, key=lambda p: p.id):
@@ -1202,6 +1239,14 @@ class Builder:
             for parent, children in self.split_children.items():
                 if parent in ds and any(c in claimed_by[celex] for c in children):
                     ds.discard(parent)
+        # a split parent known only from EUR-Lex was built from one part's act (Regulation (EU) 2017/2393 is part
+        # B of 2016/0282): name it by the split instead of by that act's title
+        for parent, children in self.split_children.items():
+            if parent in self.stub_ids:
+                p = self.proc[parent]
+                parts = " and ".join(self.proc[c].reference for c in children)
+                self.proc[parent] = p.model_copy(update={"title": f"Proposal {p.reference}, split into {parts}"})
+        self.procedures = [self.proc[p.id] for p in self.procedures]
         for celex, ds in sorted(act_dossiers.items()):
             for d in sorted(ds):
                 self.acts_of[d].append(self.act[celex])
@@ -1903,23 +1948,23 @@ class Builder:
             # date of notification to the Commission (the national journal date of a notified act may be
             # decades older than the directive, e.g. a civil code)
             dates = sorted(m.notified for m in ms if m.notified)
+            oo = self.optouts.get(a.celex)
             countries.append({
                 "country": c, "measures": len(ms), "status": self.transposition_status(a.celex, c, deadline),
                 "latest_notification": dates[-1] if dates else None,
+                "opted_in": oo.opted_in.get(c) if oo else None,
                 "infringements": [self.infr_info(i, a.celex) for i in self.infr_by_celex.get(a.celex, [])
                                   if i.country == c],
             })  # fmt: skip
-        note = (
-            "Counts are national measures notified to the Commission and listed by EUR-Lex. "
-            "'No measures found' means none appear in the available dataset; it is not, by itself, "
-            "evidence that a country has failed to transpose the directive."
-        )
+        note = "Counts are national measures notified to the Commission and listed by EUR-Lex."
         if a.celex not in self.measure_celexes:
             note = "National transposition data for this directive is not available in this release. " + note
         return {
             "celex": a.celex, "deadline": deadline, "countries": countries,
             "nim_url": f"https://eur-lex.europa.eu/legal-content/EN/NIM/?uri=CELEX:{a.celex}",
             "source": _src(a.source), "note": note,
+            # Denmark/Ireland without measures where neither the recitals nor a Council vote say whether they are bound
+            "participation_unknown": [c for c in ("DK", "IE") if not self.participation_recorded(a.celex, c)],
         }  # fmt: skip
 
     def with_recorded_events(self, p: Procedure) -> Procedure:
@@ -2147,6 +2192,7 @@ class Builder:
             sources = _dedupe_sources(sources)
             det = {
                 **summ,
+                "known_as": self.known_as(p, acts),
                 "editorial": editorial,
                 **{k: st[k] for k in ("status", "next_step", "stall", "application")},
                 "timeline": tl,
