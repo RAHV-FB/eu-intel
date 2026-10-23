@@ -114,3 +114,125 @@ def test_first_appearance_of_a_source_is_a_baseline(base: Path, monkeypatch: pyt
     assert json.loads((base / "state" / "activity.json").read_text()) == []
     dig = json.loads((base / "state" / "digest.json").read_text())
     assert dig["sources"]["ep_procedures"] and dig["sources"]["ep_votes"]
+
+
+# ---------------------------------------------------------------- status changes and their safeguards
+def _withdraw(recs, pid: str = "2099-0003"):
+    """A Commission withdrawal recorded for `pid`: its derived stage changes."""
+    p = next(r for r in recs if r["id"] == pid)
+    e = dict(p["events"][-1])
+    e.update(
+        id=f"{pid}-ev9",
+        date="2026-10-20",
+        kind="withdrawal",
+        institution="Commission",
+        title="TEST Commission withdrew the proposal",
+        source={**e["source"], "identifier": f"{pid}-ev9"},
+    )
+    p["events"].append(e)
+
+
+def _set_status(base: Path, source: str, status: str) -> None:
+    path = base / "snapshot" / "_manifest.json"
+    m = json.loads(path.read_text(encoding="utf-8"))
+    m[source]["status"] = status
+    path.write_text(json.dumps(m), encoding="utf-8")
+
+
+def _status_changes(base: Path) -> list[dict]:
+    return [r for r in json.loads((base / "state" / "activity.json").read_text()) if r["kind"] == "status_change"]
+
+
+def _stage(base: Path, pid: str) -> str | None:
+    return json.loads((base / "state" / "digest.json").read_text())["dossiers"][pid]["stage"]
+
+
+def test_stage_change_is_recorded_after_a_complete_fetch(base: Path, monkeypatch: pytest.MonkeyPatch):
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    before = _stage(base, "2099-0003")
+    _edit(base / "snapshot" / "ep_procedures" / "procedures.json", _withdraw)
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    changes = _status_changes(base)
+    assert len(changes) == 1 and changes[0]["dossier_id"] == "2099-0003"
+    assert _stage(base, "2099-0003") == "withdrawn" != before
+
+
+@pytest.mark.parametrize("source", ["ep_procedures", "eurlex"])
+@pytest.mark.parametrize("status", ["partial", "failed"])
+def test_no_status_change_from_an_incomplete_fetch(
+    base: Path, monkeypatch: pytest.MonkeyPatch, source: str, status: str
+):
+    """A run whose procedure or act fetch was incomplete may carry degraded records: no status change is
+    recorded from it and the stored stage is kept; a real change is recorded by the next complete run."""
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    before = _stage(base, "2099-0003")
+    _edit(base / "snapshot" / "ep_procedures" / "procedures.json", _withdraw)
+    _set_status(base, source, status)
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    assert _status_changes(base) == []
+    assert _stage(base, "2099-0003") == before
+    rec = json.loads((base / "state" / "activity.json").read_text())
+    assert [r["id"] for r in rec] == ["chg:2099-0003:ev:2099-0003-ev9"]  # other changes are still recorded
+    _set_status(base, source, "ok")
+    _run(base, monkeypatch, record=True, now="2026-10-30T10:00:00Z")
+    changes = _status_changes(base)
+    assert len(changes) == 1 and changes[0]["detected_at"] == "2026-10-30T10:00:00Z"
+
+
+def test_degraded_run_then_recovery_leaves_no_false_changes(base: Path, monkeypatch: pytest.MonkeyPatch):
+    """The audit replay: a partial run changes a stage, the next run restores the record. The append-only
+    log must not keep a pair of false status changes."""
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    procs = base / "snapshot" / "ep_procedures" / "procedures.json"
+    saved = procs.read_bytes()
+    _edit(procs, _withdraw)
+    _set_status(base, "ep_procedures", "partial")
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    procs.write_bytes(saved)
+    _set_status(base, "ep_procedures", "ok")
+    _run(base, monkeypatch, record=True, now="2026-10-30T10:00:00Z")
+    assert _status_changes(base) == []
+
+
+def test_new_dossier_from_an_incomplete_fetch_gets_its_stage_later(base: Path, monkeypatch: pytest.MonkeyPatch):
+    pid = "2099-0002"  # a file without a legal act: it only exists through its procedure record
+    procs = base / "snapshot" / "ep_procedures" / "procedures.json"
+    saved = json.loads(procs.read_text())
+    _edit(procs, lambda r: r.remove(next(x for x in r if x["id"] == pid)))
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    _edit(procs, lambda r: r.append(next(x for x in saved if x["id"] == pid)))
+    _set_status(base, "ep_procedures", "partial")
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    assert _stage(base, pid) is None  # not trusted yet
+    _set_status(base, "ep_procedures", "ok")
+    _edit(procs, lambda r: _withdraw(r, pid))
+    _run(base, monkeypatch, record=True, now="2026-10-30T10:00:00Z")
+    assert _status_changes(base) == []  # the first trusted stage is a baseline
+    assert _stage(base, pid) == "withdrawn"
+
+
+def test_classifier_change_rebaselines_without_status_changes(base: Path, monkeypatch: pytest.MonkeyPatch):
+    from pipeline.analysis import activity
+
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    assert json.loads((base / "state" / "digest.json").read_text())["classifier"] == activity.CLASSIFIER_VERSION
+    monkeypatch.setattr(activity, "CLASSIFIER_VERSION", "test-next")  # new status logic ...
+    _edit(base / "snapshot" / "ep_procedures" / "procedures.json", _withdraw)  # ... classifies differently
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    assert _status_changes(base) == []
+    dig = json.loads((base / "state" / "digest.json").read_text())
+    assert dig["classifier"] == "test-next" and dig["dossiers"]["2099-0003"]["stage"] == "withdrawn"
+    _edit(base / "snapshot" / "ep_procedures" / "procedures.json", lambda r: None)
+    _run(base, monkeypatch, record=True, now="2026-10-24T10:00:00Z")  # same logic again: nothing new
+    assert _status_changes(base) == []
+
+
+def test_classifier_is_stored_only_with_trusted_stages(base: Path, monkeypatch: pytest.MonkeyPatch):
+    from pipeline.analysis import activity
+
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    monkeypatch.setattr(activity, "CLASSIFIER_VERSION", "test-next")
+    _set_status(base, "eurlex", "partial")
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    # the stored stages are still those of the previous logic: they are re-baselined by a later trusted run
+    assert json.loads((base / "state" / "digest.json").read_text())["classifier"] != "test-next"

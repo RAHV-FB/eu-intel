@@ -1,8 +1,8 @@
 """Change detection between snapshots, and the public activity list.
 
 State (committed, data/state/):
-    digest.json    {version, sources: {source: seen?}, dossiers: {dossier_id: {stage, label, title,
-                   events[], votes[], council[], acts[]}}}
+    digest.json    {version, classifier, sources: {source: seen?}, dossiers: {dossier_id: {stage, label,
+                   title, events[], votes[], council[], acts[]}}}
                    ids are the union of everything ever seen, so a temporarily missing source
                    never makes old records look "new" when it comes back; records of a source seen
                    for the first time are a baseline, not changes.
@@ -10,7 +10,11 @@ State (committed, data/state/):
 
 What counts as a change (substantive only — never a metadata refresh such as a new retrieved_at):
     new_dossier     a procedure id not seen before
-    status_change   the derived lifecycle stage changed (only when procedure AND act data are present)
+    status_change   the derived lifecycle stage changed. Recorded only when procedure AND act data are
+                    present, the manifest says this snapshot's ep_procedures and eurlex fetches were
+                    complete ("ok"; a failed or partial fetch may carry degraded records, so the stored
+                    stages are kept until a complete one), and the stored stages were computed by the
+                    same CLASSIFIER_VERSION (otherwise the stages are re-baselined silently)
     milestone       a new recorded procedural event id
     publication     a new legal act linked to the dossier
     ep_vote         a new indexed EP vote linked to the dossier
@@ -32,6 +36,12 @@ from pipeline.snapshot import now_iso
 
 RECENT_DAYS = 120
 PUBLIC_LIMIT = 400
+# Version of the lifecycle-stage logic (pipeline/analysis/status.py and the inputs build.py gives it).
+# Bump it whenever the status logic changes: the next recorded run then re-baselines every stored stage
+# instead of reporting the reclassification as status changes.
+CLASSIFIER_VERSION = "2026-10-23.1"
+# Sources whose fetch must have been complete ("ok") for a stage difference to count as a change.
+STAGE_SOURCES = ("ep_procedures", "eurlex")
 SNAPSHOT_EVENT_KINDS = {
     "proposal",
     "committee_report",
@@ -155,6 +165,20 @@ def sources_present(b: Any) -> dict[str, bool]:
     }
 
 
+def incomplete_stage_sources(b: Any) -> list[str]:
+    """STAGE_SOURCES whose last fetch (manifest) was not complete ("ok"), e.g. a run in which OEIL or
+    EUR-Lex failed for some records. A snapshot without a manifest (tests, local builds) is trusted."""
+    manifest = getattr(b.s, "manifest", None) or {}
+    if not manifest:
+        return []
+    out = []
+    for source in STAGE_SOURCES:
+        st = manifest.get(source)
+        if st is None or getattr(st, "status", None) != "ok":
+            out.append(source)
+    return out
+
+
 def diff(
     old: dict[str, dict],
     new: dict[str, dict],
@@ -183,7 +207,8 @@ def diff(
                 items.append(_item(f"chg:{pid}:new", det.get("started") or det.get("last_event") or today,
                                    "new_dossier", f"New file: {title}", pid, None, src, detected_at))  # fmt: skip
             continue
-        if stage_reliable and seen["stage_reliable"] and n["stage"] != o.get("stage"):
+        # a stored stage of None was recorded from incomplete inputs: the first stage seen is a baseline
+        if stage_reliable and seen["stage_reliable"] and o.get("stage") is not None and n["stage"] != o["stage"]:
             since = (det.get("status") or {}).get("since") or today
             items.append(_item(f"chg:{pid}:stage:{n['stage']}:{since}", since, "status_change",
                                f"{title}: status now “{n['label']}” (previously “{o.get('label', o.get('stage'))}”)",
@@ -221,7 +246,8 @@ def diff(
 
 
 def _merge_digest(old: dict[str, dict], new: dict[str, dict], stage_reliable: bool = True) -> dict[str, dict]:
-    """Union of ids ever seen; the stage is only updated when it was computed from complete inputs."""
+    """Union of ids ever seen; the stage is only updated when it was computed from complete inputs
+    (otherwise a known dossier keeps its stored stage and a new one is stored without a stage)."""
     out = dict(old)
     for pid, n in new.items():
         o = old.get(pid, {})
@@ -229,7 +255,7 @@ def _merge_digest(old: dict[str, dict], new: dict[str, dict], stage_reliable: bo
             **n,
             **{k: sorted(set(o.get(k, [])) | set(n[k])) for k in ("events", "votes", "council", "acts")},
         }
-        if not stage_reliable and o:
+        if not stage_reliable:
             merged["stage"], merged["label"] = o.get("stage"), o.get("label")
         out[pid] = merged
     return dict(sorted(out.items()))
@@ -261,25 +287,32 @@ def update_state(b: Any, state_dir: Path, record: bool = False) -> list[dict]:
     stored = _read(dig_path, None)
     detected_at = os.environ.get("EU_INTEL_NOW") or now_iso()
     present = sources_present(b)
-    stage_reliable = present["stage_reliable"]
+    # Stages computed from this snapshot are stored only if its procedure and act fetches were complete.
+    stages_trusted = present["stage_reliable"] and not incomplete_stage_sources(b)
     old: dict[str, dict] | None = None
     seen = dict.fromkeys(present, False)
+    classifier: str | None = None
     if isinstance(stored, dict):
         if "dossiers" in stored:
             old, seen = stored["dossiers"], {**seen, **stored.get("sources", {})}
+            classifier = stored.get("classifier")
         else:  # plain {dossier_id: entry} map
             old, seen = stored, dict.fromkeys(present, True)
+    # Status changes need trusted stages on both sides, computed by the same classifier; after a change of
+    # the status logic the stored stages are re-baselined (updated without recording changes).
+    record_status = stages_trusted and classifier == CLASSIFIER_VERSION
     if old is not None:
         known = {it["id"] for it in recorded}
-        fresh = [it for it in diff(old, new, b, detected_at, stage_reliable, seen) if it["id"] not in known]
+        fresh = [it for it in diff(old, new, b, detected_at, record_status, seen) if it["id"] not in known]
         recorded = recorded + fresh
         _write(act_path, recorded)
     elif not act_path.exists():
         _write(act_path, [])
     _write(dig_path, {
         "version": 1,
+        "classifier": CLASSIFIER_VERSION if stages_trusted else classifier,
         "sources": {k: bool(seen.get(k)) or v for k, v in present.items()},
-        "dossiers": _merge_digest(old or {}, new, stage_reliable),
+        "dossiers": _merge_digest(old or {}, new, stages_trusted),
     })  # fmt: skip
     return recorded
 
