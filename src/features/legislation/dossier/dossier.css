@@ -961,6 +961,13 @@
   background: var(--text-3);
 }
 
+.dz-dates__prov {
+  display: block;
+  font-size: var(--fs-sm, 0.875rem);
+  line-height: 1.35;
+  margin-bottom: var(--sp-2);
+}
+
 .tp-case {
   display: block;
   margin-top: var(--sp-1);

@@ -95,7 +95,7 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
                 {r.items.map((it) => (
                   <li key={it.date}>
                     <DateWhen date={it.date} today={today} />
-                    {it.note && <span className="meta"> ({it.note})</span>}
+                    {it.note && <span className="meta dz-dates__prov">{it.note}</span>}
                   </li>
                 ))}
               </ul>

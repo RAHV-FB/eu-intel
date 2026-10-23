@@ -1798,7 +1798,7 @@ class Builder:
                 "related": [],
                 "oeil_url": p.oeil_url,
                 # built from the EUR-Lex act alone: the procedure's own steps are not in our data
-                "eurlex_only": pid in self.stub_ids,
+                "eurlex_only": pid in self.stub_ids and pid not in self.split_children,
                 "sources": [x for x in sources if x],
                 "changes": [],
             }
