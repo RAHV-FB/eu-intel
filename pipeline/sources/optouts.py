@@ -18,7 +18,8 @@ recorded opt-in is kept and the run is "partial".
 Produces data/snapshot/optouts/directives.json: one record per directive of the EUR-Lex snapshot whose
 text has been read, with the countries its recitals declare not bound, the sentences quoted, and later
 opt-ins. The text of an adopted act does not change, so each directive is read once (again when the
-recital matcher changes, PARSER_VERSION); texts that could not be fetched are retried on the next run.
+recital matcher changes, PARSER_VERSION); texts that could not be fetched are retried on the next run. A text
+read before that cannot be fetched again keeps its earlier reading (the run is "partial" until it is re-read).
 Stops starting new downloads after EU_INTEL_FETCH_BUDGET_S.
 
 Requests: GET https://publications.europa.eu/resource/celex/{CELEX} with Accept: application/xhtml+xml
@@ -146,12 +147,13 @@ def fetch(http: Any) -> SourceStatus:
         except Exception as e:  # noqa: BLE001 - one missing text must not stop the others
             log.warning("optouts: %s text not fetched: %r", celex, e)
             unavailable += 1
-            out.append(DirectiveOptOut(celex=celex, status="unavailable", url=url, source=src))
+            if celex not in done or done[celex].status != "ok":  # else the earlier reading stays until a re-read
+                out.append(DirectiveOptOut(celex=celex, status="unavailable", url=url, source=src))
             continue
         countries, quotes = not_bound(text)
         out.append(DirectiveOptOut(celex=celex, status="ok", not_bound=countries, quotes=quotes, url=url, source=src,
                                    parser=PARSER_VERSION))  # fmt: skip
-    read_now = len(out) - unavailable
+    read_now = sum(1 for r in out if r.status == "ok")
 
     def stored(celex: str) -> dict[str, str]:
         return done[celex].opted_in if celex in done else {}

@@ -173,3 +173,68 @@ def test_a_failed_opt_in_query_keeps_them_and_the_last_retrieval_time(stored):
     assert opted_in() == OPTED_IN and status.records["not_bound_IE"] == 0
     assert status.status == "partial" and "the query failed this run" in status.note
     assert status.fetched_at == PREVIOUS  # nothing was retrieved in this run
+
+
+# ---------------------------------------------------------------- fetch: a text that cannot be read again
+class TextsDown(Cellar):
+    """The opt-in query answers; Cellar fails to serve the directives' texts."""
+
+    def get(self, *args, **kw):
+        raise HttpError(args[0] if args else "celex", 503, "Service Unavailable")
+
+
+def test_a_text_due_again_that_cannot_be_fetched_keeps_its_earlier_reading(stored):
+    """After a matcher change (PARSER_VERSION) every directive is read again. One whose text Cellar then failed to
+    serve was replaced by an "unavailable" record without its countries, and the build reads only "ok" records,
+    so Directive (EU) 2023/2843 lost Denmark's "Not bound" row (recital 8) until a later run read it."""
+    path = stored / "optouts" / "directives.json"
+    before = {r["celex"]: r for r in json.loads(path.read_text(encoding="utf-8"))}
+    assert before["32023L2843"]["not_bound"] == ["DK", "IE"] and before["32023L2843"]["quotes"][0].startswith("(8)")
+    path.write_text(json.dumps([{**r, "parser": 1} for r in before.values()]), encoding="utf-8")
+    status = fetch(TextsDown([REG, D0788, D2087]))
+    after = {r.celex: r for r in read_records("optouts", "directives", DirectiveOptOut)}
+    assert {c: (r.status, r.not_bound, r.quotes, r.opted_in) for c, r in after.items()} == {
+        c: ("ok", r["not_bound"], r["quotes"], OPTED_IN[c]) for c, r in before.items()
+    }
+    assert status.status == "partial" and status.records["pending"] == 2, status.note
+    assert "2 unavailable" in status.note and status.records["not_bound_DK"] == 0  # not re-read: not counted
+
+
+def test_a_text_never_read_that_cannot_be_fetched_is_unavailable(stored):
+    path = stored / "optouts" / "directives.json"
+    recs = json.loads(path.read_text(encoding="utf-8"))
+    path.write_text(json.dumps([r for r in recs if r["celex"] != "32023L2843"]), encoding="utf-8")
+    status = fetch(TextsDown([REG, D0788, D2087]))
+    after = {r.celex: r for r in read_records("optouts", "directives", DirectiveOptOut)}
+    assert after["32023L2843"].status == "unavailable" and after["32023L2843"].not_bound == []
+    assert after["32024L1346"].status == "ok" and status.status == "partial" and status.records["pending"] == 1
+
+
+# ---------------------------------------------------------------- the About page's summary of the source
+def test_about_summary_counts_the_directives_that_contain_the_statement():
+    """The summary said the recitals of all 303 directives "say whether Denmark and Ireland took part in their
+    adoption"; 36 contain the statement. The English text of Directive (EU) 2019/790 (copyright), read with status
+    ok, names neither Denmark nor Ireland."""
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder
+
+    snap = Path(__file__).resolve().parent.parent / "data" / "snapshot" / "optouts" / "directives.json"
+    if not snap.exists():
+        pytest.skip("no snapshot")
+    recs = [DirectiveOptOut.model_validate(r) for r in json.loads(snap.read_text(encoding="utf-8"))]
+    read = {r.celex: r for r in recs if r.status == "ok"}
+    assert read["32019L0790"].not_bound == [] and read["32019L0790"].quotes == []
+    st = SourceStatus(source="optouts", status="ok", fetched_at=PREVIOUS, attempted_at=PREVIOUS)
+    summary = Builder.source_summary(SimpleNamespace(s=None, optouts=read), "optouts", st)  # type: ignore[arg-type]
+    stating = sum(1 for r in read.values() if r.not_bound)
+    dk = sum("DK" in r.not_bound and "DK" not in r.opted_in for r in read.values())
+    ie = sum("IE" in r.not_bound and "IE" not in r.opted_in for r in read.values())
+    assert 0 < stating < len(read)
+    assert summary == (
+        f"The texts of {len(read):,} directives, read for the statement that Denmark or Ireland is not taking part "
+        "in a directive's adoption and is not bound by it (Protocols No 22 and 21). "
+        f"{stating:,} of them contain it: they declare Denmark not bound by {dk:,} and Ireland by {ie:,} "
+        "(not counting 2 in which the Commission later confirmed Ireland's participation)."
+    )

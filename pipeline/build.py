@@ -4180,11 +4180,14 @@ class Builder:
                 return sum(c in o.not_bound and c not in o.opted_in for o in read)
 
             later = sum("IE" in o.opted_in for o in read)
-            out.append(f"The recitals of {len(read):,} directives, which say whether Denmark and Ireland took part in "
-                       f"their adoption: they declare Denmark not bound by {bound_not('DK'):,} of them and Ireland by "
-                       f"{bound_not('IE'):,}"
-                       + (f" (not counting {later:,} in which the Commission later confirmed Ireland's participation)"
-                          if later else "") + ".")  # fmt: skip
+            # the directives that Protocols No 21 and 22 apply to make the statement; most directives say nothing on it
+            stating = sum(1 for o in read if o.not_bound)
+            out.append(f"The texts of {len(read):,} directives, read for the statement that Denmark or Ireland is not "
+                       "taking part in a directive's adoption and is not bound by it (Protocols No 22 and 21). "
+                       + (f"{stating:,} of them contain it: they declare Denmark not bound by {bound_not('DK'):,} and "
+                          f"Ireland by {bound_not('IE'):,}"
+                          + (f" (not counting {later:,} in which the Commission later confirmed Ireland's "
+                             "participation)" if later else "") + "." if stating else "None of them contains it."))  # fmt: skip
         elif sid == "train":
             blocked = sum(1 for t in s.train if t.status.strip().lower() == "blocked")
             out.append(f"{len(s.train):,} files on Parliament's Legislative Train Schedule, {blocked:,} of them "

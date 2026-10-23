@@ -480,9 +480,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 
 ### Opt-outs in directives' recitals (`optouts`) — ok
 - Denmark (Protocol No 22) and Ireland (Protocol No 21) are not bound by most justice and home affairs measures
-  unless they opt in; each directive says so in its recitals in standard wording ("… is not taking part in the
-  adoption of this Directive and is not bound by it"). The source reads the English text of every directive in
+  unless they opt in; each such directive says so in its recitals in standard wording ("… is not taking part in
+  the adoption of this Directive and is not bound by it"). The source reads the English text of every directive in
   the EUR-Lex snapshot once (again when the matcher changes) and records the countries and the sentences quoted.
+  Most directives contain no such statement: 36 of the 303 read in the 23 October snapshot do.
   Implementation tables then show "Not bound" instead of "No measures found" for those countries. The Council's
   voting results give the same fact for votes since 2019.
 - Ireland can still take part after adoption (Protocol No 21, Article 4); the Commission then confirms it in a
@@ -494,8 +495,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - A Commission decision confirming a participation stays in Cellar, so an opt-in recorded earlier that a later
   answer lacks means that answer was incomplete (Cellar can cut a query short and still answer HTTP 200): it is
   kept and the run is `partial`. A run that read no text and whose opt-in query failed keeps the previous
-  retrieval time. The source is listed on the About page like the others (`SOURCES["optouts"]`), with the number of
-  directives read and of those Denmark and Ireland are not bound by.
+  retrieval time. A directive due to be read again (the matcher changed) whose text cannot be fetched keeps its
+  earlier reading, "not bound" countries and quotes included; the run is `partial` until the text is read.
+- The source is listed on the About page like the others (`SOURCES["optouts"]`), with the number of directives
+  read, how many of them contain the statement, and how many Denmark and Ireland are not bound by.
 
 ### Council of the EU (`council`) — ok
 - The Council's voting-results web pages are behind a browser check (403), and the data.europa.eu dataset
