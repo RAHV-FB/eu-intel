@@ -75,6 +75,24 @@ def test_referential_and_semantic_issues_are_warnings(tmp_path: Path):
     assert rep.warnings["veto-wording"]
 
 
+def test_general_deadline_by_date_order_is_reported(tmp_path: Path):
+    # two deadlines under the same article reference, as Cellar records AMLD6 (Directive (EU) 2024/1640, Art. 78(1))
+    snap = _copy(tmp_path)
+
+    def two_deadlines(r):
+        a = next(x for x in r if x["celex"] == "32099L0003")
+        a["transposition_deadlines"] = ["2025-02-21", "2027-02-21"]
+        a["transposition_dates"] = [{"date": d, "labels": [], "articles": ["9.1"]} for d in a["transposition_deadlines"]]
+
+    _edit(snap / "eurlex" / "acts.json", two_deadlines)
+    rep = check(snap, today=TODAY)
+    assert rep.errors == []
+    assert rep.warnings["transposition-date-order"] == [
+        "32099L0003: general deadline 2025-02-21 taken by date order among 2025-02-21, 2027-02-21; check the act's text"
+    ]
+    assert "transposition-date-order" not in check(FIX, today=TODAY).warnings
+
+
 def test_act_procedure_mismatch_warning(tmp_path: Path):
     snap = _copy(tmp_path)
     _edit(snap / "eurlex" / "acts.json", lambda r: r[0].update(procedure_refs=["2099/3521(COD)"]))

@@ -68,6 +68,7 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
   const general = tr.filter((x) => x.kind === 'deadline');
   const further = tr.filter((x) => x.kind === 'further_deadline');
   const applies = tr.filter((x) => x.kind === 'application');
+  const other = tr.filter((x) => x.kind === 'other');
   if (general.length)
     rows.push({
       label: (
@@ -78,9 +79,10 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
       items: withArticles(general),
     });
   if (further.length)
-    rows.push({ label: `Further transposition deadline${further.length > 1 ? 's' : ''} (specific provisions)`, items: withArticles(further) });
+    rows.push({ label: `Transposition deadline${further.length > 1 ? 's' : ''} for specific provisions`, items: withArticles(further) });
   if (applies.length)
     rows.push({ label: `Application date${applies.length > 1 ? 's' : ''} for national measures`, items: withArticles(applies) });
+  if (other.length) rows.push({ label: `Other date${other.length > 1 ? 's' : ''} recorded by EUR-Lex`, items: withArticles(other) });
   if (!rows.length) return <p className="meta">No application dates are recorded for this act in EUR-Lex.</p>;
   return (
     <>
@@ -116,10 +118,10 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
         {app.dates_note.reviewed && <> (checked {formatDate(app.dates_note.reviewed)})</>}
       </p>
     )}
-    {(further.length > 0 || applies.length > 0) && (
+    {(further.length > 0 || applies.length > 0 || other.length > 0) && (
       <p className="dz-dates__note meta">
         Transposition dates as recorded by EUR-Lex, with the article that sets each one. The directive’s text says which
-        provisions a later date covers.
+        provisions each date covers{other.length > 0 && ' and what the other dates are'}.
       </p>
     )}
     {instrument === 'regulation' && (

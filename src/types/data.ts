@@ -190,17 +190,19 @@ export interface ApplicationInfo {
   partial_application_dates?: ISODate[]; // those of application_dates from which only some provisions apply
   application_detail?: { date: ISODate; partial: boolean; provisions?: string | null }[]; // checked against the act's text
   dates_note?: { reason: string; sources: { label: string; url: string }[]; reviewed?: ISODate | null } | null; // why dates were corrected
-  transposition_deadlines: ISODate[]; // directives only: deadlines to transpose (general and further), not application dates
+  transposition_deadlines: ISODate[]; // directives only: deadlines to transpose (general and further), not application or other dates
   transposition?: TranspositionDateInfo[]; // directives only: every recorded date, classified
   future: boolean; // true if any of the above lies in the future
 }
 
-/** A directive's transposition date as classified from EUR-Lex's own annotations. */
+/** A directive's transposition date as classified from EUR-Lex's own annotations (and, where they cannot tell, a
+ * check of the act's text: data/curated/transposition.yaml). */
 export interface TranspositionDateInfo {
   date: ISODate;
-  // deadline: general transposition deadline; further_deadline: later deadline for specific provisions;
-  // application: a date from which national measures (must or may) apply
-  kind: 'deadline' | 'further_deadline' | 'application';
+  // deadline: general transposition deadline; further_deadline: deadline for specific provisions (earlier or
+  // later); application: a date from which national measures (must or may) apply; other: a date EUR-Lex records
+  // whose role the data do not establish (e.g. an optional "may apply" date), never shown as a deadline
+  kind: 'deadline' | 'further_deadline' | 'application' | 'other';
   articles: string[]; // "Art. 48(1)"
 }
 

@@ -29,7 +29,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from pipeline.analysis.transposition import article_label, articles_text, general_deadline
+from pipeline.analysis.transposition import application_start, article_label, articles_text, general_deadline
 from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models import entities
 from pipeline.models.countries import MEMBER_STATES
@@ -898,6 +898,36 @@ def apply_act_dates(a: LegalAct, e: dict | None) -> LegalAct:
     return a.model_copy(update=upd)
 
 
+def load_transposition_checks(curated: Path = CURATED) -> dict[str, dict]:
+    """Directives' general transposition deadlines checked against their text (data/curated/transposition.yaml),
+    by CELEX. Entries with a malformed date are skipped."""
+    raw = _load_yaml("transposition.yaml", curated) or []
+    out: dict[str, dict] = {}
+    for e in raw if isinstance(raw, list) else []:
+        if not isinstance(e, dict) or not isinstance(e.get("celex"), str):
+            continue
+        dates = [e.get("deadline")] + ([e["applies_from"]] if e.get("applies_from") else []) + list(e.get("other") or [])
+        if not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates):
+            log.warning("curated transposition.yaml: entry %s has a malformed date; ignored", e["celex"])
+            continue
+        out[e["celex"]] = e
+    return out
+
+
+def apply_transposition_checks(a: LegalAct, e: dict | None) -> LegalAct:
+    """The act with its checked transposition dates (see load_transposition_checks); an entry naming a date
+    EUR-Lex does not record for the act is not applied (validate.py reports it)."""
+    if not e or a.act_type != "directive":
+        return a
+    recorded = set(a.transposition_deadlines)
+    if not {e["deadline"], e.get("applies_from") or e["deadline"], *(e.get("other") or [])} <= recorded:
+        return a
+    chk = entities.CheckedTransposition(
+        deadline=e["deadline"], applies_from=e.get("applies_from"), other=list(e.get("other") or [])
+    )
+    return a.model_copy(update={"transposition_checked": chk})
+
+
 def load_curated(curated: Path = CURATED) -> tuple[dict[str, dict], dict[str, dict], list[dict]]:
     """Returns (featured by normalized reference/id, topics by slug, alias rules)."""
     featured_raw = _load_yaml("featured.yaml", curated) or []
@@ -987,6 +1017,9 @@ class Builder:
         self.act_dates = load_act_dates(curated)
         if self.act_dates:
             snap.acts = [apply_act_dates(a, self.act_dates.get(a.celex)) for a in snap.acts]
+        self.transposition_checks = load_transposition_checks(curated)
+        if self.transposition_checks:
+            snap.acts = [apply_transposition_checks(a, self.transposition_checks.get(a.celex)) for a in snap.acts]
         self.files: dict[str, Any] = {}
         self._index()
 
@@ -1653,6 +1686,42 @@ class Builder:
             text = "The legislative procedure is complete; the act applies."
         return {"text": text, "institution": None, "basis": "derived"}
 
+    def amending_deadlines(self, det: dict, acts: list[LegalAct]) -> dict:
+        """A directive's next step, followed by the transposition deadlines still ahead of the directives that
+        have since amended it (CSRD, Directive (EU) 2022/2464: amending Directive (EU) 2026/470, Art. 5(1), is to
+        be transposed by 19 March 2027). Which of an amending directive's deadlines covers the changes to this
+        one is in its text; only its own deadlines are named."""
+        ns = det["next_step"]
+        a = next((x for x in acts if x.act_type == "directive"), None)
+        if a is None or det.get("instrument") != "directive" or det["stage"] not in ("published", "in_force"):
+            return ns
+        if ns.get("basis") == "unknown":
+            return ns
+        notes = []
+        for c in a.amended_by:
+            m = self.act.get(c)
+            pub = m.date_publication if m else None
+            if not m or m.act_type != "directive" or m.in_force is False or not pub or pub > self.today:
+                continue
+            if any(x.celex == c for x in acts):
+                continue
+            tr = classify_transposition(m)
+            general = next((x.date for x in tr if x.kind == "deadline" and x.date > self.today), None)
+            specific = [x.date for x in tr if x.kind == "further_deadline" and x.date > self.today]
+            ds = [_long_date(d) for d in specific]
+            dates = ", ".join(ds[:-1]) + " and " + ds[-1] if len(ds) > 1 else "".join(ds)
+            if general:
+                extra = f" (specific provisions by {dates})" if specific else ""
+                notes.append((general, f"{act_label(m)}, which amends this directive, must be transposed by "
+                                       f"{_long_date(general)}{extra}."))  # fmt: skip
+            elif specific:
+                what = "deadlines" if len(specific) > 1 else "deadline"
+                notes.append((specific[0], f"{act_label(m)}, which amends this directive, has a transposition "
+                                           f"{what} for specific provisions still ahead: {dates}."))  # fmt: skip
+        if not notes:
+            return ns
+        return {**ns, "text": " ".join([ns["text"], *(n for _, n in sorted(notes))])}
+
     def application_info(self, acts: list[LegalAct]) -> dict | None:
         if not acts:
             return None
@@ -1681,7 +1750,7 @@ class Builder:
                             if isinstance(s, dict) and s.get("url")],
                 "reviewed": cur.get("reviewed"),
             } if cur else None,
-            "transposition_deadlines": [x.date for x in tr_all if x.kind != "application"],
+            "transposition_deadlines": [x.date for x in tr_all if x.kind in ("deadline", "further_deadline")],
             "transposition": [
                 {"date": x.date, "kind": x.kind, "articles": [article_label(r) for r in x.articles]} for x in tr_all
             ],
@@ -1778,16 +1847,21 @@ class Builder:
                     synth.append(
                         ("application", d, "Further provisions start to apply (date recorded by EUR-Lex)", None)
                     )
-            for x in classify_transposition(a):
+            # a date whose role the data do not establish ("other") is not a legal milestone: it stays off the
+            # timeline (and so off "Latest verified development" and "Coming up")
+            tr = classify_transposition(a)
+            start = application_start(a, tr)
+            for x in tr:
                 arts = f" ({articles_text(x.articles)})" if x.articles else ""
                 if x.kind == "deadline":
                     synth.append(("transposition_deadline", x.date,
                                   "Deadline for Member States to transpose the directive", None))  # fmt: skip
-                elif x.kind == "further_deadline":
-                    t = f"Further transposition deadline for specific provisions{arts}"
+                elif x.kind == "further_deadline":  # earlier or later than the general deadline
+                    t = f"Transposition deadline for specific provisions{arts}"
                     synth.append(("transposition_deadline", x.date, t, t + " (passed)"))
-                else:
-                    t = f"Application date for national transposition measures{arts}"
+                elif x.kind == "application":
+                    t = (f"Application date for specific provisions{arts}" if start and x.date > start
+                         else f"Application date for national transposition measures{arts}")  # fmt: skip
                     synth.append(("transposition_application", x.date, t, t))
             for kind, d, title, past_title in synth:
                 if (kind, d) in seen:
@@ -2055,7 +2129,7 @@ class Builder:
                 for a in acts
                 for d in [
                     *a.other_application_dates,
-                    *(a.transposition_deadlines if a.act_type == "directive" else []),
+                    *(x.date for x in classify_transposition(a) if x.kind != "other"),
                 ]
                 + ([a.entry_into_force] if a.entry_into_force else [])
                 if d > self.today
@@ -2151,6 +2225,7 @@ class Builder:
                 info = self.application_info(acts) or {}
                 det["application"] |= {k: info.get(k) for k in ("application_detail", "dates_note")}
             det["next_step"] = self.derived_next_step(det)
+            det["next_step"] = self.amending_deadlines(det, acts)
             self.dossier_detail[pid] = det
         # officially established relations between dossiers (act amends/repeals another dossier's act)
         rels = (("amends", "Amends"), ("repeals", "Repeals"), ("repealed_by", "Repealed by"))

@@ -180,6 +180,16 @@ class TranspositionDate(Model):
     articles: list[str] = Field(default_factory=list)  # article of the directive setting it, e.g. "48.1"
 
 
+class CheckedTransposition(Model):
+    """What a directive's transposition dates are, checked against its text where Cellar's annotations
+    cannot tell (data/curated/transposition.yaml). Set by the build only; never part of the snapshot."""
+
+    deadline: str  # the general transposition deadline (one of the act's transposition dates)
+    applies_from: str | None = None  # the general date from which the national measures apply
+    # recorded dates that are neither a deadline nor a firm application date (e.g. conditional or optional)
+    other: list[str] = Field(default_factory=list)
+
+
 class LegalAct(Model):
     """An act in the EU legal corpus (EUR-Lex / Cellar)."""
 
@@ -205,6 +215,8 @@ class LegalAct(Model):
     in_force: bool | None = None
     transposition_deadlines: list[str] = Field(default_factory=list)  # directives only: every value
     transposition_dates: list[TranspositionDate] = Field(default_factory=list)  # the same, annotated
+    # build only (excluded from the snapshot): the dates checked against the act's text, if curated
+    transposition_checked: CheckedTransposition | None = Field(default=None, exclude=True)
     procedure_refs: list[str] = Field(default_factory=list)  # "2021/0106(COD)"
     subjects: list[Subject] = Field(default_factory=list)
     amends: list[str] = Field(default_factory=list)  # CELEX

@@ -204,9 +204,12 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
     votes = {v.id: v for v in data.get(("ep_votes", "votes"), [])}
     ballots = data.get(("ep_votes", "ballots"), [])
     acts = {a.celex: a for a in data.get(("eurlex", "acts"), [])}
-    from pipeline.build import load_act_dates  # curated, checked corrections of act dates
+    from pipeline.analysis.transposition import classify as classify_transposition
+    from pipeline.analysis.transposition import general_deadline_basis
+    from pipeline.build import apply_transposition_checks, load_act_dates, load_transposition_checks
 
-    act_dates = load_act_dates()
+    act_dates = load_act_dates()  # curated, checked corrections of act dates
+    tr_checks = load_transposition_checks()  # curated, checked general transposition deadlines
 
     # people
     for m in meps.values():
@@ -296,6 +299,19 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
                 if d < f"{int(signed[:4]) - 1}{signed[4:]}":
                     rep.warn("application-before-act", f"{a.celex}: applies from {d}, a year or more before "
                              f"the act ({signed}); check the act's text")  # fmt: skip
+        # Several transposition deadlines whose general one neither the article references nor a check of the
+        # text decides: the earliest is taken, which is wrong when it is a derogation for a few provisions
+        # (Directive (EU) 2024/1640). Check the act's text and record it in data/curated/transposition.yaml.
+        if a.act_type == "directive" and a.transposition_deadlines:
+            e = tr_checks.get(a.celex)
+            checked = apply_transposition_checks(a, e)
+            if e and checked.transposition_checked is None:
+                rep.warn("transposition-check-stale", f"{a.celex}: data/curated/transposition.yaml names a date "
+                         f"EUR-Lex does not record for the act ({', '.join(a.transposition_deadlines)})")  # fmt: skip
+            deadlines = [x.date for x in classify_transposition(checked) if x.kind in ("deadline", "further_deadline")]
+            if general_deadline_basis(checked) == "date_order":
+                rep.warn("transposition-date-order", f"{a.celex}: general deadline {deadlines[0]} taken by date "
+                         f"order among {', '.join(deadlines)}; check the act's text")  # fmt: skip
         for r in a.procedure_refs:
             rm = REF_RE.match(r)
             if not rm:

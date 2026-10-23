@@ -1,0 +1,312 @@
+# A directive's transposition dates as its own text sets them, where EUR-Lex (Cellar) annotations cannot tell.
+#
+# Cellar records every date of a directive's transposition article under one property and labels most of
+# them (ADOPTION / APPLICATION / "at the latest") with the article setting them, but it does not say which
+# date is the general deadline. pipeline/analysis/transposition.py takes the deadline whose article reference
+# comes first in the text and, when several share it, the earliest one. The earliest is wrong when the first
+# date is a derogation for a few provisions: Directive (EU) 2024/1640, Art. 78(1), sets 10 July 2027 for the
+# Directive and 10 July 2025 for Article 74 only, and Cellar gives "Art. 78(1)" for both. Each entry states,
+# in the build only, which of the act's recorded dates is the general deadline; the snapshot keeps the source
+# values. validate.py lists every directive with several deadlines that has no entry here and whose article
+# references do not decide. A directive that sets staged deadlines and none for "this Directive" as a whole
+# (e.g. Directive (EU) 2017/2455) has its first stage as general deadline; the later stages are shown as
+# deadlines for specific provisions.
+#
+# Fields:
+#   celex         the directive (sector-3 CELEX)
+#   deadline      the general transposition deadline; must be one of the dates EUR-Lex records for the act
+#   applies_from  optional; the general date from which the national measures apply, where Cellar's labels
+#                 cannot tell (one of the recorded dates)
+#   other         optional; recorded dates that are neither a transposition deadline nor a firm date from which
+#                 national measures apply (e.g. a conditional or optional date); shown neutrally as dates recorded
+#                 by EUR-Lex, and kept off the timeline
+#   provision     the provision setting the general deadline
+#   quote         that provision, verbatim (long lists of articles shortened with [...])
+#   note          optional; what the act's other recorded dates are
+#   source        {label, url} the text checked (Cellar, English)
+#   reviewed      date of the check
+#
+# Last full review: 2026-10-23 (every directive with several transposition deadlines whose general deadline the
+# article references do not decide).
+
+- celex: "32014L0049"  # Deposit guarantee schemes
+  deadline: "2015-07-03"
+  provision: "Art. 20(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with Articles 1 to 4, [...] Articles 10 to 16, 18 and 19 and Annex I by 3 July 2015.
+  note: "31 May 2016: Article 8(4), and Article 13 where a scheme is not yet in a position to comply (second and third subparagraphs)."
+  source: {label: "Directive 2014/49/EU, Article 20", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32014L0049"}
+  reviewed: "2026-10-23"
+
+- celex: "32014L0068"  # Pressure equipment
+  deadline: "2016-07-18"
+  provision: "Art. 49(2), first subparagraph"
+  quote: >-
+    Member States shall adopt and publish, by 18 July 2016, the laws, regulations and administrative provisions
+    necessary to comply with Article 2(15) to (32), Articles 6 to 12, 14, 17 and 18, Article 19(3) to (5),
+    Articles 20 to 43, 47 and 48 and Annexes I, II, III and IV.
+  note: "28 February 2015: Article 13 only (Art. 49(1)), applied from 1 June 2015; the rest applies from 19 July 2016."
+  source: {label: "Directive 2014/68/EU, Article 49", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32014L0068"}
+  reviewed: "2026-10-23"
+
+- celex: "32015L2436"  # Trade marks
+  deadline: "2019-01-14"
+  provision: "Art. 54(1), first sentence"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with Articles 3 to 6, Articles 8 to 14, Articles 16, 17 and 18, Articles 22 to 39, Article 41, Articles 43 to
+    50 by 14 January 2019.
+  note: "14 January 2023: Article 45 (Art. 54(1), second sentence)."
+  source: {label: "Directive (EU) 2015/2436, Article 54", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32015L2436"}
+  reviewed: "2026-10-23"
+
+- celex: "32016L2284"  # National emission ceilings
+  deadline: "2018-07-01"
+  provision: "Art. 20(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 1 July 2018.
+  note: "15 February 2017: Article 10(2) only (second subparagraph)."
+  source: {label: "Directive (EU) 2016/2284, Article 20", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016L2284"}
+  reviewed: "2026-10-23"
+
+- celex: "32017L2455"  # VAT for e-commerce
+  deadline: "2018-12-31"
+  provision: "Art. 4(1), first subparagraph (staged; no deadline covers the whole Directive)"
+  quote: >-
+    Member States shall adopt and publish, by 31 December 2018, the laws, regulations and administrative
+    provisions necessary to comply with Article 1 of this Directive.
+  note: >-
+    30 June 2021 (applied from 1 July 2021): Articles 2 and 3, Art. 4(1), second and fourth subparagraphs, as
+    replaced by Council Decision (EU) 2020/1109, Article 1(3).
+  source: {label: "Council Directive (EU) 2017/2455, Article 4", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32017L2455"}
+  reviewed: "2026-10-23"
+
+- celex: "32018L0645"  # Driver qualification and driving licences
+  deadline: "2020-05-23"
+  provision: "Art. 3(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 23 May 2020, except for the laws, regulations and administrative provisions necessary
+    to comply with point 6 of Article 1 of this Directive, which shall be brought into force by 23 May 2021.
+  source: {label: "Directive (EU) 2018/645, Article 3", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32018L0645"}
+  reviewed: "2026-10-23"
+
+- celex: "32018L2002"  # Energy efficiency (2018 amendments)
+  deadline: "2020-06-25"
+  provision: "Art. 2(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 25 June 2020.
+  note: "25 October 2020: points 5 to 10 of Article 1 and points 3 and 4 of the Annex (second subparagraph)."
+  source: {label: "Directive (EU) 2018/2002, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32018L2002"}
+  reviewed: "2026-10-23"
+
+- celex: "32019L0878"  # Capital Requirements Directive V
+  deadline: "2020-12-28"
+  provision: "Art. 2(1), first subparagraph"
+  quote: >-
+    Member States shall adopt and publish, by 28 December 2020, the measures necessary to comply with this
+    Directive.
+  note: >-
+    Applies from 29 December 2020, some provisions from 28 June 2021 and 1 January 2022 (second subparagraph).
+    26 June 2021: measures concerning investment firms, added by Directive (EU) 2021/338, Article 3 ("Member
+    States shall adopt, publish and apply by 26 June 2021 the measures necessary to comply with the provisions
+    of this Directive insofar as they concern investment firms").
+  source: {label: "Directive (EU) 2019/878, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L0878"}
+  reviewed: "2026-10-23"
+
+- celex: "32019L0879"  # Bank Recovery and Resolution Directive II
+  deadline: "2020-12-28"
+  other: ["2024-01-01"]
+  provision: "Art. 3(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 28 December 2020.
+  note: >-
+    1 January 2024 is a conditional application date for one provision (third subparagraph): "Member States shall
+    apply point (17) of Article 1 of this Directive, as regards Article 45i(3) of Directive 2014/59/EU from 1
+    January 2024. Where, in accordance with Article 45m(1) of Directive 2014/59/EU, the resolution authority has
+    set a compliance deadline that ends after 1 January 2024, the application date [...] shall be the same as the
+    compliance deadline."
+  source: {label: "Directive (EU) 2019/879, Article 3", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L0879"}
+  reviewed: "2026-10-23"
+
+- celex: "32019L0944"  # Electricity market
+  deadline: "2020-12-31"
+  provision: "Art. 71(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with Articles 2 to 5, Article 6(2) and (3), [...] points (1) to (3), (5)(b) and (6) of Article 70 and Annexes
+    I and II by 31 December 2020.
+  note: "31 December 2019: point (5)(a) of Article 70; 25 October 2020: point (4) of Article 70 (second subparagraph)."
+  source: {label: "Directive (EU) 2019/944, Article 71", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L0944"}
+  reviewed: "2026-10-23"
+
+- celex: "32019L1023"  # Restructuring and insolvency
+  deadline: "2021-07-17"
+  provision: "Art. 34(1), first subparagraph"
+  quote: >-
+    Member States shall adopt and publish, by 17 July 2021, the laws, regulations and administrative provisions
+    necessary to comply with this Directive, with the exception of the provisions necessary to comply with points
+    (a), (b) and (c) of Article 28 which shall be adopted and published by 17 July 2024 and the provisions
+    necessary to comply with point (d) of Article 28 which shall be adopted and published by 17 July 2026.
+  source: {label: "Directive (EU) 2019/1023, Article 34", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L1023"}
+  reviewed: "2026-10-23"
+
+- celex: "32023L0959"  # EU Emissions Trading System (2023 amendments)
+  deadline: "2023-12-31"
+  provision: "Art. 3(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with Article 1 of this Directive by 31 December 2023. They shall apply those measures from 1 January 2024.
+  note: "30 June 2024: the provisions of Article 1 listed in the second subparagraph."
+  source: {label: "Directive (EU) 2023/959, Article 3", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L0959"}
+  reviewed: "2026-10-23"
+
+- celex: "32023L0977"  # Exchange of information between law enforcement authorities
+  deadline: "2024-12-12"
+  provision: "Art. 22(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 12 December 2024.
+  note: "12 June 2027: Article 13 only (second subparagraph)."
+  source: {label: "Directive (EU) 2023/977, Article 22", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L0977"}
+  reviewed: "2026-10-23"
+
+- celex: "32023L1791"  # Energy Efficiency Directive
+  deadline: "2025-10-11"
+  provision: "Art. 36(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with Articles 1, 2 and 3, Article 4(1) to (4), [...] Articles 29 to 32 and Annexes I, III to VII, X, XI and XV
+    by 11 October 2025.
+  note: >-
+    The earlier dates (11 January, 1 February, 15 May and 31 December 2024) are those of Article 4(5), third
+    subparagraph, Article 12(1), Article 26(3) and Article 28(6), which are to be transposed "by the dates
+    referred to therein" (second subparagraph).
+  source: {label: "Directive (EU) 2023/1791, Article 36", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L1791"}
+  reviewed: "2026-10-23"
+
+- celex: "32023L2413"  # Renewable Energy Directive III
+  deadline: "2025-05-21"
+  provision: "Art. 5(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 21 May 2025.
+  note: "1 July 2024: Article 1, point (6), as regards Article 15e of Directive (EU) 2018/2001, and point (7), as regards its Articles 16 and 16b to 16f (second subparagraph)."
+  source: {label: "Directive (EU) 2023/2413, Article 5", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L2413"}
+  reviewed: "2026-10-23"
+
+- celex: "32023L2661"  # Intelligent transport systems
+  deadline: "2025-12-21"
+  provision: "Art. 2(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 21 December 2025.
+  note: >-
+    21 March 2025: the reporting obligation of Article 17(1) of Directive 2010/40/EU, to be transposed "before the
+    deadline for the report provided in that Article" (second subparagraph); the replaced Article 17(1) sets 21
+    March 2025.
+  source: {label: "Directive (EU) 2023/2661, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L2661"}
+  reviewed: "2026-10-23"
+
+- celex: "32024L1275"  # Energy Performance of Buildings Directive
+  deadline: "2026-05-29"
+  provision: "Art. 35(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with Articles 1, 2 and 3, 5 to 29 and 32 and Annexes I, II and III and V to X by 29 May 2026.
+  note: "1 January 2025: Article 17(15) only (second subparagraph)."
+  source: {label: "Directive (EU) 2024/1275, Article 35", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1275"}
+  reviewed: "2026-10-23"
+
+- celex: "32024L1640"  # Anti-Money Laundering Directive 6
+  deadline: "2027-07-10"
+  provision: "Art. 78(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 10 July 2027.
+  note: >-
+    Second subparagraph: Article 74 by 10 July 2025, Articles 11, 12, 13 and 15 by 10 July 2026 and Article 18 by
+    10 July 2029.
+  source: {label: "Directive (EU) 2024/1640, Article 78", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1640"}
+  reviewed: "2026-10-23"
+
+- celex: "32024L1654"  # Access to bank account registers
+  deadline: "2027-07-10"
+  provision: "Art. 2(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 10 July 2027.
+  note: "10 July 2029: Article 1, points (4) and (5) (second subparagraph)."
+  source: {label: "Directive (EU) 2024/1654, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1654"}
+  reviewed: "2026-10-23"
+
+- celex: "32024L1711"  # Electricity market design
+  deadline: "2025-01-17"
+  provision: "Art. 3(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 17 January 2025.
+  note: "17 July 2026: Article 2, points (2) and (5) (second subparagraph)."
+  source: {label: "Directive (EU) 2024/1711, Article 3", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1711"}
+  reviewed: "2026-10-23"
+
+- celex: "32025L2205"  # Driving licences
+  deadline: "2028-11-26"
+  applies_from: "2029-11-26"
+  provision: "Art. 29(1), first and second subparagraphs"
+  quote: >-
+    Without prejudice to paragraph 2, by 26 November 2028, Member States shall adopt and publish the measures
+    necessary to comply with this Directive. [...] Without prejudice to paragraph 2, they shall apply those
+    measures from 26 November 2029.
+  note: >-
+    26 November 2027: Article 9(2), points (j) and (k), applied from the same day (Art. 29(2)); 26 November 2028
+    is also the date from which the measures for Article 17 apply (Art. 29(3)), so Cellar labels it an
+    application date as well.
+  source: {label: "Directive (EU) 2025/2205, Article 29", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L2205"}
+  reviewed: "2026-10-23"
+
+- celex: "32026L0470"  # Omnibus I (sustainability reporting and due diligence)
+  deadline: "2027-03-19"
+  provision: "Art. 5(1), first subparagraph (staged by article)"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with Articles 1, 2 and 3 by 19 March 2027.
+  note: "26 July 2028: Article 4, which amends Directive (EU) 2024/1760 (second subparagraph)."
+  source: {label: "Directive (EU) 2026/470, Article 5", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L0470"}
+  reviewed: "2026-10-23"
+
+- celex: "32026L0799"  # Harmonisation of insolvency law
+  deadline: "2029-01-22"
+  provision: "Art. 55(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 22 January 2029.
+  note: >-
+    10 July 2029: Articles 15, 16 and 17 as they relate to BARIS, "by the date referred to in the first
+    subparagraph of this paragraph or by 10 July 2029, whichever is later in time" (second subparagraph).
+  source: {label: "Directive (EU) 2026/799, Article 55", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L0799"}
+  reviewed: "2026-10-23"
+
+- celex: "32026L1021"  # Combating corruption
+  deadline: "2028-06-01"
+  provision: "Art. 37(1), first subparagraph"
+  quote: >-
+    Member States shall bring into force the laws, regulations and administrative provisions necessary to comply
+    with this Directive by 1 June 2028.
+  note: "1 June 2029: the obligations under Article 20(5) and Article 21 (second subparagraph)."
+  source: {label: "Directive (EU) 2026/1021, Article 37", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L1021"}
+  reviewed: "2026-10-23"
+
+- celex: "32026L1472"  # Victims' rights
+  deadline: "2028-07-02"
+  provision: "Art. 2(1)"
+  quote: >-
+    Member States shall take the necessary measures to comply with this Directive by 2 July 2028 with the
+    exception of the measures necessary to comply with Article 1, point (21), of this Directive, only concerning
+    Article 26b of Directive 2012/29/EU, which shall be adopted and published by 2 July 2030.
+  source: {label: "Directive (EU) 2026/1472, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L1472"}
+  reviewed: "2026-10-23"
