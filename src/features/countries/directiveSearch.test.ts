@@ -1,12 +1,14 @@
 /**
  * Country pages' directive search: by the directive's own number however it is written, and by the names its
  * file is known by. On the real build (public/data) when present: Ireland's rows, where "NIS2", "2022/2555" and
- * "Directive (EU) 2022/2555" used to find nothing and "2022/2464" found only the act amending the CSRD.
+ * "Directive (EU) 2022/2555" used to find nothing and "2022/2464" found only the act amending the CSRD. The
+ * infringement case search on the same page (matchCases), where "NIS2" found no case although Ireland's open NIS 2
+ * case exists, and "ban" listed the urban waste-water cases.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { CountryDetail } from '../../types/data';
-import { directiveNumber, matchDirectives, queryNumber } from './directiveSearch';
+import { directiveNumber, matchCases, matchDirectives, queryNumber } from './directiveSearch';
 
 const DATA = new URL('../../../public/data/', import.meta.url);
 const built = existsSync(new URL('countries/IE.json', DATA));
@@ -123,5 +125,68 @@ describe.skipIf(!built)('Ireland on the built data', () => {
     expect(red3.rows.map((r) => r.celex)).toEqual(['32023L2413']); // not RED II and the ILUC directive
     expect(red3.viaSearch.size).toBe(0);
     expect(matchDirectives(rows, 'RED II').rows.map((r) => r.celex)).toEqual(['32018L2001']);
+  });
+});
+
+describe('infringement cases', () => {
+  const directives = [
+    { celex: '32022L2555', title: 'Measures for a high common level of cybersecurity across the Union', act: 'Directive (EU) 2022/2555', names: ['NIS 2 Directive'] },
+    { celex: '32024L1069', title: 'Protecting persons who engage in public participation from manifestly unfounded or abusive court proceedings', act: 'Directive (EU) 2024/1069', names: ['Anti-SLAPP Directive'] },
+  ];
+  const cases = [
+    { id: 'INFR(2024)0279', celex: '32022L2555', title: 'Lack of transposition of Directive (EU) 2022/2555 on measures for a high common level of cybersecurity across the Union by Ireland' },
+    { id: 'INFR(2026)0402', celex: '32024L1069', title: 'Lack of transposition of Directive 32024L1069 by Ireland' },
+    { id: 'INFR(2023)2178', celex: '31991L0271', title: 'WATER - Bad application of Council Directive 91/271/EEC on urban waste-water treatment (UWWT) in Ireland' },
+    { id: 'INFR(2019)0278', celex: '32019L0523', title: 'Commission Implementing Directive (EU) 2019/523 on protective measures against introduction into Community of organisms' },
+    { id: 'INFR(2020)2001', celex: null, title: 'Bad application of Regulation (EU) 2016/679 and Directive (EU) 2016/680' },
+  ];
+  const ids = (q: string) => matchCases(cases, q, directives).rows.map((r) => r.id);
+  it("finds a case by its directive's name, number or CELEX id, however it is written", () => {
+    for (const q of ['NIS2', 'NIS 2', 'nis2', 'Directive 2022/2555', 'Directive (EU) 2022/2555', '2022/2555', '32022L2555', 'cybersecurity'])
+      expect(ids(q), q).toEqual(['INFR(2024)0279']);
+    for (const q of ['Anti-SLAPP', 'SLAPP', '2024/1069', 'public participation']) expect(ids(q), q).toEqual(['INFR(2026)0402']);
+    expect(ids('1991/271')).toEqual(['INFR(2023)2178']);
+    expect(ids('Directive 91/271/EEC')).toEqual(['INFR(2023)2178']);
+  });
+  it('finds a case whose subject cites the act, also without a CELEX id of its own', () => {
+    expect(ids('Regulation (EU) 2016/679')).toEqual(['INFR(2020)2001']);
+    expect(ids('32016R0679')).toEqual(['INFR(2020)2001']);
+    expect(ids('Directive 2022/2555')).not.toContain('INFR(2020)2001');
+  });
+  it('does not take a regulation of the same number for the directive', () => {
+    expect(ids('Regulation 2022/2555')).toEqual([]);
+  });
+  it('matches whole words, not text inside words', () => {
+    expect(ids('ban')).toEqual([]); // not "urban"
+    expect(ids('NIS')).toEqual(['INFR(2024)0279']); // "NIS 2 Directive", not "organisms"
+    expect(ids('urban waste water')).toEqual(['INFR(2023)2178']);
+  });
+  it('finds a case by its number, also while it is typed', () => {
+    expect(ids('INFR(2024)0279')).toEqual(['INFR(2024)0279']);
+    expect(ids('INFR(2024)02')).toEqual(['INFR(2024)0279']);
+  });
+  it('falls back to the starts of words only when no case has the words whole', () => {
+    const m = matchCases(cases, 'cyber', directives);
+    expect(m.rows.map((r) => r.id)).toEqual(['INFR(2024)0279']);
+    expect(m.partial).toBe(true);
+  });
+});
+
+describe.skipIf(!built)("Ireland's infringement cases on the built data", () => {
+  const ie = built ? (JSON.parse(readFileSync(new URL('countries/IE.json', DATA), 'utf8')) as CountryDetail) : null;
+  const rows = ie?.infringements ?? [];
+  const ids = (q: string) => matchCases(rows, q, ie?.transposition).rows.map((r) => r.id);
+  it('finds the open NIS 2 case by the directive’s name and number', () => {
+    for (const q of ['NIS2', 'NIS 2', '2022/2555', 'Directive 2022/2555', 'Directive (EU) 2022/2555'])
+      expect(ids(q), q).toContain('INFR(2024)0279');
+  });
+  it('finds the Anti-SLAPP case, whose subject cites the directive by its CELEX id only', () => {
+    for (const q of ['Anti-SLAPP', 'SLAPP', '2024/1069']) expect(ids(q), q).toContain('INFR(2026)0402');
+  });
+  it('finds both urban waste-water cases, and no case for words inside other words', () => {
+    for (const q of ['1991/271', 'urban waste water', 'urban waste-water']) expect(ids(q).sort(), q).toEqual(['INFR(2013)2056', 'INFR(2023)2178']);
+    expect(ids('ban')).toEqual([]);
+    expect(ids('NIS')).not.toContain('INFR(2019)0278'); // "organisms"
+    expect(ids('NIS')).not.toContain('INFR(2005)2037'); // "Etats-Unis"
   });
 });

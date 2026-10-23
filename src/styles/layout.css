@@ -162,6 +162,16 @@ main:focus {
     display: none;
   }
 }
+@media (max-width: 63.99rem) {
+  /* The open menu is part of the sticky header: on a short screen (a phone held sideways, zoomed text) it scrolls
+     within the screen, so that its last links can be reached. */
+  .primary-nav.is-open {
+    max-height: calc(100vh - var(--header-h) - 1px);
+    max-height: calc(100dvh - var(--header-h) - 1px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
 
 @media (min-width: 64rem) {
   .menu-toggle {
@@ -202,10 +212,6 @@ main:focus {
   padding-left: var(--sp-3);
   box-shadow: var(--shadow-sm);
 }
-.searchbox__field:focus-within {
-  border-color: var(--focus);
-  outline: 3px solid rgba(26, 86, 219, 0.25);
-}
 .searchbox__icon {
   color: var(--blue-muted);
   flex-shrink: 0;
@@ -237,6 +243,13 @@ main:focus {
 .searchbox--compact .searchbox__input {
   min-height: 2.5rem;
   font-size: var(--fs-sm);
+}
+/* Focus is shown on the field (the input has none of its own): a solid ring as on the site's other fields, 6.2:1
+   against the white page and 5.7:1 against the field. After the compact variant, whose border would otherwise win. */
+.searchbox__field:focus-within {
+  border-color: var(--focus);
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
 }
 .searchbox__list {
   position: absolute;

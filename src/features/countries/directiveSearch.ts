@@ -6,6 +6,8 @@
  * has them, words of 4+ letters that are not abbreviations may be the start of a longer word in a title or name.
  * The files the site search finds for the query (by their common names and aliases) match as well, as in the
  * legislation explorer, and are marked when nothing else in the row matches.
+ * The same page's infringement cases are searched the same way (matchCases), each with the number and names of the
+ * directive it concerns.
  */
 import { hasWord, keywordTokens, normalize, typedAbbreviations, wordSet } from '../../lib/search';
 
@@ -95,4 +97,71 @@ export function matchDirectives<T extends DirectiveRow>(rows: T[], query: string
   if (exact.length || !tokens.length) return { rows: exact, own, citing, viaSearch, number, partial: false };
   const loose = pass(true);
   return { rows: loose, own, citing, viaSearch, number, partial: loose.length > 0 };
+}
+
+export interface CaseRow {
+  id: string;
+  title: string;
+  celex?: string | null;
+}
+
+/** "2016/679" for an act's CELEX id, whatever its type (32022L2555, 32016R0679, 32019D1234). */
+function actNumber(celex: string | null | undefined): string | null {
+  const m = /^3(\d{4})[LRD]0*(\d{1,4})$/.exec(celex ?? '');
+  return m ? `${m[1]}/${m[2]}` : null;
+}
+
+/** The type of act a query names, as the letter of its CELEX id: "Regulation (EU) 2016/679" -> "r". */
+function queryType(needle: string): string | null {
+  const celex = /(?:^|\s)3\d{4}([lrd])\d/.exec(needle);
+  if (celex) return celex[1];
+  if (/\bregulations?\b/.test(needle)) return 'r';
+  if (/\bdirectives?\b/.test(needle)) return 'l';
+  if (/\bdecisions?\b/.test(needle)) return 'd';
+  return null;
+}
+
+/** A CELEX id a title cites the act by ("Lack of transposition of Directive 32024L1069 by Ireland"). */
+const CITED_CELEX = /(?:^|[^\p{L}\p{N}])3(\d{4})[lrd]0*(\d{1,4})(?![\p{L}\p{N}])/gu;
+
+/**
+ * Infringement cases matching a query, in the given order: by the words of the case's subject and number, and of
+ * the directive it concerns (its number and the names its file is known by, from the page's `directives`: "NIS2"
+ * finds a case titled "Lack of transposition of Directive (EU) 2022/2555 …"), matched whole as in matchDirectives.
+ * A query naming an act's number finds the cases about that act (by the case's CELEX id) and those whose subject
+ * cites it, as year/number or as a CELEX id.
+ */
+export function matchCases<T extends CaseRow>(rows: T[], query: string, directives: readonly DirectiveRow[] = []): { rows: T[]; partial: boolean } {
+  const needle = normalize(query);
+  if (!needle) return { rows, partial: false };
+  // queryNumber reads a directive's CELEX id; a case may concern a regulation or a decision (32016R0679)
+  const otherCelex = /(?:^|\s)3(\d{4})[rd]0*(\d{1,4})(?:\s|$)/.exec(needle);
+  const number = queryNumber(query) ?? (otherCelex ? `${otherCelex[1]}/${otherCelex[2]}` : null);
+  const type = number ? queryType(needle) : null;
+  const cited = number ? citationRe(number) : null;
+  const tight = !number && /\d/.test(needle) ? compact(needle) : null; // "NIS2" finds "NIS 2 Directive"
+  const tokens = number ? [] : keywordTokens(query);
+  const abbreviations = typedAbbreviations(query);
+  const byCelex = new Map(directives.map((d) => [d.celex, d]));
+  const pass = (prefix: boolean) =>
+    rows.filter((r) => {
+      const d = r.celex ? byCelex.get(r.celex) : undefined;
+      const title = normalize(r.title);
+      if (number) {
+        // the case's own act has the number: it is that act unless the query names another type of act
+        if (actNumber(r.celex) === number) return !type || type === r.celex?.[5]?.toLowerCase();
+        if (cited?.test(title)) return true;
+        for (const m of title.matchAll(CITED_CELEX)) if (`${m[1]}/${m[2]}` === number) return true;
+      }
+      const texts = [r.title, r.id, r.celex, d?.act, ...(d?.names ?? []), d?.title];
+      if (tight !== null && compact(normalize(texts.filter(Boolean).join(' '))).includes(tight)) return true;
+      if (!tokens.length) return false;
+      const words = wordSet(...texts);
+      const named = prefix ? wordSet(r.title, ...(d?.names ?? []), d?.title) : null;
+      return tokens.every((t) => hasWord(words, t) || (named !== null && t.length >= 4 && !abbreviations.has(t) && hasWord(named, t, true)));
+    });
+  const exact = pass(false);
+  if (exact.length || !tokens.length) return { rows: exact, partial: false };
+  const loose = pass(true);
+  return { rows: loose, partial: loose.length > 0 };
 }

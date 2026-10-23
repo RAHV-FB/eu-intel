@@ -57,9 +57,10 @@ export function useParamState(): [URLSearchParams, (patch: ParamPatch) => void] 
  * from the address would move the caret to the end and drop keys typed before the address had changed, and the
  * browser limits how often a page may change its address. The text is read from the address again when that
  * changes otherwise (Back, Forward, "Clear all filters"). Each write also removes the `reset` parameters (the rows
- * shown: a new search starts from the first page).
+ * shown: a new search starts from the first page), and applies `also` for the text written, which reads any other
+ * parameter it needs from the current address (as `patch` builds on it), not from a render's.
  */
-export function useParamText(key: string, reset: readonly string[] = [], delay = 300) {
+export function useParamText(key: string, reset: readonly string[] = [], delay = 300, also?: (text: string) => ParamPatch) {
   const [params, patch] = useParamState();
   const inAddress = params.get(key) ?? '';
   const [text, setText] = useState(inAddress);
@@ -70,7 +71,7 @@ export function useParamText(key: string, reset: readonly string[] = [], delay =
     timer.current = undefined;
     if (v === written.current) return;
     written.current = v;
-    patch({ [key]: v, ...Object.fromEntries(reset.map((k) => [k, null])) });
+    patch({ [key]: v, ...Object.fromEntries(reset.map((k) => [k, null])), ...also?.(v) });
   };
   useEffect(() => {
     if (inAddress === written.current) return; // what this box wrote
@@ -94,6 +95,11 @@ export function useParamText(key: string, reset: readonly string[] = [], delay =
     /** Write now (the box lost focus, e.g. to a link in the results). */
     flush: () => {
       if (timer.current !== undefined) write(text);
+    },
+    /** Set the text and write it at once (a button that clears the search); a write still pending is dropped. */
+    setNow: (v: string) => {
+      setText(v);
+      write(v);
     },
   };
 }

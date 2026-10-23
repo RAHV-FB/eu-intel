@@ -53,6 +53,8 @@ export default function Mep() {
   useDocumentTitle(m ? m.name : isMissing(error) ? 'MEP not found' : 'MEP');
 
   const voteById = useMemo(() => new Map((votesIndex.data ?? []).map((v) => [v.id, v])), [votesIndex.data]);
+  // a vote's date and result while the vote list loads, or when it failed to: not "—", which means not recorded
+  const unknown = votesIndex.error ? <span className="muted">Not loaded</span> : <span className="muted">…</span>;
 
   if (loading) return <div className="container page"><Loading label="Loading MEP…" /></div>;
   if (isMissing(error)) return <NotFound what="MEP" />;
@@ -204,6 +206,14 @@ export default function Mep() {
           )
         ) : (
           <>
+            {votesIndex.error && (
+              <div style={{ marginBottom: 'var(--sp-3)' }}>
+                <ErrorState
+                  error={votesIndex.error}
+                  title="The titles, dates and results of these votes could not be loaded. Each vote’s own page has them; reloading this page may help."
+                />
+              </div>
+            )}
             <div className="table-wrap table-card">
               {/* Explicit roles: on phones the rows are laid out as cards (table--stack), not as table cells. */}
               <table className="table table--stack" role="table">
@@ -223,7 +233,7 @@ export default function Mep() {
                       <tr key={b.vote_id} role="row">
                         <td className="nowrap" role="cell">
                           <StackLabel>Date</StackLabel>
-                          {v ? formatDate(v.date) : '—'}
+                          {v ? formatDate(v.date) : votesIndex.data ? '—' : unknown}
                         </td>
                         <td className="stack-title" role="cell">
                           <RowTitle to={`/votes/${encodeURIComponent(b.vote_id)}`}>{v ? <VoteTitle v={v} /> : `Vote ${b.vote_id}`}</RowTitle>
@@ -235,7 +245,7 @@ export default function Mep() {
                         </td>
                         <td className="nowrap" role="cell">
                           <StackLabel>Result</StackLabel>
-                          {v ? (v.outcome === 'adopted' ? 'Adopted' : v.outcome === 'rejected' ? 'Rejected' : v.outcome === 'lapsed' ? 'Lapsed' : '—') : '—'}
+                          {v ? (v.outcome === 'adopted' ? 'Adopted' : v.outcome === 'rejected' ? 'Rejected' : v.outcome === 'lapsed' ? 'Lapsed' : '—') : votesIndex.data ? '—' : unknown}
                         </td>
                       </tr>
                     );

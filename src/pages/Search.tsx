@@ -5,8 +5,10 @@ import { isIdentifier, loadSearch, similarWords, type SearchEngine, type SearchH
 import { useData } from '../lib/data';
 import { legislationScope } from '../lib/scope';
 import { formatDate, formatNumber } from '../lib/format';
-import { approximateNote, kindLabel } from '../components/SearchBox';
+import { useParamState } from '../lib/urlState';
+import { PAGE_PLACEHOLDERS, approximateNote, kindLabel } from '../components/SearchBox';
 import { EmptyState, ErrorState, Loading } from '../components/ui';
+import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 import { useDocumentTitle } from '../features/legislation/labels';
 import '../features/legislation/common.css';
 import '../features/legislation/search.css';
@@ -72,8 +74,7 @@ function VotesLink({ q }: { q: string }) {
   );
 }
 
-function GroupSection({ g, hits, q }: { g: Group; hits: SearchHit[]; q: string }) {
-  const [all, setAll] = useState(false);
+function GroupSection({ g, hits, q, all, onToggle }: { g: Group; hits: SearchHit[]; q: string; all: boolean; onToggle: () => void }) {
   const listId = useId();
   const shown = all ? hits : hits.slice(0, PER_GROUP);
   const mixed = new Set(hits.map((h) => h.doc.k)).size > 1;
@@ -90,7 +91,7 @@ function GroupSection({ g, hits, q }: { g: Group; hits: SearchHit[]; q: string }
       </ol>
       <div className="sr-group__foot">
         {hits.length > PER_GROUP && (
-          <button type="button" className="lx-linkbtn" aria-expanded={all} aria-controls={listId} onClick={() => setAll((a) => !a)}>
+          <button type="button" className="lx-linkbtn" aria-expanded={all} aria-controls={listId} onClick={onToggle}>
             {all ? 'Show fewer' : `Show all ${formatNumber(hits.length)} ${g.label.toLowerCase()} results`}
           </button>
         )}
@@ -104,17 +105,37 @@ function GroupSection({ g, hits, q }: { g: Group; hits: SearchHit[]; q: string }
   );
 }
 
+/** The search engine once loaded, so that a page opened again (Back from a result) renders its results at once and
+ * the browser can restore the reader's place in them. */
+let loadedEngine: SearchEngine | null = null;
+
 export default function Search() {
-  const [params, setParams] = useSearchParams();
+  const [, setParams] = useSearchParams();
+  // the groups opened with "Show all" (all=legislation,people) are kept in the address, so that Back from a result
+  // returns to the same list; a new search starts with them closed
+  const [params, patch] = useParamState();
   const q = (params.get('q') ?? '').slice(0, 200);
+  const opened = new Set((params.get('all') ?? '').split(',').filter(Boolean));
+  const toggleAll = (id: string) => {
+    const next = new Set(new URLSearchParams(window.location.search).get('all')?.split(',').filter(Boolean));
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    patch({ all: [...next].join(',') });
+  };
   const [input, setInput] = useState(q);
   useEffect(() => setInput(q), [q]);
   useDocumentTitle(q ? `Search: ${q}` : 'Search');
 
-  const [engine, setEngine] = useState<SearchEngine | null>(null);
+  const [engine, setEngine] = useState<SearchEngine | null>(loadedEngine);
   const [error, setError] = useState<Error | null>(null);
   useEffect(() => {
-    loadSearch().then(setEngine, (e: Error) => setError(e));
+    loadSearch().then(
+      (e) => {
+        loadedEngine = e;
+        setEngine(e);
+      },
+      (e: Error) => setError(e),
+    );
   }, []);
   const meta = useData<Meta>('meta.json');
 
@@ -149,6 +170,7 @@ export default function Search() {
     setParams(v ? { q: v } : {});
   };
   const inputId = useId();
+  const [placeholder, inputRef] = useFittingPlaceholder(PAGE_PLACEHOLDERS);
 
   return (
     <div className="container page sr">
@@ -161,11 +183,12 @@ export default function Search() {
           </label>
           <input
             id={inputId}
+            ref={inputRef}
             className="input lx-input sr-form__input"
             type="search"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Search a law, topic, MEP, party or country…"
+            placeholder={placeholder}
             autoComplete="off"
             spellCheck={false}
           />
@@ -178,9 +201,21 @@ export default function Search() {
       {error && <ErrorState error={error} title="The search index could not be loaded" />}
       {!error && !engine && q && <Loading label="Searching…" />}
 
+      {/* one status region for every query, whatever its result count, so that each new search is announced (a
+          region added together with its text, or removed, is not); the summary below says more */}
+      {!error && q.trim() && (
+        <p className="visually-hidden" role="status">
+          {engine &&
+            (total > 0
+              ? `${formatNumber(total)} result${total === 1 ? '' : 's'} for “${q}”` +
+                (approx.length === total ? ', none exact' : wholeCount === 0 && partialCount > 0 ? ', none on whole words' : '')
+              : `No results for “${q}”`)}
+        </p>
+      )}
+
       {engine && q.trim() && total > 0 && (
         <>
-          <p className="sr-summary" role="status">
+          <p className="sr-summary">
             {formatNumber(total)} result{total === 1 ? '' : 's'}
             {total >= 1000 ? ' (showing the best 1,000)' : ''}
             {partialCount > 0 && wholeCount === 0 && startCount === partialCount && (
@@ -235,7 +270,7 @@ export default function Search() {
             </ul>
           </nav>
           {grouped.map(({ g, hits }) => (
-            <GroupSection key={`${g.id}:${q}`} g={g} hits={hits} q={q} />
+            <GroupSection key={`${g.id}:${q}`} g={g} hits={hits} q={q} all={opened.has(g.id)} onToggle={() => toggleAll(g.id)} />
           ))}
           <VotesLink q={q.trim()} />
         </>

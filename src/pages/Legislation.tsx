@@ -1,13 +1,15 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { DossierSummary, LegalInstrument, Meta, Topic } from '../types/data';
 import { useData, DATA_BASE } from '../lib/data';
 import { formatNumber } from '../lib/format';
 import { legislationScope } from '../lib/scope';
 import { loadSearch, similarWords, type SearchEngine } from '../lib/search';
 import { useWatchlist } from '../lib/watchlist';
+import { clearAllParams, useParamState, useParamText, type ParamPatch } from '../lib/urlState';
 import { EmptyState, ErrorState, Loading, PageHeader } from '../components/ui';
 import { useMediaQuery } from '../components/useMediaQuery';
+import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 import {
   INSTRUMENT_LABEL,
   STAGE_GROUPS,
@@ -38,9 +40,23 @@ import '../features/legislation/legislation.css';
 
 const INSTRUMENTS: LegalInstrument[] = ['regulation', 'directive', 'decision', 'recommendation', 'other'];
 const NO_TOPIC_LABEL = 'No topic assigned';
+// longest first: the longest that fits the field is shown, so that phones keep a reference-format example
+const Q_PLACEHOLDERS = [
+  'e.g. artificial intelligence, 2021/0106(COD), 32024R1689',
+  'e.g. AI Act, 2021/0106(COD), 32024R1689',
+  'e.g. AI Act, 2021/0106(COD)',
+  'e.g. 2021/0106(COD)',
+];
+
+/** Emptying the keyword box drops "Best match", the natural order only while there is a query (read from the address
+ * at the time of writing, like every other parameter). */
+const dropRelevance = (q: string): ParamPatch =>
+  !q.trim() && new URLSearchParams(window.location.search).get('sort') === 'relevance' ? { sort: null } : {};
 
 export default function Legislation() {
-  const [params, setParams] = useSearchParams();
+  // filters, order and rows shown are kept in the address; each change builds on the current address, so that a
+  // filter chosen just after typing (before the keyword is written) is not undone by the keyword's write
+  const [params, patch] = useParamState();
   const state = useMemo(() => readState(params), [params]);
   const index = useData<DossierSummary[]>('dossiers/index.json');
   const topicsData = useData<Topic[]>('topics.json');
@@ -59,41 +75,13 @@ export default function Legislation() {
   const narrow = useMediaQuery('(max-width: 39.99rem)');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // ---- URL updates
-  const update = (patch: Partial<Record<keyof ExplorerState, string | null>>, opts: { keepShow?: boolean; replace?: boolean } = {}) => {
-    const next = new URLSearchParams(params);
-    for (const [k, v] of Object.entries(patch)) {
-      if (v == null || v === '') next.delete(k);
-      else next.set(k, v);
-    }
-    if (!opts.keepShow && !('show' in patch)) next.delete('show');
-    setParams(next, { replace: opts.replace ?? false });
-  };
+  // ---- URL updates (a new filter or order starts from the first page)
+  const update = (p: Partial<Record<keyof ExplorerState, string | null>>, opts: { keepShow?: boolean } = {}) =>
+    patch({ ...p, ...(opts.keepShow || 'show' in p ? {} : { show: null }) });
 
-  // ---- keyword input: local state, debounced into the URL
-  const [qInput, setQInput] = useState(state.q);
-  const lastWritten = useRef(state.q);
-  useEffect(() => {
-    if (state.q !== lastWritten.current) {
-      lastWritten.current = state.q;
-      setQInput(state.q);
-    }
-  }, [state.q]);
-  useEffect(() => {
-    if (qInput === lastWritten.current) return;
-    const t = setTimeout(() => {
-      lastWritten.current = qInput;
-      const next = new URLSearchParams(params);
-      if (qInput.trim()) next.set('q', qInput);
-      else next.delete('q');
-      // switching between "has a query" and "no query" changes the natural default sort
-      if (next.get('sort') === 'relevance' && !qInput.trim()) next.delete('sort');
-      next.delete('show');
-      setParams(next, { replace: true });
-    }, 250);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qInput]);
+  // ---- keyword input: its own text, written to the address after a pause in typing and when it loses focus
+  const qBox = useParamText('q', ['show'], 250, dropRelevance);
+  const [qPlaceholder, qRef] = useFittingPlaceholder(Q_PLACEHOLDERS);
 
   // ---- search engine for ranking (loaded only when there is a query)
   const [engine, setEngine] = useState<SearchEngine | null>(null);
@@ -182,7 +170,7 @@ export default function Legislation() {
   };
 
   const chips: { key: string; label: string; clear: () => void }[] = [];
-  if (hasQuery) chips.push({ key: 'q', label: `“${state.q.trim()}”`, clear: () => { setQInput(''); update({ q: null, sort: state.sort === 'relevance' ? null : state.sort }); } });
+  if (hasQuery) chips.push({ key: 'q', label: `“${state.q.trim()}”`, clear: () => qBox.setNow('') });
   if (state.topic) chips.push({ key: 'topic', label: `Topic: ${topicLabel(state.topic)}`, clear: () => update({ topic: null }) });
   if (state.stage) chips.push({ key: 'stage', label: `Status: ${stageFilterLabel(state.stage)}`, clear: () => update({ stage: null }) });
   if (state.type) chips.push({ key: 'type', label: `Procedure: ${typeLabels.find(([t]) => t === state.type)?.[1] ?? state.type}`, clear: () => update({ type: null }) });
@@ -191,9 +179,8 @@ export default function Legislation() {
   if (state.blocked) chips.push({ key: 'blocked', label: 'Officially blocked', clear: () => update({ blocked: null }) });
 
   const clearAll = () => {
-    setQInput('');
-    lastWritten.current = '';
-    setParams(new URLSearchParams(), { replace: false });
+    qBox.setNow('');
+    patch(clearAllParams());
   };
 
   return (
@@ -226,13 +213,15 @@ export default function Legislation() {
           <label htmlFor={`${ids}-q`}>Keyword, title or reference</label>
           <input
             id={`${ids}-q`}
+            ref={qRef}
             className="input lx-input"
             type="search"
-            value={qInput}
-            placeholder="e.g. artificial intelligence, 2021/0106(COD), 32024R1689"
+            value={qBox.value}
+            placeholder={qPlaceholder}
             autoComplete="off"
             spellCheck={false}
-            onChange={(e) => setQInput(e.target.value)}
+            onChange={(e) => qBox.set(e.target.value)}
+            onBlur={qBox.flush}
           />
         </div>
         {narrow && (
@@ -500,7 +489,7 @@ export default function Legislation() {
                     className="btn"
                     onClick={() => {
                       focusFrom.current = visible.length;
-                      update({ show: String(state.show + PAGE_SIZE * 2) }, { keepShow: true, replace: true });
+                      update({ show: String(state.show + PAGE_SIZE * 2) }, { keepShow: true });
                     }}
                   >
                     Show {formatNumber(Math.min(PAGE_SIZE * 2, sorted.length - visible.length))} more

@@ -72,6 +72,9 @@ export default function Group() {
       .sort((a, b) => (a.sort || a.name).localeCompare(b.sort || b.name));
   }, [g, meps.data]);
 
+  // a vote's date while the vote list loads, or when it failed to: not "—", which means not recorded
+  const unknown = votesIndex.error ? <span className="muted">Not loaded</span> : <span className="muted">…</span>;
+
   if (loading) return <div className="container page"><Loading label="Loading group…" /></div>;
   if (isMissing(error)) return <NotFound what="political group" />;
   if (error || !g) return <div className="container page"><ErrorState error={error} title="This group could not be loaded" /></div>;
@@ -222,14 +225,24 @@ export default function Group() {
         ) : meps.loading ? (
           <Loading label="Loading member names…" />
         ) : (
-          <ul className="member-grid">
-            {members.map((m) => (
-              <li key={m.id}>
-                <Link to={`/people/meps/${encodeURIComponent(m.id)}`}>{m.name}</Link>
-                {m.country && <span className="meta">{countryName(m.country)}</span>}
-              </li>
-            ))}
-          </ul>
+          <>
+            {meps.error && (
+              <div style={{ marginBottom: 'var(--sp-3)' }}>
+                <ErrorState
+                  error={meps.error}
+                  title="The members’ names could not be loaded, so they are listed by their Parliament identifier. Reloading this page may help."
+                />
+              </div>
+            )}
+            <ul className="member-grid">
+              {members.map((m) => (
+                <li key={m.id}>
+                  <Link to={`/people/meps/${encodeURIComponent(m.id)}`}>{m.name}</Link>
+                  {m.country && <span className="meta">{countryName(m.country)}</span>}
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
 
@@ -252,6 +265,14 @@ export default function Group() {
           </EmptyState>
         ) : (
           <>
+            {votesIndex.error && (
+              <div style={{ marginBottom: 'var(--sp-3)' }}>
+                <ErrorState
+                  error={votesIndex.error}
+                  title="The titles and dates of these votes could not be loaded. Each vote’s own page has them; reloading this page may help."
+                />
+              </div>
+            )}
             <div className="table-wrap table-card">
               <table className="table table--clamp">
                 <caption className="visually-hidden">Group members’ recorded votes. Select a column heading to sort.</caption>
@@ -287,9 +308,9 @@ export default function Group() {
                 <tbody>
                   {vs.sorted.slice(0, shown).map((r) => (
                     <tr key={r.vote_id}>
-                      <td className="nowrap hide-narrow">{r.v ? formatDate(r.v.date) : '—'}</td>
+                      <td className="nowrap hide-narrow">{r.v ? formatDate(r.v.date) : votesIndex.data ? '—' : unknown}</td>
                       <td className="gv-vote">
-                        <span className="only-narrow meta">{r.v ? formatDate(r.v.date) : '—'}</span>
+                        <span className="only-narrow meta">{r.v ? formatDate(r.v.date) : votesIndex.data ? '—' : unknown}</span>
                         <RowTitle to={`/votes/${encodeURIComponent(r.vote_id)}`}>{r.v ? <VoteTitle v={r.v} /> : `Vote ${r.vote_id}`}</RowTitle>
                         <MiniBar c={r.counts} />
                         <span className="only-narrow meta">

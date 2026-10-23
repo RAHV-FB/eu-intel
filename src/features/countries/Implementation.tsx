@@ -7,7 +7,7 @@ import { dossierScores, loadSearch, type SearchEngine } from '../../lib/search';
 import { EmptyState, ExtLink, Term } from '../../components/ui';
 import { EURLEX_CELEX, TRANSPOSITION_LABEL, dossierPath } from '../legislation/labels';
 import { SortTh, useSortable } from '../votes/sortable';
-import { matchDirectives, queryNumber } from './directiveSearch';
+import { matchCases, matchDirectives, queryNumber } from './directiveSearch';
 import './countries.css';
 
 const T_ORDER: TranspositionStatus[] = [
@@ -211,7 +211,9 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
 
 const STATUS_LABEL: Record<InfringementInfo['status'], string> = { open: 'Open', closed: 'Closed', unknown: 'Status not recorded' };
 
-export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
+const NO_DIRECTIVES: TRow[] = [];
+
+export function InfringementTable({ rows, directives = NO_DIRECTIVES }: { rows: InfringementInfo[]; directives?: TRow[] }) {
   // kept in the address (inf-…) like the directives' filters; open cases are the default, "all" is inf-status=all
   const [params, patch] = useParamState();
   const rawStatus = params.get('inf-status') ?? 'open';
@@ -226,15 +228,12 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
     return m;
   }, [rows]);
   const hasNonComm = rows.some((r) => r.non_communication);
-  const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return rows.filter(
-      (r) =>
-        (!status || r.status === status) &&
-        (!nonComm || r.non_communication) &&
-        (!needle || `${r.title} ${r.id} ${r.celex ?? ''}`.toLowerCase().includes(needle)),
-    );
-  }, [rows, status, nonComm, q]);
+  // whole words, and the number and names of the directive a case concerns, as in the directive search above
+  const match = useMemo(
+    () => matchCases(rows.filter((r) => (!status || r.status === status) && (!nonComm || r.non_communication)), q, directives),
+    [rows, status, nonComm, q, directives],
+  );
+  const filtered = match.rows;
   const { sorted, sort, toggle } = useSortable<InfringementInfo, 'id' | 'date' | 'stage'>(
     filtered,
     { id: (r) => r.id, date: (r) => r.latest_decision_date ?? null, stage: (r) => r.latest_stage ?? null },
@@ -275,7 +274,14 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
       </form>
       <p className="results-bar__count" aria-live="polite" style={{ marginBottom: 'var(--sp-2)' }}>
         {formatNumber(filtered.length)} {filtered.length === 1 ? 'case' : 'cases'}
+        {match.partial && filtered.length > 0 && <> · no whole-word matches for “{q.trim()}”, so these have words that start with it</>}
       </p>
+      {filtered.length === 0 && q.trim() && (
+        <p className="meta">
+          No case {status ? 'with this status' : 'in this list'} matches “{q.trim()}”. Cases are found by their subject and number, and by
+          the number or name of the directive they concern (for example <span className="mono">2022/2555</span> or NIS 2).
+        </p>
+      )}
       {filtered.length > 0 && (
         <div className="table-wrap table-card">
           <table className="table">

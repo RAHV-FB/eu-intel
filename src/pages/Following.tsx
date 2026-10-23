@@ -263,10 +263,23 @@ export default function Following() {
           and when you last viewed it, and the status you last saw. It is never sent to us or anyone else: this site has no
           server, accounts, cookies or analytics. See the <Link to="/privacy">privacy notice</Link>.
         </p>
-        <p>
-          <strong>No notifications.</strong> Come back to this page to see what changed. Clearing your browser data, or “Clear
-          all” below, removes the list. To use it on another device, copy the share link.
-        </p>
+        {/* only the controls this view shows: "Clear all" and the share link come with a list of one's own */}
+        {shared ? (
+          <p>
+            <strong>No notifications.</strong> The files you follow yourself are under “View my own list”: come back to it to see
+            what changed. Clearing your browser data removes that list.
+          </p>
+        ) : ids.length > 0 ? (
+          <p>
+            <strong>No notifications.</strong> Come back to this page to see what changed. Clearing your browser data, or “Clear
+            all” below, removes the list. To use it on another device, copy the share link below.
+          </p>
+        ) : (
+          <p>
+            <strong>No notifications.</strong> Come back to this page to see what changed. Clearing your browser data removes the
+            list. Once you follow a file, a link to share the list or use it on another device appears here.
+          </p>
+        )}
         {!canStore && (
           <p role={writeFailed ? 'alert' : undefined}>
             <strong>Your browser is blocking local storage</strong>, so a list cannot be saved here. Share links still work.
