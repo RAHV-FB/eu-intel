@@ -68,11 +68,17 @@ export function transpositionDates(app: ApplicationInfo | null | undefined): Tra
 
 type DateItem = { date: ISODate; note?: string };
 
+/** " (it refers to Art. 99)": the articles EUR-Lex refers to for an application date it gives as not recorded. */
+function refersTo(articles: string[]): string {
+  return articles.length ? ` (it refers to ${articles.join(', ')})` : '';
+}
+
 export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; today: ISODate; instrument?: string | null }) {
   const rows: { label: React.ReactNode; items: DateItem[]; text?: string }[] = [];
   const plain = (ds: ISODate[]) => [...new Set(ds)].sort().map((date) => ({ date }));
+  // an application date's exceptions in the directive's text follow its article (CSDDD, Art. 37(1): Article 16 later)
   const withArticles = (xs: TranspositionDateInfo[]) =>
-    xs.map((x) => ({ date: x.date, note: x.articles.length ? x.articles.join(', ') : undefined }));
+    xs.map((x) => ({ date: x.date, note: [x.articles.join(', '), x.exceptions].filter(Boolean).join('. ') || undefined }));
   if (app.entry_into_force)
     rows.push({
       label: (
@@ -94,23 +100,33 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
       items: [],
       text: 'On notification to those to whom the decision is addressed, according to EUR-Lex, which does not record the date of notification.',
     });
+  // EUR-Lex gives the date from which the act in general, or some provisions, apply as not recorded (ETIAS, Regulation
+  // (EU) 2018/1240, Art. 96: "from the date determined by the Commission"): never shown as applying from entry into force
+  const unrecorded = (partial: boolean) => app.application_unrecorded?.find((x) => x.partial === partial);
+  const noGeneral = unrecorded(false);
+  const noPartial = unrecorded(true);
   if (app.application_detail?.length) {
     const general = app.application_detail.filter((x) => !x.partial);
     const partial = app.application_detail.filter((x) => x.partial);
     const items = (xs: typeof general) => xs.map((x) => ({ date: x.date, note: x.provisions ?? undefined }));
     if (general.length) rows.push({ label: 'Rules apply from', items: items(general) });
     if (partial.length) rows.push({ label: 'Some provisions apply from', items: items(partial) });
-  } else if (app.application_dates.length || app.partial_on_entry_into_force) {
+  } else if (app.application_dates.length || app.partial_on_entry_into_force || noGeneral || noPartial) {
     const partialSet = new Set(app.partial_application_dates ?? []);
     const general = app.application_dates.filter((d) => !partialSet.has(d));
     const partial = app.application_dates.filter((d) => partialSet.has(d));
     // EUR-Lex marks the entry-into-force date too: some provisions apply from it
     const onEif = app.partial_on_entry_into_force && app.entry_into_force ? [{ date: app.entry_into_force, note: 'On entry into force' }] : [];
     if (general.length) rows.push({ label: general.length > 1 ? 'Rules apply (in phases) from' : 'Rules apply from', items: plain(general) });
-    if (partial.length || onEif.length) rows.push({ label: 'Some provisions apply from', items: [...onEif, ...plain(partial)] });
-    // EUR-Lex records the entry into force for some provisions and no date for the others (Regulation (EU) 2025/12,
-    // Art. 46: from two years after the router starts operations, as the Commission determines)
-    if (onEif.length && !app.application_dates.length)
+    else if (noGeneral) rows.push({ label: 'Rules apply from', items: [], text: `Not recorded: EUR-Lex gives no date${refersTo(noGeneral.articles)}.` });
+    if (partial.length || onEif.length || noPartial)
+      rows.push({
+        label: 'Some provisions apply from',
+        items: [...onEif, ...plain(partial)],
+        text: noPartial ? `EUR-Lex gives no date for some provisions${refersTo(noPartial.articles)}.` : undefined,
+      });
+    // EUR-Lex records the entry into force for some provisions and no date for the others
+    if (onEif.length && !app.application_dates.length && !noGeneral)
       rows.push({ label: 'Other provisions apply from', items: [], text: 'Not recorded: EUR-Lex gives no date.' });
   }
   const tr = transpositionDates(app);
@@ -328,8 +344,8 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
                 </p>
                 <p className="dz-fact__text">
                   {latest.title}
-                  {institutionSuffix(latest.title, latest.institution) && (
-                    <span className="meta"> ({institutionSuffix(latest.title, latest.institution)})</span>
+                  {institutionSuffix(latest.title, latest.institution, latest.kind) && (
+                    <span className="meta"> ({institutionSuffix(latest.title, latest.institution, latest.kind)})</span>
                   )}
                 </p>
                 <SourceLink source={latest.source} />

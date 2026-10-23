@@ -234,6 +234,7 @@ const STEP_TENSES: [string, string][] = [
   ['Starts to apply', 'Started to apply'],
   ['Some provisions start to apply', 'Some provisions started to apply'],
   ['Further provisions start to apply', 'Further provisions started to apply'],
+  ['Rules start to apply', 'Rules started to apply'],
 ];
 const DEADLINE_TITLE = /^(Deadline for Member States to transpose the directive|Transposition deadline for specific provisions\b.*?)( \(passed\))?$/;
 

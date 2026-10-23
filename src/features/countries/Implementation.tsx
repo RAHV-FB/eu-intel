@@ -165,7 +165,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                     {/* phones: the deadline and status columns are hidden and shown here */}
                     <span className="only-narrow impl-dir__more">
                       <TranspositionStatusLabel status={r.status} />
-                      {r.status_note && <span className="meta" style={{ display: 'block' }}>{r.status_note}</span>}
+                      {r.status_note && <StatusNote r={r} />}
                       <span className="meta" style={{ display: 'block' }}>
                         Deadline: {r.deadline ? formatDate(r.deadline) : 'not recorded'}
                       </span>
@@ -186,8 +186,9 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                   </td>
                   <td className="hide-narrow">
                     <TranspositionStatusLabel status={r.status} />
-                    {/* the exemption's provision and condition (Directive (EU) 2016/798, Art. 33(4)) */}
-                    {r.status_note && <span className="meta" style={{ display: 'block' }}>{r.status_note}</span>}
+                    {/* the exemption's provision and condition (Directive (EU) 2016/798, Art. 33(4)), or Denmark's
+                        position on a directive building upon the Schengen acquis (Protocol No 22, Art. 4) */}
+                    {r.status_note && <StatusNote r={r} />}
                   </td>
                 </tr>
               ))}
@@ -206,6 +207,21 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
         </div>
       )}
     </div>
+  );
+}
+
+/** A row's status note, with the document it rests on when there is one (Denmark's notification to the Council). */
+function StatusNote({ r }: { r: { status_note?: string | null; status_note_url?: string | null } }) {
+  return (
+    <span className="meta" style={{ display: 'block' }}>
+      {r.status_note}
+      {r.status_note_url && (
+        <>
+          {' '}
+          <ExtLink href={r.status_note_url}>Notification</ExtLink>
+        </>
+      )}
+    </span>
   );
 }
 

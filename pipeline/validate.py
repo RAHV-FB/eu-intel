@@ -20,7 +20,7 @@ import re
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +36,14 @@ MIN_DATE = {("implementation", "measures"): "1800-01-01"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 REF_RE = re.compile(r"^(\d{4})/(\d{4})\(([A-Z]{3})\)$")
 CELEX_TYPE = {"R": "regulation", "L": "directive", "D": "decision", "H": "recommendation"}
+# an act cited in a title by its type and number: "Directive 2014/90/EU", "Regulation (EU) 2024/1689", "Regulations
+# (EC) No 300/2008, (EU) No 167/2013 and ...", "Council Framework Decisions 2002/584/JHA, 2003/577/JHA" (each number
+# takes the type word before it)
+CITED_TYPE_RE = re.compile(r"\b(Framework Decision|Regulation|Directive|Decision)s?\b")
+CITED_NUMBER_RE = re.compile(
+    r"\bNo (?P<n1>\d{1,4})/(?P<y1>\d{4})\b|\b(?P<y2>\d{4})/(?P<n2>\d{1,4})/(?:EU|EC|EEC|JHA|CFSP)\b|\) (?P<y3>\d{4})/(?P<n3>\d{1,4})\b"
+)
+CELEX_CITED_TYPE = {"R": "Regulation", "L": "Directive", "D": "Decision", "F": "Framework Decision"}
 MAX_SITTING = 751  # Members of the European Parliament (Article 14(2) TEU)
 MAX_NOT_SITTING = 0.05  # share of MEPs with an open political-group membership allowed not to be marked sitting
 PUBLIC_FILES = [
@@ -58,6 +66,7 @@ FILES: list[tuple[str, str, str, Callable[[Any], Any] | None]] = [
     ("implementation", "indicators", "CountryIndicator", lambda r: (r.country, r.indicator, r.period)),
     ("implementation", "coverage", "ImplementationCoverage", lambda r: r.celex),
     ("train", "files", "TrainFile", lambda r: r.url),
+    ("optouts", "directives", "DirectiveOptOut", lambda r: r.celex),
 ]
 
 
@@ -97,6 +106,21 @@ class Report:
         status = "FAILED" if self.errors else "OK"
         n_warn = sum(len(v) for v in self.warnings.values())
         print(f"validate: {status} — {len(self.errors)} errors, {n_warn} warnings", file=out)
+
+
+def cited_acts(title: str) -> dict[tuple[int, int], set[str]]:
+    """(year, number) -> the types under which a title cites an act with that number."""
+    marks = sorted([(m.start(), m) for m in CITED_TYPE_RE.finditer(title)] +
+                   [(m.start(), m) for m in CITED_NUMBER_RE.finditer(title)], key=lambda x: x[0])  # fmt: skip
+    out: dict[tuple[int, int], set[str]] = defaultdict(set)
+    kind = None
+    for _, m in marks:
+        if m.re is CITED_TYPE_RE:
+            kind = m.group(1)
+        elif kind:
+            y, n = next((m.group(f"y{i}"), m.group(f"n{i}")) for i in (1, 2, 3) if m.group(f"y{i}"))
+            out[(int(y), int(n))].add(kind)
+    return out
 
 
 def _valid_date(s: str) -> bool:
@@ -210,9 +234,15 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
     votes = {v.id: v for v in data.get(("ep_votes", "votes"), [])}
     ballots = data.get(("ep_votes", "ballots"), [])
     acts = {a.celex: a for a in data.get(("eurlex", "acts"), [])}
+    from pipeline.analysis.transposition import article_label, general_deadline_basis
     from pipeline.analysis.transposition import classify as classify_transposition
-    from pipeline.analysis.transposition import general_deadline_basis
-    from pipeline.build import apply_transposition_checks, load_act_dates, load_transposition_checks
+    from pipeline.build import (
+        apply_transposition_checks,
+        load_act_dates,
+        load_act_relations,
+        load_denmark_schengen,
+        load_transposition_checks,
+    )
 
     act_dates = load_act_dates()  # curated, checked corrections of act dates
     tr_checks = load_transposition_checks()  # curated, checked general transposition deadlines
@@ -297,7 +327,36 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
             if procs and r not in proc_refs:
                 rep.warn("ref-procedure", f"vote {v.id}: procedure {r} not in procedures.json")
     # acts
+    relation_fixes = {(f["act"], f["replace"]) for f in load_act_relations()}  # curated, checked amendment links
+    for f in load_act_relations():
+        if f["act"] in acts and f["replace"] not in acts[f["act"]].amends:
+            rep.warn("act-relation-stale", f"{f['act']}: data/curated/act_relations.yaml replaces its link to "
+                     f"{f['replace']}, which EUR-Lex no longer records")  # fmt: skip
+    # Denmark decides under Protocol No 22, Art. 4, whether to implement a directive building upon the Schengen acquis
+    # (its recitals: optouts schengen_art4); its decision, notified to the Council, is recorded once checked
+    optouts = {r.celex: r for r in data.get(("optouts", "directives"), [])}
+    decisions = load_denmark_schengen()
+    for c in sorted(decisions):
+        if c in optouts and "DK" not in optouts[c].schengen_art4:
+            rep.warn("denmark-schengen-stale", f"{c}: data/curated/denmark_schengen.yaml records Denmark's decision, "
+                     "but the directive's recitals as read do not say that Denmark decides under Protocol No 22, Art. 4")  # fmt: skip
+    for r in optouts.values():
+        if "DK" in r.schengen_art4 and r.celex not in decisions:
+            rep.warn("denmark-schengen-unchecked", f"{r.celex}: Denmark decides under Protocol No 22, Art. 4, whether to "
+                     "implement it; record its decision, once notified, in data/curated/denmark_schengen.yaml")  # fmt: skip
     for a in acts.values():
+        # Cellar links the act to an act whose number its title cites under another type only (the AI Act, 32024R1689,
+        # to Implementing Regulation (EU) No 90/2014, 32014R0090, for Directive 2014/90/EU): check the text and
+        # correct the link in data/curated/act_relations.yaml
+        cited = cited_acts(a.title)
+        for c in a.amends:
+            cm = re.fullmatch(r"3(\d{4})([RLDF])(\d{4})", c)
+            if not cm:
+                continue
+            kind, key = CELEX_CITED_TYPE[cm.group(2)], (int(cm.group(1)), int(cm.group(3)))
+            if cited.get(key) and kind not in cited[key] and (a.celex, c) not in relation_fixes:
+                rep.warn("amends-link-type", f"{a.celex}: EUR-Lex links it as amending {c}, but its title cites "
+                         f"{'/'.join(sorted(cited[key]))} {key[0]}/{key[1]}, not a {kind.lower()}")  # fmt: skip
         m = re.match(r"^\d(\d{4})([A-Z])", a.celex)
         if m and CELEX_TYPE.get(m.group(2)) and CELEX_TYPE[m.group(2)] != a.act_type:
             rep.warn("act-type", f"{a.celex}: act_type {a.act_type} but CELEX type letter {m.group(2)}")
@@ -332,6 +391,24 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
             elif a.act_type == "regulation" and a.date_publication and eif < a.date_publication:
                 rep.warn("entry-into-force-before-act", f"{a.celex}: regulation enters into force {eif}, before "
                          f"its publication ({a.date_publication}); check the act's text")  # fmt: skip
+        # Cellar's own rule for the date ("DATPUB +20": the twentieth day following publication) and the date it
+        # records disagree: one of them is wrong (32017D1324: 2017-08-08 for 18.7.2017 + 20 days; 32019R0503: "+20"
+        # where its Art. 8(1) says the day following publication). Check the act's text; record a wrong date, or
+        # that the date is right, in data/curated/act_dates.yaml.
+        n = a.entry_into_force_after_publication
+        if eif and n is not None and a.date_publication and a.celex not in act_dates:
+            expected = (date.fromisoformat(a.date_publication) + timedelta(days=n)).isoformat()
+            if eif != expected:
+                rep.warn("entry-into-force-rule", f"{a.celex}: enters into force {eif}, but EUR-Lex's rule (publication "
+                         f"{a.date_publication} + {n} days) gives {expected}; check the act's text")  # fmt: skip
+        # EUR-Lex gives the date from which the act in general applies as not recorded (1001-01-01): the act leaves it
+        # to a later decision, notice or event. Once the act's text and that decision are checked, record the date
+        # (or what the text provides) in data/curated/act_dates.yaml.
+        general = next((x for x in a.application_unrecorded if not x.partial), None)
+        if general and a.celex not in act_dates and a.in_force:
+            refers = f" (it refers to {', '.join(article_label(r) for r in general.articles)})" if general.articles else ""
+            rep.warn("application-not-recorded", f"{a.celex}: EUR-Lex records no date from which it applies in "
+                     f"general{refers}; check the act's text")  # fmt: skip
         # Several transposition deadlines whose general one neither the article references nor a check of the
         # text decides: the earliest is taken, which is wrong when it is a derogation for a few provisions
         # (Directive (EU) 2024/1640). Check the act's text and record it in data/curated/transposition.yaml.

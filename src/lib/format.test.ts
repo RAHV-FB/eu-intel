@@ -164,6 +164,9 @@ describe('dated statements on the visitor’s date', () => {
       'Transposition deadline for specific provisions (Art. 9(2), points (j) and (k)) (passed)',
     );
     expect(stepTitle('Enters into force; some provisions start to apply: Article 54', true)).toBe('Entered into force; some provisions started to apply: Article 54');
+    // the first date from which any of an act applies (PPWR, Regulation (EU) 2025/40, Art. 71)
+    expect(stepTitle('Rules start to apply (date recorded by EUR-Lex)', true)).toBe('Rules started to apply (date recorded by EUR-Lex)');
+    expect(stepTitle('Rules started to apply (date recorded by EUR-Lex)', false)).toBe('Rules start to apply (date recorded by EUR-Lex)');
     const vote = { id: 'v', kind: 'plenary_vote', date: '2026-11-21', state: 'done', title: 'Plenary vote' } as TimelineEvent;
     expect(eventOn(vote, '2026-01-01')).toBe(vote);
   });
@@ -205,6 +208,8 @@ const PAST = [
   /information updated as of/, /partial end of its validity on/,
   /which is dated/, /as the end of (?:its|the act's) validity/, /repealed this directive with effect from/, /started to apply on/,
   /repealed by .+ \(?with effect from/, /had until \d/,
+  // a rule for financial years (data/curated/transposition.yaml application_exceptions): true before and after the date
+  /are to apply for financial years starting on or after/,
 ];
 const isoOf = (long: string) => {
   const [day, month, year] = long.split(' ');

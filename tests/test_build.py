@@ -207,8 +207,9 @@ def test_timeline_marks_scheduled_dates_and_links_votes(out: Path):
     assert future and all(e["state"] == "scheduled" for e in future)
     assert all(e["state"] == "done" for e in tl if e["date"] <= TODAY)
     app = [e for e in tl if e["kind"] == "application"]
+    # the first date from which any of the act applies is not "further" (nothing applied before it)
     assert {e["title"] for e in app} == {
-        "Further provisions started to apply (date recorded by EUR-Lex)",
+        "Rules started to apply (date recorded by EUR-Lex)",
         "Further provisions start to apply (date recorded by EUR-Lex)",
     }
     pos = next(e for e in tl if e["kind"] == "ep_position")

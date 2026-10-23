@@ -16,7 +16,13 @@
 #   celex         the directive (sector-3 CELEX)
 #   deadline      the general transposition deadline; must be one of the dates EUR-Lex records for the act
 #   applies_from  optional; the general date from which the national measures apply, where Cellar's labels
-#                 cannot tell (one of the recorded dates)
+#                 cannot tell, or which application_exceptions qualify (one of the recorded dates)
+#   application_exceptions  optional, with applies_from: what the directive's text provides beside that date (a later
+#                 date for some measures), one sentence naming the provision, checked against the text. The next step
+#                 gives it after "The national measures are to apply from ...", and so do the application date's
+#                 timeline step and rows (Directive (EU) 2024/1760, Art. 37(1), as replaced by Directive (EU) 2026/470:
+#                 the measures for Article 16 apply for financial years starting on or after 1 January 2030, a date
+#                 EUR-Lex does not record). Never a transposition-deadline exception (that is `exceptions`)
 #   other         optional; recorded dates that are neither a transposition deadline nor a firm date from which
 #                 national measures apply (e.g. a conditional or optional date); shown neutrally as dates recorded
 #                 by EUR-Lex, and kept off the timeline
@@ -503,4 +509,20 @@
     exception of the measures necessary to comply with Article 1, point (21), of this Directive, only concerning
     Article 26b of Directive 2012/29/EU, which shall be adopted and published by 2 July 2030.
   source: {label: "Directive (EU) 2026/1472, Article 2", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L1472"}
+  reviewed: "2026-10-23"
+
+- celex: "32024L1760"  # Corporate Sustainability Due Diligence Directive, as amended by Directive (EU) 2026/470
+  deadline: "2028-07-26"
+  applies_from: "2029-07-26"
+  provision: "Art. 37(1), first subparagraph, as replaced by Directive (EU) 2026/470, Art. 4, point (22)"
+  quote: >-
+    Member States shall adopt and publish, by 26 July 2028, the laws, regulations and administrative provisions
+    necessary to comply with this Directive. [...] They shall apply those measures from 26 July 2029 with the
+    exception of the measures necessary to comply with Article 16, which Member States shall apply for financial
+    years starting on or after 1 January 2030.
+  application_exceptions: >-
+    The measures necessary to comply with Article 16 (reporting on these matters in an annual statement) are to
+    apply for financial years starting on or after 1 January 2030 (Art. 37(1), as replaced by Directive (EU)
+    2026/470, Art. 4, point (22)).
+  source: {label: "Directive (EU) 2026/470, Article 4, point (22)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L0470"}
   reviewed: "2026-10-23"

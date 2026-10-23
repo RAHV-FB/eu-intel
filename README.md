@@ -87,7 +87,8 @@ Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time
 pipeline/            Python data pipeline: sources/ (one module per official source), analysis/, build.py, validate.py
 data/snapshot/       committed, normalized source data (diff-friendly JSON) + _manifest.json
 data/curated/        editorial YAML: featured files, topics, search aliases, checked corrections of act dates
-                     (act_dates.yaml) and transposition deadlines (transposition.yaml)
+                     (act_dates.yaml), amendment links (act_relations.yaml) and transposition deadlines
+                     (transposition.yaml), Denmark's Schengen decisions (denmark_schengen.yaml)
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
 src/                 React app: pages/, features/, components/, lib/, types/data.ts (public data contract)
 scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py

@@ -74,6 +74,32 @@ def test_other_standard_wordings():
     assert not_bound(BY_OR_SUBJECT)[0] == ["IE"]
 
 
+# Directive (EU) 2023/977 (exchange of information between law enforcement authorities), recital 40, as plain_text
+# gives it from the Cellar XHTML of 2026-10-23 (a space before the comma after "acquis")
+SCHENGEN = (
+    "(40) In accordance with Articles 1 and 2 of Protocol No 22 on the position of Denmark, annexed to the TEU and to "
+    "the TFEU, Denmark is not taking part in the adoption of this Directive and is not bound by it or subject to its "
+    "application. Given that this Directive builds upon the Schengen acquis , Denmark shall, in accordance with "
+    "Article 4 of that Protocol, decide within a period of six months after the Council has decided on this Directive "
+    "whether it will implement it in its national law. (41) Ireland is taking part in this Directive"
+)
+
+
+def test_a_directive_building_upon_the_schengen_acquis_lets_denmark_decide():
+    """Denmark is not bound by Directive (EU) 2023/977, but decides under Protocol No 22, Art. 4, whether to implement
+    it (it notified the Council on 9 November 2023 that it would: ST 15298/23); the row showed only "Not bound", next to
+    a Commission case for its not transposing the directive."""
+    from pipeline.sources.optouts import schengen_art4
+
+    assert not_bound(SCHENGEN)[0] == ["DK"]
+    assert schengen_art4(SCHENGEN) == (
+        "Given that this Directive builds upon the Schengen acquis, Denmark shall, in accordance with Article 4 of that "
+        "Protocol, decide within a period of six months after the Council has decided on this Directive whether it will "
+        "implement it in its national law."
+    )
+    assert schengen_art4(BLUE_CARD) is None and schengen_art4(THEREFORE) is None
+
+
 def test_opt_ins_after_adoption():
     from pipeline.sources.optouts import opt_ins
 

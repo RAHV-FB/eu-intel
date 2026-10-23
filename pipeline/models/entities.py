@@ -178,6 +178,9 @@ class DirectiveOptOut(Model):
     # countries that took part after adoption (Protocol No 21, Article 4): country -> CELEX of the Commission
     # decision confirming the participation, e.g. {"IE": "32024D2087"} for Directive (EU) 2024/1346
     opted_in: dict[str, str] = Field(default_factory=dict)
+    # countries the recitals say decide under Article 4 of Protocol No 22 whether to implement the directive, which
+    # builds upon the Schengen acquis (Denmark); the sentence is the last of the quotes
+    schengen_art4: list[str] = Field(default_factory=list)
     parser: int = 1  # version of the recital matcher that read the text; older records are read again
     url: str
     source: SourceRef
@@ -204,6 +207,9 @@ class CheckedTransposition(Model):
     # what the directive's own text provides for some Member States beside the general deadline (an extension of the
     # transposition period, an exemption), in plain words naming each provision
     exceptions: str | None = None
+    # what its text provides beside the general date from which the national measures apply (applies_from), e.g. a
+    # later date for some measures (Directive (EU) 2024/1760, Art. 37(1) as replaced by Directive (EU) 2026/470)
+    application_exceptions: str | None = None
 
 
 class ValidityNote(Model):
@@ -226,6 +232,14 @@ class RepealDate(Model):
     partial: bool = False  # the axiom names a modified location or has role AP (some provisions only)
 
 
+class UnrecordedApplication(Model):
+    """An application date (type MA, MA/PART or APPLICATION) that Cellar gives as the placeholder 1001-01-01: the
+    act refers to a date it does not state, e.g. one the Commission sets later (Regulation (EU) 2018/1240, Art. 96)."""
+
+    partial: bool = False  # MA/PART: the date from which some provisions apply; else the act in general
+    articles: list[str] = Field(default_factory=list)  # the article(s) Cellar's comment refers to ("V ART 99" -> "99")
+
+
 class LegalAct(Model):
     """An act in the EU legal corpus (EUR-Lex / Cellar)."""
 
@@ -246,6 +260,11 @@ class LegalAct(Model):
     # Cellar gives the date of effect (type PE) as 1001-01-01 with comment DATNOT (date of notification): a
     # decision that takes effect on notification to its addressee, notification date not recorded
     effect_on_notification: bool = False
+    # Cellar's rule for the entry-into-force date, when its comment gives one as days after publication
+    # ("DATPUB +20": the twentieth day following publication); checked against the date by `pipeline validate`
+    entry_into_force_after_publication: int | None = None
+    # application dates Cellar gives as 1001-01-01 (not recorded), by kind: in general and/or for some provisions
+    application_unrecorded: list[UnrecordedApplication] = Field(default_factory=list)
     # Further dates recorded by Cellar as entry-into-force/application of provisions, ascending.
     # Cellar does not say which provisions; label them neutrally in the UI.
     other_application_dates: list[str] = Field(default_factory=list)

@@ -283,9 +283,22 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   the `comment_on_date` annotation) are shown as "some provisions apply from"; so is the entry-into-force date
   when Cellar marks it that way too (`partial_on_entry_into_force`, 78 acts: DMA, Art. 54, "Article 3(6) and (7)
   and Articles 40, 46, 47, 48, 49 and 50 shall apply from 1 November 2022", its entry into force), in the "When it
-  applies" box and the in-force status. When EUR-Lex records no other date for such an act (6 acts, e.g. Regulation
-  (EU) 2025/12, whose Art. 46 ties the rest to "the date two years from the date on which the router starts
-  operations, as determined by the Commission"), both say that EUR-Lex records no date for the other provisions.
+  applies" box and the in-force status. When EUR-Lex records no other date for such an act, both say that EUR-Lex
+  records no date for the other provisions.
+  An application value (type MA, or MA/PART) of `1001-01-01` next to a real entry-into-force date means that the act
+  applies, in general or for some provisions, from a date it does not state: one the Commission sets ("This
+  Regulation shall apply from the date determined by the Commission in accordance with Article 88", ETIAS,
+  Regulation (EU) 2018/1240, Art. 96), six months after a Commission notice (Clinical Trials Regulation, Art. 99),
+  or an event (Regulation (EU) 2025/12, Art. 46: "the date two years from the date on which the router starts
+  operations, as determined by the Commission"). It is kept as `application_unrecorded` (general or partial, with
+  the article Cellar's comment refers to: "V ART 96"; 67 acts, 37 of them for the act in general, 23 October 2026)
+  and never read as application from the entry into force: the status says "EUR-Lex records no date from which the
+  act in general applies (it refers to Art. 96)" (or "... from which some of its provisions apply"), "When it
+  applies" shows "Rules apply from: Not recorded", and a regulation's next step says that a regulation applies
+  directly with that sentence after it, not that it applies now. Cellar does not replace the placeholder once the
+  date is set (the Clinical Trials Regulation has applied since 31 January 2022): such dates are recorded in
+  `data/curated/act_dates.yaml` with the decision or notice that set them, and `validate` lists the acts in force
+  whose general date is not recorded and not yet checked (`application-not-recorded`).
   A value of `1001-01-01` (comment
   DATNOT, "date of notification") only says that the date is not recorded; its date type says what kind of date
   it is. Type EV (entry into force) with a comment pointing to an article of the act ("V ART 2.2"): the act enters
@@ -347,7 +360,11 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   says how (`exceptions` in the curated file, checked against the text; also the detail of the deadline's
   timeline step): Directive (EU) 2016/798, Art. 33(2) and (2a), extensions to 16 June 2020 and 31 October 2020,
   and Art. 33(4), Cyprus and Malta while they have no rail system; Directive (EU) 2016/797, Art. 57(2), (2a) and
-  (5); Directive (EU) 2017/2397, Art. 39(2) to (4); Directive (EU) 2021/1233, Art. 2(1). The site's pages put a
+  (5); Directive (EU) 2017/2397, Art. 39(2) to (4); Directive (EU) 2021/1233, Art. 2(1). What a directive's text
+  provides beside the general date from which the national measures apply (`application_exceptions`, checked) follows
+  "The national measures are to apply from ..." in the next step, on that date's timeline step and on its rows: the
+  CSDDD's Art. 37(1), as replaced by Directive (EU) 2026/470, Art. 4, point (22), applies the measures for Article 16
+  (the annual statement) for financial years starting on or after 1 January 2030, a date EUR-Lex does not record. The site's pages put a
   deadline that has passed by the visitor's date in the build's past wording (src/lib/format.ts). The
   next step of a directive also names what the directives that have since amended it still require: the deadline
   that covers their changes to it, as their transposition article sets it (`amends` in the curated file;
@@ -380,11 +397,26 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   2024/1359, 2024/1252 and 2022/2560); corrigenda are otherwise not read. An entry with a reason only explains
   recorded dates (Directives (EU) 2016/797 and 2016/798: 31 October 2020, the optional extension added by Directive
   (EU) 2020/700). A date set by an amending act cites that act in
-  the timeline, and the amending act's page lists the dates it set (`dates_set_for`); the status sentence says
+  the timeline, and the amending act's page lists the dates it set (`dates_set_for`; the Deforestation Regulation's
+  dates set by Regulation (EU) 2025/2650 and Delegated Regulation (EU) 2026/2102); the status sentence says
   that the act's text, not EUR-Lex, sets the later dates. A checked date on the entry-into-force day is named in
-  the entry-into-force event. The snapshot keeps the source values; `validate` warns about application dates a
-  year or more before the act, and about an entry into force before the act's adoption (or before a
-  regulation's publication).
+  the entry-into-force event. A curated date's timeline step cites the text it was checked against as its source
+  ("Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)"), not EUR-Lex's record of the act, and no
+  step dated in the act (entry into force, application, transposition dates) is credited to an institution in
+  "Latest verified development". Dates EUR-Lex gives as not recorded and a later decision set cite that decision
+  (Clinical Trials Regulation: Commission Decision (EU) 2021/1240, published 31 July 2021, the notice of its Art.
+  82(3), so it applies from 31 January 2022; EPPO: Commission Implementing Decision (EU) 2021/856, tasks from 1 June
+  2021); fifteen regulations for a withdrawal of the United Kingdom without a withdrawal agreement have a note
+  that, by their own condition, they did not apply (the Withdrawal Agreement entered into force on 1 February 2020).
+  Cellar's comment on an entry-into-force date often states its rule ("DATPUB +20": the twentieth day following
+  publication), kept as `entry_into_force_after_publication` (1,130 acts); the date and the rule disagree for
+  two acts: Decision (EU) 2017/1324 (PRIMA) is recorded as in force from 8 August 2017, where its Art. 15 gives
+  7 August 2017 (publication on 18 July 2017 + 20 days), corrected; for Regulation (EU) 2019/503 the comment is
+  wrong ("+20", Art. 8(1): "the day following"), checked. A comment without a number of days (Directive (EU)
+  2019/789: "DATPUB V ART 13") gives no rule. The
+  snapshot keeps the source values; `validate` warns about application dates a year or more before the act, about
+  an entry into force before the act's adoption (or before a regulation's publication) or different from Cellar's
+  rule (`entry-into-force-rule`), and about acts in force whose general application date is not recorded.
 - Timeline: an act of the European Parliament and of the Council (by the act's own title, not one it names) is
   signed by both Presidents (Art. 297(1) TFEU): its signature is shown once, as "Signed by the Presidents of
   Parliament and Council" (actor `EP and Council`), on the act's signature date (else the date in its title),
@@ -392,13 +424,31 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   before the Council adopted the act; Directive (EU) 2018/597 of 18 April 2018). Without such an act in our data
   the EP's record is shown as it is ("Final act signed", actor `EP`, on the EP's date), since that date is not
   established as the date both Presidents signed (9 files on 23 October 2026, e.g. 2016/0397(COD)). A Council
-  act is signed on the day of its adoption, which the Council's own step records.
+  act is signed on the day of its adoption, which the Council's own step records. An act's steps name the act by
+  its number ("Directive (EU) 2019/884", read from its title as for related files; older titles that begin with the
+  number, "2014/335/EU, Euratom: Council Decision ...", give "Council Decision 2014/335/EU, Euratom"), not by its
+  CELEX id. A date EUR-Lex records as an application date (MA, not marked PART) is "Rules start to apply" when
+  nothing of the act applied before it (PPWR, Regulation (EU) 2025/40, Art. 71: "It shall apply from 12 August
+  2026"), and "Further provisions start to apply" only after an earlier application date or one on the entry into
+  force.
 - Related files: an amending, amended, repealing or repealed act is named by its number (from its official
   title, e.g. "Directive (EU) 2025/794"; for an act outside the snapshot from its CELEX id, 2015 onwards and
   directives from 1999, e.g. "Regulation 2026/2102"), followed by its file's short title when it has one; an
   act this file amends or repeals, or that repeals it, by its file's title too, unless that is an "Amending …"
   title. Cellar records two titles without the space after the act type ("Directive2014/63/EU of the European
   Parliament …", "Regulation(EU) 2022/870 …"); their numbers are read as if it were there ("Directive 2014/63/EU").
+  Amendment links are Cellar's (`resource_legal_amends_resource_legal`); none is built from an act's number. One
+  links to the wrong act: the AI Act (32024R1689) to Implementing Regulation (EU) No 90/2014 on decanoic acid
+  (32014R0090), with the modified location "Article 8, paragraph 5", which its Art. 105 adds to Directive 2014/90/EU
+  (32014L0090). `data/curated/act_relations.yaml` corrects it in both directions (the AI Act amends the Marine
+  Equipment Directive, whose page lists it as amending), citing the amending provision; `validate` warns when an
+  act's title cites the number of an act it is linked to under another type only (`amends-link-type`: of 1,492
+  links, only that one on 23 October 2026).
+- Titles: a file's title is its procedure's (EP), shortened. Where the file has one adopted act whose official title
+  the procedure's title does not describe, the act's title is used instead, as the page title, the official title
+  and in the country tables: a drafting placeholder ("Extending Directive [XXXX] to third country nationals ...",
+  for Directive (EU) 2024/2842), or acts cited by number that the act's title does not cite (2021/0395(COD) names
+  "Framework Decisions 2002/465/JHA, ..." where Directive (EU) 2023/2843 amends Directive 2011/99/EU instead).
 - Search index (`search.json`): a file's keywords (`x`) hold its procedure reference and number, its acts' CELEX
   ids and numbers, its COM references and the types of its acts as EUR-Lex records them (`act_type`:
   "regulation", "directive", "decision"), so that "whistleblower directive" finds Directive (EU) 2019/1937.
@@ -553,7 +603,12 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - A split procedure's parent known only from EUR-Lex (10 of the 12, e.g. 2016/0400(COD)) has no title of its own
   in the sources: its page title says what it was split into and `official_title` is null ("Not recorded" on the
   page). Its "Split into" relations carry each part's `ref` and `status_label`, and its status text links the
-  parts (`status.named_acts` entries with an empty `celex`: a procedure reference linked to its file).
+  parts (`status.named_acts` entries with an empty `celex`: a procedure reference linked to its file). Its sources
+  are the parts' OEIL procedure files ("... 2016/0400A(COD) (separate file)"), not the EUR-Lex record of one part's
+  act that the parent's record was built from; a Legislative Train page on one part, which records the proposal's
+  reference ("... – 2016/0400B(COD)", procedure 2016/0400(COD)), is cited on that part's page.
+- The explorer's status filter groups these files (stage `unknown`) as "Other (split files, Parliament reports,
+  final act or stage not recorded)": each row's own badge says which.
 - An R/M file (Parliament's interim or accompanying report, e.g. 2020/0112R(APP)) links the main procedure in
   its status text and next step the same way; the main file lists it among its related files ("Parliament's
   interim report", "Parliament's report").
@@ -641,6 +696,16 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   decision ("The participation of Ireland in Directive (EU) 2024/1346 is confirmed", Commission Decision (EU)
   2024/2087). One Cellar query per run finds such decisions by title; for those directives Ireland is treated as
   bound and the row links the decision (2 directives: 2023/2843 and 2024/1346).
+- A directive that builds upon the Schengen acquis adds to Denmark's recital that Denmark decides under Article 4 of
+  Protocol No 22 whether to implement it in its national law (Directive (EU) 2023/977, recital 40); the sentence is
+  quoted and the record lists Denmark under `schengen_art4` (matcher version 3; of the 36 directives Denmark is not
+  bound by, only 2023/977). Under Article 4(1) such a decision "will create an obligation under international law
+  between Denmark and the other Member States bound by the measure". Denmark's decision is a notification to the
+  Council that Cellar's metadata does not hold: `data/curated/denmark_schengen.yaml` records it once checked (for
+  2023/977: "Denmark hereby gives notice that it has decided to implement the above measure in accordance with
+  Article 4 of the Protocol", Council document ST 15298/23, received 9 November 2023). Denmark's row stays "Not
+  bound" (under EU law) with a note giving its decision and linking the notification, or, without a recorded
+  decision, saying that Denmark decides; `validate` lists such directives without a recorded decision.
 - The generic Denmark/Ireland caveat on a dossier is shown only where neither the recitals nor a Council voting
   result say whether the country took part.
 - A Commission decision confirming a participation stays in Cellar, so an opt-in recorded earlier that a later

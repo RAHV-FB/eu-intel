@@ -326,8 +326,9 @@
   celex: ["32024R3234"]
   short_title: "Deforestation Regulation – first postponement"
   what: >-
-    Amends the Deforestation Regulation to postpone its application by 12 months, with a later date
-    for micro and small enterprises.
+    Amends the Deforestation Regulation to postpone its application by 12 months, to 30 December 2025,
+    and to 30 June 2026 for micro and small undertakings. Regulation (EU) 2025/2650 later replaced these
+    dates with 30 December 2026 and 30 June 2027.
   why: >-
     Companies, non-EU producing countries and national authorities were given an additional year to
     prepare for the due diligence and traceability obligations.
@@ -338,15 +339,16 @@
   sources:
     - {label: "Regulation (EU) 2024/3234 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/3234/oj"}
     - {label: "Council press release, 18 December 2024", url: "https://www.consilium.europa.eu/en/press/press-releases/2024/12/18/eu-deforestation-law-council-formally-adopts-its-one-year-postponement/"}
-  reviewed: "2026-10-22"
+    - {label: "Regulation (EU) 2025/2650 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/2650/oj"}
+  reviewed: "2026-10-23"
 
 - id: "2025-0329"
   reference: "2025/0329(COD)"
   celex: ["32025R2650"]
   short_title: "Deforestation Regulation – targeted revision and second postponement"
   what: >-
-    Amends the Deforestation Regulation to postpone its application by a further year (with six more
-    months for micro and small operators) and to simplify obligations: the due diligence statement is
+    Amends the Deforestation Regulation to postpone its application by a further year, to 30 December
+    2026 (30 June 2027 for micro and small operators), and to simplify obligations: the due diligence statement is
     submitted by the operator that first places a product on the EU market, not by downstream operators
     and traders; certain printed products are removed from its scope.
   why: >-
@@ -454,7 +456,9 @@
   why: >-
     Companies in scope will have to carry out due diligence on their business partners and in their
     own operations, and national supervisory authorities will be able to investigate and fine them
-    for failures; the 2026 amendment removed the obligation to adopt a climate transition plan.
+    for failures; the 2026 amendment removed the obligation to adopt a climate transition plan. Their
+    annual statement on these matters (Article 16) is required for financial years starting on or after
+    1 January 2030.
   aliases: ["CSDDD", "CS3D", "Corporate Sustainability Due Diligence Directive", "supply chain law", "due diligence directive"]
   topics: ["economy", "rights", "environment"]
   featured: false
