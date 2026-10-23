@@ -280,7 +280,9 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
                   <tr>
                     <th scope="col">Date</th>
                     <th scope="col">Document</th>
-                    <th scope="col">Reference</th>
+                    <th scope="col" className="hide-narrow">
+                      Reference
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -289,8 +291,10 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
                       <td className="nowrap">{doc.date ? formatDate(doc.date) : '—'}</td>
                       <td>
                         {safeUrl(doc.url) ? <ExtLink href={doc.url}>{doc.label || doc.kind || doc.id}</ExtLink> : doc.label || doc.kind || doc.id}
+                        {/* phones: the reference column is hidden and shown here */}
+                        <span className="only-narrow meta mono">{doc.id}</span>
                       </td>
-                      <td className="mono">{doc.id}</td>
+                      <td className="mono hide-narrow">{doc.id}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -145,3 +145,18 @@ a.group-chip:hover {
 .member-grid .meta {
   margin-left: 0.35em;
 }
+
+/* group page, members' recorded votes: the vote column (on phones it also holds the date and the counts) */
+.gv-vote {
+  min-width: 14rem;
+}
+
+@media (max-width: 39.99rem) {
+  .gv-vote {
+    min-width: 0;
+  }
+
+  .gv-vote .minibar {
+    margin: var(--sp-1) 0;
+  }
+}

@@ -118,19 +118,29 @@
     column-gap: var(--sp-7);
     row-gap: 0;
   }
-  .dz-aside {
-    align-self: start;
+}
+
+/* Only "On this page" stays in view: the whole panel is taller than a laptop screen, so a sticky panel would keep
+   the navigation (and keyboard focus on it) below the bottom edge. The panel spans both rows; the nav sticks in it. */
+@media (min-width: 64rem) and (min-height: 36rem) {
+  .dz-toc {
     position: sticky;
     top: var(--dz-sticky-top);
   }
 }
 
 /* ---------- summary panel ---------- */
+/* No overflow clipping here: glossary popups (.term__tip) inside the panel must not be cut off. The last block
+   rounds its own lower corners instead (the key-facts band has a background). */
 .dz-summary {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+}
+
+.dz-summary > :last-child {
+  border-bottom-left-radius: calc(var(--radius-lg) - 1px);
+  border-bottom-right-radius: calc(var(--radius-lg) - 1px);
 }
 
 .dz-label {

@@ -312,7 +312,14 @@
   display: none;
 }
 
+/* .table--clamp: a table that keeps its columns on phones but clamps long RowTitle titles to three lines there */
+
 @media (max-width: 39.99rem) {
+  /* a long single word (e.g. a party name) may break so it does not push the next column off-screen */
+  .table .wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+
   .table .hide-narrow {
     display: none;
   }
@@ -387,7 +394,8 @@
     overflow-wrap: anywhere;
   }
 
-  .table--stack .row-title:not(.is-open) {
+  .table--stack .row-title:not(.is-open),
+  .table--clamp .row-title:not(.is-open) {
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;

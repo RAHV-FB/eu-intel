@@ -23,10 +23,12 @@
 .ctable .grp-impl {
   background: #fbfaf3;
 }
+/* the Country column stays in view; only the first header row has a Country cell (rowspan 2): the second row's
+   first cell is "Current MEPs". The table sits in a padded card (.table-card): stick at the card's inner edge. */
 .ctable tbody th,
-.ctable thead th:first-child {
+.ctable thead tr:first-child > th:first-child {
   position: sticky;
-  left: 0;
+  left: calc(-1 * var(--sp-3));
   background: var(--surface);
   z-index: 1;
 }

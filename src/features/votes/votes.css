@@ -161,3 +161,98 @@
   color: var(--text-2);
   display: block;
 }
+
+/*
+ * Group and country breakdown tables (Breakdowns.tsx). Below 40rem only the name and the For / Against /
+ * Abstained columns stay (.hide-narrow hides the rest); each row is followed by a second line (tr.row-more) with
+ * what the hidden columns hold, so the counts and their headings are never cut off. Cells are narrower there.
+ */
+.table--breakdown tr.row-more {
+  display: none;
+}
+
+@media (max-width: 39.99rem) {
+  .table--breakdown th,
+  .table--breakdown td {
+    padding-left: 0.375rem;
+    padding-right: 0.375rem;
+  }
+
+  /* the sort mark may wrap under its heading, so a column is only as wide as its heading's word */
+  .table--breakdown .sort-btn {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .table--breakdown tr.row-more {
+    display: table-row;
+  }
+
+  .table--breakdown tr.has-more > * {
+    border-bottom: 0;
+    padding-bottom: var(--sp-1);
+  }
+
+  .table--breakdown tr.row-more > td {
+    padding-top: 0;
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+
+  .row-more__items {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--sp-3);
+  }
+
+  .table--breakdown tr.row-more .minibar {
+    width: 4rem;
+    min-width: 4rem;
+  }
+
+  /* hovering either line highlights both */
+  .table--breakdown tbody tr.has-more:hover + tr.row-more,
+  .table--breakdown tbody tr.has-more:has(+ tr.row-more:hover) {
+    background: var(--blue-paler);
+  }
+
+  .table--breakdown tbody tr.has-more:hover + tr.row-more .muted {
+    color: var(--text-2); /* as on the hovered row (WCAG 1.4.3) */
+  }
+}
+
+/* ShortOnNarrow (Breakdowns.tsx): "Abst." on the narrowest screens; the full heading stays for screen readers */
+.label-short {
+  display: none;
+}
+
+@media (max-width: 22.5rem) {
+  .label-short {
+    display: inline;
+  }
+
+  .table--breakdown th,
+  .table--breakdown td {
+    padding-left: var(--sp-1);
+    padding-right: var(--sp-1);
+  }
+
+  .label-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* if a breakdown table still scrolls sideways (very narrow or zoomed screens), its second line stays in view */
+@media (max-width: 39.99rem) {
+  .row-more__items {
+    position: sticky;
+    left: 0;
+    max-width: calc(100vw - 4rem);
+  }
+}
