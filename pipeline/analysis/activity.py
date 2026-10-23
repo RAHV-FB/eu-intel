@@ -109,6 +109,7 @@ def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
                 e["state"] != "done"
                 or not (cut <= e["date"] <= today)
                 or e["kind"] not in SNAPSHOT_EVENT_KINDS
+                or e.get("after_end_of_validity")  # recorded for after the act's validity ended
             ):
                 continue
             out.append(

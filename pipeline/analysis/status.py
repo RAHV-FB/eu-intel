@@ -20,6 +20,8 @@ Principles (each one is covered by tests/test_status.py):
 
 from __future__ import annotations
 
+import re
+from collections.abc import Mapping
 from datetime import date
 from typing import Literal
 
@@ -37,6 +39,9 @@ Stage = Literal[
     "adopted",
     "published",
     "in_force",
+    # a decision addressed to specific recipients: takes effect on notification to them, a date EUR-Lex does
+    # not record (Cellar date of effect 1001-01-01, DATNOT), so EUR-Lex does not record it as in force
+    "takes_effect_on_notification",
     "no_longer_in_force",  # repealed, expired or otherwise no longer in force according to EUR-Lex
     "withdrawn",
     "rejected",
@@ -46,7 +51,8 @@ Stage = Literal[
 Basis = Literal["source", "derived"]
 StepBasis = Literal["source", "derived", "unknown"]
 
-TERMINAL: set[str] = {"published", "in_force", "no_longer_in_force", "withdrawn", "rejected", "lapsed"}
+TERMINAL: set[str] = {"published", "in_force", "takes_effect_on_notification", "no_longer_in_force", "withdrawn",
+                      "rejected", "lapsed"}  # fmt: skip
 # Stages in which the co-legislators still have to act (Train "Blocked" may be shown).
 ACTIVE_STAGES: set[str] = {"proposed", "parliament_position", "negotiations", "provisional_agreement"}
 
@@ -114,12 +120,24 @@ class TranspositionDateInfo(_M):
 
 class Application(_M):
     entry_into_force: str | None = None
-    entry_into_force_pending: bool = False  # EUR-Lex: takes effect on a condition not yet recorded
+    entry_into_force_pending: bool = False  # EUR-Lex: enters into force on a condition not yet recorded as met
+    entry_into_force_condition: str | None = None  # that condition, when the Treaty or EUR-Lex states it
+    effect_on_notification: bool = False  # takes effect on notification to its addressee (date not recorded)
     application_dates: list[str] = Field(default_factory=list)
     partial_application_dates: list[str] = Field(default_factory=list)  # only some provisions apply from
     transposition_deadlines: list[str] = Field(default_factory=list)  # directives: deadlines only
     transposition: list[TranspositionDateInfo] = Field(default_factory=list)  # directives: every date
     future: bool = False  # any of the above dates is after `today`
+    # dates above that EUR-Lex records for an act after the end of that act's validity
+    after_end_of_validity: list[str] = Field(default_factory=list)
+
+
+class ActRef(_M):
+    """An act named in a status explanation (e.g. the repealing act), so that the site can link it."""
+
+    celex: str
+    label: str  # "Directive (EU) 2021/555" (official title), "Regulation 2017/1430" (CELEX id), else the CELEX id
+    url: str  # EUR-Lex
 
 
 class DossierStatus(_M):
@@ -131,6 +149,7 @@ class DossierStatus(_M):
     next_step: NextStep
     stall: Stall | None = None
     application: Application | None = None
+    named_acts: list[ActRef] = Field(default_factory=list)  # acts named in `explanation`
 
 
 # ====================================================================== helpers
@@ -183,7 +202,9 @@ def relevant_acts(proc: Procedure, acts: list[LegalAct], events: list[Event], to
     procedures (e.g. a new proposal that replaced an older one) only counts when this procedure
     itself shows the act was adopted under it: its final act (OEIL) or a recorded adoption,
     signature or publication - and, when OEIL lists the procedure's final acts, is one of them. Acts
-    dated after `today` are ignored."""
+    dated after `today` are ignored, and so are acts of the Commission (implementing or delegated acts
+    adopted under the law, which OEIL may list as a "Corrigendum to final act", e.g. 32025R1328 on
+    2021/0426(COD)): the procedures here are legislative and the Commission does not adopt their acts."""
     t = today.isoformat()
     out = []
     adopted_here = any(e.kind in ADOPTION_KINDS for e in events) or (proc.stage_raw or "").startswith(
@@ -192,6 +213,8 @@ def relevant_acts(proc: Procedure, acts: list[LegalAct], events: list[Event], to
     for a in acts:
         dated = a.date_publication or a.date_signature or a.date_document
         if dated and dated > t:
+            continue
+        if a.title.startswith("Commission "):
             continue
         # OEIL's final-act list, when there is one, decides between procedures sharing an act
         if a.celex in proc.celex_refs or len(a.procedure_refs) <= 1 or (adopted_here and not proc.celex_refs):
@@ -216,14 +239,29 @@ def application_of(acts: list[LegalAct], today: date) -> Application | None:
     app = sorted({d for a in acts for d in a.other_application_dates if d and d != eif})
     tr = transposition_info(acts)
     future = any(d > t for d in ([eif] if eif else []) + app + [x.date for x in tr])
+    pending = not eif and any(a.entry_into_force_pending for a in acts)
+    # dates an act records for after its own end of validity (not when that end is retroactive: then every
+    # date of the act is later)
+    ended = {
+        d
+        for a in acts
+        if a.end_of_validity and not _retroactive_end(a)
+        for d in [*a.other_application_dates, *a.transposition_deadlines]
+        if d > a.end_of_validity
+    }
     return Application(
         entry_into_force=eif,
-        entry_into_force_pending=not eif and any(a.entry_into_force_pending for a in acts),
+        entry_into_force_pending=pending,
+        entry_into_force_condition=next((c for a in acts if (c := entry_into_force_condition(a))), None)
+        if pending
+        else None,
+        effect_on_notification=not eif and not pending and any(a.effect_on_notification for a in acts),
         application_dates=app,
         partial_application_dates=sorted({d for a in acts for d in a.partial_application_dates if d in app}),
         transposition_deadlines=[x.date for x in tr if x.kind in ("deadline", "further_deadline")],
         transposition=tr,
         future=future,
+        after_end_of_validity=sorted(d for d in ended if d in app or d in {x.date for x in tr}),
     )
 
 
@@ -290,11 +328,129 @@ class _S:
             basis,
         )
         self.next_step: NextStep | None = None
+        self.named_acts: list[ActRef] = []
 
 
-def _acts_stage(proc: Procedure, acts: list[LegalAct], events: list[Event], today: date) -> _S | None:
-    """Published / in force, from EUR-Lex acts and the recorded publication."""
+# ====================================================================== acts named in the status
+EURLEX_URL = "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:"
+# The Act concerning the election of the members of the European Parliament by direct universal suffrage
+# (annexed to Decision 76/787/ECSC, EEC, Euratom), as Cellar identifies it in the acts that amend it
+ELECTORAL_ACT = "41976X1008(01)"
+# the act's number as its official title gives it (same pattern as build.act_label)
+ACT_NAME_RE = re.compile(
+    r"^((?:Council |Commission )?(?:Implementing |Delegated )?(?:Regulation|Directive|Decision)"
+    r"(?: \([A-Z][A-Za-z, ]*\))?(?: No)? \d{1,4}/\d{1,4}(?:/[A-Z]+)*)"
+)
+# Cellar comments on an end-of-validity date (authority table fd_330) that name the act which ended it
+ENDED_BY = {"A/PAR": "repealed", "AR/PAR": "repealed and replaced", "AI/PAR": "implicitly repealed", "R/PAR": "replaced"}
+CELEX_NUMBER_RE = re.compile(r"^3(\d{4})([RLD])(\d{4})$")
+CELEX_KIND = {"R": "Regulation", "L": "Directive", "D": "Decision"}
+
+
+def _ref(celex: str, others: Mapping[str, LegalAct]) -> ActRef:
+    a = others.get(celex)
+    m = ACT_NAME_RE.match(a.title) if a else None
+    label = m.group(1) if m else celex
+    # an act not in our data: from 2015 its CELEX id gives its number ("32020R0687" -> "Regulation 2020/687")
+    if a is None and (n := CELEX_NUMBER_RE.match(celex)) and n[1] >= "2015":
+        label = f"{CELEX_KIND[n[2]]} {n[1]}/{int(n[3])}"
+    return ActRef(celex=celex, label=label, url=a.eurlex_url if a else EURLEX_URL + celex)
+
+
+def _labels(refs: list[ActRef]) -> str:
+    return _join_celex([r.label for r in refs])
+
+
+def _retroactive_end(a: LegalAct) -> bool:
+    """Cellar's end of validity is earlier than the act itself (a repeal with retroactive effect)."""
+    dated = a.date_document or a.date_publication
+    return bool(a.end_of_validity and dated and a.end_of_validity < dated)
+
+
+def _ended_by(act: LegalAct, others: Mapping[str, LegalAct]) -> tuple[str, list[ActRef]]:
+    """How EUR-Lex records the end of the act: its whole-act repeal links, else the act that Cellar's comment
+    on the end-of-validity date names (e.g. 32015R2424: "Implicitly repealed by 32017R1001 and 32017R1430")."""
+    how, celexes = "repealed", list(act.repealed_by)
+    if not celexes:
+        for n in act.validity_notes:
+            code = next((c for c in n.codes if c in ENDED_BY), None)
+            if code and not n.partial and n.date == act.end_of_validity:
+                how, celexes = ENDED_BY[code], [c for c in n.acts if c != act.celex]
+                break
+    return how, [_ref(c, others) for c in celexes]
+
+
+def _rules_continue(act: LegalAct, refs: list[ActRef], others: Mapping[str, LegalAct]) -> str:
+    """A later successor whose official title marks it as a codification or a recast takes over the rules. (An
+    earlier one cannot: Regulation 1377/2014 amended an act that the recast 609/2014, adopted before it, repealed
+    with retroactive effect.)"""
+    out = ""
+    for r in refs:
+        later = r.celex in others and (others[r.celex].date_document or "") > (act.date_document or "9999")
+        title = others[r.celex].title.lower() if later else ""
+        in_force = ", and it is in force" if r.celex in others and others[r.celex].in_force else ""
+        if "(codification)" in title:
+            out += f" {r.label} is a codification: the rules continue in it, unchanged in substance{in_force}."
+        elif "(recast)" in title:
+            out += f" {r.label} is a recast: the rules continue in it, with the amendments it makes{in_force}."
+    return out
+
+
+def _no_longer_in_force(act: LegalAct, others: Mapping[str, LegalAct]) -> _S:
+    eov = act.end_of_validity
+    how, refs = _ended_by(act, others)
+    by = f" EUR-Lex records it as {how} by {_labels(refs)}" if refs else ""
+    if eov and _retroactive_end(act):
+        which = (
+            f"which is dated {_fmt(act.date_document)}"
+            if act.date_document
+            else f"published on {_fmt(act.date_publication or '')}"
+        )
+        text = (
+            f"The act was adopted and published, but EUR-Lex gives {_fmt(eov)} as the end of its validity, a date "
+            f"earlier than the act itself, {which}."
+        )
+        text += f"{by}, with effect from that earlier date." if refs else " EUR-Lex records no reason for the earlier date."
+    elif eov:
+        text = f"The act was adopted and published, but its validity ended on {_fmt(eov)}." + (by + "." if by else "")
+    else:
+        text = "The act was adopted and published, but EUR-Lex records it as no longer in force." + (
+            by + "." if by else ""
+        )
+    s = _S("no_longer_in_force", "No longer in force", text + _rules_continue(act, refs, others), eov, "source")
+    s.named_acts = refs
+    return s
+
+
+def entry_into_force_condition(act: LegalAct) -> str | None:
+    """The condition on which a pending act enters into force, as far as the Treaty or EUR-Lex states it."""
+    if not act.entry_into_force_pending:
+        return None
+    arts = ", ".join(article_label(a) for a in act.entry_into_force_articles)
+    if ELECTORAL_ACT in act.amends:
+        # Art. 223(1) TFEU: these provisions "shall enter into force following their approval by the Member
+        # States in accordance with their respective constitutional requirements" (as Art. 2 of 2018/994 says)
+        return (
+            "It enters into force only after every Member State has approved it in accordance with its "
+            "constitutional requirements (Article 223(1) TFEU)"
+            + (f"; EUR-Lex refers to {arts} of the decision for the date." if arts else ".")
+        )
+    return "It enters into force only once a condition set in the act is met" + (
+        f" (EUR-Lex refers to {arts})." if arts else "."
+    )
+
+
+def _acts_stage(
+    proc: Procedure,
+    acts: list[LegalAct],
+    events: list[Event],
+    today: date,
+    others: Mapping[str, LegalAct] | None = None,
+) -> _S | None:
+    """Published / in force, from EUR-Lex acts and the recorded publication. `others`: acts by CELEX, to
+    name the acts that this one's record refers to (e.g. the repealing act)."""
     t = today.isoformat()
+    others = others or {}
     act = _main_act(proc, acts)
     pub_ev = _last(events, EventKind.publication)
     pub_date = (act.date_publication if act else None) or (pub_ev.date if pub_ev else None)
@@ -306,38 +462,37 @@ def _acts_stage(proc: Procedure, acts: list[LegalAct], events: list[Event], toda
                 f"It enters into force on {_fmt(eif)}."
             )
             return _S("published", "Published, not yet in force", text, pub_date, "source")
-        repealed = f" EUR-Lex records it as repealed by {_join_celex(act.repealed_by)}." if act.repealed_by else ""
         if act.end_of_validity and act.end_of_validity <= t:
-            return _S(
-                "no_longer_in_force",
-                "No longer in force",
-                f"The act was adopted and published, but its validity ended on {_fmt(act.end_of_validity)}."
-                + repealed,
-                act.end_of_validity,
+            return _no_longer_in_force(act, others)
+        published = f"published in the Official Journal{' on ' + _fmt(pub_date) if pub_date else ''}."
+        if act.effect_on_notification and not act.end_of_validity and not act.repealed_by and not act.in_force:
+            # Cellar: date of effect (PE) = date of notification (DATNOT), not recorded. Without the date EUR-Lex
+            # does not record the decision as in force, but nothing makes it "not yet in force" either. (No Treaty
+            # rule is cited: Art. 297(2) TFEU, notification of addressed decisions, is about non-legislative acts,
+            # and these decisions are legislative acts.)
+            s = _S(
+                "takes_effect_on_notification",
+                "Takes effect on notification",
+                f"The decision was {published} It is addressed to specific recipients, and EUR-Lex gives its date "
+                "of effect as the date of notification to them, without recording that date.",
+                pub_date,
                 "source",
             )
+            for n in [n for n in act.validity_notes if n.partial and n.date <= t][-1:]:
+                refs = [_ref(c, others) for c in n.acts if c != act.celex]
+                s.explanation += f" EUR-Lex records a partial end of its validity on {_fmt(n.date)}" + (
+                    f" and refers to {_labels(refs)}." if refs else "."
+                )
+                s.named_acts += refs
+            return s
         if act.in_force is False and not act.end_of_validity and not act.repealed_by and (not eif or eif > t):
             # EUR-Lex "not in force" with no end date: the act has not yet taken effect (Cellar gives
             # its entry into force as unknown, e.g. pending approval by every Member State)
-            text = (
-                f"The act was published in the Official Journal{' on ' + _fmt(pub_date) if pub_date else ''}. "
-                "EUR-Lex records it as not yet in force and gives no date of entry into force"
-            )
-            text += (
-                ": it takes effect only once a condition set in the act is met (for example, notification "
-                "or approval by every Member State)."
-                if act.entry_into_force_pending
-                else "."
-            )
-            return _S("published", "Published, not yet in force", text, pub_date, "source")
+            text = f"The act was {published} EUR-Lex records it as not yet in force and gives no date of entry into force."
+            cond = entry_into_force_condition(act)
+            return _S("published", "Published, not yet in force", text + (" " + cond if cond else ""), pub_date, "source")
         if act.in_force is False:
-            return _S(
-                "no_longer_in_force",
-                "No longer in force",
-                "The act was adopted and published, but EUR-Lex records it as no longer in force." + repealed,
-                None,
-                "source",
-            )
+            return _no_longer_in_force(act, others)
         if act.in_force is True or (eif and eif <= t):
             basis: Basis = "source" if act.in_force is True else "derived"
             text = f"The act has been in force since {_fmt(eif)}." if eif else "The act is in force."
@@ -347,7 +502,18 @@ def _acts_stage(proc: Procedure, acts: list[LegalAct], events: list[Event], toda
                     " Entry into force is not the same as application: EUR-Lex records later dates from "
                     "which (parts of) the act apply."
                 )
-            return _S("in_force", "In force", text, eif or pub_date, basis)
+            # an end of validity still ahead, and the act that repeals it (32015L0849: validity ends on
+            # 9 July 2027, repealed by Directive (EU) 2024/1640)
+            refs = [_ref(c, others) for c in act.repealed_by]
+            if act.end_of_validity:
+                text += f" EUR-Lex records that its validity ends on {_fmt(act.end_of_validity)}" + (
+                    f" and that {_labels(refs)} repeals it." if refs else "."
+                )
+            elif refs:
+                text += f" EUR-Lex also records it as repealed by {_labels(refs)}."
+            s = _S("in_force", "In force", text, eif or pub_date, basis)
+            s.named_acts = refs
+            return s
         if pub_date:
             return _S(
                 "published",
@@ -649,6 +815,8 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
         return NextStep(text="None: the procedure is closed.", basis="derived")
     if stage == "no_longer_in_force":
         return NextStep(text="None: the act is no longer in force.", basis="source")
+    if stage == "takes_effect_on_notification":
+        return NextStep(text="None: no further legislative step is required.", basis="derived")
     if stage in ("published", "in_force"):
         act = _main_act(proc, acts)
         app = application_of(acts, today)
@@ -667,8 +835,10 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
             basis = "source"
         elif app and app.entry_into_force_pending and act.in_force is False:
             return NextStep(
-                text="Entry into force once the condition set in the act is met (for example, notification or "
-                "approval by every Member State); EUR-Lex records no date yet.",
+                text="Entry into force once every Member State has approved the decision in accordance with its "
+                "constitutional requirements (Article 223(1) TFEU); EUR-Lex records no date yet."
+                if ELECTORAL_ACT in act.amends
+                else "Entry into force once the condition set in the act is met; EUR-Lex records no date yet.",
                 basis="source",
             )
         if act.act_type == "directive":
@@ -859,7 +1029,15 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
 
 
 # ====================================================================== entry point
-def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], today: date) -> DossierStatus:
+def classify(
+    proc: Procedure,
+    acts: list[LegalAct],
+    train: list[TrainFile],
+    today: date,
+    others: Mapping[str, LegalAct] | None = None,
+) -> DossierStatus:
+    """`others`: all known acts by CELEX, used only to name acts the procedure's acts refer to (the act that
+    repealed one, for example) in the explanation."""
     t = today.isoformat()
     events = sorted((e for e in proc.events if e.date <= t), key=lambda e: e.date)
     ptype = proc.type
@@ -926,7 +1104,7 @@ def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], toda
             s = _S("rejected", "Rejected by Parliament", what, rejection.date, "source")
 
     if s is None:
-        s = _acts_stage(proc, acts, events, today)
+        s = _acts_stage(proc, acts, events, today, others)
     if s is None:
         if ptype in ("COD", "SYN"):
             s = _cod_stage(events)
@@ -972,6 +1150,7 @@ def classify(proc: Procedure, acts: list[LegalAct], train: list[TrainFile], toda
         next_step=next_step,
         stall=_stall(s.stage, events, train, today),
         application=app,
+        named_acts=s.named_acts,
     )
 
 

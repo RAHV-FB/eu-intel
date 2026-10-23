@@ -14,7 +14,8 @@ Scope (v1)
 
 Requests: one paged scope query (ORDER BY + LIMIT/OFFSET), then per batch of works (VALUES blocks,
 4 threads) one query each for literal properties, English title, Official Journal issue, typed
-entry-into-force annotations, procedure codes, subjects and amend/repeal links. A batch that
+entry-into-force annotations, end-of-validity comments, procedure codes, subjects and amend/repeal
+links. A batch that
 fails is split in halves down to single works; works whose data could not be fetched are left out
 (status "partial") rather than written with gaps.
 
@@ -45,11 +46,21 @@ Source facts relied on (checked against the live endpoint, see tests/test_eurlex
   (`annotation:comment_on_date`, fd_361 codes) labels it ADOPTION (adopt and publish by),
   APPLICATION (apply from) and/or AU+TARD (at the latest), with the article that sets it
   ("{ART|...} 48.1"); kept as transposition_dates. Older or simpler directives carry no label.
-- An entry-into-force / effect value of 1001-01-01 (comment DATNOT, "date of notification") means
-  the act takes effect on a condition not yet met or recorded, e.g. Electoral Act amendments that
-  need the approval of every Member State: entry_into_force_pending.
+- A value of 1001-01-01 (comment DATNOT, "date of notification") means the date is not recorded. Its
+  type tells two cases apart. EV (entry into force), with a comment pointing to an article of the act
+  ("V ART 2.2"): the act enters into force on a condition it sets, not yet recorded as met, e.g.
+  Electoral Act amendments that need the approval of every Member State (32018D0994):
+  entry_into_force_pending, with the article(s) in entry_into_force_articles. PE (date of effect)
+  without an EV value: a decision addressed to someone, which takes effect on notification to its
+  addressee on a date Cellar does not record, e.g. 32020D0853 "addressed to the Federal Republic of
+  Germany": effect_on_notification.
 - `cdm:resource_legal_date_end-of-validity` may hold several values (provisions expiring at
-  different dates); the act's end of validity is the latest one, None when it is 9999-12-31.
+  different dates); the act's end of validity is the latest one, None when it is 9999-12-31. The
+  `comment_on_date` annotation on a value (fd_330 codes: A/PAR repealed by, AI/PAR implicitly repealed
+  by, R/PAR replaced by, FIN/VAL/PART partial end of validity...) and the CELEX ids it names are kept
+  as validity_notes, e.g. 32014R1377: 2013-12-31 "AI/PAR 32014R0609" (implicitly repealed, with
+  retroactive effect, by the own-resources Regulation 609/2014), 32020D1531: 2024-03-17 "FIN/VAL/PART V
+  32024D0867 ART 6" next to 9999-12-31.
 - amends / amended_by: `cdm:resource_legal_amends_resource_legal` (both directions). repeals /
   repealed_by: `cdm:resource_legal_repeals_resource_legal` for whole-act repeals only. A link is a
   partial repeal (left out) when every OWL axiom on it names a modified location
@@ -94,6 +105,7 @@ from pipeline.models.entities import (
     SourceStatus,
     Subject,
     TranspositionDate,
+    ValidityNote,
 )
 from pipeline.snapshot import CURATED, now_iso, read_records, write_records
 
@@ -369,6 +381,20 @@ def eif_types_query(works: list[str]) -> str:
     )
 
 
+def validity_query(works: list[str]) -> str:
+    """End-of-validity values that Cellar comments on (repealed by, partial end of validity...)."""
+    return (
+        PREFIXES
+        + f"""SELECT ?w ?d ?c WHERE {{ {_values(works)}
+  ?w cdm:resource_legal_date_end-of-validity ?d .
+  ?ax owl:annotatedSource ?w ;
+      owl:annotatedProperty cdm:resource_legal_date_end-of-validity ;
+      owl:annotatedTarget ?d ;
+      ann:comment_on_date ?c .
+}}"""
+    )
+
+
 def transposition_query(works: list[str]) -> str:
     return (
         PREFIXES
@@ -455,6 +481,8 @@ class Facts:
     titles: set[str] = field(default_factory=set)
     oj_issues: dict[str, dict[str, str]] = field(default_factory=dict)
     eif_types: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
+    eif_notes: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))  # raw comment_on_date
+    validity_notes: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))  # end of validity
     # transposition date -> comment_on_date annotations (raw "{CODE|iri} ... {ART|iri} 48.1")
     transposition_notes: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     procedure_refs: set[tuple[str, str]] = field(default_factory=set)  # (reference, type concept or "")
@@ -496,10 +524,19 @@ def add_eif_types(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
         d = _date(r["d"])
         if d:
             facts[r["w"]].eif_types[d].add(_annotation_code(r["type"]))
+            if r.get("comment"):
+                facts[r["w"]].eif_notes[d].add(r["comment"])
             # partial application is sometimes only in the comment: type MA, comment "{MA/PART|...} ..."
             for code in ANNOTATION_CODE_RE.findall(r.get("comment") or ""):
                 if code.endswith("/PART"):
                     facts[r["w"]].eif_types[d].add(code)
+
+
+def add_validity_notes(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
+    for r in rows:
+        d = _date(r["d"])
+        if d and r.get("c"):
+            facts[r["w"]].validity_notes[d].add(r["c"])
 
 
 def add_transposition_notes(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
@@ -581,6 +618,7 @@ QUERIES: list[
     ("title", title_query, add_titles),
     ("oj", oj_query, add_oj),
     ("eif_types", eif_types_query, add_eif_types),
+    ("validity", validity_query, add_validity_notes),
     ("transposition", transposition_query, add_transposition_notes),
     ("procedure", procedure_query, add_procedures),
     ("subjects", subjects_query, add_subjects),
@@ -708,6 +746,36 @@ def _act_dates(title: str, p: dict[str, set[str]], celex: str) -> tuple[str | No
     return official or meta_doc, meta_sig
 
 
+def unrecorded_entry_into_force(f: Facts, eif: str | None) -> tuple[bool, list[str], bool]:
+    """(entry_into_force_pending, entry_into_force_articles, effect_on_notification) of an act whose entry
+    into force or date of effect Cellar gives as the placeholder 1001-01-01 (see the module docstring)."""
+    if eif is not None or not any(_date(v) == UNKNOWN_DATE for v in f.props.get("eif", set())):
+        return False, [], False
+    types = f.eif_types.get(UNKNOWN_DATE, set())
+    if types & set(EFFECT_TYPES) and not types & set(EIF_TYPES):
+        return False, [], True
+    articles = {m.rstrip(".") for c in f.eif_notes.get(UNKNOWN_DATE, set()) for m in ARTICLE_RE.findall(c)}
+    return True, sorted(articles), False
+
+
+NOTE_CELEX_RE = re.compile(r"(?<![\w/])([1-4]\d{4}[A-Z]{1,2}\d{4})(?!\w)")
+
+
+def validity_notes(f: Facts) -> list[ValidityNote]:
+    """Cellar's comments on the end-of-validity values (not on the 9999-12-31 placeholder), by date."""
+    out = []
+    for d in sorted(f.validity_notes):
+        if d in PLACEHOLDER_DATES:
+            continue
+        for c in sorted(f.validity_notes[d]):
+            plain = re.sub(r"\|[^{}]*\}", "}", c)  # "{A/PAR|http://...}" -> "{A/PAR}"
+            codes = [x.strip() for x in re.findall(r"\{([^{}]+)\}", plain)]
+            codes = [x for x in codes if not NOTE_CELEX_RE.fullmatch(x)]
+            acts = list(dict.fromkeys(NOTE_CELEX_RE.findall(plain)))
+            out.append(ValidityNote(date=d, partial="FIN/VAL/PART" in codes, codes=codes, acts=acts))
+    return out
+
+
 def _whole_repeals(f: Facts, rel: str) -> set[str]:
     return {c for (r, c), axioms in f.repeal_axioms.items() if r == rel and whole_repeal(axioms)}
 
@@ -730,7 +798,7 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         return None
     act_type = act_type_for(_one(p.get("resource_type", set())), celex)
     eif, other_dates = split_eif(p.get("eif", set()), f.eif_types)
-    eif_pending = eif is None and any(_date(v) == UNKNOWN_DATE for v in p.get("eif", set()))
+    eif_pending, eif_articles, on_notification = unrecorded_entry_into_force(f, eif)
     partial = [d for d in other_dates if any(c.endswith("/PART") for c in f.eif_types.get(d, ()))]
     eov_values = {d for v in p.get("end_of_validity", set()) if (d := _date(v))}
     end_of_validity = None if not eov_values or OPEN_END in eov_values else max(eov_values)
@@ -754,9 +822,12 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         oj_ref=oj_ref,
         entry_into_force=eif,
         entry_into_force_pending=eif_pending,
+        entry_into_force_articles=eif_articles,
+        effect_on_notification=on_notification,
         other_application_dates=other_dates,
         partial_application_dates=partial,
         end_of_validity=end_of_validity,
+        validity_notes=validity_notes(f),
         in_force=in_force,
         transposition_deadlines=transposition,
         transposition_dates=transposition_dates(transposition, f.transposition_notes),

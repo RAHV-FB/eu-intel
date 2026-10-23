@@ -56,9 +56,12 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   is recorded by EP as a per-country party. Portraits not used.
 
 ### EUR-Lex / Cellar (`eurlex`) — ok
-- 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 22 final acts that OEIL
+- 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 21 final acts that OEIL
   records for procedures in the EP snapshot but Cellar does not link to them (e.g. Regulation 2019/816,
-  2017/0144(COD)): 1,270 acts. Non-legislative (NLE, ~2,490) and budgetary acts are out of scope for v1.
+  2017/0144(COD)): 1,269 acts. Non-legislative (NLE, ~2,490) and budgetary acts are out of scope for v1. OEIL's
+  "Corrigendum to final act" entries are not final acts: for 2021/0426(COD) (EPBD) one of them is Commission
+  Implementing Regulation 2025/1328, which implements the directive. Acts of the Commission are never taken as
+  the act of a legislative procedure.
 - Procedure link: dossier with `procedure_code_interinstitutional_reference_procedure` via
   `dossier_produces_resource_legal`, `resource_legal_produced_by_dossier`, or the adopted proposal's
   `work_part_of_dossier`. References whose type contradicts the dossier's own type are not linked.
@@ -66,10 +69,27 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   value tagged EV (else PE) of `resource_legal_date_entry-into-force` — the property mixes EV/PE/MA dates, and in
   166 acts the earliest value is not the entry into force. Other dates are kept as "further application dates"
   without claiming which provisions they concern, except that dates marked MA/PART or PE/PART (in the type or in
-  the `comment_on_date` annotation) are shown as "some provisions apply from". An entry-into-force value of
-  `1001-01-01` (comment DATNOT, date of notification) means the act has not yet taken effect, e.g. the Electoral
-  Act amendments awaiting approval by every Member State: shown as "Published, not yet in force", never as "no
-  longer in force".
+  the `comment_on_date` annotation) are shown as "some provisions apply from". A value of `1001-01-01` (comment
+  DATNOT, "date of notification") only says that the date is not recorded; its date type says what kind of date
+  it is. Type EV (entry into force) with a comment pointing to an article of the act ("V ART 2.2"): the act enters
+  into force on a condition it sets, not yet recorded as met. The Electoral Act amendments (2018/994, 2026/1296)
+  need the approval of every Member State in accordance with their constitutional requirements (Art. 223(1) TFEU,
+  Art. 2 of each decision): "Published, not yet in force". Type PE (date of effect) without an EV date: a decision
+  addressed to specific recipients, whose date of effect Cellar gives as the date of notification to them without
+  recording that date, e.g. the empowerment decisions 2020/853 (Germany), 2020/854 (Italy) and 2020/1531
+  (France), each "addressed to" its Member State (Art. 3): "Takes effect on notification", not "not yet in
+  force". No Treaty rule is cited for them: Art. 297(2) TFEU (addressed decisions take effect upon notification)
+  is about non-legislative acts, and these are legislative acts.
+- End of validity: the `comment_on_date` annotation on each `resource_legal_date_end-of-validity` value (fd_330
+  codes: A/PAR repealed by, AI/PAR implicitly repealed by, R/PAR replaced by, FIN/VAL/PART partial end of
+  validity, with the acts it names) is kept as `validity_notes`. A no-longer-in-force act names the repealing act
+  (by its number, linked to its file or to EUR-Lex): the whole-act repeal link, else the act in that annotation.
+  When the repealing act's official title says "(codification)" or "(recast)" and it is later than the act, the
+  status says that the rules continue in it. An end of validity earlier than the act itself (Regulation 1377/2014:
+  31 December 2013, "Implicitly repealed by" the own-resources recast 609/2014) is stated as such, not as a plain
+  end date. Dates the act records for after its end of validity are marked and are not its latest development
+  (Regulation 2024/2822: validity ended 30 June 2026, some provisions recorded to apply from 1 July 2026). An
+  in-force act with an end of validity still ahead says so, with the repealing act if one is recorded.
 - Transposition: `directive_date_transposition` holds deadlines and application dates under one property. Each
   value's `comment_on_date` label (ADOPTION = adopt and publish by, APPLICATION = apply from, AU+TARD = at the
   latest, with the article) is kept (`pipeline/analysis/transposition.py`). Apply-from dates are never shown as
@@ -111,7 +131,9 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   act this file amends or repeals, or that repeals it, by its file's title too, unless that is an "Amending …"
   title.
 - Known gaps: 352 acts without signature date, 24 directives without transposition date, only explicit whole-act
-  repeals, acts whose procedure is only in free text are unlinked.
+  repeals as repeal links (an implicit repeal is used only from the end-of-validity annotation), partial ends of
+  validity are described only for decisions that take effect on notification, acts whose procedure is only in
+  free text are unlinked.
 
 ### National implementation (`implementation`) — partial
 - National measures: Cellar `cdm:measure_national_implementing` →

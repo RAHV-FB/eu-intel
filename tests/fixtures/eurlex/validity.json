@@ -1,0 +1,61 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "w",
+   "d",
+   "c"
+  ]
+ },
+ "results": {
+  "distinct": false,
+  "ordered": true,
+  "bindings": [
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "d": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-07-09"
+    },
+    "c": {
+     "type": "literal",
+     "value": "{R/PAR|http://publications.europa.eu/resource/authority/fd_330/R%2FPAR} 32025R1208 {V|http://publications.europa.eu/resource/authority/fd_330/V} 62022CJ0061"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "d": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2022-12-31"
+    },
+    "c": {
+     "type": "literal",
+     "value": "{AI/PAR|http://publications.europa.eu/resource/authority/fd_330/AI%2FPAR} 32021R2116"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "d": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2020-12-31"
+    },
+    "c": {
+     "type": "literal",
+     "value": "{FIN/VAL/PART|http://publications.europa.eu/resource/authority/fd_330/FIN%2FVAL%2FPART} {ART|http://publications.europa.eu/resource/authority/fd_330/ART} 111 {AI/PAR|http://publications.europa.eu/resource/authority/fd_330/AI%2FPAR} 32021R0690"
+    }
+   }
+  ]
+ }
+}

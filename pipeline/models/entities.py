@@ -194,6 +194,17 @@ class CheckedTransposition(Model):
     other: list[str] = Field(default_factory=list)
 
 
+class ValidityNote(Model):
+    """One `resource_legal_date_end-of-validity` value with Cellar's comment on it (authority table fd_330)."""
+
+    date: str
+    partial: bool = False  # FIN/VAL/PART: partial end of validity (some provisions only)
+    # fd_330 codes in the comment, in order: A/PAR "Repealed by", AR/PAR "Repealed and replaced by",
+    # AI/PAR "Implicitly repealed by", R/PAR "Replaced by", P/PAR "Ext. valid. by", V "see", ART, ANN...
+    codes: list[str] = Field(default_factory=list)
+    acts: list[str] = Field(default_factory=list)  # CELEX ids of the acts the comment names
+
+
 class LegalAct(Model):
     """An act in the EU legal corpus (EUR-Lex / Cellar)."""
 
@@ -206,16 +217,21 @@ class LegalAct(Model):
     date_publication: str | None = None  # Official Journal publication
     oj_ref: str | None = None
     entry_into_force: str | None = None  # general entry-into-force date (earliest EIF value)
-    # Cellar gives the entry-into-force (or effect) date as the placeholder 1001-01-01: the act takes
-    # effect on a condition not yet met or not yet recorded (e.g. notification, approval by every
-    # Member State)
+    # Cellar gives the entry-into-force date (type EV) as the placeholder 1001-01-01: the act enters into
+    # force on a condition it sets that is not yet recorded as met (e.g. approval by every Member State)
     entry_into_force_pending: bool = False
+    # the article(s) of the act that Cellar's comment on that placeholder refers to ("V ART 2.2" -> "2.2")
+    entry_into_force_articles: list[str] = Field(default_factory=list)
+    # Cellar gives the date of effect (type PE) as 1001-01-01 with comment DATNOT (date of notification): a
+    # decision that takes effect on notification to its addressee, notification date not recorded
+    effect_on_notification: bool = False
     # Further dates recorded by Cellar as entry-into-force/application of provisions, ascending.
     # Cellar does not say which provisions; label them neutrally in the UI.
     other_application_dates: list[str] = Field(default_factory=list)
     # those of other_application_dates that Cellar marks as partial application (MA/PART, PE/PART)
     partial_application_dates: list[str] = Field(default_factory=list)
     end_of_validity: str | None = None  # None if open-ended (Cellar "9999-12-31")
+    validity_notes: list[ValidityNote] = Field(default_factory=list)  # end-of-validity values Cellar comments on
     in_force: bool | None = None
     transposition_deadlines: list[str] = Field(default_factory=list)  # directives only: every value
     transposition_dates: list[TranspositionDate] = Field(default_factory=list)  # the same, annotated

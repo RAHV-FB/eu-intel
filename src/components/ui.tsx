@@ -68,6 +68,7 @@ const STAGE_TONE: Record<LifecycleStage, string> = {
   adopted: 'done',
   published: 'done',
   in_force: 'done',
+  takes_effect_on_notification: 'done',
   no_longer_in_force: 'inactive',
   withdrawn: 'inactive',
   lapsed: 'inactive',

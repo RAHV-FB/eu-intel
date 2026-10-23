@@ -189,11 +189,64 @@ def test_entry_into_force_pending():
         "in_force": {"0"},
     })  # fmt: skip
     f.titles.add("Council Decision (EU, Euratom) 2018/994 of 13 July 2018 amending the Act concerning the election")
-    f.eif_types["1001-01-01"].add("EV")
+    E.add_eif_types({"w": f}, [{"w": "w", "d": "1001-01-01", "type": "{EV|http://publications.europa.eu/resource/"
+                                "authority/fd_335/EV}", "comment": DATNOT + " {V|.../fd_335/V} {ART|.../fd_335/ART} 2.2"}])  # fmt: skip
     act = E.build_act("w", f, RETRIEVED)
     assert act is not None
     assert act.entry_into_force is None and act.entry_into_force_pending
+    assert act.entry_into_force_articles == ["2.2"] and not act.effect_on_notification
     assert act.in_force is False and act.end_of_validity is None
+
+
+DATNOT = "{DATNOT|http://publications.europa.eu/resource/authority/fd_335/DATNOT}"
+
+
+def test_effect_on_notification_is_not_a_pending_entry_into_force():
+    """Decision 2020/853 ("addressed to the Federal Republic of Germany", Art. 3): Cellar gives its date of
+    effect (PE) as 1001-01-01 with comment DATNOT and no EV value; it takes effect on notification."""
+    f = E.Facts()
+    f.props.update({
+        "celex": {"32020D0853"},
+        "eif": {"1001-01-01"},
+        "end_of_validity": {"9999-12-31"},
+        "in_force": {"0"},
+    })  # fmt: skip
+    f.titles.add("Decision (EU) 2020/853 of the European Parliament and of the Council of 18 June 2020 empowering Germany")
+    E.add_eif_types({"w": f}, [{"w": "w", "d": "1001-01-01", "type": "{PE|http://publications.europa.eu/resource/"
+                                "authority/fd_335/PE}", "comment": DATNOT}])  # fmt: skip
+    act = E.build_act("w", f, RETRIEVED)
+    assert act is not None
+    assert act.effect_on_notification and not act.entry_into_force_pending
+    assert act.entry_into_force is None and act.entry_into_force_articles == []
+
+
+def test_validity_notes():
+    """Cellar's comments on end-of-validity values (live values, 2026-10-23)."""
+    auth = "http://publications.europa.eu/resource/authority/fd_330/"
+    f = E.Facts()
+    E.add_validity_notes({"w": f}, [
+        # 32014R0335: end of validity 2013-12-31, before the act itself (11 March 2014)
+        {"w": "w", "d": "2013-12-31", "c": f"{{A/PAR|{auth}A%2FPAR}} "
+                                           "{32014R0508|http://publications.europa.eu/resource/celex/32014R0508}"},
+        # 32015R2424
+        {"w": "w", "d": "2017-09-30", "c": f"{{AI/PAR|{auth}AI%2FPAR}} 32017R1001 {{AND|{auth}AND}} 32017R1430"},
+        # 32020D1531, next to 9999-12-31
+        {"w": "w", "d": "2024-03-17", "c": f"{{FIN/VAL/PART|{auth}FIN%2FVAL%2FPART}} {{V|{auth}V}} 32024D0867 "
+                                           f"{{ART|{auth}ART}} 6 {{repealing.act.provisional.date.notification."
+                                           "disclaimer|http://publications.europa.eu/resource/authority/fd_365/"
+                                           "repealing.act.provisional.date.notification.disclaimer}"},
+        # 32019R1157: replaced after judgment C-61/22 (case law is not an act)
+        {"w": "w", "d": "2025-07-09", "c": f"{{R/PAR|{auth}R%2FPAR}} 32025R1208 {{V|{auth}V}} 62022CJ0061"},
+        {"w": "w", "d": "9999-12-31", "c": "placeholder"},
+    ])  # fmt: skip
+    notes = [(n.date, n.partial, n.codes, n.acts) for n in E.validity_notes(f)]
+    assert notes == [
+        ("2013-12-31", False, ["A/PAR"], ["32014R0508"]),
+        ("2017-09-30", False, ["AI/PAR", "AND"], ["32017R1001", "32017R1430"]),
+        ("2024-03-17", True, ["FIN/VAL/PART", "V", "ART", "repealing.act.provisional.date.notification.disclaimer"],
+         ["32024D0867"]),
+        ("2025-07-09", False, ["R/PAR", "V"], ["32025R1208"]),
+    ]
 
 
 def test_transposition_dates_annotations():
@@ -343,6 +396,13 @@ def test_read_featured_celex(tmp_path):
     assert E.read_featured_celex(p) == ["32022L2464", "32022L2555"]
 
 
+def test_validity_notes_from_fixtures(fixture_acts):
+    # 32019R1157 (identity cards), declared invalid in C-61/22: "Replaced by 32025R1208" on 2025-07-09
+    a = fixture_acts["32019R1157"]
+    assert [(n.date, n.codes[0], n.acts) for n in a.validity_notes] == [("2025-07-09", "R/PAR", ["32025R1208"])]
+    assert fixture_acts["32024R1689"].validity_notes == []
+
+
 # ------------------------------------------------------------------------------ snapshot invariants
 SNAPSHOT = read_records("eurlex", "acts", LegalAct)
 needs_snapshot = pytest.mark.skipif(not SNAPSHOT, reason="no data/snapshot/eurlex/acts.json")
@@ -367,6 +427,20 @@ def test_snapshot_ids_and_types():
         for rel in (a.amends, a.amended_by, a.repeals, a.repealed_by):
             assert rel == sorted(set(rel)) and a.celex not in rel
             assert all(E.LINKED_CELEX_RE.match(c) for c in rel), (a.celex, rel)
+
+
+@needs_snapshot
+def test_snapshot_unrecorded_entry_into_force():
+    for a in SNAPSHOT:
+        assert not (a.entry_into_force_pending and a.effect_on_notification), a.celex
+        if a.effect_on_notification:
+            assert a.act_type == "decision" and a.entry_into_force is None, a.celex
+        if a.entry_into_force_articles:
+            assert a.entry_into_force_pending, a.celex
+        for n in a.validity_notes:
+            assert ISO.match(n.date) and n.date not in E.PLACEHOLDER_DATES, a.celex
+    by = {a.celex: a for a in SNAPSHOT}
+    assert by["32020D0853"].effect_on_notification and by["32018D0994"].entry_into_force_pending
 
 
 @needs_snapshot

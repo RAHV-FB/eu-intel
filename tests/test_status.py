@@ -374,7 +374,11 @@ def test_repealed_act_names_the_repealing_act():
     ]
     s = classify(p, repealed, [], TODAY)
     assert s.stage == "no_longer_in_force"
-    assert "repealed by 32026R0001" in s.explanation
+    # an act not in our data is named by the number its CELEX id gives, and linked to EUR-Lex
+    assert "repealed by Regulation 2026/1." in s.explanation
+    assert [(r.celex, r.url) for r in s.named_acts] == [
+        ("32026R0001", "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R0001")
+    ]
 
 
 def test_directive_next_step_uses_general_deadline_not_application_date():
@@ -535,3 +539,120 @@ def test_stale_consultation_does_not_assert_a_pending_council_decision():
     assert s.next_step.basis == "unknown" and s.next_step.text.startswith("Not determined")
     recent = status("2023-0320", date(2024, 6, 1))
     assert "Council decides" in recent.next_step.text
+
+
+# ============================================================ act validity (real EUR-Lex records)
+# tests/fixtures/eurlex/validity_acts.json: the snapshot records of these acts (subjects left out)
+VALIDITY = {
+    a.celex: a
+    for a in (
+        LegalAct.model_validate(x)
+        for x in json.loads((FIX.parent / "eurlex" / "validity_acts.json").read_text(encoding="utf-8"))
+    )
+}
+TODAY_V = date(2026, 10, 23)
+
+
+def _bare_proc(ref: str, ptype: str, celex_refs: list[str]) -> Procedure:
+    from pipeline.models.entities import SourceRef
+
+    return Procedure(
+        id=ref[:9].replace("/", "-"), reference=ref, type=ptype, title=ref, stage_raw="Procedure completed",
+        celex_refs=celex_refs, oeil_url=f"https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference={ref}",
+        source=SourceRef(institution="EP", url="https://data.europarl.europa.eu/", retrieved_at=RETRIEVED),
+    )  # fmt: skip
+
+
+def act_status(celex: str, ref: str, ptype: str = "COD") -> DossierStatus:
+    return classify(_bare_proc(ref, ptype, [celex]), [VALIDITY[celex]], [], TODAY_V, others=VALIDITY)
+
+
+def test_decision_addressed_to_a_member_state_takes_effect_on_notification():
+    # Decision (EU) 2020/853, Art. 3: "This Decision is addressed to the Federal Republic of Germany".
+    # Cellar: date of effect (PE) 1001-01-01, comment DATNOT; in force 0. Not "not yet in force".
+    s = act_status("32020D0853", "2019/0107(COD)")
+    assert (s.stage, s.label, s.since) == ("takes_effect_on_notification", "Takes effect on notification", "2020-06-22")
+    assert "EUR-Lex gives its date of effect as the date of notification to them, without recording" in s.explanation
+    assert "297" not in s.explanation  # Art. 297(2) TFEU is about non-legislative acts; this one is legislative
+    assert "not yet in force" not in all_text(s) and "no longer" not in all_text(s).lower()
+    assert s.next_step.text.startswith("None") and "once" not in s.next_step.text
+    assert s.application.effect_on_notification and not s.application.entry_into_force_pending
+
+
+def test_partial_end_of_validity_names_the_later_decision():
+    # Decision (EU) 2020/1531 (France, Channel Fixed Link): Cellar records a partial end of validity on
+    # 2024-03-17 "V 32024D0867 ART 6"; Art. 6 of Decision (EU) 2024/867: "Decision (EU) 2020/1531 remains
+    # applicable to the extent referred to in Article 5(2)."
+    s = act_status("32020D1531", "2020/0160(COD)")
+    assert s.stage == "takes_effect_on_notification"
+    assert "partial end of its validity on 17 March 2024 and refers to Decision (EU) 2024/867." in s.explanation
+    assert [(r.celex, r.label) for r in s.named_acts] == [("32024D0867", "Decision (EU) 2024/867")]
+
+
+def test_electoral_act_amendment_needs_approval_by_every_member_state():
+    # Decision 2018/994, Art. 2(1): "subject to approval by the Member States in accordance with their
+    # respective constitutional requirements"; Art. 2(2): enters into force after the last notification
+    s = act_status("32018D0994", "2015/0907(APP)", "APP")
+    assert (s.stage, s.label) == ("published", "Published, not yet in force")
+    assert "every Member State has approved it in accordance with its constitutional requirements" in s.explanation
+    assert "(Article 223(1) TFEU); EUR-Lex refers to Art. 2(2) of the decision" in s.explanation
+    assert s.next_step.text.startswith("Entry into force once every Member State has approved the decision")
+    assert "Article 223(1) TFEU" in (s.application.entry_into_force_condition or "")
+
+
+def test_repealed_by_a_codification_names_it_and_says_the_rules_continue():
+    # Directive (EU) 2017/853 (firearms), repealed by Directive (EU) 2021/555 "... (codification)"
+    s = act_status("32017L0853", "2015/0269(COD)")
+    assert s.stage == "no_longer_in_force"
+    assert "EUR-Lex records it as repealed by Directive (EU) 2021/555." in s.explanation
+    assert "Directive (EU) 2021/555 is a codification: the rules continue in it, unchanged in substance" in s.explanation
+    assert "32021L0555" not in s.explanation
+    assert [(r.celex, r.label, r.url) for r in s.named_acts] == [
+        ("32021L0555", "Directive (EU) 2021/555", "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32021L0555")
+    ]
+
+
+def test_end_of_validity_before_the_act_itself_is_explained():
+    # Council Regulation 1377/2014 of 18 December 2014: Cellar end of validity 2013-12-31, "Implicitly
+    # repealed by 32014R0609" - the own-resources recast of 26 May 2014, older than the act: its rules cannot
+    # "continue" in it
+    s = act_status("32014R1377", "2014/0332(CNS)", "CNS")
+    assert s.stage == "no_longer_in_force" and s.since == "2013-12-31"
+    assert "a date earlier than the act itself, which is dated 18 December 2014" in s.explanation
+    assert "implicitly repealed by Council Regulation (EU, Euratom) No 609/2014, with effect from that earlier date" in (
+        s.explanation
+    )
+    assert "recast" not in s.explanation and "its validity ended on" not in s.explanation
+    assert s.application.after_end_of_validity == []  # every date of the act is later than such an end
+
+
+def test_application_date_after_the_end_of_validity_is_marked():
+    # Regulation (EU) 2024/2822 (designs): validity ended 2026-06-30 (repealed by the codification 2026/715);
+    # EUR-Lex still records 2026-07-01 as a date from which some provisions apply
+    s = act_status("32024R2822", "2022/0391(COD)")
+    assert s.stage == "no_longer_in_force"
+    assert s.application.after_end_of_validity == ["2026-07-01"]
+    assert "Regulation (EU) 2026/715 is a codification" in s.explanation
+
+
+def test_in_force_act_states_its_recorded_end_and_repeal():
+    # Directive (EU) 2015/849 (AMLD4): in force, end of validity 2027-07-09, repealed by Directive (EU) 2024/1640
+    s = act_status("32015L0849", "2013/0025(COD)")
+    assert s.stage == "in_force"
+    assert "EUR-Lex records that its validity ends on 9 July 2027 and that Directive (EU) 2024/1640 repeals it." in (
+        s.explanation
+    )
+    assert [r.celex for r in s.named_acts] == ["32024L1640"]
+
+
+def test_commission_implementing_act_is_not_a_final_act_of_the_procedure():
+    # EPBD 2021/0426(COD): OEIL listed Commission Implementing Regulation (EU) 2025/1328 as a "Corrigendum to
+    # final act"; the procedure's act is Directive (EU) 2024/1275, which must be transposed (Art. 35)
+    from pipeline.analysis.status import relevant_acts
+
+    p = _bare_proc("2021/0426(COD)", "COD", ["32024L1275", "32025R1328"])
+    acts = [VALIDITY["32024L1275"], VALIDITY["32025R1328"]]
+    assert [a.celex for a in relevant_acts(p, acts, [], TODAY_V)] == ["32024L1275"]
+    s = classify(p, acts, [], TODAY_V)
+    assert s.stage == "in_force" and s.since == "2024-05-28"
+    assert "transpos" in s.next_step.text and "regulation applies directly" not in s.next_step.text
