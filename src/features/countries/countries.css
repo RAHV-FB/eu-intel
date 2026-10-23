@@ -79,6 +79,13 @@
   margin-top: var(--sp-7);
   padding-top: var(--sp-5);
   border-top: 3px solid var(--eu-blue);
+  /* a section link lands with the heading below the sticky header (and its navigation row on wide screens) */
+  scroll-margin-top: calc(var(--header-h) + var(--sp-4));
+}
+@media (min-width: 64rem) {
+  .csection {
+    scroll-margin-top: calc(var(--header-h) + 2.75rem + var(--sp-4));
+  }
 }
 .csection--council {
   border-top-color: var(--navy);
@@ -195,8 +202,19 @@
 }
 
 @media (max-width: 39.99rem) {
+  /* on phones the status is shown under the directive: the Status column's width would push "Measures notified" off
+     a 320px screen */
   .impl-dir,
-  .wrap-cell {
+  .wrap-cell,
+  .impl-dir .tstatus {
     min-width: 0;
+  }
+}
+@media (max-width: 23.49rem) {
+  /* 320-375px: a long unbroken word (a case subject's "2014/23/EU,2014/24/EU,", a group's "Greens/European") may break
+     anywhere, so that the tables fit the screen with their last column */
+  .wrap-cell,
+  .csection .table tbody th {
+    overflow-wrap: anywhere;
   }
 }

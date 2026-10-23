@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { CountryDetail, Meta } from '../types/data';
+import type { CountryDetail, MepSummary, Meta } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
+import { useHashScroll } from '../features/guide/useHashScroll';
 import { COUNTRY_NAMES, formatDate, formatNumber, pct } from '../lib/format';
 import { useParamState } from '../lib/urlState';
 import { ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Tag, Term } from '../components/ui';
@@ -26,6 +27,8 @@ const FORMER_MEMBER_STATES = new Set(['GB']);
 
 function FormerMemberState({ code }: { code: string }) {
   const name = COUNTRY_NAMES[code];
+  const meps = useData<MepSummary[]>('people/meps.json');
+  const elected = meps.data?.filter((m) => m.country === code && !m.active).length;
   return (
     <div className="container page">
       <p className="meta" style={{ marginBottom: 'var(--sp-3)' }}>
@@ -38,6 +41,16 @@ function FormerMemberState({ code }: { code: string }) {
         linked to (Council votes not linked to a file are listed only on the pages of the current Member States), and the votes of
         MEPs elected there on each MEP’s page.
       </p>
+      {/* the MEP list's default is current MEPs: none of those elected in a former Member State is */}
+      <ul className="stack" style={{ paddingLeft: '1.1rem' }}>
+        <li>
+          <Link to={`/people?country=${code}&status=former`}>MEPs elected in the {name}</Link>
+          {elected ? <span className="meta"> ({formatNumber(elected)} in our data)</span> : null}
+        </li>
+        <li>
+          <Link to={`/people?view=parties&pcountry=${code}&pscope=all`}>National parties of the {name}</Link>
+        </li>
+      </ul>
     </div>
   );
 }
@@ -96,6 +109,8 @@ export default function Country() {
       row.focus();
     }
   }, [allVotes]);
+  // a link to a section (/countries/IE#implementation) lands on it once the country has loaded
+  useHashScroll(!loading && !!c);
 
   if (FORMER_MEMBER_STATES.has(upper)) return <FormerMemberState code={upper} />;
   if (!valid) return <NotFound what="country" />;
@@ -401,7 +416,7 @@ export default function Country() {
         <h3>Infringement cases</h3>
         <InfringementNote />
         <div style={{ marginTop: 'var(--sp-4)' }}>
-          <InfringementTable rows={c.infringements} />
+          <InfringementTable rows={c.infringements} directives={c.transposition} />
         </div>
         {implSource && (
           <p className="note" style={{ marginTop: 'var(--sp-3)' }}>

@@ -15,6 +15,7 @@ import { CouncilVotes, ParliamentVotes } from '../features/legislation/dossier/V
 import { NationalApplication } from '../features/legislation/dossier/Application';
 import { DossierDetails } from '../features/legislation/dossier/Details';
 import { FollowButton } from '../features/watchlist/FollowButton';
+import { useHashScroll } from '../features/guide/useHashScroll';
 import '../features/legislation/common.css';
 import '../features/legislation/dossier/dossier.css';
 
@@ -59,6 +60,8 @@ function DossierPage({ id }: { id: string }) {
     if (c.changed) setChange(c);
     markSeen(d);
   }, [d]);
+  // a link to a section (/legislation/2021-0106#timeline) lands on it once the file has loaded
+  useHashScroll(!loading && !!d);
 
   if (notFound) return <NotFound what="legislative file" />;
   if (error)

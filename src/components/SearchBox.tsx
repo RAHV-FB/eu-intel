@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { SearchKind } from '../types/data';
 import { loadSearch, type SearchEngine, type SearchHit } from '../lib/search';
+import { useFittingPlaceholder } from './useFittingPlaceholder';
 
 const KIND_LABEL: Record<SearchKind, string> = {
   dossier: 'Legislation',
@@ -25,6 +26,22 @@ export function approximateNote(h: SearchHit): string | null {
   return h.similar?.length ? `Similar word: ${h.similar.slice(0, 2).join(', ')}` : 'All but one of the words';
 }
 
+/** Placeholders, longest first: the longest that fits the field is shown (useFittingPlaceholder). */
+const PLACEHOLDERS = [
+  'Search a law, topic, politician, party or country…',
+  'Search a law, topic, MEP or country…',
+  'Search a law, MEP or country…',
+  'Search…',
+];
+/** The same for the large search fields (home page, search page). */
+export const PAGE_PLACEHOLDERS = [
+  'Search a law, topic, MEP, party or country…',
+  'Search a law, topic, MEP or country…',
+  'Search a law, MEP or country…',
+  'A law, MEP or country…',
+  'Search…',
+];
+
 /**
  * Global search field with keyboard-navigable suggestions (ARIA combobox pattern).
  * Enter without a highlighted suggestion opens the full results page (/search?q=…).
@@ -32,12 +49,12 @@ export function approximateNote(h: SearchHit): string | null {
 export function SearchBox({
   compact,
   autoFocus,
-  placeholder = 'Search a law, topic, politician, party or country…',
+  placeholder = PLACEHOLDERS,
   initial = '',
 }: {
   compact?: boolean;
   autoFocus?: boolean;
-  placeholder?: string;
+  placeholder?: readonly string[];
   initial?: string;
 }) {
   const [q, setQ] = useState(initial);
@@ -47,7 +64,8 @@ export function SearchBox({
   const [active, setActive] = useState(-1);
   const navigate = useNavigate();
   const listId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const [shownPlaceholder, inputRef] = useFittingPlaceholder(placeholder);
 
   // Load the index lazily on first interaction.
   const ensureEngine = () => {
@@ -93,6 +111,31 @@ export function SearchBox({
 
   const showList = open && hits.length > 0;
 
+  // In the sticky header (and the phone search panel) the list fits in the screen below the field and scrolls there:
+  // the page cannot scroll a suggestion into view, notably on short or zoomed screens. (Elsewhere the page scrolls.)
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!showList || !list || !compact) return;
+    const fit = () => {
+      const bottom = window.visualViewport?.height ?? window.innerHeight;
+      list.style.maxHeight = `${Math.max(96, bottom - list.getBoundingClientRect().top - 8)}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    window.visualViewport?.addEventListener('resize', fit);
+    return () => {
+      window.removeEventListener('resize', fit);
+      window.visualViewport?.removeEventListener('resize', fit);
+    };
+  }, [showList, compact]);
+  // The highlighted suggestion is kept in view, so that keyboard users see what Enter opens; back in the field, or
+  // with new suggestions, the list starts from the top.
+  useLayoutEffect(() => {
+    if (!showList) return;
+    if (active >= 0) document.getElementById(`${listId}-opt-${active}`)?.scrollIntoView({ block: 'nearest' });
+    else if (listRef.current) listRef.current.scrollTop = 0;
+  }, [active, hits, listId, showList]);
+
   return (
     <form role="search" className={`searchbox${compact ? ' searchbox--compact' : ''}`} onSubmit={onSubmit}>
       <label className="visually-hidden" htmlFor={`${listId}-input`}>
@@ -116,7 +159,7 @@ export function SearchBox({
           autoComplete="off"
           spellCheck={false}
           autoFocus={autoFocus}
-          placeholder={placeholder}
+          placeholder={shownPlaceholder}
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
@@ -136,7 +179,7 @@ export function SearchBox({
         )}
       </div>
       {showList && (
-        <ul id={listId} role="listbox" className="searchbox__list">
+        <ul id={listId} role="listbox" className="searchbox__list" ref={listRef}>
           {hits.map((h, i) => (
             <li
               key={`${h.doc.k}:${h.doc.id}`}

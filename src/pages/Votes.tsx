@@ -7,12 +7,15 @@ import { loadSearch, type SearchEngine } from '../lib/search';
 import { clearAllParams, shownParam, useParamState, useParamText } from '../lib/urlState';
 import { Disclosure, EmptyState, ErrorState, Loading, PageHeader, Term } from '../components/ui';
 import { CollapsibleFilters } from '../components/CollapsibleFilters';
+import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, VoteKindGuide, VoteListItem } from '../features/votes/components';
 import { KIND_LABEL, OUTCOME_LABEL, isClose } from '../features/votes/labels';
 import { matchVoteDetails, voteHaystacks } from '../features/votes/keyword';
 
 const PAGE = 50;
+// longest first: the longest that fits the field is shown, so that phones keep the reference-format example
+const Q_PLACEHOLDERS = ['e.g. artificial intelligence, 2021/0106(COD)', 'e.g. AI Act, 2021/0106(COD)', 'e.g. 2021/0106(COD)'];
 const SHOW_RESET = ['show']; // a new search starts from the first page
 const KIND_ORDER: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'amendment', 'split_or_separate', 'procedural', 'other'];
 const OUTCOME_ORDER: VoteOutcome[] = ['adopted', 'rejected', 'lapsed', 'unknown'];
@@ -37,6 +40,7 @@ export default function Votes() {
 
   const qBox = useParamText('q', SHOW_RESET);
   const q = qBox.value;
+  const [qPlaceholder, qRef] = useFittingPlaceholder(Q_PLACEHOLDERS);
   const year = params.get('year') ?? '';
   const kind = params.get('kind') ?? '';
   const outcome = params.get('outcome') ?? '';
@@ -180,10 +184,11 @@ export default function Votes() {
               <label htmlFor="vf-q">Search vote titles or procedure references</label>
               <input
                 id="vf-q"
+                ref={qRef}
                 className="input"
                 type="search"
                 value={q}
-                placeholder="e.g. artificial intelligence, 2021/0106(COD)"
+                placeholder={qPlaceholder}
                 onChange={(e) => qBox.set(e.target.value)}
                 onBlur={qBox.flush}
               />

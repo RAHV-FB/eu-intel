@@ -3,7 +3,7 @@ import type { HomeData, Meta, Topic } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDateTime, formatNumber, noUpdateText, stillAhead } from '../lib/format';
 import { votesSince } from '../lib/scope';
-import { SearchBox } from '../components/SearchBox';
+import { PAGE_PLACEHOLDERS, SearchBox } from '../components/SearchBox';
 import { ErrorState, Loading } from '../components/ui';
 import { FeaturedCard } from '../features/home/FeaturedCard';
 import { HomeLists } from '../features/home/HomeLists';
@@ -58,7 +58,7 @@ export default function Home() {
             language, with every fact linked to the official record.
           </p>
           <div className="home-hero__search">
-            <SearchBox placeholder="Search a law, topic, MEP, party or country…" />
+            <SearchBox placeholder={PAGE_PLACEHOLDERS} />
           </div>
           <div className="home-hero__examples">
             <span className="home-hero__try" id="try-label">
