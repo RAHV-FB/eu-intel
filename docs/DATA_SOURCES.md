@@ -55,6 +55,25 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
 - Gaps: a few MEPs lack a national-party membership for part of a mandate (e.g. 197526 in term 10). "Independent"
   is recorded by EP as a per-country party. Portraits not used.
 
+### EP plenary votes (`ep_votes`) — ok
+- Fields are documented in `pipeline/sources/ep_votes.py`; the points below are where we read more than one
+  field of the record.
+- Counts: the API leaves out a count of zero (decision 162156 of 12 Dec 2023 has 604 for, 5 abstentions and no
+  "against"; the minutes print 604 | 0 | 5). When a decision publishes any count, a missing one is the number of
+  MEPs listed in that position, i.e. 0; a decision without counts (show of hands) keeps all three empty.
+- Procedure links keep the letter of a split procedure's reference (`2021/0211A(COD)`), and document numbers
+  are read with any hyphen-like character (`A9‑0256/2020`, U+2011). A vote item that names neither procedure
+  nor document (a secret ballot) is linked through the report in its structured label.
+- Before 2024 a decision is the vote on the provisional agreement (kind `final`) when its row in the sitting's
+  minutes has the Subject "Provisional agreement", even if the label gives only the amendment number
+  (European Climate Law, 24 Jun 2021, "Am 176"). A final vote is a negotiating mandate when the procedure's
+  referral back for negotiations is recorded on the vote's day or up to two days later (remote voting in
+  2020–21 recorded it the next day).
+- Timeline (build): Parliament's first-reading decision recorded only as "took its decision" is titled as a
+  rejection when every final vote of that day linked to the file was officially rejected (2025/0429(COD),
+  26 Mar 2026, OEIL: "the European Parliament rejected the proposal"). A rejected final vote on a file whose
+  OEIL record names a later final act carries a note saying the procedure continued.
+
 ### EUR-Lex / Cellar (`eurlex`) — ok
 - 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 21 final acts that OEIL
   records for procedures in the EP snapshot but Cellar does not link to them (e.g. Regulation 2019/816,
@@ -209,6 +228,17 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
 - QMV population figures per year from the Council decisions amending Annex III of its Rules of Procedure
   (CELEX 32018D2076, 32019D2209, 32020D2030, 32021D2320, 32022D2518, 32023D2827, 32024D3231, 32025D2427).
 - "Not participating" (opt-outs, e.g. DK/IE in justice and home affairs) is kept distinct from abstention.
+- Statements: the annex heading alone ("STATEMENTS") is not listed as a statement.
+- Build-time checks against the procedure record (`vote_on_note` says when one applies): a note headed
+  "Adoption of the legislative act" whose reference document is the Council's first-reading position (same
+  number as OEIL's "Council position published"), followed by Parliament's second-reading decision, adopted
+  that position (ST 12604/20, 12592/20, 13733/20); a note naming no item, dated the day OEIL records the
+  Council's adoption of the act, is the adoption of the act. A vote citing the reference of a split procedure
+  (2021/0211(COD)) is listed on the part holding an act of the type voted on (2021/0211A for the directive);
+  the parent keeps a pointer (`council_votes_in_parts`).
+- QMV threshold: when it is not established whether the Council acted on a Commission proposal (an ordinary
+  procedure opened by OEIL's "Legislative proposal published" without another initiator's document counts as
+  one), both numbers of Member States are given (`states_required` 55%, `states_required_alt` 72%).
 
 ### Legislative Train (`train`) — ok
 - 1,492 files across the 2014–19, 2019–24 and 2024–29 Commission terms; 663 carry procedure references. Statuses

@@ -25,10 +25,10 @@ def _term(day: str) -> int:
     return 9 if day <= "2024-07-15" else 10
 
 
-def load_sitting(day: str, minutes: bool = True) -> ev.Sitting:
-    raw = json.loads((FIX / f"sitting_{day}.json").read_text(encoding="utf-8"))
+def load_sitting(day: str, minutes: bool = True, base: Path = FIX) -> ev.Sitting:
+    raw = json.loads((base / f"sitting_{day}.json").read_text(encoding="utf-8"))
     sid = raw["sitting"]
-    xml = FIX / f"minutes_{day}.xml"
+    xml = base / f"minutes_{day}.xml"
     return ev.Sitting.build(
         {"id": sid, "date": sid[7:17], "term": _term(sid[7:17])},
         raw["decisions"]["data"],
@@ -213,6 +213,92 @@ def test_old_format_outcomes_from_minutes():
     # without the minutes only votes under an established rule get an outcome, marked "derived"
     assert (no_minutes["109643"].outcome, no_minutes["109643"].outcome_basis) == ("rejected", "derived")
     assert all(v.outcome_basis in ("derived", None) for v in no_minutes.values())
+
+
+def test_zero_against_left_out_by_the_api():
+    # 12 Dec 2023, A9-0355/2023 (2023/0027(CNS)): the decision has 604 for and 5 abstentions but no
+    # "against" count and no voter in that position; the minutes print "Commission proposal | RCV | + | 604
+    # | 0 | 5" (PV-9-2023-12-12-VOT)
+    raw = json.loads((FIX / "sitting_2023-12-12.json").read_text(encoding="utf-8"))["decisions"]["data"][0]
+    assert "number_of_votes_against" not in raw and "had_voter_against" not in raw
+    assert ev.vote_counts(raw) == (604, 0, 5)
+    assert ev.vote_counts({"number_of_votes_favor": 3, "had_voter_against": ["person/1"]}) == (3, 1, 0)
+    assert ev.vote_counts({"decision_method": "def/ep-decision-methods/VOTE_SHOW_OF_HANDS"}) == (None,) * 3
+    votes, ballots = assemble("2023-12-12")
+    v = votes["162156"]
+    assert (v.n_for, v.n_against, v.n_abstain) == (604, 0, 5)
+    assert (v.kind, v.outcome, v.outcome_basis, v.majority_rule) == ("final", "adopted", "minutes", "votes_cast")
+    assert v.procedure_refs == ["2023/0027(CNS)"] and ballots["162156"].against == []
+    no_minutes, _ = assemble("2023-12-12", minutes=False)
+    assert (no_minutes["162156"].outcome, no_minutes["162156"].outcome_basis) == ("adopted", "derived")
+
+
+# Votes that were not linked or not classed as Parliament's decision (fixtures in linking/: real API answers of
+# one decision and its vote item each; the procedure references are the EP API's labels of those ids)
+LINKING = FIX / "linking"
+LINK_LABELS = {
+    "2021-0211A": "2021/0211A(COD)", "2020-0036": "2020/0036(COD)", "2025-0045": "2025/0045(COD)",
+    "2018-0108": "2018/0108(COD)",
+}  # fmt: skip
+
+
+def link(day: str, vid: str, **kw) -> EpVote:
+    res = ev.assemble([load_sitting(day, base=LINKING)], LINK_LABELS, {}, RETRIEVED, **kw)
+    return next(v for v in res.votes if v.id == vid)
+
+
+def test_split_procedure_reference_keeps_its_letter():
+    # 18 Apr 2023, ETS revision: the vote item lists eli/dl/proc/2021-0211A (the split part of 2021/0211(COD))
+    v = link("2023-04-18", "154173")
+    assert v.title == "A9-0162/2022 – Peter Liese – Provisional agreement – Am 680"
+    assert (v.procedure_refs, v.kind) == (["2021/0211A(COD)"], "final")
+    assert ev.ref_to_process_id("2021/0211A(COD)") == "2021-0211A"
+
+
+def test_provisional_agreement_named_only_in_the_minutes():
+    # 24 Jun 2021, European Climate Law: the label is "A9-0162/2020 - Jytte Guteland - Am 176"; the minutes
+    # row reads "Provisional agreement | 176 | committee | RCV | + | 442 203 51" (PV-9-2021-06-24-VOT)
+    # the 2021 vote item lists no procedure: the item of 7 Oct 2020 on the same report does (state index)
+    known = {"A-9-2020-0162": {"procs": ["2020-0036"], "symbols": ["***I"]}}
+    v = link("2021-06-24", "134029", known_docs=known)
+    assert (v.n_for, v.n_against, v.n_abstain) == (442, 203, 51)
+    assert (v.kind, v.outcome, v.outcome_basis) == ("final", "adopted", "minutes")
+    assert (v.procedure_refs, v.majority_rule, v.has_ballots) == (["2020/0036(COD)"], "votes_cast", True)
+    without = ev.assemble([load_sitting("2021-06-24", minutes=False, base=LINKING)], LINK_LABELS, {}, RETRIEVED)
+    assert without.votes[0].kind == "amendment"  # nothing else says it was the agreement
+    # a misspelt marker in the label (European Year of Youth, 14 Dec 2021, 137684)
+    label = "European Year of Youth 2022 - A9-0322/2021 - Sabine Verheyen - Provisonal agreement - Am 2"
+    assert ev.is_provisional_agreement("", "", label)
+
+
+def test_referral_back_recorded_the_next_day_makes_a_mandate():
+    # 7 Oct 2020 (remote voting), European Climate Law, "Proposition de la Commission" 392-161-142; the
+    # referral back to committee (procedure event PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS)
+    # is dated 8 Oct 2020
+    assert link("2020-10-07", "118521").kind == "final"
+    assert link("2020-10-07", "118521", referrals={"2020-0036": ["2020-10-08"]}).kind == "mandate"
+    assert link("2020-10-07", "118521", referrals={"2020-0036": ["2020-10-12"]}).kind == "final"
+    assert not ev.referred_after("2020-10-07", ["2020-10-06"])
+
+
+def test_document_number_with_a_non_breaking_hyphen():
+    # 13 Jun 2023, e-evidence: "… – A9‑0256/2020 – Birgit Sippel – Provisional agreement – Am 2" (U+2011)
+    v = link("2023-06-13", "155928")
+    assert "A9‑0256/2020" in v.title
+    assert (v.kind, v.procedure_refs) == ("final", ["2018/0108(COD)"])
+    assert ev.doc_ref_to_id(ev.ascii_hyphens("A9‑0256/2020")) == "A-9-2020-0256"
+
+
+def test_secret_ballot_item_named_only_by_its_report():
+    # 22 Oct 2025, Omnibus I: the item of the secret ballot on the committee's negotiating mandate (309-318-34)
+    # lists no procedure and no document; its structuredLabel names "Report: Jörgen Warborn (A10-0197/2025)",
+    # the report other vote items (here: the state's document index) link to 2025/0045(COD)
+    known = {"A-10-2025-0197": {"procs": ["2025-0045"], "symbols": ["***I"]}}
+    assert link("2025-10-22", "180328").procedure_refs == []
+    v = link("2025-10-22", "180328", known_docs=known)
+    assert (v.procedure_refs, v.kind, v.kind_detail, v.outcome) == (
+        ["2025/0045(COD)"], "procedural", "negotiation_decision", "rejected"
+    )  # fmt: skip
 
 
 def test_minutes_rows():
@@ -539,9 +625,9 @@ def test_interrupted_fetch_keeps_completed_chunks_and_resumes(fetch_env, monkeyp
     checks = iter([False, True])  # the budget runs out after the first chunk
     monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: next(checks, True))
     first = ev.fetch(http)
-    assert first.status == "partial" and "11 sittings pending; resumes next run" in first.note
+    assert first.status == "partial" and "12 sittings pending; resumes next run" in first.note
     state = snapshot.read_state(ev.SOURCE_ID)
-    assert state["pass"] == "full" and len(state["pending"]) == 11
+    assert state["pass"] == "full" and len(state["pending"]) == 12
     done = {v.event_id[:17] for v in _stored().values()}
     assert done == {"MTG-PL-2019-10-24", "MTG-PL-2020-07-08", "MTG-PL-2022-07-05"}  # 2020-07-09: no decisions
     assert state["doc_links"]["RC-9-2019-0118"] == ["2019-2854"]
@@ -582,7 +668,7 @@ def test_full_refresh_flag_refetches_everything(fetch_env, monkeypatch):
     monkeypatch.setenv("EU_INTEL_FULL_REFRESH", "1")
     http = FixtureHttp()
     status = ev.fetch(http)
-    assert status.note.startswith("full pass: 15/15 sittings")
+    assert status.note.startswith("full pass: 16/16 sittings")
     assert {p.split("/")[2] for p in http.requests if p.startswith("/meetings/MTG-PL-")} == set(http.sittings)
 
 
@@ -592,7 +678,7 @@ def test_pending_sittings_resume_when_the_listing_fails(fetch_env, monkeypatch):
 
     checks = iter([False, True])
     monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: next(checks, True))
-    ev.fetch(FixtureHttp())  # interrupted after the first chunk: 11 sittings pending
+    ev.fetch(FixtureHttp())  # interrupted after the first chunk: 12 sittings pending
 
     class NoListing(FixtureHttp):
         def get(self, url, params=None, **kw):

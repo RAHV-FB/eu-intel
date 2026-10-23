@@ -126,6 +126,7 @@ export function CouncilVoteCard({
           <span className="cvote__voteon-label">Vote on: </span>
           <VoteOn vote={vote} />
         </p>
+        {vote.vote_on_note && <p className="meta cvote__voteon-note">{vote.vote_on_note}</p>}
         <dl className="cvote__facts">
           <div>
             <dt>Outcome</dt>
@@ -210,7 +211,16 @@ export function CouncilVoteCard({
                 <li>
                   <b className="num">{formatNumber(a.states_for)}</b> Member States voted in favour
                   {participating > 0 && recorded.length > 0 ? <> out of {formatNumber(participating)} taking part</> : null}; at least{' '}
-                  <b className="num">{formatNumber(a.states_required)}</b> were needed.
+                  {a.states_required_alt != null && a.states_required_alt !== a.states_required ? (
+                    <>
+                      <b className="num">{formatNumber(a.states_required)}</b> were needed if the Council acted on a Commission proposal (55%),
+                      or <b className="num">{formatNumber(a.states_required_alt)}</b> if it did not (72%).
+                    </>
+                  ) : (
+                    <>
+                      <b className="num">{formatNumber(a.states_required)}</b> were needed.
+                    </>
+                  )}
                 </li>
                 {popFor && (
                   <li>

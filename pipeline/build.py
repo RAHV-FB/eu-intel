@@ -785,6 +785,43 @@ def mark_after_end_of_validity(timeline: list[dict], acts: list[LegalAct]) -> li
 
 # Title ep_procedures gives the OEIL key event "Council position published" (see `timeline`).
 OEIL_POSITION_PUBLISHED = "Council adopted its first-reading position"
+# Council document numbers: a voting result's reference "ST 9890/20" and OEIL's position "09890/2/2020"
+_COUNCIL_DOC_NO = re.compile(r"\bST\s+0*(\d+)/(\d{2})\b")
+_COUNCIL_POSITION_NO = re.compile(r"0*(\d+)/(?:\d+/)?(\d{4})")
+# Parliament's decision on the Council's position at second reading (EP API activity types)
+SECOND_READING_DECISION_RE = re.compile(r"PLENARY_(?:APPROVE|AMEND|REJECT)_COUNCIL_POSITION$")
+_ACT_TITLE_HEAD = re.compile(r"^.*?\bof\s+the\s+council\b(?:\s+of\s+\d{1,2}\s+[a-z]+\s+\d{4})?", re.I | re.S)
+
+
+def _act_subject_key(title: str) -> str:
+    """First words of an act's title after "… of the European Parliament and of the Council [of <date>]", so
+    a Council voting result ("REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL amending …") and the
+    act ("Regulation (EU) 2023/957 of the European Parliament and of the Council of 10 May 2023 amending …")
+    compare equal."""
+    return " ".join(re.findall(r"[a-z0-9]+", _ACT_TITLE_HEAD.sub("", title, count=1).lower())[:12])
+
+
+# Parliament's decision at first (or single) reading, recorded without saying what it was ("took its decision")
+PLENARY_DECISION_TYPES = ("def/ep-activities/PLENARY_ADOPT_POSITION", "def/ep-activities/PLENARY_DECISION")
+
+
+def rejection_title(p: Procedure) -> str:
+    """Title of Parliament's first-reading (or single-reading) decision whose final vote was a rejection."""
+    council_text = any(
+        e.kind == EventKind.proposal
+        and e.docs
+        and not any(d.id.startswith("COM(") for d in e.docs)
+        and any(re.fullmatch(r"\d{5}/\d{2,4}", d.id) for d in e.docs)
+        for e in p.events
+    )
+    what = "the Council's draft" if council_text else "the proposal"
+    if p.type == "COD":
+        return f"Parliament rejected {what} at first reading"
+    if p.type == "CNS":
+        return f"Parliament delivered its opinion: it rejected {what}"
+    if p.type == "APP":
+        return "Parliament did not give its consent"
+    return f"Parliament rejected {what}"
 
 
 def council_vote_event(cv: dict) -> dict:
@@ -822,6 +859,19 @@ def council_vote_event(cv: dict) -> dict:
     }  # fmt: skip
 
 
+def commission_cod_proposal(p: Procedure) -> bool:
+    """An ordinary legislative procedure whose recorded proposal is the Commission's: the Legislative
+    Observatory's "Legislative proposal published" key event, with no document of another initiator (the
+    initiatives of Member States, the ECB or the Court under Art. 294(15) TFEU are recorded with their own
+    document, e.g. 2010/0817(COD) 09288/2010), even when the COM number itself is missing from the record."""
+    props = [e for e in p.events if e.kind == EventKind.proposal]
+    return (
+        p.type == "COD"
+        and any(e.institution == "Commission" and (e.raw_type or "").startswith("oeil:") for e in props)
+        and all(d.id.startswith("COM(") for e in props for d in e.docs)
+    )
+
+
 def council_assessment(a: dict | None) -> dict | None:
     """pipeline.analysis.council_qmv.CouncilAssessment -> CouncilAssessment in src/types/data.ts."""
     if not a:
@@ -831,6 +881,8 @@ def council_assessment(a: dict | None) -> dict | None:
         "rule": a.get("rule"),
         "states_for": a.get("states_for"),
         "states_required": a.get("states_required"),
+        # set by Builder.council_rule_assessment when the legal basis is not established (72% variant)
+        "states_required_alt": a.get("states_required_alt"),
         "population_for_pct": a.get("population_for_pct"),
         "population_required_pct": a.get("population_required_pct"),
         "adopted_by_rule": a.get("adopted_by_rule"),
@@ -1534,7 +1586,7 @@ class Builder:
             "kind_label": VOTE_DETAIL_LABELS.get(v.kind_detail or "") or VOTE_KIND_LABELS.get(v.kind, "Vote"),
             "outcome": v.outcome,
             "outcome_basis": getattr(v, "outcome_basis", None),
-            "outcome_note": VOTE_OUTCOME_NOTES.get((v.kind_detail or "", v.outcome)),
+            "outcome_note": VOTE_OUTCOME_NOTES.get((v.kind_detail or "", v.outcome)) or self.later_act_note(v, p),
             "for": n_for,
             "against": n_against,
             "abstain": n_abs,
@@ -1547,6 +1599,23 @@ class Builder:
             "has_ballots": bool(b is not None),
             "source": _src(v.source),
         }
+
+    def later_act_note(self, v: EpVote, p: Procedure | None) -> str | None:
+        """A final vote recorded as rejected, on a file whose Legislative Observatory record names a final
+        act dated after the vote: the rejection did not end the file (2025/0429(COD): rejected at first reading
+        on 26 March 2026, then Regulation (EU) 2026/1881 after the second reading)."""
+        if p is None or v.kind != "final" or v.outcome != "rejected":
+            return None
+        later = sorted(
+            (a for a in self.acts_of.get(p.id, []) if a.celex in p.celex_refs and (a.date_document or "") > v.date),
+            key=lambda a: (a.date_document or "", a.celex),
+        )
+        if not later:
+            return None
+        return (
+            "Parliament rejected the text in this vote, but the procedure continued: it later produced "
+            f"{act_label(later[0])}."
+        )
 
     def vote_display_title(self, v: EpVote, p: Procedure | None) -> tuple[str, bool]:
         """Readable title: the file's title (or the published subject of the vote) + what was voted, and
@@ -1681,10 +1750,15 @@ class Builder:
         assess = _lazy("pipeline.analysis.council_qmv", "assess")
         self.council_of: dict[str, list[dict]] = defaultdict(list)
         self.council_public: list[dict] = []
+        # split parent -> its Council votes, now listed on the part whose act each vote adopted
+        self.council_in_parts: dict[str, list[dict]] = defaultdict(list)
         for cv in sorted(self.s.council, key=lambda c: (c.date, c.id), reverse=True):
             ds = sorted({p.id for r in cv.procedure_refs if (p := self.resolve_ref(r))})
+            moved = {d: part for d in ds if (part := self.council_split_part(cv, d))}
+            ds = sorted({moved.get(d, d) for d in ds})
             did = ds[0] if len(ds) == 1 else None
             p = self.proc.get(did) if did else None
+            vote_on, vote_on_note = self.council_vote_on(cv, p)
             assessment = None
             if assess is not None and cv.voting_rule != "unknown" and cv.positions:
                 try:
@@ -1696,7 +1770,7 @@ class Builder:
             rec = {
                 "id": cv.id, "date": cv.date, "title": cv.title, "dossier_id": did,
                 "dossier_ref": p.reference if p else None, "configuration": cv.configuration,
-                "stage": cv.stage, "vote_on": cv.vote_on, "meeting": cv.meeting,
+                "stage": cv.stage, "vote_on": vote_on, "vote_on_note": vote_on_note, "meeting": cv.meeting,
                 "written_procedure": cv.written_procedure, "council_doc": cv.council_doc,
                 "voting_rule": cv.voting_rule, "outcome": cv.outcome, "positions": dict(sorted(cv.positions.items())),
                 "positions_note": cv.positions_note if not cv.positions else None,
@@ -1705,15 +1779,79 @@ class Builder:
             self.council_public.append(rec)
             for d in ds:
                 self.council_of[d].append(rec)
+            for parent, part in sorted(moved.items()):
+                self.council_in_parts[parent].append(
+                    {"id": cv.id, "date": cv.date, "dossier_id": part, "dossier_ref": self.proc[part].reference}
+                )
         self.files["council/index.json"] = self.council_public
+
+    def council_split_part(self, cv: CouncilVote, pid: str) -> str | None:
+        """The part of a split procedure whose act a Council vote on the parent reference adopted: the one
+        part holding an act of the type voted on, dated on or after the vote (the Council's voting results
+        cite the parent reference, e.g. ST 8688/23 "2021/0211 (COD)" for Directive (EU) 2023/959 of
+        2021/0211A); among several such parts, the one whose act title matches the voting result's title."""
+        cands = [
+            (c, a)
+            for c in self.split_children.get(pid, [])
+            for a in self.acts_of.get(c, [])
+            if a.act_type == cv.act_type and (a.date_document or a.date_publication or "") >= cv.date
+        ]
+        if len({c for c, _ in cands}) > 1:
+            key = _act_subject_key(cv.title)
+            cands = [(c, a) for c, a in cands if key and _act_subject_key(a.title) == key]
+        parts = {c for c, _ in cands}
+        return parts.pop() if len(parts) == 1 else None
+
+    def council_vote_on(self, cv: CouncilVote, p: Procedure | None) -> tuple[str | None, str | None]:
+        """(vote_on, note): what the Council voted on, from its voting result, corrected where the procedure
+        record shows that the document's own label does not fit, with a note saying so.
+
+        - Early second-reading agreement: a note labelled "Adoption of the legislative act" whose reference
+          document is the Council's first-reading position (OEIL "Council position published", same document
+          number), followed by Parliament's second-reading decision on that position, adopted the position:
+          the act is adopted only by Parliament's approval (Art. 294(7)(a) TFEU), e.g. ST 12604/20 (9890/20).
+        - A note that names no item, on a regulation, directive or decision, dated the day the Legislative
+          Observatory records the Council's adoption of the act (e.g. ST 11980/21, PE-CONS 62/21)."""
+        on = cv.vote_on
+        if p is None:
+            return on, None
+        if on == "act" and p.type == "COD" and (m := _COUNCIL_DOC_NO.search(cv.council_doc or "")):
+            number = (int(m.group(1)), 2000 + int(m.group(2)))  # "ST 9890/20" -> (9890, 2020)
+            position = next(
+                (
+                    d.id
+                    for e in p.events
+                    if e.kind == EventKind.council_position
+                    for d in e.docs
+                    if (n := _COUNCIL_POSITION_NO.fullmatch(d.id)) and (int(n.group(1)), int(n.group(2))) == number
+                ),
+                None,
+            )
+            second = sorted(
+                e.date for e in p.events if e.date > cv.date and SECOND_READING_DECISION_RE.search(e.raw_type or "")
+            )
+            if position and second:
+                return "first_reading_position", (
+                    f"The voting-result document names the item “{cv.stage or 'Adoption of the legislative act'}”, "
+                    f"but its reference document {cv.council_doc} is the Council’s position at first reading "
+                    f"({position}), on which Parliament decided at second reading on {_long_date(second[0])}."
+                )
+        if on is None and cv.act_type in ("regulation", "directive", "decision"):
+            if any(e.kind == EventKind.council_adoption and e.date == cv.date for e in p.events):
+                return "act", (
+                    "The voting-result document does not name the item voted on; the Legislative Observatory "
+                    "records the Council’s adoption of the act on this date."
+                )
+        return on, None
 
     def council_rule_assessment(self, assess: Any, cv: CouncilVote, p: Procedure | None) -> dict | None:
         """Apply the voting rule. Whether the Council acted on a Commission proposal (which changes the QMV
         threshold, TEU 16(4) vs TFEU 238(2)) is taken as established only when the linked procedure records
-        a COM document; otherwise both thresholds are computed and the result is kept only if they agree,
-        without asserting a legal basis."""
+        a COM document or is an ordinary legislative procedure opened by a Commission proposal (see
+        commission_cod_proposal); otherwise both thresholds are computed and the result is kept only if they
+        agree, without asserting a legal basis (both required numbers of Member States are then given)."""
         year = int(cv.date[:4])
-        if p is not None and p.com_refs:
+        if p is not None and (p.com_refs or commission_cod_proposal(p)):
             return council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, True, year=year)))
         a = council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, True, year=year)))
         b = council_assessment(_as_dict(assess(cv.positions, cv.voting_rule, False, year=year)))
@@ -1728,6 +1866,7 @@ class Builder:
             return None
         a["legal_basis"] = None
         a["blocking_minority_min_states"] = None
+        a["states_required_alt"] = b["states_required"]  # 72% (not on a Commission proposal); a: 55%
         a["note"] = (a["note"] + " " if a["note"] else "") + (
             "Whether the Council acted on a Commission proposal is not recorded in our data; the result is the "
             "same under both qualified-majority thresholds (55% and 72% of Member States, 65% of the population)."
@@ -1972,6 +2111,23 @@ class Builder:
                 )
                 pick = finals or by_doc or (cands if len(cands) == 1 else [])
                 vote_id = pick[0].id if pick else None
+                if kind == "ep_position" and e.raw_type in PLENARY_DECISION_TYPES and finals and all(
+                    v.outcome == "rejected" and v.outcome_basis in ("published", "minutes", "derived") for v in finals
+                ):
+                    # "Parliament took its decision": the decision of the day's final vote, officially a rejection
+                    # (2025/0429(COD), 26 Mar 2026: 228-311-92, OEIL "rejected the proposal", T10-0095/2026)
+                    title = rejection_title(p)
+                if vote_id is None and SECOND_READING_DECISION_RE.search(e.raw_type or ""):
+                    # second reading: the votes deciding it are the motions to reject the Council's position
+                    motions = sorted(
+                        (v for v in cands if v.kind_detail == "reject_council_position"), key=lambda v: (len(v.id), v.id)
+                    )
+                    vote_id = motions[0].id if motions else None
+                    if len(motions) > 1 and not detail and all(v.outcome == "rejected" for v in motions):
+                        detail = (
+                            f"Parliament voted on {len(motions)} motions to reject the Council's position and rejected "
+                            "each of them; the vote link opens the first."
+                        )
             elif kind == "negotiation_mandate" and e.raw_type in NEGOTIATION_EVENT_TYPES:
                 negotiation.append(len(out))  # linked below, once every event of the day is linked
             out.append({
@@ -1991,6 +2147,10 @@ class Builder:
                 if (v.kind == "mandate" or v.kind_detail == "negotiation_decision") and v.id not in linked
             ]
             out[i]["vote_id"] = pick[0].id if len(pick) == 1 else None
+        # the rejection derived from the vote (with_recorded_events, used for the status) repeats Parliament's own
+        # decision that day once that decision is titled as the rejection it was (2022/0196: 22 Nov 2023)
+        decided = {x["date"] for x in out if x["kind"] == "ep_position" and "rejected" in x["title"]}
+        out = [x for x in out if not (x["kind"] == "rejection" and x["id"].startswith("vote-") and x["date"] in decided)]
         out.extend(council_vote_event(cv) for cv in cvotes)
         for a in acts:
             src = _src(a.source)
@@ -2491,6 +2651,7 @@ class Builder:
                 "acts": [self.act_summary(a) for a in acts],
                 "ep_votes": [self.vote_summary[v.id] for v in votes if v.id in self.vote_summary],
                 "council_votes": self.council_of.get(pid, []),
+                **({"council_votes_in_parts": self.council_in_parts[pid]} if pid in self.council_in_parts else {}),
                 "implementation": self.implementation(acts),
                 "committees": [{"code": c.code, "name": c.name, "role": c.role} for c in p.committees],
                 "rapporteurs": rapps,
@@ -3368,6 +3529,15 @@ def build_search_docs(b: Builder) -> list[dict]:
         alts = _as_list(cur.get("aliases")) + named.get(pid, []) + short_names(p.title)
         alts += [n for a in acts if (n := act_short_name(a.title))]
         alts += train_names(b.train_of.get(pid, []))
+        if (m := re.fullmatch(r"(\d{4}-\d{4})[A-Z]", pid)) and pid in b.split_children.get(m.group(1), []):
+            # a part of a split procedure: the Legislative Train names the file under the parent reference
+            # ("Revision of the EU emission trading system (ETS)"), unless the name gives another part's
+            # reference ("… - 2016/0400B(COD)")
+            alts += [
+                n
+                for n in train_names(b.train_of.get(m.group(1), []))
+                if p.reference in n or not re.search(r"\d{4}/\d{4}[A-Z]\([A-Z]{3}\)", n)
+            ]
         if cur.get("short_title"):
             alts.append(clean_title(p.title))
         ids = [p.reference, ref_number(p.reference) or "", *d["celex"]]
@@ -3379,7 +3549,8 @@ def build_search_docs(b: Builder) -> list[dict]:
             "id": pid, "k": "dossier", "t": d["title"], "s": f"{d['ref']} · {d['status_label']}",
             "a": _join_alts(alts, d["title"]), "x": " ".join(dict.fromkeys(i for i in ids if i)),
             "u": f"/legislation/{pid}",
-            "w": 3.0 if d["featured"] else (1.2 if d["type"] in LEGISLATIVE_TYPES else 0.8),
+            # a split procedure's parent holds no act: its parts rank above it
+            "w": 0.4 if pid in b.split_children else 3.0 if d["featured"] else (1.2 if d["type"] in LEGISLATIVE_TYPES else 0.8),
             "d": d["last_event"],
         }  # fmt: skip
         docs.append(doc)
@@ -3398,6 +3569,8 @@ def build_search_docs(b: Builder) -> list[dict]:
             continue
         hits = []
         for doc, names, idk in match_keys:
+            if doc["k"] == "dossier" and doc["id"] in b.split_children:
+                continue  # the parent of a split procedure: its parts carry the keywords
             if any(t in idk or any(f" {t} " in f" {n} " for n in names) for t in targets):
                 hits.append(doc)
         if 0 < len(hits) <= ALIAS_RULE_MAX_DOCS:
