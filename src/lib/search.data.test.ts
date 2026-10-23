@@ -357,6 +357,10 @@ describe.skipIf(!built)('search on the built index', () => {
       expect(keywordScores(rows, hay, engine, q).has(id), q).toBe(true);
     }
     expect(ids('2016/0400A', 10)).toEqual(['dossier:2016-0400A', 'dossier:2016-0400']);
+    // /votes reads the part the same way: 167632 is the final vote on 2016/0224A(COD), 166936 that on the B part
+    const vh = voteHaystacks(votes);
+    for (const q of ['2016/0224A', '2016/0224 A', '2016/0224 A(COD)']) expect([...(matchVotes(votes, vh, q, engine) ?? [])], q).toEqual(['167632']);
+    expect([...(matchVotes(votes, vh, '2016/0224 B', engine) ?? [])]).toEqual(['166936']);
     // typing the reference keeps the file, never "all but one of the words"
     for (const q of ['2021/0106(', '2021/0106(C', '2021/0106(CO', '2021/0106(COD', '2016/0224A(C', '2016/0224A(CO']) {
       const hits = engine.search(q, { limit: 8, typing: true });
