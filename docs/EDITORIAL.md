@@ -13,10 +13,16 @@ reviewed.
 
 ## What the curated layer must not contain
 
-- **No status, dates or next steps.** Stage, dates, votes, adoption, entry into force and amendments
-  are computed from the snapshot (EP Open Data, OEIL, Cellar/EUR-Lex, Council, Legislative Train),
-  so they cannot go stale in the YAML. Dates are allowed only when they are part of the legal content
-  itself, for example "land not deforested after 31 December 2020" or a 2040 target.
+- **No procedural status or next steps.** Stage, votes, adoption, entry into force and upcoming
+  steps are computed from the snapshot (EP Open Data, OEIL, Cellar/EUR-Lex, Council, Legislative
+  Train), so they cannot go stale in the YAML. Dates are allowed when they are part of the legal
+  content, such as a cut-off date ("land not deforested after 31 December 2020"), a target year,
+  an application or transposition date ("from 30 December 2026"), or a deadline the act sets.
+- **Exceptions that change the substance.** Name, by act number, any later act that changes what
+  the law does, such as a postponement, a scope change or a new prohibition (for example "Directive
+  (EU) 2026/470 limits the obligation to …"). A withdrawn proposal is described in the past tense,
+  and its sources include the withdrawal notice. A review the act required may be described with
+  its outcome when the review has been delivered, citing the document.
 - **No judgements.** Do not call a dossier good, bad, controversial, historic, ambitious and so on.
 - **No unverifiable claims.** Every statement in `what`/`why` must be supported by one of the
   sources listed for that entry.
@@ -62,6 +68,9 @@ proposal. At most two items may come from the same topic.
 - `reference` must match `id`.
 - `celex` lists the final act(s) that Cellar links to the procedure dossier, or `[]` if none is
   linked. Each CELEX number must resolve in Cellar with a matching title.
+- If Parliament split a proposal into several procedures (for example 2016/0224A(COD) and
+  2016/0224B(COD)), the entry uses the split procedure that records the votes and the final act.
+  Cellar may still group both acts under the parent dossier. The OEIL link must open.
 
 ## Writing standards
 
@@ -70,8 +79,12 @@ proposal. At most two items may come from the same topic.
 - **`why`.** One or two sentences on the concrete effect on people, businesses or public
   authorities.
 - **Legal precision.**
-  - A proposal is always "Proposal would …" in `what` and "If adopted, …" in `why`. Never call a
-    proposal a "law".
+  - A pending proposal is always "Proposal would …" in `what` and "If adopted, …" in `why`. Never
+    call a proposal a "law". A withdrawn proposal is "The Commission proposed …", followed by what
+    happened to it (rejection, withdrawal), and `why` starts "The proposal did not become law".
+  - **Tense.** Obligations and rights that do not yet apply on the review date are written in the
+    future tense, with their application date ("will have to …", "from March 2029, … will be able
+    to …"). Only provisions that already apply are written in the present tense.
   - Use "regulation" and "directive" correctly.
   - Amending acts say what they amend.
 - **Neutral wording.** Use plain verbs (requires, prohibits, sets, creates, allows). Do not use
@@ -143,7 +156,7 @@ an official subject fits more than one theme. Curated entries set their topics e
 | Digital Omnibus, 2025/0360(COD) | (1) Omnibus simplification; (3) changes to GDPR and cookie rules; proposal under negotiation |
 | European Media Freedom Act, 2022/0277(COD) | (1) democracy priority; (3) media outlets and platforms |
 | Asylum and Migration Management Regulation, 2020/0279(COD) | (1) Migration Pact; (3) |
-| Asylum Procedure Regulation, 2016/0224(COD) | (1) Migration Pact; (3) |
+| Asylum Procedure Regulation, 2016/0224A(COD) | (1) Migration Pact; (3) |
 | Nature Restoration Regulation, 2022/0195(COD) | (1) Green Deal; (3) restoration obligations for Member States |
 | Deforestation Regulation postponements, 2024/0249(COD) and 2025/0329(COD) | (6) |
 | Carbon Border Adjustment Mechanism, 2021/0214(COD) | (1) Fit for 55; (3) importers |

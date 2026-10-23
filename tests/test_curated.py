@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import date
 from pathlib import Path
@@ -66,8 +67,10 @@ STATUS_WORDS = [
     "will be voted",
 ]
 
-ID_RE = re.compile(r"^\d{4}-\d{4}$")
-REF_RE = re.compile(r"^(\d{4})/(\d{4})\(([A-Z]{3})\)$")
+# EP process ids may carry a split suffix, e.g. "2016-0224A" / "2016/0224A(COD)".
+ID_RE = re.compile(r"^\d{4}-\d{4}[A-Z]?$")
+REF_RE = re.compile(r"^(\d{4})/(\d{4}[A-Z]?)\(([A-Z]{3})\)$")
+SNAPSHOT_PROCEDURES = CURATED.parent / "snapshot" / "ep_procedures" / "procedures.json"
 CELEX_RE = re.compile(r"^3\d{4}[RLD]\d{4}$")
 
 
@@ -111,13 +114,46 @@ def test_featured_celex(featured):
             assert CELEX_RE.match(c), (item["id"], c)
 
 
+def _is_withdrawn_text(item: dict) -> bool:
+    return item["what"].startswith("The Commission proposed") and "withdrew" in item["what"]
+
+
 def test_proposals_are_described_as_proposals(featured):
     for item in featured:
         if not item["celex"]:
-            assert item["what"].startswith("Proposal would"), item["id"]
-            assert item["why"].startswith("If adopted"), item["id"]
+            if _is_withdrawn_text(item):
+                # withdrawn proposals are described in the past tense and cite the withdrawal notice
+                assert item["why"].startswith("The proposal did not become law"), item["id"]
+                assert any("Withdrawal of Commission proposals" in s["label"] for s in item["sources"]), item[
+                    "id"
+                ]
+            else:
+                assert item["what"].startswith("Proposal would"), item["id"]
+                assert item["why"].startswith("If adopted"), item["id"]
         else:
             assert not item["what"].lower().startswith("proposal"), item["id"]
+
+
+def test_featured_ids_match_ep_snapshot(featured):
+    # Offline cross-check against the EP procedure snapshot, when present: the id must be the
+    # procedure that records the final act (split procedures carry their own id, e.g. 2016-0224A).
+    if not SNAPSHOT_PROCEDURES.exists():
+        pytest.skip("no ep_procedures snapshot")
+    procs = {p["id"]: p for p in json.loads(SNAPSHOT_PROCEDURES.read_text(encoding="utf-8"))}
+    for item in featured:
+        if item["id"] not in procs:
+            continue  # the snapshot may not cover every procedure; the live test checks existence
+        p = procs[item["id"]]
+        assert p["reference"] == item["reference"], item["id"]
+        if p.get("celex_refs") and item["celex"]:
+            assert set(item["celex"]) <= set(p["celex_refs"]), (item["id"], p["celex_refs"])
+
+
+def test_oeil_sources_match_reference(featured):
+    for item in featured:
+        for s in item["sources"]:
+            if "oeil.europarl.europa.eu" in s["url"]:
+                assert s["url"].endswith("reference=" + item["reference"]), (item["id"], s["url"])
 
 
 def test_featured_text_is_neutral_and_free_of_status(featured):

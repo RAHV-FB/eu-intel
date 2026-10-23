@@ -26,18 +26,20 @@
     AI models.
   why: >-
     Companies that develop or use AI in areas such as recruitment, credit scoring, education, law
-    enforcement or critical infrastructure must meet requirements on risk management, data quality,
-    documentation and human oversight; national authorities and the Commission's AI Office enforce the
-    rules and can impose fines.
+    enforcement or critical infrastructure will have to meet requirements on risk management, data
+    quality, documentation and human oversight; Regulation (EU) 2026/1744 set these high-risk rules
+    to apply from 2 December 2027, or 2 August 2028 for AI in regulated products. National
+    authorities and the Commission's AI Office enforce the rules and can impose fines.
   aliases: ["AI Act", "EU AI Act", "Artificial Intelligence Act", "AI regulation"]
   topics: ["tech"]
   featured: true
   feature_order: 1
   sources:
     - {label: "Regulation (EU) 2024/1689 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"}
+    - {label: "Regulation (EU) 2026/1744 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/1744/oj"}
     - {label: "European Commission – AI Act", url: "https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai"}
     - {label: "Legislative Observatory – 2021/0106(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0106(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 - id: "2025-0359"
   reference: "2025/0359(COD)"
@@ -192,16 +194,19 @@
     - {label: "Legislative Observatory – 2020/0279(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2020/0279(COD)"}
   reviewed: "2026-10-22"
 
-- id: "2016-0224"
-  reference: "2016/0224(COD)"
-  # Cellar links two acts to this procedure: the Asylum Procedure Regulation (2024/1348) and the
-  # regulation establishing a return border procedure (2024/1349), which was split from it.
-  celex: ["32024R1348", "32024R1349"]
+- id: "2016-0224A"
+  reference: "2016/0224A(COD)"
+  # The 2016 proposal 2016/0224(COD) was split by Parliament: 2016/0224A(COD) produced Regulation (EU)
+  # 2024/1348 (this entry); 2016/0224B(COD) produced Regulation (EU) 2024/1349 establishing a return
+  # border procedure. Cellar keeps both acts under one dossier, "2016/0224/COD".
+  celex: ["32024R1348"]
   short_title: "Asylum Procedure Regulation"
   what: >-
-    Replaces the Asylum Procedures Directive with a directly applicable regulation setting one common
-    procedure for applying for and examining international protection, including a border procedure that
-    is mandatory for certain categories of applicants and time limits for decisions.
+    Replaces the Asylum Procedures Directive with a directly applicable regulation setting one
+    common procedure for applying for and examining international protection, including a border
+    procedure that is mandatory for certain categories of applicants and time limits for decisions.
+    Regulations (EU) 2026/463 and 2026/464 amended it as regards the 'safe third country' concept
+    and added an EU-level list of safe countries of origin.
   why: >-
     Applicants who come from countries with low asylum recognition rates, who are considered a security
     risk or who have misled the authorities can be examined in an accelerated border procedure; the same
@@ -212,24 +217,26 @@
   feature_order: null
   sources:
     - {label: "Regulation (EU) 2024/1348 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1348/oj"}
-    - {label: "Regulation (EU) 2024/1349 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1349/oj"}
-    - {label: "Legislative Observatory – 2016/0224(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2016/0224(COD)"}
-  reviewed: "2026-10-22"
+    - {label: "Regulation (EU) 2026/463 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/463/oj"}
+    - {label: "Regulation (EU) 2026/464 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/464/oj"}
+    - {label: "Legislative Observatory – 2016/0224A(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2016/0224A(COD)"}
+  reviewed: "2026-10-23"
 
 - id: "2025-0059"
   reference: "2025/0059(COD)"
   celex: ["32026R2280"]
   short_title: "Return Regulation"
   what: >-
-    Replaces the 2008 Return Directive with a directly applicable regulation on returning non-EU
-    nationals who have no right to stay in the EU: it introduces a European Return Order to help other
-    Member States recognise return decisions and allows returns to "return hubs" in non-EU countries
-    under agreements with those countries.
+    Replaces the 2008 Return Directive, from 17 October 2027, with a directly applicable regulation
+    on returning non-EU nationals who have no right to stay in the EU, including a European Return
+    Order to help Member States recognise each other's return decisions; the rules allowing returns
+    to 'return hubs' in non-EU countries under agreements with those countries apply from 16 October
+    2026.
   why: >-
-    People subject to a return decision face obligations to cooperate, with consequences for not doing
-    so, and those considered a security risk can receive longer or indefinite entry bans; return hubs
-    may only be set up with countries that respect international human rights standards and the
-    principle of non-refoulement.
+    From 17 October 2027, people subject to a return decision will have an obligation to cooperate,
+    with consequences if they do not, and those considered a security risk can receive longer or
+    indefinite entry bans; return hubs may only be set up with countries that respect international
+    human rights standards and the principle of non-refoulement.
   aliases: ["Return Regulation", "returns regulation", "return hubs", "deportation rules", "European Return Order"]
   topics: ["migration"]
   featured: true
@@ -238,7 +245,7 @@
     - {label: "Regulation (EU) 2026/2280 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/2280/oj"}
     - {label: "Council press release, 1 October 2026", url: "https://www.consilium.europa.eu/en/press/press-releases/2026/10/01/council-adopts-new-rules-on-return-for-those-with-no-right-to-stay-in-the-eu/"}
     - {label: "Legislative Observatory – 2025/0059(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0059(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 # ------------------------------------------------------------------------ Environment & Energy
 
@@ -290,22 +297,27 @@
   celex: ["32023R1115"]
   short_title: "EU Deforestation Regulation"
   what: >-
-    Prohibits placing on the EU market, or exporting, cattle, cocoa, coffee, oil palm, rubber, soya and
-    wood, and products made from them, unless they are deforestation-free, were produced legally and are
-    covered by a due diligence statement.
+    Will prohibit, from 30 December 2026 (30 June 2027 for certain micro and small operators),
+    placing on the EU market, making available or exporting cattle, cocoa, coffee, oil palm, rubber,
+    soya and wood, and the derived products listed in its Annex I, unless they are
+    deforestation-free, were produced legally and are covered by a due diligence statement or, for
+    micro and small primary operators in low-risk countries, a simplified declaration.
   why: >-
-    Companies placing these products on the EU market must collect the geolocation of the land where
-    the commodities were produced and check that it was not deforested after 31 December 2020; the
-    Commission classifies countries by risk level, which determines the share of operators that
-    national authorities must check.
+    Companies placing these products on the EU market will have to know the geolocation of the land
+    where the commodities were produced and check that it was not deforested after 31 December 2020.
+    Regulation (EU) 2025/2650 removed printed products from Annex I; Delegated Regulation (EU)
+    2026/2102 removed cattle hides and leather and some rubber articles and adds soluble coffee,
+    frozen cattle tongues and some palm-oil derivatives from 30 December 2027.
   aliases: ["EUDR", "Deforestation Regulation", "deforestation law", "deforestation-free products"]
   topics: ["environment", "agriculture", "economy"]
   featured: true
   feature_order: 4
   sources:
     - {label: "Regulation (EU) 2023/1115 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2023/1115/oj"}
+    - {label: "Regulation (EU) 2025/2650 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/2650/oj"}
+    - {label: "Delegated Regulation (EU) 2026/2102 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj"}
     - {label: "Legislative Observatory – 2021/0366(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0366(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 - id: "2024-0249"
   reference: "2024/0249(COD)"
@@ -337,8 +349,9 @@
     and traders; certain printed products are removed from its scope.
   why: >-
     Fewer companies in a supply chain have to file their own due diligence statements, and all
-    operators have more time before the obligations apply; the Commission must report on the
-    regulation's impact and administrative burden.
+    operators have more time before the obligations apply. The regulation required the Commission to
+    carry out a simplification review by 30 April 2026; the Commission presented it on 4 May 2026
+    (COM(2026) 191) and proposed no further amendments to the regulation.
   aliases: ["EUDR revision", "EUDR simplification", "EUDR delay"]
   topics: ["environment", "agriculture"]
   featured: false
@@ -346,8 +359,9 @@
   sources:
     - {label: "Regulation (EU) 2025/2650 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/2650/oj"}
     - {label: "Legislative Train – Targeted amendments to the EUDR", url: "https://www.europarl.europa.eu/legislative-train/theme-a-european-green-deal/file-targeted-amendments-to-the-eu-deforestation-regulation-(eudr)"}
+    - {label: "Commission simplification review COM(2026) 191 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52026DC0191"}
     - {label: "Council press release, 18 December 2025", url: "https://www.consilium.europa.eu/en/press/press-releases/2025/12/18/deforestation-council-signs-off-targeted-revision-to-simplify-and-postpone-the-regulation/"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 - id: "2021-0214"
   reference: "2021/0214(COD)"
@@ -358,17 +372,20 @@
     hydrogen, corresponding to the carbon price paid by EU producers under the EU Emissions Trading
     System.
   why: >-
-    Importers of these goods must report the greenhouse gas emissions embedded in them and buy CBAM
-    certificates to cover those emissions, so that imported and EU-made goods face a comparable carbon
-    cost.
+    Importers of these goods must be authorised CBAM declarants and declare each year the emissions
+    embedded in them, and will have to buy and surrender CBAM certificates (sold from February 2027)
+    to cover those emissions. Under Regulation (EU) 2025/2083, importers of no more than 50 tonnes a
+    year of iron and steel, aluminium, fertilisers and cement combined are exempt; electricity and
+    hydrogen imports have no such threshold.
   aliases: ["CBAM", "carbon border tax", "carbon border adjustment mechanism"]
   topics: ["environment", "economy"]
   featured: false
   feature_order: null
   sources:
     - {label: "Regulation (EU) 2023/956 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2023/956/oj"}
+    - {label: "Regulation (EU) 2025/2083 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/2083/oj"}
     - {label: "Legislative Observatory – 2021/0214(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0214(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 - id: "2022-0396"
   reference: "2022/0396(COD)"
@@ -380,9 +397,9 @@
     empty space, restrictions on certain single-use packaging formats and targets for reuse and for
     reducing packaging waste.
   why: >-
-    Producers and retailers must adapt the packaging they use; Member States must cut packaging waste
-    per person and set up deposit-return systems for single-use plastic bottles and metal drink cans,
-    with some exemptions.
+    Producers and retailers must adapt the packaging they use; Member States must cut packaging
+    waste per person and, by 1 January 2029, collect separately at least 90% of single-use plastic
+    drink bottles and metal drink cans, normally through deposit-return systems.
   aliases: ["PPWR", "Packaging Regulation", "packaging waste"]
   topics: ["environment", "health"]
   featured: false
@@ -390,7 +407,7 @@
   sources:
     - {label: "Regulation (EU) 2025/40 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/40/oj"}
     - {label: "Legislative Observatory – 2022/0396(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0396(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 # ----------------------------------------------------------------------------- Economy & Trade
 
@@ -401,52 +418,63 @@
   what: >-
     Requires companies in its scope to publish information on environmental, social and governance
     matters in their management report, following European Sustainability Reporting Standards and
-    subject to external assurance.
+    subject to limited external assurance. Directive (EU) 2025/794 postponed reporting by two years
+    for companies due to start with financial years 2025 or 2026; Directive (EU) 2026/470, to be
+    transposed by 19 March 2027, limits the obligation to companies with more than 1,000 employees
+    and over EUR 450 million net turnover.
   why: >-
-    Investors and the public get comparable information on companies' sustainability risks and impacts;
-    companies in scope must collect the data, report it and have it checked by an auditor.
+    Investors and the public get comparable information on the largest companies' sustainability
+    risks and impacts; companies in scope must collect the data, report it and have it checked by a
+    statutory auditor or, where the Member State allows, an accredited independent assurance
+    services provider.
   aliases: ["CSRD", "Corporate Sustainability Reporting Directive", "sustainability reporting", "ESG reporting"]
   topics: ["economy", "environment"]
   featured: false
   feature_order: null
   sources:
     - {label: "Directive (EU) 2022/2464 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2022/2464/oj"}
+    - {label: "Directive (EU) 2025/794 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2025/794/oj"}
+    - {label: "Directive (EU) 2026/470 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2026/470/oj"}
     - {label: "Legislative Observatory – 2021/0104(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0104(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 - id: "2022-0051"
   reference: "2022/0051(COD)"
   celex: ["32024L1760"]
   short_title: "Corporate Sustainability Due Diligence Directive"
   what: >-
-    Requires large companies to identify, prevent, mitigate and bring to an end adverse impacts on human
-    rights and the environment in their own operations, their subsidiaries and their chains of
-    activities.
+    Requires large companies to identify, prevent, mitigate and bring to an end adverse impacts on
+    human rights and the environment in their own operations, their subsidiaries and their chains of
+    activities. As amended by Directive (EU) 2026/470, it will apply from 26 July 2029 and only to
+    companies with more than 5,000 employees and over EUR 1.5 billion net turnover.
   why: >-
-    Companies in scope must carry out due diligence on their business partners and in their own
-    operations, and national supervisory authorities can investigate and fine them for failures.
+    Companies in scope will have to carry out due diligence on their business partners and in their
+    own operations, and national supervisory authorities will be able to investigate and fine them
+    for failures; the 2026 amendment removed the obligation to adopt a climate transition plan.
   aliases: ["CSDDD", "CS3D", "Corporate Sustainability Due Diligence Directive", "supply chain law", "due diligence directive"]
   topics: ["economy", "rights", "environment"]
   featured: false
   feature_order: null
   sources:
     - {label: "Directive (EU) 2024/1760 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2024/1760/oj"}
+    - {label: "Directive (EU) 2026/470 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2026/470/oj"}
     - {label: "Legislative Observatory – 2022/0051(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0051(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 - id: "2025-0045"
   reference: "2025/0045(COD)"
   celex: ["32026L0470"]
   short_title: "Omnibus I – sustainability reporting and due diligence simplification"
   what: >-
-    Amends the CSRD and the CSDDD to narrow their scope: sustainability reporting is required only from
-    companies with more than 1,000 employees and over EUR 450 million net turnover, and due diligence only
-    from companies with more than 5,000 employees and over EUR 1.5 billion net turnover.
+    Amends the CSRD and the CSDDD to narrow their scope: once Member States have transposed it,
+    sustainability reporting will be required only from companies with more than 1,000 employees and
+    over EUR 450 million net turnover, and due diligence only from companies with more than 5,000
+    employees and over EUR 1.5 billion net turnover, from 26 July 2029.
   why: >-
-    Most companies previously covered no longer have to report or carry out due diligence under these
-    directives; companies with fewer than 1,000 employees do not have to give their larger business
-    partners information beyond the voluntary reporting standard, and the obligation to adopt climate
-    transition plans is removed.
+    Once the changes are transposed, most companies previously covered will no longer have to report
+    or carry out due diligence under these directives; companies with fewer than 1,000 employees
+    will not have to give their larger business partners information beyond the voluntary reporting
+    standard, and the obligation to adopt climate transition plans is removed.
   aliases: ["Omnibus I", "sustainability omnibus", "CSRD omnibus", "CSDDD omnibus", "simplification omnibus"]
   topics: ["economy", "environment"]
   featured: false
@@ -455,7 +483,7 @@
     - {label: "Directive (EU) 2026/470 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2026/470/oj"}
     - {label: "European Parliament press release, 16 December 2025", url: "https://www.europarl.europa.eu/news/en/press-room/20251211IPR32164/simplified-sustainability-reporting-and-due-diligence-rules-for-businesses"}
     - {label: "Legislative Train – Omnibus I", url: "https://www.europarl.europa.eu/legislative-train/package-simplification-business/file-first-omnibus-package-on-sustainability-proposal-amending-csrd-and-csddd"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 - id: "2023-0079"
   reference: "2023/0079(COD)"
@@ -551,13 +579,16 @@
   celex: ["32025R0327"]
   short_title: "European Health Data Space"
   what: >-
-    Creates a European Health Data Space: it gives people electronic access to their health data, such
-    as patient summaries, prescriptions, medical images and lab results, across the EU, and sets rules
-    for reusing health data for research, innovation and policy-making.
+    Creates a European Health Data Space: it will give people electronic access to their health
+    data, such as patient summaries, prescriptions, medical images and lab results, across the EU,
+    and sets rules for reusing health data for research, innovation and policy-making.
   why: >-
-    Patients can access their electronic health records and share them with health professionals,
-    including in other Member States; researchers and public bodies can request access to health data
-    through national health data access bodies, and people can opt out of this secondary use.
+    Once the rules apply, patients will be able to access their electronic health records and share
+    them with health professionals, including in other Member States (patient summaries,
+    prescriptions and dispensations from March 2029; medical images, test results and discharge
+    reports from March 2031). From March 2029, researchers and public bodies will be able to request
+    health data through national health data access bodies, and people will be able to opt out of
+    this secondary use.
   aliases: ["EHDS", "European Health Data Space", "health data"]
   topics: ["health", "tech"]
   featured: false
@@ -565,7 +596,7 @@
   sources:
     - {label: "Regulation (EU) 2025/327 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/327/oj"}
     - {label: "Legislative Observatory – 2022/0140(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0140(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 # ---------------------------------------------------------------- Employment & Social Policy
 
@@ -578,9 +609,10 @@
     when facts indicate control and direction, and sets EU rules on algorithmic management of platform
     workers.
   why: >-
-    People working through apps, such as ride-hailing or delivery platforms, can more easily have their
-    employment status correctly determined; platforms must inform workers about automated monitoring
-    and decision-making and ensure human review of significant decisions such as account suspensions.
+    Once Member States have transposed it (by 2 December 2026), people working through apps such as
+    ride-hailing or delivery platforms will more easily have their employment status correctly
+    determined; platforms will have to inform workers about automated monitoring and decision-making
+    and ensure human review of significant decisions such as account suspensions.
   aliases: ["Platform Work Directive", "gig economy directive", "platform workers"]
   topics: ["social", "tech"]
   featured: false
@@ -588,7 +620,7 @@
   sources:
     - {label: "Directive (EU) 2024/2831 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2024/2831/oj"}
     - {label: "Legislative Observatory – 2021/0414(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0414(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 # ----------------------------------------------------------------- Security & Defence / Rights
 
@@ -628,9 +660,11 @@
     EU budget for 2025-2027 to strengthen Europe's defence industry, including a Ukraine Support
     Instrument, and sets measures to secure the supply of defence products.
   why: >-
-    Defence companies in the EU, and for the Ukraine Support Instrument in Ukraine, can receive EU funding
-    for joint procurement, production capacity and supply chains, provided components from outside the
-    EU and associated countries do not exceed 35% of the cost of the end product.
+    Defence companies in the EU, and for the Ukraine Support Instrument in Ukraine, can receive EU
+    funding for joint procurement, production capacity and supply chains, provided the cost of
+    components originating outside the EU and associated countries (outside the EU and Ukraine for
+    the Ukraine Support Instrument) does not exceed 35% of the estimated cost of the components of
+    the end product.
   aliases: ["EDIP", "European Defence Industry Programme", "defence industry programme"]
   topics: ["security", "economy"]
   featured: false
@@ -639,7 +673,7 @@
     - {label: "Regulation (EU) 2025/2643 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/2643/oj"}
     - {label: "Council press release, 8 December 2025", url: "https://www.consilium.europa.eu/en/press/press-releases/2025/12/08/european-defence-industry-programme-council-gives-final-approval/"}
     - {label: "Legislative Observatory – 2024/0061(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2024/0061(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 # -------------------------------------------------------------------------- Agriculture & Food
 
@@ -648,13 +682,14 @@
   celex: ["32026R1388"]
   short_title: "New genomic techniques (NGT) plants"
   what: >-
-    Sets rules for plants obtained by targeted mutagenesis and cisgenesis: plants comparable to
-    conventionally bred plants ("category 1") are exempted from GMO authorisation requirements, while
-    other NGT plants ("category 2") remain subject to GMO rules.
+    Sets rules, applying from 17 July 2028, for plants obtained by targeted mutagenesis and
+    cisgenesis: plants comparable to conventionally bred plants ('category 1') will be exempted from
+    GMO authorisation requirements, while other NGT plants ('category 2') will remain subject to GMO
+    rules.
   why: >-
     Category 1 NGT food and feed will not carry GMO labels, but seeds and other plant reproductive
-    material will be labelled; NGT plants may not be used in organic production, and developers must
-    publish information on related patents.
+    material will be labelled; NGT plants will not be allowed in organic production, and developers
+    will have to publish information on related patents.
   aliases: ["NGT", "new genomic techniques", "gene editing", "gene-edited crops", "new GMOs"]
   topics: ["agriculture", "health"]
   featured: false
@@ -663,25 +698,26 @@
     - {label: "Regulation (EU) 2026/1388 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/1388/oj"}
     - {label: "European Commission – EU legislation on NGT plants", url: "https://food.ec.europa.eu/plants/new-genomic-techniques/legislation-plants_en"}
     - {label: "Legislative Train – Plants produced by certain NGTs", url: "https://www.europarl.europa.eu/legislative-train/theme-sustaining-our-quality-of-life-food-security-water-and-nature/file-plants-produced-by-certain-new-genomic-techniques"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"
 
 - id: "2022-0196"
   reference: "2022/0196(COD)"
   celex: []
   short_title: "Sustainable Use of Plant Protection Products Regulation"
   what: >-
-    Proposal would set legally binding EU and national targets to reduce the use and risk of chemical
-    pesticides, restrict their use in sensitive areas and make integrated pest management mandatory for
-    professional users.
+    The Commission proposed binding EU and national targets to reduce the use and risk of chemical
+    pesticides, restrictions on their use in sensitive areas and mandatory integrated pest
+    management for professional users. The European Parliament rejected the proposal in November
+    2023, and the Commission withdrew it in May 2024.
   why: >-
-    If adopted, farmers and other professional users would have to keep records, give priority to
-    non-chemical methods and follow crop-specific rules, while Member States would have to meet
-    reduction targets.
+    The proposal did not become law. The use of pesticides remains governed by Directive 2009/128/EC
+    on the sustainable use of pesticides, which the proposal would have replaced.
   aliases: ["SUR", "pesticides regulation", "pesticide reduction"]
   topics: ["agriculture", "environment", "health"]
   featured: false
   feature_order: null
   sources:
     - {label: "Commission proposal COM(2022) 305 (EUR-Lex)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52022PC0305"}
+    - {label: "Withdrawal of Commission proposals, OJ C/2024/3117", url: "https://eur-lex.europa.eu/eli/C/2024/3117/oj"}
     - {label: "Legislative Observatory – 2022/0196(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2022/0196(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-23"

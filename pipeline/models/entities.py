@@ -131,6 +131,21 @@ class Procedure(Model):
     source: SourceRef
 
 
+class CourtRuling(Model):
+    """A judgment that Cellar records as annulling (in whole or in part) or declaring invalid a legal act."""
+
+    celex: str  # judgment CELEX, e.g. "62023CJ0019"
+    case_number: str | None = None  # as published, e.g. "C-19/23", "Joined Cases C-541/20 to C-555/20"
+    ecli: str | None = None  # "ECLI:EU:C:2025:865"
+    date: str | None = None  # date of the judgment
+    title: str  # English title as published, e.g. "Judgment of the Court (Grand Chamber) of 11 November 2025. ..."
+    # annulment: action for annulment (Art. 263 TFEU); invalidity: declared invalid in a preliminary ruling
+    effect: Literal["annulment", "invalidity"]
+    effect_text: str | None = None  # the judgment's published subject-matter keywords (headnote), verbatim
+    provisions: list[str] = Field(default_factory=list)  # Cellar location codes, as recorded ("A05P1")
+    url: str  # EUR-Lex page of the judgment
+
+
 class LegalAct(Model):
     """An act in the EU legal corpus (EUR-Lex / Cellar)."""
 
@@ -155,6 +170,7 @@ class LegalAct(Model):
     amended_by: list[str] = Field(default_factory=list)
     repeals: list[str] = Field(default_factory=list)
     repealed_by: list[str] = Field(default_factory=list)
+    court_rulings: list[CourtRuling] = Field(default_factory=list)  # annulment / invalidity, by date
     eurlex_url: str
     source: SourceRef
 
