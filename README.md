@@ -17,7 +17,7 @@ images. Visitors never contact EU APIs; the data is fetched by a scheduled pipel
 ```
 official EU APIs ──fetch──▶ data/snapshot/** (committed) ──build──▶ public/data/** ──▶ React SPA ──▶ GitHub Pages
                                       ▲
-        data/curated/*.yaml (editorial selections, aliases, topics, checked date corrections)
+        data/curated/*.yaml (editorial selections, aliases, topics, checked corrections of dates and Council vote records)
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md) and
@@ -89,7 +89,8 @@ Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time
 pipeline/            Python data pipeline: sources/ (one module per official source), analysis/, build.py, validate.py
 data/snapshot/       committed, normalized source data (diff-friendly JSON) + _manifest.json
 data/curated/        editorial YAML: featured files, topics, search aliases, checked corrections of act dates
-                     (act_dates.yaml) and transposition deadlines (transposition.yaml)
+                     (act_dates.yaml), transposition deadlines (transposition.yaml), Council adoption dates
+                     (council_dates.yaml) and Council voting records (council_votes.yaml)
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
 src/                 React app: pages/, features/, components/, lib/, types/data.ts (public data contract)
 scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py
