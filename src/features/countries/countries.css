@@ -133,6 +133,10 @@
   border-radius: 2px;
 }
 
+.tstatus--no_deadline .tstatus__icon {
+  border-style: dotted;
+}
+
 .tstatus--unavailable .tstatus__icon {
   border-style: dashed;
 }

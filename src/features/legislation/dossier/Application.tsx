@@ -4,8 +4,16 @@ import type { DossierDetail, DossierImplementation, ISODate, LegalInstrument, Tr
 import { ExtLink, SourceLink, Term } from '../../../components/ui';
 import { countryName, formatDate, formatNumber, safeUrl } from '../../../lib/format';
 import { ACTIVE_STAGES, ADOPTED_STAGES, TRANSPOSITION_LABEL } from '../labels';
+import { transpositionDates } from './Summary';
 
-const STATUS_ORDER: TranspositionStatus[] = ['measures_notified', 'none_found', 'deadline_not_reached', 'not_participating', 'unavailable'];
+const STATUS_ORDER: TranspositionStatus[] = [
+  'measures_notified',
+  'none_found',
+  'deadline_not_reached',
+  'no_deadline',
+  'not_participating',
+  'unavailable',
+];
 
 const NIM_URL = (celex: string) => `https://eur-lex.europa.eu/legal-content/EN/NIM/?uri=CELEX:${encodeURIComponent(celex)}`;
 
@@ -95,6 +103,13 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
           measures found” may simply mean that it does not bind them.
         </p>
       )}
+      {impl.countries.some((c) => c.status === 'no_deadline') && (
+        <p className="meta tp-optout">
+          “No transposition deadline recorded” means EUR-Lex gives no transposition deadline for this directive (for
+          example, a codification that brings earlier directives together), so this dataset cannot say whether new
+          national measures were due.
+        </p>
+      )}
       {impl.countries.some((c) => c.status === 'not_participating') && (
         <p className="meta tp-optout">
           “Not bound” means the Council’s official voting result records the country as not participating in the
@@ -111,9 +126,19 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
   const adopted = ADOPTED_STAGES.has(d.stage);
   const impl = d.implementation;
   const celex = impl?.celex ?? d.acts.find((a) => a.act_type === 'directive')?.celex ?? d.celex[0];
-  const deadlines: ISODate[] = [
-    ...new Set([...(impl?.deadline ? [impl.deadline] : []), ...(d.application?.transposition_deadlines ?? [])]),
-  ].sort();
+  const tr = transpositionDates(d.application);
+  const general: ISODate | null = impl?.deadline ?? tr.find((x) => x.kind === 'deadline')?.date ?? null;
+  const further = tr.filter((x) => x.kind === 'further_deadline');
+  const applies = tr.filter((x) => x.kind === 'application');
+  const dateList = (xs: { date: ISODate; articles: string[] }[]) =>
+    xs.map((x, i) => (
+      <span key={x.date}>
+        {i > 0 && ', '}
+        <time dateTime={x.date}>{formatDate(x.date, true)}</time>
+        {x.articles.length > 0 && <span className="meta"> ({x.articles.join(', ')})</span>}
+        {x.date > today && <span className="dz-upcoming">upcoming</span>}
+      </span>
+    ));
 
   let body: React.ReactNode;
   if (!adopted) {
@@ -142,18 +167,19 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
           A <Term id="directive">directive</Term> sets goals that each Member State must reach through its own national law.
           Governments notify the Commission of the measures they adopt (<Term id="transposition">transposition</Term>).
         </p>
-        {deadlines.length > 0 && (
+        {general && (
           <p className="dz-deadline">
-            Transposition deadline{deadlines.length > 1 ? 's' : ''}:{' '}
-            {deadlines.map((dl, i) => (
-              <span key={dl}>
-                {i > 0 && ', '}
-                <strong>
-                  <time dateTime={dl}>{formatDate(dl, true)}</time>
-                </strong>
-                {dl > today && <span className="dz-upcoming">upcoming</span>}
-              </span>
-            ))}
+            Transposition deadline:{' '}
+            <strong>
+              <time dateTime={general}>{formatDate(general, true)}</time>
+            </strong>
+            {general > today && <span className="dz-upcoming">upcoming</span>}
+          </p>
+        )}
+        {further.length > 0 && <p className="meta">Further deadline{further.length > 1 ? 's' : ''} for specific provisions: {dateList(further)}</p>}
+        {applies.length > 0 && (
+          <p className="meta">
+            Application date{applies.length > 1 ? 's' : ''} for the national measures: {dateList(applies)}
           </p>
         )}
         {impl && impl.countries.length > 0 ? (

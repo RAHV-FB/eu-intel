@@ -976,6 +976,10 @@
   border-radius: 2px;
 }
 
+.tp--no_deadline::before {
+  border: 2px dotted var(--text-3);
+}
+
 .tp--unavailable::before {
   border: 2px dashed var(--text-3);
   border-radius: 2px;

@@ -25,6 +25,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from pipeline.analysis.transposition import article_label
+from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models.entities import Event, EventKind, Institution, LegalAct, Procedure, TrainFile
 
 Stage = Literal[
@@ -101,10 +103,20 @@ class Stall(_M):
     official_text: str | None = None  # e.g. "Classified as “Blocked” by the EP Legislative Train ..."
 
 
+class TranspositionDateInfo(_M):
+    date: str
+    # deadline: general transposition deadline; further_deadline: a later deadline for specific
+    # provisions; application: a date from which national measures (must or may) apply
+    kind: Literal["deadline", "further_deadline", "application"]
+    articles: list[str] = Field(default_factory=list)  # article setting the date, e.g. "Art. 48(1)"
+
+
 class Application(_M):
     entry_into_force: str | None = None
+    entry_into_force_pending: bool = False  # EUR-Lex: takes effect on a condition not yet recorded
     application_dates: list[str] = Field(default_factory=list)
-    transposition_deadlines: list[str] = Field(default_factory=list)  # directives only
+    transposition_deadlines: list[str] = Field(default_factory=list)  # directives: deadlines only
+    transposition: list[TranspositionDateInfo] = Field(default_factory=list)  # directives: every date
     future: bool = False  # any of the above dates is after `today`
 
 
@@ -152,6 +164,10 @@ def _fmt(d: str) -> str:
     return f"{dd} {months[m - 1]} {y}"
 
 
+def _join_celex(cs: list[str]) -> str:
+    return cs[0] if len(cs) == 1 else ", ".join(cs[:-1]) + " and " + cs[-1]
+
+
 def _join_dates(ds: list[str]) -> str:
     f = [_fmt(d) for d in ds]
     return f[0] if len(f) == 1 else ", ".join(f[:-1]) + " and " + f[-1]
@@ -194,9 +210,27 @@ def application_of(acts: list[LegalAct], today: date) -> Application | None:
     eifs = sorted(a.entry_into_force for a in acts if a.entry_into_force)
     eif = eifs[0] if eifs else None
     app = sorted({d for a in acts for d in a.other_application_dates if d and d != eif})
-    tr = sorted({d for a in acts if a.act_type == "directive" for d in a.transposition_deadlines if d})
-    future = any(d > t for d in ([eif] if eif else []) + app + tr)
-    return Application(entry_into_force=eif, application_dates=app, transposition_deadlines=tr, future=future)
+    tr = transposition_info(acts)
+    future = any(d > t for d in ([eif] if eif else []) + app + [x.date for x in tr])
+    return Application(
+        entry_into_force=eif,
+        entry_into_force_pending=not eif and any(a.entry_into_force_pending for a in acts),
+        application_dates=app,
+        transposition_deadlines=[x.date for x in tr if x.kind != "application"],
+        transposition=tr,
+        future=future,
+    )
+
+
+def transposition_info(acts: list[LegalAct]) -> list[TranspositionDateInfo]:
+    """Classified transposition dates of the first directive among the acts (see transposition.py)."""
+    for a in acts:
+        if a.act_type == "directive" and a.transposition_deadlines:
+            return [
+                TranspositionDateInfo(date=x.date, kind=x.kind, articles=[article_label(r) for r in x.articles])
+                for x in classify_transposition(a)
+            ]
+    return []
 
 
 def _stall(stage: str, events: list[Event], train: list[TrainFile], today: date) -> Stall | None:
@@ -267,19 +301,35 @@ def _acts_stage(proc: Procedure, acts: list[LegalAct], events: list[Event], toda
                 f"It enters into force on {_fmt(eif)}."
             )
             return _S("published", "Published, not yet in force", text, pub_date, "source")
+        repealed = f" EUR-Lex records it as repealed by {_join_celex(act.repealed_by)}." if act.repealed_by else ""
         if act.end_of_validity and act.end_of_validity <= t:
             return _S(
                 "no_longer_in_force",
                 "No longer in force",
-                f"The act was adopted and published, but its validity ended on {_fmt(act.end_of_validity)}.",
+                f"The act was adopted and published, but its validity ended on {_fmt(act.end_of_validity)}."
+                + repealed,
                 act.end_of_validity,
                 "source",
             )
-        if act.in_force is False and not act.end_of_validity:
+        if act.in_force is False and not act.end_of_validity and not act.repealed_by and (not eif or eif > t):
+            # EUR-Lex "not in force" with no end date: the act has not yet taken effect (Cellar gives
+            # its entry into force as unknown, e.g. pending approval by every Member State)
+            text = (
+                f"The act was published in the Official Journal{' on ' + _fmt(pub_date) if pub_date else ''}. "
+                "EUR-Lex records it as not yet in force and gives no date of entry into force"
+            )
+            text += (
+                ": it takes effect only once a condition set in the act is met (for example, notification "
+                "or approval by every Member State)."
+                if act.entry_into_force_pending
+                else "."
+            )
+            return _S("published", "Published, not yet in force", text, pub_date, "source")
+        if act.in_force is False:
             return _S(
                 "no_longer_in_force",
                 "No longer in force",
-                "The act was adopted and published, but EUR-Lex records it as no longer in force.",
+                "The act was adopted and published, but EUR-Lex records it as no longer in force." + repealed,
                 None,
                 "source",
             )
@@ -604,18 +654,23 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
         if app and app.entry_into_force and app.entry_into_force > t:
             parts.append(f"The act enters into force on {_fmt(app.entry_into_force)}.")
             basis = "source"
+        elif app and app.entry_into_force_pending and act.in_force is False:
+            return NextStep(
+                text="Entry into force once the condition set in the act is met (for example, notification or "
+                "approval by every Member State); EUR-Lex records no date yet.",
+                basis="source",
+            )
         if act.act_type == "directive":
-            future = [d for d in (app.transposition_deadlines if app else []) if d > t]
-            past = [d for d in (app.transposition_deadlines if app else []) if d <= t]
-            if future:
-                parts.append(
-                    f"EU countries must transpose the directive into national law by {_fmt(future[0])}"
-                    + (" (further deadlines: " + _join_dates(future[1:]) + ")." if len(future) > 1 else ".")
-                )
+            tr = app.transposition if app else []
+            general = next((x.date for x in tr if x.kind == "deadline"), None)
+            further = [x.date for x in tr if x.kind == "further_deadline" and x.date > t]
+            applies = [x.date for x in tr if x.kind == "application" and x.date > t and general and x.date > general]
+            if general and general > t:
+                parts.append(f"EU countries must transpose the directive into national law by {_fmt(general)}.")
                 basis = "source"
-            elif past:
+            elif general:
                 parts.append(
-                    f"The transposition deadline ({_fmt(past[-1])}) has passed: EU countries were required "
+                    f"The transposition deadline ({_fmt(general)}) has passed: EU countries were required "
                     "to adopt national measures by then."
                 )
                 basis = "source"
@@ -623,6 +678,22 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 parts.append(
                     "EU countries must transpose the directive into national law; the deadline is not "
                     "recorded in our data."
+                )
+            if further:
+                parts.append(
+                    f"EUR-Lex records {'later transposition deadlines' if len(further) > 1 else 'a later transposition deadline'}"
+                    f" for specific provisions: {_join_dates(further)}."
+                )
+            if applies:
+                later = len(applies) - 1
+                parts.append(
+                    f"The national measures are to apply from {_fmt(applies[0])}"
+                    + (
+                        f"; EUR-Lex records {later} later application date{'s' if later > 1 else ''} for "
+                        "specific provisions."
+                        if later
+                        else "."
+                    )
                 )
             return NextStep(text=" ".join(parts), institution=None, basis=basis)
         if act.act_type == "regulation":

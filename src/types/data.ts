@@ -170,9 +170,20 @@ export interface Stall {
 
 export interface ApplicationInfo {
   entry_into_force?: ISODate | null;
+  entry_into_force_pending?: boolean; // EUR-Lex gives no entry-into-force date: the act takes effect on a condition not yet met
   application_dates: ISODate[]; // further dates recorded by EUR-Lex for (parts of) the act
-  transposition_deadlines: ISODate[]; // directives only
+  transposition_deadlines: ISODate[]; // directives only: deadlines to transpose (general and further), not application dates
+  transposition?: TranspositionDateInfo[]; // directives only: every recorded date, classified
   future: boolean; // true if any of the above lies in the future
+}
+
+/** A directive's transposition date as classified from EUR-Lex's own annotations. */
+export interface TranspositionDateInfo {
+  date: ISODate;
+  // deadline: general transposition deadline; further_deadline: later deadline for specific provisions;
+  // application: a date from which national measures (must or may) apply
+  kind: 'deadline' | 'further_deadline' | 'application';
+  articles: string[]; // "Art. 48(1)"
 }
 
 export type EventKind =
@@ -192,6 +203,7 @@ export type EventKind =
   | 'entry_into_force'
   | 'application'
   | 'transposition_deadline'
+  | 'transposition_application'
   | 'withdrawal'
   | 'rejection'
   | 'lapsed'
@@ -502,6 +514,7 @@ export type TranspositionStatus =
   | 'measures_notified' // at least one national measure in the dataset
   | 'none_found' // no measures found in the available dataset (NOT proof of non-compliance)
   | 'deadline_not_reached'
+  | 'no_deadline' // EUR-Lex records no transposition deadline (e.g. codifications)
   | 'not_participating' // recorded as not participating in the Council's adoption (Treaty opt-out): not bound
   | 'unavailable';
 

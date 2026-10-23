@@ -146,6 +146,16 @@ class CourtRuling(Model):
     url: str  # EUR-Lex page of the judgment
 
 
+class TranspositionDate(Model):
+    """One `directive_date_transposition` value with Cellar's annotation of what it is."""
+
+    date: str
+    # comment_on_date codes: ADOPTION ("adopt and publish by"), APPLICATION ("apply from"),
+    # AU+TARD ("at the latest"); empty when Cellar does not annotate the date
+    labels: list[str] = Field(default_factory=list)
+    articles: list[str] = Field(default_factory=list)  # article of the directive setting it, e.g. "48.1"
+
+
 class LegalAct(Model):
     """An act in the EU legal corpus (EUR-Lex / Cellar)."""
 
@@ -158,12 +168,17 @@ class LegalAct(Model):
     date_publication: str | None = None  # Official Journal publication
     oj_ref: str | None = None
     entry_into_force: str | None = None  # general entry-into-force date (earliest EIF value)
+    # Cellar gives the entry-into-force (or effect) date as the placeholder 1001-01-01: the act takes
+    # effect on a condition not yet met or not yet recorded (e.g. notification, approval by every
+    # Member State)
+    entry_into_force_pending: bool = False
     # Further dates recorded by Cellar as entry-into-force/application of provisions, ascending.
     # Cellar does not say which provisions; label them neutrally in the UI.
     other_application_dates: list[str] = Field(default_factory=list)
     end_of_validity: str | None = None  # None if open-ended (Cellar "9999-12-31")
     in_force: bool | None = None
-    transposition_deadlines: list[str] = Field(default_factory=list)  # directives only
+    transposition_deadlines: list[str] = Field(default_factory=list)  # directives only: every value
+    transposition_dates: list[TranspositionDate] = Field(default_factory=list)  # the same, annotated
     procedure_refs: list[str] = Field(default_factory=list)  # "2021/0106(COD)"
     subjects: list[Subject] = Field(default_factory=list)
     amends: list[str] = Field(default_factory=list)  # CELEX

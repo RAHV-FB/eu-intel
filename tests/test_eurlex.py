@@ -156,6 +156,12 @@ def test_directives_transposition(fixture_acts):
     assert csrd.procedure_refs == ["2021/0104(COD)"]
     assert csrd.oj_ref == "OJ L 322, 16.12.2022"
     assert nis2.transposition_deadlines == ["2024-10-17", "2024-10-18"]
+    # Art. 41(1) NIS2: adopt and publish by 17 October 2024, apply from 18 October 2024
+    assert [(t.date, t.labels, t.articles) for t in nis2.transposition_dates] == [
+        ("2024-10-17", ["ADOPTION"], ["41.1"]),
+        ("2024-10-18", ["APPLICATION"], ["41.1"]),
+    ]
+    assert [(t.date, t.labels) for t in csrd.transposition_dates] == [("2024-07-06", [])]
     assert nis2.procedure_refs == ["2020/0359(COD)"]
     assert nis2.repeals == ["32016L1148"]
 
@@ -171,6 +177,36 @@ def test_quirky_acts(fixture_acts):
     assert dec.entry_into_force == "2024-01-26" and dec.date_publication == "2024-02-16"
     assert dec.procedure_refs == ["2023/0027(CNS)"]
     assert fixture_acts["32019D1096"].procedure_refs == []  # "2018/0359/COD" typed NLE: not linked
+
+
+def test_entry_into_force_pending():
+    """Electoral Act amendment 2018/994: EV value 1001-01-01 (date of notification), in force = 0."""
+    f = E.Facts()
+    f.props.update({
+        "celex": {"32018D0994"},
+        "eif": {"1001-01-01"},
+        "end_of_validity": {"9999-12-31"},
+        "in_force": {"0"},
+    })  # fmt: skip
+    f.titles.add("Council Decision (EU, Euratom) 2018/994 of 13 July 2018 amending the Act concerning the election")
+    f.eif_types["1001-01-01"].add("EV")
+    act = E.build_act("w", f, RETRIEVED)
+    assert act is not None
+    assert act.entry_into_force is None and act.entry_into_force_pending
+    assert act.in_force is False and act.end_of_validity is None
+
+
+def test_transposition_dates_annotations():
+    notes = {
+        "2025-04-14": {"{APPLICATION|x/APPLICATION} {V|x/V} {ART|x/ART} 6.1"},
+        "2026-12-31": {"{ADOPTION|x/ADOPTION} {AU+TARD|x/AU%2BTARD} {V|x/V} {ART|x/ART} 6.2"},
+    }
+    got = E.transposition_dates(["2025-04-14", "2026-12-31", "2027-01-01"], notes)
+    assert [(t.date, t.labels, t.articles) for t in got] == [
+        ("2025-04-14", ["APPLICATION"], ["6.1"]),
+        ("2026-12-31", ["ADOPTION", "AU+TARD"], ["6.2"]),
+        ("2027-01-01", [], []),
+    ]
 
 
 def test_title_date():
@@ -335,7 +371,8 @@ def test_snapshot_ids_and_types():
 
 @needs_snapshot
 def test_snapshot_scope_has_procedures():
-    featured = set(E.read_featured_celex())
+    # featured acts and final acts that OEIL records for a procedure (Cellar may not link them to it)
+    featured = set(E.read_featured_celex()) | set(E.procedure_celex_refs())
     for a in SNAPSHOT:
         if a.celex not in featured:
             assert E.BASE_CELEX_RE.match(a.celex), a.celex

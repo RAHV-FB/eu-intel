@@ -29,6 +29,8 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from pipeline.analysis.transposition import article_label, articles_text, general_deadline
+from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models import entities
 from pipeline.models.countries import MEMBER_STATES
 from pipeline.models.entities import (
@@ -170,6 +172,7 @@ KEY_KINDS = {
     "entry_into_force",
     "application",
     "transposition_deadline",
+    "transposition_application",
     "withdrawal",
     "rejection",
     "lapsed",
@@ -1195,9 +1198,9 @@ class Builder:
             return ns
         app = det.get("application") or {}
         apply_dates = [d for d in app.get("application_dates", []) if d > self.today]
-        deadlines = [d for d in app.get("transposition_deadlines", []) if d > self.today]
-        if deadlines and (not apply_dates or deadlines[0] <= apply_dates[0]):
-            text = f"Member States must transpose the directive by {_long_date(deadlines[0])}."
+        general = next((x["date"] for x in app.get("transposition", []) if x["kind"] == "deadline"), None)
+        if general and general > self.today and (not apply_dates or general <= apply_dates[0]):
+            text = f"Member States must transpose the directive by {_long_date(general)}."
         elif apply_dates:
             text = f"Further provisions apply from {_long_date(apply_dates[0])}."
         else:
@@ -1209,14 +1212,21 @@ class Builder:
             return None
         eif = sorted({a.entry_into_force for a in acts if a.entry_into_force})
         app = sorted({d for a in acts for d in a.other_application_dates})
-        tr = sorted({d for a in acts if a.act_type == "directive" for d in a.transposition_deadlines})
-        if not (eif or app or tr):
+        tr_all = next(
+            (classify_transposition(a) for a in acts if a.act_type == "directive" and a.transposition_deadlines), []
+        )
+        pending = not eif and any(a.entry_into_force_pending for a in acts)
+        if not (eif or app or tr_all or pending):
             return None
         return {
             "entry_into_force": eif[0] if eif else None,
+            "entry_into_force_pending": pending,
             "application_dates": app,
-            "transposition_deadlines": tr,
-            "future": any(d > self.today for d in eif + app + tr),
+            "transposition_deadlines": [x.date for x in tr_all if x.kind != "application"],
+            "transposition": [
+                {"date": x.date, "kind": x.kind, "articles": [article_label(r) for r in x.articles]} for x in tr_all
+            ],
+            "future": any(d > self.today for d in eif + app + [x.date for x in tr_all]),
         }
 
     def timeline(self, p: Procedure, acts: list[LegalAct], votes: list[EpVote]) -> list[dict]:
@@ -1251,33 +1261,40 @@ class Builder:
         for a in acts:
             src = _src(a.source)
             label = f"{a.act_type.capitalize()} {a.celex}" if a.act_type != "other" else f"Act {a.celex}"
-            synth: list[tuple[str, str, str]] = []
+            # (kind, date, title, title once the date has passed)
+            synth: list[tuple[str, str, str, str | None]] = []
             if a.date_signature:
                 synth.append(
-                    ("signature", a.date_signature, "Signed by the Presidents of Parliament and Council")
+                    ("signature", a.date_signature, "Signed by the Presidents of Parliament and Council", None)
                 )
             if a.date_publication:
                 synth.append(
-                    ("publication", a.date_publication, "Published in the Official Journal of the EU")
+                    ("publication", a.date_publication, "Published in the Official Journal of the EU", None)
                 )
             if a.entry_into_force:
-                synth.append(("entry_into_force", a.entry_into_force, "Enters into force"))
+                synth.append(("entry_into_force", a.entry_into_force, "Enters into force", None))
             for d in a.other_application_dates:
                 synth.append(
-                    ("application", d, "Further provisions start to apply (date recorded by EUR-Lex)")
+                    ("application", d, "Further provisions start to apply (date recorded by EUR-Lex)", None)
                 )
-            if a.act_type == "directive":
-                for d in a.transposition_deadlines:
-                    synth.append(
-                        ("transposition_deadline", d, "Deadline for Member States to transpose the directive")
-                    )
-            for kind, d, title in synth:
+            for x in classify_transposition(a):
+                arts = f" ({articles_text(x.articles)})" if x.articles else ""
+                if x.kind == "deadline":
+                    synth.append(("transposition_deadline", x.date,
+                                  "Deadline for Member States to transpose the directive", None))  # fmt: skip
+                elif x.kind == "further_deadline":
+                    t = f"Further transposition deadline for specific provisions{arts}"
+                    synth.append(("transposition_deadline", x.date, t, t + " (passed)"))
+                else:
+                    t = f"Application date for national transposition measures{arts}"
+                    synth.append(("transposition_application", x.date, t, t))
+            for kind, d, title, past_title in synth:
                 if (kind, d) in seen:
                     continue
                 seen.add((kind, d))
                 future = d > self.today
                 if not future:
-                    title = PAST_TITLES.get(kind, title)
+                    title = past_title or PAST_TITLES.get(kind, title)
                 out.append({
                     "id": f"act-{a.celex}-{kind}-{d}", "date": d, "kind": kind, "title": title,
                     "detail": label, "institution": "EUR-Lex", "state": "scheduled" if future else "done",
@@ -1320,7 +1337,9 @@ class Builder:
             return "measures_notified"
         if self.not_participating(celex, country):
             return "not_participating"
-        if deadline and deadline > self.today:
+        if not deadline:
+            return "no_deadline"
+        if deadline > self.today:
             return "deadline_not_reached"
         return "none_found"
 
@@ -1336,7 +1355,7 @@ class Builder:
         if not dirs:
             return None
         a = dirs[0]
-        deadline = min(a.transposition_deadlines) if a.transposition_deadlines else None
+        deadline = general_deadline(a)
         countries = []
         for c in sorted(MEMBER_STATES):
             ms = self.measures_by.get((a.celex, c), [])
@@ -1715,7 +1734,7 @@ class Builder:
                                             if self.mep_summary[m.id]["party"])  # fmt: skip
             trans = []
             for a in directives:
-                deadline = min(a.transposition_deadlines) if a.transposition_deadlines else None
+                deadline = general_deadline(a)
                 ds = sorted(self.act_dossiers.get(a.celex, ()))
                 trans.append({
                     "celex": a.celex, "title": self.dossier_summary[ds[0]]["title"] if len(ds) == 1 else a.title,
@@ -1876,7 +1895,8 @@ class Builder:
             for e in self.dossier_detail[pid]["timeline"]:
                 if (
                     e["state"] == "scheduled"
-                    and e["kind"] in ("application", "transposition_deadline", "entry_into_force")
+                    and e["kind"] in ("application", "transposition_deadline", "transposition_application",
+                                      "entry_into_force")
                     and today < e["date"] <= horizon
                 ):
                     upcoming.append({"dossier_id": pid, "title": summ[pid]["title"], "subtitle": e["title"],

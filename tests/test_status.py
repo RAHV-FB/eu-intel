@@ -346,3 +346,61 @@ def test_expired_or_repealed_act_is_no_longer_in_force_not_published():
     assert s.next_step.text.startswith("None")
     no_date = [a.model_copy(update={"end_of_validity": None, "in_force": False}) for a in acts_for(p)]
     assert classify(p, no_date, [], TODAY).stage == "no_longer_in_force"
+
+
+def test_act_pending_entry_into_force_is_not_no_longer_in_force():
+    # Electoral Act amendments (e.g. Decision 2018/994): EUR-Lex "not in force", entry into force
+    # 1001-01-01 (pending approval by every Member State), no end of validity
+    p = proc("2021-0106")
+    pending = [
+        a.model_copy(
+            update={"entry_into_force": None, "entry_into_force_pending": True, "in_force": False,
+                    "end_of_validity": None, "other_application_dates": []}
+        )
+        for a in acts_for(p)
+    ]  # fmt: skip
+    s = classify(p, pending, [], TODAY)
+    assert (s.stage, s.label) == ("published", "Published, not yet in force")
+    assert "not yet in force" in s.explanation and "no longer" not in all_text(s).lower()
+    assert s.next_step.text.startswith("Entry into force once the condition")
+    assert s.application is not None and s.application.entry_into_force_pending
+
+
+def test_repealed_act_names_the_repealing_act():
+    p = proc("2021-0106")
+    repealed = [
+        a.model_copy(update={"end_of_validity": "2025-01-01", "in_force": False, "repealed_by": ["32026R0001"]})
+        for a in acts_for(p)
+    ]
+    s = classify(p, repealed, [], TODAY)
+    assert s.stage == "no_longer_in_force"
+    assert "repealed by 32026R0001" in s.explanation
+
+
+def test_directive_next_step_uses_general_deadline_not_application_date():
+    # Consumer Credit Directive 2023/2225, Art. 48(1): adopt and publish by 20 November 2025, apply
+    # from 20 November 2026 (Cellar labels ADOPTION / APPLICATION)
+    from pipeline.models.entities import TranspositionDate
+
+    p = proc("2021-0104")
+    dated = [
+        a.model_copy(
+            update={
+                "transposition_deadlines": ["2025-11-20", "2026-11-20"],
+                "transposition_dates": [
+                    TranspositionDate(date="2025-11-20", labels=["ADOPTION"], articles=["48.1"]),
+                    TranspositionDate(date="2026-11-20", labels=["APPLICATION"], articles=["48.1"]),
+                ],
+            }
+        )
+        for a in acts_for(p)
+    ]
+    s = classify(p, dated, [], TODAY)
+    assert "transposition deadline (20 November 2025) has passed" in s.next_step.text
+    assert "must transpose" not in s.next_step.text
+    assert "apply from 20 November 2026" in s.next_step.text
+    assert s.application.transposition_deadlines == ["2025-11-20"]
+    assert [(x.date, x.kind, x.articles) for x in s.application.transposition] == [
+        ("2025-11-20", "deadline", ["Art. 48(1)"]),
+        ("2026-11-20", "application", ["Art. 48(1)"]),
+    ]

@@ -8,7 +8,9 @@ Scope (v1)
     legislative procedure), CNS (consultation) or APP (consent) - i.e. legislative acts and acts
     adopted under a special legislative procedure. Non-legislative (NLE) and budgetary (BUD)
     procedures, implementing/delegated acts and corrigenda are out of scope. CELEX ids listed under
-    `celex:` in data/curated/featured.yaml are added whatever their date or procedure.
+    `celex:` in data/curated/featured.yaml are added whatever their date or procedure, and so are the
+    final acts that OEIL records for procedures in the EP snapshot (`Procedure.celex_refs`): Cellar
+    does not link every act to its procedure (e.g. Regulation 2019/816 ECRIS-TCN, 2017/0144(COD)).
 
 Requests: one paged scope query (ORDER BY + LIMIT/OFFSET), then per batch of works (VALUES blocks,
 4 threads) one query each for literal properties, English title, Official Journal issue, typed
@@ -38,7 +40,13 @@ Source facts relied on (checked against the live endpoint, see tests/test_eurlex
   properties on the work; older acts link to an OJ issue via
   `resource_legal_published_in_official-journal` (number, collection, publication date).
 - Transposition deadlines: `cdm:directive_date_transposition` (may hold several dates, e.g. NIS2
-  "adopt and publish by" 2024-10-17 and "apply from" 2024-10-18).
+  "adopt and publish by" 2024-10-17 and "apply from" 2024-10-18). An OWL axiom on each value
+  (`annotation:comment_on_date`, fd_361 codes) labels it ADOPTION (adopt and publish by),
+  APPLICATION (apply from) and/or AU+TARD (at the latest), with the article that sets it
+  ("{ART|...} 48.1"); kept as transposition_dates. Older or simpler directives carry no label.
+- An entry-into-force / effect value of 1001-01-01 (comment DATNOT, "date of notification") means
+  the act takes effect on a condition not yet met or recorded, e.g. Electoral Act amendments that
+  need the approval of every Member State: entry_into_force_pending.
 - `cdm:resource_legal_date_end-of-validity` may hold several values (provisions expiring at
   different dates); the act's end of validity is the latest one, None when it is 9999-12-31.
 - amends / amended_by: `cdm:resource_legal_amends_resource_legal` (both directions). repeals /
@@ -77,8 +85,15 @@ from typing import Any, Protocol
 import yaml
 
 from pipeline.http import HttpError
-from pipeline.models.entities import CourtRuling, LegalAct, SourceRef, SourceStatus, Subject
-from pipeline.snapshot import CURATED, now_iso, write_records
+from pipeline.models.entities import (
+    CourtRuling,
+    LegalAct,
+    SourceRef,
+    SourceStatus,
+    Subject,
+    TranspositionDate,
+)
+from pipeline.snapshot import CURATED, now_iso, read_records, write_records
 
 log = logging.getLogger("pipeline.sources.eurlex")
 
@@ -351,6 +366,19 @@ def eif_types_query(works: list[str]) -> str:
     )
 
 
+def transposition_query(works: list[str]) -> str:
+    return (
+        PREFIXES
+        + f"""SELECT ?w ?d ?c WHERE {{ {_values(works)}
+  ?w cdm:directive_date_transposition ?d .
+  ?ax owl:annotatedSource ?w ;
+      owl:annotatedProperty cdm:directive_date_transposition ;
+      owl:annotatedTarget ?d ;
+      ann:comment_on_date ?c .
+}}"""
+    )
+
+
 def procedure_query(works: list[str]) -> str:
     return PREFIXES + f"SELECT DISTINCT ?w ?ref ?ptype WHERE {{ {_values(works)}\n  {DOSSIER_LINK}\n}}"
 
@@ -424,6 +452,8 @@ class Facts:
     titles: set[str] = field(default_factory=set)
     oj_issues: dict[str, dict[str, str]] = field(default_factory=dict)
     eif_types: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
+    # transposition date -> comment_on_date annotations (raw "{CODE|iri} ... {ART|iri} 48.1")
+    transposition_notes: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     procedure_refs: set[tuple[str, str]] = field(default_factory=set)  # (reference, type concept or "")
     subjects: dict[tuple[str, str], str | None] = field(default_factory=dict)
     relations: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
@@ -463,6 +493,31 @@ def add_eif_types(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
         d = _date(r["d"])
         if d:
             facts[r["w"]].eif_types[d].add(_annotation_code(r["type"]))
+
+
+def add_transposition_notes(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
+    for r in rows:
+        d = _date(r["d"])
+        if d and r.get("c"):
+            facts[r["w"]].transposition_notes[d].add(r["c"])
+
+
+TRANSPOSITION_LABELS = ("ADOPTION", "APPLICATION", "AU+TARD")
+ANNOTATION_CODE_RE = re.compile(r"\{([^|{}]+)\|[^{}]*\}")
+ARTICLE_RE = re.compile(r"\{ART\|[^{}]*\}\s*([0-9][0-9A-Za-z.()]*)")
+
+
+def transposition_dates(dates: list[str], notes: dict[str, set[str]]) -> list[TranspositionDate]:
+    """Annotate each transposition date with Cellar's labels and the article(s) setting it."""
+    out = []
+    for d in dates:
+        labels: set[str] = set()
+        articles: set[str] = set()
+        for c in notes.get(d, set()):
+            labels |= {code for code in ANNOTATION_CODE_RE.findall(c) if code in TRANSPOSITION_LABELS}
+            articles |= {m.rstrip(".") for m in ARTICLE_RE.findall(c)}
+        out.append(TranspositionDate(date=d, labels=sorted(labels), articles=sorted(articles)))
+    return out
 
 
 def add_procedures(facts: dict[str, Facts], rows: list[dict[str, str]]) -> None:
@@ -519,6 +574,7 @@ QUERIES: list[
     ("title", title_query, add_titles),
     ("oj", oj_query, add_oj),
     ("eif_types", eif_types_query, add_eif_types),
+    ("transposition", transposition_query, add_transposition_notes),
     ("procedure", procedure_query, add_procedures),
     ("subjects", subjects_query, add_subjects),
     ("relations", relations_query, add_relations),
@@ -667,6 +723,7 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         return None
     act_type = act_type_for(_one(p.get("resource_type", set())), celex)
     eif, other_dates = split_eif(p.get("eif", set()), f.eif_types)
+    eif_pending = eif is None and any(_date(v) == UNKNOWN_DATE for v in p.get("eif", set()))
     eov_values = {d for v in p.get("end_of_validity", set()) if (d := _date(v))}
     end_of_validity = None if not eov_values or OPEN_END in eov_values else max(eov_values)
     in_force_raw = _one(p.get("in_force", set()))
@@ -688,10 +745,12 @@ def build_act(work: str, f: Facts, retrieved_at: str) -> LegalAct | None:
         date_publication=date_publication,
         oj_ref=oj_ref,
         entry_into_force=eif,
+        entry_into_force_pending=eif_pending,
         other_application_dates=other_dates,
         end_of_validity=end_of_validity,
         in_force=in_force,
         transposition_deadlines=transposition,
+        transposition_dates=transposition_dates(transposition, f.transposition_notes),
         procedure_refs=proc_refs,
         subjects=_subjects(f),
         amends=_linked(f.relations.get("amends", set()), celex),
@@ -801,6 +860,14 @@ def read_featured_celex(path: Path = FEATURED_FILE) -> list[str]:
     return sorted(found)
 
 
+def procedure_celex_refs() -> list[str]:
+    """Final-act CELEX ids that OEIL records for the procedures in the EP snapshot."""
+    from pipeline.models.entities import Procedure
+
+    procs = read_records("ep_procedures", "procedures", Procedure)
+    return sorted({c for p in procs for c in p.celex_refs if FEATURED_CELEX_RE.match(c)})
+
+
 def resolve_celex(http: SparqlClient, celexes: list[str]) -> dict[str, str]:
     """CELEX -> work IRI (cellar URIs only)."""
     out: dict[str, str] = {}
@@ -849,7 +916,13 @@ def fetch(http: Any) -> SourceStatus:
     missing_featured = sorted(set(featured) - set(featured_works))
     if missing_featured:
         log.warning("eurlex: featured CELEX not found in Cellar: %s", missing_featured)
-    works = sorted(set(scope) | set(featured_works.values()))
+    known = set(scope.values()) | set(featured_works)
+    linked = [c for c in procedure_celex_refs() if c not in known]
+    linked_works = resolve_celex(http, linked) if linked else {}
+    if linked:
+        log.info("eurlex: %d final acts recorded by OEIL outside the scope query, %d found", len(linked),
+                 len(linked_works))  # fmt: skip
+    works = sorted(set(scope) | set(featured_works.values()) | set(linked_works.values()))
     if not works:
         raise RuntimeError("eurlex: scope query returned no acts")
 
@@ -864,6 +937,7 @@ def fetch(http: Any) -> SourceStatus:
     notes = [
         f"{len(scope)} acts in scope ({'/'.join(PROCEDURE_TYPES)} procedures, date >= {MIN_DOCUMENT_DATE})",
         f"{len(featured_works)} featured",
+        f"{len(linked_works)} more recorded by OEIL as final acts of procedures in the EP snapshot",
         f"{with_proc} with procedure reference",
     ]
     if dropped:

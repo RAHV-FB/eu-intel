@@ -1,4 +1,4 @@
-import type { ApplicationInfo, DossierDetail, ISODate, TimelineEvent } from '../../../types/data';
+import type { ApplicationInfo, DossierDetail, ISODate, TimelineEvent, TranspositionDateInfo } from '../../../types/data';
 import { Link } from 'react-router-dom';
 import { BasisNote, ExtLink, SourceLink, StatusBadge, Term, institutionLabel } from '../../../components/ui';
 import { formatDate } from '../../../lib/format';
@@ -23,8 +23,19 @@ function DateWhen({ date, today }: { date: ISODate; today: ISODate }) {
   );
 }
 
+/** A directive's transposition dates by kind; data without the classification counts as deadlines. */
+export function transpositionDates(app: ApplicationInfo | null | undefined): TranspositionDateInfo[] {
+  if (!app) return [];
+  return app.transposition ?? app.transposition_deadlines.map((date, i) => ({ date, kind: i ? 'further_deadline' : 'deadline', articles: [] }));
+}
+
+type DateItem = { date: ISODate; note?: string };
+
 export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; today: ISODate; instrument?: string | null }) {
-  const rows: { label: React.ReactNode; dates: ISODate[] }[] = [];
+  const rows: { label: React.ReactNode; items: DateItem[]; text?: string }[] = [];
+  const plain = (ds: ISODate[]) => [...new Set(ds)].sort().map((date) => ({ date }));
+  const withArticles = (xs: TranspositionDateInfo[]) =>
+    xs.map((x) => ({ date: x.date, note: x.articles.length ? x.articles.join(', ') : undefined }));
   if (app.entry_into_force)
     rows.push({
       label: (
@@ -32,19 +43,33 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
           <Term id="entry-into-force">{app.entry_into_force > today ? 'Enters into force' : 'Entered into force'}</Term>
         </>
       ),
-      dates: [app.entry_into_force],
+      items: plain([app.entry_into_force]),
+    });
+  else if (app.entry_into_force_pending)
+    rows.push({
+      label: <Term id="entry-into-force">Entry into force</Term>,
+      items: [],
+      text: 'Not yet: EUR-Lex records no date. The act takes effect once a condition it sets is met.',
     });
   if (app.application_dates.length)
-    rows.push({ label: app.application_dates.length > 1 ? 'Rules apply (in phases) from' : 'Rules apply from', dates: app.application_dates });
-  if (app.transposition_deadlines.length)
+    rows.push({ label: app.application_dates.length > 1 ? 'Rules apply (in phases) from' : 'Rules apply from', items: plain(app.application_dates) });
+  const tr = transpositionDates(app);
+  const general = tr.filter((x) => x.kind === 'deadline');
+  const further = tr.filter((x) => x.kind === 'further_deadline');
+  const applies = tr.filter((x) => x.kind === 'application');
+  if (general.length)
     rows.push({
       label: (
         <>
-          National <Term id="transposition">transposition</Term> deadline{app.transposition_deadlines.length > 1 ? 's' : ''}
+          National <Term id="transposition">transposition</Term> deadline
         </>
       ),
-      dates: app.transposition_deadlines,
+      items: withArticles(general),
     });
+  if (further.length)
+    rows.push({ label: `Further transposition deadline${further.length > 1 ? 's' : ''} (specific provisions)`, items: withArticles(further) });
+  if (applies.length)
+    rows.push({ label: `Application date${applies.length > 1 ? 's' : ''} for national measures`, items: withArticles(applies) });
   if (!rows.length) return <p className="meta">No application dates are recorded for this act in EUR-Lex.</p>;
   return (
     <>
@@ -53,17 +78,27 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
         <div key={i}>
           <dt>{r.label}</dt>
           <dd>
-            <ul>
-              {[...new Set(r.dates)].sort().map((d) => (
-                <li key={d}>
-                  <DateWhen date={d} today={today} />
-                </li>
-              ))}
-            </ul>
+            {r.text && <p>{r.text}</p>}
+            {r.items.length > 0 && (
+              <ul>
+                {r.items.map((it) => (
+                  <li key={it.date}>
+                    <DateWhen date={it.date} today={today} />
+                    {it.note && <span className="meta"> ({it.note})</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
           </dd>
         </div>
       ))}
     </dl>
+    {(further.length > 0 || applies.length > 0) && (
+      <p className="dz-dates__note meta">
+        Transposition dates as recorded by EUR-Lex, with the article that sets each one. The directive’s text says which
+        provisions a later date covers.
+      </p>
+    )}
     {instrument === 'regulation' && (
       <p className="dz-dates__note meta">
         A <Term id="regulation">regulation</Term> applies directly in every Member State.
