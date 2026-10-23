@@ -66,14 +66,51 @@ function CompactVote({ v }: { v: EpVoteSummary }) {
   );
 }
 
+/** Parliament's approval of the Council's position at second reading, which no vote on the text decides. */
+function ApprovalWithoutVote({ a }: { a: NonNullable<DossierDetail['ep_approval_without_vote']> }) {
+  const voted =
+    a.amendments_voted && a.rejection_voted
+      ? 'Proposals to amend and to reject the Council’s position were put to the vote and not adopted'
+      : a.amendments_voted
+        ? 'Proposals to amend the Council’s position were put to the vote and not adopted'
+        : a.rejection_voted
+          ? 'A proposal to reject the Council’s position was put to the vote and not adopted'
+          : null;
+  return (
+    <p className="dz-none">
+      On {formatDate(a.date)} Parliament approved the Council’s position at second reading without a vote on the text as a whole:
+      when Parliament approves the Council’s position, or takes no decision on it, the act is deemed adopted in the wording of that
+      position (Article 294(7)(a) TFEU); a vote is needed only to reject or amend it.
+      {a.record && (
+        <>
+          {' '}
+          Parliament’s record of that decision reads “Approval without vote” (
+          <ExtLink href={a.record.url}>{a.record.label || 'European Parliament'}</ExtLink>).
+        </>
+      )}
+      {voted && <> {voted}; these votes are not listed here.</>}
+      {a.parts_voted && <> Split or separate votes on parts of the text were also held; these votes are not listed here.</>}
+      {a.first_reading && (
+        <>
+          {' '}
+          Its first-reading decision of {formatDate(a.first_reading)} precedes the votes covered on this site (see{' '}
+          <Link to="/about#coverage">coverage</Link>).
+        </>
+      )}
+    </p>
+  );
+}
+
 export function ParliamentVotes({
   votes,
   oeilUrl,
   split = [],
+  approval,
 }: {
   votes: EpVoteSummary[];
   oeilUrl?: string | null;
   split?: DossierDetail['related'];
+  approval?: DossierDetail['ep_approval_without_vote'];
 }) {
   const [showAll, setShowAll] = useState(false);
   const listId = useId();
@@ -101,6 +138,8 @@ export function ParliamentVotes({
         <p className="dz-none">
           This proposal was split into separate files; Parliament’s votes are shown on them: <SplitLinks parts={split} />.
         </p>
+      ) : votes.length === 0 && approval ? (
+        <ApprovalWithoutVote a={approval} />
       ) : votes.length === 0 ? (
         <p className="dz-none">
           No roll-call vote is matched to this file in our data (see <Link to="/about#coverage">coverage</Link>).
@@ -133,6 +172,7 @@ export function ParliamentVotes({
               )}
             </div>
           )}
+          {approval && <ApprovalWithoutVote a={approval} />}
         </>
       )}
     </section>

@@ -77,7 +77,7 @@ for (const v of readJson('votes/index.json')) {
   const counts = [
     [v.for, 'for'],
     [v.against, 'against'],
-    [v.abstain, 'abstentions'],
+    [v.abstain, v.abstain === 1 ? 'abstention' : 'abstentions'],
   ].filter(([k]) => k != null);
   const result = counts.length
     ? `${counts.map(([k, label]) => `${k} ${label}`).join(', ')}.`

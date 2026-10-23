@@ -5,7 +5,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } f
 import { Link } from 'react-router-dom';
 import type { Basis, LifecycleStage, SourceRef } from '../types/data';
 import { GLOSSARY } from '../content/glossary';
-import { formatNumber, safeUrl } from '../lib/format';
+import { formatNumber, plural, safeUrl } from '../lib/format';
 
 // ------------------------------------------------------------------ page scaffolding
 
@@ -268,7 +268,7 @@ export function VoteBar({
   const total = f + a + x;
   if (forCount == null && against == null) return <span className="meta">Vote counts not recorded</span>;
   const w = (n: number) => (total ? `${(n / total) * 100}%` : '0');
-  const desc = `${label ? label + ': ' : ''}${formatNumber(f)} for, ${formatNumber(x)} abstentions, ${formatNumber(a)} against`;
+  const desc = `${label ? label + ': ' : ''}${formatNumber(f)} for, ${plural(x, 'abstention')}, ${formatNumber(a)} against`;
   return (
     <div className={`votebar${compact ? ' votebar--compact' : ''}`}>
       <div className="votebar__track" role="img" aria-label={desc}>

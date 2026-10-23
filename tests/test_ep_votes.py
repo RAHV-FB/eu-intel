@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 import warnings
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -826,8 +827,7 @@ def test_french_label_gives_the_document_the_minutes_confirm():
     links = {"A-9-2021-0149": (["2020-2216"], []), "A-9-2020-0149": (["2019-0272"], [])}
     v = roles("2021-04-28", links)["130719"]
     assert (v.procedure_refs, v.kind, v.majority_rule) == (["2019/0272(COD)"], "final", "votes_cast")
-    # not when the English label's document is an item of the sitting (26 Mar 2020: 112990 "Request for urgency
-    # procedure: … - C9-0083/2020", French label "C9-0082/2020 - Am 1", both items of that sitting)
+    # not when the English label's document is an item of the sitting (that is misfiled_english_label's case)
     sitting = load_sitting("2021-04-28", base=ROLES)
     dec = sitting.decisions[0]
     assert ev.french_label_docs(sitting, dec, ["A-9-2021-0149"]) == ["A-9-2020-0149"]
@@ -838,6 +838,112 @@ def test_french_label_gives_the_document_the_minutes_confirm():
     dec = sitting.decisions[0]
     assert ev.french_label_docs(sitting, dec, ["A-9-2022-0247"]) is None
     assert ev.draft(dec, sitting).label_docs == ["A-9-2022-0247"]
+
+
+# ----------------------------------- whole texts: other votes' English labels, budget decisions, resolutions (whole_texts/)
+WHOLE = FIX / "whole_texts"
+WHOLE_LABELS = {
+    "2020-0042": "2020/0042(COD)", "2020-0043": "2020/0043(COD)", "2020-0044": "2020/0044(COD)",
+    "2019-0078": "2019/0078(NLE)", "2019-0078M": "2019/0078M(NLE)", "2019-0090": "2019/0090(NLE)",
+    "2019-0090M": "2019/0090M(NLE)", "2019-0226": "2019/0226(NLE)", "2019-0226M": "2019/0226M(NLE)",
+    "2020-2535": "2020/2535(RSP)", "2021-2736": "2021/2736(RSP)", "2024-2565": "2024/2565(RSO)",
+    "2019-2021": "2019/2021(BUD)", "2019-2022": "2019/2022(BUD)", "2020-0371": "2020/0371(BUD)",
+    "2026-0254": "2026/0254(BUD)", "2026-0196": "2026/0196(BUD)",
+}  # fmt: skip
+
+
+def whole(day: str, links: dict | None = None, **kw) -> dict[str, EpVote]:
+    res = ev.assemble([load_sitting(day, base=WHOLE)], WHOLE_LABELS, links or {}, RETRIEVED, **kw)
+    return {v.id: v for v in res.votes}
+
+
+def test_english_label_of_another_vote_gives_way_to_the_french_label():
+    # 26 Mar 2020: the English labels of 112990 and 112991 are those of the urgency requests on C9-0083/2020 and
+    # C9-0084/2020 (whose own request is 112989, 684-1-2). Parliament's French "Results of roll-call votes"
+    # (PV-9-2020-03-26-RCV_fr.xml) and the French labels: "C9-0082/2020 - Am 1" (689-1-2, 18:30) and "C9-0082/2020 -
+    # Vote final" (686-0-2, 21:00); the minutes record both counts only in block 1, "Allocation of slots at Community
+    # airports: common rules ***I (COM(2020)0111 – C9-0082/2020 – 2020/0042(COD))"
+    votes = whole("2020-03-26")
+    got = {vid: (v.kind, v.procedure_refs, v.title) for vid, v in votes.items()}
+    assert got["112991"] == ("final", ["2020/0042(COD)"], "C9-0082/2020 - Vote final")
+    assert got["112990"] == ("amendment", ["2020/0042(COD)"], "C9-0082/2020 - Am 1")
+    assert got["112989"][:2] == ("procedural", ["2020/0044(COD)"])  # the urgency request on C9-0084/2020
+    assert got["112995"][:2] == ("final", ["2020/0043(COD)"])
+    assert votes["112991"].has_ballots and votes["112991"].majority_rule == "votes_cast"
+    sitting = load_sitting("2020-03-26", base=WHOLE)
+    dec = next(d for d in sitting.decisions if d["notation_votingId"] == "112991")
+    assert ev.misfiled_english_label(sitting, dec, ["C-9-2020-0084"]) == "C9-0082/2020 - Vote final"
+
+
+def test_resolution_accompanying_a_consent_is_not_the_consent():
+    # 17 Jun 2020, PV-9-2020-06-17-VOT: block 7 "… Guinea-Bissau (2019-2024) ***", "Recommendation: João Ferreira
+    # (A9-0012/2020)", "Consent procedure | RCV | + | 537 64 87" (115242); block 8 "… Guinea-Bissau (2019-2024)
+    # (Resolution)", "Report: João Ferreira (A9-0013/2020)", "Single vote | RCV | + | 620 44 24" (115243, whose label
+    # misprints A9-0012/2020); block 6, Cape Verde "(Resolution)" A9-0023/2020, 2019/0078M(NLE) (115241)
+    votes = whole("2020-06-17")
+    got = {vid: (v.kind, v.procedure_refs) for vid, v in votes.items()}
+    assert got == {
+        "115240": ("final", ["2019/0078(NLE)"]),
+        "115241": ("resolution", ["2019/0078M(NLE)"]),
+        "115242": ("final", ["2019/0090(NLE)"]),
+        "115243": ("resolution", ["2019/0090M(NLE)"]),
+    }
+    # 11 Nov 2020, French minutes: block 6 "… Protocole (résolution)", A9-0182/2020, 583-43-60, labelled "Consent
+    # procedure" (124727); the consent is block 5, A9-0180/2020 (124726)
+    votes = whole("2020-11-11", {"A-9-2020-0180": (["2019-0226"], [])})
+    assert (votes["124727"].kind, votes["124727"].procedure_refs) == ("resolution", ["2019/0226M(NLE)"])
+    assert (votes["124726"].kind, votes["124726"].procedure_refs) == ("final", ["2019/0226(NLE)"])
+
+
+def test_budget_decision_is_a_final_vote_whatever_its_label_says():
+    # 18 Sep 2019: draft amending budgets No 2/2019 "… - Resolution" (108568) and No 1/2019 "… - Single vote"
+    # (108569) are the same kind of decision; 18 Dec 2020, 126342, minutes block "New General Budget of the European
+    # Union for the financial year 2021", label "… - Resolution" (TA-9-2020-0385, point 14: "Approves the Council
+    # position on the second draft general budget of the European Union for the financial year 2021"); 21 Oct 2026,
+    # 198409, EGF application, "Motion for a resolution (as a whole)"
+    assert {v.id: v.kind for v in whole("2019-09-18").values()} == {"108568": "final", "108569": "final"}
+    assert whole("2020-12-18", {"A-9-2020-0267": (["2020-0371"], [])})["126342"].kind == "final"
+    votes = whole("2026-10-21")
+    assert (votes["198409"].kind, votes["198409"].majority_rule) == ("final", "votes_cast")
+    # Parliament's reading of the annual draft budget amends the Council's position: still the resolution
+    assert votes["198774"].subject.startswith("General budget of the European Union for the financial year 2027")
+    assert votes["198774"].kind == "resolution"
+    s = ev.Signals(ref="Resolution", label=None, proc_types=["BUD"])
+    assert ev.classify(replace(s, vote_subject="Estimates of revenue and expenditure for the financial year 2021")) == "resolution"
+    assert ev.classify(replace(s, vote_subject="Guidelines for the 2021 Budget - Section III")) == "resolution"
+    assert ev.classify(replace(s, vote_subject="Mobilisation of the Contingency Margin in 2020")) == "final"
+    assert ev.classify(replace(s, vote_subject="Mobilisation of the Flexibility Instrument", proc_types=["INI"])) == "resolution"
+
+
+def test_objection_named_only_in_the_subject():
+    # 13 May 2020, 113694 "B9-0121/2020 - Resolution", vote item titled in French ("Soja génétiquement modifié …"),
+    # French minutes block 13 "Résolution (ensemble du texte) | AN | + | 477 181 23"; the subject is the procedure's
+    # English title, "Objection pursuant to Rule 112: …" (2020/2535(RSP))
+    title = ("Objection pursuant to Rule 112: Draft Commission Implementing Decision authorising the placing on the market "
+             "of products containing, consisting of or produced from genetically modified soybean MON 87708 × MON 89788 × "
+             "A5547-127")  # fmt: skip
+    v = whole("2020-05-13", proc_titles={"2020-2535": title})["113694"]
+    assert (v.kind, v.kind_detail, v.outcome, v.subject) == ("motion", "objection", "adopted", title)
+    assert whole("2020-05-13")["113694"].kind == "resolution"  # without the subject, as before
+
+
+def test_recommendation_of_parliament():
+    # 20 Jan 2022, 139042 "… B9-0057/2022/REV - Draft recommandation (text as a whole)", minutes heading "Proposal for
+    # a European Parliament recommendation to the Council and the Commission", row "Proposal for a recommendation (as a
+    # whole)"; 12 Mar 2024, 166075, a committee's "Recommendation for a decision" on Parliament's Rules
+    v = whole("2022-01-20")["139042"]
+    assert (v.kind, v.kind_detail) == ("resolution", "recommendation")
+    assert whole("2024-03-12")["166075"].kind_detail is None
+    s = ev.Signals(ref="Motion for a resolution (as a whole)", label=None, proc_types=["INI"])
+    rec = lambda **kw: ev.kind_detail("resolution", replace(s, **kw), None)  # noqa: E731
+    assert rec(vote_subject="Recommendation to the Council on EU priorities for the 70th session of the UN Commission "
+                            "on the Status of Women") == "recommendation"  # 184379, 12 Feb 2026  # fmt: skip
+    assert rec(subject="Recommandation (ensemble du texte)") == "recommendation"  # 115399, 18 Jun 2020
+    # a resolution about a Council Recommendation (170765, 2024/2911(RSP)), not Parliament's own
+    assert rec(vote_subject="Recommendation on smoke- and aerosol-free environments", proc_types=["RSP"]) is None
+    assert rec(vote_subject="Council Recommendation on vocational education and training") is None
+    assert rec(ref="Recommendation 5") is None  # a part of the text
+    assert rec() is None
 
 
 def test_stated_majority_that_contradicts_the_assumed_one_is_not_used():

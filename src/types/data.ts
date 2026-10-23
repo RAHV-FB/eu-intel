@@ -322,6 +322,18 @@ export interface DossierDetail extends DossierSummary {
   timeline: TimelineEvent[]; // ascending by date
   acts: LegalActSummary[];
   ep_votes: EpVoteSummary[]; // votes linked to this dossier via official ids, newest first
+  // Parliament's latest approval of the Council's position at second reading to which no vote is linked (no vote on the
+  // text as a whole is needed; Art. 294(7)(a) TFEU): Parliament's "Approval without vote" record when it has one, whether
+  // proposals to amend or reject the position, or parts of the text, were voted, and a first-reading decision before the
+  // votes covered
+  ep_approval_without_vote?: {
+    date: ISODate;
+    record: SourceRef | null;
+    amendments_voted: boolean;
+    rejection_voted: boolean;
+    parts_voted: boolean; // split or separate votes on parts of the Council's position
+    first_reading: ISODate | null;
+  } | null;
   council_votes: CouncilVote[];
   // Split procedures only: Council votes that cite this (parent) reference, listed on the part whose act they adopted
   council_votes_in_parts?: { id: string; date: ISODate; dossier_id: string; dossier_ref: string }[];
@@ -371,7 +383,8 @@ export type VoteKindDetail =
   // final vote on a discharge report's proposal to grant, postpone or refuse discharge (where the record says which)
   | 'grant_discharge'
   | 'postpone_discharge'
-  | 'refuse_discharge';
+  | 'refuse_discharge'
+  | 'recommendation'; // a recommendation of Parliament (Rule 118 external policies, Rule 208(12) committee of inquiry)
 export type VoteOutcome = 'adopted' | 'rejected' | 'lapsed' | 'unknown';
 /**
  * What a final vote decides: "commission_election" for the vote titled "Election of the Commission"; else by the type
@@ -395,6 +408,10 @@ export interface VoteMargin {
   relative: number; // distance / votes counted towards the threshold
   label: string; // "Majority reached: 12 votes more than needed" (the vote's majority, not a law passing)
   component_members?: number | null; // Members in office on the day, for rules based on component Members
+  // two_thirds_cast only: the two conditions (Art. 234 / 354 TFEU), both to be met; threshold is the larger
+  votes_cast?: number; // for + against
+  two_thirds_of_cast?: number; // two thirds of votes_cast, rounded up
+  majority_of_members?: number; // a majority of component_members
 }
 
 /** A run of text and its language ("fr", "de"), or null for the page language, references and names. */
@@ -423,6 +440,9 @@ export interface EpVoteSummary {
   dossier_id?: string | null;
   dossier_ref?: string | null;
   procedure_ref?: string | null; // official procedure reference, also when the procedure is not a tracked file
+  // what tells the vote apart from another of the same day with the same title, as appended to display_title
+  // ("motion B10-0432/2026", "amendments 1, 2 and 7"); absent when no other vote shares its title
+  distinction?: string;
   // the published subject of the vote, only when display_title and title lack some of its words (keyword search)
   subject?: string | null;
   topics: string[];

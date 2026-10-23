@@ -79,11 +79,13 @@ Subject (EpVote.subject) — what was voted, in English, as published: the vote 
 (earlier items are titled in French only), else the block title of the sitting's English minutes, else the
 title of the vote's only linked procedure (EP API process_title; see procedure_subject).
 Document numbers: an old-format label whose document number the minutes contradict is linked through the
-minutes block that records its counts (minutes_docs), or takes the number of its French label when that block
-gives the French label's (french_label_docs).
+minutes block that records its counts (minutes_docs, also the block of the resolution accompanying the labelled
+consent), or takes the number of its French label when that block gives the French label's (french_label_docs); an
+English label that is another vote's gives way to the French label (misfiled_english_label).
 Kind detail (EpVote.kind_detail) — see kind_detail(): rejection motions, censure, objections and
-recommendations to raise no objections, decisions to enter into negotiations, and what a discharge decision voted
-on proposes (grant, postpone or refuse discharge) where the minutes heading or headingLabel says so.
+recommendations to raise no objections, decisions to enter into negotiations, what a discharge decision voted
+on proposes (grant, postpone or refuse discharge) where the minutes heading or headingLabel says so, and
+recommendations of Parliament (is_recommendation).
 
 Mandates — a vote classified "final" becomes "mandate" when Parliament referred the file back to committee
 for interinstitutional negotiations right after it: an adopted referral-back decision in the same vote item
@@ -762,6 +764,10 @@ class Signals:
     symbol: str | None = None  # procedure symbol of the vote item or minutes block ("***I"), see symbol_of
     subject: str | None = None  # before 2024: the "Subject" column of the minutes row ("Rejection"), see minutes_subject
     section: str | None = None  # before 2024: the heading row above it ("Decision to refuse discharge"), see minutes_section
+    vote_subject: str | None = None  # what was voted, in English (EpVote.subject: "Draft amending budget No 5/2024: …")
+    # every linked procedure is Parliament's interim report ("2020/0112R(APP)") or the resolution accompanying a consent
+    # ("2019/0226M(NLE)"), whose procedure type does not apply (see build_records)
+    report: bool = False
 
 
 def label_parts(label: str | None) -> list[str]:
@@ -802,15 +808,33 @@ def is_provisional_agreement(ref: str, heading: str, label: str) -> bool:
 
 
 def _is_objection(s: Signals) -> bool:
-    """Objections to delegated / implementing acts: the item or heading says so, the label opens with it (157978, an
-    old-format vote without a vote item: "Objection pursuant to Rule 112(2) and (3): Genetically modified maize MON
-    87419 – Motion for a resolution (text as a whole)"), or every linked procedure is an objection procedure (DEA,
-    RPS), whose whole-text vote is always the objection."""
+    """Objections to delegated / implementing acts: the item or heading says so, the label or the English subject opens
+    with it (157978, an old-format vote without a vote item: "Objection pursuant to Rule 112(2) and (3): Genetically
+    modified maize MON 87419 – Motion for a resolution (text as a whole)"; 113694, 13 May 2020, labelled "B9-0121/2020 -
+    Resolution" under a vote item titled in French, subject "Objection pursuant to Rule 112: …"), or every linked
+    procedure is an objection procedure (DEA, RPS), whose whole-text vote is always the objection."""
     return (
         bool(re.search(r"\bobjection\b", f"{s.item_title or ''} {s.heading or ''}", re.I))
-        or bool(re.match(r"objection pursuant to rule\b", s.label or "", re.I))
+        or any(re.match(r"objection pursuant to rule\b", t or "", re.I) for t in (s.label, s.vote_subject))
         or (bool(s.proc_types) and set(s.proc_types) <= OBJECTION_TYPES)
     )
+
+
+# Parliament's decision, as one arm of the budgetary authority, on a draft amending budget (Art. 314 TFEU), on mobilising
+# a special instrument (European Globalisation Adjustment Fund, Solidarity Fund, Flexibility Instrument, Contingency
+# Margin) or on a new draft budget (Art. 314(8)): the motion for a resolution approving the Council's position or the
+# decision annexed to it, whatever its label calls the vote ("Single vote", "Resolution", "Motion for a resolution (as a
+# whole)"; TA-10-2024-0049, 170632: "Approves the Council position on Draft amending budget No 5/2024"; TA-9-2020-0385,
+# 126342: "Approves the Council position on the second draft general budget … for the financial year 2021"). Parliament's
+# reading of the annual draft budget, which amends the Council's position ("General budget of the European Union for the
+# financial year 2027 – all sections", 198774), its estimates and its budget guidelines stay resolutions.
+_BUDGET_DECISION = re.compile(r"^((draft )?amending budget|mobili[sz]ation of the|new (draft )?general budget)\b", re.I)
+
+
+def budget_decision(s: Signals) -> bool:
+    """A whole-text vote on a BUD file that is Parliament's budget decision (see _BUDGET_DECISION)."""
+    title = s.vote_subject or ""
+    return set(s.proc_types) == {"BUD"} and bool(_BUDGET_DECISION.match(title)) and "all sections" not in title.lower()
 
 
 def tabled_rejection(s: Signals) -> bool:
@@ -833,8 +857,10 @@ def classify(s: Signals) -> VoteKind:
     whole_marker = bool(_FINAL.match(ref) or _RESOLUTION.match(ref))
     legislative = bool(set(s.proc_types) & LEGISLATIVE_TYPES) and not set(s.proc_types) - LEGISLATIVE_TYPES
     # no legislative symbol: a label's misprinted document number can lead to an own-initiative report (the tuna plan
-    # vote of 28 Apr 2021, minutes "***I", English label A9-0149/2021 for A9-0149/2020; see french_label_docs)
-    resolution_file = bool(s.proc_types) and set(s.proc_types) <= RESOLUTION_TYPES and not s.symbol
+    # vote of 28 Apr 2021, minutes "***I", English label A9-0149/2021 for A9-0149/2020; see french_label_docs); the
+    # resolution accompanying a consent is one too, also when labelled "Single vote" or "Consent procedure" (124727, 11
+    # Nov 2020, 2019/0226M(NLE), minutes "Protocole (résolution)")
+    resolution_file = (bool(s.proc_types) and set(s.proc_types) <= RESOLUTION_TYPES and not s.symbol) or s.report
     is_objection = _is_objection(s)
 
     # 1. procedural decisions (referral back, urgency, agenda, adjournment, negotiation mandates); a discharge report's
@@ -887,7 +913,7 @@ def classify(s: Signals) -> VoteKind:
         if _RESOLUTION.match(text) or _WHOLE_DOC.match(text):
             if is_objection:
                 return "motion"  # an objection to a delegated / implementing act, as a whole
-            return "final" if legislative else "resolution"
+            return "final" if legislative or budget_decision(s) else "resolution"
     return "other"
 
 
@@ -933,6 +959,31 @@ def discharge_proposal(s: Signals) -> KindDetail | None:
     return found.pop() if len(found) == 1 else None
 
 
+# Parliament's own recommendation, as its record names the text voted: the label or referenceText ("Draft recommendation",
+# "Proposal for a recommendation", "Projet de recommandation", "Recommandation"), the minutes Subject or heading
+# ("Recommendation (text as a whole)", "Draft recommendation B9-0260/2023", "Proposal for a European Parliament
+# recommendation to the Council and the Commission"), or the subject of an own-initiative report ("Recommendation to the
+# Council on the EU priorities for the 69th session of the UN Human Rights Council", 171157): a recommendation to the
+# Council, the Commission or the High Representative (Rule 118 of the 9th-term Rules of Procedure) or of a committee of
+# inquiry (Rule 208(12)). Not a resolution about a Council Recommendation ("Council Recommendation on …", 126251; the
+# topical resolution 170765 "Recommendation on smoke- and aerosol-free environments", 2024/2911(RSP)), nor a report
+# "with recommendations to the Commission" (INL), nor a committee's "Recommendation for a decision" (166075, on
+# Parliament's Rules of Procedure). Records that call the text only a motion for a resolution (143769, A9-0164/2022)
+# are not read as recommendations.
+_RECOMMENDATION = re.compile(
+    r"^((draft|proposal for an?|projet de) )?(european parliament )?(recommendations?|recommandation)(?![a-z])"
+    r"(?! (\d|for\b|de décision))",
+    re.I,
+)
+_RECOMMENDATION_SUBJECT = re.compile(r"^(proposal for an? )?recommendations? (to|on)\b", re.I)
+
+
+def is_recommendation(s: Signals) -> bool:
+    """A whole-text vote on a recommendation of Parliament (see _RECOMMENDATION)."""
+    named = any(_RECOMMENDATION.match((t or "").strip()) for t in (s.ref, s.heading, s.subject, s.section))
+    return named or (set(s.proc_types) == {"INI"} and bool(_RECOMMENDATION_SUBJECT.match(s.vote_subject or "")))
+
+
 def kind_detail(kind: str, s: Signals, symbol: str | None) -> KindDetail | None:
     """What a motion or procedural vote, or a final vote on discharge, decides, where the published texts say so
     (else None).
@@ -948,11 +999,14 @@ def kind_detail(kind: str, s: Signals, symbol: str | None) -> KindDetail | None:
       negotiations (Rule 71 of the 9th-term, Rule 72 of the 10th-term Rules of Procedure).
     - "grant_discharge" / "postpone_discharge" / "refuse_discharge": a final vote on a discharge report's proposal
       for a decision to grant, postpone or refuse discharge (see discharge_proposal).
+    - "recommendation": the vote on a recommendation of Parliament as a whole (see is_recommendation).
     """
     ref = (s.ref or "").strip()
     heading = s.heading or ""
     if kind == "final":
         return discharge_proposal(s)
+    if kind == "resolution":
+        return "recommendation" if is_recommendation(s) else None
     if kind == "procedural":
         return "negotiation_decision" if _NEGOTIATION_DECISION.search(f"{ref} {s.label or ''}") else None
     if kind != "motion":
@@ -1175,6 +1229,17 @@ def _block_fits(row: MinutesRow, title: str | None, names: list[str]) -> bool:
     return bool(names) and all(n in (row.description or "") for n in names)
 
 
+def accompanying_resolution(rows: list[MinutesRow], labelled: list[MinutesRow]) -> bool:
+    """The minutes `rows` lie in one block that records the resolution accompanying the text of the `labelled` block:
+    the same English title followed by "(Resolution)" ("… Guinea-Bissau (2019-2024) ***", the consent, and "…
+    Guinea-Bissau (2019-2024) (Resolution)", 17 Jun 2020)."""
+    titles = {r.title for r in rows}
+    bases = {SYMBOL_RE.sub("", r.title).strip() for r in labelled if r.title}
+    if len({r.item for r in rows}) != 1 or len(titles) != 1 or None in titles or len(bases) != 1:
+        return False
+    return _title_key(titles.pop() or "") == _title_key(f"{bases.pop()} (Resolution)")
+
+
 def minutes_docs(sitting: Sitting, dec: dict, label_docs: list[str]) -> list[str] | None:
     """Documents of the minutes block recording the decision, when the document its label names is another
     item of the sitting (old format); else None.
@@ -1186,7 +1251,11 @@ def minutes_docs(sitting: Sitting, dec: dict, label_docs: list[str]) -> list[str
     rapporteurs (see _block_fits), none of its rows has the decision's counts, and the rows that have them lie
     in one block that fits the label. A document number the minutes do not list (a typo in the label or in
     the minutes) is left as it is: the minutes of 15 Mar 2023 print the report of 153312 (label "Law enforcement
-    information exchange - A9-0247/2022 - …", 2021/0411(COD)) as A9-0247/2023, an own-initiative report."""
+    information exchange - A9-0247/2022 - …", 2021/0411(COD)) as A9-0247/2023, an own-initiative report.
+    Also when the rows with the counts record the resolution accompanying the labelled text (accompanying_resolution):
+    115243, 17 Jun 2020, "A9-0012/2020 - João Ferreira - Single vote", 620-44-24, the counts of the minutes block
+    "… Guinea-Bissau (2019-2024) (Resolution)", "Report: João Ferreira (A9-0013/2020)"; A9-0012/2020 is his
+    recommendation on consent (537-64-87, 115242)."""
     counts = vote_counts(dec)
     if sitting.rich or not sitting.minutes or not label_docs or counts[0] is None or counts[1] is None:
         return None
@@ -1198,6 +1267,8 @@ def minutes_docs(sitting: Sitting, dec: dict, label_docs: list[str]) -> list[str
     if not title and not names:
         names = label_subject(clean_label(_text(dec.get("activity_label"))))[1]
     labelled = [r for r in sitting.minutes if r.docs & set(label_docs)]
+    if labelled and accompanying_resolution(rows, labelled):
+        return sorted(rows[0].docs)
     if not labelled or any(_block_fits(r, title, names) for r in labelled):
         return None
     blocks = {r.docs for r in rows if _block_fits(r, title, names)}
@@ -1211,8 +1282,8 @@ def french_label_docs(sitting: Sitting, dec: dict, label_docs: list[str]) -> lis
     28 Apr 2021 (130719) is labelled "… - A9-0149/2021 - Giuseppe Ferrandino - …" (an own-initiative report on the
     digital future of Europe, 2020/2216(INI)), its French label and its minutes block "Report: Giuseppe Ferrandino
     (A9-0149/2020)" (2019/0272(COD)). A number misprinted in the minutes alone changes nothing (153312, see
-    minutes_docs), nor does a French label naming another item of the sitting (26 Mar 2020: 112990 "Request for
-    urgency procedure: … - C9-0083/2020", French label "C9-0082/2020 - Am 1")."""
+    minutes_docs). An English label naming another item of the sitting whose block does not record the decision's counts
+    is the label of another vote (see misfiled_english_label)."""
     lab = dec.get("activity_label")
     counts = vote_counts(dec)
     if sitting.rich or not sitting.minutes or not label_docs or not isinstance(lab, dict) or counts[1] is None:
@@ -1228,6 +1299,36 @@ def french_label_docs(sitting: Sitting, dec: dict, label_docs: list[str]) -> lis
     if len({r.item for r in rows}) != 1:
         return None
     return fr_docs if all(set(fr_docs) <= r.docs for r in rows) else None
+
+
+def misfiled_english_label(sitting: Sitting, dec: dict, label_docs: list[str]) -> str | None:
+    """The French label of an old-format decision whose English label is that of another vote of the sitting, else None:
+    the English label names a document whose minutes block has no row with the decision's counts, while the rows that
+    have them lie in one block, which lists the documents the French label names. 26 Mar 2020: 112991, English label
+    "Request for urgency procedure: Financial assistance … - C9-0084/2020 26/03/2020 11:00:00.300", French label
+    "C9-0082/2020 - Vote final", 686 for, 2 abstentions: the counts the minutes record for the Commission proposal on
+    the allocation of slots at Community airports (C9-0082/2020, 2020/0042(COD)); 112990, "… - C9-0083/2020", French "C9-
+    0082/2020 - Am 1", 689-1-2, amendment 1 in that block. Parliament's French "Results of roll-call votes" of that sitting
+    (PV-9-2020-03-26-RCV_fr.xml) gives the French labels; the urgency request on C9-0084/2020 is 112989 (684-1-2)."""
+    lab = dec.get("activity_label")
+    counts = vote_counts(dec)
+    if sitting.rich or not sitting.minutes or not label_docs or not isinstance(lab, dict) or not _english(lab):
+        return None
+    fr = clean_label(_text(lab.get("fr")))
+    fr_docs = _doc_ids(fr or "")
+    if not fr or not fr_docs or fr_docs == set(label_docs) or counts[0] is None or counts[1] is None:
+        return None
+    key = (counts[0], counts[1], counts[2] or 0)
+    labelled = [r for r in sitting.minutes if r.docs & set(label_docs)]
+    if not labelled or any(r.counts == key for r in labelled):
+        return None
+    rows = [r for r in sitting.minutes if r.counts == key]
+    if len({r.item for r in rows}) != 1 or not all(fr_docs <= r.docs for r in rows):
+        return None
+    # an English label with the title or rapporteurs of that block describes this vote with a misprinted document
+    # number (130862, see minutes_docs): it is kept
+    title, names = label_subject(clean_label(_english(lab)))
+    return None if any(_block_fits(r, title, names) for r in rows) else fr
 
 
 def minutes_procs(d: Draft, docs_procs: dict[str, set[str]], ref_to_id: dict[str, str]) -> list[str]:
@@ -1303,6 +1404,11 @@ def draft(dec: dict, sitting: Sitting) -> Draft:
     text = ascii_hyphens(" ".join(t for t in (label, heading) if t))
     label_docs = [d for m in DOC_REF_RE.finditer(text) if (d := doc_ref_to_id(m.group(0)))]
     label_procs = sorted({m.group(0) for m in PROC_REF_RE.finditer(label or "")})
+    if not sitting.rich and (fr_label := misfiled_english_label(sitting, dec, label_docs)):
+        # the English label is another vote's: the French label as published, its documents and procedure references
+        label = fr_label
+        label_docs = [d for m in DOC_REF_RE.finditer(ascii_hyphens(label)) if (d := doc_ref_to_id(m.group(0)))]
+        label_procs = sorted({m.group(0) for m in PROC_REF_RE.finditer(label)})
     if not sitting.rich:
         ref = label_tail(label)
         lab = dec.get("activity_label")
@@ -1634,6 +1740,7 @@ def build_records(
     item = d.items[0] if len({it.id for it in d.items}) == 1 else None
     counts = vote_counts(dec)
     symbol = symbol_of(d, ctx.doc_symbols) or minutes_symbol(d, counts)
+    subject = subject_of(d, counts) or procedure_subject(refs, ctx.proc_titles)
     sig = Signals(
         ref=d.ref,
         label=d.label,
@@ -1646,6 +1753,8 @@ def build_records(
         symbol=symbol,
         subject=None if s.rich else minutes_subject(d, counts),
         section=None if s.rich else minutes_section(d, counts),
+        vote_subject=subject,
+        report=bool(refs) and len(proc_types) == 0,
     )
     kind = classify(sig)
     if kind in ("amendment", "other") and not s.rich and minutes_agreement(d, counts):
@@ -1706,7 +1815,7 @@ def build_records(
         reference_text=d.ref if s.rich else None,
         doc_ids=d.docs,
         procedure_refs=refs,
-        subject=subject_of(d, counts) or procedure_subject(refs, ctx.proc_titles),
+        subject=subject,
         kind=kind,
         kind_detail=detail,
         outcome=outcome,

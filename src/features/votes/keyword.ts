@@ -5,7 +5,8 @@
  * votes on the Artificial Intelligence Act ("AI Act vote" too: "vote" is not looked for in the file's names); a
  * file the search matches only approximately counts last, and flagged. References are matched whole:
  * "2023/0134(COD)" or "2023/2116" against the vote's procedure and file references (and acts identified by the
- * number), "A9-0050/2024" against the session document in its label. The rapporteurs named in Parliament's label
+ * number), "A9-0050/2024" against the session document in its label; their years and serial numbers are not words
+ * of the vote ("discharge 2022" is not a vote on 2024/2022(DEC)). The rapporteurs named in Parliament's label
  * match only as written ("Carlos" is not Carlo Fidanza).
  */
 import type { EpVoteSummary } from '../../types/data';
@@ -51,6 +52,9 @@ function refKeys(v: EpVoteSummary): string[] {
 
 // the rapporteurs after a committee report in Parliament's label: "A9-0197/2020 - Carlo Calenda - Resolution"
 const RAPPORTEURS_RE = /\bA\d{1,2}-\d{4}\/\d{4}\s+[-–]\s+(.+?)\s+[-–]\s+/;
+// procedure references and session documents in Parliament's label are matched whole (refKeys), never by their year or
+// serial number: "discharge 2022" is not 175675, Discharge 2023 on 2024/2022(DEC) labelled "A10-0050/2025 – …"
+const LABEL_REF_RE = /\b\d{4}\/\d{4}[A-Z]?(?:\s*\([A-Z]{3}\))?|\b(?:RC-)?[ABC]\d{1,2}[-‐-–−]\d{4}\/\d{4}\b/gi;
 // the words of those names are kept with this mark: a name has no singular form ("Carlos" is not "Carlo")
 const NAME = '=';
 const VOTE_WORDS = new Set(['vote', 'votes', 'voted', 'voting']);
@@ -60,7 +64,8 @@ export function voteHaystacks(votes: EpVoteSummary[]): Map<string, Set<string>> 
   for (const v of votes) {
     const names = RAPPORTEURS_RE.exec(v.title)?.[1];
     const label = names ? v.title.replace(RAPPORTEURS_RE, (all, n: string) => all.replace(n, ' ')) : v.title;
-    const words = wordSet(v.display_title, label, v.subject, v.dossier_ref, v.procedure_ref, v.id);
+    // the vote's references are its reference keys only (refKeys); the vote id stays a word ("166051")
+    const words = wordSet(v.display_title, label.replace(LABEL_REF_RE, ' '), v.subject, v.id);
     for (const w of names ? wordsOf(names) : []) words.add(NAME + w);
     for (const k of refKeys(v)) words.add(k);
     m.set(v.id, words);

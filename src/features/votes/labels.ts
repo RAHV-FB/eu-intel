@@ -85,6 +85,8 @@ export const DETAIL_EXPLAINER: Record<VoteKindDetail, string> = {
     'A vote on the proposal in a discharge report to postpone Parliament’s decision on discharge for how a budget was implemented in a given year: the EU general budget (Article 319 TFEU), including its sections for the other institutions, or the budget of an EU agency or other body. If the proposal is adopted, the decision on discharge is postponed.',
   refuse_discharge:
     'A vote on the proposal in a discharge report to refuse discharge for how a budget was implemented in a given year: the EU general budget (Article 319 TFEU), including its sections for the other institutions, or the budget of an EU agency or other body. If the proposal is adopted, discharge is refused.',
+  recommendation:
+    'A vote on a recommendation of Parliament as a whole: a recommendation on the Union’s external policies to the Council, the Commission or the High Representative of the Union for Foreign Affairs and Security Policy (Rule 118 of Parliament’s Rules of Procedure in the 9th term), or a committee of inquiry’s recommendation to EU institutions or bodies or to the Member States (Rule 208(12)). It sets out what Parliament asks of them; it is not legislation.',
 };
 
 export const POSITION_LABEL: Record<BallotPosition, string> = {

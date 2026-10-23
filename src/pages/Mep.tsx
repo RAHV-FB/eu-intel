@@ -11,7 +11,7 @@ import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { EP_MEP_URL, periodText, rapporteurRoleLabel, roleLabel, termShort, useGroups } from '../features/people/labels';
 import { Pos } from '../features/votes/Breakdowns';
-import { VoteTitle } from '../features/votes/VoteTitle';
+import { VoteRowMeta, VoteTitle } from '../features/votes/VoteTitle';
 import '../features/people/people.css';
 import '../features/votes/common.css';
 
@@ -237,7 +237,7 @@ export default function Mep() {
                         </td>
                         <td className="stack-title" role="cell">
                           <RowTitle to={`/votes/${encodeURIComponent(b.vote_id)}`}>{v ? <VoteTitle v={v} /> : `Vote ${b.vote_id}`}</RowTitle>
-                          {v && <span className="meta" style={{ display: 'block' }}>{v.kind_label}</span>}
+                          {v && <VoteRowMeta v={v} />}
                         </td>
                         <td role="cell">
                           <StackLabel>Recorded vote</StackLabel>

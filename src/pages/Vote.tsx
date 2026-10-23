@@ -117,12 +117,21 @@ export default function Vote() {
               </span>
               <span className="meta">
                 Rule applied: {v.margin.rule_label}. Votes in favour needed: {formatNumber(v.margin.threshold)}
-                {v.margin.component_members != null && (
+                {v.margin.rule === 'two_thirds_cast' && v.margin.two_thirds_of_cast != null && v.margin.component_members != null ? (
                   <>
-                    {' '}
-                    (a majority of the {formatNumber(v.margin.component_members)} Members in office on the day of the vote, as
-                    recorded in Parliament’s membership data)
+                    . Both conditions must be met: two thirds of the {formatNumber(v.margin.votes_cast)} votes cast for or against (
+                    {formatNumber(v.margin.two_thirds_of_cast)}; abstentions do not count) and a majority of the{' '}
+                    {formatNumber(v.margin.component_members)} Members in office on the day of the vote (
+                    {formatNumber(v.margin.majority_of_members)}), as recorded in Parliament’s membership data
                   </>
+                ) : (
+                  v.margin.component_members != null && (
+                    <>
+                      {' '}
+                      (a majority of the {formatNumber(v.margin.component_members)} Members in office on the day of the vote, as
+                      recorded in Parliament’s membership data)
+                    </>
+                  )
                 )}
                 .
               </span>

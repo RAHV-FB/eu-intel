@@ -72,6 +72,9 @@ class Margin(BaseModel):
     distance: int  # votes_for - threshold; >= 0 means the required majority was reached
     relative: float | None  # distance / votes cast
     label: str
+    # two_thirds_cast: the two conditions, both of which must be met (threshold is the larger)
+    two_thirds_of_cast: int | None = None  # ceil(2/3 x votes cast)
+    majority_of_members: int | None = None  # floor(M / 2) + 1
 
 
 def _plural(n: int) -> str:
@@ -116,6 +119,7 @@ def margin(vote: EpVote, component_members: int | None = None) -> Margin | None:
         label = "Majority reached with exactly the votes needed"
     else:
         label = f"Majority not reached: {_plural(-distance)} short"
+    both = rule == "two_thirds_cast" and component_members
     return Margin(
         rule=rule,
         threshold=need,
@@ -125,4 +129,6 @@ def margin(vote: EpVote, component_members: int | None = None) -> Margin | None:
         distance=distance,
         relative=round(distance / cast, 4) if cast else None,
         label=label,
+        two_thirds_of_cast=-(-2 * cast // 3) if both else None,
+        majority_of_members=component_members // 2 + 1 if both and component_members else None,
     )

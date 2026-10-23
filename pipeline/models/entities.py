@@ -309,6 +309,8 @@ KindDetail = Literal[
     "grant_discharge",
     "postpone_discharge",
     "refuse_discharge",
+    # whole-text vote on a recommendation of Parliament (Rule 118 external policies, Rule 208(12) committee of inquiry)
+    "recommendation",
 ]
 
 

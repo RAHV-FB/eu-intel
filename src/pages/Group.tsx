@@ -11,7 +11,7 @@ import { useDocumentTitle } from '../features/legislation/labels';
 import { termLabel } from '../features/people/labels';
 import { MiniBar, Pos } from '../features/votes/Breakdowns';
 import { SortTh, useSortable } from '../features/votes/sortable';
-import { VoteTitle } from '../features/votes/VoteTitle';
+import { VoteRowMeta, VoteTitle } from '../features/votes/VoteTitle';
 import { RowTitle } from '../components/StackedTable';
 import { cohesionText } from '../features/votes/labels';
 import '../features/people/people.css';
@@ -312,6 +312,7 @@ export default function Group() {
                       <td className="gv-vote">
                         <span className="only-narrow meta">{r.v ? formatDate(r.v.date) : votesIndex.data ? '—' : unknown}</span>
                         <RowTitle to={`/votes/${encodeURIComponent(r.vote_id)}`}>{r.v ? <VoteTitle v={r.v} /> : `Vote ${r.vote_id}`}</RowTitle>
+                        {r.v && <VoteRowMeta v={r.v} />}
                         <MiniBar c={r.counts} />
                         <span className="only-narrow meta">
                           For {formatNumber(r.counts.for)} · Against {formatNumber(r.counts.against)} · Abstained{' '}
