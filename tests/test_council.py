@@ -80,6 +80,51 @@ def test_statements_heading_is_not_a_statement():
     assert not C.STATEMENTS_HEADING_RE.fullmatch("Statement by France")
 
 
+def test_statement_headings_printed_at_the_margin_are_statements():
+    # ST 8502/21 (IPA III), annex 2: four statements; two headings start at the margin (one after a page break,
+    # one indented by two) and were missed, so the vote card listed two
+    assert C.parse_statements(pages("ST-8502-2021-INIT.txt")) == [
+        "Statement by Hungary",
+        "Statement by the European Commission on a geopolitical dialogue with the European Parliament on the the "
+        "Instrument for Pre-Accession Assistance (IPA III)",
+        "Statement by the European Commission on the modulation/suspension of assistance in Article 8 , paragraph 5 "
+        "of Regulation No. 2021/XXX/ of the European Parliament and of the Council of XX/XX/2021 establishing the "
+        "Instrument for Pre-Accession Assistance (IPA III)",
+        "Statement of the European Commission on the advisory nature of strategic boards as in in Article 12 of "
+        "Regulation No. 2021/XXX/of the European Parliament and of the Council of XX/XX 2021 establishing the "
+        "Instrument for Pre-Accession Assistance (IPA III)",
+    ]
+    # ST 7232/20 REV 1 (Mobility Package I), annex 2: three statements by eight Member States, indented by two
+    bg = "Statement by Bulgaria, Cyprus, Hungary, Latvia, Lithuania, Malta, Poland and Romania"
+    assert C.parse_statements(pages("ST-7232-2020-REV-1.txt")) == [
+        "Statement by Belgium", bg, f"{bg} (2)", f"{bg} (3)", "Statement by Estonia", "Statement by Hungary"
+    ]
+    # a subheading at the margin that names no author is part of the statement above it (ST 14341/20: "Statement in
+    # relation to Recital 6" under "Statement by the Commission")
+    assert C.parse_statements(pages("ST-14341-2020-INIT.txt")) == ["Statement by Poland", "Statement by the Commission"]
+
+
+def test_statement_headings_with_a_prefix_or_less_indented_lines():
+    # ST 6149/21 (Recovery and Resilience Facility): the first heading's second line is indented by two (it was cut
+    # after "COUNCIL AND"); "ADDITIONAL DECLARATION BY …" and "COMMISSION DECLARATION ON …" were not read
+    assert C.parse_statements(pages("ST-6149-2021-INIT.txt")) == [
+        "JOINT DECLARATION BY THE EUROPEAN PARLIAMENT, COUNCIL AND COMMISSION ON THE ESTABLISHMENT OF REPORTING "
+        "REQUIREMENTS TO ENABLE THE ISSUANCE OF BONDS CONTRIBUTING TO ENVIRONMENTAL OBJECTIVES FOR NEXTGENERATIONEU",
+        "JOINT DECLARATION BY THE EUROPEAN PARLIAMENT AND THE COMMISSION ON DATA COLLECTION FOR EFFECTIVE CONTROLS "
+        "AND AUDITS",
+        "ADDITIONAL DECLARATION BY THE COMMISSION ON DATA COLLECTION FOR EFFECTIVE CONTROLS AND AUDITS",
+        "COMMISSION DECLARATION ON THE METHODOLOGY FOR CLIMATE TRACKING",
+        "Statement by Malta",
+    ]
+
+
+def test_bare_short_reference_number_is_not_a_council_document():
+    # ST 6219/25 (RESTORE, 2024/0275(COD)): "Reference document: 102/24"; OEIL lists the file's draft final act as
+    # 00102/2024/LEX (PE-CONS 102/24): the record said "ST 102/24". A four-digit number is a Council document.
+    assert C.parse_note(text("ST-6219-2025-INIT.page1.txt")).council_doc is None
+    assert C.parse_note(pages("ST-14522-2025-REV-1.txt")[0]).council_doc == "ST 10498/25"
+
+
 def test_parse_note_council_position_multi_day_meeting():
     m = C.parse_note(pages("ST-14522-2025-REV-1.txt")[0])
     assert m.title.startswith(

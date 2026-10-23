@@ -198,16 +198,55 @@ def test_commission_proposal_of_an_ordinary_procedure_needs_its_com_number():
     assert not commission_cod_proposal(bare)
 
 
+def test_council_document_is_not_shown_as_the_councils_proposal():
+    # 2010/0817(COD), European Investigation Order: OEIL "Initiative Belgium, Bulgaria, Estonia, Spain, Austria,
+    # Slovenia and Sweden", recorded with Council document 09288/2010; the Council does not initiate an ordinary
+    # procedure. 2008/0027(NLE): 13395/2014 is the Council's request for consent; Council Decision (EU) 2016/1218
+    # "Having regard to the proposal from the European Commission", so it does not date the proposal
+    p = procs("2010-0817", "2008-0027", "2014-0807")
+    ini = next(e for e in p["2010-0817"].events if e.kind.value == "proposal")
+    e = Builder.procedure_event(p["2010-0817"], ini)
+    assert (e.title, e.institution, e.kind.value) == (
+        "Legislative proposal published (as recorded by the Legislative Observatory)", "OEIL", "proposal")
+    req = next(e for e in p["2008-0027"].events if e.kind.value == "proposal")
+    e = Builder.procedure_event(p["2008-0027"], req)
+    assert (e.title, e.institution, e.kind.value) == ("Council text submitted to Parliament", "Council", "other")
+    q = Builder.with_recorded_events(stand_in(), p["2008-0027"])  # type: ignore[arg-type]
+    assert Builder.proposal_date(q) is None
+    # a consultation keeps the Council's text as its proposal step (2014/0807(CNS), 10896/2014)
+    cns = next(e for e in p["2014-0807"].events if e.kind.value == "proposal")
+    assert Builder.procedure_event(p["2014-0807"], cns).title == "Council text submitted to Parliament"
+
+
 def test_both_qmv_thresholds_are_given_when_the_legal_basis_is_not_established():
     from pipeline.analysis.council_qmv import assess
 
     cv = council("ST-7930-2022")["ST-7930-2022"]  # 2022/0077(COD): 25 of 25 taking part
     a = Builder.council_rule_assessment(None, assess, cv, None)  # type: ignore[arg-type]
     assert a and a["legal_basis"] is None and (a["states_required"], a["states_required_alt"]) == (14, 18)
+    # the note says what is missing: here the vote is not linked to a file (it said "the procedure record names
+    # no Commission proposal" for every such vote)
+    assert "this vote is not linked to a procedure file in our data" in a["note"]
     p = procs("2022-0077")["2022-0077"]
     b = Builder.council_rule_assessment(None, assess, cv, p)  # type: ignore[arg-type]
     # on a Commission proposal, with Denmark and Ireland not taking part: Art. 238(3)(a) TFEU
     assert b and b["legal_basis"] == "TFEU Art. 238(3)(a)" and b["states_required_alt"] is None
+
+
+def test_act_adopted_at_the_request_of_the_court_of_justice_needs_72_percent():
+    from pipeline.analysis.council_qmv import assess
+
+    # 2022/0906(COD): OEIL "CJEC | Legislative proposal | 07307/2022"; Regulation (EU, Euratom) 2024/2019 "Having
+    # regard to the request of the Court of Justice" (Art. 281 TFEU, second paragraph), so not on a Commission
+    # proposal: TFEU Art. 238(2), 20 of 27 Member States. The card said both thresholds, 15 or 20.
+    from pipeline.build import court_request
+
+    cv = council("ST-8001-2024")["ST-8001-2024"]
+    p = procs("2022-0906", "2021-0106", "2010-0817")
+    assert court_request(p["2022-0906"]) and not court_request(p["2021-0106"]) and not court_request(p["2010-0817"])
+    a = Builder.council_rule_assessment(None, assess, cv, p["2022-0906"])  # type: ignore[arg-type]
+    assert a and (a["legal_basis"], a["states_required"], a["states_required_alt"]) == ("TFEU Art. 238(2)", 20, None)
+    assert "not established" not in a["note"]
 
 
 def test_council_consent_to_parliaments_ombudsman_statute_is_not_on_a_commission_proposal():
@@ -291,6 +330,70 @@ def test_council_rule_correction_is_dropped_when_the_outcome_does_not_follow(tmp
     assert r["ST-9781-2024"]["voting_rule"] == "qmv"  # a legal basis not in UNANIMITY_BASES is not used
 
 
+def test_failed_reassessment_after_a_dropped_correction_does_not_stop_the_build(tmp_path: Path, monkeypatch):
+    # the assessment under the sheet's rule, after the correction is dropped, is guarded like the first one
+    (tmp_path / "council_votes.yaml").write_text(
+        "corrections:\n  - {vote: ST-15907-2022, celex: 32022R2496, legal_basis: TFEU Art. 312(2), citation: x,\n"
+        "     sources: [{label: act, url: 'https://eur-lex.europa.eu/eli/reg/2022/2496/oj'}]}\n",
+        encoding="utf-8",
+    )
+
+    original = Builder.council_rule_assessment
+    calls: list[str] = []
+
+    def assessment(me, assess, cv, p):
+        calls.append(cv.voting_rule)
+        if cv.voting_rule == "qmv":
+            raise ValueError("population figures unavailable")
+        return original(me, assess, cv, p)
+
+    monkeypatch.setattr(Builder, "council_rule_assessment", assessment)
+    # without an outcome, the unanimity reading contradicts the sheet's "adopted": the correction is dropped
+    r = _built_council(["ST-15907-2022"], ["2022-0369"], tmp_path).council_records["ST-15907-2022"]  # type: ignore[attr-defined]
+    assert calls == ["unanimity", "qmv"]
+    assert (r["voting_rule"], r["outcome"], r["assessment"]) == ("qmv", "adopted", None)
+
+
+def test_council_vote_in_the_budget_procedure_is_not_the_adoption_of_an_act():
+    # ST 10354/25, "Council Decision adopting the Council's position on draft amending budget No 1 …" (2025/0091
+    # (BUD)), subject "Adoption of the legislative act": shown as "Act adopted"; the other draft amending budget
+    # positions (ST 12944/25, 15603/25, 10726/26) were already "other"
+    from pipeline.build import council_vote_items, council_vote_label
+
+    cv = council("ST-10354-2025")["ST-10354-2025"]
+    assert (cv.vote_on, cv.stage, cv.procedure_refs) == ("act", "Adoption of the legislative act", ["2025/0091(BUD)"])
+    on, note = Builder.council_vote_on(SimpleNamespace(s=SimpleNamespace(council=[cv])), cv, None)  # type: ignore[arg-type]
+    assert on == "other" and note and "2025/0091(BUD)" in note and "does not by itself adopt a budget" in note
+    # no item remains once "Adoption of the legislative act" is left out: the row is tagged "Other Council decision"
+    assert council_vote_items(cv.title, on, cv.stage, cv.procedure_refs) is None
+    assert council_vote_label(cv.title, on, cv.stage, cv.procedure_refs) == cv.title
+
+
+def test_council_rule_correction_links_the_texts_it_was_checked_against(tmp_path: Path):
+    from pipeline.build import council_vote_event
+
+    # the ST 15907/22 step said only "Council did not adopt the act", sourced to the sheet that marks it adopted
+    me = _built_council(["ST-15907-2022"], ["2022-0369"])
+    mff = me.council_records["ST-15907-2022"]  # type: ignore[attr-defined]
+    labels = [x["label"] for x in mff["correction_sources"]]
+    assert labels == ["Council Regulation (EU, Euratom) 2022/2496, citations", "Council of the EU – ST 15179/22",
+                      "Council of the EU – ST 15179/1/22 REV 1", "Council of the EU – CM 5842/22",
+                      "Council of the EU – CM 5860/22"]  # fmt: skip
+    # ST 15179/22 of 28 November 2022, point 2, quoted as written (the note said "only", and dated it 9 December)
+    assert "on 28 November 2022, that “In accordance with Article 312(2)" in mff["outcome_note"]
+    assert "may adopt the Regulation acting unanimously and after obtaining the consent" in mff["outcome_note"]
+    ev = council_vote_event(mff)
+    assert ev["title"] == "Council did not adopt the act" and "Hungary's vote against" in ev["detail"]
+    assert [d["label"] for d in ev["docs"]] == labels and all(d["url"].startswith("https://") for d in ev["docs"])
+    # a correction that lists no text it was checked against is not applied
+    (tmp_path / "council_votes.yaml").write_text(
+        "corrections:\n"
+        "  - {vote: ST-9781-2024, celex: 32024L1499, legal_basis: TFEU Art. 19(1), citation: x}\n",
+        encoding="utf-8",
+    )
+    assert _built_council(["ST-9781-2024"], ["2022-0401"], tmp_path).council_records["ST-9781-2024"]["voting_rule"] == "qmv"  # type: ignore[attr-defined]
+
+
 def test_council_list_title_names_the_item_voted_on():
     from pipeline.build import council_vote_label
 
@@ -302,7 +405,8 @@ def test_council_list_title_names_the_item_voted_on():
         "Amendments of the European Parliament to the Council's position on the draft budget for 2027 – "
         "Non-approval of the European Parliament's amendment(s)"
     )
-    # "Adoption of the legislative act" on a budget note (the budget is not a legislative act) is left out
+    # "Adoption of the legislative act" on a budget note is left out: there the Council's vote does not by itself
+    # adopt the budget, which Parliament and the Council establish together (Art. 314(1) and (9) TFEU)
     assert cv["ST-14735-2024"].stage.endswith("; Adoption of the legislative act")
     assert label["ST-14735-2024"].endswith("for 2025 – Non-approval of the European Parliament's amendment(s)")
     assert label["ST-9781-2024"].startswith("Council Directive on standards for equality bodies")
@@ -918,6 +1022,17 @@ def test_council_vote_on_the_derogation_from_the_eight_week_period_is_not_the_ad
     me = SimpleNamespace(s=SimpleNamespace(council=list(cv.values())))
     on, note = Builder.council_vote_on(me, cv["ST-8160-2020"], p["2020-0067"])  # type: ignore[arg-type]
     assert on == "other" and note and "ST 8159/20" in note and "PE-CONS 15/20" in note
+    # Rules of Procedure, Art. 3(3): "The Council shall decide in accordance with the voting rule applicable for
+    # the adoption of the act or position concerned" (hence the act's qualified majority, TEU Art. 16(4))
+    assert "in accordance with the voting rule applicable for the adoption of the act or position concerned" in note
+    # the card and the country rows name the derogation, not "Adoption of the legislative act" listed first
+    from pipeline.build import COUNCIL_DEROGATION_ITEM, council_vote_items, council_vote_label
+
+    d = cv["ST-8160-2020"]
+    assert d.stage.startswith("Adoption of the legislative act; Derogation")
+    assert council_vote_items(d.title, on, d.stage) == COUNCIL_DEROGATION_ITEM
+    assert council_vote_label(d.title, on, d.stage).endswith(f"[2020/0067(COD)] – {COUNCIL_DEROGATION_ITEM}")
+    assert council_vote_items(d.title, "act", cv["ST-8159-2020"].stage) is None
     assert Builder.council_vote_on(me, cv["ST-8159-2020"], p["2020-0067"]) == ("act", None)  # type: ignore[arg-type]
     assert Builder.council_vote_on(me, cv["ST-7391-2020"], p["2020-0055"]) == ("act", None)  # type: ignore[arg-type]
     ev = council_vote_event(council_rec(cv["ST-8160-2020"], on))
@@ -999,8 +1114,9 @@ def test_signature_of_an_ordinary_procedure_act_is_both_presidents_on_the_acts_d
 
     joint = "Signed by the Presidents of Parliament and Council"
     assert sig(Builder.timeline(stand_in(), p, [a], [])) == [("2018-04-18", joint, "EP and Council")]  # type: ignore[arg-type]
-    # without the act in our data: the EP's record, shown as the joint signature it is
-    assert sig(Builder.timeline(stand_in(), p, [], [])) == [("2018-04-11", joint, "EP and Council")]  # type: ignore[arg-type]
+    # without the act in our data: the EP's record as it is, since its date can be a week early (here before the
+    # Council's adoption), not as both Presidents' signature
+    assert sig(Builder.timeline(stand_in(), p, [], [])) == [("2018-04-11", "Final act signed", "EP")]  # type: ignore[arg-type]
     # a Council act that names an act of Parliament and the Council in its title is not one
     c = acts("32021R1696")["32021R1696"]
     assert JOINT_ACT_RE.match(a.title) and not JOINT_ACT_RE.match(c.title)
@@ -1023,6 +1139,34 @@ def test_steps_of_one_day_are_in_procedural_order():
     assert [x["kind"] for x in tl if x["date"] == "2024-05-14"] == ["council_adoption", "signature"]
 
 
+def test_trilogue_tabling_and_second_reading_steps_follow_the_decision_they_depend_on():
+    # 2025/0132(COD), 17 Dec 2025: the first trilogue after Parliament confirmed the mandate (vote 182896);
+    # 2025/0359(COD), 26 Mar 2026: after the referral back to committee to negotiate; 2024/0071(COD), 16 Jun 2025:
+    # the agreed text tabled for the plenary after the committee approved it; 2018/0136(COD), 14 Dec 2020: the
+    # Council's first-reading position (ST 14020/20, written procedure), then the second-reading referral and the
+    # committee's recommendation
+    p = procs("2025-0132", "2025-0359", "2024-0071", "2018-0136")
+    cv = council("ST-14020-2020")["ST-14020-2020"]
+    me = stand_in(council_of={"2018-0136": [council_rec(cv)]})
+
+    def day(pid: str, d: str) -> list[str]:
+        return [x["title"] for x in Builder.timeline(me, p[pid], [], []) if x["date"] == d]  # type: ignore[arg-type]
+
+    tri = "Negotiation meeting with the Council (trilogue)"
+    assert day("2025-0132", "2025-12-17") == ["Parliament confirmed the committee's mandate to negotiate with the Council", tri]
+    assert day("2025-0359", "2026-03-26")[-2:] == [
+        "Parliament sent the file back to committee to negotiate with the Council", tri
+    ]
+    assert day("2024-0071", "2025-06-16") == [
+        "Parliament committee approved the provisional agreement with the Council", "Amendments tabled for the plenary"
+    ]
+    assert day("2018-0136", "2020-12-14") == [
+        "Council adopted its position at first reading (written procedure)",
+        "Announced in Parliament and referred to committee (second reading)",
+        "Parliament committee adopted its recommendation for second reading",
+    ]
+
+
 def test_vote_records_of_a_sitting_list_only_the_files_documents():
     # re-derived snapshot records (pipeline.sources.ep_procedures.build_events): 2020/0112(APP) keeps only its own
     # report A9-0227/2021; 2019/0900(APP) no longer lists A9-0170/2021 (Black Sea fisheries, 2019/2159(INI))
@@ -1032,6 +1176,15 @@ def test_vote_records_of_a_sitting_list_only_the_files_documents():
     assert [d.id for d in p["2016-0132"].documents if d.kind == "report"] == ["A-8-2017-0212"]
     assert "A-9-2021-0170" not in {d.id for e in p["2019-0900"].events for d in e.docs}
     assert max(len(e.docs) for e in p["2020-0067"].events) < 10
+    # the file's own registered text, which only the sitting's vote items of several files list, is kept when an
+    # EP vote on the file alone names it: 2020/0127(COD), vote 117279 "C9-0186/2020 - Commission Proposal";
+    # 2020/0378(COD), vote 128850 "C9-0430/2021" (sic) for C-9-2020-0430
+    q = procs("2020-0127", "2020-0378", "2020-0362")
+    assert "C-9-2020-0186" in {d.id for e in q["2020-0127"].events if e.id == "2020-0127-DEC-DCPL-2020-09-17" for d in e.docs}
+    assert "C-9-2020-0430" in {d.id for e in q["2020-0378"].events for d in e.docs}
+    assert "C-9-2021-0430" not in {d.id for e in q["2020-0378"].events for d in e.docs}
+    # the day's urgent-procedure vote record (125802)
+    assert "C-9-2020-0399" in {d.id for e in q["2020-0362"].events if e.id == "MTG-PL-2020-12-15-PVCRE-ITM-9" for d in e.docs}
 
 
 # ------------------------------------------------------------------------- acts, types of act, implementation

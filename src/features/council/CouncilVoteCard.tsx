@@ -4,7 +4,7 @@
  */
 import { Link } from 'react-router-dom';
 import type { CouncilAssessment, CouncilPosition, CouncilVote, CouncilVoteOn } from '../../types/data';
-import { SourceLink, Term, VoteBar } from '../../components/ui';
+import { ExtLink, SourceLink, Term, VoteBar } from '../../components/ui';
 import { COUNTRY_NAMES, countryName, formatDate, formatNumber } from '../../lib/format';
 import './council.css';
 
@@ -62,6 +62,11 @@ function VoteOn({ vote }: { vote: CouncilVote }) {
   if (vote.vote_on === 'act') {
     return <strong>{/legislative act/i.test(vote.stage ?? '') ? 'Adoption of the legislative act' : 'Adoption of the act'}</strong>;
   }
+  // an 'other' vote: the item(s) as the build names them (the derogation, not "Adoption of the legislative act")
+  if (vote.vote_on === 'other') {
+    if (vote.vote_on_label) return <strong>{vote.vote_on_label}</strong>;
+    return vote.stage ? <>{COUNCIL_VOTE_ON_SHORT.other}</> : <>Not named in the voting-result document</>;
+  }
   if (vote.stage) return <strong>{vote.stage}</strong>;
   return <>Not named in the voting-result document</>;
 }
@@ -110,6 +115,7 @@ export function CouncilVoteCard({
   const notParticipating = a?.states_not_participating ?? groups.not_participating.length;
   const participating = a?.states_participating ?? recorded.length - groups.not_participating.length;
   const bmRule = a ? blockingRule(a, notParticipating) : null;
+  const checked = vote.correction_sources ?? []; // the texts a correction of the rule or outcome rests on
 
   return (
     <article className="cvote" aria-labelledby={`cvote-${vote.id}`}>
@@ -155,6 +161,18 @@ export function CouncilVoteCard({
         </dl>
         {vote.voting_rule_note && <p className="meta cvote__voteon-note">{vote.voting_rule_note}</p>}
         {vote.outcome_note && <p className="meta cvote__voteon-note">{vote.outcome_note}</p>}
+        {checked.length > 0 && (
+          <p className="meta cvote__voteon-note">
+            Texts checked:{' '}
+            {checked.map((x, i) => (
+              <span key={x.url}>
+                {i > 0 && '; '}
+                <ExtLink href={x.url}>{x.label}</ExtLink>
+              </span>
+            ))}
+            .
+          </p>
+        )}
       </header>
 
       {recorded.length > 0 ? (

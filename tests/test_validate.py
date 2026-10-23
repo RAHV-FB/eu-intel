@@ -234,6 +234,27 @@ def test_public_timeline_of_an_ordinary_procedure_adopting_its_act_twice_or_befo
     assert dossier_contradictions({**twice, "type": "CNS"}) == []
 
 
+def test_public_timeline_with_a_trilogue_or_second_reading_step_before_what_it_follows():
+    # as published before the fix: 2025-0132 (the first trilogue listed before Parliament confirmed the mandate on
+    # 17 Dec 2025), 2018-0136 (the second-reading referral before the Council's first-reading position, 14 Dec 2020)
+    from pipeline.validate import dossier_contradictions
+
+    tri = {"kind": "other", "date": "2025-12-17", "title": "Negotiation meeting with the Council (trilogue)"}
+    mandate = {"kind": "negotiation_mandate", "date": "2025-12-17",
+               "title": "Parliament confirmed the committee's mandate to negotiate with the Council"}  # fmt: skip
+    assert dossier_contradictions({"timeline": [tri, mandate]}) == [
+        "trilogue listed before Parliament's decision of 2025-12-17"
+    ]
+    assert dossier_contradictions({"timeline": [mandate, tri]}) == []
+    ref = {"kind": "referral", "date": "2020-12-14",
+           "title": "Announced in Parliament and referred to committee (second reading)"}  # fmt: skip
+    pos = {"kind": "council_position", "date": "2020-12-14", "title": "Council adopted its position at first reading"}
+    assert dossier_contradictions({"timeline": [ref, pos]}) == [
+        "second-reading step listed before the Council's position of 2020-12-14"
+    ]
+    assert dossier_contradictions({"timeline": [pos, ref]}) == []
+
+
 def test_public_vote_margin_must_agree_with_an_established_outcome(tmp_path: Path):
     # as published before the guard in build.py ep_vote_summary, 1,102 index entries with no established outcome
     # carried a margin label; a margin's sign or label can also disagree with the outcome (ids are illustrative)

@@ -273,6 +273,42 @@ def test_vote_records_keep_only_the_documents_of_the_file():
     assert {"C-9-2023-0047", "A-9-2023-0076", "TA-9-2023-0096"} <= {d.id for d in second.docs}
 
 
+def test_vote_records_keep_the_registered_text_a_vote_on_the_file_names():
+    # 2020/0128(COD): the file's own C9-0185/2020 is listed in MTG-PL-2020-07-08-PVCRE-ITM-18 with 19 documents of
+    # other files; EP vote 116299 on this file alone is labelled "C9-0185/2020 - Commission proposal"
+    p = m.build_procedure(ep_proc("2020-0128"), RETRIEVED, oeil_info("2020-0128"), lambda _id: None,
+                          vote_refs={("9", "0185")})  # fmt: skip
+    by = {e.id: [d.id for d in e.docs] for e in p.events}
+    assert by["MTG-PL-2020-07-08-PVCRE-ITM-18"] == ["C-9-2020-0185", "PV-9-2020-07-08-ITM-018"]
+    assert [d for d in by["2020-0128-DEC-DCPL-2020-07-10"] if d.startswith(("A-", "B-", "C-"))] == ["C-9-2020-0185"]
+    assert [d.id for d in p.documents] == ["COM(2020)0261", "TA-9-2020-0203"]  # not a key document
+
+    # by term and number (vote 128850 on 2020/0378(COD) prints "C9-0430/2021" for C-9-2020-0430), and only when
+    # the item lists one text of that number
+    def item(*docs: str) -> dict:
+        return {"process_id": "2020-0378", "consists_of": [{
+            "activity_id": "MTG-PL-2021-03-11-PVCRE-ITM-4", "activity_date": "2021-03-11",
+            "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+            "based_on_a_realization_of": [f"eli/dl/doc/{d}" for d in docs]}]}  # fmt: skip
+
+    def kept(proc: dict) -> list[str]:
+        (e,) = m.build_events(proc, RETRIEVED, None, "2020/0378(COD)", {("9", "0430")})
+        return [d.id for d in e.docs]
+
+    assert kept(item("C-9-2020-0431", "C-9-2020-0430", "A-9-2021-0016")) == ["C-9-2020-0430"]
+    assert kept(item("C-9-2019-0430", "C-9-2020-0430", "A-9-2021-0016")) == []
+
+
+def test_vote_label_refs_are_read_from_votes_on_one_file(monkeypatch):
+    from types import SimpleNamespace
+
+    # the ep_votes snapshot's labels (vote 117279) of votes on one file only
+    votes = [SimpleNamespace(title="C9-0186/2020 - Commission Proposal", procedure_refs=["2020/0127(COD)"]),
+             SimpleNamespace(title="C9-0001/2020 - joint", procedure_refs=["2020/0001(COD)", "2020/0002(COD)"])]  # fmt: skip
+    monkeypatch.setattr(m, "read_records", lambda *a: votes)
+    assert m.vote_label_refs() == {"2020-0127": {("9", "0186")}}
+
+
 def test_vote_records_fold_into_parliaments_decision_on_negotiations():
     # 2016/0133(COD), 16 Nov 2017: the vote record of the day belongs to the vote confirming the committee's
     # mandate; no separate "Results of vote in Parliament" entry

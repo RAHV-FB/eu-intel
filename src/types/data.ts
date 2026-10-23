@@ -528,6 +528,10 @@ export interface CouncilVote {
   configuration?: string | null;
   stage?: string | null; // item(s) voted on as listed in the voting-result document, "; "-separated
   vote_on?: CouncilVoteOn | null; // normalised from the subject; null when the document names no item
+  // For a vote_on 'other': the item(s) voted on as shown (pipeline: council_vote_items): the subject's items, the
+  // derogation from the eight-week period for national parliaments, or, in the budget procedure, the items without
+  // "Adoption of the legislative act"; null when no item remains
+  vote_on_label?: string | null;
   // Set when vote_on differs from what the voting-result document's own label says, citing the procedure
   // record that shows it (e.g. its reference document is the Council's first-reading position)
   vote_on_note?: string | null;
@@ -546,6 +550,8 @@ export interface CouncilVote {
   // Set only where, under that rule, the vote did not adopt the act although the sheet marks it adopted
   sheet_outcome?: 'adopted' | null;
   outcome_note?: string | null;
+  // With a correction: the texts it was checked against (the act, the Council's documents), as listed there
+  correction_sources?: { label: string; url: string }[];
   // A curated record taken from another Council document than a voting-result note: what it is
   source_note?: string | null;
   positions: Record<string, CouncilPosition>; // ISO2 -> position
@@ -683,6 +689,7 @@ export interface CountryDetail extends CountrySummary {
     pos: CouncilPosition;
     dossier_id?: string | null;
     vote_on?: CouncilVoteOn | null;
+    vote_on_label?: string | null; // as CouncilVote.vote_on_label
     stage?: string | null; // item(s) voted on, as the voting-result document lists them
     outcome?: CouncilVote['outcome'];
   }[];

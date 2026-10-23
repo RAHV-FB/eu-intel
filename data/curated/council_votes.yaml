@@ -19,12 +19,18 @@
 #     citation      the act's citation of its legal basis, verbatim
 #     outcome       optional: not_adopted, when under unanimity the vote did not adopt the act (a Member State
 #                   voted against); outcome_note then says what the Council did instead, citing its documents
-#     sources       [{label, url}] the texts checked
+#     sources       [{label, url}] the texts checked, linked on the vote and on its timeline step
+#                   (`correction_sources`); an entry without them is ignored
 #     reviewed      date of the last check
 #
 # records: a Council adoption that no voting-result document records, as the Council's communication on the
 #   outcome of a written procedure states it (each delegation's vote in words). Shown like a voting result, with
 #   that document as its source. Fields as in data/snapshot/council/votes.json (CouncilVote), plus reviewed.
+#   Not a complete list of such adoptions: CM 5860/22 also records, point 2, the adoption of the Pillar Two
+#   Directive (2021/0433(CNS)), "all delegations voted in favour of, except for Hungary that abstained", in the
+#   written procedure "completed on 15 December 2022 at 22:11", while the act is "Council Directive (EU)
+#   2022/2523 of 14 December 2022" ("Done at Brussels, 14 December 2022"). The two dates are not reconciled by
+#   these texts, so that adoption is not recorded here.
 #
 # Last full review: 2026-10-23.
 
@@ -34,16 +40,27 @@ corrections:
     legal_basis: "TFEU Art. 312(2)"
     citation: "Having regard to the Treaty on the Functioning of the European Union, and in particular Article 312 thereof"
     outcome: not_adopted
+    # ST 15179/22 (28 November 2022, the note for the adoption) and ST 15179/1/22 REV 1 (9 December), point 2:
+    # "In accordance with Article 312(2) of the Treaty on the Functioning of the European Union, the Council may
+    # adopt the Regulation acting unanimously and after obtaining the consent of the European Parliament." REV 1,
+    # point 6, invites the Permanent Representatives Committee to "decide ... that, in view of urgency of the
+    # matter, the Council uses the written procedure"; CM 5842/22: "Following the decision of the Permanent
+    # Representatives Committee Part 2 on 12 December 2022 to use the written procedure".
     outcome_note: >-
       The voting-result document marks the result as adopted. Under unanimity, Hungary's vote against meant that
-      the Regulation was not adopted at this meeting. On 9 December 2022 the Council's General Secretariat noted
-      that under Article 312(2) TFEU the Council may adopt it only acting unanimously and proposed a written
-      procedure (ST 15179/1/22 REV 1). The Council adopted the Regulation by written procedure completed on
-      15 December 2022, all Member States voting in favour except Hungary, which abstained (CM 5860/22):
+      the Regulation was not adopted at this meeting. The Council's General Secretariat had noted before the
+      meeting, on 28 November 2022, that “In accordance with Article 312(2) of the Treaty on the Functioning of
+      the European Union, the Council may adopt the Regulation acting unanimously and after obtaining the consent
+      of the European Parliament” (ST 15179/22). On 9 December 2022 it invited the Permanent Representatives
+      Committee to decide that the Council use the written procedure (ST 15179/1/22 REV 1), which the Committee
+      decided on 12 December 2022 (CM 5842/22). The Council adopted the Regulation by written procedure completed
+      on 15 December 2022, all Member States voting in favour except Hungary, which abstained (CM 5860/22):
       Council Regulation (EU, Euratom) 2022/2496 of 15 December 2022.
     sources:
       - {label: "Council Regulation (EU, Euratom) 2022/2496, citations", url: "https://eur-lex.europa.eu/eli/reg/2022/2496/oj"}
+      - {label: "Council of the EU – ST 15179/22", url: "https://data.consilium.europa.eu/doc/document/ST-15179-2022-INIT/EN/pdf"}
       - {label: "Council of the EU – ST 15179/1/22 REV 1", url: "https://data.consilium.europa.eu/doc/document/ST-15179-2022-REV-1/EN/pdf"}
+      - {label: "Council of the EU – CM 5842/22", url: "https://data.consilium.europa.eu/doc/document/CM-5842-2022-INIT/EN/pdf"}
       - {label: "Council of the EU – CM 5860/22", url: "https://data.consilium.europa.eu/doc/document/CM-5860-2022-INIT/EN/pdf"}
     reviewed: "2026-10-23"
 
@@ -101,6 +118,6 @@ records:
       published: "2022-12-15"
     note: >-
       Recorded from the Council's communication on the outcome of the written procedure (CM 5860/22), which states
-      each delegation's vote in words; no voting-result document with a voting sheet was published for this
-      adoption.
+      each delegation's vote in words. The Council's voting-result documents that the Publications Office (Cellar)
+      lists, from which this site's other Council votes come, include none for this adoption.
     reviewed: "2026-10-23"
