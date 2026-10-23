@@ -101,8 +101,11 @@ proposal. At most two items may come from the same topic.
 ## Alias policy
 
 - **`aliases.yaml`** contains only standard abbreviations and official short names that the
-  institutions themselves use, such as GDPR, DSA, DMA, CSRD, ETS and CBAM. It does not include
-  ambiguous everyday words (for example, plain "safe" or "red").
+  institutions themselves use, such as GDPR, DSA, DMA, CSRD, ETS and CBAM, and everyday words for the
+  term that legal texts use instead ("pesticides" for "plant protection products", "medicines" for
+  "medicinal products"); a new entry of this kind carries a comment citing an official page that
+  uses both. It does not
+  include ambiguous everyday words (for example, plain "safe" or "red").
 - **Per-file names in `aliases.yaml`** (`{procedure: "2023/0083(COD)", names: [...]}`) attach a name
   to one procedure for search only. Each entry needs a `# source:` comment citing a Commission,
   Parliament or Council page that uses the name for that file (a test enforces the comment).

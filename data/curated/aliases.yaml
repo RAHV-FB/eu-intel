@@ -51,6 +51,13 @@
 - {terms: ["ppwr"], expands_to: ["packaging and packaging waste"]}
 - {terms: ["nzia"], expands_to: ["net-zero industry act", "net zero industry act"]}
 - {terms: ["crma"], expands_to: ["critical raw materials act", "critical raw materials"]}
+# Petrol and diesel cars are combustion-engine cars: the European Parliament's page on Regulation (EU) 2023/851
+# is "EU ban on the sale of new petrol and diesel cars from 2035 explained" (a name of 2021/0197(COD) below), and
+# the Commission (https://climate.ec.europa.eu/areas-action/transport-decarbonisation/road-transport/cars-and-vans_en)
+# writes that Regulation (EU) 2023/851 "introduced a 100% emission reduction target for new passenger cars and vans
+# from 2035 onwards", and that its proposed revision "will allow for plug-in hybrids (PHEVs), range extenders, mild
+# hybrids, and internal combustion engine vehicles to still play a role beyond 2035"
+- {terms: ["combustion engine", "combustion engines"], expands_to: ["new petrol and diesel cars"]}
 
 # ------------------------------------------------------------- companies, finance, economy
 - {terms: ["csrd"], expands_to: ["corporate sustainability reporting directive", "corporate sustainability reporting"]}
@@ -60,7 +67,8 @@
 - {terms: ["sfdr"], expands_to: ["sustainability-related disclosures in the financial services sector"]}
 - {terms: ["sme", "smes"], expands_to: ["small and medium-sized enterprises"]}
 - {terms: ["vat"], expands_to: ["value added tax"]}
-- {terms: ["aml", "amla"], expands_to: ["anti-money laundering", "money laundering"]}
+# "AMLA" is the name of the Authority itself: a per-file name of 2021/0240(COD) below, not an AML synonym
+- {terms: ["aml"], expands_to: ["anti-money laundering", "money laundering"]}
 - {terms: ["cbdc"], expands_to: ["central bank digital currency", "digital euro"]}
 - {terms: ["psd", "psd3", "psr"], expands_to: ["payment services"]}
 
@@ -84,6 +92,11 @@
 - {terms: ["sur"], expands_to: ["sustainable use of plant protection products"]}
 - {terms: ["pesticides"], expands_to: ["plant protection products"]}
 - {terms: ["ema"], expands_to: ["european medicines agency"]}
+# EU law says "medicinal products" for medicines: the Commission's page "Legal framework governing medicinal products
+# for human use in the EU" (https://health.ec.europa.eu/medicinal-products/legal-framework-governing-medicinal-products-human-use-eu_en)
+# opens "The EU legal framework for human medicines sets standards ..." and lists "Medicinal products for rare
+# diseases ('Orphan medicines')"
+- {terms: ["medicine", "medicines"], expands_to: ["medicinal product", "medicinal products"]}
 
 # ===================================================================== names of individual files
 # Entries {procedure, names} attach common names to ONE legislative file (by procedure reference).
@@ -128,3 +141,41 @@
 # source: https://www.europarl.europa.eu/thinktank/en/document/EPRS_BRI(2022)698920 ("CO2 emission standards for new cars and vans: 'Fit for 55' package")
 # source: https://www.europarl.europa.eu/news/en/press-room/20221024IPR45734/deal-confirms-zero-emissions-target-for-new-cars-and-vans-in-2035 ("Deal confirms zero-emissions target for new cars and vans in 2035")
 - {procedure: "2021/0197(COD)", names: ["EU ban on the sale of new petrol and diesel cars from 2035", "CO2 emission standards for new cars and vans", "zero-emissions target for new cars and vans in 2035"]}
+
+# ------------------------------------------- Ecodesign for Sustainable Products Regulation (Regulation (EU) 2024/1781)
+# source: https://oeil.europarl.europa.eu/oeil/en/document-summary?id=1785880 (Legislative Observatory: "Ecodesign for Sustainable Products Regulation 2022/0095(COD)", "LEGISLATIVE ACT: Regulation (EU) 2024/1781")
+# source: https://environment.ec.europa.eu/news/video-ecodesign-sustainable-products-regulation-explained-2024-07-19_en ("the EU has introduced the Ecodesign for Sustainable Products Regulation (ESPR)")
+- {procedure: "2022/0095(COD)", names: ["Ecodesign for Sustainable Products Regulation", "ESPR"]}
+
+# ------------------------------------------------------------- anti-SLAPP Directive (Directive (EU) 2024/1069)
+# source: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52025DC0900 (Commission, 2025 Rule of Law Report, COM(2025) 900: "the transposition and implementation of the new anti-SLAPP Directive, which includes legislative safeguards to counter abusive lawsuits against journalists and human rights defenders in cross-border situations")
+# source: https://commission.europa.eu/news-and-media/news/new-eu-rules-protect-against-strategic-lawsuits-against-public-participation-enter-force-2024-05-03_en ("This Directive forms a package together with the Commission's Recommendation on anti-SLAPP")
+# source: https://www.europarl.europa.eu/legislative-train/theme-a-new-push-for-european-democracy/file-initiative-against-abusive-litigation-targeting-journalists-and-rights-defenders (Legislative Train file of 2022/0117(COD))
+- {procedure: "2022/0117(COD)", names: ["Anti-SLAPP Directive", "Initiative against abusive litigation targeting journalists and rights defenders"]}
+
+# ------------------------------------------------ European Digital Identity Framework (Regulation (EU) 2024/1183)
+# source: https://www.europarl.europa.eu/legislative-train/theme-a-europe-fit-for-the-digital-age/file-eid (Legislative Train file of 2021/0136(COD): "Revision of the eIDAS Regulation – European Digital Identity (EUid)")
+# source: https://interoperable-europe.ec.europa.eu/collection/rolling-plan-ict-standardisation/electronic-identification-and-trust-services-including-e-signatures-rp2025 (Commission, Rolling Plan for ICT Standardisation 2025, on Regulation (EU) 2024/1183: "the successful implementation of the EUDI Wallet as outlined in the eIDAS 2 regulations")
+- {procedure: "2021/0136(COD)", names: ["eIDAS 2", "Revision of the eIDAS Regulation – European Digital Identity (EUid)"]}
+
+# ------------------------------------------------------------------ FuelEU Maritime (Regulation (EU) 2023/1805)
+# source: https://transport.ec.europa.eu/transport-modes/maritime/decarbonising-maritime-transport-fueleu-maritime_en ("Decarbonising maritime transport – FuelEU Maritime": "the FuelEU maritime regulation (regulation (EU) 2023/1805)")
+- {procedure: "2021/0210(COD)", names: ["FuelEU Maritime", "FuelEU Maritime Regulation"]}
+
+# ------------------------------------------------------------ Single-Use Plastics Directive (Directive (EU) 2019/904)
+# source: https://environment.ec.europa.eu/topics/plastics/single-use-plastics_en ("The Single-Use Plastics Directive (Directive (EU) 2019/904) (SUPD)")
+# source: https://www.europarl.europa.eu/legislative-train/theme-new-boost-for-jobs-growth-and-investment/file-single-use-plastics-and-fishing-gear-reducing-marine-litter-from-plastics (Legislative Train: "Single-use plastics and fishing gear: reducing marine litter from plastics")
+- {procedure: "2018/0172(COD)", names: ["Single-Use Plastics Directive", "SUPD", "Single-use plastics and fishing gear: reducing marine litter from plastics"]}
+
+# ------------------------------------------------ Copyright in the Digital Single Market (Directive (EU) 2019/790)
+# source: https://intellectual-property-helpdesk.ec.europa.eu/ip-management-and-resources/publications/copyright-directive_en (Commission IP Helpdesk, "Copyright Directive": "On 15 April 2019, the European Council approved the Directive on Copyright and Related Rights in the Digital Single Market")
+# source: https://www.europarl.europa.eu/legislative-train/theme-connected-digital-single-market/file-jd-directive-on-copyright-in-the-digital-single-market (Legislative Train: "Modernisation of European copyright rules: directive on copyright in the digital single market")
+- {procedure: "2016/0280(COD)", names: ["Copyright Directive", "Directive on Copyright and Related Rights in the Digital Single Market", "Modernisation of European copyright rules: directive on copyright in the digital single market"]}
+
+# --------------------------------------------------------------- Pay Transparency Directive (Directive (EU) 2023/970)
+# source: https://commission.europa.eu/strategy-and-policy/policies/justice-and-fundamental-rights/gender-equality/equal-pay/eu-action-equal-pay_en ("Main elements of the Pay transparency directive"; "FAQ on the Pay Transparency Directive (EU) 2023/970")
+- {procedure: "2021/0050(COD)", names: ["Pay Transparency Directive"]}
+
+# ------------------------------------------ Authority for Anti-Money Laundering, AMLA (Regulation (EU) 2024/1620)
+# source: https://www.amla.europa.eu/index_en ("The Authority for Anti-Money Laundering and Countering the Financing of Terrorism (AMLA) is a decentralised EU agency")
+- {procedure: "2021/0240(COD)", names: ["AMLA", "Authority for Anti-Money Laundering and Countering the Financing of Terrorism"]}

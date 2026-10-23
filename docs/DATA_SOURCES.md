@@ -54,6 +54,12 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   (from 2020-12-18) are distinct bodies at source and kept distinct.
 - Gaps: a few MEPs lack a national-party membership for part of a mandate (e.g. 197526 in term 10). "Independent"
   is recorded by EP as a per-country party. Portraits not used.
+- Two party records, corporate bodies 5500 (FR) and 5719 (HR), are labelled "-" in all 24 languages: the site
+  shows "Party name not recorded" for them and leaves them out of the parties list and search. Party records of
+  the same name and country are told apart in search by their term, and when they share a term (Azione 6103 and
+  6478, both 2019–2024) by the period of each record (`temporal`: 20 November 2019 – 8 November 2022 and
+  6 December 2023 – 15 July 2024). Search subtitles name the former member state as "United Kingdom", as the MEP
+  and party pages do.
 
 ### EP plenary votes (`ep_votes`) — ok
 - Fields are documented in `pipeline/sources/ep_votes.py`; the points below are where we read more than one
@@ -73,6 +79,10 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   rejection when every final vote of that day linked to the file was officially rejected (2025/0429(COD),
   26 Mar 2026, OEIL: "the European Parliament rejected the proposal"). A rejected final vote on a file whose
   OEIL record names a later final act carries a note saying the procedure continued.
+- `subject` in `votes/index.json`: the vote's published subject (vote item or minutes block title, without its
+  procedure symbol), only when the display title and Parliament's label lack some of its words; the vote search
+  matches it (vote 195775, titled after the act it amends, has the subject "Temporary derogation from the ePrivacy
+  directive"). `votes/<id>.json` keeps the full published subject.
 
 ### EUR-Lex / Cellar (`eurlex`) — ok
 - 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 21 final acts that OEIL

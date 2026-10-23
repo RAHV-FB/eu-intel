@@ -105,14 +105,16 @@ export default function Legislation() {
   const rows = index.data ?? [];
   const haystacks = useMemo(() => buildHaystacks(rows), [rows]);
 
-  const { matched, scores } = useMemo(() => {
-    if (!hasQuery) return { matched: rows, scores: new Map<string, number>() };
-    const keyword = keywordScores(rows, haystacks, engine, state.q);
-    return { matched: rows.filter((d) => keyword.has(d.id)), scores: keyword };
+  const { matched, scores, related } = useMemo(() => {
+    const related = new Set<string>(); // files matching only another form of a query word
+    if (!hasQuery) return { matched: rows, scores: new Map<string, number>(), related };
+    const keyword = keywordScores(rows, haystacks, engine, state.q, related);
+    return { matched: rows.filter((d) => keyword.has(d.id)), scores: keyword, related };
   }, [rows, haystacks, engine, state.q, hasQuery]);
 
   const preds = useMemo(() => makePredicates(state), [state]);
   const filtered = useMemo(() => applyFilters(matched, preds), [matched, preds]);
+  const relatedShown = useMemo(() => filtered.filter((d) => related.has(d.id)).length, [filtered, related]);
   const sorted = useMemo(() => sortRows(filtered, state.sort, scores, today), [filtered, state.sort, scores, today]);
 
   // ---- facet counts (each facet counted with all *other* filters applied)
@@ -376,6 +378,15 @@ export default function Legislation() {
             <p className="lx-count" role="status" aria-live="polite" aria-atomic="true">
               <strong>{formatNumber(sorted.length)}</strong> {sorted.length === 1 ? 'file' : 'files'}
               {anyFilter ? <> match{sorted.length === 1 ? 'es' : ''}</> : <> in our dataset</>}
+              {relatedShown > 0 && relatedShown < sorted.length && (
+                <span className="meta">
+                  {' '}
+                  · {formatNumber(relatedShown)} of them only through another form of a word
+                </span>
+              )}
+              {relatedShown > 0 && relatedShown === sorted.length && (
+                <span className="meta"> · only through other forms of the words (longer words built on them)</span>
+              )}
               {sorted.length > 0 && <span className="meta"> · sorted by {SORT_LABEL[state.sort].toLowerCase()}</span>}
             </p>
             <div className="lx-results-tools">

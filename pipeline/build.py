@@ -32,7 +32,7 @@ from pydantic import BaseModel, ValidationError
 from pipeline.analysis.transposition import application_start, article_label, articles_text, general_deadline
 from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models import entities
-from pipeline.models.countries import MEMBER_STATES
+from pipeline.models.countries import FORMER_MEMBER_STATES, MEMBER_STATES
 from pipeline.models.entities import (
     CouncilVote,
     CountryIndicator,
@@ -213,6 +213,15 @@ def vote_subject(subject: str | None) -> str | None:
         return None
     s = _SUBJECT_NUMBER.sub("", _SUBJECT_SYMBOL.sub("", subject)).strip()
     return s or None
+
+
+def search_subject(subject: str | None, *shown: str) -> str | None:
+    """The published subject of a vote for keyword search, when the titles shown lack some of its words
+    (vote 195775: "Temporary derogation from the ePrivacy directive", under the title of the act it amends)."""
+    s = vote_subject(subject)
+    if not s:
+        return None
+    return s if set(_norm_key(s).split()) - set(_norm_key(" ".join(shown)).split()) else None
 
 
 # Parliament publishes some vote labels with the title in French, English and German, in that order, joined by
@@ -457,6 +466,16 @@ GROUP_ALIASES: dict[str, list[str]] = {
     "esn": ["ESN", "Europe of Sovereign Nations"],
     "ni": ["NI", "Non-attached", "Non-inscrits", "Independents"],
 }
+
+# shown for a party record whose name in EP open data is only a placeholder ("-")
+PARTY_NAME_MISSING = "Party name not recorded"
+
+
+def unnamed_parties(orgs: list[Organization]) -> set[str]:
+    """Party records whose only name in EP open data is a placeholder: corporate bodies 5500 and 5719 are
+    labelled "-" in every language."""
+    return {o.id for o in orgs if o.kind == "party" and not re.search(r"\w", o.label or "")}
+
 
 # Guide pages (How the EU Works) for search. Anchors must exist on /how-the-eu-works.
 GUIDE_PAGES: list[dict[str, str]] = [
@@ -757,7 +776,7 @@ def _dedupe_sources(sources: list[dict | None]) -> list[dict]:
 
 def _vote_index_entry(v: dict) -> dict:
     """Compact EpVoteSummary for votes/index.json (full record in votes/<id>.json)."""
-    optional = ("dossier_id", "dossier_ref", "margin", "kind_detail", "outcome_note", "procedure_ref")
+    optional = ("dossier_id", "dossier_ref", "margin", "kind_detail", "outcome_note", "procedure_ref", "subject")
     out = {k: x for k, x in v.items() if not (k in optional and x is None)}
     src = v.get("source") or {}
     out["source"] = {k: src[k] for k in ("institution", "url") if src.get(k)}
@@ -1173,6 +1192,10 @@ class Builder:
     def _index(self) -> None:
         s = self.s
         self.org = {o.id: o for o in s.orgs}
+        # the name is shown as not recorded, and the records are left out of the parties list and search
+        self.unnamed_parties = unnamed_parties(s.orgs)
+        for oid in self.unnamed_parties:
+            self.org[oid] = self.org[oid].model_copy(update={"label": PARTY_NAME_MISSING})
         self.mep = {m.id: m for m in s.meps}
         self.proc_by_ref: dict[str, Procedure] = {}
         self.proc_by_num: dict[str, list[Procedure]] = defaultdict(list)
@@ -1594,6 +1617,8 @@ class Builder:
             "dossier_ref": p.reference if p else None,
             # the official procedure reference, also for procedures that are not tracked as legislative files
             "procedure_ref": proc_ref,
+            # the published subject, for keyword search, when the titles above do not already say it
+            "subject": search_subject(v.subject, display, v.title),
             "topics": self.topics_for(p) if p else [],
             "margin": margin,
             "has_ballots": bool(b is not None),
@@ -2908,7 +2933,8 @@ class Builder:
                 "groups": sorted(gh),
             }  # fmt: skip
             self.party_summary[oid] = summ
-            parties_out.append(summ)
+            if oid not in self.unnamed_parties:
+                parties_out.append(summ)
             meps_rows: dict[str, dict] = {}
             for m, start, end in sorted(rows, key=lambda r: (r[0].id, r[1] or "")):
                 r = meps_rows.setdefault(m.id, {"id": m.id, "name": m.name, "active": m.active and False,
@@ -3580,8 +3606,10 @@ def build_search_docs(b: Builder) -> list[dict]:
                 doc["x"] = " ".join([*(doc.get("x") or "").split(), *add]).strip() or None
         elif hits:
             log.info("alias rule %s matches %d documents; not embedded", terms[:1], len(hits))
+    # country names as on the MEP and party pages, the former member state included ("United Kingdom")
+    country_name = {**MEMBER_STATES, **FORMER_MEMBER_STATES}
     for m in sorted(b.mep_summary.values(), key=lambda m: m["id"]):
-        sub = ["MEP" if m["active"] else "Former MEP", MEMBER_STATES.get(m["country"], m["country"])]
+        sub = ["MEP" if m["active"] else "Former MEP", country_name.get(m["country"], m["country"])]
         if m["group_code"]:
             sub.append(m["group_code"])
         docs.append({"id": m["id"], "k": "mep", "t": m["name"], "s": " · ".join(sub),
@@ -3601,13 +3629,20 @@ def build_search_docs(b: Builder) -> list[dict]:
     same_party: dict[tuple[str, str], list[str]] = defaultdict(list)
     for pid, pt in b.party_summary.items():
         same_party[(_norm_key(pt["label"]), pt["country"])].append(pid)
+    unnamed = getattr(b, "unnamed_parties", set())
     for pid in sorted(b.party_summary):
+        if pid in unnamed:
+            continue  # no name recorded: nothing to search for
         pt = b.party_summary[pid]
-        sub = f"National party · {MEMBER_STATES.get(pt['country'], pt['country'] or 'unknown country')}"
+        sub = f"National party · {country_name.get(pt['country'], pt['country'] or 'unknown country')}"
         w = 1.3 if pt["members_active"] else 0.8
         twins = same_party[(_norm_key(pt["label"]), pt["country"])]
         if len(twins) > 1 and party_terms.get(pid):
             sub += f" · {ep_term_label(party_terms[pid])}"
+            # records of the same name within the same term (Azione 6103 and 6478): the period each covers
+            o = getattr(b, "org", {}).get(pid)
+            if o and o.start and any(t != pid and party_terms.get(t) == party_terms[pid] for t in twins):
+                sub += f" · {_long_date(o.start)} – {_long_date(o.end)}" if o.end else f" · from {_long_date(o.start)}"
             if max(party_terms[pid]) < max(max(party_terms.get(t) or {0}) for t in twins):
                 w = 0.5
         doc = {"id": pid, "k": "party", "t": pt["label"], "s": sub, "u": f"/people/parties/{pid}", "w": w}

@@ -112,8 +112,8 @@ export default function Search() {
     loadSearch().then(setEngine, (e: Error) => setError(e));
   }, []);
 
-  const { grouped, partialOnly } = useMemo(() => {
-    if (!engine || !q.trim()) return { grouped: [], partialOnly: false };
+  const { grouped, partialOnly, partialCount } = useMemo(() => {
+    if (!engine || !q.trim()) return { grouped: [], partialOnly: false, partialCount: 0 };
     let hits: SearchHit[] = [];
     try {
       hits = engine.search(q, { limit: 1000 });
@@ -125,7 +125,8 @@ export default function Search() {
     const groups = GROUPS.map((g) => ({ g, hits: hits.filter((h) => g.kinds.includes(h.doc.k)) }))
       .filter((x) => x.hits.length > 0)
       .sort((a, b) => rank(a.g.kinds) - rank(b.g.kinds));
-    return { grouped: groups, partialOnly: hits.length > 0 && hits.every((h) => h.partial) };
+    const partialCount = hits.filter((h) => h.partial).length;
+    return { grouped: groups, partialOnly: hits.length > 0 && partialCount === hits.length, partialCount };
   }, [engine, q]);
   const total = grouped.reduce((n, x) => n + x.hits.length, 0);
 
@@ -170,6 +171,13 @@ export default function Search() {
             {formatNumber(total)} result{total === 1 ? '' : 's'}
             {total >= 1000 ? ' (showing the best 1,000)' : ''}
             {partialOnly && <> · no whole-word matches for “{q}”, so these contain words that start with it</>}
+            {!partialOnly && partialCount > 0 && (
+              <>
+                {' '}
+                · {formatNumber(partialCount)} of them match only another form of a word (a longer word built on it,
+                or another ending) and are listed after the exact matches
+              </>
+            )}
           </p>
           <nav className="sr-jump" aria-label="Result groups">
             <ul className="lx-chips">

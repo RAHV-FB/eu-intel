@@ -567,7 +567,9 @@
   why: >-
     If adopted, carmakers could continue to sell some plug-in hybrid, range-extender and combustion-engine
     vehicles after 2035, provided the remaining emissions are offset as set out in the regulation.
-  aliases: ["2035 combustion engine ban", "car CO2 standards", "CO2 cars", "automotive package"]
+  # not "combustion engine ban": that is Regulation (EU) 2023/851 (2021/0197(COD)), which this proposal would amend;
+  # the Commission's cars-and-vans page heads it "Proposed revision of the Regulation on CO₂ standards for cars and vans"
+  aliases: ["Proposed revision of the Regulation on CO2 standards for cars and vans", "car CO2 standards", "CO2 cars", "automotive package"]
   topics: ["transport", "environment"]
   featured: false
   feature_order: null

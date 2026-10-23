@@ -96,22 +96,24 @@ export function queryTokens(q: string): string[] {
 }
 
 /** Map search-engine dossier hits to dossier ids → normalised score (0..1]. */
-export function engineScores(engine: SearchEngine | null, q: string): Map<string, number> {
-  return engine ? dossierScores(engine, q) : new Map();
+export function engineScores(engine: SearchEngine | null, q: string, partial?: Set<string>): Map<string, number> {
+  return engine ? dossierScores(engine, q, { partial }) : new Map();
 }
 
 /**
  * Files matching the keyword query, with their relevance. Once the search index is loaded only its matches
- * count, so "N files match" agrees with the Legislation results on /search for the same query; until then a
- * whole-word match on titles and references stands in.
+ * count, so "N files match" agrees with the Legislation results on /search for the same query (including the
+ * files that match only related word forms, which `partial` collects); until then a whole-word match on titles
+ * and references stands in.
  */
 export function keywordScores(
   rows: DossierSummary[],
   haystacks: Map<string, Haystack>,
   engine: SearchEngine | null,
   q: string,
+  partial?: Set<string>,
 ): Map<string, number> {
-  if (engine) return engineScores(engine, q);
+  if (engine) return engineScores(engine, q, partial);
   const tokens = queryTokens(q);
   const out = new Map<string, number>();
   for (const d of rows) {
