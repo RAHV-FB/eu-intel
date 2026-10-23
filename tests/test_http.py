@@ -57,6 +57,15 @@ def test_without_deadline_retries_as_before(monkeypatch):
     assert clock.waits == [1, 2, 4, 8, 16]  # exponential backoff between attempts
 
 
+def test_retries_can_be_set_per_call(monkeypatch):
+    """A caller with a cheaper fallback (a smaller page) asks for a single attempt."""
+    monkeypatch.delenv(H.FETCH_DEADLINE_ENV, raising=False)
+    http, clock, calls = make(monkeypatch, always(500))
+    with pytest.raises(H.HttpError) as e:
+        http.get_json(URL, retries=0)
+    assert e.value.status == 500 and len(calls) == 1 and clock.waits == []
+
+
 def test_success_after_retry(monkeypatch):
     answers = iter([httpx.Response(503), httpx.Response(200, content=b"ok")])
     http, clock, calls = make(monkeypatch, lambda r: next(answers), deadline=3600)

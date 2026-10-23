@@ -535,8 +535,9 @@ def test_oeil_failure_for_some_files_is_partial(snapshot_dir):
     assert state_of(snapshot_dir)["pending"] == ["2023-0448"]
 
 
-def test_new_file_without_oeil_is_recorded_and_retried(snapshot_dir):
+def test_new_file_without_oeil_is_recorded_and_retried(snapshot_dir, monkeypatch):
     """A file seen for the first time while OEIL is down: EP data only (as before), refreshed later."""
+    monkeypatch.setattr(m, "OUTAGE_STOP", len(in_scope()) + 1)  # every file is tried (the outage stop: below)
     status = m.fetch(OeilDown())
     recs = m.read_records(m.SOURCE_ID, "procedures", Procedure)
     assert recs and all(r.stage_raw is None and not r.subjects for r in recs)
@@ -644,19 +645,141 @@ def time_past() -> float:
     return time.monotonic() - 1
 
 
-def test_sequential_retries_stop_during_an_outage(snapshot_dir):
-    class ApiDown(FakeHttp):
-        def get(self, url, params=None, **kw):
-            if url.startswith(f"{m.EP_API}/procedures/"):
-                self.detail_calls.append(url.rsplit("/", 1)[1])
-                raise m.HttpError(url, 500, "gave up")
-            return super().get(url, params=params, **kw)
+class ApiDown(FakeHttp):
+    """GET /procedures/{id} answers HTTP 500 (after Http's own retries) for every id."""
 
+    def get(self, url, params=None, **kw):
+        if url.startswith(f"{m.EP_API}/procedures/"):
+            self.detail_calls.append(url.rsplit("/", 1)[1])
+            raise m.HttpError(url, 500, "gave up")
+        return super().get(url, params=params, **kw)
+
+
+def test_sequential_retries_stop_during_an_outage(snapshot_dir, monkeypatch):
+    monkeypatch.setattr(m, "OUTAGE_STOP", 100)  # the parallel pass tries every id (the outage stop: below)
     http = ApiDown()
     status = m.fetch(http)
     n = len(in_scope())
     assert len(http.detail_calls) == n + m.SEQUENTIAL_RETRY_STOP  # parallel pass + 3 one-by-one retries
     assert status.status == "failed"
+
+
+def test_an_outage_stops_the_parallel_pass(snapshot_dir, monkeypatch):
+    """Every EP call fails (with Http's 240 s per call, a chunk of 100 ids could take up to 100 minutes): once
+    OUTAGE_STOP ids failed in a row, no new id is started and there is no one-by-one retry."""
+    m.fetch(FakeHttp())
+    before = records_by_id(snapshot_dir)
+    monkeypatch.setenv("EU_INTEL_FULL_REFRESH", "1")  # every id is to be fetched
+    http = ApiDown()
+    status = m.fetch(http)
+    n = len(in_scope())
+    assert m.OUTAGE_STOP <= len(http.detail_calls) <= m.OUTAGE_STOP + m.MAX_WORKERS - 1 < n
+    assert status.status == "failed" and f"Stopped after {m.OUTAGE_STOP} ids in a row failed" in status.note
+    assert records_by_id(snapshot_dir) == before
+    assert set(state_of(snapshot_dir)["pending"]) == in_scope()  # all of them resume next run
+    monkeypatch.delenv("EU_INTEL_FULL_REFRESH")
+    again = FakeHttp()
+    assert m.fetch(again).status == "ok" and set(again.detail_calls) == in_scope()
+
+
+def test_budget_applies_to_the_first_chunk_once_ids_keep_failing(snapshot_dir, monkeypatch):
+    run = m._Run(FakeHttp(), {}, {}, deadline=time_past(), min_progress=100)
+    assert not run.out_of_time()  # the first chunk normally runs whatever the budget
+    for _ in range(m.SEQUENTIAL_RETRY_STOP):
+        run.note_result(False)
+    assert run.out_of_time()  # ... but not while its ids keep failing
+    run.note_result(True)
+    assert not run.out_of_time()
+    within = m._Run(FakeHttp(), {}, {}, min_progress=100)  # budget not reached: only an outage stops it
+    for _ in range(m.OUTAGE_STOP - 1):
+        within.note_result(False)
+    assert not within.out_of_time()
+    within.note_result(False)
+    assert within.out_of_time() and within.outage
+
+    # a whole run with the budget already used up: a few ids are tried, not the whole first chunk
+    monkeypatch.setattr(m, "OUTAGE_STOP", 100)
+    monkeypatch.setenv("EU_INTEL_FETCH_BUDGET_S", "0")
+    http = ApiDown()
+    status = m.fetch(http)
+    assert len(http.detail_calls) <= m.SEQUENTIAL_RETRY_STOP + m.MAX_WORKERS - 1 < len(in_scope())
+    assert status.status == "partial" and "time budget reached" in status.note
+    assert set(state_of(snapshot_dir)["pending"]) == in_scope()
+
+
+class OeilGone(FakeHttp):
+    """OEIL answers 404 for 2023/0448(COD) (e.g. a file OEIL replaced or split), whose record has OEIL data."""
+
+    def get(self, url, params=None, **kw):
+        if url == m.OEIL_FILE and params["reference"] == "2023/0448(COD)":
+            self.oeil_calls.append("2023-0448")
+            raise m.HttpError(url, 404, "no procedure file")
+        return super().get(url, params=params, **kw)
+
+
+def test_persistent_oeil_404_stops_being_pending(snapshot_dir):
+    m.fetch(FakeHttp())
+    before = records_by_id(snapshot_dir)["2023-0448"]
+    seen = []
+    for _ in range(m.OEIL_GONE_RUNS + 1):
+        status = m.fetch(OeilGone())
+        seen.append((status.status, state_of(snapshot_dir)["pending"]))
+        assert records_by_id(snapshot_dir)["2023-0448"] == before  # the stored record (with OEIL data) stays
+    # pending while it may be a passing problem, then kept as is: the source is no longer partial for good
+    assert seen == [("partial", ["2023-0448"])] * (m.OEIL_GONE_RUNS - 1) + [("ok", [])] * 2
+    assert "OEIL no longer has a procedure file" in status.note and "2023-0448 (since 2026-10-22)" in status.note
+    assert state_of(snapshot_dir)["oeil_gone"]["2023-0448"]["runs"] == m.OEIL_GONE_RUNS + 1
+    assert state_of(snapshot_dir)["unsettled"]["ids"] == []
+    m.fetch(FakeHttp())  # the OEIL file is back: the record is read again and the count is cleared
+    assert state_of(snapshot_dir)["oeil_gone"] == {}
+
+
+def test_unsettled_ids_are_recorded_for_change_detection(snapshot_dir):
+    """_state.json names the files this run did not refresh completely, stamped with the run's attempted_at
+    (that of its manifest entry), so change detection sets them aside instead of every file."""
+    first = m.fetch(FakeHttp())
+    assert state_of(snapshot_dir)["unsettled"] == {"attempted_at": first.attempted_at, "ids": []}
+
+    class SomeDown(FakeHttp):  # OEIL fails for an enriched file and for a new one
+        def get(self, url, params=None, **kw):
+            if url == m.OEIL_FILE and params["reference"] in ("2023/0448(COD)", "2023/0320(CNS)"):
+                raise m.HttpError(url, 503, "gave up")
+            return super().get(url, params=params, **kw)
+
+    add_discovery_snapshots(snapshot_dir)  # brings in 2023-0320, new in this run
+    status = m.fetch(SomeDown())
+    state = state_of(snapshot_dir)
+    assert state["unsettled"]["attempted_at"] == status.attempted_at
+    # 2023-0448: kept as it was and pending; 2023-0320: recorded with EP API data only
+    assert state["unsettled"]["ids"] == ["2023-0320", "2023-0448"]
+    rec = {r.id: r for r in m.read_records(m.SOURCE_ID, "procedures", Procedure)}
+    assert rec["2023-0320"].stage_raw is None
+    m.fetch(FakeHttp())
+    assert state_of(snapshot_dir)["unsettled"]["ids"] == []
+
+
+def test_listing_remembers_the_page_size_and_fails_fast(snapshot_dir):
+    class SmallPagesOnly(FakeHttp):
+        def __init__(self):
+            super().__init__()
+            self.list_calls: list[tuple[str, int, int | None]] = []
+
+        def get_json(self, url, params=None, **kw):
+            if url == f"{m.EP_API}/procedures":
+                self.list_calls.append((params["process-type"], params["limit"], kw.get("retries")))
+                if params["process-type"] == "COD" and params["limit"] > 125:
+                    raise m.HttpError(url, 500, "WebClientRequestException")
+            return super().get_json(url, params=params, **kw)
+
+    http = SmallPagesOnly()
+    assert m.fetch(http).status == "ok"
+    # a single attempt at 500 and at 250 (no retries before halving); Http's usual retries at the smallest page
+    cod = [c for c in http.list_calls if c[0] == "COD"]
+    assert cod == [("COD", 500, 0), ("COD", 250, 0), ("COD", 125, None)]
+    assert state_of(snapshot_dir)["list_page"] == {"APP": 500, "CNS": 500, "COD": 125}
+    again = SmallPagesOnly()
+    m.fetch(again)
+    assert [c for c in again.list_calls if c[0] == "COD"] == [("COD", 125, None)]  # starts at the size that worked
 
 
 # ---------------------------------------------------------------- live

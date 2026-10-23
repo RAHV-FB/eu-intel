@@ -148,11 +148,15 @@ class _Pacer:
 _PACER = _Pacer(MIN_GAP_S)
 
 
-def _get_data(http: Http, path: str, *, use_cache: bool = True, **params: Any) -> list[dict]:
-    """GET an API resource's `data`; 204 (no content) and 404 (unknown id) mean "no records"."""
-    body = _PACER.get(
-        http, f"{EP_API}{path}", params={**FMT, **params}, use_cache=use_cache, ok_statuses=(200, 204, 404)
-    )
+def _get_data(
+    http: Http, path: str, *, use_cache: bool = True, retries: int | None = None, **params: Any
+) -> list[dict]:
+    """GET an API resource's `data`; 204 (no content) and 404 (unknown id) mean "no records". `retries`
+    overrides Http's retries (0: a single attempt)."""
+    kw: dict[str, Any] = {"use_cache": use_cache, "ok_statuses": (200, 204, 404)}
+    if retries is not None:
+        kw["retries"] = retries
+    body = _PACER.get(http, f"{EP_API}{path}", params={**FMT, **params}, **kw)
     if not body:
         return []
     try:
@@ -207,19 +211,60 @@ def fetch_sitting(http: Http, sitting: dict, today: str | None = None) -> tuple[
     return decisions, items
 
 
-def fetch_procedure_labels(http: Http) -> dict[str, str]:
-    """EP process id ("2021-0106") -> official reference ("2021/0106(COD)") for every EP procedure."""
+# /procedures answered HTTP 500 to limit=1000 (2026-10-22) and, for COD, to 500 and 250 (2026-10-23); 125 worked
+LABELS_PAGE = 500
+MIN_LABELS_PAGE = 125
+SMALLER_PAGE_STATUSES = (500, 502, 503, 504, None)  # server errors and timeouts: try a smaller page
+
+
+def _procedure_page(http: Http, ptype: str, offset: int, page: int) -> list[dict]:
+    """One page of /procedures. While the page can still be halved it gets a single attempt, so a server error
+    or timeout is raised at once (for the caller to ask for a smaller page); otherwise Http's usual retries."""
+    params = {"process-type": ptype, "offset": offset, "limit": page}
+    if page // 2 < MIN_LABELS_PAGE:
+        return _get_data(http, "/procedures", **params)
+    try:
+        return _get_data(http, "/procedures", retries=0, **params)
+    except HttpError as e:
+        if e.status in SMALLER_PAGE_STATUSES:
+            raise
+        return _get_data(http, "/procedures", **params)  # e.g. 429: the usual retries, same page
+
+
+def fetch_procedure_labels(
+    http: Http, sizes: dict[str, int] | None = None, unlisted: list[str] | None = None
+) -> dict[str, str]:
+    """EP process id ("2021-0106") -> official reference ("2021/0106(COD)") for every EP procedure.
+
+    As in ep_procedures.list_procedure_ids, a page that can still be halved gets a single attempt, and a server
+    error or timeout halves it (down to MIN_LABELS_PAGE); `sizes` (process type -> page size) gives the size to
+    start with and receives the one that worked. If a type cannot be listed even then, the listing stops
+    (the API is down) and the types not listed are added to `unlisted`: the references of their procedures
+    then come from the snapshot, the state and per-id requests (fetch_procedures_by_id)."""
     out: dict[str, str] = {}
-    for ptype in PROCESS_TYPES:
-        offset, page = 0, 1000
+    sizes = {} if sizes is None else sizes
+    for n, ptype in enumerate(PROCESS_TYPES):
+        offset, page = 0, sizes.get(ptype, LABELS_PAGE)
         while True:
-            rows = _get_data(http, "/procedures", **{"process-type": ptype}, offset=offset, limit=page)
+            try:
+                rows = _procedure_page(http, ptype, offset, page)
+            except HttpError as e:
+                if page // 2 >= MIN_LABELS_PAGE and e.status in SMALLER_PAGE_STATUSES:
+                    page //= 2
+                    log.warning("ep_votes: procedure list %s failed (%s); retrying with limit=%d", ptype, e, page)
+                    continue
+                if unlisted is None:
+                    raise
+                log.warning("ep_votes: procedure list unavailable from %s on (%s)", ptype, e)
+                unlisted += PROCESS_TYPES[n:]
+                return out
             for r in rows:
                 if r.get("process_id") and r.get("label"):
                     out[r["process_id"]] = r["label"]
             if len(rows) < page:
                 break
             offset += page
+        sizes[ptype] = page
     return out
 
 
@@ -1578,12 +1623,26 @@ def _sitting_of(v: EpVote) -> str:
     return v.event_id[:17]  # "MTG-PL-2024-03-13-DEC-166051" -> "MTG-PL-2024-03-13"
 
 
-def _shrunk_sittings(done: set[str], res: Result, stored: Counter[str]) -> set[str]:
-    """Sittings of a chunk whose new result has far fewer votes than the snapshot holds: an empty or partial
-    /decisions answer (204 and 404 read as "no records"), not a real removal. Their stored votes and
-    ballots are kept and they stay pending."""
-    new = Counter(_sitting_of(v) for v in res.votes)
-    return {s for s in done if stored.get(s, 0) and new.get(s, 0) < MIN_KEEP_SHARE * stored[s]}
+def sitting_counts(votes: Iterable[EpVote]) -> dict[str, Counter[str]]:
+    """Per sitting: its votes, those linked to a procedure and those with a subject (both mostly given by the
+    sitting's vote items; see resolve_procs and subject_of)."""
+    out: dict[str, Counter[str]] = {"votes": Counter(), "linked": Counter(), "with a subject": Counter()}
+    for v in votes:
+        s = _sitting_of(v)
+        out["votes"][s] += 1
+        out["linked"][s] += bool(v.procedure_refs)
+        out["with a subject"][s] += bool(v.subject)
+    return out
+
+
+def _shrunk_sittings(done: set[str], res: Result, stored: dict[str, Counter[str]]) -> set[str]:
+    """Sittings of a chunk whose new result has far fewer votes than the snapshot holds (`stored`, see
+    sitting_counts): an empty or partial /decisions answer (204 and 404 read as "no records"), not a real
+    removal; or as many votes but far fewer linked to a procedure or with a subject: an empty /vote-results
+    answer, read the same way (some sittings never had vote items, e.g. MTG-PL-2022-10-17: their stored votes
+    have nothing to lose). Their stored votes and ballots are kept and they stay pending."""
+    new = sitting_counts(res.votes)
+    return {s for s in done for k, n in stored.items() if n.get(s, 0) and new[k][s] < MIN_KEEP_SHARE * n[s]}
 
 
 def _without_sittings(res: Result, sittings: set[str]) -> Result:
@@ -1701,8 +1760,12 @@ def fetch(http: Http) -> SourceStatus:
     pass_kind = "full" if full or (pending_before and state.get("pass") == "full") else "window"
 
     proc_refs = _procedure_refs(state, existing)
-    if full:
-        proc_refs = {**fetch_procedure_labels(http), **proc_refs}  # one listing per full pass
+    list_page = {  # process type -> page size of the procedure list that worked in the last full pass
+        k: v for k, v in (state.get("list_page") or {}).items() if isinstance(v, int) and v >= MIN_LABELS_PAGE
+    }
+    unlisted: list[str] = []
+    if full:  # one listing per full pass (if it is unavailable: the known references, then per-id requests)
+        proc_refs = {**fetch_procedure_labels(http, list_page, unlisted), **proc_refs}
     doc_links: dict[str, list[str]] = dict(state.get("doc_links", {}))
     known_docs: DocIndex = dict(state.get("item_docs", {}))
     proc_titles: dict[str, str] = dict(state.get("proc_titles", {}))
@@ -1723,13 +1786,14 @@ def fetch(http: Http) -> SourceStatus:
                 "proc_refs": {p: proc_refs[p] for p in sorted(used) if p in proc_refs},
                 "proc_titles": dict(sorted(proc_titles.items())),
                 "last_full": last_full,
+                "list_page": dict(sorted(list_page.items())),
             },
         )
 
     save()
     counts: Counter[str] = Counter()
     n_ballots = len(read_records(SOURCE_ID, "ballots", EpBallots))
-    stored_per_sitting = Counter(_sitting_of(v) for v in existing)
+    stored_per_sitting = sitting_counts(existing)
     held: set[str] = set()  # sittings whose stored votes were kept (new answer far smaller)
     error = None
     for i in range(0, len(targets), CHUNK):
@@ -1746,7 +1810,8 @@ def fetch(http: Http) -> SourceStatus:
             break
         shrunk = _shrunk_sittings(done, res, stored_per_sitting)
         if shrunk:
-            log.warning("ep_votes: kept the stored votes of %s (new answer far smaller)", ", ".join(sorted(shrunk)))
+            log.warning("ep_votes: kept the stored votes of %s (new answer with far fewer votes, links or "
+                        "subjects)", ", ".join(sorted(shrunk)))  # fmt: skip
             res, done = _without_sittings(res, shrunk), done - shrunk
             held |= shrunk
         _, n_ballots = _merge_chunk(done, res)
@@ -1771,9 +1836,15 @@ def fetch(http: Http) -> SourceStatus:
         + (f"; {len(pending)} sittings pending; resumes next run" if pending else "")
         + (f" (stopped by {error})" if error else "")
         + (
-            f"; stored votes kept for {len(held)} sittings whose new answer had far fewer votes "
-            f"({', '.join(sorted(held)[:5])})"
+            f"; stored votes kept for {len(held)} sittings whose new answer had far fewer votes, procedure links "
+            f"or subjects ({', '.join(sorted(held)[:5])})"
             if held
+            else ""
+        )
+        + (
+            f"; procedure list unavailable for {len(unlisted)} process types ({', '.join(unlisted[:5])}"
+            f"{' …' if len(unlisted) > 5 else ''}): references from the snapshot and per-id requests"
+            if unlisted
             else ""
         )
         + f". Snapshot: {len(votes)} votes ({rollcalls} roll-call, {n_ballots} with ballots), {linked} linked "

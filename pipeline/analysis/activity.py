@@ -14,7 +14,11 @@ What counts as a change (substantive only — never a metadata refresh such as a
                     present, the manifest says this snapshot's ep_procedures and eurlex fetches were
                     complete ("ok"; a failed or partial fetch may carry degraded records, so the stored
                     stages are kept until a complete one), and the stored stages were computed by the
-                    same CLASSIFIER_VERSION (otherwise the stages are re-baselined silently)
+                    same CLASSIFIER_VERSION (otherwise the stages are re-baselined silently).
+                    A fetch that records which files it did not refresh completely (`unsettled` in
+                    data/snapshot/<source>/_state.json, stamped with the manifest entry's attempted_at:
+                    pending, kept or degraded records) is trusted for every other dossier: only the
+                    dossiers it names keep their stored stage ("held") until a later run refreshes them
     milestone       a new recorded procedural event id
     publication     a new legal act linked to the dossier
     ep_vote         a new indexed EP vote linked to the dossier
@@ -27,6 +31,7 @@ itself, with detected_at = null (we did not observe *when* they appeared).
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from datetime import date, timedelta
@@ -34,6 +39,8 @@ from pathlib import Path
 from typing import Any
 
 from pipeline.snapshot import now_iso
+
+log = logging.getLogger("pipeline.analysis.activity")
 
 RECENT_DAYS = 120
 PUBLIC_LIMIT = 400
@@ -201,18 +208,64 @@ def sources_present(b: Any) -> dict[str, bool]:
     }
 
 
+def unsettled_record(b: Any, source: str) -> dict | None:
+    """What the source's last fetch did not refresh completely (`unsettled` in data/snapshot/<source>/_state.json:
+    procedure ids, CELEX ids, procedure references), if it was written by the fetch the manifest describes (same
+    attempted_at; a restored or older state file does not count)."""
+    st = (getattr(b.s, "manifest", None) or {}).get(source)
+    root = getattr(b.s, "root", None)
+    if st is None or root is None:
+        return None
+    state = _read(Path(root) / source / "_state.json", {})
+    u = state.get("unsettled") if isinstance(state, dict) else None
+    if isinstance(u, dict) and u.get("attempted_at") and u["attempted_at"] == getattr(st, "attempted_at", None):
+        return u
+    return None
+
+
 def incomplete_stage_sources(b: Any) -> list[str]:
     """STAGE_SOURCES whose last fetch (manifest) was not complete ("ok"), e.g. a run in which OEIL or
-    EUR-Lex failed for some records. A snapshot without a manifest (tests, local builds) is trusted."""
+    EUR-Lex failed for some records, and did not record which files it left unsettled (then nothing it wrote
+    is trusted). A snapshot without a manifest (tests, local builds) is trusted."""
     manifest = getattr(b.s, "manifest", None) or {}
     if not manifest:
         return []
     out = []
     for source in STAGE_SOURCES:
         st = manifest.get(source)
-        if st is None or getattr(st, "status", None) != "ok":
+        if st is None or (getattr(st, "status", None) != "ok" and unsettled_record(b, source) is None):
             out.append(source)
     return out
+
+
+def _norm_ref(ref: str) -> str:
+    return re.sub(r"\s+", "", ref or "").upper()
+
+
+def unsettled_dossiers(b: Any, old: dict[str, dict] | None = None) -> dict[str, str]:
+    """Dossier id -> source, for the dossiers whose procedure or act data this snapshot's fetches did not refresh
+    completely (see unsettled_record): their stage is neither compared nor stored in this run."""
+    out: dict[str, str] = {}
+    u = unsettled_record(b, "ep_procedures")
+    for pid in u.get("ids", []) if u else []:
+        if pid in b.dossier_detail:
+            out.setdefault(pid, "ep_procedures")
+    u = unsettled_record(b, "eurlex")
+    if u and (u.get("acts") or u.get("procedures")):
+        acts = set(u.get("acts", []))
+        refs = {_norm_ref(r) for r in u.get("procedures", [])}
+        for pid in b.dossier_ids:
+            det = b.dossier_detail[pid]
+            celex = {a["celex"] for a in det["acts"]} | set((old or {}).get(pid, {}).get("acts", []))
+            if celex & acts or _norm_ref(det.get("ref") or "") in refs:
+                out.setdefault(pid, "eurlex")
+    return out
+
+
+def _warn(msg: str) -> None:
+    log.warning(msg)
+    if os.environ.get("GITHUB_ACTIONS"):  # an annotation on the workflow run
+        print(f"::warning::{msg}")
 
 
 def diff(
@@ -222,11 +275,13 @@ def diff(
     detected_at: str,
     stage_reliable: bool,
     seen: dict[str, bool] | None = None,
+    held: set[str] | frozenset[str] = frozenset(),
 ) -> list[dict]:
     """Verified substantive changes from `old` to `new` digests.
 
     `seen` says which sources were already present when `old` was recorded: records of a source that
-    was absent then are the first observation of that source (a baseline), not changes.
+    was absent then are the first observation of that source (a baseline), not changes. Dossiers in `held`
+    (see unsettled_dossiers) get no status change in this run.
     """
     seen = seen or dict.fromkeys(("ep_procedures", "eurlex", "ep_votes", "council", "stage_reliable"), True)
     stubs = getattr(b, "stub_ids", set())
@@ -244,7 +299,13 @@ def diff(
                                    "new_dossier", f"New file: {title}", pid, None, src, detected_at))  # fmt: skip
             continue
         # a stored stage of None was recorded from incomplete inputs: the first stage seen is a baseline
-        if stage_reliable and seen["stage_reliable"] and o.get("stage") is not None and n["stage"] != o["stage"]:
+        if (
+            stage_reliable
+            and seen["stage_reliable"]
+            and pid not in held
+            and o.get("stage") is not None
+            and n["stage"] != o["stage"]
+        ):
             since = (det.get("status") or {}).get("since") or today
             items.append(_item(f"chg:{pid}:stage:{n['stage']}:{since}", since, "status_change",
                                f"{title}: status now “{n['label']}” (previously “{o.get('label', o.get('stage'))}”)",
@@ -281,9 +342,18 @@ def diff(
     return items
 
 
-def _merge_digest(old: dict[str, dict], new: dict[str, dict], stage_reliable: bool = True) -> dict[str, dict]:
+def _merge_digest(
+    old: dict[str, dict],
+    new: dict[str, dict],
+    stage_reliable: bool = True,
+    held: set[str] | frozenset[str] = frozenset(),
+    rebaseline: bool = False,
+    detected_at: str | None = None,
+) -> dict[str, dict]:
     """Union of ids ever seen; the stage is only updated when it was computed from complete inputs
-    (otherwise a known dossier keeps its stored stage and a new one is stored without a stage)."""
+    (otherwise a known dossier keeps its stored stage and a new one is stored without a stage). A held
+    dossier keeps its stored stage too, with the time it was first held (`held_since`); when the status logic
+    changed (`rebaseline`) its stage is dropped instead, so its next trusted stage is a baseline."""
     out = dict(old)
     for pid, n in new.items():
         o = old.get(pid, {})
@@ -291,8 +361,12 @@ def _merge_digest(old: dict[str, dict], new: dict[str, dict], stage_reliable: bo
             **n,
             **{k: sorted(set(o.get(k, [])) | set(n[k])) for k in ("events", "votes", "council", "acts")},
         }
-        if not stage_reliable:
+        if not stage_reliable or pid in held:
             merged["stage"], merged["label"] = o.get("stage"), o.get("label")
+        if stage_reliable and pid in held:
+            merged["held_since"] = o.get("held_since") or detected_at
+            if rebaseline:
+                merged["stage"] = merged["label"] = None
         out[pid] = merged
     return dict(sorted(out.items()))
 
@@ -323,33 +397,51 @@ def update_state(b: Any, state_dir: Path, record: bool = False) -> list[dict]:
     stored = _read(dig_path, None)
     detected_at = os.environ.get("EU_INTEL_NOW") or now_iso()
     present = sources_present(b)
-    # Stages computed from this snapshot are stored only if its procedure and act fetches were complete.
-    stages_trusted = present["stage_reliable"] and not incomplete_stage_sources(b)
+    # Stages computed from this snapshot are stored only if its procedure and act fetches were complete, or
+    # recorded which files they did not refresh completely (those dossiers are held: their stage waits).
+    untrusted = incomplete_stage_sources(b)
+    stages_trusted = present["stage_reliable"] and not untrusted
     old: dict[str, dict] | None = None
     seen = dict.fromkeys(present, False)
     classifier: str | None = None
+    suspended_since: str | None = None
     if isinstance(stored, dict):
         if "dossiers" in stored:
             old, seen = stored["dossiers"], {**seen, **stored.get("sources", {})}
             classifier = stored.get("classifier")
+            suspended_since = stored.get("status_suspended_since")
         else:  # plain {dossier_id: entry} map
             old, seen = stored, dict.fromkeys(present, True)
+    held = set(unsettled_dossiers(b, old)) & set(new) if stages_trusted else set()
     # Status changes need trusted stages on both sides, computed by the same classifier; after a change of
     # the status logic the stored stages are re-baselined (updated without recording changes).
     record_status = stages_trusted and classifier == CLASSIFIER_VERSION
     if old is not None:
         known = {it["id"] for it in recorded}
-        fresh = [it for it in diff(old, new, b, detected_at, record_status, seen) if it["id"] not in known]
+        fresh = [it for it in diff(old, new, b, detected_at, record_status, seen, held) if it["id"] not in known]
         recorded = recorded + fresh
         _write(act_path, recorded)
     elif not act_path.exists():
         _write(act_path, [])
+    dossiers = _merge_digest(old or {}, new, stages_trusted, held, classifier != CLASSIFIER_VERSION, detected_at)
+    suspended_since = None if stages_trusted else suspended_since or detected_at
     _write(dig_path, {
         "version": 1,
         "classifier": CLASSIFIER_VERSION if stages_trusted else classifier,
+        "status_suspended_since": suspended_since,
         "sources": {k: bool(seen.get(k)) or v for k, v in present.items()},
-        "dossiers": _merge_digest(old or {}, new, stages_trusted),
+        "dossiers": dossiers,
     })  # fmt: skip
+    if untrusted and present["stage_reliable"]:
+        manifest = getattr(b.s, "manifest", None) or {}
+        how = ", ".join(f"{s} {getattr(manifest.get(s), 'status', 'missing')}" for s in untrusted)
+        _warn(f"Status changes not recorded (suspended since {suspended_since}): the last fetch of {how} was not "
+              "complete and did not record which files it left unsettled.")  # fmt: skip
+    if held:
+        since = min(dossiers[pid]["held_since"] for pid in held)
+        _warn(f"Status changes held for {len(held)} files whose procedure or act data this run did not refresh "
+              f"completely (the earliest held since {since}): {', '.join(sorted(held)[:20])}"
+              + (" …" if len(held) > 20 else ""))  # fmt: skip
     return recorded
 
 

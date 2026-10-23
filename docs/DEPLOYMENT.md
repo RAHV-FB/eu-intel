@@ -50,14 +50,30 @@ open http://127.0.0.1:4174/eu-intel/).
   request or retry starts after it, and `timeout --signal=INT` stops the fetch well before the job limit, so the
   checkpoints already written (`_state.json`, chunked snapshot files) are always validated and committed.
   Sources resume their pending work on the next run.
-- **A source fails or returns less** (API down, timeout, schema change, an empty answer): its previous records
-  are kept (sources carry previous records forward and refuse to overwrite a file whose record count drops by more
-  than a few percent), the manifest records `partial` or `failed` with the previous successful `fetched_at`, and
-  the run continues with the other sources. The site shows each source's last successful retrieval.
+- **A source fails or returns less** (API down, timeout, schema change, an empty answer): a source that fails
+  keeps all its files, and a record that could not be fetched keeps its previous version (EP procedures, EUR-Lex
+  acts, MEPs and organisations, Council notes, Legislative Train files, infringement cases' legal basis). Some
+  files also refuse a short answer: EUR-Lex `acts.json` and `procedure_notices.json`, `ep_people`
+  `meps.json`/`orgs.json`, the implementation measures, coverage and infringements and the Train's `files.json`
+  are not rewritten when they would lose more than 5% of their records; EUR-Lex keeps stored acts missing from a
+  scope answer whose rows fall short of Cellar's count of them; Council stops when Cellar lists fewer than 90% of
+  its stored notes; an EP vote sitting keeps its stored votes when a new answer has less than half of its votes,
+  procedure links or subjects. Smaller drops are written (a record can be removed at source). EP procedures and
+  opt-outs add or replace records (EP procedures also removes one that no longer passes validation). The manifest
+  records `partial` or `failed` (with the previous successful `fetched_at`), and the run continues with the other
+  sources. The site shows each source's last successful retrieval.
+- **A source stops early**: no source starts after the run deadline, and every source starts no new work after
+  its own budget (`EU_INTEL_FETCH_BUDGET_S`). EP procedures also stops starting files once 8 in a row have failed
+  (an EP API or OEIL outage), and the EP procedure list starts at the page size that worked last time (kept in
+  `_state.json`).
 - **Validation fails** for one source: that source's snapshot directory and manifest entry are restored from the
   previous commit (marked `partial`), the whole snapshot must then validate, and the other sources' new data is
   committed. The activity log (`data/state`) is committed only after a successful build. Status changes are
-  recorded only from runs in which the procedure and EUR-Lex fetches were complete.
+  recorded only from complete procedure and EUR-Lex data: a partial fetch lists in its `_state.json`
+  (`unsettled`) the files it did not refresh completely (pending, kept from an earlier run, recorded without OEIL
+  data, an act or notice kept or lost), and only those dossiers keep their stored stage until a later run
+  refreshes them. A partial fetch without that list (e.g. a restored state file) suspends all status changes for
+  the run. The build log warns in both cases, with the date since when.
 - **No changes**: nothing is committed (the deploy still re-runs; harmless).
 - **Push rejected** because `main` moved during the run: the job resets onto the new `main`, re-applies only the
   data files this run changed (this run's version wins for those; `_manifest.json` is merged per source) and

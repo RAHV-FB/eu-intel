@@ -147,6 +147,63 @@ def test_fetch_end_to_end(tmp_path, monkeypatch):
     assert sum(c.startswith("/meps/") and "," in c for c in http.calls) == 1  # one batched detail request
 
 
+def _files(root: Path) -> dict[str, str]:
+    return {n: (root / "ep_people" / f"{n}.json").read_text(encoding="utf-8") for n in ("meps", "orgs")}
+
+
+def test_fetch_keeps_records_a_batch_did_not_return(tmp_path, monkeypatch):
+    """MEPs missing from a /meps/{ids} answer used to be left out of meps.json (their votes' ballots then name
+    unknown MEPs); they keep their stored record and the run is 'partial'."""
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S", raising=False)
+    E.fetch(FakeHttp())
+    before = _files(tmp_path)
+
+    class Short(FakeHttp):
+        def get_json(self, url: str, params: dict | None = None):
+            d = super().get_json(url, params)
+            if "," in url:  # a detail batch that lacks one MEP and one organization
+                d = {"data": [r for r in d["data"] if r["identifier"] not in ("197526", "7911")]}
+            return d
+
+    status = E.fetch(Short())
+    assert _files(tmp_path) == before
+    assert status.status == "partial"
+    assert "MEP 197526 not returned (previous record kept)" in status.note
+    assert "org 7911 not returned (previous record kept)" in status.note
+
+
+@pytest.mark.parametrize("empty_term", [9, 10])
+def test_fetch_does_not_overwrite_with_a_short_list(tmp_path, monkeypatch, empty_term):
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S", raising=False)
+    E.fetch(FakeHttp())
+    before = _files(tmp_path)
+
+    class EmptyTerm(FakeHttp):  # /meps?parliamentary-term=N answers with no records
+        def get_json(self, url: str, params: dict | None = None):
+            if (params or {}).get("parliamentary-term") == empty_term:
+                return {"data": []}
+            return super().get_json(url, params)
+
+    with pytest.raises(RuntimeError, match="not overwriting"):  # the source fails; its files stay
+        E.fetch(EmptyTerm())
+    assert _files(tmp_path) == before
+
+
+def test_fetch_starts_no_batch_after_its_time_budget(tmp_path, monkeypatch):
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+    monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S", raising=False)
+    E.fetch(FakeHttp())
+    before = _files(tmp_path)
+    monkeypatch.setenv("EU_INTEL_FETCH_BUDGET_S", "0")
+    http = FakeHttp()
+    status = E.fetch(http)
+    assert not [c for c in http.calls if c.startswith(("/meps/1", "/corporate-bodies"))]  # no detail request
+    assert _files(tmp_path) == before
+    assert status.status == "partial" and "time budget reached" in status.note
+
+
 # ------------------------------------------------------------------------------ snapshot invariants
 SNAP = snapshot.SNAPSHOT / "ep_people"
 

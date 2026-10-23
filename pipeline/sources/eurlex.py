@@ -12,12 +12,15 @@ Scope (v1)
     final acts that OEIL records for procedures in the EP snapshot (`Procedure.celex_refs`): Cellar
     does not link every act to its procedure (e.g. Regulation 2019/816 ECRIS-TCN, 2017/0144(COD)).
 
-Requests: one paged scope query (ORDER BY + LIMIT/OFFSET), then per batch of works (VALUES blocks,
+Requests: one paged scope query (ORDER BY + LIMIT/OFFSET) and a COUNT of its rows (a short page also
+ends a truncated answer), then per batch of works (VALUES blocks,
 4 threads) one query each for literal properties, English title, Official Journal issue, typed
 entry-into-force annotations, end-of-validity comments, procedure codes, subjects and amend/repeal
-links. A batch that
-fails is split in halves down to single works; works whose data could not be fetched are left out
-(status "partial") rather than written with gaps.
+links, and one query for the procedure notices. A batch that
+fails is split in halves down to single works; works whose data could not be fetched are not written
+with gaps: they keep their previous record (status "partial"), and so do stored acts missing from a
+scope answer whose rows fall short of the count. No query starts after the source's time budget
+(EU_INTEL_FETCH_BUDGET_S, EU_INTEL_FETCH_DEADLINE).
 
 Source facts relied on (checked against the live endpoint, see tests/test_eurlex.py)
 - The procedure is a `cdm:dossier` (also typed `cdm:procedure_code_interinstitutional`) carrying
@@ -107,7 +110,7 @@ from pipeline.models.entities import (
     TranspositionDate,
     ValidityNote,
 )
-from pipeline.snapshot import CURATED, now_iso, read_records, write_records
+from pipeline.snapshot import CURATED, fetch_deadline, now_iso, past, read_records, write_records, write_state
 
 log = logging.getLogger("pipeline.sources.eurlex")
 
@@ -307,12 +310,9 @@ DOSSIER_LINK = """{ ?dos cdm:dossier_produces_resource_legal ?w }
   OPTIONAL { ?dos cdm:procedure_code_interinstitutional_has_type_concept_type_procedure_code_interinstitutional ?ptype }"""
 
 
-def scope_query(offset: int, limit: int = SCOPE_PAGE) -> str:
-    """Candidate acts with their procedure references; the procedure-type filter is in Python."""
+def _scope_select() -> str:
     types = "|".join(PROCEDURE_TYPES)
-    return (
-        PREFIXES
-        + f"""SELECT DISTINCT ?w ?celex ?ref ?ptype WHERE {{
+    return f"""SELECT DISTINCT ?w ?celex ?ref ?ptype WHERE {{
   ?w cdm:resource_legal_id_sector "3"^^xsd:string ;
      cdm:resource_legal_type ?t ;
      cdm:work_date_document ?d ;
@@ -322,8 +322,17 @@ def scope_query(offset: int, limit: int = SCOPE_PAGE) -> str:
   FILTER(REGEX(STR(?celex), "^3[0-9]{{4}}[RLD][0-9]{{4}}$"))
   {DOSSIER_LINK}
   FILTER(REGEX(STR(?ref), "({types})\\\\)?$"))
-}} ORDER BY ?w ?celex ?ref ?ptype LIMIT {limit} OFFSET {offset}"""
-    )
+}}"""
+
+
+def scope_query(offset: int, limit: int = SCOPE_PAGE) -> str:
+    """Candidate acts with their procedure references; the procedure-type filter is in Python."""
+    return PREFIXES + f"{_scope_select()} ORDER BY ?w ?celex ?ref ?ptype LIMIT {limit} OFFSET {offset}"
+
+
+def scope_count_query() -> str:
+    """The number of rows of the scope query (all pages): a paged answer with fewer rows is incomplete."""
+    return PREFIXES + f"SELECT (COUNT(*) AS ?n) WHERE {{ {_scope_select()} }}"
 
 
 def celex_lookup_query(celexes: Iterable[str]) -> str:
@@ -866,13 +875,17 @@ def run_batched(
     *,
     batch: int = BATCH,
     workers: int = WORKERS,
+    deadline: float | None = None,
 ) -> tuple[list[dict[str, str]], set[str]]:
-    """Run build(chunk) for chunks of works; split a failing chunk in halves down to single works.
+    """Run build(chunk) for chunks of works; split a failing chunk in halves down to single works. No query
+    is started after `deadline` (monotonic; the source's time budget): its works count as not fetched.
 
     Returns (all rows, works that could not be fetched even alone).
     """
 
     def run(chunk: list[str]) -> tuple[list[dict[str, str]], set[str]]:
+        if past(deadline):
+            return [], set(chunk)
         try:
             return http.sparql(build(chunk)), set()
         except (HttpError, ValueError, KeyError) as e:
@@ -897,19 +910,27 @@ def run_batched(
     return rows, failed
 
 
-def discover_scope(http: SparqlClient, page: int = SCOPE_PAGE) -> dict[str, str]:
-    """work IRI -> CELEX for all in-scope acts (paged, deterministic order)."""
+def discover_scope(http: SparqlClient, page: int = SCOPE_PAGE) -> tuple[dict[str, str], str | None]:
+    """work IRI -> CELEX for all in-scope acts (paged, deterministic order), and why the answer may be
+    incomplete: the pages end at the first short one, which a truncated answer (Virtuoso can return a partial
+    result with HTTP 200) also is, so their rows are checked against Cellar's count of the same query."""
     out: dict[str, str] = {}
-    offset = 0
+    offset = rows_seen = 0
     while True:
         rows = http.sparql(scope_query(offset, page))
+        rows_seen += len(rows)
         for r in rows:
             ref = format_procedure_ref(r["ref"], r.get("ptype"))
             if ref and ref[-4:-1] in PROCEDURE_TYPES and BASE_CELEX_RE.match(r["celex"]):
                 out.setdefault(r["w"], r["celex"])
         if len(rows) < page:
-            return out
+            break
         offset += page
+    try:
+        counted = int(http.sparql(scope_count_query())[0]["n"])
+    except Exception as e:  # noqa: BLE001 - an unchecked answer is treated as possibly incomplete
+        return out, f"not checked: the count query failed ({e})"[:200]
+    return out, None if rows_seen >= counted else f"{rows_seen} rows against {counted} counted by Cellar"
 
 
 def read_featured_celex(path: Path = FEATURED_FILE) -> list[str]:
@@ -1013,12 +1034,14 @@ def resolve_celex(http: SparqlClient, celexes: list[str]) -> dict[str, str]:
     return out
 
 
-def collect(http: SparqlClient, works: list[str], retrieved_at: str) -> tuple[list[LegalAct], set[str]]:
+def collect(
+    http: SparqlClient, works: list[str], retrieved_at: str, deadline: float | None = None
+) -> tuple[list[LegalAct], set[str]]:
     """Fetch all facts for the works and build acts. Returns (acts, works dropped)."""
     facts: dict[str, Facts] = defaultdict(Facts)
     failed: set[str] = set()
     for name, build, add in QUERIES:
-        rows, bad = run_batched(http, build, works)
+        rows, bad = run_batched(http, build, works, deadline=deadline)
         add(facts, rows)
         failed |= bad
         log.info("eurlex: %s: %d rows%s", name, len(rows), f", {len(bad)} works failed" if bad else "")
@@ -1038,14 +1061,20 @@ def collect(http: SparqlClient, works: list[str], retrieved_at: str) -> tuple[li
 
 
 def fetch(http: Any) -> SourceStatus:
+    """Writes acts.json and procedure_notices.json, and in _state.json `unsettled`: the acts kept from the
+    previous snapshot and the procedures whose notices were not refreshed (or lost one) in this run, for change
+    detection (pipeline/analysis/activity.py)."""
     attempted = now_iso()
-    scope = discover_scope(http)
+    deadline = fetch_deadline()
+    scope, scope_gap = discover_scope(http)
     log.info(
         "eurlex: %d in-scope acts (%s procedures, document date >= %s)",
         len(scope),
         "/".join(PROCEDURE_TYPES),
         MIN_DOCUMENT_DATE,
     )
+    if scope_gap:
+        log.warning("eurlex: the scope answer may be incomplete (%s)", scope_gap)
     featured = read_featured_celex()
     featured_works = resolve_celex(http, featured) if featured else {}
     missing_featured = sorted(set(featured) - set(featured_works))
@@ -1061,7 +1090,7 @@ def fetch(http: Any) -> SourceStatus:
     if not works:
         raise RuntimeError("eurlex: scope query returned no acts")
 
-    acts, dropped = collect(http, works, attempted)
+    acts, dropped = collect(http, works, attempted, deadline)
     if not acts:
         raise RuntimeError("eurlex: no acts could be built")
     if len(dropped) > MAX_FAILED_SHARE * len(works):
@@ -1074,17 +1103,50 @@ def fetch(http: Any) -> SourceStatus:
     have = {a.celex for a in acts}
     kept = [previous[c] for w in sorted(dropped) if (c := celex_of.get(w)) in previous and c not in have]
     acts += kept
+    # So does a stored act that this run's answers left out: missing from a scope answer that may be incomplete
+    # (see discover_scope), or a featured / OEIL-recorded CELEX that Cellar did not resolve this time. Only a
+    # complete scope answer without it removes it.
+    have |= {a.celex for a in kept}
+    unresolved = set(missing_featured) | (set(linked) - set(linked_works))
+    carried = [a for c, a in sorted(previous.items()) if c not in have and (scope_gap or c in unresolved)]
+    acts += carried
     if previous and len(acts) < (1 - MAX_FAILED_SHARE) * len(previous):
         raise RuntimeError(f"eurlex: {len(acts)} acts against {len(previous)} in the snapshot; not overwriting")
 
     write_records(SOURCE_ID, "acts", acts, key=lambda a: a.celex)  # type: ignore[attr-defined]
-    try:  # withdrawals / replacements recorded on procedures; on failure the previous file is kept
+    # Withdrawals / replacements recorded on procedures (some dossiers are "withdrawn" or "replaced" on these
+    # notices alone). As for the acts, the stored file is kept when the answer fails, is empty or much smaller.
+    stored_notices = read_records(SOURCE_ID, "procedure_notices", ProcedureNotice)
+    notices: list[ProcedureNotice] | None = None
+    try:
+        if past(deadline):
+            raise RuntimeError("time budget reached")
         notices = build_notices(http.sparql(procedure_notices_query()), attempted)
-        write_records(SOURCE_ID, "procedure_notices", notices, key=lambda n: (n.reference, n.date, n.kind))
-        notices_note = f"{len(notices)} withdrawal/replacement notices on procedures"
     except Exception as e:  # noqa: BLE001 - optional data: never fail the acts
         log.warning("eurlex: procedure notices not fetched: %r", e)
-        notices_note = "procedure notices not refreshed (fetch failed)"
+        notices_note = "procedure notices not refreshed (fetch failed; previous file kept)"
+    if notices is not None and stored_notices and len(notices) < (1 - MAX_FAILED_SHARE) * len(stored_notices):
+        log.warning("eurlex: %d procedure notices against %d stored; not overwriting", len(notices),
+                    len(stored_notices))  # fmt: skip
+        notices_note = (
+            f"procedure notices not refreshed: the answer had {len(notices)} against {len(stored_notices)} in the "
+            "snapshot (previous file kept)"
+        )
+        notices = None
+    if notices is not None:
+        write_records(SOURCE_ID, "procedure_notices", notices, key=lambda n: (n.reference, n.date, n.kind))
+        notices_note = f"{len(notices)} withdrawal/replacement notices on procedures"
+        new_ids = {n.id for n in notices}
+        unsettled_refs = sorted({n.reference for n in stored_notices if n.id not in new_ids})
+        if unsettled_refs:
+            notices_note += f" ({len(unsettled_refs)} procedures lost one: {', '.join(unsettled_refs[:10])})"
+    else:
+        unsettled_refs = sorted({n.reference for n in stored_notices})
+    write_state(SOURCE_ID, {"unsettled": {
+        "attempted_at": attempted,
+        "acts": sorted(a.celex for a in kept + carried),
+        "procedures": unsettled_refs,
+    }})  # fmt: skip
     with_proc = sum(1 for a in acts if a.procedure_refs)
     notes = [
         f"{len(scope)} acts in scope ({'/'.join(PROCEDURE_TYPES)} procedures, date >= {MIN_DOCUMENT_DATE})",
@@ -1093,13 +1155,20 @@ def fetch(http: Any) -> SourceStatus:
         f"{with_proc} with procedure reference",
         notices_note,
     ]
+    if scope_gap:
+        notes.append(f"scope answer possibly incomplete ({scope_gap})")
     if dropped:
-        notes.append(f"{len(dropped)} not fetched or built this run ({len(kept)} kept from the previous snapshot)")
+        notes.append(f"{len(dropped)} not fetched or built this run ({len(kept)} kept from the previous snapshot)"
+                     + (" (time budget reached)" if past(deadline) else ""))  # fmt: skip
+    if carried:
+        shown = ", ".join(a.celex for a in carried[:10]) + (" …" if len(carried) > 10 else "")
+        notes.append(f"{len(carried)} stored acts missing from this run's answers kept from the previous snapshot: "
+                     f"{shown}")  # fmt: skip
     if missing_featured:
         notes.append(f"featured not found: {', '.join(missing_featured)}")
     return SourceStatus(
         source=SOURCE_ID,
-        status="partial" if dropped or missing_featured else "ok",
+        status="partial" if dropped or missing_featured or carried or notices is None else "ok",
         fetched_at=now_iso(),
         attempted_at=attempted,
         records={"acts": len(acts)},
