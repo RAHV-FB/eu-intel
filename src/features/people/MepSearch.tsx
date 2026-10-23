@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { GroupSummary, MepSummary } from '../../types/data';
 import { countryName, formatNumber } from '../../lib/format';
+import { shownParam } from '../../lib/urlState';
 import { EmptyState } from '../../components/ui';
 import { CollapsibleFilters } from '../../components/CollapsibleFilters';
 import { SortTh, useSortable } from '../votes/sortable';
@@ -13,7 +14,8 @@ type Key = 'name' | 'country' | 'group' | 'party';
 
 export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<string, GroupSummary> }) {
   const [params, setParams] = useSearchParams();
-  const [shown, setShown] = useState(PAGE);
+  // rows shown: kept in the address like the filters, so that Back from an MEP returns to the same list
+  const shown = shownParam(params, 'show', PAGE);
   const q = params.get('q') ?? '';
   const country = params.get('country') ?? '';
   const group = params.get('group') ?? '';
@@ -25,10 +27,14 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
     const next = new URLSearchParams(params);
     if (value && value !== dflt) next.set(key, value);
     else next.delete(key);
+    next.delete('show'); // a new filter starts from the first page
     setParams(next, { replace: true });
   };
-  const filterKey = params.toString();
-  useEffect(() => setShown(PAGE), [filterKey]);
+  const setShown = (n: number) => {
+    const next = new URLSearchParams(params);
+    next.set('show', String(n));
+    setParams(next, { replace: true, preventScrollReset: true });
+  };
 
   const opts = useMemo(() => {
     const countries = [...new Set(meps.map((m) => m.country))].sort((a, b) => countryName(a).localeCompare(countryName(b)));
@@ -65,6 +71,8 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
       party: (m) => m.party_label ?? null,
     },
     { key: 'name', dir: 'asc' },
+    {},
+    'sort',
   );
 
   const anyFilter = [q, country, group, party, term].some(Boolean) || status !== 'current';
@@ -210,7 +218,7 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
           </div>
           {sorted.length > shown && (
             <div className="more">
-              <button type="button" className="btn" onClick={() => setShown((n) => n + PAGE)}>
+              <button type="button" className="btn" onClick={() => setShown(shown + PAGE)}>
                 Show {formatNumber(Math.min(PAGE, sorted.length - shown))} more
               </button>
               <span className="meta">

@@ -144,7 +144,8 @@ def parse_mep(p: dict, active: bool, list_terms: set[int], retrieved_at: str) ->
         photo_url=None,  # portraits are not hotlinked (privacy); see report / DATA_SOURCES.md
         source=SourceRef(
             institution="EP",
-            url=url,
+            # the record the memberships come from (official_url is the profile page on the EP website)
+            url=f"{EP_API}/meps/{p['identifier']}?format=application%2Fld%2Bjson",
             label=f"EP Open Data API – MEP {p['identifier']}",
             identifier=p["identifier"],
             retrieved_at=retrieved_at,

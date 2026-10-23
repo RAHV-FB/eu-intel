@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Loading, NotFound } from './components/ui';
+import { useDocumentTitle } from './features/legislation/labels';
 
 /**
  * Routes. Pages are lazy-loaded so the homepage stays small.
@@ -30,6 +31,12 @@ function TopicRedirect() {
   return <Navigate to={`/legislation?topic=${encodeURIComponent(slug ?? '')}`} replace />;
 }
 
+/** Any other address. (Entity pages title their own not-found state: their title effect runs after NotFound's.) */
+function PageNotFound() {
+  useDocumentTitle('Page not found');
+  return <NotFound />;
+}
+
 export function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
@@ -53,7 +60,7 @@ export function App() {
             <Route path="how-the-eu-works" element={<HowEuWorks />} />
             <Route path="about" element={<About />} />
             <Route path="privacy" element={<Privacy />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="*" element={<PageNotFound />} />
           </Route>
         </Routes>
       </Suspense>

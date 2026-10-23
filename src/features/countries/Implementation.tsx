@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CountryDetail, InfringementInfo, TranspositionStatus } from '../../types/data';
 import { formatDate, formatNumber } from '../../lib/format';
+import { shownParam, useParamState } from '../../lib/urlState';
+import { dossierScores, loadSearch, type SearchEngine } from '../../lib/search';
 import { EmptyState, ExtLink, Term } from '../../components/ui';
 import { EURLEX_CELEX, TRANSPOSITION_LABEL, dossierPath } from '../legislation/labels';
 import { SortTh, useSortable } from '../votes/sortable';
+import { matchDirectives, queryNumber } from './directiveSearch';
 import './countries.css';
 
 const T_ORDER: TranspositionStatus[] = [
@@ -32,19 +35,29 @@ type TRow = CountryDetail['transposition'][number];
 const PAGE = 25;
 
 export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countryName: string }) {
-  const [status, setStatus] = useState('');
-  const [q, setQ] = useState('');
-  const [shown, setShown] = useState(PAGE);
+  // filters, order and rows shown are kept in the address (tr-…), so that Back from a file returns to the same list
+  const [params, patch] = useParamState();
+  const status = params.get('tr-status') ?? '';
+  const q = params.get('tr-q') ?? '';
+  const shown = shownParam(params, 'tr-show', PAGE);
   const counts = useMemo(() => {
     const m = new Map<TranspositionStatus, number>();
     for (const r of rows) m.set(r.status, (m.get(r.status) ?? 0) + 1);
     return m;
   }, [rows]);
-  const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return rows.filter((r) => (!status || r.status === status) && (!needle || `${r.title} ${r.celex}`.toLowerCase().includes(needle)));
-  }, [rows, status, q]);
-  const { sorted, sort, toggle } = useSortable<TRow, 'title' | 'deadline' | 'measures' | 'status'>(
+  // files the site search finds for the query (common names, aliases); the index is loaded once there is a query
+  const [engine, setEngine] = useState<SearchEngine | null>(null);
+  const hasQuery = !!q.trim();
+  useEffect(() => {
+    if (hasQuery && !engine) loadSearch().then(setEngine, () => undefined);
+  }, [hasQuery, engine]);
+  const files = useMemo(
+    () => (engine && hasQuery ? new Set(dossierScores(engine, q, queryNumber(q) ? { identifiers: true } : { wholeWords: true }).keys()) : null),
+    [engine, hasQuery, q],
+  );
+  const match = useMemo(() => matchDirectives(status ? rows.filter((r) => r.status === status) : rows, q, files), [rows, status, q, files]);
+  const filtered = match.rows;
+  const { sorted: bySort, sort, toggle } = useSortable<TRow, 'title' | 'deadline' | 'measures' | 'status'>(
     filtered,
     {
       title: (r) => r.title,
@@ -54,7 +67,10 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
     },
     { key: 'deadline', dir: 'desc' },
     { deadline: 'desc', measures: 'desc' },
+    'tr-sort',
   );
+  // the directive whose own number was searched for comes first, before acts whose titles only cite it
+  const sorted = match.own.size ? [...bySort.filter((r) => match.own.has(r.celex)), ...bySort.filter((r) => !match.own.has(r.celex))] : bySort;
 
   if (rows.length === 0)
     return <EmptyState title="No directives with transposition data for this country in this release" />;
@@ -72,11 +88,11 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
       <form className="filters" aria-label="Filter directives" onSubmit={(e) => e.preventDefault()}>
         <div className="field">
           <label htmlFor="tr-q">Search directives</label>
-          <input id="tr-q" type="search" className="input" value={q} onChange={(e) => (setQ(e.target.value), setShown(PAGE))} />
+          <input id="tr-q" type="search" className="input" value={q} onChange={(e) => patch({ 'tr-q': e.target.value, 'tr-show': null })} />
         </div>
         <div className="field">
           <label htmlFor="tr-status">Status in the dataset</label>
-          <select id="tr-status" className="select" value={status} onChange={(e) => (setStatus(e.target.value), setShown(PAGE))}>
+          <select id="tr-status" className="select" value={status} onChange={(e) => patch({ 'tr-status': e.target.value, 'tr-show': null })}>
             <option value="">All ({formatNumber(rows.length)})</option>
             {T_ORDER.filter((s) => counts.get(s)).map((s) => (
               <option key={s} value={s}>
@@ -89,6 +105,12 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
       <p className="results-bar__count" aria-live="polite" style={{ marginBottom: 'var(--sp-2)' }}>
         {formatNumber(filtered.length)} {filtered.length === 1 ? 'directive' : 'directives'}
       </p>
+      {filtered.length === 0 && hasQuery && (
+        <p className="meta">
+          No directive in this list matches “{q.trim()}”. The list covers the directives adopted in the legislative files on this site.{' '}
+          <Link to={`/search?q=${encodeURIComponent(q.trim())}`}>Search the whole site</Link>
+        </p>
+      )}
       {filtered.length > 0 && (
         <div className="table-wrap table-card">
           <table className="table">
@@ -117,10 +139,21 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                   <td className="impl-dir">
                     {r.dossier_id ? <Link to={dossierPath(r.dossier_id)}>{r.title}</Link> : r.title}
                     <span className="meta" style={{ display: 'block' }}>
+                      {/* the link first, where it was: a link centred under the title's would be too close a target */}
                       <ExtLink href={EURLEX_CELEX(r.celex)}>
                         <span className="mono">{r.celex}</span>
                       </ExtLink>
+                      {r.act && (
+                        <>
+                          {' '}
+                          · {r.act}
+                          {r.names?.length ? ` (${r.names.join(', ')})` : ''}
+                        </>
+                      )}
                     </span>
+                    {match.citing.has(r.celex) && match.number && (
+                      <span className="meta impl-dir__cites">Listed because its title cites {match.number}; it is not that directive.</span>
+                    )}
                     {/* phones: the deadline and status columns are hidden and shown here */}
                     <span className="only-narrow impl-dir__more">
                       <TranspositionStatusLabel status={r.status} />
@@ -153,7 +186,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
       )}
       {sorted.length > shown && (
         <div className="more">
-          <button type="button" className="btn" onClick={() => setShown((n) => n + PAGE * 2)}>
+          <button type="button" className="btn" onClick={() => patch({ 'tr-show': String(shown + PAGE * 2) })}>
             Show more directives
           </button>
           <span className="meta">
@@ -168,10 +201,13 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
 const STATUS_LABEL: Record<InfringementInfo['status'], string> = { open: 'Open', closed: 'Closed', unknown: 'Status not recorded' };
 
 export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
-  const [status, setStatus] = useState('open');
-  const [q, setQ] = useState('');
-  const [nonComm, setNonComm] = useState(false);
-  const [shown, setShown] = useState(PAGE);
+  // kept in the address (inf-…) like the directives' filters; open cases are the default, "all" is inf-status=all
+  const [params, patch] = useParamState();
+  const rawStatus = params.get('inf-status') ?? 'open';
+  const status = rawStatus === 'all' ? '' : rawStatus;
+  const q = params.get('inf-q') ?? '';
+  const nonComm = params.get('inf-nc') === '1';
+  const shown = shownParam(params, 'inf-show', PAGE);
   const counts = useMemo(() => {
     const m = { open: 0, closed: 0, unknown: 0 } as Record<InfringementInfo['status'], number>;
     for (const r of rows) m[r.status] = (m[r.status] ?? 0) + 1;
@@ -192,6 +228,7 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
     { id: (r) => r.id, date: (r) => r.latest_decision_date ?? null, stage: (r) => r.latest_stage ?? null },
     { key: 'date', dir: 'desc' },
     { date: 'desc' },
+    'inf-sort',
   );
 
   if (rows.length === 0) return <EmptyState title="No infringement cases for this country in the available dataset" />;
@@ -201,11 +238,16 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
       <form className="filters" aria-label="Filter infringement cases" onSubmit={(e) => e.preventDefault()}>
         <div className="field">
           <label htmlFor="inf-q">Search cases</label>
-          <input id="inf-q" type="search" className="input" value={q} onChange={(e) => (setQ(e.target.value), setShown(PAGE))} />
+          <input id="inf-q" type="search" className="input" value={q} onChange={(e) => patch({ 'inf-q': e.target.value, 'inf-show': null })} />
         </div>
         <div className="field">
           <label htmlFor="inf-status">Case status</label>
-          <select id="inf-status" className="select" value={status} onChange={(e) => (setStatus(e.target.value), setShown(PAGE))}>
+          <select
+            id="inf-status"
+            className="select"
+            value={status}
+            onChange={(e) => patch({ 'inf-status': e.target.value === 'open' ? null : e.target.value || 'all', 'inf-show': null })}
+          >
             <option value="open">Open ({formatNumber(counts.open)})</option>
             <option value="closed">Closed ({formatNumber(counts.closed)})</option>
             {counts.unknown > 0 && <option value="unknown">Status not recorded ({formatNumber(counts.unknown)})</option>}
@@ -214,7 +256,7 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
         </div>
         {hasNonComm && (
           <div className="field field--check">
-            <input id="inf-nc" type="checkbox" checked={nonComm} onChange={(e) => (setNonComm(e.target.checked), setShown(PAGE))} />
+            <input id="inf-nc" type="checkbox" checked={nonComm} onChange={(e) => patch({ 'inf-nc': e.target.checked ? '1' : null, 'inf-show': null })} />
             <label htmlFor="inf-nc">Only cases about not notifying transposition measures</label>
           </div>
         )}
@@ -270,7 +312,7 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
       )}
       {sorted.length > shown && (
         <div className="more">
-          <button type="button" className="btn" onClick={() => setShown((n) => n + PAGE * 2)}>
+          <button type="button" className="btn" onClick={() => patch({ 'inf-show': String(shown + PAGE * 2) })}>
             Show more cases
           </button>
           <span className="meta">

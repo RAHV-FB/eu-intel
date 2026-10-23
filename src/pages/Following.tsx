@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { DossierDetail } from '../types/data';
 import { loadData } from '../lib/data';
@@ -45,6 +45,9 @@ function useDossiers(ids: string[]): Record<string, Loaded> {
   return map;
 }
 
+/** The element that receives focus for an item (its title), after an action removed the control that had it. */
+const itemTitle = (id: string) => document.querySelector<HTMLElement>(`[data-follow-title="${CSS.escape(id)}"]`);
+
 function Item({
   id,
   loaded,
@@ -52,6 +55,8 @@ function Item({
   shared,
   followingIds,
   today,
+  onRemove,
+  onSeen,
   onSaved,
 }: {
   id: string;
@@ -60,6 +65,8 @@ function Item({
   shared: boolean;
   followingIds: Set<string>;
   today: string;
+  onRemove: (id: string, title: string) => void;
+  onSeen: (d: DossierDetail) => void;
   onSaved: (ok: boolean) => void;
 }) {
   if (!loaded)
@@ -73,7 +80,9 @@ function Item({
       <li className="following__item">
         <div>
           <p className="following__title">
-            <span className="mono">{id}</span>
+            <span className="mono" tabIndex={-1} data-follow-title={id}>
+              {id}
+            </span>
           </p>
           <p className="following__latest">
             {loaded.state === 'missing'
@@ -83,7 +92,7 @@ function Item({
         </div>
         {!shared && followingIds.has(id) && (
           <div className="following__item-actions">
-            <button type="button" className="btn lx-btn-quiet" onClick={() => onSaved(unfollow(id))}>
+            <button type="button" className="btn lx-btn-quiet" onClick={() => onRemove(id, id)} aria-label={`Remove ${id}`}>
               Remove
             </button>
           </div>
@@ -100,7 +109,9 @@ function Item({
     <li className="following__item">
       <div>
         <h3 className="following__title">
-          <Link to={dossierPath(d.id)}>{d.title}</Link>
+          <Link to={dossierPath(d.id)} data-follow-title={d.id}>
+            {d.title}
+          </Link>
         </h3>
         <div className="following__status">
           <StatusBadge stage={d.stage} label={d.status_label} blocked={d.officially_blocked} />
@@ -131,12 +142,12 @@ function Item({
       </div>
       <div className="following__item-actions">
         {!shared && change?.changed && (
-          <button type="button" className="btn" onClick={() => markSeen(d)}>
+          <button type="button" className="btn" onClick={() => onSeen(d)}>
             Mark as seen
           </button>
         )}
         {isFollowed ? (
-          <button type="button" className="btn lx-btn-quiet" onClick={() => onSaved(unfollow(d.id))} aria-label={`Unfollow ${d.title}`}>
+          <button type="button" className="btn lx-btn-quiet" onClick={() => onRemove(d.id, d.title)} aria-label={`Unfollow ${d.title}`}>
             Unfollow
           </button>
         ) : (
@@ -170,6 +181,27 @@ export default function Following() {
   const shareId = useId();
   const link = shareUrl(ids);
 
+  // Actions that remove the control that has keyboard focus (Unfollow, Clear all, Mark as seen…) move focus to
+  // the next sensible place once the page has re-rendered, and a status message says what happened.
+  const [announcement, setAnnouncement] = useState('');
+  const focusNext = useRef<(() => HTMLElement | null) | null>(null);
+  const [focusTick, setFocusTick] = useState(0);
+  const afterRender = (target: () => HTMLElement | null, message?: string) => {
+    focusNext.current = target;
+    setFocusTick((t) => t + 1);
+    if (message) setAnnouncement(message);
+  };
+  useEffect(() => {
+    const target = focusNext.current;
+    focusNext.current = null;
+    target?.()?.focus();
+  }, [focusTick]);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const emptyRef = useRef<HTMLDivElement>(null);
+  const clearRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const ownListRef = useRef<HTMLAnchorElement>(null);
+
   const entries = new Map(watch.map((w) => [w.id, w]));
   const changedIds = shared
     ? []
@@ -180,6 +212,17 @@ export default function Following() {
   // Changed first; otherwise keep the stored order (most recently followed first).
   const ordered = shared ? ids : [...changedIds, ...ids.filter((id) => !changedIds.includes(id))];
   const notYetFollowed = sharedIds.filter((id) => !followingIds.has(id) && loaded[id]?.state === 'ok');
+
+  const remove = (id: string, title: string) => {
+    const i = ordered.indexOf(id);
+    const next = ordered[i + 1] ?? ordered[i - 1];
+    onSaved(unfollow(id));
+    afterRender(() => (next ? itemTitle(next) : emptyRef.current ?? headingRef.current), `Removed ${title} from the list.`);
+  };
+  const seen = (d: DossierDetail) => {
+    markSeen(d);
+    afterRender(() => itemTitle(d.id), `Marked ${d.title} as seen.`);
+  };
 
   const copy = async () => {
     try {
@@ -205,10 +248,10 @@ export default function Following() {
 
       <div className="following__privacy" id="about-storage">
         <p>
-          <strong>What is stored, and where.</strong> When you click “Follow”, this site saves the identifier of that file
-          (for example <span className="mono">2021-0106</span>) and the status you last saw — nothing else — in this
-          browser’s local storage. It is never sent to us or anyone else: this site has no server, accounts, cookies or
-          analytics.
+          <strong>What is stored, and where.</strong> When you click “Follow”, this site saves in this browser’s local storage
+          the identifier of each file you follow (for example <span className="mono">2021-0106</span>), when you followed it
+          and when you last viewed it, and the status you last saw. It is never sent to us or anyone else: this site has no
+          server, accounts, cookies or analytics. See the <Link to="/privacy">privacy notice</Link>.
         </p>
         <p>
           <strong>No notifications.</strong> Come back to this page to see what changed. Clearing your browser data, or “Clear
@@ -220,6 +263,10 @@ export default function Following() {
           </p>
         )}
       </div>
+      {/* stays mounted when the list empties, so that the result of the last action is still announced */}
+      <p className="visually-hidden" role="status" aria-live="polite">
+        {announcement}
+      </p>
 
       {shared && (
         <div className="following__shared-note" style={{ marginTop: 'var(--sp-5)' }}>
@@ -236,12 +283,13 @@ export default function Following() {
                 onClick={() => {
                   const ds = notYetFollowed.map((id) => loaded[id]).flatMap((l) => (l?.state === 'ok' ? [l.d] : []));
                   onSaved(followMany(ds));
+                  afterRender(() => ownListRef.current, `Now following ${plural(ds.length)} in this browser.`);
                 }}
               >
                 {notYetFollowed.length === 1 ? 'Follow this file' : `Follow these ${notYetFollowed.length} files`} in this browser
               </button>
             )}
-            <Link to="/following" className="btn">
+            <Link to="/following" className="btn" ref={ownListRef}>
               View my own list{watch.length ? ` (${watch.length})` : ''}
             </Link>
           </div>
@@ -250,7 +298,7 @@ export default function Following() {
 
       {ids.length === 0 ? (
         !shared && (
-          <div style={{ marginTop: 'var(--sp-6)' }}>
+          <div style={{ marginTop: 'var(--sp-6)' }} ref={emptyRef} tabIndex={-1}>
             <EmptyState title="You are not following any legislation yet">
               <p>
                 Open any file and choose <strong>Follow this legislation</strong>. Start from the{' '}
@@ -262,7 +310,7 @@ export default function Following() {
       ) : (
         <>
           <div className="following__bar">
-            <h2>
+            <h2 ref={headingRef} tabIndex={-1}>
               {plural(ids.length)}
               {changedIds.length > 0 && <span className="meta"> · {formatNumber(changedIds.length)} changed since you last looked</span>}
             </h2>
@@ -272,12 +320,13 @@ export default function Following() {
                   <button
                     type="button"
                     className="btn"
-                    onClick={() =>
+                    onClick={() => {
                       changedIds.forEach((id) => {
                         const l = loaded[id];
                         if (l?.state === 'ok') markSeen(l.d);
-                      })
-                    }
+                      });
+                      afterRender(() => headingRef.current, `Marked ${plural(changedIds.length)} as seen.`);
+                    }}
                   >
                     Mark all as seen
                   </button>
@@ -288,18 +337,36 @@ export default function Following() {
                       type="button"
                       className="btn lx-btn-danger"
                       onClick={() => {
-                        clearWatchlist();
+                        const n = ids.length;
+                        onSaved(clearWatchlist());
                         setConfirmClear(false);
+                        afterRender(() => emptyRef.current, `Removed all ${plural(n)} from the list.`);
                       }}
                     >
                       Yes, remove all {ids.length}
                     </button>
-                    <button type="button" className="btn lx-btn-quiet" onClick={() => setConfirmClear(false)}>
+                    <button
+                      type="button"
+                      className="btn lx-btn-quiet"
+                      ref={cancelRef}
+                      onClick={() => {
+                        setConfirmClear(false);
+                        afterRender(() => clearRef.current);
+                      }}
+                    >
                       Cancel
                     </button>
                   </>
                 ) : (
-                  <button type="button" className="btn lx-btn-danger" onClick={() => setConfirmClear(true)}>
+                  <button
+                    type="button"
+                    className="btn lx-btn-danger"
+                    ref={clearRef}
+                    onClick={() => {
+                      setConfirmClear(true);
+                      afterRender(() => cancelRef.current); // the safe choice
+                    }}
+                  >
                     Clear all
                   </button>
                 )}
@@ -319,6 +386,8 @@ export default function Following() {
                 shared={shared}
                 followingIds={followingIds}
                 today={today}
+                onRemove={remove}
+                onSeen={seen}
                 onSaved={onSaved}
               />
             ))}

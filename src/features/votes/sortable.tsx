@@ -3,6 +3,7 @@
  * Used by votes, people and countries features.
  */
 import { useMemo, useState, type ReactNode } from 'react';
+import { useParamState } from '../../lib/urlState';
 import './common.css';
 
 export type SortDir = 'asc' | 'desc';
@@ -30,16 +31,29 @@ export function useSortable<T, K extends string>(
   initial: SortState<K>,
   /** default direction when a column is first selected */
   firstDir: Partial<Record<K, SortDir>> = {},
+  /** keep the order in this query parameter ("name-desc"), so that Back returns to it; left out when it is `initial` */
+  urlKey?: string,
 ) {
-  const [sort, setSort] = useState<SortState<K>>(initial);
+  const [local, setLocal] = useState<SortState<K>>(initial);
+  const [params, patch] = useParamState();
+  const fromUrl = urlKey ? /^(.+)-(asc|desc)$/.exec(params.get(urlKey) ?? '') : null;
+  const sort: SortState<K> = !urlKey
+    ? local
+    : fromUrl && Object.prototype.hasOwnProperty.call(accessors, fromUrl[1])
+      ? { key: fromUrl[1] as K, dir: fromUrl[2] as SortDir }
+      : initial;
+  const setSort = (s: SortState<K>) => {
+    if (!urlKey) return setLocal(s);
+    patch({ [urlKey]: s.key === initial.key && s.dir === initial.dir ? null : `${s.key}-${s.dir}` });
+  };
   const sorted = useMemo(() => {
     const acc = accessors[sort.key];
     return [...rows].sort((a, b) => compareValues(acc(a), acc(b), sort.dir));
     // accessors are expected to be stable in meaning for a given key
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, sort]);
+  }, [rows, sort.key, sort.dir]);
   const toggle = (key: K) =>
-    setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: firstDir[key] ?? 'asc' }));
+    setSort(sort.key === key ? { key, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: firstDir[key] ?? 'asc' });
   return { sorted, sort, toggle, setSort };
 }
 

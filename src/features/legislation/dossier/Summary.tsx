@@ -5,13 +5,21 @@ import { asOfToday, formatDate } from '../../../lib/format';
 import { ADOPTED_STAGES, dossierPath, institutionSuffix } from '../labels';
 import { SplitLinks, splitParts } from './Split';
 
-/** Most recent recorded (done) event on or before today; not a date an act records for after its validity ended. */
+/**
+ * Most recent recorded (done) event on or before today; not a date an act records for after its validity ended.
+ * Of several steps on that day, the key one (the milestone "Where is it now?" names), else the last listed: the
+ * sources give no order within a day, so a document tabled that day is not shown as following the decision.
+ */
 export function latestDone(timeline: TimelineEvent[], today: ISODate): TimelineEvent | null {
+  let latest: TimelineEvent | null = null;
   for (let i = timeline.length - 1; i >= 0; i--) {
     const e = timeline[i];
-    if (e.state === 'done' && e.date <= today && !e.after_end_of_validity) return e;
+    if (e.state !== 'done' || e.date > today || e.after_end_of_validity) continue;
+    if (latest && e.date !== latest.date) break;
+    if (!latest) latest = e;
+    if (e.key) return e;
   }
-  return null;
+  return latest;
 }
 
 /** A status explanation with the acts it names (e.g. the repealing act) linked: to their file here, else EUR-Lex. */
@@ -203,7 +211,7 @@ export function NextStep({ d, today }: { d: DossierDetail; today: ISODate }) {
   return (
     <>
       <p className="dz-fact__text">
-        {asOfToday(ns.text, today)} <BasisNote basis={ns.basis} />
+        <ExplanationText text={asOfToday(ns.text, today)} acts={d.status.named_acts} /> <BasisNote basis={ns.basis} />
       </p>
       {ns.institution && <p className="meta">{institutionLabel(ns.institution)}</p>}
     </>
@@ -234,10 +242,20 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
           <h3 className="dz-label">What is it?</h3>
           {ed?.what ? (
             <p className="dz-what__text">{ed.what}</p>
-          ) : (
+          ) : d.official_title ? (
             <>
               <p className="dz-nocurated">We have not written a plain-language summary for this file yet. Its official title is:</p>
               <p className="dz-what__official">{d.official_title}</p>
+            </>
+          ) : (
+            <>
+              <p className="dz-nocurated">We have not written a plain-language summary for this file yet.</p>
+              {splitParts(d).length > 0 && (
+                <p className="dz-what__text">
+                  This is the file the proposal {d.ref} was split from. It was split into separate procedures, each with its own page:{' '}
+                  <SplitLinks parts={splitParts(d)} />.
+                </p>
+              )}
             </>
           )}
         </div>

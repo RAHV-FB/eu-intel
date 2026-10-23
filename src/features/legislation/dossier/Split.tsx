@@ -7,14 +7,27 @@ export function splitParts(d: DossierDetail) {
   return d.related.filter((r) => r.relation === 'Split into');
 }
 
-/** "<title A> and <title B>", each linked to its file (long titles shortened). */
+const shorten = (t: string) => (t.length > 80 ? `${t.slice(0, 78).replace(/\s+\S*$/, '')}…` : t);
+
+/**
+ * "<ref A> – <title A> (status) and <ref B> – <title B> (status)", each linked to its file. The parts' titles can
+ * be the same but for their last words ("… - part I", "… - part II"), so each link leads with its reference.
+ */
 export function SplitLinks({ parts }: { parts: DossierDetail['related'] }) {
   return (
     <>
       {parts.map((r, i) => (
         <span key={r.id}>
           {i > 0 && (i === parts.length - 1 ? ' and ' : ', ')}
-          <Link to={dossierPath(r.id)}>{r.title.length > 80 ? `${r.title.slice(0, 78).replace(/\s+\S*$/, '')}…` : r.title}</Link>
+          <Link to={dossierPath(r.id)}>
+            {r.ref && (
+              <>
+                <span className="mono">{r.ref}</span> –{' '}
+              </>
+            )}
+            {shorten(r.title)}
+          </Link>
+          {r.status_label && <> ({r.status_label})</>}
         </span>
       ))}
     </>

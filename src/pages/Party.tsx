@@ -1,34 +1,78 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { PartyDetail } from '../types/data';
+import type { PartyDetail, PartyRef } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
 import { ErrorState, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
-import { periodText, useGroups } from '../features/people/labels';
+import { periodText, termYears, useGroups } from '../features/people/labels';
 import { SortTh, useSortable } from '../features/votes/sortable';
 import '../features/people/people.css';
 
 type MepRow = PartyDetail['meps'][number];
 
+/** "2 Jul 2019 – 15 Jul 2024", or "from 16 Jul 2024" for a record still open. */
+function recordPeriod(start?: string | null, end?: string | null): string {
+  if (!start) return 'dates not recorded';
+  return end ? `${formatDate(start)} – ${formatDate(end)}` : `from ${formatDate(start)}`;
+}
+
+/** A link to another party record, with the term it covers when it shares this record's name (and its period when
+ * it also shares the term, as Azione's two 2019–2024 records do). */
+function PartyRefLink({ r, withTerm, terms }: { r: PartyRef; withTerm: boolean; terms?: number[] }) {
+  const term = termYears(r.terms);
+  const sameTerm = !!term && term === termYears(terms);
+  return (
+    <>
+      <Link to={`/people/parties/${encodeURIComponent(r.id)}`}>{r.label}</Link>
+      {withTerm && term && (
+        <>
+          {' '}
+          ({term}
+          {sameTerm && `, ${recordPeriod(r.start, r.end)}`})
+        </>
+      )}
+    </>
+  );
+}
+
+/** The MEP's own status: sitting today (in this party record or under another one) or a former MEP. */
+function statusText(r: MepRow): string {
+  return r.active || r.mep_active ? 'Current MEP' : 'Former MEP';
+}
+
 export default function Party() {
   const { id = '' } = useParams();
   const { data: p, error, loading } = useData<PartyDetail>(`people/parties/${encodeURIComponent(id)}.json`);
   const groups = useGroups();
-  useDocumentTitle(p ? `${p.label} (${countryName(p.country)})` : 'National party');
+  useDocumentTitle(p ? `${p.label} (${countryName(p.country)})` : isMissing(error) ? 'National party not found' : 'National party');
 
   const m = useSortable<MepRow, 'name' | 'from' | 'to' | 'status'>(
     p?.meps ?? [],
-    { name: (r) => r.name, from: (r) => r.from ?? null, to: (r) => r.to ?? (r.active ? '9999' : null), status: (r) => (r.active ? 0 : 1) },
+    {
+      name: (r) => r.name,
+      from: (r) => r.from ?? null,
+      to: (r) => r.to ?? (r.active ? '9999' : null),
+      status: (r) => (r.active ? 0 : r.mep_active ? 1 : 2),
+    },
     { key: 'status', dir: 'asc' },
     { from: 'desc', to: 'desc' },
   );
   const history = useMemo(() => [...(p?.group_history ?? [])].sort((a, b) => (b.from ?? '').localeCompare(a.from ?? '')), [p]);
+  const now = useMemo(() => new Map((p?.now_parties ?? []).map((r) => [r.id, r])), [p]);
 
   if (loading) return <div className="container page"><Loading label="Loading party…" /></div>;
   if (isMissing(error)) return <NotFound what="national party" />;
   if (error || !p) return <div className="container page"><ErrorState error={error} title="This party could not be loaded" /></div>;
+
+  const term = termYears(p.terms);
+  const sameName = p.same_name ?? [];
+  const nowParties = p.now_parties ?? [];
+  // a record of an earlier term: Parliament closed it, and its MEPs are no longer recorded in it
+  const closed = !!p.end && p.members_active === 0;
+  const sameLabel = (r: PartyRef) => r.label === p.label;
+  const sittingElsewhere = nowParties.reduce((n, r) => n + (r.meps ?? 0), 0);
 
   return (
     <div className="container page">
@@ -36,7 +80,12 @@ export default function Party() {
         <Link to="/people?view=parties">← National parties</Link>
       </p>
       <PageHeader
-        eyebrow={<>National party · {countryName(p.country)}</>}
+        eyebrow={
+          <>
+            National party · {countryName(p.country)}
+            {term && <> · {term}</>}
+          </>
+        }
         title={p.label}
         lead={
           <>
@@ -47,15 +96,54 @@ export default function Party() {
         }
       />
 
+      {(sameName.length > 0 || closed) && (
+        <div className="callout party-record">
+          <p>
+            Parliament’s membership data records national parties term by term, so the same party can have several records. This
+            record covers {p.start ? <>the period {recordPeriod(p.start, p.end)}</> : 'a period that is not recorded'}
+            {term && <> ({term})</>}
+            {closed ? ', and none of its MEPs is recorded in it today.' : '.'}
+          </p>
+          {sameName.length > 0 && (
+            <p>
+              {sameName.length === 1 ? 'Other record' : 'Other records'} of {p.label} ({countryName(p.country)}):{' '}
+              {sameName.map((r, i) => (
+                <span key={r.id}>
+                  {i > 0 && ', '}
+                  <PartyRefLink r={r} withTerm terms={p.terms} />
+                  {r.start && !r.end && r.members_active > 0 && <> – {formatNumber(r.members_active)} current {r.members_active === 1 ? 'MEP' : 'MEPs'}</>}
+                </span>
+              ))}
+              .
+            </p>
+          )}
+        </div>
+      )}
+
       <dl className="facts card">
-        <div>
-          <dt>Current MEPs</dt>
-          <dd className="big">{formatNumber(p.members_active)}</dd>
-        </div>
-        <div>
-          <dt>MEPs in our dataset</dt>
-          <dd className="big">{formatNumber(p.members_total)}</dd>
-        </div>
+        {closed ? (
+          <>
+            <div>
+              <dt>MEPs in this record</dt>
+              <dd className="big">{formatNumber(p.members_total)}</dd>
+            </div>
+            <div>
+              <dt>Period of this record</dt>
+              <dd>{p.start ? recordPeriod(p.start, p.end) : 'Not recorded'}</dd>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <dt>Current MEPs</dt>
+              <dd className="big">{formatNumber(p.members_active)}</dd>
+            </div>
+            <div>
+              <dt>MEPs in our dataset</dt>
+              <dd className="big">{formatNumber(p.members_total)}</dd>
+            </div>
+          </>
+        )}
         <div>
           <dt>European political groups</dt>
           <dd>
@@ -75,6 +163,20 @@ export default function Party() {
           </dd>
         </div>
       </dl>
+
+      {nowParties.length > 0 && (
+        <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
+          {formatNumber(sittingElsewhere)} of the MEPs listed here {sittingElsewhere === 1 ? 'sits' : 'sit'} in Parliament today under
+          another party record:{' '}
+          {nowParties.map((r, i) => (
+            <span key={r.id}>
+              {i > 0 && ', '}
+              <PartyRefLink r={r} withTerm={sameLabel(r)} terms={p.terms} /> ({formatNumber(r.meps ?? 0)})
+            </span>
+          ))}
+          .
+        </p>
+      )}
 
       <section className="section" aria-labelledby="gh-h">
         <h2 id="gh-h">Political groups its MEPs sat in</h2>
@@ -118,37 +220,56 @@ export default function Party() {
                   <SortTh k="name" sort={m.sort} onSort={m.toggle}>
                     Name
                   </SortTh>
-                  <SortTh k="status" sort={m.sort} onSort={m.toggle}>
+                  {/* phones: the status is shown under the name and the period in one column, so nothing is off-screen */}
+                  <SortTh k="status" sort={m.sort} onSort={m.toggle} className="hide-narrow">
                     Status
                   </SortTh>
                   <SortTh k="from" sort={m.sort} onSort={m.toggle}>
-                    With this party from
+                    <span className="hide-narrow">With this party from</span>
+                    <span className="only-narrow">With this party</span>
                   </SortTh>
-                  <SortTh k="to" sort={m.sort} onSort={m.toggle}>
+                  <SortTh k="to" sort={m.sort} onSort={m.toggle} className="hide-narrow">
                     Until
                   </SortTh>
                 </tr>
               </thead>
               <tbody>
-                {m.sorted.map((r) => (
-                  <tr key={`${r.id}-${r.from ?? ''}`}>
-                    <th scope="row" style={{ fontWeight: 500 }}>
-                      <Link to={`/people/meps/${encodeURIComponent(r.id)}`}>{r.name}</Link>
-                    </th>
-                    <td>
-                      <span className={`status-dot${r.active ? '' : ' status-dot--former'}`}>{r.active ? 'Current MEP' : 'Former MEP'}</span>
-                    </td>
-                    <td className="nowrap">{r.from ? formatDate(r.from) : '—'}</td>
-                    <td className="nowrap">{r.to ? formatDate(r.to) : r.from ? 'Ongoing' : '—'}</td>
-                  </tr>
-                ))}
+                {m.sorted.map((r) => {
+                  const moved = r.now_party ? now.get(r.now_party) : undefined;
+                  const nowLine = moved && (
+                    <span className="meta party-now">
+                      Now: <PartyRefLink r={moved} withTerm={sameLabel(moved)} terms={p.terms} />
+                    </span>
+                  );
+                  return (
+                    <tr key={`${r.id}-${r.from ?? ''}`}>
+                      <th scope="row" style={{ fontWeight: 500 }}>
+                        <Link to={`/people/meps/${encodeURIComponent(r.id)}`}>{r.name}</Link>
+                        <span className="only-narrow meta" style={{ fontWeight: 400 }}>
+                          {statusText(r)}
+                          {nowLine}
+                        </span>
+                      </th>
+                      <td className="hide-narrow">
+                        <span className={`status-dot${r.active || r.mep_active ? '' : ' status-dot--former'}`}>{statusText(r)}</span>
+                        {nowLine}
+                      </td>
+                      <td>
+                        <span className="hide-narrow nowrap">{r.from ? formatDate(r.from) : '—'}</span>
+                        <span className="only-narrow">{r.from || r.to ? periodText(r.from, r.to) : '—'}</span>
+                      </td>
+                      <td className="nowrap hide-narrow">{r.to ? formatDate(r.to) : r.from ? 'Ongoing' : '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
         <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
           Dates are the party membership periods recorded by Parliament, within the parliamentary terms covered by our dataset (see{' '}
-          <Link to="/about#coverage">coverage</Link>).
+          <Link to="/about#coverage">coverage</Link>). “Current MEP” means the person sits in Parliament today; “Now” names the party
+          record a sitting MEP is listed under when it is another one.
         </p>
       </section>
 

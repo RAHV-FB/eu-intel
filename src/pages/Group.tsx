@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { BallotPosition, EpVoteSummary, GroupDetail, MepSummary, Meta, PositionCounts } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber, pct } from '../lib/format';
+import { shownParam, useParamState } from '../lib/urlState';
 import { ballotScope } from '../lib/scope';
 import { EmptyState, ErrorState, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
@@ -28,8 +29,10 @@ export default function Group() {
   const votesIndex = useData<EpVoteSummary[]>(g && g.votes.length > 0 ? 'votes/index.json' : null);
   const meta = useData<Meta>('meta.json');
   const noVoteData = meta.data ? meta.data.counts.ep_votes_with_ballots === 0 : false;
-  const [shown, setShown] = useState(VOTES_PAGE);
-  useDocumentTitle(g ? `${g.code} – ${g.name}` : 'Political group');
+  // votes shown: kept in the address, so that Back from a vote returns to the same list
+  const [params, patch] = useParamState();
+  const shown = shownParam(params, 'show', VOTES_PAGE);
+  useDocumentTitle(g ? `${g.code} – ${g.name}` : isMissing(error) ? 'Political group not found' : 'Political group');
 
   const countryRows = useMemo<CountryRow[]>(
     () => Object.entries(g?.countries ?? {}).map(([country, members]) => ({ country, members })),
@@ -60,6 +63,7 @@ export default function Group() {
     },
     { key: 'date', dir: 'desc' },
     { date: 'desc', recorded: 'desc' },
+    'sort',
   );
   const members = useMemo(() => {
     const byId = new Map((meps.data ?? []).map((m) => [m.id, m]));
@@ -313,7 +317,7 @@ export default function Group() {
             </div>
             {vs.sorted.length > shown && (
               <div className="more">
-                <button type="button" className="btn" onClick={() => setShown((n) => n + VOTES_PAGE)}>
+                <button type="button" className="btn" onClick={() => patch({ show: String(shown + VOTES_PAGE) })}>
                   Show more votes
                 </button>
                 <span className="meta">

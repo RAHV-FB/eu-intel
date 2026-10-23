@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { CountryDetail, Meta } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { COUNTRY_NAMES, formatDate, formatNumber, pct } from '../lib/format';
+import { useParamState } from '../lib/urlState';
 import { ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Tag, Term } from '../components/ui';
 import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
@@ -55,9 +56,19 @@ export default function Country() {
   const { data: c, error, loading } = useData<CountryDetail>(valid ? `countries/${upper}.json` : null);
   const meta = useData<Meta>('meta.json');
   const groups = useGroups();
-  const [allVotes, setAllVotes] = useState(false);
-  const [showMeps, setShowMeps] = useState(false);
-  useDocumentTitle(c ? c.name : upper in COUNTRY_NAMES ? COUNTRY_NAMES[upper] : 'Country');
+  // the open MEP list and the full Council vote list are kept in the address, so that Back returns to them
+  const [params, patch] = useParamState();
+  const allVotes = params.get('cvotes') === 'all';
+  const showMeps = params.get('meps') === 'all';
+  useDocumentTitle(
+    FORMER_MEMBER_STATES.has(upper)
+      ? COUNTRY_NAMES[upper]
+      : !valid || isMissing(error)
+        ? 'Country not found'
+        : c
+          ? c.name
+          : COUNTRY_NAMES[upper],
+  );
 
   const groupRows = useMemo<GroupRow[]>(
     () =>
@@ -201,7 +212,7 @@ export default function Country() {
 
         {c.meps.length > 0 && (
           <div style={{ marginTop: 'var(--sp-5)' }}>
-            <button type="button" className="btn" aria-expanded={showMeps} aria-controls="country-meps" onClick={() => setShowMeps((o) => !o)}>
+            <button type="button" className="btn" aria-expanded={showMeps} aria-controls="country-meps" onClick={() => patch({ meps: showMeps ? null : 'all' })}>
               {showMeps ? 'Hide the list of MEPs' : `Show all ${formatNumber(c.meps.length)} current MEPs from ${c.name}`}
             </button>
             <div id="country-meps" hidden={!showMeps} style={{ marginTop: 'var(--sp-3)' }}>
@@ -314,7 +325,7 @@ export default function Country() {
             )}
             {c.council_votes.length > 20 && !allVotes && (
               <div className="more">
-                <button type="button" className="btn" onClick={() => setAllVotes(true)}>
+                <button type="button" className="btn" onClick={() => patch({ cvotes: 'all' })}>
                   Show all {formatNumber(c.council_votes.length)} Council votes
                 </button>
               </div>
@@ -333,27 +344,29 @@ export default function Country() {
         <p className="csection__kicker">3 · National application of EU law</p>
         <h2 id="imp-h">Implementation</h2>
         <p className="section-intro">
-          What official records show about how {c.name} applies EU law: published indicators, national measures notified for{' '}
-          <Term id="directive">directives</Term>, and <Term id="infringement">infringement cases</Term> opened by the European Commission.
+          What official records show about how {c.name} applies EU law: {c.indicators.length > 0 && 'published indicators, '}national
+          measures notified for <Term id="directive">directives</Term>, and <Term id="infringement">infringement cases</Term> opened by
+          the European Commission.
         </p>
 
-        <h3>Published indicators</h3>
-        {c.indicators.length === 0 ? (
-          <p className="meta">No published implementation indicators are available for {c.name} in this release.</p>
-        ) : (
-          <div className="indicators">
-            {c.indicators.map((i) => (
-              <div className="indicator" key={i.indicator}>
-                <p className="indicator__label">{i.label}</p>
-                <p className="indicator__value">{formatIndicator(i.value, i.unit)}</p>
-                <p>
-                  <strong>Period:</strong> {i.period}
-                </p>
-                <p>{i.definition}</p>
-                <SourceLink source={i.source} />
-              </div>
-            ))}
-          </div>
+        {/* Country indicators (Single Market Scoreboard) could not be retrieved for any Member State in this release (see About) */}
+        {c.indicators.length > 0 && (
+          <>
+            <h3>Published indicators</h3>
+            <div className="indicators">
+              {c.indicators.map((i) => (
+                <div className="indicator" key={i.indicator}>
+                  <p className="indicator__label">{i.label}</p>
+                  <p className="indicator__value">{formatIndicator(i.value, i.unit)}</p>
+                  <p>
+                    <strong>Period:</strong> {i.period}
+                  </p>
+                  <p>{i.definition}</p>
+                  <SourceLink source={i.source} />
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         <h3>National measures for directives</h3>

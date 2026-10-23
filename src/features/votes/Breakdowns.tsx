@@ -1,7 +1,8 @@
-import { Fragment, useId, useMemo, useState } from 'react';
+import { Fragment, useId, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { Ballot, BallotPosition, CountryBreakdown, GroupBreakdown, PositionCounts } from '../../types/data';
 import { countryName, formatNumber, pct } from '../../lib/format';
+import { shownParam, useParamState } from '../../lib/urlState';
 import { SortTh, useSortable } from './sortable';
 import { POSITION_LABEL, cohesionText } from './labels';
 import './votes.css';
@@ -244,11 +245,13 @@ export function BallotList({
   names: Record<string, string>;
   groupCodes: Map<string, string>;
 }) {
-  const [q, setQ] = useState('');
-  const [group, setGroup] = useState('');
-  const [country, setCountry] = useState('');
-  const [pos, setPos] = useState('');
-  const [shown, setShown] = useState(BALLOT_PAGE);
+  // filters, order and rows shown are kept in the address (bl-…), so that Back from an MEP returns to the same list
+  const [params, patch] = useParamState();
+  const q = params.get('bl-q') ?? '';
+  const group = params.get('bl-group') ?? '';
+  const country = params.get('bl-country') ?? '';
+  const pos = params.get('bl-pos') ?? '';
+  const shown = shownParam(params, 'bl-show', BALLOT_PAGE);
 
   const groups = useMemo(() => [...new Set(ballots.map((b) => b.group).filter(Boolean) as string[])].sort((a, b) => (groupCodes.get(a) ?? a).localeCompare(groupCodes.get(b) ?? b)), [ballots, groupCodes]);
   const countries = useMemo(() => [...new Set(ballots.map((b) => b.country).filter(Boolean) as string[])].sort((a, b) => countryName(a).localeCompare(countryName(b))), [ballots]);
@@ -273,23 +276,23 @@ export function BallotList({
       pos: (b) => POS_RANK[b.pos],
     },
     { key: 'name', dir: 'asc' },
+    {},
+    'bl-sort',
   );
 
-  const reset = (fn: (v: string) => void) => (v: string) => {
-    fn(v);
-    setShown(BALLOT_PAGE);
-  };
+  const set = (key: string) => (v: string) => patch({ [key]: v, 'bl-show': null });
+  const setShown = (n: number) => patch({ 'bl-show': n > BALLOT_PAGE ? String(n) : null });
 
   return (
     <div>
       <form className="filters" aria-label="Filter individual votes" onSubmit={(e) => e.preventDefault()}>
         <div className="field">
           <label htmlFor="bl-q">MEP name</label>
-          <input id="bl-q" className="input" type="search" value={q} onChange={(e) => reset(setQ)(e.target.value)} />
+          <input id="bl-q" className="input" type="search" value={q} onChange={(e) => set('bl-q')(e.target.value)} />
         </div>
         <div className="field">
           <label htmlFor="bl-pos">Position</label>
-          <select id="bl-pos" className="select" value={pos} onChange={(e) => reset(setPos)(e.target.value)}>
+          <select id="bl-pos" className="select" value={pos} onChange={(e) => set('bl-pos')(e.target.value)}>
             <option value="">Any position</option>
             <option value="for">For</option>
             <option value="against">Against</option>
@@ -298,7 +301,7 @@ export function BallotList({
         </div>
         <div className="field">
           <label htmlFor="bl-group">Political group</label>
-          <select id="bl-group" className="select" value={group} onChange={(e) => reset(setGroup)(e.target.value)}>
+          <select id="bl-group" className="select" value={group} onChange={(e) => set('bl-group')(e.target.value)}>
             <option value="">All groups</option>
             {groups.map((g) => (
               <option key={g} value={g}>
@@ -309,7 +312,7 @@ export function BallotList({
         </div>
         <div className="field">
           <label htmlFor="bl-country">Country represented</label>
-          <select id="bl-country" className="select" value={country} onChange={(e) => reset(setCountry)(e.target.value)}>
+          <select id="bl-country" className="select" value={country} onChange={(e) => set('bl-country')(e.target.value)}>
             <option value="">All countries</option>
             {countries.map((c) => (
               <option key={c} value={c}>
@@ -374,7 +377,7 @@ export function BallotList({
       )}
       {sorted.length > shown && (
         <div className="more">
-          <button type="button" className="btn" onClick={() => setShown((n) => n + BALLOT_PAGE * 3)}>
+          <button type="button" className="btn" onClick={() => setShown(shown + BALLOT_PAGE * 3)}>
             Show more MEPs
           </button>
           <button type="button" className="btn" onClick={() => setShown(sorted.length)}>

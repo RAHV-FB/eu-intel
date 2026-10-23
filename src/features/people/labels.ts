@@ -24,6 +24,12 @@ export function termLabel(t: number): string {
   return TERM_LABEL[t] ?? `Term ${t}`;
 }
 
+/** "2019–2024 term", "2019–2024 and 2024–2029 terms": the years a record covers, as search subtitles name them. */
+export function termYears(terms: number[] | null | undefined): string {
+  const spans = [...(terms ?? [])].sort((x, y) => x - y).map((t) => `${1979 + 5 * (t - 1)}–${1984 + 5 * (t - 1)}`);
+  return spans.length ? `${spans.join(' and ')} term${spans.length > 1 ? 's' : ''}` : '';
+}
+
 /** Short form: "9th (2019–2024)". */
 export function termShort(t: number): string {
   return termLabel(t).replace(' term', '');

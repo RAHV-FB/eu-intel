@@ -4,6 +4,7 @@ import type { EpVoteSummary, Topic, VoteKind, VoteOutcome } from '../types/data'
 import { useData } from '../lib/data';
 import { formatNumber, plural } from '../lib/format';
 import { loadSearch, type SearchEngine } from '../lib/search';
+import { shownParam } from '../lib/urlState';
 import { Disclosure, EmptyState, ErrorState, Loading, PageHeader, Term } from '../components/ui';
 import { CollapsibleFilters } from '../components/CollapsibleFilters';
 import { useDocumentTitle } from '../features/legislation/labels';
@@ -30,7 +31,8 @@ export default function Votes() {
   const { data, error, loading } = useData<EpVoteSummary[]>('votes/index.json');
   const topicsState = useData<Topic[]>('topics.json');
   const [params, setParams] = useSearchParams();
-  const [shown, setShown] = useState(PAGE);
+  // rows shown: kept in the address like the filters, so that Back from a vote returns to the same list
+  const shown = shownParam(params, 'show', PAGE);
 
   const q = params.get('q') ?? '';
   const year = params.get('year') ?? '';
@@ -45,12 +47,14 @@ export default function Votes() {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
+    next.delete('show'); // a new filter starts from the first page
     setParams(next, { replace: true });
   };
-
-  // reset paging whenever the filters change
-  const filterKey = params.toString();
-  useEffect(() => setShown(PAGE), [filterKey]);
+  const setShown = (n: number) => {
+    const next = new URLSearchParams(params);
+    next.set('show', String(n));
+    setParams(next, { replace: true, preventScrollReset: true });
+  };
 
   const votes = useMemo(() => data ?? [], [data]);
   const opts = useMemo(() => {
@@ -285,7 +289,7 @@ export default function Votes() {
               </ul>
               {filtered.length > shown && (
                 <div className="more">
-                  <button type="button" className="btn" onClick={() => setShown((n) => n + PAGE)}>
+                  <button type="button" className="btn" onClick={() => setShown(shown + PAGE)}>
                     Show {formatNumber(Math.min(PAGE, filtered.length - shown))} more
                   </button>
                   <span className="meta">

@@ -187,6 +187,12 @@
   margin-top: var(--sp-1);
 }
 
+/* a row found only because its title cites the number searched for (e.g. an amending directive) */
+.impl-dir__cites {
+  display: block;
+  font-style: italic;
+}
+
 @media (max-width: 39.99rem) {
   .impl-dir,
   .wrap-cell {

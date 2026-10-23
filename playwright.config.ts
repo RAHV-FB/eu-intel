@@ -39,14 +39,14 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      command: 'npx vite preview --host 127.0.0.1 --port 4173 --strictPort',
+      command: `npx vite preview --host 127.0.0.1 --port ${new URL(PREVIEW_ORIGIN).port} --strictPort`,
       url: PREVIEW_ORIGIN + BASE_PATH,
       env: { BASE_PATH },
       reuseExistingServer: !CI,
       timeout: 60_000,
     },
     {
-      command: 'node tests/e2e/pages-server.mjs dist 4174',
+      command: `node tests/e2e/pages-server.mjs dist ${new URL(PAGES_ORIGIN).port}`,
       url: PAGES_ORIGIN + BASE_PATH,
       env: { BASE_PATH },
       reuseExistingServer: !CI,

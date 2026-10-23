@@ -930,7 +930,7 @@ def _index_entry(d: dict) -> dict:
     """Compact DossierSummary for dossiers/index.json: long official titles shortened (full text in
     dossiers/<id>.json), optional fields omitted when empty."""
     out = {k: v for k, v in d.items() if not (k in _OPTIONAL_SUMMARY and v is None)}
-    out["official_title"] = _truncate(d["official_title"], INDEX_OFFICIAL_TITLE_MAX)
+    out["official_title"] = d["official_title"] and _truncate(d["official_title"], INDEX_OFFICIAL_TITLE_MAX)
     out["title"] = _truncate(d["title"], INDEX_TITLE_MAX)
     if out.get("short"):
         out["short"] = _truncate(out["short"], 240)
@@ -2516,21 +2516,24 @@ class Builder:
                 "status": {"stage": "unknown", "label": "Split into separate procedures", "explanation": text,
                            "since": None, "basis": "derived"},
                 "next_step": {"text": text, "institution": None, "basis": "derived"},
+                "named_acts": [self._procedure_ref(self.proc[c]) for c in children],  # linked to their files
             })  # fmt: skip
         if (m := PARLIAMENT_REPORT_RE.fullmatch(p.id)) is not None:
             # 2017/0333R(APP): Parliament's interim report (Rule 105(5)) or report accompanying a consent
             # (M) on the main procedure 2017/0333(APP); a resolution, not a legislative act
             main = self.proc.get(m.group(1))
             kind = "an interim report" if m.group(2) == "R" else "a report"
+            ref = main.reference if main else m.group(1)
             text = (
-                f"Parliament adopted {kind} on the procedure {main.reference if main else m.group(1)}. It is a "
-                "resolution of Parliament, not a legislative act; the proposal itself is followed on the main file."
+                f"Parliament adopted {kind} on the procedure {ref}. It is a resolution of Parliament, not a "
+                "legislative act; the proposal itself is followed on the main file."
             )
             return self._status_dict({
                 "status": {"stage": "unknown", "label": "Parliament report (not a legislative act)",
                            "explanation": text, "since": None, "basis": "source"},
-                "next_step": {"text": "None for this report. See the main procedure for the proposal.",
+                "next_step": {"text": f"None for this report. See the main procedure {ref} for the proposal.",
                               "institution": None, "basis": "source"},
+                "named_acts": [self._procedure_ref(main)] if main else [],  # linked to the main file
             })  # fmt: skip
         fn = (
             _lazy("pipeline.analysis.status", "classify")
@@ -2550,6 +2553,11 @@ class Builder:
                 log.warning("classify failed for %s: %r", p.id, e)
                 self.s.issues.append(f"status.classify failed for {p.id}: {e!r}"[:300])
         return self.fallback_status(p, acts, train)
+
+    @staticmethod
+    def _procedure_ref(p: Procedure) -> dict:
+        """A procedure named in a status text, in the form of `named_acts` (no CELEX id): linked to its file."""
+        return {"celex": "", "label": p.reference, "url": p.oeil_url, "dossier": p.id}
 
     @staticmethod
     def _status_dict(r: dict) -> dict:
@@ -3332,7 +3340,9 @@ class Builder:
                 "type": p.type,
                 "type_label": TYPE_LABELS.get(p.type, f"Procedure ({p.type})"),
                 "title": self.dossier_title(p),
-                "official_title": p.title,
+                # a split parent known only from EUR-Lex has no title of its own in the sources (its name says
+                # what it was split into): none is shown as its official title
+                "official_title": None if pid in self.stub_ids and self.split_children.get(pid) else p.title,
                 "short": (cur or {}).get("what") or None,
                 "topics": self.topics_for(p),
                 "stage": st["status"].get("stage", "unknown"),
@@ -3461,6 +3471,8 @@ class Builder:
                     dates_set_by[c].append((base, ds))
         for pid, det in self.dossier_detail.items():
             for ref in det["status"].get("named_acts") or []:  # an act the status names: its file, when we have one
+                if not ref["celex"]:
+                    continue  # a procedure (split parts, the main file of a report): linked to its own file
                 files = sorted(o for o in self.act_dossiers.get(ref["celex"], ()) if o != pid)
                 ref["dossier"] = files[0] if files else None
             related: dict[str, dict] = {}
@@ -3497,6 +3509,7 @@ class Builder:
             for child in self.split_children.get(pid, []):
                 related.setdefault(f"split:{child}", {
                     "id": child, "title": _truncate(self.dossier_summary[child]["title"], 160), "relation": "Split into",
+                    "ref": self.dossier_summary[child]["ref"], "status_label": self.dossier_summary[child]["status_label"],
                 })  # fmt: skip
             if (m := PARLIAMENT_REPORT_RE.fullmatch(pid)) and m.group(1) in self.dossier_summary:
                 related.setdefault(f"report_on:{m.group(1)}", {
@@ -3508,8 +3521,15 @@ class Builder:
                     "id": m.group(1), "title": _truncate(self.dossier_summary[m.group(1)]["title"], 160),
                     "relation": "Split from",
                 })  # fmt: skip
+            for rep, label in ((f"{pid}R", "Parliament's interim report"), (f"{pid}M", "Parliament's report")):
+                if rep in self.dossier_summary:  # the R / M file of Parliament's report on this procedure
+                    related.setdefault(f"report:{rep}", {
+                        "id": rep, "title": _truncate(self.dossier_summary[rep]["title"], 160), "relation": label,
+                    })  # fmt: skip
             order = {
                 "Report on": 0,
+                "Parliament's interim report": 0,
+                "Parliament's report": 0,
                 "Replaced by": 0,
                 "Replaces": 0,
                 "Split into": 0,
@@ -3647,10 +3667,13 @@ class Builder:
                         h["to"] = max(h["to"], hi)
                         h["meps"].add(m.id)
             ongoing_ids = {m.id for m, _s, e in rows if e is None and m.active}
+            # EP open data has one record per party per parliamentary term: the terms this record covers
+            terms = sorted({x.term for m, _s, _e in rows for x in m.memberships
+                            if x.kind == "party" and x.org_id == oid and x.term})  # fmt: skip
             summ = {
                 "id": oid, "label": o.label, "code": o.code, "country": o.country or "",
                 "members_active": len(ongoing_ids), "members_total": len({m.id for m, _s, _e in rows}),
-                "groups": sorted(gh),
+                "groups": sorted(gh), "terms": terms,
             }  # fmt: skip
             self.party_summary[oid] = summ
             if oid not in self.unnamed_parties:
@@ -3662,8 +3685,14 @@ class Builder:
                 r["from"] = min(r["from"] or start or "", start or "") or None
                 r["to"] = None if (end is None or r["to"] is None) else max(r["to"], end)
                 r["active"] = m.id in ongoing_ids
+                # `active`: still in this party record and sitting; the MEP's own status, and the party record a
+                # sitting MEP is in now when it is another one (the same party's next-term record, or a new party)
+                r["mep_active"] = m.active
+                now = [other for _s, e, other in self.mep_parties.get(m.id, []) if e is None and other != oid]
+                r["now_party"] = now[-1] if m.active and not r["active"] and now else None
             self.files[f"people/parties/{oid}.json"] = {
                 **summ,
+                "start": o.start, "end": o.end,
                 "meps": sorted(meps_rows.values(), key=lambda r: (not r["active"], r["name"], r["id"])),
                 "group_history": [
                     {
@@ -3678,6 +3707,24 @@ class Builder:
             }
         parties_out.sort(key=lambda p: (p["country"], -p["members_active"], p["label"], p["id"]))
         self.files["people/parties.json"] = parties_out
+        # each party page links the records of the same name and country (the same party in other terms) and
+        # the records its sitting MEPs are now in
+        same_name: dict[tuple[str, str], list[str]] = defaultdict(list)
+        for oid, summ in self.party_summary.items():
+            if oid not in self.unnamed_parties:
+                same_name[(_norm_key(summ["label"]), summ["country"])].append(oid)
+
+        def ref(oid: str) -> dict:
+            pt, o = self.party_summary[oid], self.org[oid]
+            return {"id": oid, "label": pt["label"], "terms": pt["terms"], "start": o.start, "end": o.end,
+                    "members_active": pt["members_active"]}  # fmt: skip
+
+        for oid, summ in self.party_summary.items():
+            f = self.files[f"people/parties/{oid}.json"]
+            twins = [t for t in same_name.get((_norm_key(summ["label"]), summ["country"]), []) if t != oid]
+            f["same_name"] = [ref(t) for t in sorted(twins, key=lambda t: (self.org[t].start or "", t))]
+            now = Counter(r["now_party"] for r in f["meps"] if r["now_party"] in self.party_summary)
+            f["now_parties"] = [ref(t) | {"meps": n} for t, n in sorted(now.items(), key=lambda kv: (-kv[1], kv[0]))]
 
     # ---------------------------------------------------------------- countries
     def build_countries(self) -> None:
@@ -3692,6 +3739,14 @@ class Builder:
             }.values(),
             key=lambda a: a.celex,
         )
+        # each directive's own number as its official title cites it ("Directive (EU) 2022/2555", "Directive
+        # 2014/35/EU") and the names its file is known by, so that a country page can be searched by them
+        act_names: dict[str, tuple[str | None, list[str]]] = {}
+        for a in directives:
+            ds = sorted(self.act_dossiers.get(a.celex, ()))
+            known = self.known_as(self.proc[ds[0]], self.acts_of.get(ds[0], [])) if len(ds) == 1 else None
+            names = (known or {}).get("names") or ([n] if (n := act_short_name(a.title)) else [])
+            act_names[a.celex] = (act_label(a) if act_label(a) != a.celex else celex_act_label(a.celex), names)
         index = []
         for code, name in sorted(MEMBER_STATES.items()):
             active = sorted(
@@ -3734,6 +3789,7 @@ class Builder:
                     title = f"{act_label(a)}: {title}"  # one of the file's directives (2013/0400(CNS) has two)
                 trans.append({
                     "celex": a.celex, "title": title,
+                    "act": act_names[a.celex][0], "names": act_names[a.celex][1],
                     "dossier_id": ds[0] if len(ds) == 1 else None, "deadline": deadline,
                     "measures": len(self.measures_by.get((a.celex, code), [])),
                     "status": self.transposition_status(a.celex, code, deadline),

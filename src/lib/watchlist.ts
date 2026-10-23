@@ -4,8 +4,9 @@
  * Privacy contract (also explained on /following and /privacy):
  * - Nothing is written until the visitor explicitly clicks "Follow" (pages only read the saved list, to show
  *   what is followed; storageReadable() checks for storage without writing).
- * - Only dossier ids plus what the visitor last saw (last recorded event date, stage, status label)
- *   are stored, in this browser's localStorage. Nothing is ever sent anywhere; there are no notifications.
+ * - Only dossier ids, when each was followed and last viewed (timestamps), and what the visitor last saw (last
+ *   recorded event date, stage, status label) are stored, in this browser's localStorage. Nothing is ever sent
+ *   anywhere; there are no notifications.
  * - A shareable form (/following?ids=2021-0106,2022-0155) works without any storage.
  */
 import { useSyncExternalStore } from 'react';

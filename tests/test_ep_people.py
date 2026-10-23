@@ -55,6 +55,8 @@ def test_names_country_terms_and_urls():
     assert {x.term for x in m.memberships} == {10}
     assert m.official_url == "https://www.europarl.europa.eu/meps/en/1294" and m.photo_url is None
     assert m.source.institution == "EP" and m.source.identifier == "1294"
+    # the membership data's source is the API record it was read from, not the profile page
+    assert m.source.url == "https://data.europarl.europa.eu/api/v2/meps/1294?format=application%2Fld%2Bjson"
     assert mep("197526").name == "Martin Hlaváček" and mep("197526").country == "CZ"
 
 
