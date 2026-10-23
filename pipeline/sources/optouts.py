@@ -11,6 +11,9 @@ Ireland may still take part after adoption (Protocol No 21, Article 4): the Comm
 participation in a decision, e.g. Commission Decision (EU) 2024/2087, Article 1: "The participation of
 Ireland in Directive (EU) 2024/1346 is confirmed." Such decisions are found by their title in Cellar and
 recorded on the directive (`opted_in`); the recitals' "not bound" no longer applies to that country.
+Such a decision is a published act that Cellar keeps, so an opt-in recorded earlier that is missing from a
+later answer means that answer was incomplete (a query Cellar cut short can still answer HTTP 200): the
+recorded opt-in is kept and the run is "partial".
 
 Produces data/snapshot/optouts/directives.json: one record per directive of the EUR-Lex snapshot whose
 text has been read, with the countries its recitals declare not bound, the sentences quoted, and later
@@ -33,7 +36,7 @@ from typing import Any
 
 from pipeline.http import HttpError
 from pipeline.models.entities import DirectiveOptOut, LegalAct, SourceRef, SourceStatus
-from pipeline.snapshot import fetch_deadline, now_iso, read_records, upsert_records
+from pipeline.snapshot import fetch_deadline, now_iso, read_manifest, read_records, upsert_records
 from pipeline.sources.eurlex import ENG, PREFIXES
 
 log = logging.getLogger("pipeline.sources.optouts")
@@ -148,20 +151,30 @@ def fetch(http: Any) -> SourceStatus:
         countries, quotes = not_bound(text)
         out.append(DirectiveOptOut(celex=celex, status="ok", not_bound=countries, quotes=quotes, url=url, source=src,
                                    parser=PARSER_VERSION))  # fmt: skip
-    if later is not None:  # every record carries the opt-ins as last queried
+    read_now = len(out) - unavailable
+
+    def stored(celex: str) -> dict[str, str]:
+        return done[celex].opted_in if celex in done else {}
+
+    kept: list[str] = []  # opt-ins recorded earlier that this run's answer lacks: kept (see the module docstring)
+    if later is not None:  # every record carries the opt-ins as last queried, and those recorded earlier
         fresh = {r.celex for r in out}
         out += [r for c, r in done.items() if c not in fresh]
-        out = [r.model_copy(update={"opted_in": later.get(r.celex, {})}) for r in out]
+        kept = [f"{r.celex} {c} ({d})" for r in out for c, d in sorted(stored(r.celex).items())
+                if c not in later.get(r.celex, {})]  # fmt: skip
+    out = [r.model_copy(update={"opted_in": {**stored(r.celex), **(later or {}).get(r.celex, {})}}) for r in out]
     total = upsert_records(SOURCE_ID, "directives", DirectiveOptOut, out, id_of=lambda r: r.celex)
     merged = read_records(SOURCE_ID, "directives", DirectiveOptOut)
     ok = [r for r in merged if r.status == "ok" and r.parser >= PARSER_VERSION]
     pending = len([c for c in directives if c not in {r.celex for r in ok}])
     by_country = {c: sum(1 for r in ok if c in r.not_bound and c not in r.opted_in) for c in ("DK", "IE")}
     n_opt_in = sum(len(r.opted_in) for r in merged)
+    prev = read_manifest().get(SOURCE_ID)
     return SourceStatus(
         source=SOURCE_ID,
-        status="ok" if not pending else "partial",
-        fetched_at=now_iso(),
+        status="ok" if not (pending or later is None or kept) else "partial",
+        # a run that retrieved nothing (no text read, opt-in query failed) keeps the last retrieval time
+        fetched_at=now_iso() if read_now or later is not None or prev is None else prev.fetched_at,
         attempted_at=attempted,
         records={"directives_read": len(ok), "pending": pending, "not_bound_DK": by_country["DK"],
                  "not_bound_IE": by_country["IE"]},  # fmt: skip
@@ -171,6 +184,8 @@ def fetch(http: Any) -> SourceStatus:
             f" (net of {n_opt_in} later opt-ins confirmed by the Commission"
             + ("" if later is not None else ", as last recorded: the query failed this run")
             + ")"
+            + (f"; this run's answer lacked {len(kept)} opt-ins recorded earlier, kept: {', '.join(kept)}"
+               if kept else "")  # fmt: skip
             + (f"; {pending} pending, resumed next run" if pending else "")
             + f"; {total} records"
         ),
