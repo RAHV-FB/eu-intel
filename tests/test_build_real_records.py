@@ -157,11 +157,22 @@ def test_voting_result_naming_no_item_on_the_day_the_council_adopted_the_act():
     assert Builder.council_vote_on(None, cv, later) == (None, None)  # type: ignore[arg-type]
 
 
-def test_commission_proposal_of_an_ordinary_procedure_without_its_com_number():
-    p = procs("2023-0052", "2010-0817", "2021-0106")
-    assert not p["2023-0052"].com_refs and commission_cod_proposal(p["2023-0052"])
+def test_commission_proposal_of_an_ordinary_procedure_needs_its_com_number():
+    p = procs("2023-0052", "2010-0817", "2021-0106", "2022-0906")
+    # OEIL prints COM(2023)0126 as plain text next to a EUR-Lex flag link; the record now carries it
+    assert p["2023-0052"].com_refs == ["COM(2023)0126"] and commission_cod_proposal(p["2023-0052"])
     assert not commission_cod_proposal(p["2010-0817"])  # initiative of Member States (09288/2010)
     assert commission_cod_proposal(p["2021-0106"])
+    # the Court of Justice's request (OEIL documentation gateway "CJEC | Legislative proposal | 07307/2022"): not
+    # a Commission proposal, so the Council's qualified majority is not asserted under TEU Art. 16(4)
+    assert not commission_cod_proposal(p["2022-0906"])
+    prop = next(e for e in p["2022-0906"].events if e.kind.value == "proposal")
+    assert (prop.institution, [d.id for d in prop.docs]) == ("CJEU", ["07307/2022"])
+    assert Builder.procedure_event(p["2022-0906"], prop).title == "Court of Justice submitted its request (legislative proposal)"
+    # an empty list of documents does not make a Commission proposal
+    bare = p["2021-0106"].model_copy(update={"events": [
+        e.model_copy(update={"docs": []}) for e in p["2021-0106"].events if e.kind.value == "proposal"]})
+    assert not commission_cod_proposal(bare)
 
 
 def test_both_qmv_thresholds_are_given_when_the_legal_basis_is_not_established():
@@ -367,3 +378,219 @@ def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
     )  # fmt: skip
     durand = [r for r in Builder.rapporteur_entries(me, p["2016-0107"]) if r["mep_id"] == "124693"]  # type: ignore[arg-type]
     assert [(r["group"], r["group_code"]) for r in durand] == [("greens-efa", "Greens/EFA")]
+
+
+# ----------------------------------------------------------------------------- timelines: steps, dates and order
+def stand_in(**kw) -> SimpleNamespace:
+    """The Builder state the procedure methods read (with_recorded_events, timeline, adoption_dates), with the
+    checked Council dates of data/curated/council_dates.yaml."""
+    from pipeline.build import load_council_dates
+
+    state = {"today": "2026-10-23", "notices_by_ref": {}, "acts_of": {}, "votes_of": {}, "council_of": {}, "act": {},
+             "act_dates": {}, "indexed_vote_ids": set(), "procedure_event": Builder.procedure_event,
+             "council_dates": load_council_dates()}  # fmt: skip
+    me = SimpleNamespace(**(state | kw))
+    for name in ("council_dated", "checked_council_date", "council_step_dated", "council_vote_date"):
+        setattr(me, name, getattr(Builder, name).__get__(me))
+    return me
+
+
+def council_rec(cv: CouncilVote, vote_on: str | None = None) -> dict:
+    """A Council vote as build_council publishes it (the fields the timeline reads)."""
+    return {"id": cv.id, "date": cv.date, "vote_on": vote_on or cv.vote_on, "outcome": cv.outcome, "stage": cv.stage,
+            "written_procedure": cv.written_procedure, "positions": cv.positions, "source": None}  # fmt: skip
+
+
+def test_council_adoption_is_dated_by_the_acts_own_text():
+    # Directive (EU) 2017/1132, footnote 2: "Position of the European Parliament of 5 April 2017 ... and decision of
+    # the Council of 29 May 2017"; OEIL "Act adopted by Council after Parliament's 1st reading" 18/04/2017.
+    # Regulation (EU) 2016/2030: "Council decision of 20 September 2016"; OEIL 19/10/2016
+    from pipeline.build import load_council_dates
+
+    cur = load_council_dates()
+    assert len(cur) == 36 and cur["2015/0283(COD)"]["date"] == "2017-05-29"
+    for pid, celex, want, oeil in (("2015-0283", "32017L1132", "2017-05-29", "18 April 2017"),
+                                   ("2016-0064", "32016R2030", "2016-09-20", "19 October 2016")):  # fmt: skip
+        p, a = procs(pid)[pid], acts(celex)[celex]
+        me = stand_in(acts_of={pid: [a]}, act={celex: a})
+        q = Builder.with_recorded_events(me, p)  # type: ignore[arg-type]
+        step = next(e for e in q.events if e.kind.value == "council_adoption")
+        assert step.date == want and step.detail and oeil in step.detail and celex in [d.id for d in step.docs]
+        assert Builder.adoption_dates(me, q, [a])[0] == want  # type: ignore[arg-type]
+        tl = Builder.timeline(me, q, [a], [])  # type: ignore[arg-type]
+        assert [x["date"] for x in tl if x["kind"] == "council_adoption"] == [want]
+    # an entry for an act that is not the file's is not applied
+    p = procs("2015-0283")["2015-0283"]
+    assert Builder.checked_council_date(stand_in(), p) is None  # type: ignore[arg-type]
+
+
+def test_council_vote_of_a_meeting_over_several_days_is_dated_by_the_act():
+    # CSDDD: ST 10263/24 is for the 4026th meeting of 23-24 May 2024 (recorded on the first day); its voting sheet
+    # gives "Sitting date: 24/05/2024" and Directive (EU) 2024/1760 "decision of the Council of 24 May 2024"
+    cv = council("ST-10263-2024", "ST-8001-2024")
+    p, a = procs("2022-0051")["2022-0051"], acts("32024L1760")["32024L1760"]
+    me = stand_in(acts_of={"2022-0051": [a]}, act={a.celex: a})
+    assert cv["ST-10263-2024"].date == "2024-05-23"
+    when, note = Builder.council_vote_date(me, cv["ST-10263-2024"], p, "act")  # type: ignore[arg-type]
+    assert when == "2024-05-24" and note and "Sitting date: 24/05/2024" in note and "24 May 2024" in note
+    other = Builder.council_vote_date(me, cv["ST-10263-2024"], p, "first_reading_position")  # type: ignore[arg-type]
+    assert other == ("2024-05-23", None)
+    # a vote no entry names keeps the voting result's date (2022/0906: ST 8001/24)
+    p2 = procs("2022-0906")["2022-0906"]
+    assert Builder.council_vote_date(me, cv["ST-8001-2024"], p2, "act") == (cv["ST-8001-2024"].date, None)  # type: ignore[arg-type]
+
+
+def test_every_curated_council_date_names_the_files_act():
+    from pipeline.build import load_council_dates
+
+    cur = load_council_dates()
+    ids = {ref.replace("/", "-").split("(")[0]: e for ref, e in cur.items()}
+    p, a = procs(*ids), acts(*{e["celex"] for e in cur.values()})
+    for pid, e in ids.items():
+        act = a[e["celex"]]
+        assert e["celex"] in p[pid].celex_refs or p[pid].reference in act.procedure_refs, pid
+        # the Council decided before the act was signed and published
+        assert e["date"] <= (act.date_signature or act.date_document or "9999") <= (act.date_publication or "9999")
+        assert e["reviewed"] == "2026-10-23"
+    assert council(*{e["vote"] for e in cur.values() if e.get("vote")})
+
+
+def test_curated_council_date_must_be_the_one_its_quote_gives(tmp_path: Path):
+    from pipeline.build import load_council_dates
+
+    (tmp_path / "council_dates.yaml").write_text(
+        '- {procedure: "2015/0283(COD)", celex: "32017L1132", date: "2017-05-28",\n'
+        '   quote: "Position of the European Parliament of 5 April 2017 and decision of the Council of 29 May 2017."}\n'
+        '- {procedure: "2016/0064(COD)", celex: "32016R2030", date: "2016-09-20",\n'
+        '   quote: "Position of the European Parliament of 6 July 2016 and Council decision of 20 September 2016."}\n',
+        encoding="utf-8",
+    )
+    assert list(load_council_dates(tmp_path)) == ["2016/0064(COD)"]
+
+
+def test_council_vote_on_the_derogation_from_the_eight_week_period_is_not_the_adoption():
+    # 2020/0067(COD), 20 May 2020, both on PE-CONS 15/20: ST 8159/20 adopted the act (22-4-1); ST 8160/20's voting
+    # sheet is on "Derogation, on the basis of the second subparagraph of Article 3(3) of the Council's Rules of
+    # Procedure, from the eight-week period" (25-0-2). ST 7391/20 REV 1 (2020/0055) only notes "Derogation from the
+    # 8-week period provided for in Article 3(3) ..." next to the adoption: it adopted the act.
+    from pipeline.build import council_vote_event
+
+    cv = council("ST-8159-2020", "ST-8160-2020", "ST-7391-2020")
+    p = procs("2020-0067", "2020-0055")
+    me = SimpleNamespace(s=SimpleNamespace(council=list(cv.values())))
+    on, note = Builder.council_vote_on(me, cv["ST-8160-2020"], p["2020-0067"])  # type: ignore[arg-type]
+    assert on == "other" and note and "ST 8159/20" in note and "PE-CONS 15/20" in note
+    assert Builder.council_vote_on(me, cv["ST-8159-2020"], p["2020-0067"]) == ("act", None)  # type: ignore[arg-type]
+    assert Builder.council_vote_on(me, cv["ST-7391-2020"], p["2020-0055"]) == ("act", None)  # type: ignore[arg-type]
+    ev = council_vote_event(council_rec(cv["ST-8160-2020"], on))
+    assert (ev["kind"], ev["key"]) == ("other", False)
+    assert ev["title"] == (
+        "Council decided to derogate from the eight-week period for national parliaments (written procedure)"
+    )
+    assert council_vote_event(council_rec(cv["ST-8159-2020"]))["title"] == "Council adopted the act (written procedure)"
+
+
+def test_council_consent_by_vote_is_the_councils_step():
+    # 2019/0900(APP), Statute of the European Ombudsman: ST 9947/21 "Consent of the Council (Article 228(4) TFEU) -
+    # Approval", 18 June 2021, the step OEIL lists as "Act adopted by Council after consultation of Parliament"
+    from pipeline.build import council_vote_event
+
+    cv = council("ST-9947-2021")["ST-9947-2021"]
+    p = procs("2019-0900")["2019-0900"]
+    ev = council_vote_event(council_rec(cv))
+    assert (ev["kind"], ev["title"], ev["key"]) == ("council_adoption", "Council gave its consent", True)
+    me = stand_in(council_of={"2019-0900": [council_rec(cv)]})
+    tl = Builder.timeline(me, p, [], [])  # type: ignore[arg-type]
+    council_day = [x["id"] for x in tl if x["date"] == "2021-06-18" and x["institution"] == "Council"]
+    assert council_day == ["council-ST-9947-2021"]
+
+
+def test_consultation_opinion_recorded_as_amendments_is_parliaments_opinion():
+    # 2018/0173(CNS), 24 Oct 2018: EP API PLENARY_AMEND; OEIL "Decision by Parliament T8-0415/2018" ("Approves the
+    # Commission proposal as amended"). 2011/0436(APP), 19 Nov 2013: T7-0462/2013 "Consents to the draft".
+    # 2022/0154(CNS), 16 Jan 2024: one opinion, not a second one derived from its final vote 163120.
+    p = procs("2018-0173", "2011-0436", "2022-0154")
+    ev = {pid: Builder.with_recorded_events(stand_in(), p[pid]).events for pid in p}  # type: ignore[arg-type]
+
+    def day(pid: str, d: str) -> list[tuple[str, str]]:
+        return [(e.kind.value, e.title) for e in ev[pid] if e.date == d and e.institution == "EP"]
+
+    assert day("2018-0173", "2018-10-24") == [("ep_position", "Parliament delivered its opinion")]
+    assert day("2011-0436", "2013-11-19") == [("ep_position", "Parliament voted on consent")]
+    v = votes("163120")
+    q = Builder.with_recorded_events(stand_in(votes_of={"2022-0154": list(v.values())}), p["2022-0154"])  # type: ignore[arg-type]
+    assert [(e.kind.value, e.title) for e in q.events if e.date == "2024-01-16"] == [
+        ("ep_position", "Parliament delivered its opinion")
+    ]
+    tl = Builder.timeline(stand_in(indexed_vote_ids=set(v)), q, [], list(v.values()))  # type: ignore[arg-type]
+    assert [(x["key"], x["vote_id"]) for x in tl if x["date"] == "2024-01-16"] == [(True, "163120")]
+
+
+def test_vote_on_a_request_for_urgent_procedure_says_so():
+    # 2025/3502(COD), 16 Dec 2025: the only vote is decision 182690 "Request for an urgent decision", adopted by show
+    # of hands. 2020/0128(COD), 8 Jul 2020: 116197 "Request for urgent procedure", 618-62-13 (roll call).
+    p = procs("2025-3502", "2020-0128")
+    v = votes("182690", "116197")
+    last = Builder.timeline(stand_in(), p["2025-3502"], [], [v["182690"]])[-1]  # type: ignore[arg-type]
+    assert (last["date"], last["title"], last["detail"]) == (
+        "2025-12-16", "Parliament approved the request for an urgent decision", "By show of hands"
+    )
+    assert last["source"]["identifier"] == "MTG-PL-2025-12-16-DEC-182690"
+    tl = Builder.timeline(stand_in(), p["2020-0128"], [], [v["116197"]])  # type: ignore[arg-type]
+    day = [x for x in tl if x["date"] == "2020-07-08"]
+    assert [(x["title"], x["detail"]) for x in day] == [
+        ("Parliament approved the request for urgent procedure", "618 in favour, 62 against, 13 abstentions")
+    ]
+    assert {d["id"] for d in day[0]["docs"]} == {
+        "PV-9-2020-07-08-ITM-018", "C-9-2020-0185", "PV-9-2020-07-08-VOT-ITM-027"
+    }  # fmt: skip
+    # without the vote in our data, the records keep their neutral titles
+    tl = Builder.timeline(stand_in(), p["2020-0128"], [], [])  # type: ignore[arg-type]
+    assert [x["title"] for x in tl if x["date"] == "2020-07-08"] == ["Vote in Parliament", "Results of vote in Parliament"]
+
+
+def test_signature_of_an_ordinary_procedure_act_is_both_presidents_on_the_acts_date():
+    # 2017/0329(COD): EP/OEIL "Final act signed" 11 Apr 2018, the day before the Council adopted the act (12 Apr);
+    # Directive (EU) 2018/597 "of 18 April 2018", signed by the Presidents of Parliament and Council (Art. 297(1) TFEU)
+    from pipeline.build import JOINT_ACT_RE
+
+    p, a = procs("2017-0329")["2017-0329"], acts("32018L0597")["32018L0597"]
+
+    def sig(tl: list[dict]) -> list[tuple[str, str, str]]:
+        return [(x["date"], x["title"], x["institution"]) for x in tl if x["kind"] == "signature"]
+
+    joint = "Signed by the Presidents of Parliament and Council"
+    assert sig(Builder.timeline(stand_in(), p, [a], [])) == [("2018-04-18", joint, "EP and Council")]  # type: ignore[arg-type]
+    # without the act in our data: the EP's record, shown as the joint signature it is
+    assert sig(Builder.timeline(stand_in(), p, [], [])) == [("2018-04-11", joint, "EP and Council")]  # type: ignore[arg-type]
+    # a Council act that names an act of Parliament and the Council in its title is not one
+    c = acts("32021R1696")["32021R1696"]
+    assert JOINT_ACT_RE.match(a.title) and not JOINT_ACT_RE.match(c.title)
+
+
+def test_steps_of_one_day_are_in_procedural_order():
+    # 2020/0055(APP), 17 Apr 2020: Parliament's vote, the Council's adoption by written procedure (ST 7391/20 REV 1),
+    # publication and entry into force of Council Regulation (EU, Euratom) 2020/538, all that day.
+    # 2016/0132(COD), 14 May 2024: the Council adopted the act (ST 9841/24) before it was signed.
+    p = procs("2020-0055", "2016-0132")
+    cv = council("ST-7391-2020", "ST-9841-2024")
+    a = acts("32020R0538", "32024R1358")
+    me = stand_in(council_of={"2020-0055": [council_rec(cv["ST-7391-2020"])],
+                              "2016-0132": [council_rec(cv["ST-9841-2024"])]})  # fmt: skip
+    tl = Builder.timeline(me, p["2020-0055"], [a["32020R0538"]], [])  # type: ignore[arg-type]
+    assert [x["kind"] for x in tl if x["date"] == "2020-04-17"] == [
+        "plenary_vote", "council_adoption", "publication", "entry_into_force"
+    ]
+    tl = Builder.timeline(me, p["2016-0132"], [a["32024R1358"]], [])  # type: ignore[arg-type]
+    assert [x["kind"] for x in tl if x["date"] == "2024-05-14"] == ["council_adoption", "signature"]
+
+
+def test_vote_records_of_a_sitting_list_only_the_files_documents():
+    # re-derived snapshot records (pipeline.sources.ep_procedures.build_events): 2020/0112(APP) keeps only its own
+    # report A9-0227/2021; 2019/0900(APP) no longer lists A9-0170/2021 (Black Sea fisheries, 2019/2159(INI))
+    p = procs("2020-0112", "2019-0900", "2020-0067", "2016-0132")
+    assert [d.id for d in p["2020-0112"].documents if d.kind == "report"] == ["A-9-2021-0227"]
+    # a joint debate's reports (the asylum files debated together) are not the file's key documents
+    assert [d.id for d in p["2016-0132"].documents if d.kind == "report"] == ["A-8-2017-0212"]
+    assert "A-9-2021-0170" not in {d.id for e in p["2019-0900"].events for d in e.docs}
+    assert max(len(e.docs) for e in p["2020-0067"].events) < 10

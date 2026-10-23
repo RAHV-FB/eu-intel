@@ -36,6 +36,7 @@ export type ISODateTime = string;
 
 export type Institution =
   | 'EP'
+  | 'EP and Council' // timeline only: an act of Parliament and the Council, signed by both Presidents
   | 'Council'
   | 'European Council'
   | 'Commission'
@@ -504,6 +505,9 @@ export interface CouncilVote {
   // Set when vote_on differs from what the voting-result document's own label says, citing the procedure
   // record that shows it (e.g. its reference document is the Council's first-reading position)
   vote_on_note?: string | null;
+  // Set when the date is the day the act's text gives for the Council's decision, not the first day of a meeting
+  // held over several days (data/curated/council_dates.yaml)
+  date_note?: string | null;
   meeting?: string | null; // meeting reference as published
   written_procedure?: boolean | null; // adopted by written procedure rather than at a meeting
   council_doc?: string | null; // e.g. "PE-CONS 24/24"

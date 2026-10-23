@@ -185,8 +185,10 @@ def test_dossier_linking_by_identifier_only(out: Path):
     # EUR-Lex-only dossier: built from the act record, no invented EP events
     d9 = load(out, "dossiers/2099-0009.json")
     assert d9["ref"] == "2099/0009(COD)" and d9["celex"] == ["32099L0009"]
-    # no EP events; the only Council event is the Council's own voting result (C2)
-    assert {e["institution"] for e in d9["timeline"]} == {"EUR-Lex", "Council"}
+    # no EP events; the only Council event is the Council's own voting result (C2); the act's signature by both
+    # Presidents is dated by the act
+    assert {e["institution"] for e in d9["timeline"]} == {"EUR-Lex", "Council", "EP and Council"}
+    assert [e["source"]["institution"] for e in d9["timeline"] if e["kind"] == "signature"] == ["EUR-Lex"]
     assert [e["source"]["url"] for e in d9["timeline"] if e["institution"] == "Council"] == [
         "https://example.invalid/C2"
     ]
@@ -923,9 +925,12 @@ def _builder(**kw):
     for n in RECORDS["notices"]:
         notices[norm_ref(n["reference"])].append(ProcedureNotice.model_validate(n))
     state = {"today": TODAY, "notices_by_ref": notices, "acts_of": {}, "votes_of": {}, "council_of": {}, "act_dates": {},
-             "act": {}, "indexed_vote_ids": set(), "procedure_event": Builder.procedure_event}  # fmt: skip
+             "act": {}, "indexed_vote_ids": set(), "procedure_event": Builder.procedure_event,
+             "council_dates": {}}  # fmt: skip
     me = SimpleNamespace(**(state | kw))
     me.council_dated = lambda p: Builder.council_dated(me, p)  # type: ignore[attr-defined]
+    me.checked_council_date = lambda p: Builder.checked_council_date(me, p)  # type: ignore[attr-defined]
+    me.council_step_dated = lambda evs, cd: Builder.council_step_dated(me, evs, cd)  # type: ignore[attr-defined]
     return me
 
 

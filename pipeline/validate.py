@@ -426,6 +426,13 @@ def dossier_contradictions(d: dict) -> list[str]:
             out.append(f"withdrawn on {since}, before the proposal of {d['started']}")
     if d.get("adopted") and d.get("published") and d["adopted"] > d["published"]:
         out.append(f"adopted on {d['adopted']}, after its publication on {d['published']}")
+    # one Council adoption of the act per day (a procedural vote of the same day is not one), and no signature
+    # before it (2017/0329(COD): the EP's "Final act signed" of 11 Apr 2018, before the Council's adoption)
+    adoptions = Counter(e["date"] for e in d.get("timeline", []) if e.get("kind") == "council_adoption")
+    out += [f"{n} Council adoption steps on {day}" for day, n in sorted(adoptions.items()) if n > 1]
+    signed = [e["date"] for e in d.get("timeline", []) if e.get("kind") == "signature"]
+    if signed and adoptions and min(signed) < max(adoptions):
+        out.append(f"signed on {min(signed)}, before the Council's adoption step of {max(adoptions)}")
     return out
 
 

@@ -211,9 +211,13 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   the entry-into-force event. The snapshot keeps the source values; `validate` warns about application dates a
   year or more before the act, and about an entry into force before the act's adoption (or before a
   regulation's publication).
-- Timeline: an act's signature date is shown as "Signed by the Presidents of Parliament and Council" only for
-  acts of the European Parliament and of the Council (by the act's title); a Council act is signed on the day
-  of its adoption, which the Council's own step records.
+- Timeline: an act of the European Parliament and of the Council (by the act's own title, not one it names) is
+  signed by both Presidents (Art. 297(1) TFEU): its signature is shown once, as "Signed by the Presidents of
+  Parliament and Council" (actor `EP and Council`), on the act's signature date (else the date in its title),
+  in place of the EP's or OEIL's "Final act signed", which can be a week off (2017/0329(COD): 11 April 2018,
+  before the Council adopted the act; Directive (EU) 2018/597 of 18 April 2018). Without such an act in our data
+  the EP's signature step of an ordinary-procedure file is shown the same way. A Council act is signed on the
+  day of its adoption, which the Council's own step records.
 - Related files: an amending, amended, repealing or repealed act is named by its number (from its official
   title, e.g. "Directive (EU) 2025/794"; for an act outside the snapshot from its CELEX id, 2015 onwards and
   directives from 1999, e.g. "Regulation 2026/2102"), followed by its file's short title when it has one; an
@@ -229,22 +233,63 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   document" (shown as "Commission published its proposal", a proposal step); a text cited as T9-0129/2022 is
   Parliament's adopted text; a numbered Council document (09941/2017) is the Council's text submitted to
   Parliament; N-numbered documents are attributed as OEIL's documentation gateway lists them
-  (`OEIL_PROPOSAL_AUTHORS`), otherwise to the Legislative Observatory's record.
+  (`OEIL_PROPOSAL_AUTHORS`), otherwise to the Legislative Observatory's record. A proposal that OEIL's gateway
+  of other institutions lists under the Court of Justice ("CJEC | Legislative proposal | 07307/2022",
+  2022/0906(COD)) is the Court's request (Art. 281 TFEU), not a Commission proposal. OEIL prints some
+  references as plain text next to a EUR-Lex flag link ("COM(2018)0825", 2018/0417(CNS)); they are read like
+  linked ones, so every recorded proposal step carries its document.
 - Consent files: Parliament's decision in an interim or accompanying report (R/M procedure) and any earlier
   plenary decision in a file that has a later one (2013/0255(APP), 2013/0361(APP)) are interim resolutions, not
   its consent. Statutes adopted by Parliament with the Council's consent (Articles 223(2) and 228(4) TFEU,
   `status.PARLIAMENT_ADOPTS`, or an act titled "of the European Parliament of …") show the Council's consent and
   Parliament's adoption. Consultation and consent files show no readings.
+- Parliament's decision at a sitting that the EP API records as amendments (`PLENARY_AMEND`, OEIL "Decision by
+  Parliament") is, in a consultation file, Parliament's opinion ("Parliament delivered its opinion", 2018/0173(CNS):
+  T8-0415/2018 "Approves the Commission proposal as amended") and, in a consent file, its decision on consent: a
+  key step, with the text adopted that OEIL's "Decision by Parliament" of that day cites, and no second opinion
+  derived from the day's final vote. It stays "Parliament voted amendments to the proposal" when a referral back
+  to committee was voted that day.
 - "Proposed" (`started`): the earliest recorded proposal or COM document. "Adopted": Parliament's
   second-reading approval of the Council's position (Art. 294(7)(a) TFEU), else the date of the Council's
   adopted voting result on the act, else OEIL's Council step; a Council act (consultation, consent) is dated
   by its voting result, else by the act itself, which bears its adoption date (OEIL's Council date is then
   shown on the act's date, with OEIL's date in the detail); never after publication.
+- The Council's adoption checked against the act's text: every act of the ordinary legislative procedure gives
+  the date of the Council's decision in the footnote to "Acting in accordance with the ordinary legislative
+  procedure" ("… and decision of the Council of 24 May 2024", Directive (EU) 2024/1760). Where it differs from
+  the date we have, `data/curated/council_dates.yaml` gives it with the footnote quoted; the build then dates
+  OEIL's Council step (timeline, status, "Adopted", with OEIL's date in the detail and the act linked) or the
+  Council's voting result it names (a meeting held over several days, otherwise dated by its first day:
+  ST 10263/24, 23-24 May 2024) by it. Checked on 2026-10-23: the 58 ordinary-procedure acts dated from OEIL
+  alone whose date differs from Cellar's Council approval event (`APR_R1_byCONSIL`) or that have none; 35
+  differ from their text (by up to six weeks: 2015/0283(COD), OEIL 18 April 2017, "decision of the Council of
+  29 May 2017"). Acts dated from OEIL whose date Cellar confirms (341) were not read.
 - Negotiations: "Negotiations with the Council" runs from the first recorded trilogue after Parliament's
   mandate; mandate decisions (not their announcement in plenary) are key timeline steps and activity items. A
   first-reading vote followed by a referral back to committee in the same vote item (a "mandate" vote) is
   shown as "Parliament voted amendments to the proposal" and a mandate, also when the EP API already records
   a first-reading position and OEIL has not recorded the referral (2025/0393(COD)).
+- Plenary vote records: the EP API attaches to a procedure the vote items of each sitting (`PLENARY_VOTE`,
+  `PLENARY_VOTE_RESULTS`). They are folded into that day's decision of Parliament (its position, opinion,
+  consent, or, when there is none, its decision on negotiations or on a referral back). An item may cover every
+  file voted at the sitting ("Announcement of voting results" lists 20 documents of other files on
+  2020/0128(COD)), so a vote record keeps only the documents the procedure itself references: its own documents
+  and those of its other activities, OEIL key events and EP documentation gateway, amendments to them, the
+  item's own minutes and verbatim record, and every document of an item of this file alone (one document, or
+  this file's documents and registered texts such as the Council's position). A joint debate keeps the reports
+  of every file debated with this one on its own step, but they are not this file's "Key documents" (the asylum
+  files 2016/0132-0225(COD) were debated together). A vote record whose only votes on the file that day are on
+  a request for urgent procedure is titled by that vote, in the EP's wording ("Parliament approved the request
+  for urgent procedure", "… for an urgent decision"), with its counts or "By show of hands", and sourced to the
+  decision; the day's records are shown as one step.
+- Second reading: the committee steps the EP API records at stage RDG2 are the recommendation for second
+  reading ("Parliament committee adopted its recommendation for second reading", "Committee recommendation for
+  second reading tabled for the plenary", "Draft recommendation for second reading presented in Parliament
+  committee"). OEIL's "Approval in committee of the text agreed at 2nd reading interinstitutional negotiations"
+  is shown as the committee's approval of the provisional agreement, without a reading: OEIL also gives it where
+  Parliament then concluded at first reading (2016/0357A(COD)).
+- Steps of one day are listed in procedural order (proposal, committee, plenary vote, Parliament's decision,
+  the Council's, signature, publication, the act's dates), not by record id.
 - Rejection by Parliament: a final vote officially recorded as rejected, or an adopted motion to reject the
   proposal (2023/0413(COD), vote 179804), unless OEIL shows the file past Parliament's first reading.
 - OEIL has no procedure file for split parents (e.g. 2016/0224(COD)) or for 2020/3521(COD); those pages carry no
@@ -319,9 +364,26 @@ Scheduled runs are best-effort; the site shows the real retrieval timestamp per 
   Council's adoption of the act, is the adoption of the act. A vote citing the reference of a split procedure
   (2021/0211(COD)) is listed on the part holding an act of the type voted on (2021/0211A for the directive);
   the parent keeps a pointer (`council_votes_in_parts`).
+- A separate vote on derogating from the eight-week period for national parliaments (Rules of Procedure,
+  Art. 3(3), second subparagraph): a note that lists, after "Adoption of the legislative act", the item
+  "Derogation, on the basis of the second subparagraph of Article 3(3) of the Council's Rules of Procedure, from
+  the eight-week period …", next to another note of the same day on the same reference document that does not,
+  is that procedural decision (`vote_on` "other", with a note): ST 8160/20 (its voting sheet: the regulation's
+  title followed by that derogation; 25 in favour) beside ST 8159/20, which adopted the act (22-4-1), on
+  2020/0067(COD). It is shown as "Council decided to derogate from the eight-week period for national
+  parliaments", not as an adoption, and Member States' positions on it are listed as another Council decision.
+  The note "= Derogation from the 8-week period …" that accompanies an adoption (ST 8159/20, ST 7391/20 REV 1)
+  does not make a vote one; the dossier lists the vote adopting the act first among the day's votes.
+- A vote on the "Consent of the Council" to an act Parliament adopts (Art. 223(2), 226, 228(4) TFEU; ST 9947/21,
+  Statute of the European Ombudsman) is shown as the Council's step ("Council gave its consent"), in place of
+  OEIL's record of the same step.
+- `date_note`: a voting result of a meeting held over several days, which the note does not date to one day, is
+  dated by its first day unless `data/curated/council_dates.yaml` gives the day from the act's text (and, for
+  ST 10263/24, the voting sheet's "Sitting date: 24/05/2024"); the note then says so.
 - QMV threshold: when it is not established whether the Council acted on a Commission proposal (an ordinary
-  procedure opened by OEIL's "Legislative proposal published" without another initiator's document counts as
-  one), both numbers of Member States are given (`states_required` 55%, `states_required_alt` 72%).
+  procedure opened by OEIL's "Legislative proposal published" with its COM document and no other initiator's
+  document counts as one), both numbers of Member States are given (`states_required` 55%,
+  `states_required_alt` 72%).
 
 ### Legislative Train (`train`) — ok
 - 1,492 files across the 2014–19, 2019–24 and 2024–29 Commission terms; 663 carry procedure references. Statuses

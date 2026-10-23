@@ -1,0 +1,288 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2016-0133",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/LIBE-PR-599751-DEPOT-2017-02-24",
+     "type": "Activity",
+     "activity_date": "2017-02-24",
+     "activity_id": "LIBE-PR-599751-DEPOT-2017-02-24",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-PR-599751"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/BUDG-PA-597582-DEPOT-2017-01-20",
+     "type": "Activity",
+     "activity_date": "2017-01-20",
+     "activity_id": "BUDG-PA-597582-DEPOT-2017-01-20",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/BUDG-PA-597582"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2016-0133-DEC-ADCP-AFET-2017-04-11",
+     "type": "Decision",
+     "activity_date": "2017-04-11",
+     "activity_id": "2016-0133-DEC-ADCP-AFET-2017-04-11",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/AFET-AD-599593"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2016-0133-DEC-ADCP-BUDG-2017-05-11",
+     "type": "Decision",
+     "activity_date": "2017-05-11",
+     "activity_id": "2016-0133-DEC-ADCP-BUDG-2017-05-11",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/BUDG-AD-597582"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/AFET-PA-599593-DEPOT-2017-02-09",
+     "type": "Activity",
+     "activity_date": "2017-02-09",
+     "activity_id": "AFET-PA-599593-DEPOT-2017-02-09",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/AFET-PA-599593"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2016-0133-DEC-PLEIN1-2017-11-16",
+     "type": "Decision",
+     "activity_date": "2017-11-16",
+     "activity_id": "2016-0133-DEC-PLEIN1-2017-11-16",
+     "had_activity_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    },
+    {
+     "id": "eli/dl/event/2016-0133-DEPOT-2017-11-06",
+     "type": "Activity",
+     "activity_date": "2017-11-06",
+     "activity_id": "2016-0133-DEPOT-2017-11-06",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-8-2017-0345"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2016-0133-DEC-ADCP-2017-10-19",
+     "type": "Decision",
+     "activity_date": "2017-10-19",
+     "activity_id": "2016-0133-DEC-ADCP-2017-10-19",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2016-0133-ANPRO-2016-09-12",
+     "type": "Activity",
+     "activity_date": "2016-09-12",
+     "activity_id": "2016-0133-ANPRO-2016-09-12",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2017-11-16-VOT-ITM-657327-4",
+     "type": "Activity",
+     "activity_date": "2017-11-16",
+     "activity_id": "MTG-PL-2017-11-16-VOT-ITM-657327-4",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-8-2017-0345"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-8-2017-11-16-VOT-ITM-004"
+     ]
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/BUDG-AD-597582",
+    "eli/dl/doc/AFET-AD-599593",
+    "eli/dl/doc/AFET-PA-599593",
+    "eli/dl/doc/BUDG-PA-597582",
+    "eli/dl/doc/A-8-2017-0345",
+    "eli/dl/doc/LIBE-PR-599751"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2016-0133-NMSR-197806-2019-09-13",
+     "type": "Participation",
+     "activity_date": "2019-09-13",
+     "had_participant_person": [
+      "person/197806"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ID",
+     "precedenceOrder": 2100
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-AVI-BUDG",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/BUDG"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-NMSR-197808-2019-09-13",
+     "type": "Participation",
+     "activity_date": "2019-09-13",
+     "had_participant_person": [
+      "person/197808"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 2102
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-MAIN-LIBE",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/LIBE"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-NMSR-95074-2019-09-13",
+     "type": "Participation",
+     "activity_date": "2019-09-13",
+     "had_participant_person": [
+      "person/95074"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 2101
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-NMCP-22858-LIBE-2019-09-04",
+     "type": "Participation",
+     "activity_date": "2019-09-04",
+     "had_participant_person": [
+      "person/22858"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/LIBE",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 2105
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-NMCP-1473-BUDG-2016-06-15",
+     "type": "Participation",
+     "activity_date": "2016-06-15",
+     "had_participant_person": [
+      "person/1473"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-8",
+     "participation_in_name_of": "org/BUDG",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/ALDE",
+     "precedenceOrder": 600
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-NMSR-96852-2019-09-13",
+     "type": "Participation",
+     "activity_date": "2019-09-13",
+     "had_participant_person": [
+      "person/96852"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/GUE-NGL",
+     "precedenceOrder": 2107
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-OAR-JURI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/JURI"
+     ]
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-NMCP-39717-AFET-2016-07-12",
+     "type": "Participation",
+     "activity_date": "2016-07-12",
+     "had_participant_person": [
+      "person/39717"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-8",
+     "participation_in_name_of": "org/AFET",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 101
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-NMSR-197820-2019-09-13",
+     "type": "Participation",
+     "activity_date": "2019-09-13",
+     "had_participant_person": [
+      "person/197820"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 2104
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-NMSR-197574-2019-09-13",
+     "type": "Participation",
+     "activity_date": "2019-09-13",
+     "had_participant_person": [
+      "person/197574"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 2106
+    },
+    {
+     "id": "eli/dl/participation/2016-0133-AVI-AFET",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/AFET"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    }
+   ],
+   "process_id": "2016-0133",
+   "process_title": {
+    "en": "Establishing the criteria and mechanisms for determining the Member State responsible for examining an application for international protection lodged in one of the Member States by a third-country national or a stateless person (recast)"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "label": "2016/0133(COD)",
+   "identifierYear": "2016"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

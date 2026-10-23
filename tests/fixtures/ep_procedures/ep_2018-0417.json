@@ -1,0 +1,75 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2018-0417",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2018-0417-ANPRO-2019-01-30",
+     "type": "Activity",
+     "activity_date": "2019-01-30",
+     "activity_id": "2018-0417-ANPRO-2019-01-30",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2018-0417-DEC-DCPL-2019-03-27",
+     "type": "Decision",
+     "activity_date": "2019-03-27",
+     "activity_id": "2018-0417-DEC-DCPL-2019-03-27",
+     "had_activity_type": "def/ep-activities/PLENARY_DECISION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2019-03-27-PVCRE-ITM-10-3",
+     "type": "Activity",
+     "activity_date": "2019-03-27",
+     "activity_id": "MTG-PL-2019-03-27-PVCRE-ITM-10-3",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-8-2019-03-27-ITM-010-03"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2018-0417-PUB-2019-04-26",
+     "type": "Activity",
+     "activity_date": "2019-04-26",
+     "activity_id": "2018-0417-PUB-2019-04-26",
+     "had_activity_type": "def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2019-03-27-VOT-ITM-780634-3",
+     "type": "Activity",
+     "activity_date": "2019-03-27",
+     "activity_id": "MTG-PL-2019-03-27-VOT-ITM-780634-3",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-8-2019-0112"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-8-2019-03-27-VOT-ITM-003"
+     ]
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/TA-8-2019-0297",
+    "eli/dl/doc/A-8-2019-0112"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "process_id": "2018-0417",
+   "process_title": {
+    "en": "Products eligible for exemption from or a reduction in dock dues"
+   },
+   "process_type": "def/ep-procedure-types/CNS",
+   "label": "2018/0417(CNS)",
+   "identifierYear": "2018"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

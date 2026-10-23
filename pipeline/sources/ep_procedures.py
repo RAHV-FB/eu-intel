@@ -28,7 +28,10 @@ Sources (both official European Parliament publications):
 Event normalization (deterministic, nothing invented):
 - one Event per EP activity, kind/title from ACTIVITY_MAP (unknown types -> "other");
 - PLENARY_VOTE / PLENARY_VOTE_RESULTS records of a sitting are folded (with their minutes,
-  verbatim and vote-result documents) into that day's plenary decision event, if any;
+  verbatim and vote-result documents) into that day's plenary decision event, if any (else into
+  Parliament's decision on negotiations or on a referral back that day); a vote record keeps only
+  the documents the procedure itself references, not those of the other files voted under the
+  same item;
 - amendment tablings (committee or plenary) are grouped per day into one event;
 - OEIL key events listed in OEIL_EVENT_MAP are added (Commission proposal and withdrawal,
   Council positions/adoption, ...) unless the EP API already has an event of the same kind and
@@ -215,13 +218,21 @@ ACTIVITY_MAP: dict[str, tuple[EventKind, str]] = {
     ),
 }
 
-# Activities whose actor is not the EP. Signature is joint (EP + Council); publication is
-# done by the Publications Office (EUR-Lex / Official Journal).
+# Activities whose actor is not the EP: publication is done by the Publications Office (EUR-Lex /
+# Official Journal). Signature stays "EP" in the snapshot; the build shows the signature of an act of
+# Parliament and the Council as signed by both Presidents, dated by the act (build.timeline).
 ACTIVITY_INSTITUTION: dict[str, Institution] = {"PUBLICATION_OFFICIAL_JOURNAL": "EUR-Lex"}
 
 READING = {"RDG1": "first reading", "RDG2": "second reading", "RDG3": "third reading"}
 # Activity types whose title gets the reading appended when the source states it.
 READING_QUALIFIED = {"PLENARY_ADOPT_POSITION", "PLENARY_AMEND_PROPOSAL", "PLENARY_DECISION", "REFERRAL"}
+# At second reading the committee responsible adopts a recommendation for second reading, not a report
+# (2023/0112(COD): A10-0066/2026 "RECOMMENDATION FOR SECOND READING on the Council position at first reading")
+STAGE_TITLES: dict[tuple[str, str], str] = {
+    ("COMMITTEE_ADOPTING_REPORT", "RDG2"): "Parliament committee adopted its recommendation for second reading",
+    ("TABLING_PLENARY", "RDG2"): "Committee recommendation for second reading tabled for the plenary",
+    ("COMMITTEE_TABLING_REPORT", "RDG2"): "Draft recommendation for second reading presented in Parliament committee",
+}
 
 # Vote-record activities that duplicate a same-day plenary decision; their documents
 # (minutes, verbatim report, vote results) are folded into that decision event.
@@ -237,6 +248,15 @@ PLENARY_DECISION_TYPES = {
     "PLENARY_REJECT_COUNCIL_POSITION",
     "PLENARY_ADOPT_JOINT_TEXT",
     "PLENARY_REJECT_JOINT_TEXT",
+}
+# Parliament's other decisions at a sitting, which a same-day vote record is folded into when the day has no
+# decision of PLENARY_DECISION_TYPES (2023/0077(COD), 14 Sep 2023: the vote confirming the committee's mandate)
+PLENARY_OTHER_DECISION_TYPES = {
+    "PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+    "PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+    "PLENARY_REJECT_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+    "PLENARY_REJECT_COMMITTEE_INTERINSTUTIONAL_NEGOTIATIONS",
+    "PLENARY_REFER_COMMITTEE_RECONSIDERATION",
 }
 
 # --------------------------------------------------------------------------------------
@@ -377,12 +397,25 @@ OEIL_EVENT_MAP: dict[str, tuple[EventKind, Institution, str]] = {
         "EP",
         "Parliament committee approved the agreement reached with the Council for an early second reading",
     ),
+    # No reading in the title: OEIL gives this label also where the agreement was then concluded at first
+    # reading (2016/0357A(COD), 25 Apr 2018; "Decision by Parliament, 1st reading" on 5 Jul 2018)
+    "Approval in committee of the text agreed at 2nd reading interinstitutional negotiations": (
+        EventKind.provisional_agreement,
+        "EP",
+        "Parliament committee approved the provisional agreement with the Council",
+    ),
     "Debate in Parliament": (EventKind.plenary_debate, "EP", "Debate in Parliament"),
     "Committee decision to open interinstitutional negotiations after 1st reading in Parliament": (
         EventKind.negotiation_mandate,
         "EP",
         "Parliament committee decided to open second-reading negotiations with the Council",
     ),
+}
+
+# Initiators that OEIL's documentation gateway names for a legislative proposal ("Institution/body" column):
+# the Court of Justice's request under Article 281 TFEU (2022/0906(COD): "CJEC | Legislative proposal | 07307/2022")
+OEIL_PROPOSAL_BODIES: dict[str, tuple[Institution, str]] = {
+    "CJEC": ("CJEU", "Court of Justice submitted its request (legislative proposal)"),
 }
 
 COMMITTEE_ROLE: dict[str, str] = {
@@ -469,6 +502,7 @@ def activity_title(raw: str, stage: str | None = None) -> tuple[EventKind, str]:
         kind, title = ACTIVITY_MAP[code]
     else:
         kind, title = EventKind.other, f"Parliament activity: {humanize_type(code)}"
+    title = STAGE_TITLES.get((code, last_segment(stage)), title) if stage else title
     reading = READING.get(last_segment(stage)) if stage else None
     if reading and code in READING_QUALIFIED:
         title = f"{title} ({reading})"
@@ -582,6 +616,10 @@ class OeilInfo:
     mep_names: dict[str, str] = field(default_factory=dict)  # EP person id -> "SURNAME Given"
     events: list[OeilEvent] = field(default_factory=list)
     com_docs: list[DocRef] = field(default_factory=list)
+    ep_docs: list[str] = field(default_factory=list)  # references in the EP documentation gateway ("A9-0227/2021")
+    # (institution or body, document type, reference) in the gateway of other institutions, e.g.
+    # ("CJEC", "Legislative proposal", "07307/2022") for 2022/0906(COD)
+    other_docs: list[tuple[str, str, str]] = field(default_factory=list)
     final_acts: list[DocRef] = field(default_factory=list)  # id = CELEX
     players: list[OeilPlayer] = field(default_factory=list)  # EP committees + rapporteurs
     has_basic_info: bool = False  # the page has the procedure file's "Basic information" section
@@ -603,6 +641,25 @@ def check_oeil_page(info: OeilInfo, reference: str) -> None:
 
 def _text(el: Any) -> str:
     return " ".join(el.text_content().split())
+
+
+def _cell_refs(cell: Any) -> list[tuple[str, str | None]]:
+    """(reference, url) in a references cell: each link with text, and each reference printed as plain text
+    (<span>) with the textless flag link that follows it, if any, as its url (2018/0417(CNS): "<span>COM(2018)0825
+    </span> <a href=…EUR-Lex…><i class="flag-icon…"/></a>")."""
+    out: list[tuple[str, str | None]] = []
+    for el in cell.iter("a", "span"):
+        if el.tag == "span" and next(el.iterancestors("a", "span"), None) is not None:
+            continue  # part of a link's (or an enclosing span's) text
+        t = _text(el)
+        if not t:
+            continue
+        url = el.get("href")
+        if el.tag == "span":
+            nxt = el.getnext()
+            url = nxt.get("href") if nxt is not None and nxt.tag == "a" and not _text(nxt) else None
+        out.append((t, url))
+    return out
 
 
 def parse_oeil(body: bytes | str) -> OeilInfo:
@@ -685,12 +742,7 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
         label = _text(tds[1])
         if not date or not label:
             continue
-        refs: list[tuple[str, str | None]] = []
-        if len(tds) > 2:
-            for a in tds[2].xpath(".//a"):
-                t = _text(a)
-                if t:
-                    refs.append((t, a.get("href")))
+        refs = _cell_refs(tds[2]) if len(tds) > 2 else []
         info.events.append(OeilEvent(date=date, label=label, refs=refs))
 
     # Commission documents in the documentation gateway (legislative proposals)
@@ -700,8 +752,7 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
         if len(cells) < 3:
             continue
         dtype = _text(cells[0])
-        ref_a = cells[1].xpath(".//a")
-        ref_text = _text(ref_a[0]) if ref_a else _text(cells[1])
+        ref_text, url = (_cell_refs(cells[1]) or [(_text(cells[1]), None)])[0]
         m = COM_RE.search(ref_text)
         if not m or "proposal" not in dtype.lower():
             continue
@@ -710,8 +761,20 @@ def parse_oeil(body: bytes | str) -> OeilInfo:
             continue
         seen.add(cid)
         date = dmy_to_iso(_text(cells[2])) if len(cells) > 2 else None
-        url = ref_a[0].get("href") if ref_a else None
         info.com_docs.append(DocRef(id=cid, label=dtype, kind="proposal", date=date, url=url))
+    # EP documents of the file (reports, texts adopted, committee documents): which documents are its own
+    for tr in doc.xpath('//*[@id="es_accordion-item-doc-gateway-EP"]//tbody/tr'):
+        cells = tr.xpath("./th|./td")
+        for t, _ in _cell_refs(cells[2]) if len(cells) > 2 else []:
+            if t not in info.ep_docs:
+                info.ep_docs.append(t)
+    # other institutions and bodies: "Institution/body | Document type | Reference | Date"
+    for tr in doc.xpath('//*[@id="es_accordion-item-doc-gateway-OTHER"]//tbody/tr'):
+        cells = tr.xpath("./th|./td")
+        if len(cells) > 2:
+            for t, _ in _cell_refs(cells[2]) or [(_text(cells[2]), None)]:
+                if t:
+                    info.other_docs.append((_text(cells[0]), _text(cells[1]), t))
     # COM references also appear on key events (e.g. when the gateway is empty)
     for ev in info.events:
         if ev.label in OEIL_EVENT_MAP and OEIL_EVENT_MAP[ev.label][0] == EventKind.proposal:
@@ -771,20 +834,51 @@ def build_events(
             for d in as_list(e.get(k)):
                 if isinstance(d, str):
                     out.append(ep_docref(d))
+        if last_segment(activity_type(e)) in VOTE_RECORD_TYPES:
+            out = [d for d in out if own_doc(d, e)]
         return out
 
-    # 1) fold vote records into the same-day plenary decision event
+    # A vote record is an item of the sitting, which may cover every file voted under it ("Announcement of
+    # voting results": MTG-PL-2020-07-08-PVCRE-ITM-18 lists 20 documents of other files on 2020/0128(COD)).
+    # Its documents are kept only when the procedure itself references them: its own documents, those of its
+    # other activities, of its OEIL key events and EP documentation (and amendments to them); the item's own
+    # minutes and verbatim record; and every document of an item of this file alone: one based on a single
+    # document, or on documents of this file and registered texts (C) only, such as the Council's position
+    # (2016/0139(COD), 18 Apr 2023: C9-0047/2023 and the file's recommendation A9-0076/2023).
+    own = {last_segment(d) for d in as_list(proc.get("created_a_realization_of")) if isinstance(d, str)}
+    for e in raw_events:
+        if last_segment(activity_type(e)) not in VOTE_RECORD_TYPES | {"PLENARY_DEBATE"}:  # a debate may be joint
+            for k in ("decided_on_a_realization_of", "based_on_a_realization_of", "recorded_in_a_realization_of"):
+                own |= {last_segment(d) for d in as_list(e.get(k)) if isinstance(d, str)}
+    own_refs = ({t for ev in oeil.events for t, _ in ev.refs} | set(oeil.ep_docs)) if oeil else set()
+
+    def proven(did: str) -> bool:
+        base = re.sub(r"-AM-\d+-\d+$", "", did)
+        return base in own or (ep_docref(base).label or base) in own_refs
+
+    def own_doc(d: DocRef, e: dict[str, Any]) -> bool:
+        based_on = [last_segment(x) for x in as_list(e.get("based_on_a_realization_of")) if isinstance(x, str)]
+        recorded = {last_segment(x) for x in as_list(e.get("recorded_in_a_realization_of")) if isinstance(x, str)}
+        this_file = len(based_on) == 1 or (
+            any(proven(x) for x in based_on) and all(proven(x) or x.startswith("C-") for x in based_on)
+        )
+        return proven(d.id) or d.id in recorded or this_file
+
+    # 1) fold vote records into the same-day plenary decision event (else another decision of Parliament that day)
     decisions_by_date: dict[str, list[dict[str, Any]]] = {}
+    other_decisions: dict[str, list[dict[str, Any]]] = {}
     for e in raw_events:
         if last_segment(activity_type(e)) in PLENARY_DECISION_TYPES:
             decisions_by_date.setdefault(e["activity_date"][:10], []).append(e)
+        elif last_segment(activity_type(e)) in PLENARY_OTHER_DECISION_TYPES:
+            other_decisions.setdefault(e["activity_date"][:10], []).append(e)
     folded_docs: dict[str, list[DocRef]] = {}
     keep: list[dict[str, Any]] = []
     for e in raw_events:
         code = last_segment(activity_type(e))
         day = e["activity_date"][:10]
-        if code in VOTE_RECORD_TYPES and day in decisions_by_date:
-            target = sorted(decisions_by_date[day], key=lambda x: x["activity_id"])[-1]
+        if code in VOTE_RECORD_TYPES and (day in decisions_by_date or day in other_decisions):
+            target = sorted(decisions_by_date.get(day) or other_decisions[day], key=lambda x: x["activity_id"])[-1]
             folded_docs.setdefault(target["activity_id"], []).extend(docs_of(e))
             continue
         keep.append(e)
@@ -858,6 +952,19 @@ def build_events(
             )
         )
 
+    # Parliament's opinion (consultation) or decision (consent) that the EP API records as PLENARY_AMEND, without
+    # the text adopted: the text OEIL's "Decision by Parliament" of that day cites (2018/0173(CNS), 24 Oct 2018:
+    # T8-0415/2018, "Approves the Commission proposal as amended")
+    m_ref = PROC_REF_RE.match(reference)
+    if oeil and m_ref and m_ref[3] in ("CNS", "APP"):
+        for oe in oeil.events:
+            texts = [m for t, _ in oe.refs if (m := re.fullmatch(r"T(\d+)-(\d{4})/(\d{4})", t))]
+            same = [ev for ev in events if ev.date == oe.date and "-DEC-" in ev.id
+                    and (ev.raw_type or "").endswith("/PLENARY_AMEND")]  # fmt: skip
+            if oe.label.startswith("Decision by Parliament") and len(texts) == 1 and len(same) == 1:
+                ta = ep_docref(f"TA-{texts[0][1]}-{texts[0][3]}-{texts[0][2]}", oe.date)
+                same[0].docs = _dedupe_docs([*same[0].docs, ta])
+
     # 3) OEIL key events not recorded by the EP API
     if oeil:
         have = {(ev.date, ev.kind, ev.institution) for ev in events}
@@ -883,6 +990,10 @@ def build_events(
                         url=url if url and url.startswith("http") else None,
                     )
                 )
+            if kind == EventKind.proposal:  # a proposal OEIL lists under another institution than the Commission
+                refs = {t for t, _ in oe.refs}
+                body = next((b for b, dtype, r in oeil.other_docs if r in refs and "proposal" in dtype.lower()), None)
+                inst, title = OEIL_PROPOSAL_BODIES.get(body or "", (inst, title))
             slug = re.sub(r"[^a-z0-9]+", "-", oe.label.lower()).strip("-")[:40]
             base = f"OEIL-{pid}-{oe.date}-{slug}"
             n = counter.get(base, 0)
@@ -1065,6 +1176,8 @@ def build_procedure(
         for d in oeil.com_docs:
             documents.setdefault(d.id, d)
     for ev in events:
+        if (ev.raw_type or "").endswith("/PLENARY_DEBATE"):
+            continue  # a joint debate lists the reports of every file debated with this one (2016/0132(COD))
         for d in ev.docs:
             if is_key_document(d) and d.id not in documents:
                 documents[d.id] = d.model_copy(update={"date": d.date or ev.date})

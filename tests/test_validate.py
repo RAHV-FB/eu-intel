@@ -178,6 +178,20 @@ def test_public_dossier_contradicting_its_own_dates(tmp_path: Path):
     assert "before the proposal of 2018-05-31" in errors[1] and "after its publication" in errors[2]
 
 
+def test_public_timeline_with_two_council_adoptions_or_a_signature_before_one(tmp_path: Path):
+    # as published before the fix: 2020-0067 (ST 8159/20 and the derogation vote ST 8160/20 both "Council adopted
+    # the act" on 20 May 2020), 2017-0329 (the EP's "Final act signed" of 11 Apr 2018 before the Council's 12 Apr)
+    from pipeline.validate import dossier_contradictions
+
+    two = {"id": "2020-0067", "timeline": [{"kind": "council_adoption", "date": "2020-05-20"}] * 2}
+    early = {"id": "2017-0329", "timeline": [{"kind": "signature", "date": "2018-04-11"},
+                                             {"kind": "council_adoption", "date": "2018-04-12"}]}  # fmt: skip
+    assert dossier_contradictions(two) == ["2 Council adoption steps on 2020-05-20"]
+    assert dossier_contradictions(early) == ["signed on 2018-04-11, before the Council's adoption step of 2018-04-12"]
+    early["timeline"][0]["date"] = "2018-04-18"  # the act's date
+    assert dossier_contradictions(early) == []
+
+
 def test_public_vote_margin_must_agree_with_an_established_outcome(tmp_path: Path):
     # as published before the guard in build.py ep_vote_summary, 1,102 index entries with no established outcome
     # carried a margin label; a margin's sign or label can also disagree with the outcome (ids are illustrative)

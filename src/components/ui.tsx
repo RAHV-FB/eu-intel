@@ -116,6 +116,7 @@ export function BasisNote({ basis }: { basis: Basis }) {
 
 const INSTITUTION_LABEL: Record<string, string> = {
   EP: 'European Parliament',
+  'EP and Council': 'European Parliament and Council of the EU',
   Council: 'Council of the EU',
   'European Council': 'European Council',
   Commission: 'European Commission',
