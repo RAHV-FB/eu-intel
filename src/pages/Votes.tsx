@@ -5,6 +5,7 @@ import { useData } from '../lib/data';
 import { formatNumber, plural } from '../lib/format';
 import { loadSearch, type SearchEngine } from '../lib/search';
 import { Disclosure, EmptyState, ErrorState, Loading, PageHeader, Term } from '../components/ui';
+import { CollapsibleFilters } from '../components/CollapsibleFilters';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, VoteKindGuide, VoteListItem } from '../features/votes/components';
 import { KIND_LABEL, OUTCOME_LABEL, isClose } from '../features/votes/labels';
@@ -106,6 +107,8 @@ export default function Votes() {
   }, [votes, keywordHits, year, kind, outcome, topic, dossier, close, sort]);
 
   const active = [q, year, kind, outcome, topic, dossier, close ? '1' : ''].some(Boolean);
+  // what the phone toggle reports: everything behind it that differs from the default, including the order
+  const activeFilters = [year, kind, outcome, topic, dossier, close ? '1' : '', sort !== 'newest' ? sort : ''].filter(Boolean).length;
 
   return (
     <div className="container page">
@@ -153,78 +156,80 @@ export default function Votes() {
                 onChange={(e) => set('q', e.target.value)}
               />
             </div>
-            <div className="field">
-              <label htmlFor="vf-year">Year</label>
-              <select id="vf-year" className="select" value={year} onChange={(e) => set('year', e.target.value)}>
-                <option value="">All years</option>
-                {opts.years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="vf-kind">Kind of vote</label>
-              <select id="vf-kind" className="select" value={kind} onChange={(e) => set('kind', e.target.value)}>
-                <option value="">All kinds</option>
-                {KIND_ORDER.filter((k) => opts.kinds.has(k)).map((k) => (
-                  <option key={k} value={k}>
-                    {KIND_LABEL[k]} ({formatNumber(opts.kinds.get(k))})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="vf-outcome">Outcome</label>
-              <select id="vf-outcome" className="select" value={outcome} onChange={(e) => set('outcome', e.target.value)}>
-                <option value="">Any outcome</option>
-                {OUTCOME_ORDER.filter((o) => opts.outcomes.has(o)).map((o) => (
-                  <option key={o} value={o}>
-                    {OUTCOME_LABEL[o]} ({formatNumber(opts.outcomes.get(o))})
-                  </option>
-                ))}
-              </select>
-            </div>
-            {opts.topics.size > 0 && (
+            <CollapsibleFilters label="Filters and sorting" active={activeFilters}>
               <div className="field">
-                <label htmlFor="vf-topic">Topic</label>
-                <select id="vf-topic" className="select" value={topic} onChange={(e) => set('topic', e.target.value)}>
-                  <option value="">All topics</option>
-                  {[...opts.topics.keys()]
-                    .sort((a, b) => topicLabel(a).localeCompare(topicLabel(b)))
-                    .map((t) => (
-                      <option key={t} value={t}>
-                        {topicLabel(t)} ({formatNumber(opts.topics.get(t))})
-                      </option>
-                    ))}
+                <label htmlFor="vf-year">Year</label>
+                <select id="vf-year" className="select" value={year} onChange={(e) => set('year', e.target.value)}>
+                  <option value="">All years</option>
+                  {opts.years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
                 </select>
               </div>
-            )}
-            {opts.linked > 0 && opts.linked < votes.length && (
               <div className="field">
-                <label htmlFor="vf-dossier">Legislative file</label>
-                <select id="vf-dossier" className="select" value={dossier} onChange={(e) => set('dossier', e.target.value)}>
-                  <option value="">Linked or not</option>
-                  <option value="linked">Linked to a file ({formatNumber(opts.linked)})</option>
-                  <option value="unlinked">Not linked ({formatNumber(votes.length - opts.linked)})</option>
+                <label htmlFor="vf-kind">Kind of vote</label>
+                <select id="vf-kind" className="select" value={kind} onChange={(e) => set('kind', e.target.value)}>
+                  <option value="">All kinds</option>
+                  {KIND_ORDER.filter((k) => opts.kinds.has(k)).map((k) => (
+                    <option key={k} value={k}>
+                      {KIND_LABEL[k]} ({formatNumber(opts.kinds.get(k))})
+                    </option>
+                  ))}
                 </select>
               </div>
-            )}
-            <div className="field">
-              <label htmlFor="vf-sort">Sort by</label>
-              <select id="vf-sort" className="select" value={sort} onChange={(e) => set('sort', e.target.value === 'newest' ? '' : e.target.value)}>
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                {opts.withMargin > 0 && <option value="margin">Closest margin first</option>}
-              </select>
-            </div>
-            {opts.withMargin > 0 && (
-              <div className="field field--check">
-                <input id="vf-close" type="checkbox" checked={close} onChange={(e) => set('close', e.target.checked ? '1' : '')} />
-                <label htmlFor="vf-close">Close votes only ({formatNumber(opts.closeCount)})</label>
+              <div className="field">
+                <label htmlFor="vf-outcome">Outcome</label>
+                <select id="vf-outcome" className="select" value={outcome} onChange={(e) => set('outcome', e.target.value)}>
+                  <option value="">Any outcome</option>
+                  {OUTCOME_ORDER.filter((o) => opts.outcomes.has(o)).map((o) => (
+                    <option key={o} value={o}>
+                      {OUTCOME_LABEL[o]} ({formatNumber(opts.outcomes.get(o))})
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
+              {opts.topics.size > 0 && (
+                <div className="field">
+                  <label htmlFor="vf-topic">Topic</label>
+                  <select id="vf-topic" className="select" value={topic} onChange={(e) => set('topic', e.target.value)}>
+                    <option value="">All topics</option>
+                    {[...opts.topics.keys()]
+                      .sort((a, b) => topicLabel(a).localeCompare(topicLabel(b)))
+                      .map((t) => (
+                        <option key={t} value={t}>
+                          {topicLabel(t)} ({formatNumber(opts.topics.get(t))})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+              {opts.linked > 0 && opts.linked < votes.length && (
+                <div className="field">
+                  <label htmlFor="vf-dossier">Legislative file</label>
+                  <select id="vf-dossier" className="select" value={dossier} onChange={(e) => set('dossier', e.target.value)}>
+                    <option value="">Linked or not</option>
+                    <option value="linked">Linked to a file ({formatNumber(opts.linked)})</option>
+                    <option value="unlinked">Not linked ({formatNumber(votes.length - opts.linked)})</option>
+                  </select>
+                </div>
+              )}
+              <div className="field">
+                <label htmlFor="vf-sort">Sort by</label>
+                <select id="vf-sort" className="select" value={sort} onChange={(e) => set('sort', e.target.value === 'newest' ? '' : e.target.value)}>
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  {opts.withMargin > 0 && <option value="margin">Closest margin first</option>}
+                </select>
+              </div>
+              {opts.withMargin > 0 && (
+                <div className="field field--check">
+                  <input id="vf-close" type="checkbox" checked={close} onChange={(e) => set('close', e.target.checked ? '1' : '')} />
+                  <label htmlFor="vf-close">Close votes only ({formatNumber(opts.closeCount)})</label>
+                </div>
+              )}
+            </CollapsibleFilters>
           </form>
 
           <div className="results-bar">

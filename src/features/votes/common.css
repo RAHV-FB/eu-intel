@@ -44,6 +44,22 @@
 .filters--wide-first > :first-child {
   grid-column: 1 / -1;
 }
+/* Everything after the search box: grid items in place, or behind a toggle on phones (CollapsibleFilters). */
+.filters__rest {
+  display: contents;
+}
+.filters__rest[hidden] {
+  display: none;
+}
+.filters__toggle {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.filters__count {
+  font-weight: var(--fw-regular);
+  color: var(--text-2);
+  white-space: pre;
+}
 .field {
   display: flex;
   flex-direction: column;

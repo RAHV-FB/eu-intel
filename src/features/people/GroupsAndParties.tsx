@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { GroupSummary, PartySummary } from '../../types/data';
 import { countryName, formatNumber } from '../../lib/format';
-import { EmptyState } from '../../components/ui';
+import { Disclosure, EmptyState } from '../../components/ui';
+import { CollapsibleFilters, PHONE_WIDTH } from '../../components/CollapsibleFilters';
+import { useMediaQuery } from '../../components/useMediaQuery';
 import { SortTh, useSortable } from '../votes/sortable';
 import { termLabel } from './labels';
 import './people.css';
@@ -145,24 +147,26 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
           <label htmlFor="pf-q">Party name</label>
           <input id="pf-q" className="input" type="search" value={q} onChange={(e) => set('pq', e.target.value)} />
         </div>
-        <div className="field">
-          <label htmlFor="pf-country">Country</label>
-          <select id="pf-country" className="select" value={country} onChange={(e) => set('pcountry', e.target.value)}>
-            <option value="">All countries</option>
-            {countries.map((c) => (
-              <option key={c} value={c}>
-                {countryName(c)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="pf-scope">Show</label>
-          <select id="pf-scope" className="select" value={scope} onChange={(e) => set('pscope', e.target.value, 'current')}>
-            <option value="current">Parties with current MEPs</option>
-            <option value="all">All parties in dataset</option>
-          </select>
-        </div>
+        <CollapsibleFilters label="Filters" active={(country ? 1 : 0) + (scope !== 'current' ? 1 : 0)}>
+          <div className="field">
+            <label htmlFor="pf-country">Country</label>
+            <select id="pf-country" className="select" value={country} onChange={(e) => set('pcountry', e.target.value)}>
+              <option value="">All countries</option>
+              {countries.map((c) => (
+                <option key={c} value={c}>
+                  {countryName(c)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="pf-scope">Show</label>
+            <select id="pf-scope" className="select" value={scope} onChange={(e) => set('pscope', e.target.value, 'current')}>
+              <option value="current">Parties with current MEPs</option>
+              <option value="all">All parties in dataset</option>
+            </select>
+          </div>
+        </CollapsibleFilters>
       </form>
       <p className="results-bar__count" aria-live="polite" style={{ marginBottom: 'var(--sp-3)' }}>
         {formatNumber(filtered.length)} {filtered.length === 1 ? 'party' : 'parties'}
@@ -233,9 +237,11 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
   );
 }
 
+/** What a national party is and what a political group is. On phones it is folded into a disclosure, so the lists start higher up. */
 export function PartyVsGroup() {
-  return (
-    <div className="party-vs-group">
+  const narrow = useMediaQuery(PHONE_WIDTH);
+  const body = (
+    <div className={narrow ? 'party-vs-group party-vs-group--plain' : 'party-vs-group'}>
       <div>
         <h2>National party</h2>
         <p>
@@ -251,6 +257,12 @@ export function PartyVsGroup() {
           their own vote.
         </p>
       </div>
+    </div>
+  );
+  if (!narrow) return body;
+  return (
+    <div className="party-vs-group-disclosure">
+      <Disclosure summary="National party or political group?">{body}</Disclosure>
     </div>
   );
 }
