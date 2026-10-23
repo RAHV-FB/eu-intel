@@ -64,7 +64,8 @@ export function MarginText({
 }
 
 /** One row in a list of plenary votes. */
-export function VoteListItem({ v, showDossier = true }: { v: EpVoteSummary; showDossier?: boolean }) {
+/** `listUrl`: the address of the list shown, which the vote page's "All votes" link then returns to. */
+export function VoteListItem({ v, showDossier = true, listUrl }: { v: EpVoteSummary; showDossier?: boolean; listUrl?: string }) {
   return (
     <li className="vote-item">
       <div className="vote-item__main">
@@ -90,7 +91,7 @@ export function VoteListItem({ v, showDossier = true }: { v: EpVoteSummary; show
           )}
         </p>
         <h3 className="vote-item__title">
-          <Link to={`/votes/${encodeURIComponent(v.id)}`}>
+          <Link to={`/votes/${encodeURIComponent(v.id)}`} state={listUrl ? { votesList: listUrl } : undefined}>
             <VoteTitle v={v} />
           </Link>
         </h3>

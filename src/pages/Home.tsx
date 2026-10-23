@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { HomeData, Meta, Topic } from '../types/data';
 import { useData } from '../lib/data';
-import { formatDateTime, formatNumber, stillAhead } from '../lib/format';
+import { formatDateTime, formatNumber, noUpdateText, stillAhead } from '../lib/format';
 import { votesSince } from '../lib/scope';
 import { SearchBox } from '../components/SearchBox';
 import { ErrorState, Loading } from '../components/ui';
@@ -12,6 +12,9 @@ import { useDocumentTitle } from '../features/legislation/labels';
 import { todayISO } from '../features/legislation/explorer';
 import '../features/legislation/common.css';
 import '../features/home/home.css';
+
+// a "Stalled" file's subtitle, counted on the day the data was built (pipeline/build.py build_home)
+const NO_UPDATE = /^No recorded procedural update in (\d+) days?$/;
 
 const EXAMPLES = ['AI Act', 'Migration', 'GDPR', 'Spain', 'EPP', 'Agriculture', 'Digital markets', 'Climate'];
 
@@ -25,9 +28,22 @@ export default function Home() {
   const topics = home.data?.topics?.length ? home.data.topics : (topicsFallback.data ?? []);
   const topicLabel = (slug: string) => topics.find((t) => t.slug === slug)?.label ?? slug;
 
-  // "Coming up" was computed when the data was built: dates that have passed since are left out
+  // "Coming up" was computed when the data was built: dates that have passed since are left out; the days since a
+  // stalled file's last recorded step are counted on the visitor's date
   const today = todayISO();
-  const lists = (home.data?.lists ?? []).map((l) => (l.id === 'upcoming' ? { ...l, items: stillAhead(l.items, today) } : l));
+  const lists = (home.data?.lists ?? []).map((l) =>
+    l.id === 'upcoming'
+      ? { ...l, items: stillAhead(l.items, today) }
+      : l.id === 'stalled'
+        ? {
+            ...l,
+            items: l.items.map((it) => {
+              const n = it.subtitle && NO_UPDATE.exec(it.subtitle);
+              return n ? { ...it, subtitle: noUpdateText(Number(n[1]), it.date, today) } : it;
+            }),
+          }
+        : l,
+  );
   const featured = home.data?.featured ?? [];
 
   return (

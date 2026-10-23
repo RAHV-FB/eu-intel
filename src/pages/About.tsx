@@ -215,9 +215,10 @@ export default function About() {
               The homepage lists are rule-based: <em>Recently adopted</em> (formally adopted acts, newest first);{' '}
               <em>Under discussion</em> (files not yet adopted with a recorded procedural step in the last 120 days);{' '}
               <em>Close votes</em> (the most recent final Parliament votes on a whole text that were close, as defined under “Votes and
-              margins” below); <em>Rejected</em> (final votes on a whole text that Parliament voted down,
-              and motions to reject a proposal or the Council’s position that it adopted, with what happened to the file next; then files
-              recorded as rejected — never amendments, rejected objections or motions of censure);{' '}
+              margins” below, except decisions on discharge for the EU budget); <em>Rejected</em> (final votes on a whole text that
+              Parliament voted down, and motions to reject a proposal or the Council’s position that it adopted, with what happened to the
+              file next; then files recorded as rejected — never amendments, rejected objections or motions of censure, or decisions on
+              discharge for the EU budget);{' '}
               <em>Stalled</em> (see below); <em>Coming up</em> (legally fixed dates in the next 12 months).
             </li>
           </ul>
@@ -255,8 +256,10 @@ export default function About() {
           <p>
             We call a file <strong>officially blocked</strong> only when Parliament’s Legislative Train Schedule labels it “blocked” (no
             progress for at least nine months, in the Train’s own definition). Otherwise we state only a fact: the number of days since the
-            last recorded procedural step. Files still under discussion with no recorded step for a year or more appear in the homepage’s
-            “Stalled” list, described that way — this is not an official assessment, and work can continue without a recorded step.
+            last recorded procedural step. The homepage’s “Stalled” list shows officially blocked files first (the Train’s most recent
+            classifications, longest without a recorded step first, saying how many of them it shows), then files in the ordinary
+            legislative procedure, where both Parliament and the Council must still act, with no recorded step for a year or more,
+            described that way — this is not an official assessment, and work can continue without a recorded step.
           </p>
 
           <h3>Votes and margins</h3>
@@ -270,7 +273,9 @@ export default function About() {
             </li>
             <li>
               In the vote explorer and the homepage’s <em>Close votes</em> list, a vote is marked <strong>close</strong> when the votes
-              in favour were within {formatNumber(CLOSE_RELATIVE * 100)}% of the votes counted towards the threshold.
+              in favour were within {formatNumber(CLOSE_RELATIVE * 100)}% of the votes counted towards the threshold. The homepage list
+              leaves out decisions on discharge for the EU budget: whether such a decision grants discharge depends on the proposal voted
+              on, not on its being adopted or rejected.
             </li>
             <li>
               <strong>Group majority</strong> is the most common position among a political group’s members with a recorded vote, using

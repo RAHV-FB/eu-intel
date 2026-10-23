@@ -2,7 +2,7 @@ import { Fragment, useId, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { Ballot, BallotPosition, CountryBreakdown, GroupBreakdown, PositionCounts } from '../../types/data';
 import { countryName, formatNumber, pct } from '../../lib/format';
-import { shownParam, useParamState } from '../../lib/urlState';
+import { shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { SortTh, useSortable } from './sortable';
 import { POSITION_LABEL, cohesionText } from './labels';
 import './votes.css';
@@ -233,6 +233,7 @@ export function CountryBreakdownTable({ rows }: { rows: CountryBreakdown[] }) {
 }
 
 const BALLOT_PAGE = 100;
+const BALLOT_RESET = ['bl-show']; // a new search starts from the first page
 type BallotKey = 'name' | 'group' | 'country' | 'pos';
 const POS_RANK: Record<BallotPosition, number> = { for: 0, against: 1, abstain: 2 };
 
@@ -247,7 +248,8 @@ export function BallotList({
 }) {
   // filters, order and rows shown are kept in the address (bl-…), so that Back from an MEP returns to the same list
   const [params, patch] = useParamState();
-  const q = params.get('bl-q') ?? '';
+  const qBox = useParamText('bl-q', BALLOT_RESET);
+  const q = qBox.value;
   const group = params.get('bl-group') ?? '';
   const country = params.get('bl-country') ?? '';
   const pos = params.get('bl-pos') ?? '';
@@ -288,7 +290,7 @@ export function BallotList({
       <form className="filters" aria-label="Filter individual votes" onSubmit={(e) => e.preventDefault()}>
         <div className="field">
           <label htmlFor="bl-q">MEP name</label>
-          <input id="bl-q" className="input" type="search" value={q} onChange={(e) => set('bl-q')(e.target.value)} />
+          <input id="bl-q" className="input" type="search" value={q} onChange={(e) => qBox.set(e.target.value)} onBlur={qBox.flush} />
         </div>
         <div className="field">
           <label htmlFor="bl-pos">Position</label>

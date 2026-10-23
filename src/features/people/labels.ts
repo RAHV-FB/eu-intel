@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import type { GroupSummary } from '../../types/data';
+import type { GroupSummary, PartyDetail } from '../../types/data';
 import { useData } from '../../lib/data';
-import { formatDate } from '../../lib/format';
+import { countryName, formatDate } from '../../lib/format';
 
 /** European Parliament terms (direct elections since 1979, five-year terms). */
 export const TERM_LABEL: Record<number, string> = {
@@ -28,6 +28,34 @@ export function termLabel(t: number): string {
 export function termYears(terms: number[] | null | undefined): string {
   const spans = [...(terms ?? [])].sort((x, y) => x - y).map((t) => `${1979 + 5 * (t - 1)}–${1984 + 5 * (t - 1)}`);
   return spans.length ? `${spans.join(' and ')} term${spans.length > 1 ? 's' : ''}` : '';
+}
+
+/** A party name compared as pipeline/build.py compares them (_norm_key) to find records of the same party:
+ * without accents, case, punctuation or spacing ('"Visu Latvijai!"-"Tēvzemei…' and '"Visu Latvijai!" - "Tēvzemei…'). */
+export function partyNameKey(label: string): string {
+  return label
+    .normalize('NFD')
+    .replace(/\p{Mn}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/** A party record's period: "2 Jul 2019 – 15 Jul 2024", or "from 16 Jul 2024" for a record still open. */
+export function recordPeriod(start?: string | null, end?: string | null): string {
+  if (!start) return 'dates not recorded';
+  return end ? `${formatDate(start)} – ${formatDate(end)}` : `from ${formatDate(start)}`;
+}
+
+/** A party page's title (also written by scripts/prerender-routes.mjs): records of the same party in other terms
+ * share its name, so the title names the term, and the period when another record of that name covers the same
+ * term (Azione 6103 and 6478, both 2019–2024). */
+export function partyRecordTitle(p: Pick<PartyDetail, 'label' | 'country' | 'terms' | 'start' | 'end' | 'same_name'>): string {
+  const term = termYears(p.terms);
+  const others = p.same_name ?? [];
+  if (!others.length || !term) return `${p.label} (${countryName(p.country)})`;
+  const sameTerm = others.some((r) => termYears(r.terms) === term);
+  return `${p.label} (${countryName(p.country)}, ${term}${sameTerm ? `, ${recordPeriod(p.start, p.end)}` : ''})`;
 }
 
 /** Short form: "9th (2019–2024)". */

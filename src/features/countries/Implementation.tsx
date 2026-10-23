@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CountryDetail, InfringementInfo, TranspositionStatus } from '../../types/data';
 import { formatDate, formatNumber } from '../../lib/format';
-import { shownParam, useParamState } from '../../lib/urlState';
+import { shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { dossierScores, loadSearch, type SearchEngine } from '../../lib/search';
 import { EmptyState, ExtLink, Term } from '../../components/ui';
 import { EURLEX_CELEX, TRANSPOSITION_LABEL, dossierPath } from '../legislation/labels';
@@ -33,12 +33,16 @@ export function TranspositionStatusLabel({ status }: { status: TranspositionStat
 
 type TRow = CountryDetail['transposition'][number];
 const PAGE = 25;
+// a new search starts from the first page
+const TR_RESET = ['tr-show'];
+const INF_RESET = ['inf-show'];
 
 export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countryName: string }) {
   // filters, order and rows shown are kept in the address (tr-…), so that Back from a file returns to the same list
   const [params, patch] = useParamState();
   const status = params.get('tr-status') ?? '';
-  const q = params.get('tr-q') ?? '';
+  const qBox = useParamText('tr-q', TR_RESET);
+  const q = qBox.value;
   const shown = shownParam(params, 'tr-show', PAGE);
   const counts = useMemo(() => {
     const m = new Map<TranspositionStatus, number>();
@@ -88,7 +92,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
       <form className="filters" aria-label="Filter directives" onSubmit={(e) => e.preventDefault()}>
         <div className="field">
           <label htmlFor="tr-q">Search directives</label>
-          <input id="tr-q" type="search" className="input" value={q} onChange={(e) => patch({ 'tr-q': e.target.value, 'tr-show': null })} />
+          <input id="tr-q" type="search" className="input" value={q} onChange={(e) => qBox.set(e.target.value)} onBlur={qBox.flush} />
         </div>
         <div className="field">
           <label htmlFor="tr-status">Status in the dataset</label>
@@ -208,7 +212,8 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
   const [params, patch] = useParamState();
   const rawStatus = params.get('inf-status') ?? 'open';
   const status = rawStatus === 'all' ? '' : rawStatus;
-  const q = params.get('inf-q') ?? '';
+  const qBox = useParamText('inf-q', INF_RESET);
+  const q = qBox.value;
   const nonComm = params.get('inf-nc') === '1';
   const shown = shownParam(params, 'inf-show', PAGE);
   const counts = useMemo(() => {
@@ -241,7 +246,7 @@ export function InfringementTable({ rows }: { rows: InfringementInfo[] }) {
       <form className="filters" aria-label="Filter infringement cases" onSubmit={(e) => e.preventDefault()}>
         <div className="field">
           <label htmlFor="inf-q">Search cases</label>
-          <input id="inf-q" type="search" className="input" value={q} onChange={(e) => patch({ 'inf-q': e.target.value, 'inf-show': null })} />
+          <input id="inf-q" type="search" className="input" value={q} onChange={(e) => qBox.set(e.target.value)} onBlur={qBox.flush} />
         </div>
         <div className="field">
           <label htmlFor="inf-status">Case status</label>

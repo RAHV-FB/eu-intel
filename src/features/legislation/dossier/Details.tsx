@@ -139,6 +139,9 @@ function ActBlock({ a }: { a: LegalActSummary }) {
   );
 }
 
+/** An interim report (…R) or a report accompanying a consent (…M) on a main procedure (pipeline/build.py PARLIAMENT_REPORT_RE). */
+const PARLIAMENT_REPORT = /^\d{4}-\d{4}[RM]$/;
+
 /** Everything a researcher needs: identifiers, actors, related acts, documents and sources. Collapsed by default. */
 export function DossierDetails({ d }: { d: DossierDetail }) {
   const comRefs = d.documents.filter((doc) => /^COM\(/i.test(doc.id) || doc.kind === 'COM');
@@ -196,6 +199,8 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
                 <CelexList items={d.celex} />
               ) : splitParts(d).length > 0 ? (
                 <span className="meta">None on this file: each separate file lists its own act</span>
+              ) : PARLIAMENT_REPORT.test(d.id) ? (
+                <span className="meta">None: Parliament’s report is a resolution of Parliament, not a legislative act</span>
               ) : (
                 <span className="meta">None recorded (no adopted act yet, or not linked)</span>
               )}

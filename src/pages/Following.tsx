@@ -57,7 +57,7 @@ function Item({
   today,
   onRemove,
   onSeen,
-  onSaved,
+  onFollow,
 }: {
   id: string;
   loaded: Loaded | undefined;
@@ -67,7 +67,7 @@ function Item({
   today: string;
   onRemove: (id: string, title: string) => void;
   onSeen: (d: DossierDetail) => void;
-  onSaved: (ok: boolean) => void;
+  onFollow: (d: DossierDetail) => void;
 }) {
   if (!loaded)
     return (
@@ -151,7 +151,7 @@ function Item({
             Unfollow
           </button>
         ) : (
-          <button type="button" className="btn" onClick={() => onSaved(follow(d))} aria-label={`Follow ${d.title} in this browser`}>
+          <button type="button" className="btn" onClick={() => onFollow(d)} aria-label={`Follow ${d.title} in this browser`}>
             Follow
           </button>
         )}
@@ -214,10 +214,20 @@ export default function Following() {
   const notYetFollowed = sharedIds.filter((id) => !followingIds.has(id) && loaded[id]?.state === 'ok');
 
   const remove = (id: string, title: string) => {
+    onSaved(unfollow(id));
+    // a shared list keeps the file, whose button becomes "Follow" and keeps focus: only the browser's list changed
+    if (shared) {
+      setAnnouncement(`You no longer follow ${title} in this browser.`);
+      return;
+    }
     const i = ordered.indexOf(id);
     const next = ordered[i + 1] ?? ordered[i - 1];
-    onSaved(unfollow(id));
     afterRender(() => (next ? itemTitle(next) : emptyRef.current ?? headingRef.current), `Removed ${title} from the list.`);
+  };
+  const followOne = (d: DossierDetail) => {
+    const ok = follow(d);
+    onSaved(ok);
+    if (ok) setAnnouncement(`Now following ${d.title} in this browser.`);
   };
   const seen = (d: DossierDetail) => {
     markSeen(d);
@@ -388,7 +398,7 @@ export default function Following() {
                 today={today}
                 onRemove={remove}
                 onSeen={seen}
-                onSaved={onSaved}
+                onFollow={followOne}
               />
             ))}
           </ul>

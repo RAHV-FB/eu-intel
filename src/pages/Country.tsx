@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { CountryDetail, Meta } from '../types/data';
 import { useData } from '../lib/data';
@@ -19,6 +19,7 @@ import '../features/countries/countries.css';
 type GroupRow = { group: string; code: string; name: string; meps: number };
 type MepRow = CountryDetail['meps'][number];
 type CouncilRow = CountryDetail['council_votes'][number];
+const COUNCIL_ROWS = 20; // Council votes listed before "Show all"
 
 /** Former Member States (the United Kingdom) have no country page; links to them land here. */
 const FORMER_MEMBER_STATES = new Set(['GB']);
@@ -83,6 +84,20 @@ export default function Country() {
     { name: (r) => r.name, group: (r) => (r.group ? groups.byId.get(r.group)?.code ?? r.group : null), party: (r) => r.party_label ?? null },
     { key: 'name', dir: 'asc' },
   );
+  // "Show all … Council votes" is gone once pressed: focus moves to the first vote it added, not to the page
+  const votesBody = useRef<HTMLTableSectionElement>(null);
+  const focusAdded = useRef(false);
+  useEffect(() => {
+    if (!allVotes || !focusAdded.current) return;
+    focusAdded.current = false;
+    const row = votesBody.current?.rows[COUNCIL_ROWS];
+    const link = row?.querySelector<HTMLElement>('a');
+    if (link) link.focus();
+    else if (row) {
+      row.tabIndex = -1;
+      row.focus();
+    }
+  }, [allVotes]);
 
   if (FORMER_MEMBER_STATES.has(upper)) return <FormerMemberState code={upper} />;
   if (!valid) return <NotFound what="country" />;
@@ -95,7 +110,7 @@ export default function Country() {
   const councilSource = meta.data?.sources.find((s) => s.id === 'council');
   const councilDataExists = (meta.data?.counts.council_votes ?? 0) > 0;
   const implSource = meta.data?.sources.find((s) => s.id === 'implementation');
-  const votesShown = allVotes ? c.council_votes : c.council_votes.slice(0, 20);
+  const votesShown = allVotes ? c.council_votes : c.council_votes.slice(0, COUNCIL_ROWS);
 
   return (
     <div className="container page">
@@ -302,7 +317,7 @@ export default function Country() {
                       <th scope="col" role="columnheader">{c.name}’s position</th>
                     </tr>
                   </thead>
-                  <tbody role="rowgroup">
+                  <tbody role="rowgroup" ref={votesBody}>
                     {votesShown.map((v) => (
                       <tr key={v.vote_id} role="row">
                         <td className="nowrap" role="cell">
@@ -323,9 +338,16 @@ export default function Country() {
                 </table>
               </div>
             )}
-            {c.council_votes.length > 20 && !allVotes && (
+            {c.council_votes.length > COUNCIL_ROWS && !allVotes && (
               <div className="more">
-                <button type="button" className="btn" onClick={() => patch({ cvotes: 'all' })}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    focusAdded.current = true;
+                    patch({ cvotes: 'all' });
+                  }}
+                >
                   Show all {formatNumber(c.council_votes.length)} Council votes
                 </button>
               </div>

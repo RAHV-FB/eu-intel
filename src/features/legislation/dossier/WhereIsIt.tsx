@@ -1,6 +1,6 @@
 import type { DossierDetail, EventKind, ISODate, LifecycleStage, TimelineEvent } from '../../../types/data';
 import { ExtLink, Term, institutionLabel } from '../../../components/ui';
-import { asOfToday, formatDate, formatNumber } from '../../../lib/format';
+import { asOfToday, formatDate, noUpdateText } from '../../../lib/format';
 import { institutionSuffix } from '../labels';
 
 interface Step {
@@ -111,8 +111,8 @@ export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
           <div>
             <dt>Recorded activity</dt>
             <dd>
-              {stall.days_since_last_event > 0 ? (
-                <>No recorded procedural update in {formatNumber(stall.days_since_last_event)} days.</>
+              {stall.days_since_last_event > 0 || (stall.last_event_date && stall.last_event_date < today) ? (
+                <>{noUpdateText(stall.days_since_last_event, stall.last_event_date, today)}.</>
               ) : (
                 <>A procedural update was recorded today.</>
               )}{' '}

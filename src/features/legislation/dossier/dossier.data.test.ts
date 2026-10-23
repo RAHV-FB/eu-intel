@@ -68,6 +68,17 @@ describe.skipIf(!built)('dossiers on the built data', () => {
       expect(d.next_step.text).toContain(link!.label);
       const back = read<DossierDetail>(`dossiers/${main}.json`).related.find((r) => r.id === d.id);
       expect(back?.relation, d.id).toMatch(/^Parliament's (interim )?report$/);
+      // the two have the same title (2020/0112(APP) and 2020/0112R(APP)): each link gives the other's reference
+      expect(back?.ref, d.id).toBe(d.ref);
+      expect(d.related.find((r) => r.relation === 'Report on')?.ref, d.id).toBe(read<DossierDetail>(`dossiers/${main}.json`).ref);
     }
+  });
+
+  it('names a rapporteur’s committee as OEIL does where the EP API gives none or a subcommittee', () => {
+    const committee = (id: string, mep: string) => all.find((d) => d.id === id)!.rapporteurs.find((r) => r.mep_id === mep)?.committee;
+    expect(committee('2021-0240', '96899')).toBe('CONT'); // EP API "org/null"; OEIL: CONT, FERNANDES José Manuel
+    expect(committee('2025-0045', '204332')).toBe('AFET'); // EP API DROI; OEIL: AFET, ANDREWS Barry
+    expect(all.find((d) => d.id === '2023-0187')!.rapporteurs.filter((r) => r.role === 'rapporteur').map((r) => r.committee)).toEqual(['ECON']);
+    for (const d of all) for (const r of d.rapporteurs) expect(r.committee, `${d.id} ${r.mep_id}`).not.toBe('null');
   });
 });
