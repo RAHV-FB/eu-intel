@@ -144,7 +144,7 @@
   z-index: 20;
   left: 0;
   top: calc(100% + 6px);
-  width: min(22rem, 80vw);
+  width: min(22rem, calc(100vw - 1rem)); /* Term() shifts it sideways to stay on screen */
   padding: var(--sp-3) var(--sp-4);
   background: var(--navy);
   color: #fff;

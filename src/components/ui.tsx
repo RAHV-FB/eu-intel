@@ -1,7 +1,7 @@
 /**
  * Shared UI primitives. Keep these small and generic; feature-specific components live in src/features/<area>/.
  */
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { Basis, LifecycleStage, SourceRef } from '../types/data';
 import { GLOSSARY } from '../content/glossary';
@@ -154,14 +154,62 @@ export function SourceLink({ source, prefix = 'Source:' }: { source: SourceRef |
 
 // ------------------------------------------------------------------ glossary term
 
-/** Inline explanation of an EU term. Click/tap to reveal; works with keyboard and screen readers. */
+/**
+ * Inline explanation of an EU term. Click/tap to reveal; works with keyboard and screen readers.
+ * The popup is kept inside the viewport, and closes on Escape, on a click elsewhere or when focus leaves it.
+ */
 export function Term({ id, children }: { id: keyof typeof GLOSSARY | string; children?: ReactNode }) {
   const entry = GLOSSARY[id];
   const [open, setOpen] = useState(false);
   const tipId = useId();
+  const wrapRef = useRef<HTMLSpanElement>(null);
+  const tipRef = useRef<HTMLSpanElement>(null);
+
+  // Shift the popup sideways so it never runs past either edge of the screen.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const tip = tipRef.current;
+      if (!tip) return;
+      tip.style.left = '0px';
+      const r = tip.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const gap = 8;
+      let shift = 0;
+      if (r.right > vw - gap) shift = vw - gap - r.right;
+      if (r.left + shift < gap) shift = gap - r.left;
+      tip.style.left = `${Math.round(shift)}px`;
+    };
+    place();
+    // If the definition opens below the bottom of the screen, bring it into view.
+    if (tipRef.current && tipRef.current.getBoundingClientRect().bottom > window.innerHeight) {
+      tipRef.current.scrollIntoView({ block: 'nearest' });
+    }
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [open]);
+
   if (!entry) return <>{children}</>;
   return (
-    <span className="term">
+    <span
+      className="term"
+      ref={wrapRef}
+      onBlur={(e) => {
+        // Keyboard focus moved on to something else. Clicks are handled by the pointerdown listener: a click on
+        // the popup's text moves focus to a focusable ancestor such as <main>, which must not close it.
+        const to = e.relatedTarget as Node | null;
+        if (open && to && !e.currentTarget.contains(to) && !to.contains(e.currentTarget)) setOpen(false);
+      }}
+    >
       <button
         type="button"
         className="term__btn"
@@ -173,7 +221,7 @@ export function Term({ id, children }: { id: keyof typeof GLOSSARY | string; chi
         {children ?? entry.term}
       </button>
       {open && (
-        <span id={tipId} role="note" className="term__tip">
+        <span id={tipId} role="note" className="term__tip" ref={tipRef} onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
           <strong>{entry.term}.</strong> {entry.short}{' '}
           {entry.href && <Link to={entry.href}>Learn more</Link>}
         </span>
