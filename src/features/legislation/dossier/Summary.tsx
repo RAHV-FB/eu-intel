@@ -76,9 +76,10 @@ function refersTo(articles: string[]): string {
 /**
  * One step of "When it applies": a date and what it is, or a statement that EUR-Lex records no date (`when` then
  * says so in the date column). `rank` orders steps of the same day: entry into force, then application, then
- * transposition dates.
+ * transposition dates. `end` marks the step from which the act is no longer in force, which is never itself flagged as a
+ * date after its validity ended.
  */
-type ScheduleStep = { date?: ISODate; when?: string; what: React.ReactNode; note?: string; rank: number };
+type ScheduleStep = { date?: ISODate; when?: string; what: React.ReactNode; note?: string; rank: number; end?: boolean };
 
 /**
  * The dates an act sets, in one chronological schedule: what EUR-Lex records (entry into force, the dates from which
@@ -180,7 +181,7 @@ export function KeyDates({
   dated(5, () => 'Application date for national measures', withArticles(applies));
   dated(6, () => 'Other date recorded by EUR-Lex', withArticles(other));
   // "No longer in force" (from the day after the end of validity, or the repeal's date), as the status says
-  for (const e of noLonger) steps.push({ date: e.date, rank: 7, what: e.title });
+  for (const e of noLonger) steps.push({ date: e.date, rank: 7, what: e.title, end: true });
   if (!steps.length) return <p className="meta">No application dates are recorded for this act in EUR-Lex.</p>;
   // an entry into force without a date first, then the dated steps in time order, then the dates not recorded
   const place = (s: ScheduleStep) => (s.date ? 1 : s.rank === 0 ? 0 : 2);
@@ -195,7 +196,7 @@ export function KeyDates({
           <span className="dz-sched__what">
             {s.what}
             {s.note && <span className="dz-dates__prov">{s.note}</span>}
-            {s.date && ended.has(s.date) && <span className="dz-dates__prov">A date after the act’s validity ended</span>}
+            {s.date && !s.end && ended.has(s.date) && <span className="dz-dates__prov">A date after the act’s validity ended</span>}
           </span>
         </li>
       ))}

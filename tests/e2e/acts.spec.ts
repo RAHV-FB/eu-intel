@@ -35,6 +35,29 @@ test.describe('act validity', () => {
     await expect(page.locator('#timeline')).toContainText('Its validity ended on 31 October 2023.');
   });
 
+  test('the end of validity is not flagged as a date after it, a date it shares is', async ({ page }) => {
+    // Regulation (EU) 2024/2822: validity ended 30 June 2026 (repealed by Regulation (EU) 2026/715); some provisions
+    // apply from 1 July 2026, the day it is no longer in force. Also Directive 2014/48/EU (transposition deadline
+    // 1 January 2016) and Regulation (EU) 2015/2424 (some provisions apply from 1 October 2017).
+    const after = 'A date after the act’s validity ended';
+    for (const [file, shared] of [
+      ['2022-0391', /Some provisions start(?:ed)? to apply/],
+      ['2008-0215', /National transposition deadline/],
+      ['2013-0088', /Some provisions start(?:ed)? to apply/],
+    ] as const) {
+      await open(page, `legislation/${file}/`);
+      const rows = page.locator('#when-it-applies .dz-sched li');
+      const end = rows.filter({ hasText: 'No longer in force' });
+      await expect(end).toHaveCount(1);
+      await expect(end).not.toContainText(after);
+      await expect(rows.filter({ hasText: shared }).filter({ hasText: after })).toHaveCount(1);
+    }
+    await open(page, 'legislation/2022-0391/');
+    const last = page.locator('#when-it-applies .dz-sched li').last();
+    await expect(last).toContainText('No longer in force');
+    await expect(last).not.toContainText(after);
+  });
+
   test('a repeal in stages states the recorded dates and no single day', async ({ page }) => {
     // Directive 2014/61/EU: Regulation (EU) 2024/1309, Art. 18
     await open(page, 'legislation/2013-0080/');
