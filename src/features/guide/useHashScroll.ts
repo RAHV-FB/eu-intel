@@ -23,7 +23,9 @@ export function useHashScroll(ready = true) {
     // wait a frame so layout (and the site's scroll-to-top on navigation) has settled
     const t = window.setTimeout(() => {
       const el = document.getElementById(id);
-      if (!el) return;
+      // "Skip to content" (#main): the browser has already focused <main> itself, before the page's title and status,
+      // where reading and tabbing should start; its first section heading must not take the focus over
+      if (!el || el.tagName === 'MAIN') return;
       el.scrollIntoView({ block: 'start' });
       const heading = el.querySelector<HTMLElement>('h2, h3');
       if (heading) {

@@ -50,14 +50,28 @@ test.describe('routes render (vite preview)', () => {
     }
   });
 
-  test('skip link moves focus to the main content', async ({ page }) => {
-    await open(page, 'legislation');
-    await page.keyboard.press('Tab');
-    const skip = page.getByRole('link', { name: 'Skip to content' });
-    await expect(skip).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(page.locator('#main')).toBeFocused();
-  });
+  // the law and vote pages scroll to a section named in the address: not for #main, whose first section heading
+  // would take the focus 30 ms later, past the page's title, status and jump links
+  for (const [path, first] of [
+    ['legislation', null],
+    [`legislation/${AI_ACT_ID}/`, 'Legislation'],
+    ['votes/166051/', '← All votes'],
+  ] as const) {
+    test(`skip link moves focus to the main content (${path})`, async ({ page }) => {
+      await open(page, path);
+      await page.keyboard.press('Tab');
+      const skip = page.getByRole('link', { name: 'Skip to content' });
+      await expect(skip).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(page.locator('#main')).toBeFocused();
+      await page.waitForTimeout(300);
+      await expect(page.locator('#main')).toBeFocused();
+      if (first) {
+        await page.keyboard.press('Tab');
+        await expect(page.locator(':focus')).toHaveText(first);
+      }
+    });
+  }
 });
 
 // ------------------------------------------------------------------ GitHub Pages semantics
