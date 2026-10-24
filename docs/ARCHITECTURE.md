@@ -80,11 +80,13 @@ the UI; every institutional fact on a page has a reachable origin.
   status tags with icons drawn in CSS (`StatusIcon`), `.row-link` for a row's title or name, `.ref` for procedure
   references (monospace only for identifiers), metadata separated by dots that never open a line (`.dot-list`),
   and the loading, empty, error and not-found states.
-- Strict CSP meta (`default-src 'self'`; scripts and styles only from the site's own files, no inline ones: React
-  sets its `style` props through the CSSOM, which the policy does not restrict, and `scripts/check_privacy.mjs` fails
-  a build with `'unsafe-inline'` or an inline style; only the dev server's page allows inline styles, which it injects,
-  `vite.config.ts`), no third-party fonts/scripts, no cookies. The optional watchlist writes
-  nothing to `localStorage` before the visitor's first "Follow" click (pages check for storage by reading only).
+- Strict CSP meta: `default-src 'self'`, and scripts and styles only from the site's own files, none inline
+  (`scripts/check_privacy.mjs` fails a build with `'unsafe-inline'` or an inline style). React sets its `style` props
+  through the CSSOM, which the policy does not restrict; only the dev server's page allows inline styles, which it
+  injects (`vite.config.ts`). Styles a reader applies through the browser (a user style sheet, CSS an extension
+  inserts) are not subject to the policy, but a bookmarklet that adds an inline `<style>` element is refused, so the
+  e2e text-spacing check loads its style sheet as a file. No third-party fonts/scripts, no cookies. The optional
+  watchlist writes nothing to `localStorage` before the visitor's first "Follow" click (pages check for storage by reading only).
   After that the list changes on clicks only, except that opening the page of a followed file records what the
   visitor last saw there (`markSeen`: its stage, status label and latest event, when one of them changed), as
   /privacy says ("when you last viewed it").
