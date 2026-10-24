@@ -5,7 +5,7 @@ import { countryName, formatNumber, pct } from '../../lib/format';
 import { filterKey } from '../../lib/search';
 import { shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { SortTh, useSortable } from './sortable';
-import { POSITION_LABEL, cohesionText } from './labels';
+import { POSITION_LABEL, cohesionPercent, cohesionText } from './labels';
 import './votes.css';
 
 /** Small proportional bar for table rows (numbers are always in adjacent cells). */
@@ -26,6 +26,12 @@ export function Pos({ pos }: { pos: BallotPosition | 'not_participating' | null 
   if (!pos) return <span className="pos pos--none">Not recorded</span>;
   if (pos === 'not_participating') return <span className="pos pos--not_participating">Not participating</span>;
   return <span className={`pos pos--${pos}`}>{POSITION_LABEL[pos]}</span>;
+}
+
+/** A group's majority position on a vote, or that there is none because the most common positions are tied. */
+export function GroupMajority({ c, majority }: { c: PositionCounts; majority: BallotPosition | null | undefined }) {
+  if (majority) return <Pos pos={majority} />;
+  return c.for + c.against + c.abstain > 0 ? <span>None (tie)</span> : <span className="muted">—</span>;
 }
 
 /** A heading shortened on the narrowest screens (below 22.5rem); screen readers always get the full word. */
@@ -94,8 +100,9 @@ export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown
         <tbody>
           {sorted.map((r) => {
             const th = `${idBase}-${r.group}`;
-            const majority = r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>;
-            const cohesion = r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>;
+            const majority = <GroupMajority c={r} majority={r.majority} />;
+            const pctWith = cohesionPercent(r, r.majority);
+            const cohesion = pctWith != null ? cohesionText(pctWith) : <span className="muted">—</span>;
             return (
               <Fragment key={r.group}>
                 <tr className="has-more">
@@ -131,7 +138,7 @@ export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown
                       ) : (
                         <>
                           <span>Group majority: {majority}</span>
-                          <span>Cohesion: {r.cohesion != null ? `${Math.round(r.cohesion * 100)}%` : '—'}</span>
+                          {pctWith != null && <span>Cohesion: {pctWith}%</span>}
                         </>
                       )}
                     </div>

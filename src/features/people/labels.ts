@@ -58,17 +58,28 @@ export function partyRecordTitle(p: Pick<PartyDetail, 'label' | 'country' | 'ter
   return `${p.label} (${countryName(p.country)}, ${term}${sameTerm ? `, ${recordPeriod(p.start, p.end)}` : ''})`;
 }
 
+/** Where a party record's MEPs sit in Parliament, from the groups recorded for them: in political groups, as
+ * non-attached members (NI, who form no group), or both; null when no group membership is recorded. */
+export function partySeating(groups: string[]): 'groups' | 'non-attached' | 'both' | null {
+  const ni = groups.includes('ni');
+  const inGroups = groups.some((g) => g !== 'ni');
+  return inGroups ? (ni ? 'both' : 'groups') : ni ? 'non-attached' : null;
+}
+
 /** Short form: "9th (2019–2024)". */
 export function termShort(t: number): string {
   return termLabel(t).replace(' term', '');
 }
 
-const ROLE_LABEL: Record<string, string> = {
+export const ROLE_LABEL: Record<string, string> = {
   MEMBER: 'Member',
   MEMBER_SUBSTITUTE: 'Substitute member',
   SUBSTITUTE: 'Substitute member',
   CHAIR: 'Chair',
   CHAIR_VICE: 'Vice-Chair',
+  // the English labels of the EP roles vocabulary (https://data.europarl.europa.eu/def/ep-roles/<code>)
+  CHAIR_VICE_FIRST: 'First Vice-Chair',
+  CHAIR_VICE_BUREAU_TREASURER: 'Treasurer/Vice-Chair/Member of the Bureau',
   CHAIR_CO: 'Co-Chair',
   PRESIDENT: 'President',
   PRESIDENT_VICE: 'Vice-President',

@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { MepSummary, PartyDetail, PartySummary } from '../../types/data';
-import { partyNameKey, partyRecordTitle, termYears } from './labels';
+import { partyNameKey, partyRecordTitle, partySeating, termYears } from './labels';
 
 const DATA = new URL('../../../public/data/', import.meta.url);
 const built = existsSync(new URL('people/parties.json', DATA));
@@ -97,6 +97,19 @@ describe.skipIf(!built)('party records on the built data', () => {
     // the records the build lists as having the same name are the ones the names compare equal for
     for (const p of parties.values())
       for (const r of p.same_name ?? []) expect(partyNameKey(r.label), `${p.id} ${r.id}`).toBe(partyNameKey(p.label));
+  });
+
+  it('says that the MEPs of a party sit as non-attached members when Parliament records no group for them', () => {
+    // SMER-SD 6723 and BSW 8006 read "Its MEPs sit in Parliament in a European political group": all are NI
+    expect(partySeating(parties.get('6723')!.groups)).toBe('non-attached');
+    expect(partySeating(parties.get('8006')!.groups)).toBe('non-attached');
+    expect(partySeating(parties.get('5253')!.groups)).toBe('both'); // Fidesz 2019–2024: EPP, then NI from 5 Mar 2021
+    expect(partySeating(parties.get('6848')!.groups)).toBe('groups'); // Rassemblement national: PfE
+    for (const p of parties.values()) {
+      const seating = partySeating(p.groups);
+      expect(seating, p.id).not.toBeNull();
+      expect(seating === 'non-attached', p.id).toBe(p.groups.length > 0 && p.groups.every((g) => g === 'ni'));
+    }
   });
 
   it('builds a page for every party an MEP page links, including the two without a recorded name', () => {

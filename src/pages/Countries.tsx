@@ -50,7 +50,8 @@ export default function Countries() {
             <div>
               <h2 style={{ fontSize: 'var(--fs-md)' }}>Representation in Parliament</h2>
               <p className="note">
-                Current MEPs elected in each country and the number of <Term id="political-group">political groups</Term> they sit in. MEPs
+                Current MEPs elected in each country and the number of <Term id="political-group">political groups</Term> they sit in
+                (non-attached MEPs belong to no group and are not counted as one). MEPs
                 vote individually, not as national delegations. The number of seats per country is fixed by a European Council decision.
               </p>
             </div>

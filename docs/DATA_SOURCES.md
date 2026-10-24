@@ -57,7 +57,13 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   83 committees, each membership dated. Group-at-date reproduced the API's own `show-current?mandate-date=` view
   with 0 mismatches on two group-change dates.
 - Group codes from official labels (PPE→EPP, Verts/ALE→Greens/EFA). GUE/NGL (until 2020-12-17) and The Left
-  (from 2020-12-18) are distinct bodies at source and kept distinct.
+  (from 2020-12-18) are distinct bodies at source and kept distinct. An MEP's summary group code (`group_code` in
+  `people/meps.json`) is that of the body they were last in: "GUE/NGL" for the 2 MEPs who left before the renaming
+  (Martina Anderson 113959, Matt Carthy 124986), whose `group` is still the group page of The Left.
+- The non-attached members (NI, corporate body 6561) are classified by the EP like a political group
+  (`EU_POLITICAL_GROUP`) and are kept as one in the data (`groups.ni`), but they belong to no group: the site never
+  counts them as a political group (the country pages and the Countries table count NI MEPs apart; a party whose
+  MEPs are all NI is described as sitting outside any group).
 - Gaps: a few MEPs lack a national-party membership for part of a mandate (e.g. 197526 in term 10). "Independent"
   is recorded by EP as a per-country party. Portraits not used.
 - Two party records, corporate bodies 5500 (FR) and 5719 (HR), are labelled "-" in all 24 languages: the site
@@ -615,7 +621,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   naming its acts in words is not checked ("Amendment to the fuel quality directive ...", 2012/0288(COD)).
 - Search index (`search.json`): a file's keywords (`x`) hold its procedure reference and number, its acts' CELEX
   ids and numbers, its COM references and the types of its acts as EUR-Lex records them (`act_type`:
-  "regulation", "directive", "decision"), so that "whistleblower directive" finds Directive (EU) 2019/1937. The
+  "regulation", "directive", "decision"), so that "whistleblower directive" finds Directive (EU) 2019/1937. These
+  are the acts the file keeps (its `celex`), not an act EUR-Lex also links to it that is another file's: Regulation
+  (EU) 2026/2280 lists 2018/0329(COD) and 2025/0059(COD), and only 2025/0059(COD) has it; a file without an act has
+  no type keyword (2018/0329(COD) was listed as a "Regulation"). The
   search matches an act type only as that whole word (or its plural), never as a form, the start or a misspelling
   of another word: "regulated" does not find every file that produced a regulation; the search page shows the act
   types next to each file, so that a match on them is visible.

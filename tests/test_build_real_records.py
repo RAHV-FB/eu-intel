@@ -140,6 +140,25 @@ def test_search_entries_carry_the_types_of_the_files_acts():
     assert not {"directive", "regulation", "decision"} & set(x["2099-0001"])
 
 
+def test_search_entries_carry_the_types_of_the_acts_a_file_keeps_only():
+    # EUR-Lex links Regulation (EU) 2026/2280, the act of 2025/0059(COD), to 2018/0329(COD) too: the search listed
+    # that directive proposal, which keeps no act, as a "Regulation"
+    p = procs("2018-0329", "2025-0059")
+    a = acts("32026R2280")
+    assert {"2018/0329(COD)", "2025/0059(COD)"} <= set(a["32026R2280"].procedure_refs)
+    kept = {"2018-0329": [], "2025-0059": [a["32026R2280"]]}
+    summary = {pid: {"title": p[pid].title, "ref": p[pid].reference, "status_label": "", "featured": False,
+                     "type": "COD", "last_event": None, "celex": [x.celex for x in kept[pid]]} for pid in p}  # fmt: skip
+    b = SimpleNamespace(
+        dossier_summary=summary, proc=p, curated_of={}, acts_of={pid: [a["32026R2280"]] for pid in p}, dossier_acts=kept,
+        train_of={}, split_children={}, alias_rules=[], mep_summary={}, group_summaries=[], party_summary={},
+        s=SimpleNamespace(meps=[]), topic_list=[], topics_cur={}, resolve_ref=lambda ref: None, org={}, unnamed_parties=set(),
+    )  # fmt: skip
+    x = {d["id"]: d["x"].split() for d in build_search_docs(b) if d["k"] == "dossier"}
+    assert "regulation" in x["2025-0059"]
+    assert not {"directive", "regulation", "decision"} & set(x["2018-0329"])
+
+
 def test_act_number_of_a_title_written_without_a_space_after_the_act_type():
     # Cellar's title of 32014L0063 reads "Directive2014/63/EU of the European Parliament ...": the country pages
     # wrote "Directive 2014/63" (from the CELEX id); 32022R0870 reads "Regulation(EU) 2022/870 ..."
