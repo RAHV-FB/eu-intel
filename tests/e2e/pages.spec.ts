@@ -421,15 +421,19 @@ test.describe('legislative files', () => {
     await expect(page.locator('#details')).toContainText('None: Parliament’s report is a resolution of Parliament, not a legislative act');
   });
 
-  test('the days without a recorded step are counted on the visitor’s date, in the singular for one', async ({ page, request }) => {
+  test('the days without a recorded step are counted on the visitor’s date, never fewer than the build counted', async ({ page, request }) => {
+    // the singular ("1 day") is covered by src/lib/format.test.ts (noUpdateText); here the count follows the
+    // visitor's clock from the build's own count, whichever day the data was built
     const d = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/dossiers/2026-0325.json`)).json();
     const last: string = d.stall.last_event_date;
+    const built: number = d.stall.days_since_last_event;
     const day = (n: number) => new Date(Date.parse(`${last}T12:00:00Z`) + n * 86_400_000);
-    await page.clock.install({ time: day(1) });
+    const text = (n: number) => `No recorded procedural update in ${n} ${n === 1 ? 'day' : 'days'}.`;
+    await page.clock.install({ time: day(built) });
     await open(page, 'legislation/2026-0325/');
-    await expect(page.locator('.dz-where')).toContainText('No recorded procedural update in 1 day.');
-    await page.clock.setSystemTime(day(42));
+    await expect(page.locator('.dz-where')).toContainText(text(built));
+    await page.clock.setSystemTime(day(built + 40));
     await open(page, 'legislation/2026-0325/');
-    await expect(page.locator('.dz-where')).toContainText('No recorded procedural update in 42 days.');
+    await expect(page.locator('.dz-where')).toContainText(text(built + 40));
   });
 });
