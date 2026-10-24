@@ -4345,9 +4345,12 @@ class Builder:
             pid = self.current_or_last(self.mep_parties.get(m.id, []))
             slug = self.org_slug.get(gid) if gid else None
             po = self.org.get(pid) if pid else None
+            # the group's code when the MEP was last in it: "GUE/NGL" for an MEP who left before it became The Left
+            go = self.org.get(gid) if gid else None
             summ = {
                 "id": m.id, "name": m.name, "sort": (m.sort_label or m.family_name or m.name).upper(),
-                "country": m.country, "group": slug, "group_code": self.group_code(slug),
+                "country": m.country, "group": slug,
+                "group_code": (go.code or go.label) if go and slug else self.group_code(slug),
                 "party": pid, "party_label": po.label if po else None, "active": m.active, "terms": m.terms,
             }  # fmt: skip
             self.mep_summary[m.id] = summ

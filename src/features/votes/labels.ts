@@ -1,4 +1,4 @@
-import type { BallotPosition, EpVoteSummary, FinalRole, VoteKind, VoteKindDetail, VoteOutcome } from '../../types/data';
+import type { BallotPosition, EpVoteSummary, FinalRole, PositionCounts, VoteKind, VoteKindDetail, VoteOutcome } from '../../types/data';
 
 export const OUTCOME_LABEL: Record<VoteOutcome, string> = {
   adopted: 'Adopted',
@@ -110,8 +110,16 @@ export function outcomeTone(o: VoteOutcome): string {
   return o === 'adopted' ? 'done' : o === 'rejected' ? 'critical' : 'inactive';
 }
 
+/** The whole percentage of a group's recorded votes that match its majority, from the counts; null without a
+ * majority (a tie) or a recorded vote. Not from the stored `cohesion`, which is rounded to three decimals: rounding it
+ * again can add a point (64 of 65 is 98.46%, stored as 0.985). */
+export function cohesionPercent(c: PositionCounts, majority: BallotPosition | null | undefined): number | null {
+  const total = c.for + c.against + c.abstain;
+  return majority && total ? Math.round((100 * c[majority]) / total) : null;
+}
+
 /** "x% voted with the group majority" */
-export function cohesionText(c: number | null | undefined): string {
-  if (c == null) return '—';
-  return `${Math.round(c * 100)}% voted with the group majority`;
+export function cohesionText(pct: number | null): string {
+  if (pct == null) return '—';
+  return `${pct}% voted with the group majority`;
 }

@@ -274,8 +274,8 @@ export default function Vote() {
             </div>
             <p className="section-intro">
               A <Term id="political-group">political group</Term> does not cast a vote of its own: these figures add up how its members
-              voted individually. “Group majority” is the most common position among members with a recorded vote; cohesion is the share
-              of them who voted that way.
+              voted individually. “Group majority” is the most common position among members with a recorded vote (there is none when the
+              most common positions are tied); cohesion is the share of them who voted that way.
             </p>
             <LookupNotice failed={groups.failed} what="Political group names" />
             {v.groups.length > 0 ? (

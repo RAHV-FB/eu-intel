@@ -27,6 +27,23 @@ test.describe('party records', () => {
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('a party whose MEPs are all non-attached does not say they sit in a political group, and lists names in order', async ({ page }) => {
+    await open(page, 'people/parties/6723/'); // SMER-SD: 5 MEPs, all NI
+    const lead = page.locator('.page-header .lead');
+    await expect(lead).toContainText('Its MEPs sit in Parliament as non-attached members, outside any political group.');
+    await expect(lead).not.toContainText('in a European political group');
+    // within a status, by name as the Name column sorts: "Ľuboš Blaha" came last, after "Monika Beňová"
+    await expect(page.locator('section[aria-labelledby="pm-h"] tbody th a')).toHaveText([
+      'Erik Kaliňák',
+      'Judita Laššáková',
+      'Katarína Roth Neveďalová',
+      'Ľuboš Blaha',
+      'Monika Beňová',
+    ]);
+    await open(page, 'people/parties/5253/'); // Fidesz 2019–2024: EPP, then NI from 5 Mar 2021
+    await expect(page.locator('.page-header .lead')).toContainText('Its MEPs sat in Parliament in a European political group or as non-attached members.');
+  });
+
   for (const width of [320, 390]) {
     test(`the MEP table fits a ${width}px screen with the period on screen`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
@@ -37,6 +54,42 @@ test.describe('party records', () => {
       await expect(page.getByRole('row', { name: /Laura Huhtasaari/ })).toContainText('2 Jul 2019 – 11 Apr 2023');
     });
   }
+});
+
+test.describe('political groups, cohesion and roles', () => {
+  test('a country page and the Countries table count the non-attached members apart from the groups', async ({ page }) => {
+    await open(page, 'countries/FR/'); // showed "Political groups 9": 8 groups and 1 NI MEP
+    const facts = page.locator('#representation dl.facts');
+    await expect(facts.locator('div', { hasText: 'Political groups' }).locator('dd')).toHaveText('8');
+    await expect(facts.locator('div', { hasText: 'Non-attached MEPs' }).locator('dd')).toHaveText('1');
+    await open(page, 'countries/IT/'); // no NI MEP
+    await expect(page.locator('#representation dl.facts div', { hasText: 'Political groups' }).locator('dd')).toHaveText('8');
+    await expect(page.locator('#representation dl.facts')).not.toContainText('Non-attached');
+    await open(page, 'countries/');
+    const france = page.getByRole('row', { name: /^France/ });
+    await expect(france.locator('td').nth(1)).toHaveText('8');
+  });
+
+  test('cohesion is rounded once, and a tie says there is no majority', async ({ page }) => {
+    await open(page, 'votes/199470/'); // ECR 64 for, 1 against: 98.46%, shown as 99%
+    await expect(page.locator('#groups tr.has-more', { has: page.locator('th a', { hasText: /^ECR$/ }) })).toContainText(
+      '98% voted with the group majority',
+    );
+    await open(page, 'votes/125106/'); // ID 31 for, 31 against, 11 abstained
+    await expect(page.locator('#groups tr.has-more', { has: page.locator('th a', { hasText: /^ID$/ }) })).toContainText('None (tie)');
+    await open(page, 'people/groups/the-left/'); // vote 198216: 13 for, 13 abstained
+    const row = page.locator('tbody tr', { has: page.locator('a[href$="/votes/198216"]') });
+    await expect(row).toContainText('None (tie)');
+    await expect(page.locator('section[aria-labelledby="gv-h"] .section-intro')).toContainText('“cohesion” is the share of them who voted that way');
+  });
+
+  test('MEP pages name group roles as Parliament does and a former MEP’s group as it was then', async ({ page }) => {
+    await open(page, 'people/meps/197781/'); // Malik Azmani: "Chair vice first"
+    await expect(page.locator('main')).toContainText('First Vice-Chair');
+    await expect(page.locator('main')).not.toContainText('Chair vice first');
+    await open(page, 'people/meps/113959/'); // Martina Anderson left on 31 Jan 2020, before GUE/NGL became The Left
+    await expect(page.locator('.page-header .lead')).toContainText('last recorded group: GUE/NGL');
+  });
 });
 
 test.describe('country page directive search', () => {

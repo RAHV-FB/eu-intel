@@ -10,7 +10,7 @@ import { ExtLink, LoadFailed, Loading, LookupNotice, NotFound, PageHeader, Sourc
 import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { useGroups } from '../features/people/labels';
-import { formatIndicator } from '../features/countries/CountryTable';
+import { formatIndicator, politicalGroupCount } from '../features/countries/CountryTable';
 import { InfringementNote, InfringementTable, TranspositionTable } from '../features/countries/Implementation';
 import { COUNCIL_POSITION_LABEL, councilRowTag, councilRowTitle } from '../features/council/CouncilVoteCard';
 import { Pos } from '../features/votes/Breakdowns';
@@ -173,8 +173,15 @@ export default function Country() {
           </div>
           <div>
             <dt>Political groups</dt>
-            <dd className="big">{formatNumber(groupRows.length)}</dd>
+            <dd className="big">{formatNumber(politicalGroupCount(c.groups))}</dd>
           </div>
+          {/* the non-attached members belong to no group: counted apart (the table below gives them a row of their own) */}
+          {(c.groups.ni ?? 0) > 0 && (
+            <div>
+              <dt>Non-attached MEPs</dt>
+              <dd className="big">{formatNumber(c.groups.ni)}</dd>
+            </div>
+          )}
           <div>
             <dt>National parties</dt>
             <dd className="big">{formatNumber(c.parties.filter((p) => p.members_active > 0).length)}</dd>

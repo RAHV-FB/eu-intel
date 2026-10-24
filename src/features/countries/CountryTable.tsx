@@ -24,6 +24,12 @@ export function indicatorColumns(rows: CountrySummary[]): IndicatorColumn[] {
   return [...seen.values()];
 }
 
+/** The political groups a country's current MEPs sit in, from its MEPs by group: the non-attached members (NI) are
+ * not a group. */
+export function politicalGroupCount(groups: Record<string, number>): number {
+  return Object.entries(groups).filter(([g, n]) => g !== 'ni' && n > 0).length;
+}
+
 export function formatIndicator(value: number | null | undefined, unit: string): string {
   if (value == null) return '—';
   const n = value.toLocaleString('en-GB', { maximumFractionDigits: 1 });
@@ -47,7 +53,7 @@ export function CountryTable({
     const a: Record<string, (r: CountrySummary) => string | number | null | undefined> = {
       name: (r) => r.name,
       meps: (r) => r.meps_active,
-      groups: (r) => Object.values(r.groups).filter((n) => n > 0).length,
+      groups: (r) => politicalGroupCount(r.groups),
       cfor: (r) => r.council_positions.for,
       cagainst: (r) => r.council_positions.against,
       cabstain: (r) => r.council_positions.abstain,
@@ -153,7 +159,7 @@ export function CountryTable({
                 <Link to={`/countries/${r.code}`}>{r.name}</Link>
               </th>
               <td className="num grp-start">{formatNumber(r.meps_active)}</td>
-              <td className="num">{formatNumber(Object.values(r.groups).filter((n) => n > 0).length)}</td>
+              <td className="num">{formatNumber(politicalGroupCount(r.groups))}</td>
               {councilAvailable ? (
                 <>
                   <td className="num grp-start">{formatNumber(r.council_positions.for)}</td>

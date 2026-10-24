@@ -57,7 +57,13 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   83 committees, each membership dated. Group-at-date reproduced the API's own `show-current?mandate-date=` view
   with 0 mismatches on two group-change dates.
 - Group codes from official labels (PPE→EPP, Verts/ALE→Greens/EFA). GUE/NGL (until 2020-12-17) and The Left
-  (from 2020-12-18) are distinct bodies at source and kept distinct.
+  (from 2020-12-18) are distinct bodies at source and kept distinct. An MEP's summary group code (`group_code` in
+  `people/meps.json`) is that of the body they were last in: "GUE/NGL" for the 2 MEPs who left before the renaming
+  (Martina Anderson 113959, Matt Carthy 124986), whose `group` is still the group page of The Left.
+- The non-attached members (NI, corporate body 6561) are classified by the EP like a political group
+  (`EU_POLITICAL_GROUP`) and are kept as one in the data (`groups.ni`), but they belong to no group: the site never
+  counts them as a political group (the country pages and the Countries table count NI MEPs apart; a party whose
+  MEPs are all NI is described as sitting outside any group).
 - Gaps: a few MEPs lack a national-party membership for part of a mandate (e.g. 197526 in term 10). "Independent"
   is recorded by EP as a per-country party. Portraits not used.
 - Two party records, corporate bodies 5500 (FR) and 5719 (HR), are labelled "-" in all 24 languages: the site
