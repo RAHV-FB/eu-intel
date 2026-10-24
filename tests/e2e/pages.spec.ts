@@ -480,6 +480,18 @@ test.describe('legislative files', () => {
     await expect(christ.getByRole('link', { name: 'Marie-Sophie Christ' })).toHaveAttribute('href', `${BASE_PATH}people/meps/277057`);
   });
 
+  test('the transposition summary counts Member States, beside a column that counts measures (NIS2)', async ({ page, request }) => {
+    // the chip read "25 Measures notified" next to the "Measures notified" column, which adds up to 301 measures
+    const d = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/dossiers/2020-0359.json`)).json();
+    const notified = (d.implementation.countries as { status: string }[]).filter((c) => c.status === 'measures_notified').length;
+    await open(page, 'legislation/2020-0359/');
+    const summary = page.getByRole('list', { name: 'Member States by status' });
+    await expect(summary.getByRole('button', { name: `${notified} Member States: Measures notified` })).toHaveCount(1);
+    const chips = await summary.getByRole('button').allTextContents();
+    expect(chips.length).toBeGreaterThan(1);
+    for (const t of chips) expect(t).toMatch(/^\d+ Member States?: /);
+  });
+
   test('a committee of an earlier term is former, not joint; a joint debate names the other files', async ({ page }) => {
     await open(page, 'legislation/2023-0131/'); // OEIL: "Committee responsible SANT", "Former committee responsible ENVI"
     await page.locator('#details summary').click();
