@@ -1,8 +1,22 @@
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import type { Meta, SearchKind } from '../types/data';
-import { isIdentifier, loadSearch, similarWords, type SearchEngine, type SearchHit } from '../lib/search';
+import type { CountryDetail, Meta, SearchKind } from '../types/data';
+import {
+  actTypes,
+  dossierScores,
+  isIdentifier,
+  isMepQuery,
+  loadSearch,
+  normalize,
+  queryParts,
+  similarWords,
+  words,
+  type QueryPart,
+  type SearchEngine,
+  type SearchHit,
+} from '../lib/search';
 import { useData } from '../lib/data';
+import { matchDirectives, queryNumber } from '../features/countries/directiveSearch';
 import { legislationScope } from '../lib/scope';
 import { formatDate, formatNumber } from '../lib/format';
 import { useParamState } from '../lib/urlState';
@@ -42,10 +56,17 @@ const PER_GROUP = 8;
 /** What the date on a result means (search.json `d`: the latest recorded procedural step of a file). */
 const DATE_LABEL: Partial<Record<SearchKind, string>> = { dossier: 'Latest recorded step', act: 'Latest recorded step' };
 
+/** "Regulation", "Regulation and directive": the types of a file's acts, which the search matches too. */
+function typeLabel(types: string[]): string | null {
+  const s = types.join(', ').replace(/, ([^,]+)$/, ' and $1');
+  return s ? s[0].toUpperCase() + s.slice(1) : null;
+}
+
 function ResultItem({ hit, showKind }: { hit: SearchHit; showKind: boolean }) {
   const { doc } = hit;
   const dateLabel = DATE_LABEL[doc.k];
   const note = approximateNote(hit);
+  const types = typeLabel(actTypes(doc));
   return (
     <li className="sr-item">
       <Link to={doc.u} className="sr-item__title">
@@ -54,6 +75,7 @@ function ResultItem({ hit, showKind }: { hit: SearchHit; showKind: boolean }) {
       <span className="sr-item__meta">
         {showKind && <span className="sr-item__kind">{kindLabel(doc.k)}</span>}
         {doc.s && <span>{doc.s}</span>}
+        {types && <span>{types}</span>}
         {doc.d && (
           <span>
             {dateLabel && <>{dateLabel} </>}
@@ -71,6 +93,60 @@ function VotesLink({ q }: { q: string }) {
     <p className="sr-votes">
       Looking for a vote? <Link to={`/votes?q=${encodeURIComponent(q)}`}>Search Parliament votes for “{q}”</Link>
     </p>
+  );
+}
+
+/** Where a query for MEPs ("Spanish MEPs", "EPP MEPs", "former MEPs") is answered: the MEP directory, filtered by
+ * the country or group the query names (a party's page lists its MEPs). */
+function mepLink(q: string, hits: SearchHit[]): { to: string; label: string } | null {
+  const h = hits.find((x) => x.meps);
+  if (!h && !isMepQuery(q)) return null;
+  if (h?.doc.k === 'country') return { to: `/people?country=${h.doc.id}`, label: `See the current MEPs from ${h.doc.t}` };
+  if (h?.doc.k === 'group') {
+    const former = (h.doc.s ?? '').startsWith('Former');
+    return former
+      ? { to: `/people?group=${h.doc.id}&status=all`, label: `See the MEPs of the ${h.doc.t} (a group of an earlier term)` }
+      : { to: `/people?group=${h.doc.id}`, label: `See the current MEPs of the ${h.doc.t}` };
+  }
+  if (h?.doc.k === 'party') return { to: h.doc.u, label: `See the MEPs of ${h.doc.t}` };
+  if (words(q).includes('former')) return { to: '/people?status=former', label: 'See former MEPs in the MEP directory' };
+  return { to: '/people', label: 'Find MEPs by name, country, political group or party in the MEP directory' };
+}
+
+function MepLink({ link }: { link: { to: string; label: string } }) {
+  return (
+    <p className="sr-summary">
+      Looking for MEPs? <Link to={link.to}>{link.label}</Link>
+    </p>
+  );
+}
+
+/** The part of a query that names a country ("Ireland" in "NIS2 Ireland"), and the file another part finds. */
+function countryAndFile(parts: QueryPart[]): { country: SearchHit; file: SearchHit; text: string } | null {
+  const names = (h: SearchHit) => [h.doc.t, ...(h.doc.a ?? '').split('|')].map(normalize);
+  const at = parts.findIndex((p) => p.hits[0]?.doc.k === 'country' && names(p.hits[0]).includes(normalize(p.text)));
+  const file = parts.find((p, k) => k !== at && p.hits[0]?.doc.k === 'dossier' && !p.hits[0].approximate);
+  return at >= 0 && file ? { country: parts[at].hits[0], file: file.hits[0], text: file.text } : null;
+}
+
+function PartSection({ part }: { part: QueryPart }) {
+  const id = useId();
+  return (
+    <section className="sr-group" aria-labelledby={id}>
+      <h2 id={id} className="sr-group__title">
+        “{part.text}”
+      </h2>
+      <ol className="sr-list">
+        {part.hits.map((h) => (
+          <ResultItem key={`${h.doc.k}:${h.doc.id}`} hit={h} showKind />
+        ))}
+      </ol>
+      <div className="sr-group__foot">
+        <Link to={`/search?q=${encodeURIComponent(part.text)}`} className="sr-group__more">
+          All results for “{part.text}” →
+        </Link>
+      </div>
+    </section>
   );
 }
 
@@ -139,8 +215,8 @@ export default function Search() {
   }, []);
   const meta = useData<Meta>('meta.json');
 
-  const { grouped, partialCount, startCount, approx } = useMemo(() => {
-    if (!engine || !q.trim()) return { grouped: [], partialCount: 0, startCount: 0, approx: [] };
+  const { grouped, partialCount, startCount, approx, mep } = useMemo(() => {
+    if (!engine || !q.trim()) return { grouped: [], partialCount: 0, startCount: 0, approx: [], mep: null };
     let hits: SearchHit[] = [];
     try {
       hits = engine.search(q, { limit: 1000 });
@@ -154,9 +230,31 @@ export default function Search() {
       .sort((a, b) => rank(a.g.kinds) - rank(b.g.kinds));
     const partialCount = hits.filter((h) => h.partial).length;
     const startCount = hits.filter((h) => h.wordStart).length;
-    return { grouped: groups, partialCount, startCount, approx: hits.filter((h) => h.approximate) };
+    return { grouped: groups, partialCount, startCount, approx: hits.filter((h) => h.approximate), mep: mepLink(q, hits) };
   }, [engine, q]);
   const total = grouped.reduce((n, x) => n + x.hits.length, 0);
+  // nothing matches all the words ("NIS2 Ireland"): what each part of the query finds on its own; not for MEPs,
+  // whom the MEP directory lists ("former MEPs" is not the "former Yugoslav Republic")
+  const parts = useMemo(
+    () => (engine && q.trim() && total === 0 && !mep ? queryParts(engine, q) : null),
+    [engine, q, total, mep],
+  );
+  const found = parts?.filter((p) => p.hits.length) ?? [];
+  const unknown = parts?.filter((p) => !p.hits.length) ?? [];
+  // a file next to a country ("NIS2 Ireland"): the directive in that country's implementation table
+  const pair = useMemo(() => (parts && parts.every((p) => p.hits.length) ? countryAndFile(parts) : null), [parts]);
+  const country = useData<CountryDetail>(pair ? `countries/${pair.country.doc.id}.json` : null);
+  const transposed = useMemo(() => {
+    const ofCountry = pair && country.data?.code === pair.country.doc.id ? country.data.transposition : [];
+    const row = ofCountry.find((r) => r.dossier_id === pair?.file.doc.id);
+    if (!engine || !pair || !row) return null;
+    // the country page's directive search, with the words typed if they find the row, else with the act's number
+    const opts = queryNumber(pair.text) ? { identifiers: true } : { wholeWords: true };
+    const files = new Set(dossierScores(engine, pair.text, opts).keys());
+    const typed = matchDirectives([row], pair.text, files).rows.length > 0;
+    const trq = typed ? pair.text : (row.act ?? row.celex);
+    return { row, to: `/countries/${pair.country.doc.id}?tr-q=${encodeURIComponent(trq)}#implementation` };
+  }, [engine, pair, country.data]);
   // matches on whole words (exact, or singular/plural) rank first, then other forms of a word, then approximate ones
   const wholeCount = total - partialCount - approx.length;
   const similar = similarWords(approx.map((h) => h.similar))
@@ -269,6 +367,7 @@ export default function Search() {
               ))}
             </ul>
           </nav>
+          {mep && <MepLink link={mep} />}
           {grouped.map(({ g, hits }) => (
             <GroupSection key={`${g.id}:${q}`} g={g} hits={hits} q={q} all={opened.has(g.id)} onToggle={() => toggleAll(g.id)} />
           ))}
@@ -276,17 +375,53 @@ export default function Search() {
         </>
       )}
 
-      {engine && q.trim() && total === 0 && (
+      {engine && q.trim() && total === 0 && found.length > 0 && (
+        <>
+          <p className="sr-summary" role="status">
+            No results for “{q}”: nothing matches all of its words. {found.length === parts?.length ? 'Each part' : 'Part of it'}{' '}
+            finds results on its own:
+          </p>
+          {transposed && (
+            <p className="sr-summary">
+              <Link to={transposed.to}>
+                {transposed.row.act ?? transposed.row.title} in {pair?.country.doc.t}’s implementation table
+              </Link>{' '}
+              (national measures as EUR-Lex records them)
+            </p>
+          )}
+          {found.map((p) => (
+            <PartSection key={`${p.text}:${q}`} part={p} />
+          ))}
+          {unknown.length > 0 && (
+            <p className="sr-votes">
+              {unknown.map((p) => `“${p.text}”`).join(', ')} {unknown.length === 1 ? 'is' : 'are'} not in our index as typed:
+              check the spelling, or try a shorter or more general word.
+            </p>
+          )}
+          <VotesLink q={q.trim()} />
+        </>
+      )}
+
+      {engine && q.trim() && total === 0 && found.length === 0 && (
         <EmptyState title={`No results for “${q}”`}>
           {isIdentifier(q) && (
             <p>
               No file in our data has this reference or number. {legislationScope(meta.data?.scope, true)}
             </p>
           )}
-          <p>
-            Check the spelling, try a shorter or more general word, or search an official reference such as{' '}
-            <span className="mono">2021/0106(COD)</span> or a CELEX number such as <span className="mono">32016R0679</span>.
-          </p>
+          {mep ? (
+            <>
+              <p>No legislative file, guide or name in our data matches it.</p>
+              <p>
+                Looking for MEPs? <Link to={mep.to}>{mep.label}</Link>.
+              </p>
+            </>
+          ) : (
+            <p>
+              Check the spelling, try a shorter or more general word, or search an official reference such as{' '}
+              <span className="mono">2021/0106(COD)</span> or a CELEX number such as <span className="mono">32016R0679</span>.
+            </p>
+          )}
           <Suggestions />
           <p>
             Or <Link to="/legislation">browse all legislation by topic and status</Link>.

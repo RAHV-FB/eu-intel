@@ -4,8 +4,8 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { DossierSummary, EpVoteSummary, SearchDoc } from '../types/data';
-import { createSearchEngine, similarWords, type SearchHit } from './search';
+import type { CountryDetail, DossierSummary, EpVoteSummary, SearchDoc } from '../types/data';
+import { createSearchEngine, queryParts, similarWords, type SearchHit } from './search';
 import { buildHaystacks, keywordScores } from '../features/legislation/explorer';
 import { matchVoteDetails, matchVotes, voteHaystacks } from '../features/votes/keyword';
 
@@ -428,6 +428,132 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(of('Nicolas').has('158114')).toBe(false); // Nicola Beer
     expect(of('Marcos').has('167417')).toBe(false); // Marco Campomenosi
     expect(of('agreements').size).toBe(of('agreement').size); // "Provisional agreement" in the labels
+  });
+
+  it('finds an act by its number as readers write it: "EU Regulation 2016/679", "Reg 2016/679", "EU 2016/679"', () => {
+    for (const q of [
+      'EU Regulation 2016/679', 'Regulation EU 2016/679', 'Reg. (EU) 2016/679', 'Reg 2016/679', 'EU 2016/679',
+      'Regulation 2016/679 EU', 'EU GDPR',
+    ]) { // prettier-ignore
+      expect(top(q), q).toBe('dossier:2012-0011'); // CELEX 32016R0679, the GDPR
+      expect(engine.search(q)[0].approximate, q).toBeUndefined();
+    }
+    for (const q of ['EU Directive 2019/1937', 'Dir 2019/1937', 'Dir. (EU) 2019/1937']) expect(top(q), q).toBe('dossier:2018-0106');
+    expect(top('EU Data Act')).toBe('dossier:2022-0047');
+    expect(engine.search('EU Data Act')[0].approximate).toBeUndefined();
+  });
+
+  it('finds every act from 2015 on first by its number in those forms', { timeout: 60_000 }, () => {
+    const T: Record<string, [string, string]> = { R: ['Regulation', 'Reg'], L: ['Directive', 'Dir'], D: ['Decision', 'Dec'] };
+    const missed: string[] = [];
+    let n = 0;
+    for (const d of read<SearchDoc[]>('search.json')) {
+      if (d.k !== 'dossier') continue;
+      for (const t of (d.x ?? '').split(/\s+/)) {
+        const m = /^3(\d{4})([RLD])0*(\d+)$/.exec(t);
+        if (!m || Number(m[1]) < 2015) continue;
+        const [type, abbr] = T[m[2]];
+        // one form per act, in turn (all four for every act take half a minute)
+        const forms = [`EU ${type} ${m[1]}/${m[3]}`, `${type} EU ${m[1]}/${m[3]}`, `${abbr} ${m[1]}/${m[3]}`, `EU ${m[1]}/${m[3]}`];
+        const q = forms[n++ % forms.length];
+        const hits = engine.search(q, { limit: 50 });
+        const at = hits.findIndex((h) => h.doc.id === d.id);
+        if (at < 0 || hits[at].score !== hits[0].score || hits[at].approximate) missed.push(`${q} ${d.id}`);
+      }
+    }
+    expect(n).toBeGreaterThan(1000);
+    expect(missed).toEqual([]);
+  });
+
+  it('ranks a file named with another act type than its own first', () => {
+    expect(top('GDPR directive')).toBe('dossier:2012-0011'); // not only the Digital Omnibus, which mentions both words
+    expect(top('simplification omnibus regulation')).toBe('dossier:2025-0045'); // Omnibus I
+    expect(top('packaging waste directive')).toBe('dossier:2015-0276'); // the directives on packaging waste stay first
+    expect(top('GDPR regulation')).toBe('dossier:2012-0011');
+  });
+
+  it('answers "<country, group or party> MEPs" with it and links the MEP directory, not files on "Member States"', () => {
+    const first = (q: string) => engine.search(q, { limit: 5 })[0];
+    for (const [q, want] of [
+      ['Spanish MEPs', 'country:ES'], ['MEPs from Spain', 'country:ES'], ['German MEPs', 'country:DE'],
+      ['Greens MEPs', 'group:greens-efa'], ['ECR MEPs', 'group:ecr'], ['EPP MEPs', 'group:epp'], ['S&D MEPs', 'group:s-d'],
+    ]) { // prettier-ignore
+      expect(key(first(q)), q).toBe(want);
+      expect(first(q).meps, q).toBe(true);
+    }
+    expect(ids('Greens MEPs', 50)).not.toContain('dossier:2021-0071'); // certificates for third-country nationals
+    expect(ids('ECR MEPs', 50).some((k) => k.startsWith('dossier:'))).toBe(false); // not ECRIS-TCN
+    expect(ids('former MEPs', 50)).not.toContain('dossier:2014-0199'); // "the former Yugoslav Republic of Macedonia"
+    expect(top('election of MEPs')).toBe('dossier:2025-0900'); // "... the election of the members of the European Parliament"
+    expect(top('MEP statute')).toBe('dossier:2026-0900'); // "... the Statute for Members of the European Parliament"
+  });
+
+  it('matches plurals in -ves and -oes, US spellings and a dropped "e" as forms of the word', () => {
+    const vh = voteHaystacks(votes);
+    expect(top('wolves')).toBe('dossier:2025-0058'); // "... the protection status of the wolf"
+    expect(matchVotes(votes, vh, 'wolves', engine)?.has('176305')).toBe(true);
+    expect(top('vetoes')).toBe('page:council-voting');
+    expect(top('potato')).toBe('dossier:2023-0062'); // "... seed potatoes"
+    expect(engine.search('potato')[0].approximate).toBeUndefined();
+    const forms = (q: string) => engine.search(q, { limit: 1000 });
+    expect(forms('labeled').map(key)).toContain('dossier:2015-0149'); // "Energy efficiency labelling"
+    expect(forms('labeled').every((h) => h.partial)).toBe(true);
+    expect(forms('canceled').map(key)).toEqual(['dossier:2013-0072']); // "... cancellation ..."
+    expect(forms('emissions trade').length).toBe(forms('emissions trading').length); // "trading"
+    expect(forms('emissions trade').every((h) => h.partial)).toBe(true);
+    expect(forms('directives').length).toBe(forms('directive').length);
+    expect(forms('packageing').every((h) => h.approximate)).toBe(true); // still a typo of "packaging"
+  });
+
+  it('does not count the act type of a file as another form of a word', () => {
+    // each file found for "regulated" has a word starting with "regulat" in its names or keywords
+    const docs = new Map(read<SearchDoc[]>('search.json').map((d) => [`${d.k}:${d.id}`, d]));
+    const shown = (d: SearchDoc) => `${d.t} ${d.a ?? ''} ${(d.x ?? '').split(/\s+/).filter((x) => x !== 'regulation').join(' ')}`;
+    const regulated = engine.search('regulated', { limit: 5000 });
+    expect(regulated.length).toBeLessThan(500);
+    expect(regulated.filter((h) => !/\bregulat/i.test(shown(docs.get(key(h))!))).map(key)).toEqual([]);
+    expect(engine.search('regulation', { limit: 5000 }).map(key)).toContain('dossier:2022-0047'); // the Data Act, by its act type
+    expect(top('whistleblower directive')).toBe('dossier:2018-0106');
+  });
+
+  it('describes word starts in the explorer as the search page does', () => {
+    const hay = buildHaystacks(rows);
+    const partial = new Set<string>();
+    const starts = new Set<string>();
+    expect(keywordScores(rows, hay, engine, 'Spa', partial, undefined, starts).size).toBeGreaterThan(0);
+    expect([...partial].sort()).toEqual([...starts].sort()); // "Space", "spatial": words starting with "Spa"
+    const fish = new Set<string>();
+    const fishStarts = new Set<string>();
+    keywordScores(rows, hay, engine, 'fish', fish, undefined, fishStarts);
+    expect(fish.size).toBeGreaterThan(0);
+    expect(fishStarts.size).toBe(0); // "fisheries" is another form of the word
+  });
+
+  it('says what each part of a query finds when nothing matches all of it', () => {
+    const parts = (q: string) => queryParts(engine, q)?.map((p) => [p.text, p.hits[0] ? key(p.hits[0]) : null]);
+    expect(engine.search('NIS2 Ireland')).toEqual([]);
+    expect(parts('NIS2 Ireland')).toEqual([['NIS2', 'dossier:2020-0359'], ['Ireland', 'country:IE']]);
+    expect(parts('GDPR Ireland')).toEqual([['GDPR', 'dossier:2012-0011'], ['Ireland', 'country:IE']]);
+    expect(parts('von der leyen')).toBeUndefined();
+    // the directive's row on the Ireland page, which the search page links to
+    const ie = read<CountryDetail>('countries/IE.json');
+    expect(ie.transposition.find((r) => r.dossier_id === '2020-0359')?.act).toBe('Directive (EU) 2022/2555');
+    expect(ie.transposition.some((r) => r.dossier_id === '2012-0011')).toBe(false); // a regulation: no transposition
+  });
+
+  it("finds a file by the site's own id, and lists only its votes", () => {
+    const vh = voteHaystacks(votes);
+    const fileOf = new Map(votes.map((v) => [v.id, v.dossier_id]));
+    for (const [q, file] of [['2021-0106', '2021-0106'], ['2021 0106', '2021-0106'], ['2023-0134', '2023-0134']]) {
+      expect(ids(q), q).toEqual([`dossier:${file}`]);
+      const found = matchVotes(votes, vh, q, engine)!;
+      expect(found.size, q).toBeGreaterThan(0);
+      expect([...found].every((id) => fileOf.get(id) === file), q).toBe(true); // not the discharge reports A9-0106/2023
+    }
+    // pairs of years are not file ids
+    expect(matchVotes(votes, vh, 'Erasmus 2021-2027', engine)?.has('163025')).toBe(true);
+    expect(matchVotes(votes, vh, '2019-2024', engine)!.size).toBeGreaterThan(10);
+    expect(ids('2021-2027', 50).length).toBeGreaterThan(10);
   });
 
   it('does not match vote rapporteurs by the start of their names', () => {

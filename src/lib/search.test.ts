@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import type { SearchDoc } from '../types/data';
 import {
+  actTypes,
   createSearchEngine,
+  dossierScores,
   familyStems,
   hasWord,
+  isIdentifier,
+  isMepQuery,
   keywordTokens,
   normalize,
+  queryParts,
   similarWords,
   singular,
+  stemSpellings,
   wordSet,
   type SearchHit,
 } from './search';
@@ -459,6 +465,69 @@ describe('act citations', () => {
   it('ranks the file that owns a number above files that cite it, also next to its name', () => {
     expect(ids('GDPR 2016/679', 2)).toEqual(['dossier:2012-0011', 'dossier:2025-0360']);
   });
+
+  it('reads an act number as readers write it: "EU" before or after the type, abbreviated types', () => {
+    for (const q of [
+      'EU Regulation 2016/679', 'Regulation EU 2016/679', 'Reg. (EU) 2016/679', 'Reg 2016/679', 'EU 2016/679',
+      'Regulation 2016/679 EU', 'EU Reg 2016/679',
+    ]) { // prettier-ignore
+      expect(isIdentifier(q), q).toBe(true);
+      const hits = engine.search(q);
+      expect(hits.map((h) => h.doc.id), q).toEqual(['2012-0011', '2025-0360']); // the owner, then the file citing it
+      expect(hits[0].approximate, q).toBeUndefined();
+      expect(engine.search(q, { typing: true })[0].doc.id, q).toBe('2012-0011');
+    }
+    // the cited type still decides between acts sharing a number
+    expect(ids('EU Decision 376/2014', 2)).toEqual(['dossier:2014-0064', 'dossier:2012-0361']);
+    expect(ids('Dec 376/2014', 2)).toEqual(['dossier:2014-0064', 'dossier:2012-0361']);
+    expect(ids('Reg 376/2014', 2)).toEqual(['dossier:2012-0361', 'dossier:2014-0064']);
+    expect(isIdentifier('EU 2024')).toBe(false);
+  });
+
+  it('lets "EU" qualify a name without being required', () => {
+    expect(top('EU GDPR')).toBe('dossier:2012-0011'); // its entry has no "EU"; the Digital Omnibus' has "(EU)"
+    expect(engine.search('EU GDPR')[0].approximate).toBeUndefined();
+    expect(top('EU Return Regulation')).toBe('dossier:2025-0059');
+  });
+
+  it("ranks a file named with another act type than its own first, above files that only mention both words", () => {
+    // the GDPR is a regulation; the Digital Omnibus has "GDPR reform" and "Directive 2002/58/EC" in its names
+    expect(ids('GDPR directive', 2)).toEqual(['dossier:2012-0011', 'dossier:2025-0360']);
+  });
+});
+
+describe('MEPs', () => {
+  // TEST-ONLY documents with the names of real files, groups and countries
+  const docs: SearchDoc[] = [
+    { id: 'ES', k: 'country', t: 'Spain', s: 'EU Member State', a: 'Spanish | Spaniard | España | ES', u: '/countries/ES', w: 5 },
+    { id: 'greens-efa', k: 'group', t: 'Group of the Greens/European Free Alliance', s: 'Political group · 53 MEPs', a: 'Greens/EFA | Greens | Verts/ALE | European Free Alliance', u: '/people/groups/greens-efa', w: 4 },
+    { id: '6737', k: 'party', t: 'Fidesz-Magyar Polgári Szövetség-Kereszténydemokrata Néppárt', s: 'National party · Hungary', u: '/people/parties/6737', w: 1.3 },
+    { id: '2021-0071', k: 'dossier', t: 'Framework for the issuance, verification and acceptance of interoperable certificates on vaccination, testing and recovery to third-country nationals legally staying or legally residing in the territories of Member States', s: '2021/0071(COD) · No longer in force', a: 'Digital Green Certificate (third-country nationals)', x: '2021/0071(COD) 2021/0071 regulation', u: '/legislation/2021-0071', w: 1.2, d: '2021-06-15' },
+    { id: '2014-0199', k: 'dossier', t: 'Stabilisation and Association Agreement between the European Communities and their Member States, of the one part, and the former Yugoslav Republic of Macedonia', s: '2014/0199(COD) · In force', x: '2014/0199(COD) 2014/0199', u: '/legislation/2014-0199', w: 1.2, d: '2015-03-01' },
+    { id: '2026-0900', k: 'dossier', t: 'Amendments to the Decision of the European Parliament of 28 September 2005 adopting the Statute for Members of the European Parliament', s: '2026/0900(APP) · Under examination in Parliament', x: '2026/0900(APP) 2026/0900', u: '/legislation/2026-0900', w: 1.2, d: '2026-09-01' },
+    { id: '2025-0900', k: 'dossier', t: 'Amending the Act concerning the election of the members of the European Parliament by direct universal suffrage', s: '2025/0900(APP) · Published, not yet in force', x: '2025/0900(APP) 2025/0900', u: '/legislation/2025-0900', w: 1.2, d: '2026-05-01' },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.k}:${h.doc.id}${h.meps ? '!' : ''}`);
+
+  it('answers a country, group or party next to "MEPs" with it, flagged for the MEP directory', () => {
+    for (const q of ['Spanish MEPs', 'MEPs from Spain', 'Spain MEPs', 'Spanish members of the European Parliament', 'Spanish MEP'])
+      expect(all(q), q).toEqual(['country:ES!']);
+    expect(all('Greens MEPs')).toEqual(['group:greens-efa!']); // not the certificates for "Member States" nationals
+    expect(all('Green MEPs')).toEqual(['group:greens-efa!']);
+    expect(all('Greens/EFA MEPs')).toEqual(['group:greens-efa!']);
+    expect(all('Fidesz MEPs')).toEqual(['party:6737!']); // a name holding the word
+    expect(all('Spain')).toEqual(['country:ES']); // no flag without the words for MEPs
+  });
+
+  it('reads "MEP" as "Member of the European Parliament", not "Member States"', () => {
+    expect(all('former MEPs')).toEqual([]); // not "... Member States ... the former Yugoslav Republic"
+    expect(all('MEP statute')).toEqual(['dossier:2026-0900']); // "Statute for Members of the European Parliament"
+    expect(all('election of MEPs')).toEqual(['dossier:2025-0900']);
+    expect(isMepQuery('former MEPs')).toBe(true);
+    expect(isMepQuery('members of the European Parliament')).toBe(true);
+    expect(isMepQuery('Member States')).toBe(false);
+  });
 });
 
 describe('approximate matches', () => {
@@ -667,7 +736,8 @@ describe('regular word forms', () => {
   it('does not take a regular form of index words for a typo, and lists its word family first', () => {
     // "travelers" is one edit from "travellers", but it is "travel" + "ers"
     expect(all('travelers').slice(0, 2).sort()).toEqual(['2013-0246*', '2018-0186*']);
-    expect(all('travelers')).toEqual(expect.arrayContaining(['2023-0435~', '2012-0184~'])); // listed last
+    // "travellers", the British spelling, is another form of the word; "trailers" only a similar word, listed last
+    expect(all('travelers')).toEqual(['2018-0186*', '2013-0246*', '2023-0435*', '2012-0184~']);
     expect(all('promoted')[0]).toBe('2016-0287*'); // "promotion", above "proposed"
     expect(all('marking')[0]).toBe('2013-0088*'); // "mark", above "making"
     expect(all('banning')[0]).toBe('2021-0197*'); // "ban", above "banking" and "burning"
@@ -687,6 +757,63 @@ describe('regular word forms', () => {
     expect(spa.every((h) => h.wordStart)).toBe(true);
     expect(engine.search('pharma package')[0].wordStart).toBe(true);
     expect(engine.search('fish').some((h) => h.wordStart)).toBe(false); // whole words matched: no fallback
+  });
+
+  it('passes the word starts on to the legislation explorer', () => {
+    const partial = new Set<string>();
+    const starts = new Set<string>();
+    expect([...dossierScores(engine, 'batt', { partial, wordStart: starts }).keys()]).toEqual(['2020-0353']); // "Batteries"
+    expect([...starts]).toEqual(['2020-0353']);
+    const forms = new Set<string>();
+    dossierScores(e, 'fueled', { partial, wordStart: forms });
+    expect(partial.has('2014-0136')).toBe(true);
+    expect(forms.size).toBe(0); // another form of the word, not a word starting with it
+  });
+});
+
+describe('plurals in -ves and -oes, US spellings and a dropped "e"', () => {
+  // TEST-ONLY documents with the titles of real files
+  const docs: SearchDoc[] = [
+    { id: '2025-0058', k: 'dossier', t: 'Amending Council Directive 92/43/EEC as regards the protection status of the wolf (Canis lupus)', s: '2025/0058(COD) · In force', x: '2025/0058(COD) 2025/0058 directive', u: '/legislation/2025-0058', w: 1.2, d: '2025-06-01' },
+    { id: '2023-0062', k: 'dossier', t: 'Specific rules relating to the entry into Northern Ireland of certain consignments of seed potatoes', s: '2023/0062(COD) · In force', x: '2023/0062(COD) 2023/0062 regulation', u: '/legislation/2023-0062', w: 1.2, d: '2023-06-01' },
+    { id: '2015-0149', k: 'dossier', t: 'Energy efficiency labelling', s: '2015/0149(COD) · In force', x: '2015/0149(COD) 2015/0149 regulation', u: '/legislation/2015-0149', w: 1.2, d: '2017-07-28' },
+    { id: '2013-0072', k: 'dossier', t: 'Air passenger rights in the event of denied boarding, cancellation or long delay of flights', s: '2013/0072(COD) · In force', x: '2013/0072(COD) 2013/0072', u: '/legislation/2013-0072', w: 1.2, d: '2025-06-01' },
+    { id: '2021-0211', k: 'dossier', t: 'EU Emissions Trading System', s: '2021/0211(COD) · In force', x: '2021/0211(COD) 2021/0211 directive', u: '/legislation/2021-0211', w: 1.2, d: '2023-05-16' },
+    { id: '2017-0114', k: 'dossier', t: 'Charging of heavy goods vehicles for the use of certain infrastructures', s: '2017/0114(COD) · In force', x: '2017/0114(COD) 2017/0114 directive', u: '/legislation/2017-0114', w: 1.2, d: '2022-03-24' },
+    { id: '2009-0001', k: 'dossier', t: 'Control of rats and other pests', s: '2009/0001(COD) · In force', x: '2009/0001(COD) 2009/0001', u: '/legislation/2009-0001', w: 1.2, d: '2010-01-01' },
+    { id: '2009-0002', k: 'dossier', t: 'Nationally determined contributions', s: '2009/0002(COD) · In force', x: '2009/0002(COD) 2009/0002', u: '/legislation/2009-0002', w: 1.2, d: '2010-01-01' },
+    { id: '2016-0374', k: 'dossier', t: 'Rates of value added tax applied to books', s: '2016/0374(CNS) · In force', x: '2016/0374(CNS) 2016/0374 directive', u: '/legislation/2016-0374', w: 1.2, d: '2018-11-06' },
+    { id: '2013-0443', k: 'dossier', t: 'Reduction of national emissions of certain atmospheric pollutants', s: '2013/0443(COD) · In force', x: '2013/0443(COD) 2013/0443 directive', u: '/legislation/2013-0443', w: 1.2, d: '2016-12-31' },
+    { id: '2022-0396', k: 'dossier', t: 'Packaging and Packaging Waste Regulation', s: '2022/0396(COD) · In force', x: '2022/0396(COD) 2022/0396 regulation', u: '/legislation/2022-0396', w: 1.2, d: '2025-02-11' },
+    { id: '2013-0246', k: 'dossier', t: 'Package travel and assisted travel arrangements', s: '2013/0246(COD) · In force', x: '2013/0246(COD) 2013/0246 directive', u: '/legislation/2013-0246', w: 1.2, d: '2015-12-11' },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`);
+
+  it('singularises a curated list of plurals in -ves and -oes, not "directives" or "shoes"', () => {
+    expect(singular('wolves')).toBe('wolf');
+    expect(singular('vetoes')).toBe('veto');
+    expect(singular('potatoes')).toBe('potato');
+    expect(singular('directives')).toBe('directive');
+    expect(singular('derivatives')).toBe('derivative');
+    expect(singular('shoes')).toBe('shoe');
+    expect(all('wolves')).toEqual(['2025-0058']);
+    expect(all('potato')).toEqual(['2023-0062']);
+    expect(all('directives')).toEqual(all('directive'));
+  });
+
+  it('finds US spellings and a dropped "e" among the other forms of a word', () => {
+    expect(stemSpellings('trade')).toEqual([['trad', new Set(['ing', 'ings'])]]);
+    expect(stemSpellings('label')[0][0]).toBe('labell');
+    expect(stemSpellings('free')).toEqual([]);
+    expect(all('labeled')).toEqual(['2015-0149*']); // "labelling"
+    expect(all('labeling')).toEqual(['2015-0149*']);
+    expect(all('canceled')).toEqual(['2013-0072*']); // "cancellation"
+    expect(all('emissions trade')).toEqual(['2021-0211*']); // "trading"
+    expect(all('vehicle charge')).toEqual(['2017-0114*']); // "charging"
+    expect(all('rate')).toEqual(['2016-0374']); // not "rats"
+    expect(all('national')).toEqual(['2013-0443']); // not "nationally"
+    expect(all('packageing')).toEqual(['2022-0396~']); // still a typo of "packaging", not "package"
   });
 });
 
@@ -712,6 +839,10 @@ describe('act types', () => {
       a: 'Batteries Directive', x: '2003/0282(COD) 2003/0282 32006L0066 2006/66 directive', u: '/legislation/2003-0282', w: 1.2,
       d: '2006-09-26',
     },
+    {
+      id: '2022-0047', k: 'dossier', t: 'Data Act', s: '2022/0047(COD) · In force', x: '2022/0047(COD) 2022/0047 32023R2854 2023/2854 regulation',
+      u: '/legislation/2022-0047', w: 3, d: '2025-09-12',
+    },
   ]; // prettier-ignore
   const e = createSearchEngine(docs);
   const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`);
@@ -728,6 +859,43 @@ describe('act types', () => {
     expect(all('common charger regulation')).toEqual(['2021-0291']);
     expect(all('batteries regulation')).toEqual(['2020-0353']); // not the Batteries Directive
     expect(all('batteries directive')[0]).toBe('2003-0282');
+  });
+
+  it('matches an act type as the whole word only, not through the forms or the start of another word', () => {
+    expect(all('regulation')).toEqual(['2020-0353', '2022-0047']); // in a name first, then as the act type
+    expect(all('regulations')).toEqual(['2020-0353', '2022-0047']);
+    expect(all('directive').sort()).toEqual(['2003-0282', '2018-0106', '2021-0291']);
+    // the Data Act's entry has the word only as its act type; the Batteries Regulation has it in a name
+    expect(all('regulated')).toEqual(['2020-0353*']);
+    expect(all('regulating')).toEqual(['2020-0353*']);
+    expect(e.search('regul', { typing: true }).map((h) => h.doc.id)).toEqual(['2020-0353']);
+    expect(actTypes(docs.find((d) => d.id === '2022-0047')!)).toEqual(['regulation']); // shown on the search page
+  });
+});
+
+describe('query parts', () => {
+  // TEST-ONLY documents with the names of real files, countries and MEPs
+  const docs: SearchDoc[] = [
+    { id: '2020-0359', k: 'dossier', t: 'Measures for a high common level of cybersecurity across the Union', s: '2020/0359(COD) · In force', a: 'NIS2 | NIS 2 Directive | NIS 2', x: '2020/0359(COD) 2020/0359 32022L2555 2022/2555 directive', u: '/legislation/2020-0359', w: 3, d: '2023-01-16' },
+    { id: 'IE', k: 'country', t: 'Ireland', s: 'EU Member State', a: 'Irish | Éire | IE', u: '/countries/IE', w: 5 },
+    { id: '256966', k: 'mep', t: 'Michael von der Schulenburg', s: 'MEP · Germany · NI', u: '/people/meps/256966', w: 1.5 },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const parts = (q: string) => queryParts(e, q)?.map((p) => `${p.text}: ${p.hits.map((h) => `${h.doc.k}:${h.doc.id}`).join(' ')}`);
+
+  it('says what each part of a query that matches nothing as a whole finds on its own', () => {
+    expect(e.search('NIS2 Ireland')).toEqual([]);
+    expect(parts('NIS2 Ireland')).toEqual(['NIS2: dossier:2020-0359', 'Ireland: country:IE']);
+    expect(parts('NIS 2 Ireland')).toEqual(['NIS 2: dossier:2020-0359', 'Ireland: country:IE']);
+    expect(parts('NIS2 in Ireland')).toEqual(['NIS2: dossier:2020-0359', 'Ireland: country:IE']);
+    expect(parts('NIS2 Irelnd')).toEqual(['NIS2: dossier:2020-0359', 'Irelnd: ']); // a misspelling finds nothing here
+  });
+
+  it('does not make a part of name particles, and leaves single words and identifiers alone', () => {
+    expect(parts('von der Leyen')).toBeUndefined(); // one word that counts: not Michael von der Schulenburg
+    expect(parts('Ursula von der Leyen')).toEqual(['Ursula: ', 'von der Leyen: ']);
+    expect(parts('Ireland')).toBeUndefined();
+    expect(parts('2021/0106(COD)')).toBeUndefined();
   });
 });
 
