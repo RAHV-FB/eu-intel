@@ -308,8 +308,11 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   step"), names the amending acts EUR-Lex lists for the file's acts that are not in our EUR-Lex data (so the
   timeline cannot date them), when the year in their CELEX id is not earlier than the latest step's: that step may
   be older than they are (2021/0366(COD): Commission Delegated Regulation (EU) 2026/2102 "of 13 July 2026", in
-  force on 18 September 2026 as Cellar records, after the step of 23 December 2025). More than three are counted,
-  not named (71 files on 24 October 2026, 13 of them counted). The homepage card is an overview (status, what the
+  force on 18 September 2026 as Cellar records, after the step of 23 December 2025). Where the one act named is a
+  text checked for the file's act dates (`data/curated/act_dates.yaml`), as 2026/2102 is for the EUDR's 30 December
+  2027, the note says so instead of "That act is not in our data": its text was checked for the dates it sets, its
+  publication is not in our data. More than three are counted, not named (71 files on 24 October 2026, 13 of them
+  counted). The homepage card is an overview (status, what the
   file does, the next date fixed in law or the next step) and shows neither the latest step nor this note.
 - Feeds and activity: a final vote not already a file's milestone is titled by Parliament's step when the file is
   a consultation or consent procedure (CNS, APP, or the "*" / "***" symbol ending the vote's published subject):
@@ -573,8 +576,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Related files: an amending, amended, repealing or repealed act is named by its number (from its official
   title, e.g. "Directive (EU) 2025/794"; for an act outside the snapshot from its CELEX id, 2015 onwards and
   directives from 1999, e.g. "Regulation 2026/1770", with its type as a text checked for
-  `data/curated/act_dates.yaml` names it where one does: "Delegated Regulation 2026/2102", from "Delegated
-  Regulation (EU) 2026/2102, Annex"), followed by its file's short title when it has one; an
+  `data/curated/act_dates.yaml` names it where one does, with the author and the "(EU)" of its number that the
+  label gives and the CELEX id does not: "Commission Delegated Regulation (EU) 2026/2102", from "Commission
+  Delegated Regulation (EU) 2026/2102, Annex"), followed by its file's short title when it has one; an
   act this file amends or repeals, or that repeals it, by its file's title too, unless that is an "Amending …"
   title. Cellar records two titles without the space after the act type ("Directive2014/63/EU of the European
   Parliament …", "Regulation(EU) 2022/870 …"); their numbers are read as if it were there ("Directive 2014/63/EU").

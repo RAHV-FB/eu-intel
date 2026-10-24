@@ -65,7 +65,8 @@ so that nobody reads a gap as a fact about EU law.
   recognised from their title. Reading regulations' recitals needs a fetch of their texts (about 800).
 - Amending acts known only by their CELEX id (outside our EUR-Lex data, such as delegated acts) are named by the
   number in that id ("Regulation 2026/2102"), not by their full type, unless a curated date correction cites
-  their text ("Delegated Regulation 2026/2102").
+  their text ("Commission Delegated Regulation (EU) 2026/2102"). Such an act's publication is not dated on the
+  timeline, so the EUDR's latest step (23 December 2025) is older than its amendment published on 17 September 2026.
 - Initiatives of Member States are named from the Legislative Observatory's file title, and requests of the
   Court of Justice from its record; other initiators, such as the ECB, are not named.
 - Links to committee documents on www.europarl.europa.eu could not be checked automatically (the site refuses

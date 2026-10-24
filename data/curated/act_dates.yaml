@@ -445,8 +445,8 @@
     Regulation (EU) 2025/2650 replaced Article 38: Articles 3 to 13, 16 to 24, 26, 31 and 32 apply from 30 December
     2026, and from 30 June 2027 for operators that were established as micro or small undertakings (or are natural
     persons) by 31 December 2024, except as regards the products covered by the Annex to Regulation (EU) No 995/2010:
-    the dates EUR-Lex records. Delegated Regulation (EU) 2026/2102 amended Annex I; the entries it adds apply from 30
-    December 2027, a date EUR-Lex does not record for this Regulation.
+    the dates EUR-Lex records. Commission Delegated Regulation (EU) 2026/2102 amended Annex I; the entries it adds apply
+    from 30 December 2027, a date EUR-Lex does not record for this Regulation.
   application:
     - date: "2026-12-30"
       partial: true
@@ -462,13 +462,13 @@
     - date: "2027-12-30"
       partial: true
       provisions: >-
-        The entries Delegated Regulation (EU) 2026/2102 adds to Annex I, among them frozen cattle tongues, coffee
-        extracts and some palm-oil products (its Annex: "This provision shall apply from 30 December 2027")
+        The entries Commission Delegated Regulation (EU) 2026/2102 adds to Annex I, among them frozen cattle tongues,
+        coffee extracts and some palm-oil products (its Annex: "This provision shall apply from 30 December 2027")
       source: 2
   sources:
     - {label: "Regulation (EU) 2023/1115, Article 38", url: "https://eur-lex.europa.eu/eli/reg/2023/1115/oj"}
     - {label: "Regulation (EU) 2025/2650, Article 1, point (25)", url: "https://eur-lex.europa.eu/eli/reg/2025/2650/oj",
        celex: "32025R2650"}
-    - {label: "Delegated Regulation (EU) 2026/2102, Annex", url: "https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj",
+    - {label: "Commission Delegated Regulation (EU) 2026/2102, Annex", url: "https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj",
        celex: "32026R2102"}
   reviewed: "2026-10-23"

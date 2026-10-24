@@ -482,8 +482,10 @@ def test_council_list_title_names_the_item_voted_on():
 def test_featured_card_names_amending_acts_the_timeline_cannot_date():
     # EUDR (2021/0366(COD)): EUR-Lex lists Delegated Regulation (EU) 2026/2102 as amending Regulation (EU) 2023/1115,
     # but it is not in our EUR-Lex data; the card's latest step (23 December 2025) is older than it
+    from pipeline.build import load_act_dates
+
     a = acts("32023R1115", "32024R3234", "32025R2650")
-    me = SimpleNamespace(dossier_acts={"2021-0366": [a["32023R1115"]]}, act=a, checked_act_types={},
+    me = SimpleNamespace(dossier_acts={"2021-0366": [a["32023R1115"]]}, act=a, checked_act_types={}, act_dates={},
                          latest_event=lambda pid: {"date": "2025-12-23"})  # fmt: skip
     me.celex_label = lambda c: Builder.celex_label(me, c)  # type: ignore[arg-type]
     note = Builder.undated_amendments_note(me, "2021-0366")  # type: ignore[arg-type]
@@ -491,11 +493,18 @@ def test_featured_card_names_amending_acts_the_timeline_cannot_date():
         "EUR-Lex also lists Regulation 2026/2102 as amending this act. That act is not in our data, so its publication "
         "is not shown and the step above may not be the latest."
     )
-    # its type as the text checked for data/curated/act_dates.yaml gives it ("Delegated Regulation (EU) 2026/2102,
-    # Annex"; Cellar: "Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU)
-    # 2023/1115"), as in the related files, where it read "Regulation 2026/2102" next to the legislative acts
-    me.checked_act_types = {"32026R2102": "Delegated Regulation"}
-    assert note.replace("Regulation 2026", "Delegated Regulation 2026") == Builder.undated_amendments_note(me, "2021-0366")  # type: ignore[arg-type]
+    # named as the text checked for data/curated/act_dates.yaml names it ("Commission Delegated Regulation (EU)
+    # 2026/2102, Annex"; Cellar: "COMMISSION DELEGATED REGULATION (EU) 2026/2102 of 13 July 2026 amending Regulation
+    # (EU) 2023/1115"), as in the related files, where it read "Regulation 2026/2102" next to the legislative acts;
+    # that text dates a step of the page (its Annex: "This provision shall apply from 30 December 2027"), so the note
+    # said "That act is not in our data" of an act the page cites
+    me.checked_act_types = {"32026R2102": "Commission Delegated Regulation (EU)"}
+    me.act_dates = {"32023R1115": load_act_dates()["32023R1115"]}
+    assert Builder.undated_amendments_note(me, "2021-0366") == (  # type: ignore[arg-type]
+        "EUR-Lex also lists Commission Delegated Regulation (EU) 2026/2102 as amending this act. Its text was checked "
+        "for the dates it sets for this act, but its publication is not in our data, so it is not shown and the step "
+        "above may not be the latest."
+    )
     # an amending act of a year before the latest step predates it: no note
     me.latest_event = lambda pid: {"date": "2027-01-04"}
     assert Builder.undated_amendments_note(me, "2021-0366") is None  # type: ignore[arg-type]
@@ -505,17 +514,21 @@ def test_featured_card_names_amending_acts_the_timeline_cannot_date():
 
 
 def test_an_act_known_only_by_its_celex_id_takes_its_type_from_the_checked_text():
-    # data/curated/act_dates.yaml (EUDR) cites "Delegated Regulation (EU) 2026/2102, Annex", celex 32026R2102; the
-    # Batteries Regulation's Commission Delegated Regulation (EU) 2026/1770 is named by no checked text
+    # data/curated/act_dates.yaml (EUDR) cites "Commission Delegated Regulation (EU) 2026/2102, Annex", celex
+    # 32026R2102; the Batteries Regulation's Commission Delegated Regulation (EU) 2026/1770 is named by no checked text.
+    # The "(EU)" of the number is the label's: the CELEX id does not say whether an act is (EU) or (EU, Euratom)
     from pipeline.build import checked_act_types, load_act_dates
 
     kinds = checked_act_types(load_act_dates())
-    assert kinds["32026R2102"] == "Delegated Regulation"
-    assert all(re.fullmatch(r"(?:(?:Implementing|Delegated) )?(?:Regulation|Directive|Decision)", k) for k in kinds.values())
+    assert kinds["32026R2102"] == "Commission Delegated Regulation (EU)"
+    assert all(re.fullmatch(r"(?:Commission )?(?:(?:Implementing|Delegated) )?(?:Regulation|Directive|Decision)(?: \(EU\))?", k)
+               for k in kinds.values())  # fmt: skip
     # a label whose number is not the CELEX id's is not used
     assert checked_act_types({"x": {"sources": [{"label": "Delegated Regulation (EU) 2026/2103", "celex": "32026R2102"}]}}) == {}
+    assert checked_act_types({"x": {"sources": [{"label": "Delegated Regulation 2026/2102", "celex": "32026R2102"}]}}) == {
+        "32026R2102": "Delegated Regulation"}  # fmt: skip
     me = SimpleNamespace(checked_act_types=kinds)
-    assert Builder.celex_label(me, "32026R2102") == "Delegated Regulation 2026/2102"  # type: ignore[arg-type]
+    assert Builder.celex_label(me, "32026R2102") == "Commission Delegated Regulation (EU) 2026/2102"  # type: ignore[arg-type]
     assert Builder.celex_label(me, "32026R1770") == "Regulation 2026/1770"  # type: ignore[arg-type]
     assert Builder.celex_label(me, "32013R1303") is None  # type: ignore[arg-type]
 

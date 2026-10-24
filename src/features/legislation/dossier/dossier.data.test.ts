@@ -313,13 +313,14 @@ describe.skipIf(!built)('application dates, act names and sources on the built d
     expect(byId('2012-0288').official_title).toMatch(/^Amendment to the fuel quality directive/);
   });
 
-  it('says under the latest step that an amending act outside our data is not dated, and names its type (EUDR)', () => {
-    // Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU) 2023/1115 (Cellar)
+  it('says under the latest step that an amending act outside our data is not dated, and names it as its text does (EUDR)', () => {
+    // Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU) 2023/1115 (Cellar); its
+    // Annex dates a step of the page, so the note no longer says that the act is not in our data
     const eudr = byId('2021-0366');
     expect(eudr.latest_note).toBe(
-      'EUR-Lex also lists Delegated Regulation 2026/2102 as amending this act. That act is not in our data, so its publication is not shown and the step above may not be the latest.',
+      'EUR-Lex also lists Commission Delegated Regulation (EU) 2026/2102 as amending this act. Its text was checked for the dates it sets for this act, but its publication is not in our data, so it is not shown and the step above may not be the latest.',
     );
-    expect(eudr.related.filter((r) => r.relation === 'Amended by').map((r) => r.title)).toContain('Delegated Regulation 2026/2102');
+    expect(eudr.related.filter((r) => r.relation === 'Amended by').map((r) => r.title)).toContain('Commission Delegated Regulation (EU) 2026/2102');
   });
 
   it('names as debated together only files whose own record shows that debate (CAP, 20 October 2020; customs, 8 June 2021)', () => {

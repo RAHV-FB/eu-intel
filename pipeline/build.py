@@ -980,14 +980,19 @@ def act_label(a: LegalAct) -> str:
 
 
 CELEX_ACT_RE = re.compile(r"^3(\d{4})([RLD])(\d{4})$")
-# the type of act a checked text's label gives ("Delegated Regulation (EU) 2026/2102, Annex" -> "Delegated Regulation")
-CHECKED_ACT_TYPE_RE = re.compile(r"^((?:Implementing |Delegated )?(?:Regulation|Directive|Decision))\b")
+# the type of act a checked text's label gives, with its author and the "(EU)" of its number where the label gives
+# them ("Commission Delegated Regulation (EU) 2026/2102, Annex" -> "Commission Delegated Regulation (EU)")
+CHECKED_ACT_TYPE_RE = re.compile(
+    r"^((?:Commission |Council )?(?:Implementing |Delegated )?(?:Regulation|Directive|Decision)"
+    r"(?: \((?:EU|Euratom|EU, Euratom)\))?)(?= )"
+)
 
 
 def checked_act_types(act_dates: dict[str, dict]) -> dict[str, str]:
     """CELEX -> type of act, as the label of a text checked for data/curated/act_dates.yaml gives it, for the texts
-    that name an act by its CELEX id and number: an act outside our EUR-Lex data is then "Delegated Regulation
-    2026/2102" ("Delegated Regulation (EU) 2026/2102, Annex", celex 32026R2102), not only the type its CELEX id gives."""
+    that name an act by its CELEX id and number: an act outside our EUR-Lex data is then "Commission Delegated
+    Regulation (EU) 2026/2102" ("Commission Delegated Regulation (EU) 2026/2102, Annex", celex 32026R2102), not only
+    the type its CELEX id gives ("Regulation 2026/2102", without the "(EU)" that the CELEX id does not carry)."""
     return {
         x["celex"]: m.group(1) for e in act_dates.values() for x in e.get("sources") or []
         if x.get("celex") and (m := CHECKED_ACT_TYPE_RE.match(_squash(x.get("label"))))
@@ -2374,7 +2379,7 @@ class Builder:
 
     def celex_label(self, celex: str) -> str | None:
         """An act known only by its CELEX id: "Regulation 2026/2102" (celex_act_label), its type as a checked text
-        gives it (checked_act_types): "Delegated Regulation 2026/2102"."""
+        gives it (checked_act_types): "Commission Delegated Regulation (EU) 2026/2102"."""
         label = celex_act_label(celex)
         kind = self.checked_act_types.get(celex)
         return f"{kind} {label.split(' ', 1)[1]}" if label and kind else label
@@ -4669,7 +4674,7 @@ class Builder:
 
     def undated_amendments_note(self, pid: str) -> str | None:
         """The acts that EUR-Lex lists as amending the file's acts but that are not in our EUR-Lex data, so the
-        timeline has no dated step for them (2021/0366(COD): Delegated Regulation (EU) 2026/2102). Said next to
+        timeline has no dated step for them (2021/0366(COD): Commission Delegated Regulation (EU) 2026/2102). Said next to
         the latest step, which may be older than they are."""
         latest = self.latest_event(pid)
         since = latest["date"][:4] if latest else ""  # an act of an earlier year (its CELEX id) predates that step
@@ -4683,6 +4688,14 @@ class Builder:
         names = [self.celex_label(c) or c for c in cs]
         listed = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
         one = len(cs) == 1
+        # a text checked for the dates it sets for the file's act (data/curated/act_dates.yaml) is in our data as
+        # that text only, not as an act with its publication (EUDR: Commission Delegated Regulation (EU) 2026/2102)
+        checked = {s.get("celex") for a in self.dossier_acts.get(pid, [])
+                   for s in (self.act_dates.get(a.celex) or {}).get("sources") or [] if isinstance(s, dict)}  # fmt: skip
+        if one and cs[0] in checked:
+            return (f"EUR-Lex also lists {listed} as amending this act. Its text was checked for the dates it sets for "
+                    "this act, but its publication is not in our data, so it is not shown and the step above may not "
+                    "be the latest.")
         return (f"EUR-Lex also lists {listed} as amending this act. {'That act is' if one else 'Those acts are'} not in "
                 f"our data, so {'its' if one else 'their'} publication is not shown and the step above may not be the "
                 "latest.")

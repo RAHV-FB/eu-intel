@@ -37,7 +37,7 @@ describe.skipIf(!built)('home lists and feed on the built data', () => {
 
   it('says on the EUDR card that EUR-Lex lists an amending act the latest step does not include', () => {
     const eudr = home.featured.find((f) => f.dossier.id === '2021-0366');
-    if (eudr) expect(eudr.latest_note ?? '').toContain('Regulation 2026/2102');
+    if (eudr) expect(eudr.latest_note ?? '').toContain('Commission Delegated Regulation (EU) 2026/2102');
   });
 
   it('describes each list in a few words; the full rules are on the About page', () => {
