@@ -108,7 +108,7 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
                       </span>
                     )}
                     {c.infringements.some((i) => i.status === 'open' && i.non_communication) && (
-                      <span className="tp-case meta">Commission case open for incomplete notification</span>
+                      <span className="tp-case meta">Commission case open for non-communication of transposition measures</span>
                     )}
                   </span>
                 </td>
@@ -283,7 +283,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
         ) : instrument === 'regulation' ? (
           <>
             It was proposed as a <Term id="regulation">regulation</Term>: if adopted in that form, it would apply
-            directly in every Member State.
+            directly, without national transposition.
           </>
         ) : (
           <>Once adopted, its legal form determines how it applies nationally.</>
@@ -342,11 +342,18 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
       </>
     );
   } else if (instrument === 'regulation') {
+    // which Member States it binds is in its text: one implementing enhanced cooperation binds only those taking part
+    // (Art. 20(4) TEU), and Treaty opt-outs are in its recitals (Protocols 21 and 22); the Council's latest recorded
+    // vote with positions names who did not take part (Regulation (EU) 2026/2280: Denmark and Ireland)
+    const act = d.acts.find((a) => a.act_type === 'regulation');
+    const enhanced = !!act && /\bimplementing enhanced cooperation\b/i.test(act.title);
+    const cv = [...d.council_votes].sort((a, b) => b.date.localeCompare(a.date)).find((v) => Object.keys(v.positions).length > 0);
+    const absent = cv ? Object.keys(cv.positions).filter((c) => cv.positions[c] === 'not_participating').sort() : [];
     body = (
       <>
         <p className="dz-lede">
           <strong>Applies directly; no national transposition needed.</strong> A <Term id="regulation">regulation</Term> is
-          binding in its entirety in every Member State from the dates it sets
+          binding in its entirety and directly applicable in the Member States it binds, from the dates it sets
           {d.application ? (
             <>
               {' '}
@@ -354,7 +361,14 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
             </>
           ) : null}
           .
+          {enhanced && ' This one implements enhanced cooperation, so it binds only the Member States taking part in it (Article 20(4) TEU).'}
         </p>
+        {cv && absent.length > 0 && (
+          <p className="meta">
+            The Council’s vote of {formatDate(cv.date)} records {namesList(absent)} as not taking part. The regulation’s{' '}
+            {act ? <ExtLink href={act.eurlex_url}>text</ExtLink> : 'text'} (its recitals) says which Member States it binds.
+          </p>
+        )}
       </>
     );
   } else if (instrument === 'decision') {

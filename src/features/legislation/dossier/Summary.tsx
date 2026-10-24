@@ -205,7 +205,8 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
     )}
     {instrument === 'regulation' && (
       <p className="dz-dates__note meta">
-        A <Term id="regulation">regulation</Term> applies directly in every Member State.
+        A <Term id="regulation">regulation</Term> applies directly, without national transposition, in the Member States it
+        binds.
       </p>
     )}
     </>
@@ -217,7 +218,9 @@ export function nextScheduled(timeline: TimelineEvent[], today: ISODate): Timeli
   return timeline.map((e) => eventOn(e, today)).find((e) => e.state === 'scheduled' && e.date >= today) ?? null;
 }
 
-const APPLIES_DIRECTLY = 'The regulation applies directly in all EU countries; no national transposition is needed.';
+// "applies directly" or, for an act implementing enhanced cooperation, "applies directly only in the Member States
+// taking part …": never "in all EU countries" (pipeline/analysis/status.py, regulation_applies)
+const APPLIES_DIRECTLY = /^The regulation (applies directly[^;]*); no national transposition is needed\.(.*)$/s;
 const LATER_DATES = /^Later dates? from which \(parts of\) the act apply: (.+)\.$/;
 
 /**
@@ -226,9 +229,10 @@ const LATER_DATES = /^Later dates? from which \(parts of\) the act apply: (.+)\.
  * such date is ahead, that no step follows. `later` is true when it names dates still to come. Other texts unchanged.
  */
 export function regulationNextStep(text: string): { text: string; later: boolean } {
-  if (!text.startsWith(APPLIES_DIRECTLY)) return { text, later: false };
-  const rest = text.slice(APPLIES_DIRECTLY.length).trim();
-  const directly = 'As a regulation, it applies directly in all EU countries; no national transposition is needed.';
+  const m = APPLIES_DIRECTLY.exec(text);
+  if (!m) return { text, later: false };
+  const rest = m[2].trim();
+  const directly = `As a regulation, it ${m[1]}; no national transposition is needed.`;
   if (!rest) return { text: `No further step in the procedure. ${directly}`, later: false };
   const dates = LATER_DATES.exec(rest)?.[1];
   return dates ? { text: `Provisions of the act start to apply on ${dates}. ${directly}`, later: true } : { text, later: false };
@@ -414,6 +418,7 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
                   )}
                 </p>
                 <SourceLink source={latest.source} />
+                {d.latest_note && <p className="meta">{d.latest_note}</p>}
               </>
             ) : (
               <p className="dz-fact__text meta">No dated procedural step is recorded.</p>

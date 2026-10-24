@@ -75,11 +75,11 @@ describe('dated statements on the visitor’s date', () => {
   it('lists only the later dates still ahead', () => {
     // 2021/0106(COD), AI Act (Regulation (EU) 2024/1689)
     const ai =
-      'The regulation applies directly in all EU countries; no national transposition is needed. Later dates from which ' +
+      'The regulation applies directly; no national transposition is needed. Later dates from which ' +
       '(parts of) the act apply: 2 December 2026, 2 December 2027 and 2 August 2028.';
     expect(asOfToday(ai, '2026-12-02')).toBe(ai.replace('2 December 2026, ', ''));
     expect(asOfToday(ai, '2027-12-02')).toBe(ai.replace('dates', 'date').replace('2 December 2026, 2 December 2027 and ', ''));
-    expect(asOfToday(ai, '2028-08-02')).toBe('The regulation applies directly in all EU countries; no national transposition is needed.');
+    expect(asOfToday(ai, '2028-08-02')).toBe('The regulation applies directly; no national transposition is needed.');
     // 2021/0250(COD), AMLD6 (Directive (EU) 2024/1640), Art. 78(1): 10 July 2027; Article 18 by 10 July 2029
     const amld6 =
       'The Member States bound by the directive must transpose it into national law by 10 July 2027. EUR-Lex records earlier ' +

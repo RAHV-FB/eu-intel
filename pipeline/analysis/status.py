@@ -540,6 +540,23 @@ def entry_into_force_condition(act: LegalAct) -> str | None:
     )
 
 
+ENHANCED_COOPERATION_RE = re.compile(r"\bimplementing enhanced cooperation\b", re.I)
+
+
+def regulation_applies(act: LegalAct) -> str:
+    """How a regulation applies, as far as its title says where: one "implementing enhanced cooperation" binds only
+    the participating Member States (Art. 20(4) TEU: "Acts adopted in the framework of enhanced cooperation shall bind
+    only participating Member States"; Regulation (EU) 2026/467, recital 43: "This Regulation does not apply to
+    Member States which do not participate in the enhanced cooperation"). Which Member States another regulation
+    binds is in its recitals (Protocols 21 and 22), which our data do not read for regulations."""
+    if ENHANCED_COOPERATION_RE.search(act.title or ""):
+        return (
+            "applies directly only in the Member States taking part in the enhanced cooperation it implements "
+            "(Article 20(4) TEU)"
+        )
+    return "applies directly"
+
+
 def unrecorded_application_text(act: LegalAct) -> str:
     """What EUR-Lex records of an act whose application date it gives as not recorded (1001-01-01): never that it
     applies from its entry into force. ETIAS, Regulation (EU) 2018/1240, Art. 96: "This Regulation shall apply from
@@ -701,8 +718,12 @@ def _cod_stage(events: list[Event]) -> _S:
         return _S(
             "adopted",
             "Signed, awaiting publication",
-            "Parliament and the Council have adopted the act and it has been signed. "
-            "It becomes applicable law only after publication in the Official Journal.",
+            # Art. 297(1) TFEU: legislative acts "shall enter into force on the date specified in them or, in the
+            # absence thereof, on the twentieth day following that of their publication"
+            "Parliament and the Council have adopted the act and it has been signed. It is not recorded as published "
+            "in the Official Journal yet; once published, it enters into force on the date it sets or, if it sets "
+            "none, on the twentieth day after publication (Article 297(1) TFEU). Its rules can apply from later "
+            "dates.",
             sig.date,
             "source",
         )
@@ -976,8 +997,13 @@ def _cns_app_stage(ptype: str, events: list[Event]) -> _S:
         return _S(
             "adopted",
             "Adopted by the Council",
-            "The Council has adopted the act. It becomes applicable law only after publication "
-            "in the Official Journal.",
+            # not "once published, it enters into force": the date an act sets can be that of its adoption (Council
+            # Decision 2014/161/EU, 2013/0446(CNS): in force on 11 March 2014, published on 25 March 2014, as EUR-Lex
+            # records), and a decision addressed to specific recipients takes effect on notification (Art. 297(2) TFEU)
+            "The Council has adopted the act. It is not recorded as published in the Official Journal yet. It enters "
+            "into force on the date it sets, which can be the day of its adoption, or, if it sets none, on the "
+            "twentieth day after publication; a decision addressed to specific recipients takes effect on "
+            "notification to them (Article 297 TFEU).",
             adopt.date,
             "source",
         )
@@ -1325,15 +1351,17 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 )
             return NextStep(text=" ".join(parts), institution=None, basis=basis)
         if act.act_type == "regulation":
+            # never "in all EU countries": a regulation binds the Member States the Treaties make it bind, not those
+            # with an opt-out (Regulation (EU) 2024/1348, recital 107: "Denmark is not taking part in the adoption of
+            # this Regulation and is not bound by it") nor those outside an enhanced cooperation (Art. 20(4) TEU)
+            applies = regulation_applies(act)
             if any(not x.partial for x in act.application_unrecorded):  # no date from which it applies in general
                 parts.append(
-                    "A regulation applies directly in all EU countries; no national transposition is needed. "
+                    f"A regulation {applies}; no national transposition is needed. "
                     + unrecorded_application_text(act).replace("the act in general", "this regulation in general")
                 )
             else:
-                parts.append(
-                    "The regulation applies directly in all EU countries; no national transposition is needed."
-                )
+                parts.append(f"The regulation {applies}; no national transposition is needed.")
             pending = [d for d in (app.application_dates if app else []) if d > t]
             if pending:
                 parts.append(

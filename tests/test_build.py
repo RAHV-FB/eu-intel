@@ -1664,7 +1664,7 @@ def test_transposition_dates_without_an_established_role_stay_off_the_timeline(t
         "2025-04-14": "other", "2027-03-30": "deadline", "2027-04-01": "application", "2028-03-30": "further_deadline",
     }  # fmt: skip
     assert d["application"]["transposition_deadlines"] == ["2027-03-30", "2028-03-30"]
-    assert "2025-04-14" not in {e["date"] for e in d["timeline"]}  # never the "Latest verified development"
+    assert "2025-04-14" not in {e["date"] for e in d["timeline"]}  # never the "Latest recorded step"
     assert {e["date"]: e["title"] for e in d["timeline"] if e["kind"].startswith("transposition")} == {
         "2027-03-30": "Deadline for Member States to transpose the directive",
         "2027-04-01": "Application date for national transposition measures (Art. 6(2))",

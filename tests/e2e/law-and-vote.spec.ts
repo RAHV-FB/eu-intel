@@ -76,7 +76,7 @@ test.describe('law page: status and key facts', () => {
     await open(page, `legislation/${AI_ACT_ID}/`);
     const next = page.locator('.dz-fact', { hasText: 'What happens next' });
     await expect(next).toContainText(/^What happens nextProvisions of the act start to apply on \d/);
-    await expect(next).toContainText('As a regulation, it applies directly in all EU countries; no national transposition is needed.');
+    await expect(next).toContainText('As a regulation, it applies directly; no national transposition is needed.');
     await expect(next.getByRole('link', { name: 'When it applies' })).toHaveAttribute('href', '#when-it-applies');
   });
 

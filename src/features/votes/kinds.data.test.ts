@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { DossierDetail, EpVoteDetail, EpVoteSummary, SearchDoc } from '../../types/data';
 import { createSearchEngine } from '../../lib/search';
 import { matchVotes, voteHaystacks } from './keyword';
+import { DETAIL_EXPLAINER } from './labels';
 
 const DATA = new URL('../../../public/data/', import.meta.url);
 const built = existsSync(new URL('votes/index.json', DATA));
@@ -52,6 +53,13 @@ describe.skipIf(!built)('votes on the built data', () => {
     expect(byId.get('139042')?.kind_label).toBe('Vote on a recommendation of Parliament');
     expect(byId.get('139042')?.display_title).toMatch(/— vote on the recommendation$/);
     expect([byId.get('113694')?.kind, byId.get('113694')?.kind_detail]).toEqual(['motion', 'objection']);
+    // the explanation fits every recommendation voted: A9-0200/2022 (146609, Interpol agreement negotiations) cites
+    // "Rules 114(4) and 54", A9-0251/2022 (150162) "Rule 118", B9-0057/2022 (139042) "Rule 208(12)"
+    for (const id of ['146609', '150162', '139042']) expect(byId.get(id)?.kind_detail, id).toBe('recommendation');
+    const text = DETAIL_EXPLAINER.recommendation;
+    expect(text).toContain('on an international agreement under negotiation');
+    for (const rule of ['Rule 118', 'Rule 114(4)', 'Rule 208(12)']) expect(text).toContain(rule);
+    expect(text).toContain('Each report cites the rule');
   });
 
   it('timeline steps: consent given on the linked vote of another day, a split part’s negotiation vote', () => {
@@ -75,6 +83,16 @@ describe.skipIf(!built)('votes on the built data', () => {
     // 17 split votes on parts of the text, adopted: not proposals to amend
     expect(dossier('2018-0190').ep_approval_without_vote).toMatchObject({ amendments_voted: false, parts_voted: true });
     expect(dossier('2023-0288').ep_approval_without_vote?.record?.identifier).toBe('MTG-PL-2025-05-06-DEC-176084');
+    // where the step links the rejected motion to reject that decided it, the step says so (2017/0121(COD), 8 Jul 2020:
+    // 116204, "Proposal for rejection (Rule 67(1))", rejected 218-469-7; Art. 294(7)(a) TFEU); 13 such steps
+    const step = dossier('2017-0121').timeline.find((e) => e.id === '2017-0121-DEC-DCPL-2020-07-08')!;
+    expect(step.vote_id).toBe('116204');
+    expect(step.detail).toMatch(/rejected a motion to reject the Council's position.*\(Article 294\(7\)\(a\) TFEU\)\. The vote link opens that motion\.$/);
+    for (const id of ['2017-0122', '2017-0123', '2018-0152A', '2018-0152B', '2018-0210', '2018-0228', '2018-0247', '2018-0249', '2018-0250', '2018-0254', '2023-0226', '2023-0232']) {
+      const s = dossier(id).timeline.filter((e) => e.title === "Parliament approved the Council's position at second reading" && e.vote_id);
+      expect(s.length, id).toBe(1);
+      expect(s[0].detail ?? '', id).toContain('Article 294(7)(a) TFEU');
+    }
   });
 
   it('the votes search does not match a year against procedure or document numbers: "discharge 2022"', () => {
