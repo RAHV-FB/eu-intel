@@ -255,7 +255,7 @@ test.describe('mobile layout', () => {
     await expect(page).toHaveURL(new RegExp(`${BASE_PATH}legislation/?$`));
   });
 
-  for (const p of ['./', 'legislation', `legislation/${AI_ACT_ID}`, 'votes', 'people', 'countries']) {
+  for (const p of ['./', 'legislation', `legislation/${AI_ACT_ID}`, 'votes', 'people', 'countries', 'how-the-eu-works', 'about']) {
     test(`no horizontal overflow: ${p}`, async ({ page }) => {
       await open(page, p);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

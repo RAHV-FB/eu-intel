@@ -252,6 +252,12 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
                 </li>
               ))}
             </ul>
+            {d.committees.some((c) => c.former) && (
+              <p className="meta">
+                “Former” means that the Legislative Observatory lists the committee only under a “Former …” heading for this file, in the
+                current parliamentary term or an earlier one.
+              </p>
+            )}
           </div>
         )}
 
@@ -260,8 +266,9 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
             <h3>Rapporteurs and shadow rapporteurs</h3>
             <p className="meta">
               From Parliament’s open data and, where available, the key players of its Legislative Observatory file. Each MEP is shown with the
-              political group they belonged to in that role, where the records establish it; “former” marks an appointment
-              in an earlier parliamentary term.
+              political group they belonged to in that role, where the records establish it. “Former” means that the Legislative Observatory
+              lists the MEP only under a “Former …” heading for this file, in the current parliamentary term or an earlier one; where it
+              does not list the MEP, it means that Parliament’s open data records the appointment in an earlier term.
             </p>
             <ul className="dz-list">
               {d.rapporteurs.map((r, i) => (

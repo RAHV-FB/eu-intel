@@ -343,7 +343,8 @@ export interface DossierDetail extends DossierSummary {
   council_votes_in_parts?: { id: string; date: ISODate; dossier_id: string; dossier_ref: string }[];
   implementation?: DossierImplementation | null; // directives only (the file's first directive)
   implementation_more?: DossierImplementation[]; // the file's further directives, one table each (2013/0400(CNS))
-  // former: in that role in an earlier parliamentary term only (OEIL "Former committee responsible"); set only when true
+  // former: OEIL lists the committee in that role only under a "Former …" heading (e.g. "Former committee responsible"),
+  // in the current parliamentary term or an earlier one; set only when true
   committees: { code: string; name?: string | null; role: string; former?: boolean }[];
   // group / group_code: the political group held in that role (not the MEP's current group); null when not established
   rapporteurs: {
@@ -354,7 +355,7 @@ export interface DossierDetail extends DossierSummary {
     country?: string | null;
     role: string; // rapporteur | shadow | opinion_rapporteur | shadow_opinion
     committee?: string | null;
-    former?: boolean; // an appointment of an earlier parliamentary term; set only when true
+    former?: boolean; // OEIL lists it only under a "Former …" heading (current or earlier term), or, if OEIL does not list it, the EP API dates it to an earlier term; set only when true
   }[];
   documents: DocRef[];
   related: { id: string; title: string; relation: string; ref?: string; status_label?: string }[]; // only officially established relations; "Split into" parts also carry their reference and status

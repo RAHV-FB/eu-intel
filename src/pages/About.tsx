@@ -10,6 +10,9 @@ import { CLOSE_RELATIVE } from '../features/votes/labels';
 import '../features/guide/guide.css';
 import '../features/votes/common.css';
 
+/** The project's public source code: the editorial policy and the corrections (`data/curated`) are kept there. */
+const REPOSITORY = 'https://github.com/RAHV-FB/eu-intel';
+
 const STATUS_LABEL: Record<SourceStatusInfo['status'], string> = {
   ok: 'Retrieved',
   partial: 'Partly retrieved',
@@ -18,7 +21,7 @@ const STATUS_LABEL: Record<SourceStatusInfo['status'], string> = {
 };
 
 const COUNT_LABEL: { key: keyof Meta['counts']; label: string }[] = [
-  { key: 'dossiers', label: 'Legislative files (procedures)' },
+  { key: 'dossiers', label: 'Legislative files' },
   { key: 'legal_acts', label: 'Adopted legal acts' },
   { key: 'meps', label: 'MEPs (current and former)' },
   { key: 'meps_active', label: 'Current MEPs' },
@@ -189,7 +192,9 @@ export default function About() {
                 </table>
               </div>
               <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
-                A count of zero means the source was not available for this release, not that nothing happened.
+                A count of zero means the source was not available for this release, not that nothing happened. “Legislative files”
+                counts every file in the legislation explorer: the procedures recorded by Parliament and the files without a
+                Parliament procedure record of their own that the notes above describe.
               </p>
             </>
           ) : (
@@ -200,16 +205,41 @@ export default function About() {
         <section id="selection" aria-labelledby="selection-h">
           <h2 id="selection-h">How featured files are selected</h2>
           <p>
-            The homepage features a small number of major legislative files chosen by editorial judgement, aiming for a spread of topics
-            and broad public relevance. Being featured is not a ranking and does not mean a file is more important than others.
+            The homepage features five or six major legislative files, chosen by our editors. Each meets at least two of these criteria:
+          </p>
+          <ul>
+            <li>it is part of a major package, or a named priority in the Commission’s work programme or Parliament’s Legislative Train;</li>
+            <li>
+              it has drawn significant institutional attention, for example a plenary vote with a recorded division or repeated
+              negotiations between the institutions;
+            </li>
+            <li>people or companies must do, or may do, something concrete because of it;</li>
+            <li>
+              the institutions’ positions differ on the record, Member States’ statements were published by the Council, or a recorded
+              vote was close or divided;
+            </li>
+            <li>it has reached an important milestone: recently adopted or published, a provisional agreement, or the start of negotiations;</li>
+            <li>
+              it has an officially recognised delay: a postponement adopted as law, or a “blocked” label on Parliament’s Legislative Train
+              Schedule.
+            </li>
+          </ul>
+          <p>
+            Together the featured files include at least one adopted act and at least one pending proposal, with no more than two on the
+            same topic. The selection is reviewed at least every three months and when the data show a material change. Being featured is
+            not a ranking and does not mean a file is more important than others. The rules are in the{' '}
+            <ExtLink href={`${REPOSITORY}/blob/main/docs/EDITORIAL.md`}>editorial policy</ExtLink>.
           </p>
           <ul>
             <li>
-              For featured and other curated files we add a short title and a plain-language description of what the law does and who it
-              affects. These are written from the official sources listed with them and carry the date they were last reviewed.
+              For the homepage files and other curated files we add a short title and a plain-language description of what the law does and
+              who it affects. These are written from the official sources listed with them and carry the date they were last reviewed. The
+              other curated files meet at least one of the criteria.
             </li>
             <li>
-              Everything else — status, dates, next steps, votes, implementation — is computed from official data, never written by hand.
+              Everything else — status, dates, next steps, votes, implementation — is computed from official data. The one exception is a
+              small set of corrections checked by hand against official texts, described under{' '}
+              <a href="#corrections">Corrections checked against official texts</a>.
             </li>
             <li>
               The homepage lists are rule-based: <em>Recently adopted</em> (formally adopted acts, newest first);{' '}
@@ -229,16 +259,59 @@ export default function About() {
 
           <h3>Recorded, calculated, editorial, unavailable</h3>
           <p>
-            We keep four kinds of statement apart: facts recorded by an official source; statistics we calculate from those records
-            (marked “Derived from recorded events” where it matters); editorial selections and descriptions; and information that is not
-            available, which we show as missing rather than guess.
+            We keep four kinds of statement apart: facts recorded by an official source; statements we derive from those records, such as
+            a file’s stage and next step (marked “Derived from recorded events”), an outcome calculated from recorded vote counts (marked
+            as such) and vote margins; editorial selections and descriptions; and information that is not available, which we show as
+            missing rather than guess.
           </p>
+
+          <div id="corrections">
+            <h3>Corrections checked against official texts</h3>
+            <p>
+              Apart from the editorial texts, everything is computed from the retrieved official records. The exception is a small set of
+              corrections, made only where an official text shows that a record is wrong or incomplete. Each one cites the provision of
+              that text and lists the texts checked, and applies only in this site’s build: the retrieved data is kept unchanged.
+            </p>
+            <ul>
+              <li>
+                <strong>Dates of entry into force and application</strong>, where EUR-Lex’s record differs from the text of the act or of
+                the act that amended it. The file’s page says “Dates checked against the act’s text” and links the texts.
+              </li>
+              <li>
+                <strong>The day the Council adopted an act</strong>, where the date in our sources differs from the one in the act’s own
+                citation (“decision of the Council of …”). The timeline step or the Council vote quotes the citation and says which date
+                the source records.
+              </li>
+              <li>
+                <strong>Transposition dates of a directive</strong>: which of the dates EUR-Lex records is the general deadline, and, for a
+                few directives, an exemption of some Member States that the directive’s own text provides.
+              </li>
+              <li>
+                <strong>Council votes</strong>: where a voting-result document prints “qualified majority” but the act’s legal basis
+                requires unanimity, the vote is shown under unanimity, with a note and the texts checked; and an adoption by written
+                procedure that no voting-result document records is entered from the Council’s own communication on the outcome.
+              </li>
+              <li>
+                A few further entries of the same kind, such as a link between two acts that EUR-Lex records wrongly, Denmark’s decision
+                (notified to the Council) on a directive that builds on the Schengen acquis, and the status of a file whose act the
+                official records do not link to it.
+              </li>
+            </ul>
+            <p>
+              The corrections are listed in full in the{' '}
+              <ExtLink href={`${REPOSITORY}/tree/main/data/curated`}>
+                <span className="mono">data/curated</span> folder
+              </ExtLink>{' '}
+              of the project’s public repository, one file per kind, each entry with the provision it relies on.
+            </p>
+          </div>
 
           <h3>Status of a legislative file</h3>
           <p>
             A file’s stage is worked out from the events recorded by Parliament’s Legislative Observatory and from the adopted act recorded
             in EUR-Lex. Labels are deliberately precise: for example, “Approved by Parliament” is not “passed” when the Council has not yet
-            agreed.
+            agreed. <Link to="/how-the-eu-works#status-labels">The guide explains each label</Link> and whether the act is adopted or in
+            force.
           </p>
 
           <h3>Topics</h3>
@@ -339,7 +412,10 @@ export default function About() {
             <li>
               Our membership and voting data covers the parliamentary terms listed under coverage; earlier periods are not fully included.
             </li>
-            <li>The site is updated when its data is rebuilt; it is not a live feed.</li>
+            <li>
+              The data is refreshed about once a week; a refresh can be late or skipped. The date of the last refresh is shown on the
+              homepage and in the footer. The site is not a live feed.
+            </li>
           </ul>
           <p>
             See also: <Link to="/privacy">Privacy</Link>.

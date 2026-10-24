@@ -2,9 +2,12 @@
 
 EU Legislative Intelligence explains EU legislation using only official, verifiable data. Almost
 everything on the site is computed from official sources. The one exception is a small curated layer
-in `data/curated/`: editorial selections and texts, a few date corrections checked against the acts' texts,
-and a few corrections of Council voting records checked against the acts, the Treaties and the Council's own
-documents. This document covers what goes into that layer and how it is written and reviewed.
+in `data/curated/`: editorial selections and texts, date corrections checked against the acts' texts,
+corrections of Council voting records checked against the acts, the Treaties and the Council's own
+documents, and a few single entries of the same kind (an amendment link, a Danish decision on a Schengen
+directive, an act that no official record links to its file). This document covers what goes into that layer and how it is written and reviewed. The About page
+describes the corrections ("Corrections checked against official texts") and states the selection criteria below
+("How featured files are selected"); when a correction file or the criteria change, change that text with them.
 
 | File | Contents |
 |---|---|
@@ -14,6 +17,9 @@ documents. This document covers what goes into that layer and how it is written 
 | `act_dates.yaml` | Corrections to the entry-into-force and application dates Cellar records for an act. Each date cites the provision that sets it (or the amending act), and the entry lists the official texts it was checked against. The correction applies in the build only; the snapshot keeps Cellar's values. |
 | `transposition.yaml` | Which of the transposition dates EUR-Lex records for a directive is its general deadline (one of the recorded dates), with the provision quoted verbatim, the text checked and a review date. |
 | `council_dates.yaml` | The day the Council adopted an act of the ordinary legislative procedure, as the act's own text gives it, where the date our sources record differs. Each entry names the act and quotes verbatim the footnote to its citation "Acting in accordance with the ordinary legislative procedure" that gives the date of the Council's decision, with a review date. It re-dates the Legislative Observatory's adoption step and, only where the Council's voting sheet gives that day as its "Sitting date" (quoted in the entry), the Council's voting result; the file's header sets which date takes precedence. The correction applies in the build only; the snapshot keeps the source values. |
+| `act_relations.yaml` | Amendment links that Cellar records between the wrong acts, replaced by the link the amending act's text establishes (evidence quoted, texts listed). The correction applies in the build only. |
+| `denmark_schengen.yaml` | Denmark's decision under Article 4 of Protocol No 22 on a directive that builds upon the Schengen acquis, from its notification to the Council (the Council document and Denmark's decision quoted). |
+| `unlinked_acts.yaml` | An act whose own text cites a step of a procedure while no official record links the two: the file's status names the act and says what it cites. It does not link the act, and the quote of the act's citation is checked against the file's recorded Parliament opinion. |
 | `council_votes.yaml` | Council voting results corrected where the Council's voting-result document prints something else than the Treaties require, and Council adoptions that no voting-result document records. A correction shows the voting rule as unanimity where the sheet prints "qualified majority" but the act's legal basis requires unanimity: only a Treaty provision listed in `UNANIMITY_BASES` (`pipeline/build.py`, which quotes it), with the act's citation of it quoted verbatim. It may set the outcome to "not adopted" only when, under unanimity, the vote did not adopt the act, with a note on what the Council did instead citing its documents. A correction lists the official texts checked, which are linked on the vote. A record is taken from the Council's communication on the outcome of a written procedure, which is its source, with a note on why it is recorded by hand. Each entry has a review date; the snapshot keeps what the voting-result documents print. |
 
 ## What the curated layer must not contain
