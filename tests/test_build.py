@@ -1910,5 +1910,8 @@ def test_coverage_notes_format_counts_and_pluralise_unread_documents():
     assert any(n.startswith("Adopted acts: 1,269 legal acts from EUR-Lex/Cellar") for n in notes([cv(1, {"DE": "for"})]))
     one = next(n for n in notes([cv(1, {}), cv(2, {"DE": "for"})]) if n.startswith("Council votes"))
     assert one.endswith("1 voting-result document could not be read and is shown without positions.")
+    # Art. 31(2) TEU lets one government stop a qualified-majority vote, so the note speaks of a country's vote
+    assert "Only under unanimity can a single country’s vote block a decision." in one
+    assert "Only a vote under unanimity" not in one
     two = next(n for n in notes([cv(1, {}), cv(2, {}), cv(3, {"DE": "for"})]) if n.startswith("Council votes"))
     assert two.endswith("2 voting-result documents could not be read and are shown without positions.")

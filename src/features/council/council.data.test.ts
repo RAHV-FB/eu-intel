@@ -139,6 +139,9 @@ describe.skipIf(!built)('Council votes on the built data', () => {
     expect(summary.startsWith(`${formatNumber(listed.length)} votes of the Council of the EU`)).toBe(true);
     expect(summary).toContain(`${formatNumber(withPositions)} of them with each Member State's position`);
     expect(coverage.startsWith(`Council votes: ${formatNumber(listed.length)} votes`)).toBe(true);
+    // the guide's exceptions (Art. 31(2) TEU) let one government stop a qualified-majority vote; a vote cast cannot
+    expect(coverage).toContain('Only under unanimity can a single country’s vote block a decision.');
+    expect(meta.coverage_notes.join('\n')).not.toContain('Only a vote under unanimity');
     for (const c of read<CountrySummary[]>('countries/index.json')) {
       const p = c.council_positions;
       expect(p.for + p.against + p.abstain + p.not_participating, c.code).toBe(withPositions);
