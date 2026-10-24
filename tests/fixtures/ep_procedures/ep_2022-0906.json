@@ -1,0 +1,283 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2022-0906",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/MTG-PL-2024-02-27-PVCRE-ITM-7-6",
+     "type": "Activity",
+     "activity_date": "2024-02-27",
+     "activity_id": "MTG-PL-2024-02-27-PVCRE-ITM-7-6",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2024-02-27-ITM-007-06",
+      "eli/dl/doc/PV-9-2024-02-27-ITM-007-06"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2022-0906-DEC-ADCP-2023-09-19",
+     "type": "Decision",
+     "activity_date": "2023-09-19",
+     "activity_id": "2022-0906-DEC-ADCP-2023-09-19",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0906-SIGN-2024-04-11",
+     "type": "Activity",
+     "activity_date": "2024-04-11",
+     "activity_id": "2022-0906-SIGN-2024-04-11",
+     "had_activity_type": "def/ep-activities/SIGNATURE"
+    },
+    {
+     "id": "eli/dl/event/2022-0906-DEC-VOAGT-2024-01-24",
+     "type": "Decision",
+     "activity_date": "2024-01-24",
+     "activity_id": "2022-0906-DEC-VOAGT-2024-01-24",
+     "had_activity_type": "def/ep-activities/COMMITTEE_APPROVE_PROVISIONAL_AGREEMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/JURI-PR-749912-DEPOT-2023-06-13",
+     "type": "Activity",
+     "activity_date": "2023-06-13",
+     "activity_id": "JURI-PR-749912-DEPOT-2023-06-13",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/JURI-PR-749912"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0906-PUB-2024-08-12",
+     "type": "Activity",
+     "activity_date": "2024-08-12",
+     "activity_id": "2022-0906-PUB-2024-08-12",
+     "had_activity_type": "def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL"
+    },
+    {
+     "id": "eli/dl/event/AFCO-PA-749876-DEPOT-2023-06-09",
+     "type": "Activity",
+     "activity_date": "2023-06-09",
+     "activity_id": "AFCO-PA-749876-DEPOT-2023-06-09",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/AFCO-PA-749876"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0906-DEC-DCPL-2024-02-27",
+     "type": "Decision",
+     "activity_date": "2024-02-27",
+     "activity_id": "2022-0906-DEC-DCPL-2024-02-27",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/TA-9-2024-0086"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_ADOPT_POSITION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0906-DEPOT-2023-09-27",
+     "type": "Activity",
+     "activity_date": "2023-09-27",
+     "activity_id": "2022-0906-DEPOT-2023-09-27",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0278"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0906-DEC-PLEIN1-2023-10-04",
+     "type": "Decision",
+     "activity_date": "2023-10-04",
+     "activity_id": "2022-0906-DEC-PLEIN1-2023-10-04",
+     "had_activity_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    },
+    {
+     "id": "eli/dl/event/2022-0906-ANPRO-2022-12-12",
+     "type": "Activity",
+     "activity_date": "2022-12-12",
+     "activity_id": "2022-0906-ANPRO-2022-12-12",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2022-0906-DEC-ADCP-AFCO-2023-07-18",
+     "type": "Decision",
+     "activity_date": "2023-07-18",
+     "activity_id": "2022-0906-DEC-ADCP-AFCO-2023-07-18",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/AFCO-AD-749876"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-02-27-VOT-ITM-940099",
+     "type": "Activity",
+     "activity_date": "2024-02-27",
+     "activity_id": "MTG-PL-2024-02-27-VOT-ITM-940099",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0278"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-9-2024-02-27-VOT-ITM-006"
+     ]
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/AFCO-AD-749876",
+    "eli/dl/doc/JURI-PR-749912",
+    "eli/dl/doc/C-9-2024-0131",
+    "eli/dl/doc/TA-9-2024-0086",
+    "eli/dl/doc/AFCO-PA-749876",
+    "eli/dl/doc/A-9-2023-0278"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2022-0906-NMSR-124873-2023-03-08",
+     "type": "Participation",
+     "activity_date": "2023-03-08",
+     "had_participant_person": [
+      "person/124873"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 2004
+    },
+    {
+     "id": "eli/dl/participation/2022-0906-NMCP-204416-JURI-2023-01-31",
+     "type": "Participation",
+     "activity_date": "2023-01-31",
+     "had_participant_person": [
+      "person/204416"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/JURI",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 2005
+    },
+    {
+     "id": "eli/dl/participation/2022-0906-NMSR-124738-2023-03-08",
+     "type": "Participation",
+     "activity_date": "2023-03-08",
+     "had_participant_person": [
+      "person/124738"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ID",
+     "precedenceOrder": 2000
+    },
+    {
+     "id": "eli/dl/participation/2022-0906-NMSR-4289-2023-03-08",
+     "type": "Participation",
+     "activity_date": "2023-03-08",
+     "had_participant_person": [
+      "person/4289"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 2001
+    },
+    {
+     "id": "eli/dl/participation/2022-0906-AVI-AFCO",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/AFCO"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2022-0906-NMCP-197426-AFCO-2023-02-28",
+     "type": "Participation",
+     "activity_date": "2023-02-28",
+     "had_participant_person": [
+      "person/197426"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/AFCO",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 2201
+    },
+    {
+     "id": "eli/dl/participation/2022-0906-MAIN-JURI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/JURI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2022-0906-NMSR-229839-2023-03-08",
+     "type": "Participation",
+     "activity_date": "2023-03-08",
+     "had_participant_person": [
+      "person/229839"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 2002
+    },
+    {
+     "id": "eli/dl/participation/2022-0906-NMSR-197431-2023-03-08",
+     "type": "Participation",
+     "activity_date": "2023-03-08",
+     "had_participant_person": [
+      "person/197431"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 2006
+    }
+   ],
+   "process_id": "2022-0906",
+   "process_title": {
+    "en": "Proposed amendments to Protocol No 3 on the Statute of the Court of Justice of the European Union"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "was_scheduled_in": [
+    {
+     "id": "eli/dl/event/MTG-PL-2024-02-27-OJ-ITM-V-59",
+     "type": "ForeseenActivity",
+     "activity_date": "2024-02-27",
+     "activity_id": "MTG-PL-2024-02-27-OJ-ITM-V-59",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-9-2024-02-27"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "V-59"
+    }
+   ],
+   "label": "2022/0906(COD)",
+   "identifierYear": "2022"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

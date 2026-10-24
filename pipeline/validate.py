@@ -1,0 +1,777 @@
+"""Offline checks of the normalized snapshot (data/snapshot/**) and, once built, of public/data.
+
+    python -m pipeline validate            # the snapshot, and the built output if there is one
+    python -m pipeline validate --built    # the same, but a missing built output is an error (CI, deploy, refresh)
+
+Errors (exit code 1) are STRUCTURAL problems only: unreadable files, records that do not match
+the schema in pipeline/models/entities.py, duplicate ids, malformed dates; and, in the built output,
+claims that contradict the rules or the dossier's own dates (a veto outside unanimity, a withdrawn file
+with an adopted act or withdrawn before its proposal, an adoption after publication, a vote margin next to an
+outcome that is not established or on the other side of the threshold from it); and a count of sitting MEPs that
+a complete list of current Members cannot give (see the people checks); a snapshot file that is missing or holds
+fewer records than the manifest records for it, or than a complete snapshot can; and, with --built, a built output
+that is incomplete (a missing or unreadable file, an empty list, a count of zero or below the snapshot's).
+Everything else is reported as a warning: dangling references, official totals that differ from the
+recorded individual votes (official discrepancies are facts, not bugs), implausible dates,
+transposition data on non-directives, "veto" wording outside unanimity, odd act/procedure pairs.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+import xml.etree.ElementTree as ET
+from collections import Counter, defaultdict
+from collections.abc import Callable
+from datetime import date, timedelta
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, ValidationError
+
+from pipeline.models import entities as E
+from pipeline.models.countries import FORMER_MEMBER_STATES, MEMBER_STATES
+from pipeline.snapshot import ROOT, SNAPSHOT
+
+COUNTRIES = set(MEMBER_STATES) | set(FORMER_MEMBER_STATES)
+# National measures notified as transposing a directive can be old national laws (e.g. a 19th-century code).
+MIN_DATE = {("implementation", "measures"): "1800-01-01"}
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+REF_RE = re.compile(r"^(\d{4})/(\d{4})\(([A-Z]{3})\)$")
+CELEX_TYPE = {"R": "regulation", "L": "directive", "D": "decision", "H": "recommendation"}
+# an act cited in a title by its type and number: "Directive 2014/90/EU", "Regulation (EU) 2024/1689", "Regulations
+# (EC) No 300/2008, (EU) No 167/2013 and ...", "Council Framework Decisions 2002/584/JHA, 2003/577/JHA" (each number
+# takes the type word before it)
+CITED_TYPE_RE = re.compile(r"\b(Framework Decision|Regulation|Directive|Decision)s?\b")
+CITED_NUMBER_RE = re.compile(
+    r"\bNo (?P<n1>\d{1,4})/(?P<y1>\d{4})\b|\b(?P<y2>\d{4})/(?P<n2>\d{1,4})/(?:EU|EC|EEC|JHA|CFSP)\b|\) (?P<y3>\d{4})/(?P<n3>\d{1,4})\b"
+)
+CELEX_CITED_TYPE = {"R": "Regulation", "L": "Directive", "D": "Decision", "F": "Framework Decision"}
+MAX_SITTING = 751  # Members of the European Parliament (Article 14(2) TEU)
+MAX_NOT_SITTING = 0.05  # share of MEPs with an open political-group membership allowed not to be marked sitting
+MAX_SHRINK = 0.05  # share of the records the manifest records for a file that the file may lack (as the fetch guards)
+# Fewest records in each file of the committed snapshot, about half of what it holds today: a source module that wrote
+# an emptied or truncated file and the manifest with it would pass the comparison with the manifest. Applied to the
+# committed snapshot only (check's min_records); a file without an entry here has no floor.
+MIN_RECORDS: dict[tuple[str, str], int] = {
+    ("ep_people", "meps"): 600, ("ep_people", "orgs"): 300,
+    ("ep_procedures", "procedures"): 800,
+    ("ep_votes", "votes"): 15000, ("ep_votes", "ballots"): 1500,
+    ("eurlex", "acts"): 600,
+    ("council", "votes"): 350,
+    ("implementation", "measures"): 30000, ("implementation", "infringements"): 3500,
+    ("implementation", "coverage"): 250,
+    ("train", "files"): 700,
+    ("optouts", "directives"): 150, ("optouts", "regulations"): 8,
+}  # fmt: skip
+# Built lists that are never empty (activity.json can be, before the first recorded change).
+BUILT_LISTS = [
+    "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json", "people/meps.json",
+    "people/groups.json", "people/parties.json", "countries/index.json", "topics.json", "search.json",
+]  # fmt: skip
+# meta.json counts and the snapshot file each is counted from: a count of zero is an error when that file has records;
+# the first four are the file's own size, so they may not fall below it (the others are derived and can differ).
+BUILT_COUNTS = {
+    "legal_acts": ("eurlex", "acts"), "meps": ("ep_people", "meps"),
+    "national_measures": ("implementation", "measures"), "infringements": ("implementation", "infringements"),
+    "dossiers": ("ep_procedures", "procedures"), "ep_votes": ("ep_votes", "votes"),
+    "council_votes": ("council", "votes"),
+}  # fmt: skip
+SAME_SIZE_COUNTS = ("legal_acts", "meps", "national_measures", "infringements")
+PUBLIC_FILES = [
+    "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json",
+    "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
+    "topics.json", "search.json", "activity.json", "feeds/updates.xml",
+]  # fmt: skip
+
+# (source, file, model name, id function)
+FILES: list[tuple[str, str, str, Callable[[Any], Any] | None]] = [
+    ("ep_people", "meps", "Mep", lambda r: r.id),
+    ("ep_people", "orgs", "Organization", lambda r: r.id),
+    ("ep_procedures", "procedures", "Procedure", lambda r: r.id),
+    ("ep_votes", "votes", "EpVote", lambda r: r.id),
+    ("ep_votes", "ballots", "EpBallots", lambda r: r.vote_id),
+    ("eurlex", "acts", "LegalAct", lambda r: r.celex),
+    ("council", "votes", "CouncilVote", lambda r: r.id),
+    ("implementation", "measures", "NationalMeasure", lambda r: r.id),
+    ("implementation", "infringements", "InfringementCase", lambda r: r.id),
+    ("implementation", "indicators", "CountryIndicator", lambda r: (r.country, r.indicator, r.period)),
+    ("implementation", "coverage", "ImplementationCoverage", lambda r: r.celex),
+    ("train", "files", "TrainFile", lambda r: r.url),
+    ("optouts", "directives", "DirectiveOptOut", lambda r: r.celex),
+    ("optouts", "regulations", "RegulationOptIn", lambda r: r.decision),
+]
+
+
+MANIFEST_KEY = "_manifest"  # errors_by_source key for an unreadable _manifest.json as a whole
+
+
+class Report:
+    def __init__(self) -> None:
+        self.errors: list[str] = []
+        # source directory (or MANIFEST_KEY / "public") -> its structural errors; a manifest entry's
+        # error counts for that entry's source
+        self.errors_by_source: dict[str, list[str]] = defaultdict(list)
+        self.warnings: dict[str, list[str]] = defaultdict(list)
+        self.info: list[str] = []
+
+    def error(self, msg: str, source: str = "?") -> None:
+        self.errors.append(msg)
+        self.errors_by_source[source].append(msg)
+
+    def warn(self, check: str, msg: str) -> None:
+        self.warnings[check].append(msg)
+
+    def print(self, out=sys.stdout, examples: int = 5) -> None:
+        for line in self.info:
+            print(f"  {line}", file=out)
+        for check in sorted(self.warnings):
+            items = self.warnings[check]
+            print(f"WARNING [{check}] {len(items)}", file=out)
+            for m in items[:examples]:
+                print(f"    - {m}", file=out)
+            if len(items) > examples:
+                print(f"    … {len(items) - examples} more", file=out)
+        for m in self.errors[:50]:
+            print(f"ERROR {m}", file=out)
+        if len(self.errors) > 50:
+            print(f"ERROR … {len(self.errors) - 50} more errors", file=out)
+        status = "FAILED" if self.errors else "OK"
+        n_warn = sum(len(v) for v in self.warnings.values())
+        print(f"validate: {status} — {len(self.errors)} errors, {n_warn} warnings", file=out)
+
+
+def cited_acts(title: str) -> dict[tuple[int, int], set[str]]:
+    """(year, number) -> the types under which a title cites an act with that number."""
+    marks = sorted([(m.start(), m) for m in CITED_TYPE_RE.finditer(title)] +
+                   [(m.start(), m) for m in CITED_NUMBER_RE.finditer(title)], key=lambda x: x[0])  # fmt: skip
+    out: dict[tuple[int, int], set[str]] = defaultdict(set)
+    kind = None
+    for _, m in marks:
+        if m.re is CITED_TYPE_RE:
+            kind = m.group(1)
+        elif kind:
+            y, n = next((m.group(f"y{i}"), m.group(f"n{i}")) for i in (1, 2, 3) if m.group(f"y{i}"))
+            out[(int(y), int(n))].add(kind)
+    return out
+
+
+def _valid_date(s: str) -> bool:
+    if not DATE_RE.match(s):
+        return False
+    try:
+        date.fromisoformat(s)
+    except ValueError:
+        return False
+    return True
+
+
+def _load(snapshot: Path, source: str, name: str, model_name: str, rep: Report) -> list[BaseModel] | None:
+    path = snapshot / source / f"{name}.json"
+    if not path.exists():
+        return None
+    model: type[BaseModel] | None = getattr(E, model_name, None)
+    if model is None:
+        rep.warn("schema", f"{source}/{name}.json present but model {model_name} is not defined")
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        rep.error(f"{source}/{name}.json: unreadable JSON ({e})", source)
+        return None
+    if not isinstance(raw, list):
+        rep.error(f"{source}/{name}.json: expected a JSON array", source)
+        return None
+    out: list[BaseModel] = []
+    bad = 0
+    for i, x in enumerate(raw):
+        try:
+            out.append(model.model_validate(x))
+        except ValidationError as e:
+            bad += 1
+            if bad <= 5:
+                first = e.errors()[0]
+                rep.error(
+                    f"{source}/{name}.json[{i}]: {'.'.join(map(str, first['loc']))}: {first['msg']}", source
+                )
+    if bad > 5:
+        rep.error(f"{source}/{name}.json: {bad} invalid records in total", source)
+    rep.info.append(f"{source}/{name}.json: {len(out)} records")
+    return out
+
+
+def check_size(
+    snapshot: Path,
+    source: str,
+    name: str,
+    n: int | None,
+    recorded: dict[str, dict[str, int]],
+    floors: dict[tuple[str, str], int],
+    rep: Report,
+) -> None:
+    """A file that is missing, or holds more than MAX_SHRINK fewer records than its manifest entry records for it, or
+    fewer than the floor for a complete snapshot, is an error of its source (an emptied or truncated file would
+    otherwise be built and deployed as an empty section). `n` is None when `_load` read nothing."""
+    count = recorded.get(source, {}).get(name) or 0
+    floor = floors.get((source, name)) or 0
+    if n is None:
+        if (count or floor) and not (snapshot / source / f"{name}.json").exists():
+            what = f"_manifest.json records {count} records" if count else f"a complete snapshot has at least {floor}"
+            rep.error(f"{source}/{name}.json: file missing, but {what}", source)
+    elif n < (1 - MAX_SHRINK) * count:
+        rep.error(
+            f"{source}/{name}.json: {n} records, but _manifest.json records {count} "
+            f"(more than {MAX_SHRINK:.0%} fewer): an emptied or truncated file",
+            source,
+        )
+    elif n < floor:
+        rep.error(f"{source}/{name}.json: {n} records, fewer than the {floor} a complete snapshot has", source)
+    if n is not None and count and n != count:  # e.g. records re-derived offline without rewriting the manifest
+        rep.warn("manifest-count", f"{source}/{name}.json: {n} records, but _manifest.json records {count}")
+
+
+def _dates(obj: Any, path: str = "") -> list[tuple[str, str]]:
+    """All (field path, value) pairs for date-like fields of a model dump."""
+    out: list[tuple[str, str]] = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            p = f"{path}.{k}" if path else k
+            if isinstance(v, str) and (k in ("date", "start", "end", "started", "published", "last_updated",
+                                             "notified", "latest_decision_date")
+                                       or k.startswith("date_") or k in ("entry_into_force", "end_of_validity")):  # fmt: skip
+                out.append((p, v))
+            elif isinstance(v, list) and k in ("other_application_dates", "transposition_deadlines"):
+                out += [(p, x) for x in v if isinstance(x, str)]
+            elif isinstance(v, (dict, list)) and k != "source":
+                out += _dates(v, p)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            out += _dates(v, f"{path}[{i}]")
+    return out
+
+
+def check(
+    snapshot: Path = SNAPSHOT,
+    public: Path | None = None,
+    today: str | None = None,
+    built: bool = False,
+    min_records: dict[tuple[str, str], int] | None = None,
+) -> Report:
+    """`built`: the built output must be complete (see check_built). `min_records`: the fewest records per
+    (source, file); MIN_RECORDS for the committed snapshot, none for a test fixture."""
+    rep = Report()
+    today = today or date.today().isoformat()
+    data: dict[tuple[str, str], list[Any]] = {}
+    recorded: dict[str, dict[str, int]] = {}  # source -> the record counts its manifest entry gives
+    # manifest
+    man = snapshot / "_manifest.json"
+    if man.exists():
+        try:
+            raw = json.loads(man.read_text(encoding="utf-8"))
+            for k, v in raw.items():
+                try:
+                    recorded[str(k)] = E.SourceStatus.model_validate(v).records
+                except ValidationError as e:
+                    rep.error(f"_manifest.json[{k}]: {e.errors()[0]['msg']}", str(k))
+        except (OSError, json.JSONDecodeError, AttributeError) as e:
+            rep.error(f"_manifest.json unreadable ({e})", MANIFEST_KEY)
+    else:
+        rep.warn("manifest", "data/snapshot/_manifest.json missing")
+    # schema + duplicates + date format
+    for source, name, model_name, key in FILES:
+        recs = _load(snapshot, source, name, model_name, rep)
+        check_size(snapshot, source, name, None if recs is None else len(recs), recorded, min_records or {}, rep)
+        if recs is None:
+            continue
+        data[(source, name)] = recs
+        if key:
+            dup = [k for k, n in Counter(key(r) for r in recs).items() if n > 1]
+            for k in dup[:20]:
+                rep.error(f"{source}/{name}.json: duplicate id {k!r}", source)
+            if len(dup) > 20:
+                rep.error(f"{source}/{name}.json: {len(dup)} duplicate ids in total", source)
+        for r in recs:
+            for p, v in _dates(r.model_dump(mode="json")):
+                if not _valid_date(v[:10]) or (len(v) > 10 and not v[10] == "T"):
+                    rep.error(
+                        f"{source}/{name}.json {key(r) if key else '?'}: malformed date {p}={v!r}", source
+                    )
+                elif not ((MIN_DATE.get((source, name), "1950-01-01")) <= v[:10] <= "2100-12-31"):
+                    rep.warn("date-range", f"{source}/{name} {key(r) if key else '?'}: {p}={v}")
+
+    meps = {m.id: m for m in data.get(("ep_people", "meps"), [])}
+    orgs = {o.id: o for o in data.get(("ep_people", "orgs"), [])}
+    procs = data.get(("ep_procedures", "procedures"), [])
+    proc_refs = {p.reference for p in procs}
+    proc_by_ref = {p.reference: p for p in procs}
+    votes = {v.id: v for v in data.get(("ep_votes", "votes"), [])}
+    ballots = data.get(("ep_votes", "ballots"), [])
+    acts = {a.celex: a for a in data.get(("eurlex", "acts"), [])}
+    from pipeline.analysis.transposition import article_label, general_deadline_basis
+    from pipeline.analysis.transposition import classify as classify_transposition
+    from pipeline.build import (
+        apply_transposition_checks,
+        load_act_dates,
+        load_act_relations,
+        load_denmark_schengen,
+        load_transposition_checks,
+    )
+
+    act_dates = load_act_dates()  # curated, checked corrections of act dates
+    tr_checks = load_transposition_checks()  # curated, checked general transposition deadlines
+
+    # people
+    for m in meps.values():
+        if m.country not in COUNTRIES:
+            rep.warn("country-code", f"MEP {m.id}: country {m.country!r}")
+        for ms in m.memberships:
+            if orgs and ms.org_id not in orgs and ms.kind in ("group", "party", "committee"):
+                rep.warn("ref-org", f"MEP {m.id}: membership org {ms.org_id} not in orgs.json")
+            if ms.start and ms.end and ms.end < ms.start:
+                rep.warn(
+                    "date-order", f"MEP {m.id}: membership {ms.org_id} ends {ms.end} before start {ms.start}"
+                )
+        spans = sorted((x.start or "", x.end or "9999-12-31") for x in m.memberships if x.kind == "group")
+        for (_s1, e1), (s2, _e2) in zip(spans, spans[1:], strict=False):
+            if s2 <= e1:
+                rep.warn("group-overlap", f"MEP {m.id}: overlapping political-group memberships around {s2}")
+                break
+    # Sitting MEPs (`active`, from the EP's list of current Members): a short list would show the Members it
+    # lacks as no longer sitting. Members holding an open political-group membership are sitting, and no more
+    # than 751 can sit (Article 14(2) TEU: "seven hundred and fifty in number, plus the President").
+    in_group = [m for m in meps.values() if any(x.kind == "group" and x.end is None for x in m.memberships)]
+    not_sitting = [m.id for m in in_group if not m.active]
+    sitting = sum(1 for m in meps.values() if m.active)
+    if len(not_sitting) > MAX_NOT_SITTING * len(in_group) or sitting > MAX_SITTING:
+        rep.error(
+            f"ep_people/meps.json: {sitting} MEPs marked as sitting (at most {MAX_SITTING} seats)"
+            if sitting > MAX_SITTING
+            else f"ep_people/meps.json: {sitting} MEPs marked as sitting, but {len(not_sitting)} of the "
+            f"{len(in_group)} holding an open political-group membership are not (e.g. {not_sitting[:3]})",
+            "ep_people",
+        )
+    # procedures
+    for p in procs:
+        if not REF_RE.match(p.reference):
+            rep.warn("procedure-ref", f"procedure {p.id}: unusual reference {p.reference!r}")
+        elif REF_RE.match(p.reference).group(3) != p.type:  # type: ignore[union-attr]
+            rep.warn(
+                "procedure-type", f"procedure {p.id}: type {p.type} differs from reference {p.reference}"
+            )
+        dates = [e.date for e in p.events]
+        if dates != sorted(dates):
+            rep.warn("event-order", f"procedure {p.id}: events not sorted by date")
+        for e in p.events:
+            if e.date > today:
+                rep.warn("future-event", f"procedure {p.id}: event {e.id} dated {e.date} (after today)")
+        for r in p.rapporteurs:
+            if r.mep_id and meps and r.mep_id not in meps:
+                rep.warn("ref-mep", f"procedure {p.id}: rapporteur {r.mep_id} not in meps.json")
+    # votes + ballots
+    ballot_ids = set()
+    for b in ballots:
+        ballot_ids.add(b.vote_id)
+        v = votes.get(b.vote_id)
+        if v is None:
+            rep.warn("ref-vote", f"ballots for unknown vote {b.vote_id}")
+            continue
+        recorded = b.favor + b.against + b.abstain
+        dup = [k for k, n in Counter(recorded).items() if n > 1]
+        if dup:
+            rep.warn("ballot-duplicate", f"vote {v.id}: {len(dup)} MEPs recorded with more than one position")
+        missing = [i for i in recorded if meps and i not in meps]
+        if missing:
+            rep.warn(
+                "ref-mep", f"vote {v.id}: {len(missing)} ballot MEP ids not in meps.json (e.g. {missing[0]})"
+            )
+        if v.n_for is not None and (len(b.favor), len(b.against), len(b.abstain)) != (
+            v.n_for,
+            v.n_against,
+            v.n_abstain,
+        ):
+            rep.warn("ballot-totals", f"vote {v.id} {v.date}: recorded {len(b.favor)}/{len(b.against)}/"
+                     f"{len(b.abstain)} vs official {v.n_for}/{v.n_against}/{v.n_abstain}")  # fmt: skip
+    for v in votes.values():
+        if v.has_ballots and ballots and v.id not in ballot_ids:
+            rep.warn("ballots-missing", f"vote {v.id}: has_ballots but no ballots record")
+        if v.date > today:
+            rep.warn("future-event", f"vote {v.id} dated {v.date}")
+        for r in v.procedure_refs:
+            if procs and r not in proc_refs:
+                rep.warn("ref-procedure", f"vote {v.id}: procedure {r} not in procedures.json")
+    # acts
+    relation_fixes = {(f["act"], f["replace"]) for f in load_act_relations()}  # curated, checked amendment links
+    for f in load_act_relations():
+        if f["act"] in acts and f["replace"] not in acts[f["act"]].amends:
+            rep.warn("act-relation-stale", f"{f['act']}: data/curated/act_relations.yaml replaces its link to "
+                     f"{f['replace']}, which EUR-Lex no longer records")  # fmt: skip
+    # Denmark decides under Protocol No 22, Art. 4, whether to implement a directive building upon the Schengen acquis
+    # (its recitals: optouts schengen_art4); its decision, notified to the Council, is recorded once checked
+    optouts = {r.celex: r for r in data.get(("optouts", "directives"), [])}
+    decisions = load_denmark_schengen()
+    for c in sorted(decisions):
+        if c in optouts and "DK" not in optouts[c].schengen_art4:
+            rep.warn("denmark-schengen-stale", f"{c}: data/curated/denmark_schengen.yaml records Denmark's decision, "
+                     "but the directive's recitals as read do not say that Denmark decides under Protocol No 22, Art. 4")  # fmt: skip
+    for r in optouts.values():
+        if "DK" in r.schengen_art4 and r.celex not in decisions:
+            rep.warn("denmark-schengen-unchecked", f"{r.celex}: Denmark decides under Protocol No 22, Art. 4, whether to "
+                     "implement it; record its decision, once notified, in data/curated/denmark_schengen.yaml")  # fmt: skip
+    for a in acts.values():
+        # Cellar links the act to an act whose number its title cites under another type only (the AI Act, 32024R1689,
+        # to Implementing Regulation (EU) No 90/2014, 32014R0090, for Directive 2014/90/EU): check the text and
+        # correct the link in data/curated/act_relations.yaml
+        cited = cited_acts(a.title)
+        for c in a.amends:
+            cm = re.fullmatch(r"3(\d{4})([RLDF])(\d{4})", c)
+            if not cm:
+                continue
+            kind, key = CELEX_CITED_TYPE[cm.group(2)], (int(cm.group(1)), int(cm.group(3)))
+            if cited.get(key) and kind not in cited[key] and (a.celex, c) not in relation_fixes:
+                rep.warn("amends-link-type", f"{a.celex}: EUR-Lex links it as amending {c}, but its title cites "
+                         f"{'/'.join(sorted(cited[key]))} {key[0]}/{key[1]}, not a {kind.lower()}")  # fmt: skip
+        m = re.match(r"^\d(\d{4})([A-Z])", a.celex)
+        if m and CELEX_TYPE.get(m.group(2)) and CELEX_TYPE[m.group(2)] != a.act_type:
+            rep.warn("act-type", f"{a.celex}: act_type {a.act_type} but CELEX type letter {m.group(2)}")
+        if a.transposition_deadlines and a.act_type != "directive":
+            rep.warn("transposition-non-directive", f"{a.celex} ({a.act_type}) has transposition deadlines")
+        if a.date_publication and a.date_document and a.date_publication < a.date_document:
+            rep.warn(
+                "date-order",
+                f"{a.celex}: published {a.date_publication} before document date {a.date_document}",
+            )
+        if a.other_application_dates != sorted(a.other_application_dates):
+            rep.warn("date-order", f"{a.celex}: other_application_dates not ascending")
+        # Retroactive application exists (e.g. from 1 January of a budget year), but a date a year or
+        # more before the act is more often a Cellar error (DSA: 2022-02-17 for 2024-02-17): check the
+        # act's text and, if wrong, correct it in data/curated/act_dates.yaml.
+        signed = a.date_signature or a.date_document
+        if signed and a.celex not in act_dates:
+            for d in a.other_application_dates:
+                if d < f"{int(signed[:4]) - 1}{signed[4:]}":
+                    rep.warn("application-before-act", f"{a.celex}: applies from {d}, a year or more before "
+                             f"the act ({signed}); check the act's text")  # fmt: skip
+        # An act does not enter into force before it is adopted, and a regulation (published in the Official
+        # Journal) normally not before its publication; a decision or directive addressed to the Member States
+        # can take effect on adoption or notification, so those stay quiet. Cellar sometimes gives the date the
+        # act applies from instead, or that of another act its entry into force is tied to (Regulation
+        # 2021/768, Art. 9). Once checked, record the date in data/curated/act_dates.yaml.
+        eif = a.entry_into_force
+        if eif and a.celex not in act_dates and not a.entry_into_force_pending:
+            if a.date_document and eif < a.date_document:
+                rep.warn("entry-into-force-before-act", f"{a.celex}: enters into force {eif}, before the act "
+                         f"({a.date_document}); check the act's text")  # fmt: skip
+            elif a.act_type == "regulation" and a.date_publication and eif < a.date_publication:
+                rep.warn("entry-into-force-before-act", f"{a.celex}: regulation enters into force {eif}, before "
+                         f"its publication ({a.date_publication}); check the act's text")  # fmt: skip
+        # Cellar's own rule for the date ("DATPUB +20": the twentieth day following publication) and the date it
+        # records disagree: one of them is wrong (32017D1324: 2017-08-08 for 18.7.2017 + 20 days; 32019R0503: "+20"
+        # where its Art. 8(1) says the day following publication). Check the act's text; record a wrong date, or
+        # that the date is right, in data/curated/act_dates.yaml.
+        n = a.entry_into_force_after_publication
+        if eif and n is not None and a.date_publication and a.celex not in act_dates:
+            expected = (date.fromisoformat(a.date_publication) + timedelta(days=n)).isoformat()
+            if eif != expected:
+                rep.warn("entry-into-force-rule", f"{a.celex}: enters into force {eif}, but EUR-Lex's rule (publication "
+                         f"{a.date_publication} + {n} days) gives {expected}; check the act's text")  # fmt: skip
+        # EUR-Lex gives the date from which the act in general applies as not recorded (1001-01-01): the act leaves it
+        # to a later decision, notice or event. Once the act's text and that decision are checked, record the date
+        # (or what the text provides) in data/curated/act_dates.yaml.
+        general = next((x for x in a.application_unrecorded if not x.partial), None)
+        if general and a.celex not in act_dates and a.in_force:
+            refers = f" (it refers to {', '.join(article_label(r) for r in general.articles)})" if general.articles else ""
+            rep.warn("application-not-recorded", f"{a.celex}: EUR-Lex records no date from which it applies in "
+                     f"general{refers}; check the act's text")  # fmt: skip
+        # Several transposition deadlines whose general one neither the article references nor a check of the
+        # text decides: the earliest is taken, which is wrong when it is a derogation for a few provisions
+        # (Directive (EU) 2024/1640). Check the act's text and record it in data/curated/transposition.yaml.
+        if a.act_type == "directive" and a.transposition_deadlines:
+            e = tr_checks.get(a.celex)
+            checked = apply_transposition_checks(a, e)
+            if e and checked.transposition_checked is None:
+                rep.warn("transposition-check-stale", f"{a.celex}: data/curated/transposition.yaml names a date "
+                         f"EUR-Lex does not record for the act ({', '.join(a.transposition_deadlines)})")  # fmt: skip
+            for x in (e or {}).get("amends") or []:  # the deadlines covering its changes to another directive
+                if not {x["deadline"], *(f["date"] for f in x.get("further") or [])} <= set(a.transposition_deadlines):
+                    rep.warn("transposition-check-stale", f"{a.celex}: data/curated/transposition.yaml amends "
+                             f"{x['celex']} names a date EUR-Lex does not record for the act")  # fmt: skip
+            deadlines = [x.date for x in classify_transposition(checked) if x.kind in ("deadline", "further_deadline")]
+            if general_deadline_basis(checked) == "date_order":
+                rep.warn("transposition-date-order", f"{a.celex}: general deadline {deadlines[0]} taken by date "
+                         f"order among {', '.join(deadlines)}; check the act's text")  # fmt: skip
+        for r in a.procedure_refs:
+            rm = REF_RE.match(r)
+            if not rm:
+                rep.warn("procedure-ref", f"{a.celex}: unusual procedure reference {r!r}")
+                continue
+            ptype, num = rm.group(3), int(rm.group(2))
+            if ptype in ("COD", "CNS") and num >= 2000:
+                rep.warn("act-procedure-mismatch", f"{a.celex} ({a.act_type}) linked to {r}: number range is "
+                         "not used for legislative procedures")  # fmt: skip
+            p = proc_by_ref.get(r)
+            if p is not None and p.type != ptype:
+                rep.warn(
+                    "act-procedure-mismatch", f"{a.celex} linked to {r} but the procedure type is {p.type}"
+                )
+    # council
+    for cv in data.get(("council", "votes"), []):
+        for c in cv.positions:
+            if c not in COUNTRIES:
+                rep.warn("country-code", f"council vote {cv.id}: position for {c!r}")
+        text = " ".join([cv.title, *cv.statements]).lower()
+        if cv.voting_rule != "unanimity" and re.search(r"\bveto", text):
+            rep.warn("veto-wording", f"council vote {cv.id}: 'veto' wording but voting rule {cv.voting_rule}")
+        for r in cv.procedure_refs:
+            if procs and r not in proc_refs:
+                rep.warn("ref-procedure", f"council vote {cv.id}: procedure {r} not in procedures.json")
+    # implementation
+    for nm in data.get(("implementation", "measures"), []):
+        if nm.country not in COUNTRIES:
+            rep.warn("country-code", f"measure {nm.id}: country {nm.country!r}")
+        if not re.match(r"^3\d{4}L\d+", nm.directive_celex):
+            rep.warn(
+                "transposition-non-directive",
+                f"measure {nm.id}: {nm.directive_celex} is not a directive CELEX",
+            )
+        a = acts.get(nm.directive_celex)
+        if a is not None and a.act_type != "directive":
+            rep.warn("transposition-non-directive", f"measure {nm.id}: act {a.celex} is a {a.act_type}")
+    for ic in data.get(("implementation", "infringements"), []):
+        if ic.country not in COUNTRIES:
+            rep.warn("country-code", f"infringement {ic.id}: country {ic.country!r}")
+    # train
+    for t in data.get(("train", "files"), []):
+        for r in t.procedure_refs:
+            if not REF_RE.match(r):
+                rep.warn("procedure-ref", f"train file {t.url}: unusual reference {r!r}")
+
+    # built output (optional): derived claims must respect the rules too
+    if public is not None and public.exists():
+        docs: dict[str, Any] = {}  # the public files read so far (None: unreadable, reported once)
+        if built:
+            check_built(public, data, rep, docs)
+        else:
+            for f in PUBLIC_FILES:
+                if not (public / f).exists():
+                    rep.warn("public-missing", f"public/data/{f} missing (run `python -m pipeline build`)")
+        if (public / "council" / "index.json").exists():
+            for cv in _public_json(public, "council/index.json", rep, docs) or []:
+                a = cv.get("assessment") or {}
+                if a.get("single_state_veto_possible") and cv.get("voting_rule") != "unanimity":
+                    rep.error(
+                        f"public council/index.json {cv['id']}: single-state veto outside unanimity", "public"
+                    )
+        owners: dict[str, list[str]] = {}
+        for f in sorted((public / "dossiers").glob("*.json")):
+            if f.name != "index.json":
+                d = _public_json(public, f"dossiers/{f.name}", rep)
+                if d is None:
+                    continue
+                for msg in dossier_contradictions(d) + rapporteur_problems(d, public):
+                    rep.error(f"public dossiers/{f.name}: {msg}", "public")
+                # a key report that no step carries has no tabling or vote of its own on the timeline
+                steps = {x["id"] for e in d.get("timeline", []) for x in e.get("docs", [])}
+                for doc in d.get("documents") or []:
+                    if doc.get("kind") == "report" and doc["id"] not in steps:
+                        rep.warn("report-off-timeline", f"dossier {d['id']}: key document {doc['id']} is on no timeline step")
+                for c in d.get("celex") or []:
+                    owners.setdefault(c, []).append(d["id"])
+                for v in d.get("ep_votes") or []:
+                    for msg in margin_contradictions(v):
+                        rep.error(f"public dossiers/{f.name}: {msg}", "public")
+        # one law, one page: an act shown on two files means EUR-Lex and the EP disagree on its procedure
+        for c, ids in sorted(owners.items()):
+            if len(ids) > 1:
+                rep.warn("act-on-two-dossiers", f"{c} is shown on {', '.join(ids)}; check which procedure adopted it")
+        for f in sorted((public / "votes").glob("*.json")):
+            recs = _public_json(public, f"votes/{f.name}", rep)
+            if recs is None:
+                continue
+            for v in recs if isinstance(recs, list) else [recs]:
+                for msg in margin_contradictions(v):
+                    rep.error(f"public votes/{f.name}: {msg}", "public")
+    return rep
+
+
+def _public_json(public: Path, rel: str, rep: Report, cache: dict[str, Any] | None = None) -> Any:
+    """A built JSON file, or None if it cannot be read (reported as an error, once when a cache is given)."""
+    if cache is not None and rel in cache:
+        return cache[rel]
+    try:
+        doc = json.loads((public / rel).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        rep.error(f"public {rel}: unreadable JSON ({e})", "public")
+        doc = None
+    if cache is not None:
+        cache[rel] = doc
+    return doc
+
+
+def check_built(public: Path, data: dict[tuple[str, str], list[Any]], rep: Report, docs: dict[str, Any]) -> None:
+    """The built output of a complete build (`validate --built`, after `pipeline build`). Nothing in a build from an
+    emptied or partial snapshot contradicts itself, so it is checked for what it must hold: every PUBLIC_FILES entry
+    present and readable, the lists that are never empty not empty, the counts of meta.json not zero when the snapshot
+    has records of that kind (nor below the snapshot's size, for the counts that are its size), and every detail file
+    that the dossier and vote indexes list written. `data`: the snapshot records read by check()."""
+    for f in PUBLIC_FILES:
+        if not (public / f).exists():
+            rep.error(f"public/data/{f} is missing (run `python -m pipeline build`)", "public")
+        elif f.endswith(".xml"):
+            try:
+                ET.parse(public / f)
+            except (OSError, ET.ParseError) as e:
+                rep.error(f"public {f}: unreadable XML ({e})", "public")
+        else:
+            _public_json(public, f, rep, docs)
+    for f in BUILT_LISTS:
+        if docs.get(f) is not None and not (isinstance(docs[f], list) and docs[f]):
+            rep.error(f"public {f}: not a list with records (the build found none; check data/snapshot)", "public")
+    if docs.get("home.json") is not None and not (isinstance(docs["home.json"], dict) and docs["home.json"]):
+        rep.error("public home.json: empty", "public")
+    # the titles of the MEP and group vote tables are the index's votes, in its order (the pages look them up by id)
+    index, titles = docs.get("votes/index.json"), docs.get("votes/titles.json")
+    if isinstance(index, list) and isinstance(titles, list):
+        listed = [e.get("id") if isinstance(e, dict) else None for e in index]
+        titled = [e.get("id") if isinstance(e, dict) else None for e in titles]
+        if listed != titled:
+            absent, extra = set(listed) - set(titled), set(titled) - set(listed)
+            how = f"{len(titled)} entries against {len(listed)}"
+            if absent:
+                how += f", {len(absent)} missing (e.g. {sorted(absent, key=str)[:3]})"
+            if extra:
+                how += f", {len(extra)} not in the index (e.g. {sorted(extra, key=str)[:3]})"
+            if not (absent or extra) and len(titled) == len(listed):
+                how += ", in another order"
+            rep.error(f"public votes/titles.json: not the votes of votes/index.json in its order ({how})", "public")
+    meta = docs.get("meta.json")
+    if meta is not None:
+        counts = meta.get("counts") if isinstance(meta, dict) else None
+        if not isinstance(counts, dict):
+            rep.error("public meta.json: no counts", "public")
+        else:
+            for key, (source, name) in BUILT_COUNTS.items():
+                have, n = len(data.get((source, name), [])), counts.get(key)
+                if not isinstance(n, int):
+                    rep.error(f"public meta.json: count {key!r} is {n!r}", "public")
+                elif have and n == 0:
+                    rep.error(f"public meta.json: count {key!r} is 0, but {source}/{name}.json has {have} records", "public")
+                elif key in SAME_SIZE_COUNTS and n < (1 - MAX_SHRINK) * have:
+                    rep.error(f"public meta.json: count {key!r} is {n}, but {source}/{name}.json has {have} records", "public")
+    for index, folder in (("dossiers/index.json", "dossiers"), ("votes/index.json", "votes")):
+        entries = docs.get(index)
+        if isinstance(entries, list):
+            missing = [e["id"] for e in entries if isinstance(e, dict) and not (public / folder / f"{e.get('id')}.json").exists()]
+            if missing:
+                rep.error(f"public {index}: {len(missing)} of {len(entries)} listed files not written (e.g. {missing[:3]})", "public")
+
+
+ADOPTION_STEPS = ("council_adoption", "signature", "publication")
+# Parliament's decision on the Council's position at second reading, as timelines title it (ep_procedures)
+SECOND_READING_TITLE = re.compile(r"Parliament (?:approved|amended|rejected) the Council's position at second reading")
+
+
+def dossier_contradictions(d: dict) -> list[str]:
+    """Claims of a built dossier that its own dates contradict."""
+    out = []
+    since = (d.get("status") or {}).get("since")
+    if d.get("stage") == "withdrawn":
+        later = [e["date"] for e in d.get("timeline", []) if e.get("kind") in ADOPTION_STEPS and since and e["date"] > since]
+        if d.get("celex") or d.get("adopted") or later:
+            out.append(f"withdrawn since {since}, but an act is recorded (celex {d.get('celex')}, adopted "
+                       f"{d.get('adopted')}, adoption steps on {', '.join(later) or 'none'})")  # fmt: skip
+        if since and d.get("started") and since < d["started"]:
+            out.append(f"withdrawn on {since}, before the proposal of {d['started']}")
+    if d.get("adopted") and d.get("published") and d["adopted"] > d["published"]:
+        out.append(f"adopted on {d['adopted']}, after its publication on {d['published']}")
+    # one Council adoption of the act per day (a procedural vote of the same day is not one), and no signature
+    # before it (2017/0329(COD): the EP's "Final act signed" of 11 Apr 2018, before the Council's adoption)
+    adoptions = Counter(e["date"] for e in d.get("timeline", []) if e.get("kind") == "council_adoption")
+    out += [f"{n} Council adoption steps on {day}" for day, n in sorted(adoptions.items()) if n > 1]
+    signed = [e["date"] for e in d.get("timeline", []) if e.get("kind") == "signature"]
+    if signed and adoptions and min(signed) < max(adoptions):
+        out.append(f"signed on {min(signed)}, before the Council's adoption step of {max(adoptions)}")
+    if d.get("type") == "COD" and len(d.get("celex") or []) <= 1:
+        # the act of an ordinary procedure is adopted once (2014/0174(COD): OEIL's 13 July and 6 October 2015 for one
+        # "decision of the Council of 18 September 2015"), and not by the Council before Parliament's second reading,
+        # which is on the Council's first-reading position (2018/0202(COD): OEIL 21 April 2021, second reading 27 April)
+        if len(adoptions) > 1:
+            out.append(f"Council adoption steps on {len(adoptions)} days: {', '.join(sorted(adoptions))}")
+        second = [e["date"] for e in d.get("timeline", []) if SECOND_READING_TITLE.fullmatch(e.get("title") or "")]
+        early = sorted(day for day in adoptions if second and day < min(second))
+        if early:
+            out.append(f"Council adoption step of {early[0]}, before Parliament's second reading of {min(second)}")
+    # steps of one day in procedural order (build.day_rank): a trilogue after Parliament's decisions of the day
+    # (2025/0132(COD), 17 Dec 2025), a second-reading step after the Council's first-reading position (2018/0136(COD))
+    tl = d.get("timeline", [])
+    for i, e in enumerate(tl):
+        later = {x.get("kind") for x in tl[i + 1 :] if x.get("date") == e.get("date")}
+        if e.get("title") == "Negotiation meeting with the Council (trilogue)" and later & {
+            "negotiation_mandate", "plenary_vote", "ep_position"}:  # fmt: skip
+            out.append(f"trilogue listed before Parliament's decision of {e['date']}")
+        if "council_position" in later and re.search(r"(?<!early )\bsecond[ -]reading\b", e.get("title") or ""):
+            out.append(f"second-reading step listed before the Council's position of {e['date']}")
+    return out
+
+
+def rapporteur_problems(d: dict, public: Path) -> list[str]:
+    """A rapporteur linked to an MEP page that is not written, and an MEP listed twice in one role (2026/0172(COD):
+    Marie-Sophie Christ under OEIL's person id and under EP Open Data's, as two shadow rapporteurs)."""
+    out, seen = [], Counter()
+    for r in d.get("rapporteurs") or []:
+        if r.get("has_page") and not (public / "people" / "meps" / f"{r.get('mep_id')}.json").exists():
+            out.append(f"rapporteur {r.get('name')} links people/meps/{r.get('mep_id')}.json, which is not written")
+        if r.get("mep_id"):
+            seen[(r["mep_id"], r.get("role"), r.get("committee"))] += 1
+    out += [f"MEP {i} listed {n} times as {role}" + (f" ({c})" if c else "") for (i, role, c), n in seen.items() if n > 1]
+    return out
+
+
+def margin_contradictions(v: dict) -> list[str]:
+    """A built vote's margin that its outcome contradicts. A margin is our calculation: it may stand only next to
+    an established outcome (adopted or rejected), on the side of the threshold that outcome says."""
+    m = v.get("margin")
+    if not m:
+        return []
+    outcome, distance, label = v.get("outcome"), m.get("distance"), str(m.get("label") or "")
+    if outcome not in ("adopted", "rejected"):
+        return [f"vote {v.get('id')}: margin {label!r} with outcome {outcome!r}"]
+    if not isinstance(distance, int) or (distance >= 0) != (outcome == "adopted"):
+        return [f"vote {v.get('id')}: margin distance {distance} contradicts outcome {outcome!r}"]
+    if label.startswith("Majority not reached") == (outcome == "adopted"):
+        return [f"vote {v.get('id')}: margin label {label!r} contradicts outcome {outcome!r}"]
+    return []
+
+
+def _floors(snapshot: Path) -> dict[tuple[str, str], int] | None:
+    """MIN_RECORDS for the committed snapshot; a snapshot somewhere else (a test fixture) has none."""
+    return MIN_RECORDS if snapshot == SNAPSHOT else None
+
+
+def validate(built: bool = False) -> int:
+    """The snapshot checks and the built-output checks. The built output is checked only if it exists, so the
+    workflows run this again after `python -m pipeline build` with built=True: without public/data that is an error
+    instead of a silent skip."""
+    from pipeline import snapshot as snapshot_module
+
+    public = ROOT / "public" / "data"
+    rep = check(snapshot_module.SNAPSHOT, public=public, built=built, min_records=_floors(snapshot_module.SNAPSHOT))
+    if built and not public.exists():
+        rep.error(f"no built output in {public}: run `python -m pipeline build` first", "public")
+    rep.print(sys.stdout)
+    if not built and not public.exists():
+        print("validate: built output not checked (no public/data; run `python -m pipeline build` first)")
+    return 1 if rep.errors else 0
+
+
+def validate_by_source(snapshot: Path | None = None, out=sys.stdout, today: str | None = None) -> list[str]:
+    """Check the snapshot only (not the built output) and return the sources with structural errors,
+    so that the refresh can restore just those sources' previous files instead of discarding the run."""
+    from pipeline import snapshot as snapshot_module
+
+    snapshot = snapshot or snapshot_module.SNAPSHOT
+    rep = check(snapshot, today=today, min_records=_floors(snapshot))
+    rep.print(out)
+    for source, errs in sorted(rep.errors_by_source.items()):
+        print(f"validate: {source}: {len(errs)} errors, e.g. {errs[0]}", file=out)
+    return sorted(rep.errors_by_source)

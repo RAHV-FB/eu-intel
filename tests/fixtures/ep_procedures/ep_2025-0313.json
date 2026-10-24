@@ -1,0 +1,216 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2025-0313",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2025-0313-ANPRO-2026-06-15",
+     "type": "Activity",
+     "activity_date": "2026-06-15",
+     "activity_id": "2025-0313-ANPRO-2026-06-15",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0313-DEC-DCPL-2026-10-06",
+     "type": "Decision",
+     "activity_date": "2026-10-06",
+     "activity_id": "2025-0313-DEC-DCPL-2026-10-06",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/TA-10-2026-0324"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DECISION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-10-06-PVCRE-ITM-9-6",
+     "type": "Activity",
+     "activity_date": "2026-10-06",
+     "activity_id": "MTG-PL-2026-10-06-PVCRE-ITM-9-6",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-10-2026-10-06-ITM-009-06",
+      "eli/dl/doc/PV-10-2026-10-06-ITM-009-06"
+     ]
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-10-06-VOT-ITM-993165",
+     "type": "Activity",
+     "activity_date": "2026-10-06",
+     "activity_id": "MTG-PL-2026-10-06-VOT-ITM-993165",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0206"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-10-2026-10-06-VOT-ITM-006"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2025-0313-DEPOT-2026-07-22",
+     "type": "Activity",
+     "activity_date": "2026-07-22",
+     "activity_id": "2025-0313-DEPOT-2026-07-22",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0206"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0313-DEC-ADCP-2026-07-15",
+     "type": "Decision",
+     "activity_date": "2026-07-15",
+     "activity_id": "2025-0313-DEC-ADCP-2026-07-15",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/ECON-PR-789861-DEPOT-2026-06-17",
+     "type": "Activity",
+     "activity_date": "2026-06-17",
+     "activity_id": "ECON-PR-789861-DEPOT-2026-06-17",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/ECON-PR-789861"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/TA-10-2026-0324",
+    "eli/dl/doc/A-10-2026-0206",
+    "eli/dl/doc/ECON-PR-789861"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2025-0313-NMSR-96830-2025-12-15",
+     "type": "Participation",
+     "activity_date": "2025-12-15",
+     "had_participant_person": [
+      "person/96830"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PFE",
+     "precedenceOrder": 803
+    },
+    {
+     "id": "eli/dl/participation/2025-0313-MAIN-ECON",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/ECON"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2025-0313-NMCOR-257071-ECON-2025-12-10",
+     "type": "Participation",
+     "activity_date": "2025-12-10",
+     "had_participant_person": [
+      "person/257071"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/ECON",
+     "participation_role": "def/ep-roles/RAPPORTEUR_CO",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 802
+    },
+    {
+     "id": "eli/dl/participation/2025-0313-NMCOR-1917-ECON-2025-12-10",
+     "type": "Participation",
+     "activity_date": "2025-12-10",
+     "had_participant_person": [
+      "person/1917"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/ECON",
+     "participation_role": "def/ep-roles/RAPPORTEUR_CO",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 801
+    },
+    {
+     "id": "eli/dl/participation/2025-0313-NMSR-257133-2026-02-10",
+     "type": "Participation",
+     "activity_date": "2026-02-10",
+     "had_participant_person": [
+      "person/257133"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 807
+    },
+    {
+     "id": "eli/dl/participation/2025-0313-NMSR-239260-2026-01-16",
+     "type": "Participation",
+     "activity_date": "2026-01-16",
+     "had_participant_person": [
+      "person/239260"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 804
+    }
+   ],
+   "process_id": "2025-0313",
+   "process_title": {
+    "fi": "Neuvoston asetuksen (EY) N:o 332/2002 muuttaminen rahoitusjärjestelyjen ja hajautetun rahoitusstrategian käytön osalta",
+    "pl": "Zmiana rozporządzenia Rady (WE) nr 332/2002 w odniesieniu do ustaleń dotyczących finansowania oraz w odniesieniu do stosowania zróżnicowanej strategii finansowania",
+    "mt": "Emenda tar-Regolament tal-Kunsill (KE) Nru 332/2002 fir-rigward tal-arranġamenti ta’ finanzjament u l-użu ta’ strateġija diversifikata ta’ finanzjament",
+    "da": "Ændring af Rådets forordning (EF) nr. 332/2002 for så vidt angår finansieringsmetoden og anvendelsen af en diversificeret finansieringsstrategi",
+    "pt": "Alteração do Regulamento (CE) n.º 333/2002 do Conselho no respeitante às modalidades de financiamento e ao recurso a uma estratégia de financiamento diversificada",
+    "de": "Änderung der Verordnung (EG) Nr. 332/2002 des Rates im Hinblick auf die Finanzierungsmodalitäten und die Anwendung einer diversifizierten Finanzierungsstrategie",
+    "es": "Modificación del Reglamento (CE) n.º 332/2002 del Consejo en lo que respecta a las modalidades de financiación y al uso de una estrategia de financiación diversificada",
+    "sl": "Sprememba Uredbe Sveta (ES) št. 332/2002 glede ureditve financiranja in uporabe diverzificirane strategije financiranja",
+    "en": "Amending Council Regulation (EC) No 332/2002 as regards funding arrangements and the use of a diversified funding strategy",
+    "fr": "Modification du règlement (CE) nº 332/2022 du Conseil en ce qui concerne les modalités de financement et le recours à une stratégie de financement diversifiée",
+    "et": "Nõukogu määruse (EÜ) nr 332/2002 muutmine seoses rahastamiskorra ja mitmekesise rahastamise strateegia kasutamisega",
+    "ga": "Leasú a dhéanamh ar Rialachán (CE) Uimh. 332/2002 ón gComhairle a mhéid a bhaineann le socruithe cistiúcháin agus úsáid straitéise cistiúcháin éagsúlaithe",
+    "lt": "Tarybos reglamento (EB) Nr. 332/2002 dalinis keitimas, kiek tai susiję su finansavimo tvarka ir diversifikuotos finansavimo strategijos naudojimu",
+    "lv": "Grozījumi Padomes Regulā (EK) Nr. 332/2002 attiecībā uz finansēšanas kārtību un diversificētas finansēšanas stratēģijas izmantošanu",
+    "bg": "Изменение на Регламент (ЕО) № 332/2002 на Съвета по отношение на условията на финансиране и използването на диверсифицирана стратегия за финансиране",
+    "cs": "Změna nařízení Rady (ES) č. 332/2002, pokud jde o finanční ujednání a použití diverzifikované strategie financování",
+    "hu": "A 332/2002/EK tanácsi rendeletnek a finanszírozási szabályok és a diverzifikált finanszírozási stratégia alkalmazása tekintetében történő módosítása",
+    "nl": "Wijziging van Verordening (EG) nr. 332/2002 van de Raad wat betreft financieringsregelingen en het gebruik van een gediversifieerde financieringsstrategie",
+    "hr": "Izmjena Uredbe Vijeća (EZ) br. 332/2002 u pogledu mehanizama financiranja i primjene diversificirane strategije financiranja",
+    "sk": "Zmena nariadenia Rady (ES) č. 332/2002, pokiaľ ide o spôsoby financovania a využívanie diverzifikovanej stratégie financovania",
+    "sv": "Ändring av rådets förordning (EG) nr 332/2002 vad gäller finansieringsarrangemang \noch användning av en diversifierad finansieringsstrategi",
+    "it": "Modifica del regolamento (CE) n. 332/2002 del Consiglio per quanto riguarda le modalità di finanziamento e l'uso di una strategia di finanziamento diversificata",
+    "el": "Tροποποίηση του κανονισμού (ΕΚ) αριθ. 332/2002 του Συμβουλίου όσον αφορά τις ρυθμίσεις χρηματοδότησης και τη χρήση διαφοροποιημένης στρατηγικής χρηματοδότησης",
+    "ro": "Modificarea Regulamentului (CE) nr. 332/2002 al Consiliului în ceea ce privește mecanismele de finanțare și utilizarea unei strategii de finanțare diversificate"
+   },
+   "process_type": "def/ep-procedure-types/APP",
+   "was_scheduled_in": [
+    {
+     "id": "eli/dl/event/MTG-PL-2026-10-06-OJ-ITM-V-53",
+     "type": "ForeseenActivity",
+     "activity_date": "2026-10-06",
+     "activity_id": "MTG-PL-2026-10-06-OJ-ITM-V-53",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-10-2026-10-06"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "notation_agendaPoint": "V-53"
+    }
+   ],
+   "label": "2025/0313(APP)",
+   "identifierYear": "2025"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

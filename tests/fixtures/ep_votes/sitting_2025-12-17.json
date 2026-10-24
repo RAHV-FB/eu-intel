@@ -1,0 +1,181 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2025-12-17/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: ; others keep their first 3 ids (published counts unchanged).",
+ "sitting": "MTG-PL-2025-12-17",
+ "decisions": {
+  "data": [
+   {
+    "id": "eli/dl/event/MTG-PL-2025-12-17-DEC-182886",
+    "type": "Vote",
+    "activity_date": "2025-12-17",
+    "activity_id": "MTG-PL-2025-12-17-DEC-182886",
+    "activity_label": {
+     "en": "C10-0263/2025 – Provisional agreement – Am 137",
+     "mul": "C10-0263/2025 - Accord provisoire - Am 137",
+     "fr": "C10-0263/2025 - Accord provisoire - Am 137"
+    },
+    "activity_order": "4.0",
+    "activity_start_date": "2025-12-17T12:25:40+01:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/257018",
+     "person/257067",
+     "person/197800"
+    ],
+    "had_voter_against": [
+     "person/197395",
+     "person/197543",
+     "person/187917"
+    ],
+    "had_voter_favor": [
+     "person/256808",
+     "person/256845",
+     "person/124713"
+    ],
+    "had_voter_intended_against": [
+     "person/257061"
+    ],
+    "number_of_attendees": 655,
+    "number_of_votes_abstention": 8,
+    "number_of_votes_against": 242,
+    "number_of_votes_favor": 405,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2025-12-17-RCV-ITM-006"
+    ],
+    "responsible_organization_label": {
+     "en": "committee",
+     "fr": "commission"
+    },
+    "comment": {
+     "fr": "AN",
+     "en": "RCV"
+    },
+    "notation_votingId": "182886",
+    "decisionAboutId_XMLLiteral": "<am><reference><number>137</number></reference></am>",
+    "decisionAboutId": "137",
+    "decisionAboutId_Lang": {
+     "fr": "137",
+     "en": "137"
+    },
+    "headingLabel": {
+     "en": "Provisional agreement",
+     "fr": "Accord provisoire"
+    },
+    "referenceText": {
+     "fr": "Accord provisoire",
+     "en": "Provisional agreement"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2025-12-17-VOT-ITM-978831"
+    ]
+   },
+   {
+    "id": "eli/dl/event/MTG-PL-2025-12-17-DEC-182885",
+    "type": "Vote",
+    "activity_date": "2025-12-17",
+    "activity_id": "MTG-PL-2025-12-17-DEC-182885",
+    "activity_label": {
+     "en": "C10-0263/2025 – Proposal for rejection – Am 135= 136=",
+     "fr": "C10-0263/2025 - Proposition de rejet - Am 135= 136=",
+     "mul": "C10-0263/2025 - Proposition de rejet - Am 135= 136="
+    },
+    "activity_order": "2.0",
+    "activity_start_date": "2025-12-17T12:25:21+01:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "decision_outcome": "def/ep-statuses/REJECTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197800",
+     "person/197523",
+     "person/257067"
+    ],
+    "had_voter_against": [
+     "person/33998",
+     "person/257034",
+     "person/257097"
+    ],
+    "had_voter_favor": [
+     "person/197772",
+     "person/257257",
+     "person/257135"
+    ],
+    "had_voter_intended_against": [
+     "person/112748",
+     "person/257123"
+    ],
+    "had_voter_intended_favor": [
+     "person/5392",
+     "person/218347"
+    ],
+    "number_of_attendees": 656,
+    "number_of_votes_abstention": 6,
+    "number_of_votes_against": 512,
+    "number_of_votes_favor": 138,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2025-12-17-RCV-ITM-005"
+    ],
+    "responsible_organization_label": {
+     "en": "Verts/ALE\nThe Left",
+     "fr": "Verts/ALE\nThe Left"
+    },
+    "comment": {
+     "en": "RCV",
+     "fr": "AN"
+    },
+    "notation_votingId": "182885",
+    "decisionAboutId_Lang": {
+     "fr": "135=\n136=",
+     "en": "135=\n136="
+    },
+    "decisionAboutId": "135=\n136=",
+    "decisionAboutId_XMLLiteral": "<am><equal_reference><reference><number>135</number><symbol href=\"https://xx.xx.xx/=\"/><symbol href=\"https://xx.xx.xx/BR\"/></reference><reference><number>136</number><symbol href=\"https://xx.xx.xx/=\"/></reference></equal_reference></am>",
+    "headingLabel": {
+     "fr": "Proposition de rejet de la proposition de la Commission",
+     "en": "Proposal to reject the Commission proposal"
+    },
+    "referenceText": {
+     "en": "Proposal for rejection",
+     "fr": "Proposition de rejet"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2025-12-17-VOT-ITM-978831"
+    ]
+   }
+  ]
+ },
+ "vote_results": {
+  "data": [
+   {
+    "id": "eli/dl/event/MTG-PL-2025-12-17-VOT-ITM-978831",
+    "type": "Activity",
+    "activity_date": "2025-12-17",
+    "activity_id": "MTG-PL-2025-12-17-VOT-ITM-978831",
+    "activity_label": {
+     "en": "Deforestation Regulation: certain obligations of operators and traders ***I",
+     "mul": "Règlement sur la déforestation: certaines obligations des opérateurs et commerçants - Deforestation Regulation: certain obligations of operators and traders - Entwaldungsverordnung: bestimmte Verpflichtungen von Marktteilnehmern und Händlern",
+     "fr": "Règlement sur la déforestation: certaines obligations des opérateurs et commerçants ***I"
+    },
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2025-12-17-DEC-182885",
+     "eli/dl/event/MTG-PL-2025-12-17-DEC-182886"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2025-12-17-OJ-ITM-V-70"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2025-12-17-VOT-ITM-004"
+    ],
+    "notation_dlvId": "978831",
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Règlement sur la déforestation: certaines obligations des opérateurs et commerçants ***I</title><label>Proposition de règlement (COM(2025)0652 - C10-0263/2025 - 2025/0329(COD)) (Majorité des suffrages exprimés requise)</label></structuredLabel>",
+     "en": "<structuredLabel><title>Deforestation Regulation: certain obligations of operators and traders ***I</title><label>Proposal for a regulation (COM(2025)0652 – C10-0263/2025 – 2025/0329(COD)) (Majority of votes cast required)</label></structuredLabel>"
+    },
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2025-12-17"
+    ]
+   }
+  ]
+ }
+}

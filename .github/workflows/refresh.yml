@@ -1,0 +1,284 @@
+# Weekly data refresh: fetch official sources -> validate per source -> build and record activity -> validate the
+# built data -> commit the snapshot.
+#
+# - Each source is failure-isolated by `python -m pipeline fetch`: a failed source keeps its previous
+#   snapshot files and is recorded in data/snapshot/_manifest.json; the job carries on.
+# - Time limits: the fetch gets a run-wide deadline (EU_INTEL_FETCH_DEADLINE, FETCH_DEADLINE_MIN after it
+#   starts). After it no source is started, sources start no new work and requests get no retries or long
+#   waits (pipeline/http.py). `timeout --signal=INT` stops the fetch at FETCH_LIMIT_MIN at the latest, well
+#   before the job timeout, so the checkpoints already written are always validated and committed.
+# - Validation is per source: a source whose new files fail structural validation gets its files and its
+#   manifest entry back from the last commit; the other sources' new data is kept. If the snapshot still
+#   fails validation after that, nothing is committed and the job fails (so no deploy is triggered).
+# - The snapshot, with the resumable _state.json checkpoints, is committed even if the activity build fails;
+#   data/state (the activity log) is committed only after a successful build. A failed build fails the job,
+#   so nothing is deployed until a later run succeeds.
+# - After a successful build, `python -m pipeline validate --built` checks the built data (pipeline/validate.py,
+#   e.g. a vote margin that contradicts its outcome, a withdrawn file with an act, a veto outside unanimity). If it
+#   fails, nothing is committed (neither the snapshot nor data/state) and the job fails: main keeps the last
+#   snapshot whose build passed, and the next run fetches again.
+# - The push survives concurrent commits on main: this run's data changes are re-applied on top of the
+#   current main (for the data files this run changed, its version wins; _manifest.json is merged per
+#   source). Do not commit data/snapshot or data/state by hand while a refresh is running.
+# - On success, "Deploy to GitHub Pages" runs via its workflow_run trigger and publishes the new data.
+# - GitHub runs scheduled workflows on a best-effort basis (they can be delayed or skipped under load) and
+#   disables them in public repos after 60 days without repository activity. Re-enable from the Actions tab.
+# - Scheduled runs are incremental: EP procedures, EP votes and the Legislative Train re-read only new, open
+#   or recently changed records and reuse the others (docs/DEPLOYMENT.md, "What a weekly run re-reads").
+# Manual run: Actions -> Data refresh -> Run workflow (optionally list specific sources; "Full refresh" re-reads
+# every stored record of those three sources).
+name: Data refresh
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # Mondays 05:17 UTC
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: "Sources to fetch, space-separated (blank = all): ep_people ep_procedures ep_votes eurlex council implementation optouts train"
+        required: false
+        default: ""
+      full_refresh:
+        description: "Full refresh: re-read every stored record of ep_procedures, ep_votes and train, not only new and changing ones (best with those sources listed above; resumes over several runs)"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  EU_INTEL_NO_CACHE: "1"
+  # Per-source time budget (seconds). Sources fetch in chunks, upsert each finished chunk into the committed
+  # snapshot and record pending work in data/snapshot/<source>/_state.json, so a long backfill that exceeds the
+  # budget stops cleanly, is committed, and continues on the next run.
+  EU_INTEL_FETCH_BUDGET_S: "1500"
+  # Whole fetch: soft deadline (no new work, no retries) and hard stop, in minutes from the start of the fetch.
+  # Job budget: setup ~5 + fetch <= FETCH_LIMIT_MIN + 3 (kill grace) + validate/build/commit ~5 < 120.
+  FETCH_DEADLINE_MIN: "80"
+  FETCH_LIMIT_MIN: "90"
+
+jobs:
+  refresh:
+    name: Fetch, validate, commit
+    # Scheduled runs only in the canonical repository (forks can still dispatch manually).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'rahv-fb/eu-intel' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        # poppler-utils (pdftoppm) renders Council voting-result sheets for the council source. The Python packages are
+        # the pinned, hash-checked runtime dependencies (requirements.txt): this job can push to main, and an unattended
+        # run must not install a release CI has not tested. The pipeline runs from the checkout (python -m pipeline).
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          python -m pip install --require-hashes -r requirements.txt
+
+      - name: Fetch official sources
+        id: fetch
+        # Backstop only: the fetch stops itself at FETCH_LIMIT_MIN (+3 min grace).
+        timeout-minutes: 100
+        env:
+          SOURCES: ${{ inputs.sources }}
+          # "1" only on a manual run with "Full refresh" ticked (scheduled runs are incremental)
+          EU_INTEL_FULL_REFRESH: ${{ inputs.full_refresh && '1' || '' }}
+        run: |
+          if [[ ! "$SOURCES" =~ ^[a-z_\ ]*$ ]]; then
+            echo "rc=2" >> "$GITHUB_OUTPUT"
+            echo "::error::invalid sources input"; exit 2
+          fi
+          EU_INTEL_FETCH_DEADLINE=$(( $(date +%s) + FETCH_DEADLINE_MIN * 60 ))
+          export EU_INTEL_FETCH_DEADLINE
+          set +e
+          # SIGINT lets the pipeline record the interrupted source and abort its requests; KILL 3 min later.
+          # shellcheck disable=SC2086  # word splitting of the source list is intended
+          timeout --signal=INT --kill-after=3m "${FETCH_LIMIT_MIN}m" python -m pipeline fetch $SOURCES
+          rc=$?
+          set -e
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          case "$rc" in
+            0) ;;
+            2) echo "::error::unknown source name"; exit 2 ;;
+            124 | 130 | 137)
+              echo "::warning::The fetch was stopped at its time limit (${FETCH_LIMIT_MIN} min); the checkpoints written so far are kept and the rest resumes next run." ;;
+            *)
+              echo "::warning::One or more sources failed or were not refreshed; their previous snapshot files were kept (see data/snapshot/_manifest.json)." ;;
+          esac
+
+      - name: Validate snapshot per source (restore failing sources)
+        id: validate
+        if: ${{ !cancelled() && steps.fetch.outputs.rc != '2' }}
+        run: |
+          # Sources with structural errors (one per line; the report goes to the log).
+          failing=$(python -m pipeline validate --list-failing)
+          if [ -n "$failing" ]; then
+            head_manifest="$RUNNER_TEMP/manifest_head.json"
+            git show HEAD:data/snapshot/_manifest.json > "$head_manifest" 2>/dev/null || echo '{}' > "$head_manifest"
+            restored=""
+            for s in $failing; do
+              if [[ ! "$s" =~ ^[a-z_]+$ ]]; then
+                echo "::error::unexpected source name from validation: $s"; exit 1
+              fi
+              if [ "$s" = "_manifest" ]; then
+                echo "::error::data/snapshot/_manifest.json is unreadable; restoring it from the last commit."
+                git checkout HEAD -- data/snapshot/_manifest.json
+                continue
+              fi
+              echo "::error::$s: this run's data failed validation; its previous files are restored from the last commit."
+              rm -rf "data/snapshot/$s"
+              git checkout HEAD -- "data/snapshot/$s" 2>/dev/null || echo "($s was not in the last commit: removed)"
+              restored="$restored $s"
+            done
+            if [ -n "$restored" ]; then
+              # shellcheck disable=SC2086  # word splitting of the source list is intended
+              python -m pipeline restore-manifest --previous "$head_manifest" $restored
+            fi
+          fi
+          # Everything that is committed must pass.
+          python -m pipeline validate
+
+      - name: Source status
+        if: ${{ always() && steps.fetch.outcome != 'skipped' }}
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          p = pathlib.Path("data/snapshot/_manifest.json")
+          try:
+              m = json.loads(p.read_text()) if p.exists() else {}
+          except ValueError:
+              m = {}
+          print("| source | status | last successful fetch | records | note |")
+          print("| --- | --- | --- | --- | --- |")
+          for k, v in sorted(m.items()):
+              recs = ", ".join(f"{a}: {b}" for a, b in (v.get("records") or {}).items())
+              note = (v.get("note") or "").replace("|", "/")[:160]
+              print(f"| {k} | {v.get('status')} | {v.get('fetched_at') or '-'} | {recs} | {note} |")
+          PY
+
+      - name: Build and record activity
+        id: build
+        if: ${{ !cancelled() && steps.validate.outcome == 'success' }}
+        env:
+          EU_INTEL_RECORD_ACTIVITY: "1"
+        run: python -m pipeline build
+
+      - name: Validate built data
+        id: validate_built
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: python -m pipeline validate --built
+
+      - name: Commit and push snapshot
+        # Also after a failed build: the validated snapshot and its checkpoints must not be lost. Never after a
+        # build whose output failed validation.
+        if: ${{ !cancelled() && steps.validate.outcome == 'success' && steps.validate_built.outcome != 'failure' }}
+        env:
+          BUILD_OK: ${{ steps.build.outcome == 'success' && steps.validate_built.outcome == 'success' }}
+        run: |
+          paths=(data/snapshot)
+          if [ "$BUILD_OK" = "true" ]; then
+            [ -d data/state ] && paths+=(data/state)
+          else
+            echo "::warning::The build failed: committing the snapshot without the activity log (data/state)."
+          fi
+          git add -A -- "${paths[@]}"
+          if git diff --cached --quiet; then
+            echo "No data changes." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git diff --cached --stat | tail -n 30
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          subject="Data refresh $(date -u +%Y-%m-%d)"
+          body="Automated by .github/workflows/refresh.yml (run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
+          git commit -q -m "$subject" -m "$body"
+
+          # Re-create the commit on top of the current main after a rejected push: everything comes from main
+          # except the data files this run changed, for which this run's version wins; _manifest.json is
+          # merged per source (entries this run did not change keep main's version).
+          # Returns 3 if main already has this data.
+          reapply() {
+            local ours base f
+            ours=$(git rev-parse HEAD) || return 1
+            base=$(git rev-parse HEAD~1) || return 1
+            git fetch -q origin main || return 1
+            git reset -q --hard FETCH_HEAD || return 1
+            mapfile -d '' -t changed < <(git diff --name-only --no-renames -z "$base" "$ours" -- data/snapshot data/state)
+            for f in "${changed[@]}"; do
+              if git cat-file -e "$ours:$f" 2>/dev/null; then
+                git checkout -q "$ours" -- "$f" || return 1
+              else
+                git rm -q --ignore-unmatch -- "$f" || return 1
+              fi
+            done
+            python - "$base" "$ours" <<'PY' || return 1
+          import json, subprocess, sys
+
+          PATH = "data/snapshot/_manifest.json"
+
+          def load(rev):
+              r = subprocess.run(["git", "show", f"{rev}:{PATH}"], capture_output=True, text=True)
+              try:
+                  d = json.loads(r.stdout) if r.returncode == 0 else {}
+              except ValueError:
+                  d = {}
+              return d if isinstance(d, dict) else {}
+
+          base, ours, theirs = load(sys.argv[1]), load(sys.argv[2]), load("HEAD")
+          if ours:
+              merged = dict(theirs)
+              for k in set(base) | set(ours):
+                  if ours.get(k) != base.get(k):  # this run changed the entry: it wins
+                      if k in ours:
+                          merged[k] = ours[k]
+                      else:
+                          merged.pop(k, None)
+              with open(PATH, "w", encoding="utf-8") as f:
+                  f.write(json.dumps(dict(sorted(merged.items())), indent=1, sort_keys=True) + "\n")
+          PY
+            git add -A -- "${paths[@]}" || return 1  # data/state only after a successful build
+            if git diff --cached --quiet; then return 3; fi
+            git commit -q -m "$subject" -m "$body" || return 1
+          }
+
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              echo "Pushed $(git rev-parse --short HEAD)." | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              break
+            fi
+            echo "Push rejected (main moved?); re-applying this run's data on top of main (attempt $attempt)."
+            sleep $((attempt * 5))
+            rc=0
+            reapply || rc=$?
+            if [ "$rc" -eq 3 ]; then
+              echo "Main already contains this run's data; nothing to push." | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$rc" -ne 0 ]; then
+              echo "::error::could not re-apply the data refresh on top of main"
+              exit 1
+            fi
+          done
+          echo "::error::could not push the data refresh commit"
+          exit 1

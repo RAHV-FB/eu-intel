@@ -1,0 +1,142 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2023-0126",
+   "type": "Process",
+   "process_id": "2023-0126",
+   "process_type": "COD",
+   "label": "2023/0126(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2023-0448",
+   "type": "Process",
+   "process_id": "2023-0448",
+   "process_type": "COD",
+   "label": "2023/0448(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2024-0068",
+   "type": "Process",
+   "process_id": "2024-0068",
+   "process_type": "COD",
+   "label": "2024/0068(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2025-0134",
+   "type": "Process",
+   "process_id": "2025-0134",
+   "process_type": "COD",
+   "label": "2025/0134(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2024-0098",
+   "type": "Process",
+   "process_id": "2024-0098",
+   "process_type": "COD",
+   "label": "2024/0098(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2022-0051",
+   "type": "Process",
+   "process_id": "2022-0051",
+   "process_type": "COD",
+   "label": "2022/0051(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2021-0106",
+   "type": "Process",
+   "process_id": "2021-0106",
+   "process_type": "COD",
+   "label": "2021/0106(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2018-0329",
+   "type": "Process",
+   "process_id": "2018-0329",
+   "process_type": "COD",
+   "label": "2018/0329(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2017-0003",
+   "type": "Process",
+   "process_id": "2017-0003",
+   "process_type": "COD",
+   "label": "2017/0003(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2025-0059",
+   "type": "Process",
+   "process_id": "2025-0059",
+   "process_type": "COD",
+   "label": "2025/0059(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2022-0196",
+   "type": "Process",
+   "process_id": "2022-0196",
+   "process_type": "COD",
+   "label": "2022/0196(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2021-0104",
+   "type": "Process",
+   "process_id": "2021-0104",
+   "process_type": "COD",
+   "label": "2021/0104(COD)"
+  },
+  {
+   "id": "eli/dl/proc/2012-0011",
+   "type": "Process",
+   "process_id": "2012-0011",
+   "process_type": "COD",
+   "label": "2012/0011(COD)"
+  }
+ ],
+ "searchResults": {
+  "hits": [
+   {
+    "id": "eli/dl/proc/2023-0126"
+   },
+   {
+    "id": "eli/dl/proc/2023-0448"
+   },
+   {
+    "id": "eli/dl/proc/2024-0068"
+   },
+   {
+    "id": "eli/dl/proc/2025-0134"
+   },
+   {
+    "id": "eli/dl/proc/2024-0098"
+   },
+   {
+    "id": "eli/dl/proc/2022-0051"
+   },
+   {
+    "id": "eli/dl/proc/2021-0106"
+   },
+   {
+    "id": "eli/dl/proc/2018-0329"
+   },
+   {
+    "id": "eli/dl/proc/2017-0003"
+   },
+   {
+    "id": "eli/dl/proc/2025-0059"
+   },
+   {
+    "id": "eli/dl/proc/2022-0196"
+   },
+   {
+    "id": "eli/dl/proc/2021-0104"
+   },
+   {
+    "id": "eli/dl/proc/2012-0011"
+   }
+  ]
+ },
+ "meta": {
+  "total": 2968
+ },
+ "_trimmed": "Real response of GET /procedures?process-type=COD (2026-10-22), data reduced to fixture procedures; meta.total is the original total."
+}

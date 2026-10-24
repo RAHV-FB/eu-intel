@@ -1,0 +1,611 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "m",
+   "mc",
+   "country",
+   "mne",
+   "msref",
+   "journal",
+   "doj",
+   "dnot",
+   "wtitle",
+   "etitle",
+   "link",
+   "eli",
+   "modified"
+  ]
+ },
+ "results": {
+  "distinct": false,
+  "ordered": true,
+  "bindings": [
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/84ccd285-90b1-4589-b430-976bf9da3a0a"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555MLT_202501976"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/MLT"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2025)01976"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "The Malta government gazette"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-04-08"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-04-16"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Measures for a High Common Level of Cybersecurity across the European Union (Malta) Order, 2025"
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Measures for a High Common Level of Cybersecurity across the European Union (Malta) Order, 2025"
+    },
+    "link": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#anyURI",
+     "value": "https://legislation.mt/eli/ln/2025/71/eng"
+    },
+    "eli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#anyURI",
+     "value": "https://legislation.mt/eli/ln/2025/71/eng"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2025-04-22T09:10:19.039+02:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/d5f0a396-8cba-407c-80d2-b2dd28dae9a9"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555POL_202601963"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/POL"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2026)01963"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Dziennik Urzędowy (Official journal)"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-03-02"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-03-24"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "pl",
+     "value": "Ustawa z dnia 23 stycznia 2026 roku o zmianie ustawy o krajowym systemie cyberbezpieczeństwa oraz niektórych innych ustaw"
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Ustawa z dnia 23 stycznia 2026 roku o zmianie ustawy o krajowym systemie cyberbezpieczeństwa oraz niektórych innych ustaw"
+    },
+    "eli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#anyURI",
+     "value": "https://eli.gov.pl/eli/DU/2026/252/ogl/pol"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2026-03-27T12:12:19.005+01:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/38d5b05e-ef31-48d9-8e8a-1c0753ea57ca"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555LUX_202602683"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/LUX"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2026)02683"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Journal officiel du Grand-Duché de Luxembourg – Mémorial A"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-05-06"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-05-06"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "fr",
+     "value": "Loi du 5 mai 2026 concernant des mesures destinées à assurer un niveau élevé de cybersécurité et portant modification de :\n1°\t\nla loi modifiée du 14 août 2000 relative au commerce électronique ;\n2°\t\nla loi modifiée du 23 juillet 2016 portant création d’un Haut-Commissariat à la Protection nationale ;\n3°\t\nla loi du 17 décembre 2021 sur les réseaux et les services de communications électroniques."
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Loi du 5 mai 2026 concernant des mesures destinées à assurer un niveau élevé de cybersécurité et portant modification de :\n1°\t\nla loi modifiée du 14 août 2000 relative au commerce électronique ;\n2°\t\nla loi modifiée du 23 juillet 2016 portant création d’un Haut-Commissariat à la Protection nationale ;\n3°\t\nla loi du 17 décembre 2021 sur les réseaux et les services de communications électroniques."
+    },
+    "eli": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#anyURI",
+     "value": "http://data.legilux.public.lu/eli/etat/leg/loi/2026/05/05/a225/jo"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2026-05-08T08:04:17.867+02:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/31395117-41fa-4029-839d-9fc52ae6fc2a"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555CZE_202504528"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/CZE"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2025)04528"
+    },
+    "msref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "270/2025"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Sbirka Zakonu CR"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-08-05"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-08-09"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "cs",
+     "value": "Zákon č. 270/2025 Sb., kterým se mění zákon č. 40/2009 Sb., trestní zákoník, ve znění pozdějších předpisů, zákon č. 141/1961 Sb., o trestním řízení soudním (trestní řád), ve znění pozdějších předpisů, a další související zákony"
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Zákon č. 270/2025 Sb., kterým se mění zákon č. 40/2009 Sb., trestní zákoník, ve znění pozdějších předpisů, zákon č. 141/1961 Sb., o trestním řízení soudním (trestní řád), ve znění pozdějších předpisů, a další související zákony"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2026-06-12T09:35:17.747+02:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/384b1c58-d1b2-4734-a04c-783735905a81"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555CZE_26393"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/CZE"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2003)56393"
+    },
+    "msref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "23/2000"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Sbirka Zakonu CR"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2000-02-21"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2004-02-18"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "cs",
+     "value": "Zákon č. 23/2000 Sb., kterým se mění zákon č. 266/1994 Sb., o dráhách"
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Zákon č. 23/2000 Sb., kterým se mění zákon č. 266/1994 Sb., o dráhách"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2024-12-06T10:00:09.658+01:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a009031b-dc79-4146-adba-d28acbb71c21"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555CZE_158543"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/CZE"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2016)56495"
+    },
+    "msref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "310/2008"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Sbirka Zakonu CR"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2008-08-21"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2008-10-13"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "cs",
+     "value": "Zákon č. 310/2008 Sb., kterým se mění zákon č. 61/2000 Sb., o námořní plavbě, ve znění pozdějších předpisů"
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Zákon č. 310/2008 Sb., kterým se mění zákon č. 61/2000 Sb., o námořní plavbě, ve znění pozdějších předpisů"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2024-12-06T09:38:29.511+01:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/085dbb5b-82fe-4625-990b-dc0edb8afba7"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555SWE_202601018"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/SWE"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2026)01018"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Svensk författningssamling (SFS)"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "1001-01-01"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-02-13"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "sv",
+     "value": "Myndighetsförordning (2007:515)"
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Myndighetsförordning (2007:515)"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2026-02-20T10:13:37.618+01:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/13b03d11-2d28-4bd2-a603-e92524ae4b0d"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555SWE_202601021"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/SWE"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2026)01021"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Svensk författningssamling (SFS)"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "1001-01-01"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-02-13"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "sv",
+     "value": "Lag (2018:672) om ekonomiska föreningar"
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Lag (2018:672) om ekonomiska föreningar"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2026-02-20T10:14:17.046+01:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/19c50b29-0adc-4c9e-9186-3a1673c72787"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555SWE_202601176"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/SWE"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2026)01176"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Other"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-01-09"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-02-13"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "sv",
+     "value": "Myndigheten för civilt försvars föreskrifter (MCFFS 2026:1) om anmälan och identifiering av väsentliga och viktiga verksamhetsutövare"
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Myndigheten för civilt försvars föreskrifter (MCFFS 2026:1) om anmälan och identifiering av väsentliga och viktiga verksamhetsutövare"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2026-02-20T10:15:34.652+01:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3020e1d0-aa65-40fb-88bc-bf283296eb06"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555SWE_202601178"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/SWE"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2026)01178"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Svensk författningssamling (SFS)"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2025-12-17"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-02-13"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "sv",
+     "value": "Lag om ändring i offentlighets- och sekretesslagen (2009:400)"
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Lag om ändring i offentlighets- och sekretesslagen (2009:400)"
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2026-02-20T10:16:16.704+01:00"
+    }
+   },
+   {
+    "m": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/d3a324cf-82b0-4554-b646-e85804ae1796"
+    },
+    "mc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "72022L2555ITA_202404316"
+    },
+    "country": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/country/ITA"
+    },
+    "mne": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "MNE(2024)04316"
+    },
+    "journal": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Gazzetta Ufficiale della Repubblica Italiana"
+    },
+    "doj": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "1001-01-01"
+    },
+    "dnot": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2024-10-11"
+    },
+    "wtitle": {
+     "type": "literal",
+     "xml:lang": "it",
+     "value": "Decreto legislativo 4 settembre 2024, n. 138, di recepimento nell’ordinamento italiano della direttiva 2022/2555.\nNotifica provvediemento di attuazione."
+    },
+    "etitle": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Decreto legislativo 4 settembre 2024, n. 138, di recepimento nell’ordinamento italiano della direttiva 2022/2555.\nNotifica provvediemento di attuazione."
+    },
+    "modified": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "value": "2024-10-18T08:41:42.908+02:00"
+    }
+   }
+  ]
+ }
+}

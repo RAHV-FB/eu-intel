@@ -1,0 +1,130 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2021-0104",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2021-0104-PUB-2022-12-16",
+     "type": "Activity",
+     "activity_date": "2022-12-16",
+     "activity_id": "2021-0104-PUB-2022-12-16",
+     "had_activity_type": "def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL"
+    },
+    {
+     "id": "eli/dl/event/2021-0104-ANPRO-2021-06-23",
+     "type": "Activity",
+     "activity_date": "2021-06-23",
+     "activity_id": "2021-0104-ANPRO-2021-06-23",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2021-0104-SIGN-2022-12-14",
+     "type": "Activity",
+     "activity_date": "2022-12-14",
+     "activity_id": "2021-0104-SIGN-2022-12-14",
+     "had_activity_type": "def/ep-activities/SIGNATURE"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2022-11-10-VOT-ITM-938283",
+     "type": "Activity",
+     "activity_date": "2022-11-10",
+     "activity_id": "MTG-PL-2022-11-10-VOT-ITM-938283",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2022-0059"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-9-2022-11-10-VOT-ITM-005"
+     ]
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2022-11-09-PVCRE-ITM-16",
+     "type": "Activity",
+     "activity_date": "2022-11-09",
+     "activity_id": "MTG-PL-2022-11-09-PVCRE-ITM-16",
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2022-11-09-ITM-016",
+      "eli/dl/doc/PV-9-2022-11-09-ITM-16"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2021-0104-DEC-PLEIN1-2022-04-04",
+     "type": "Decision",
+     "activity_date": "2022-04-04",
+     "activity_id": "2021-0104-DEC-PLEIN1-2022-04-04",
+     "had_activity_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2022-11-10-PVCRE-ITM-5-5",
+     "type": "Activity",
+     "activity_date": "2022-11-10",
+     "activity_id": "MTG-PL-2022-11-10-PVCRE-ITM-5-5",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/C-9-2021-0147",
+      "eli/dl/doc/A-9-2022-0059"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2022-11-10-ITM-005-05",
+      "eli/dl/doc/PV-9-2022-11-10-ITM-005-05"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2021-0104-DEC-DCPL-2022-11-10",
+     "type": "Decision",
+     "activity_date": "2022-11-10",
+     "activity_id": "2021-0104-DEC-DCPL-2022-11-10",
+     "had_activity_type": "def/ep-activities/PLENARY_AMEND_PROPOSAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/C-9-2022-0414",
+    "eli/dl/doc/TA-9-2022-0380",
+    "eli/dl/doc/A-9-2022-0059",
+    "eli/dl/doc/SP-2022-688-TA-9-2022-0380"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "process_id": "2021-0104",
+   "process_title": {
+    "cs": "Změna směrnice 2013/34/EU, směrnice  2004/109/ES, směrnice 2006/43/ES a nařízení (EU) č. 537/2014, pokud jde o podávání zpráv o udržitelnosti podniků",
+    "sl": "Sprememba Direktive 2013/34/EU, Direktive 2004/109/ES, Direktive 2006/43/ES in Uredbe (EU) št. 537/2014 glede poročanja podjetij o trajnostnosti",
+    "fr": "Modification de la directive 2013/34/UE, de la directive 2004/109/CE, de la directive 2006/43/CE et du règlement (UE) n° 537/2014, en ce qui concerne la communication, par les entreprises, d’informations sur l’impact environnemental de leurs activités",
+    "et": "Direktiivide 2013/34/EL, 2004/109/EÜ ja 2006/43/EÜ ning määruse (EL) nr 537/2014 muutmine seoses äriühingute kestlikkusaruandlusega",
+    "lv": "Grozījumu izdarīšana Direktīvā 2013/34/ES, Direktīvā 2004/109/EK, Direktīvā 2006/43/EK un Regulā (ES) Nr. 537/2014 attiecībā uz korporatīvo ilgtspējas ziņojumu sniegšanu",
+    "de": "Änderung der Richtlinien 2013/34/EU, 2004/109/EG und 2006/43/EG und  der Verordnung (EU) Nr. 537/2014 hinsichtlich der Nachhaltigkeitsberichterstattung von Unternehmen",
+    "en": "Amending Directive 2013/34/EU, Directive 2004/109/EC, Directive 2006/43/EC and Regulation (EU) No 537/2014, as regards corporate sustainability reporting",
+    "da": "Ændring af direktiv 2013/34/EU, direktiv 2004/109/EF, direktiv 2006/43/EF og forordning (EU) nr. 537/2014 for så vidt angår virksomheders bæredygtighedsrapportering",
+    "ga": "Leasú a dhéanamh ar Threoir 2013/34/AE, Treoir 2004/109/CE, Treoir 2006/43/CE agus Rialachán (AE) Uimh. 537/2014, a mhéid a bhaineann le tuairisciú inbhuanaitheachta corparáideach",
+    "it": "Modifica della direttiva 2013/34/UE, della direttiva 2004/109/CE, della direttiva 2006/43/CE e del regolamento (UE) n. 537/2014 per quanto riguarda la comunicazione societaria sulla sostenibilità",
+    "fi": "Direktiivin 2013/34/EU, direktiivin 2004/109/EY, direktiivin 2006/43/EY ja asetuksen (EU) N:o 537/2014 muuttaminen yritysten kestävyysraportoinnin osalta",
+    "lt": "Direktyvų 2013/34/ES, 2004/109/EB, 2006/43/EB ir Reglamento (ES) Nr. 537/2014 dalinis keitimas dėl įmonių informacijos apie tvarumą teikimo",
+    "ro": "Modificarea Directivei 2013/34/UE, a Directivei 2004/109/CE, a Directivei 2006/43/CE și a Regulamentului (UE) nr. 537/2014 în ceea ce privește raportarea de către întreprinderi de informații privind durabilitatea",
+    "pt": "Alteração da Diretiva 2013/34/UE, da Diretiva 2004/109/CE, da Diretiva 2006/43/CE e do Regulamento (UE) n.º 537/2014 no que respeita à comunicação de informações sobre a sustentabilidade das empresas",
+    "bg": "Изменение на Директива 2013/34/ЕС, Директива 2004/109/ЕО, Директива 2006/43/ЕО и Регламент (ЕС) № 537/2014 по отношение на корпоративната отчетност във връзка с устойчивостта",
+    "hr": "Izmjena Direktive 2013/34/EU, Direktive 2004/109/EZ, Direktive 2006/43/EZ i Uredbe (EU) br. 537/2014, u pogledu korporativnog izvještavanja o održivosti",
+    "sk": "Zmena smernice 2013/34/EÚ, smernice 2004/109/ES, smernice 2006/43/ES a nariadenia (EÚ) č. 537/2014, pokiaľ ide o vykazovanie informácií o udržateľnosti podnikov",
+    "pl": "Zmiana dyrektyw 2013/34/UE, 2004/109/WE i 2006/43/WE oraz rozporządzenia (UE) nr 537/2014 w odniesieniu do sprawozdawczości przedsiębiorstw w zakresie zrównoważonego rozwoju",
+    "el": "Τροποποίηση της οδηγίας 2013/34/ΕΕ, της οδηγίας 2004/109/ΕΚ, της οδηγίας 2006/43/ΕΚ και του κανονισμού (ΕΕ) αριθ. 537/2014 όσον αφορά την υποβολή εκθέσεων για την εταιρική βιωσιμότητα",
+    "sv": "Ändring av direktiv 2013/34/EU, direktiv 2004/109/EG, direktiv 2006/43/EG och förordning (EU) nr 537/2014 vad gäller företagens hållbarhetsrapportering",
+    "es": "Modificación de las Directivas 2013/34/UE, 2004/109/CE y 2006/43/CE y del Reglamento (UE) n.º 537/2014, por lo que respecta a la información corporativa en materia de sostenibilidad",
+    "hu": "A 2013/34/EU irányelvnek, a 2004/109/EK irányelvnek, a 2006/43/EK irányelvnek és az 537/2014/EU rendeletnek a fenntarthatósággal kapcsolatos vállalati beszámolás tekintetében történő módosítása",
+    "nl": "Wijziging van Richtlijn 2013/34/EU, Richtlijn 2004/109/EG, Richtlijn 2006/43/EG en Verordening (EU) nr. 537/2014 betreffende duurzaamheidsrapportage door ondernemingen",
+    "mt": "Emenda tad-Direttiva 2013/34/UE, id-Direttiva 2004/109/KE, id-Direttiva 2006/43/KE u r-Regolament (UE) Nru 537/2014, fir-rigward tar-rapportar korporattiv sostenibbli minn ċerti impriżi"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "label": "2021/0104(COD)",
+   "identifierYear": "2021"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

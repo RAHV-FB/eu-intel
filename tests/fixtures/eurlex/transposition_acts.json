@@ -1,0 +1,1901 @@
+[
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32024L2749"
+  ],
+  "amends": [
+   "32003R1882",
+   "32012R1025"
+  ],
+  "celex": "32014L0068",
+  "court_rulings": [],
+  "date_document": "2014-05-15",
+  "date_publication": "2014-06-27",
+  "date_signature": null,
+  "eli": "http://data.europa.eu/eli/dir/2014/68/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2014-07-17",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32014L0068",
+  "in_force": true,
+  "oj_ref": "OJ L 189, 27.6.2014",
+  "other_application_dates": [
+   "2016-07-19"
+  ],
+  "partial_application_dates": [
+   "2016-07-19"
+  ],
+  "procedure_refs": [
+   "2013/0221(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [
+   "31997L0023"
+  ],
+  "source": {
+   "identifier": "32014L0068",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32014L0068",
+   "published": "2024-12-31",
+   "retrieved_at": "2026-10-23T02:19:24Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32014L0068"
+  },
+  "subjects": [],
+  "title": "Directive 2014/68/EU of the European Parliament and of the Council of 15 May 2014 on the harmonisation of the laws of the Member States relating to the making available on the market of pressure equipment (recast) Text with EEA relevance",
+  "transposition_dates": [
+   {
+    "articles": [
+     "49.1.1"
+    ],
+    "date": "2015-02-28",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "49.1.2"
+    ],
+    "date": "2015-06-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "49.2.1"
+    ],
+    "date": "2016-07-18",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "49.2.2"
+    ],
+    "date": "2016-07-19",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2015-02-28",
+   "2015-06-01",
+   "2016-07-18",
+   "2016-07-19"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32018L0843",
+   "32019L2177",
+   "32023R1113",
+   "32024L1640"
+  ],
+  "amends": [
+   "32012R0648"
+  ],
+  "celex": "32015L0849",
+  "court_rulings": [],
+  "date_document": "2015-05-20",
+  "date_publication": "2015-06-05",
+  "date_signature": null,
+  "effect_on_notification": false,
+  "eli": "http://data.europa.eu/eli/dir/2015/849/oj",
+  "end_of_validity": "2027-07-09",
+  "entry_into_force": "2015-06-25",
+  "entry_into_force_articles": [],
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32015L0849",
+  "in_force": true,
+  "oj_ref": "OJ L 141, 5.6.2015",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2013/0025(COD)"
+  ],
+  "repealed_by": [
+   "32024L1640"
+  ],
+  "repeals": [
+   "32005L0060",
+   "32006L0070"
+  ],
+  "source": {
+   "identifier": "32015L0849",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32015L0849",
+   "published": "2025-07-03",
+   "retrieved_at": "2026-10-23T05:03:22Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32015L0849"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2015/849 of the European Parliament and of the Council of 20 May 2015 on the prevention of the use of the financial system for the purposes of money laundering or terrorist financing, amending Regulation (EU) No 648/2012 of the European Parliament and of the Council, and repealing Directive 2005/60/EC of the European Parliament and of the Council and Commission Directive 2006/70/EC (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "67.1"
+    ],
+    "date": "2017-06-26",
+    "labels": [
+     "AU+TARD"
+    ]
+   },
+   {
+    "articles": [
+     "67.3"
+    ],
+    "date": "2024-12-30",
+    "labels": [
+     "ADOPTION",
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2017-06-26",
+   "2024-12-30"
+  ],
+  "validity_notes": [
+   {
+    "acts": [
+     "32024L1640"
+    ],
+    "codes": [
+     "A/PAR"
+    ],
+    "date": "2027-07-09",
+    "partial": false
+   }
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32019L1023",
+   "32019L1151",
+   "32019L2121",
+   "32021R0023",
+   "32025L0001",
+   "32025L0025"
+  ],
+  "amends": [
+   "32007L0063",
+   "32009L0109",
+   "32012L0017",
+   "32013L0024",
+   "32014L0059"
+  ],
+  "celex": "32017L1132",
+  "court_rulings": [],
+  "date_document": "2017-06-14",
+  "date_publication": "2017-06-30",
+  "date_signature": "2017-06-14",
+  "eli": "http://data.europa.eu/eli/dir/2017/1132/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2017-07-20",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32017L1132",
+  "in_force": true,
+  "oj_ref": "OJ L 169, 30.6.2017",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2015/0283(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [
+   "31982L0891",
+   "31989L0666",
+   "32005L0056",
+   "32009L0101",
+   "32011L0035",
+   "32012L0030"
+  ],
+  "source": {
+   "identifier": "32017L1132",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32017L1132",
+   "published": "2024-01-20",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32017L1132"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2017/1132 of the European Parliament and of the Council of 14 June 2017 relating to certain aspects of company law (codification) (Text with EEA relevance. )",
+  "transposition_dates": [],
+  "transposition_deadlines": []
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32026L1021"
+  ],
+  "amends": [],
+  "celex": "32017L1371",
+  "court_rulings": [],
+  "date_document": "2017-07-05",
+  "date_publication": "2017-07-28",
+  "date_signature": "2017-07-05",
+  "eli": "http://data.europa.eu/eli/dir/2017/1371/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2017-08-17",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32017L1371",
+  "in_force": true,
+  "oj_ref": "OJ L 198, 28.7.2017",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2012/0193(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32017L1371",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32017L1371",
+   "published": "2024-01-21",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32017L1371"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2017/1371 of the European Parliament and of the Council of 5 July 2017 on the fight against fraud to the Union's financial interests by means of criminal law",
+  "transposition_dates": [
+   {
+    "articles": [
+     "17.1"
+    ],
+    "date": "2019-07-06",
+    "labels": [
+     "ADOPTION",
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2019-07-06"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "31998L0026",
+   "32014L0059"
+  ],
+  "celex": "32019L0879",
+  "court_rulings": [],
+  "date_document": "2019-05-20",
+  "date_publication": "2019-06-07",
+  "date_signature": "2019-05-20",
+  "eli": "http://data.europa.eu/eli/dir/2019/879/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2019-06-27",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L0879",
+  "in_force": true,
+  "oj_ref": "OJ L 150, 7.6.2019",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2016/0362(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32019L0879",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32019L0879",
+   "published": "2022-11-24",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L0879"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2019/879 of the European Parliament and of the Council of 20 May 2019 amending Directive 2014/59/EU as regards the loss-absorbing and recapitalisation capacity of credit institutions and investment firms and Directive 98/26/EC",
+  "transposition_dates": [
+   {
+    "articles": [
+     "3.1"
+    ],
+    "date": "2020-12-28",
+    "labels": [
+     "APPLICATION",
+     "AU+TARD"
+    ]
+   },
+   {
+    "articles": [
+     "3.1"
+    ],
+    "date": "2024-01-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2020-12-28",
+   "2024-01-01"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [],
+  "celex": "32019L0882",
+  "court_rulings": [],
+  "date_document": "2019-04-17",
+  "date_publication": "2019-06-07",
+  "date_signature": "2019-04-17",
+  "eli": "http://data.europa.eu/eli/dir/2019/882/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2019-06-27",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L0882",
+  "in_force": true,
+  "oj_ref": "OJ L 151, 7.6.2019",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2015/0278(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32019L0882",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32019L0882",
+   "published": "2024-12-31",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L0882"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2019/882 of the European Parliament and of the Council of 17 April 2019 on the accessibility requirements for products and services (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "31.1"
+    ],
+    "date": "2022-06-28",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "31.2"
+    ],
+    "date": "2025-06-28",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "31.3"
+    ],
+    "date": "2027-06-28",
+    "labels": [
+     "APPLICATION",
+     "AU+TARD"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2022-06-28",
+   "2025-06-28",
+   "2027-06-28"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32024L1654"
+  ],
+  "amends": [],
+  "celex": "32019L1153",
+  "court_rulings": [],
+  "date_document": "2019-06-20",
+  "date_publication": "2019-07-11",
+  "date_signature": "2019-06-20",
+  "eli": "http://data.europa.eu/eli/dir/2019/1153/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2019-07-31",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L1153",
+  "in_force": true,
+  "oj_ref": "OJ L 186, 11.7.2019",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2018/0105(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [
+   "32000D0642"
+  ],
+  "source": {
+   "identifier": "32019L1153",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32019L1153",
+   "published": "2025-05-08",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L1153"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2019/1153 of the European Parliament and of the Council of 20 June 2019 laying down rules facilitating the use of financial and other information for the prevention, detection, investigation or prosecution of certain criminal offences, and repealing Council Decision 2000/642/JHA",
+  "transposition_dates": [
+   {
+    "articles": [
+     "23"
+    ],
+    "date": "2021-08-01",
+    "labels": []
+   }
+  ],
+  "transposition_deadlines": [
+   "2021-08-01"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32020R1503",
+   "32022R1925",
+   "32023R1114",
+   "32024L1640",
+   "32024L1760",
+   "32024R0573",
+   "32024R3015"
+  ],
+  "amends": [],
+  "celex": "32019L1937",
+  "court_rulings": [],
+  "date_document": "2019-10-23",
+  "date_publication": "2019-11-26",
+  "date_signature": "2019-10-23",
+  "eli": "http://data.europa.eu/eli/dir/2019/1937/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2019-12-16",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L1937",
+  "in_force": true,
+  "oj_ref": "OJ L 305, 26.11.2019",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2018/0106(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32019L1937",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32019L1937",
+   "published": "2024-12-31",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L1937"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2019/1937 of the European Parliament and of the Council of 23 October 2019 on the protection of persons who report breaches of Union law",
+  "transposition_dates": [
+   {
+    "articles": [
+     "26.1"
+    ],
+    "date": "2021-12-17",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "26.2"
+    ],
+    "date": "2023-12-17",
+    "labels": [
+     "ADOPTION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2021-12-17",
+   "2023-12-17"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32009L0138",
+   "32014L0065",
+   "32015L0849"
+  ],
+  "celex": "32019L2177",
+  "court_rulings": [],
+  "date_document": "2019-12-18",
+  "date_publication": "2019-12-27",
+  "date_signature": "2019-12-18",
+  "eli": "http://data.europa.eu/eli/dir/2019/2177/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2019-12-30",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L2177",
+  "in_force": true,
+  "oj_ref": "OJ L 334, 27.12.2019",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2017/0231(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32019L2177",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32019L2177",
+   "published": "2024-06-19",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019L2177"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2019/2177 of the European Parliament and of the Council of 18 December 2019 amending Directive 2009/138/EC on the taking-up and pursuit of the business of Insurance and Reinsurance (Solvency II), Directive 2014/65/EU on markets in financial instruments and Directive (EU) 2015/849 on the prevention of the use of the financial system for the purposes of money-laundering or terrorist financing (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "4.2"
+    ],
+    "date": "2020-06-30",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "4.3"
+    ],
+    "date": "2020-07-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "4.1",
+     "4.3"
+    ],
+    "date": "2021-06-30",
+    "labels": [
+     "ADOPTION",
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "4.3"
+    ],
+    "date": "2022-01-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2020-06-30",
+   "2020-07-01",
+   "2021-06-30",
+   "2022-01-01"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32003R1882",
+   "32009R0596"
+  ],
+  "celex": "32020L2184",
+  "court_rulings": [],
+  "date_document": "2020-12-16",
+  "date_publication": "2020-12-23",
+  "date_signature": "2020-12-16",
+  "eli": "http://data.europa.eu/eli/dir/2020/2184/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2021-01-12",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020L2184",
+  "in_force": true,
+  "oj_ref": "OJ L 435, 23.12.2020",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2017/0332(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [
+   "31998L0083",
+   "32015L1787"
+  ],
+  "source": {
+   "identifier": "32020L2184",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32020L2184",
+   "published": "2025-07-03",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020L2184"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2020/2184 of the European Parliament and of the Council of 16 December 2020 on the quality of water intended for human consumption (recast) (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "24.1"
+    ],
+    "date": "2023-01-12",
+    "labels": []
+   },
+   {
+    "articles": [
+     "25.1"
+    ],
+    "date": "2026-01-12",
+    "labels": []
+   }
+  ],
+  "transposition_deadlines": [
+   "2023-01-12",
+   "2026-01-12"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32025L0794",
+   "32026L0470"
+  ],
+  "amends": [
+   "32004L0109",
+   "32006L0043",
+   "32013L0034",
+   "32014R0537"
+  ],
+  "celex": "32022L2464",
+  "court_rulings": [],
+  "date_document": "2022-12-14",
+  "date_publication": "2022-12-16",
+  "date_signature": "2022-12-14",
+  "eli": "http://data.europa.eu/eli/dir/2022/2464/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2023-01-05",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022L2464",
+  "in_force": true,
+  "oj_ref": "OJ L 322, 16.12.2022",
+  "other_application_dates": [
+   "2024-01-01"
+  ],
+  "partial_application_dates": [
+   "2024-01-01"
+  ],
+  "procedure_refs": [
+   "2021/0104(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32022L2464",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32022L2464",
+   "published": "2023-03-21",
+   "retrieved_at": "2026-10-23T02:19:24Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022L2464"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2022/2464 of the European Parliament and of the Council of 14 December 2022 amending Regulation (EU) No 537/2014, Directive 2004/109/EC, Directive 2006/43/EC and Directive 2013/34/EU, as regards corporate sustainability reporting (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "5.1"
+    ],
+    "date": "2024-07-06",
+    "labels": []
+   }
+  ],
+  "transposition_deadlines": [
+   "2024-07-06"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32025L2205"
+  ],
+  "amends": [
+   "32004L0066",
+   "32006L0103",
+   "32008R1137",
+   "32013L0022",
+   "32018L0645",
+   "32019R1243"
+  ],
+  "celex": "32022L2561",
+  "court_rulings": [],
+  "date_document": "2022-12-14",
+  "date_publication": "2022-12-23",
+  "date_signature": "2022-12-14",
+  "eli": "http://data.europa.eu/eli/dir/2022/2561/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2023-01-12",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022L2561",
+  "in_force": true,
+  "oj_ref": "OJ L 330, 23.12.2022",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2021/0018(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [
+   "32003L0059"
+  ],
+  "source": {
+   "identifier": "32022L2561",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32022L2561",
+   "published": "2025-07-03",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022L2561"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2022/2561 of the European Parliament and of the Council of 14 December 2022 on the initial qualification and periodic training of drivers of certain road vehicles for the carriage of goods or passengers (codification) (Text with EEA relevance)",
+  "transposition_dates": [],
+  "transposition_deadlines": []
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32011L0016"
+  ],
+  "celex": "32023L2226",
+  "court_rulings": [],
+  "date_document": "2023-10-17",
+  "date_publication": "2023-10-24",
+  "date_signature": null,
+  "eli": "http://data.europa.eu/eli/dir/2023/2226/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2023-11-13",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L2226",
+  "in_force": true,
+  "oj_ref": "OJ L, 2023/2226, 24.10.2023",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2022/0413(CNS)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32023L2226",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32023L2226",
+   "published": "2025-04-02",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L2226"
+  },
+  "subjects": [],
+  "title": "Council Directive (EU) 2023/2226 of 17 October 2023 amending Directive 2011/16/EU on administrative cooperation in the field of taxation",
+  "transposition_dates": [
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2025-12-31",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2026-01-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "2.2"
+    ],
+    "date": "2027-12-31",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "2.2"
+    ],
+    "date": "2028-01-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "2.3"
+    ],
+    "date": "2029-12-31",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "2.3"
+    ],
+    "date": "2030-01-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2025-12-31",
+   "2026-01-01",
+   "2027-12-31",
+   "2028-01-01",
+   "2029-12-31",
+   "2030-01-01"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32002L0087",
+   "32004L0025",
+   "32004L0109",
+   "32006L0043",
+   "32007L0036",
+   "32009L0065",
+   "32009L0138",
+   "32011L0061",
+   "32013L0034",
+   "32013L0036",
+   "32014L0059",
+   "32014L0065",
+   "32016L0097",
+   "32016L2341",
+   "32019L2034",
+   "32019L2162"
+  ],
+  "celex": "32023L2864",
+  "court_rulings": [],
+  "date_document": "2023-12-13",
+  "date_publication": "2023-12-20",
+  "date_signature": "2023-12-13",
+  "eli": "http://data.europa.eu/eli/dir/2023/2864/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2024-01-09",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L2864",
+  "in_force": true,
+  "oj_ref": "OJ L, 2023/2864, 20.12.2023",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2021/0379(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32023L2864",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32023L2864",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L2864"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2023/2864 of the European Parliament and of the Council of 13 December 2023 amending certain Directives as regards the establishment and functioning of the European single access point (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "17.2"
+    ],
+    "date": "2025-07-10",
+    "labels": []
+   },
+   {
+    "articles": [
+     "17.1"
+    ],
+    "date": "2026-01-10",
+    "labels": []
+   }
+  ],
+  "transposition_deadlines": [
+   "2025-07-10",
+   "2026-01-10"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32009L0065",
+   "32011L0061"
+  ],
+  "celex": "32024L0927",
+  "court_rulings": [],
+  "date_document": "2024-03-13",
+  "date_publication": "2024-03-26",
+  "date_signature": "2024-03-13",
+  "eli": "http://data.europa.eu/eli/dir/2024/927/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2024-04-15",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L0927",
+  "in_force": true,
+  "oj_ref": "OJ L, 2024/927, 26.3.2024",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2021/0376(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32024L0927",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32024L0927",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L0927"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2024/927 of the European Parliament and of the Council of 13 March 2024 amending Directives 2011/61/EU and 2009/65/EC as regards delegation arrangements, liquidity risk management, supervisory reporting, the provision of depositary and custody services and loan origination by alternative investment funds (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "3.1"
+    ],
+    "date": "2026-04-16",
+    "labels": [
+     "ADOPTION",
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "3.1"
+    ],
+    "date": "2027-04-16",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2026-04-16",
+   "2027-04-16"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32013L0034"
+  ],
+  "celex": "32024L1306",
+  "court_rulings": [],
+  "date_document": "2024-04-29",
+  "date_publication": "2024-05-08",
+  "date_signature": "2024-04-29",
+  "eli": "http://data.europa.eu/eli/dec/2024/1306/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2024-05-28",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1306",
+  "in_force": true,
+  "oj_ref": "OJ L, 2024/1306, 8.5.2024",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2023/0368(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32024L1306",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32024L1306",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1306"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2024/1306 of the European Parliament and of the Council of 29 April 2024 amending Directive 2013/34/EU as regards the time limits for the adoption of sustainability reporting standards for certain sectors and for certain third-country undertakings (Text with EEA relevance)",
+  "transposition_dates": [],
+  "transposition_deadlines": []
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32013L0036"
+  ],
+  "celex": "32024L1619",
+  "court_rulings": [],
+  "date_document": "2024-05-31",
+  "date_publication": "2024-06-19",
+  "date_signature": "2024-05-31",
+  "eli": "http://data.europa.eu/eli/dir/2024/1619/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2024-07-09",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1619",
+  "in_force": true,
+  "oj_ref": "OJ L, 2024/1619, 19.6.2024",
+  "other_application_dates": [
+   "2024-07-29"
+  ],
+  "partial_application_dates": [
+   "2024-07-29"
+  ],
+  "procedure_refs": [
+   "2021/0341(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32024L1619",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32024L1619",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-23T02:19:24Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1619"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2024/1619 of the European Parliament and of the Council of 31 May 2024 amending Directive 2013/36/EU as regards supervisory powers, sanctions, third-country branches, and environmental, social and governance risks (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2026-01-10",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2026-01-11",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2026-07-11",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2027-01-11",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2026-01-10",
+   "2026-01-11",
+   "2026-07-11",
+   "2027-01-11"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32015L0849",
+   "32019L1937"
+  ],
+  "celex": "32024L1640",
+  "court_rulings": [],
+  "date_document": "2024-05-31",
+  "date_publication": "2024-06-19",
+  "date_signature": "2024-05-31",
+  "eli": "http://data.europa.eu/eli/dir/2024/1640/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2024-07-09",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1640",
+  "in_force": true,
+  "oj_ref": "OJ L, 2024/1640, 19.6.2024",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2021/0250(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [
+   "32015L0849"
+  ],
+  "source": {
+   "identifier": "32024L1640",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32024L1640",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1640"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2024/1640 of the European Parliament and of the Council of 31 May 2024 on the mechanisms to be put in place by Member States for the prevention of the use of the financial system for the purposes of money laundering or terrorist financing, amending Directive(EU) 2019/1937, and amending and repealing Directive (EU) 2015/849 (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "78.1"
+    ],
+    "date": "2025-07-10",
+    "labels": []
+   },
+   {
+    "articles": [
+     "78.1"
+    ],
+    "date": "2026-07-10",
+    "labels": []
+   },
+   {
+    "articles": [
+     "78.1"
+    ],
+    "date": "2027-07-10",
+    "labels": []
+   },
+   {
+    "articles": [
+     "78.1"
+    ],
+    "date": "2029-07-10",
+    "labels": []
+   }
+  ],
+  "transposition_deadlines": [
+   "2025-07-10",
+   "2026-07-10",
+   "2027-07-10",
+   "2029-07-10"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32019L1153"
+  ],
+  "celex": "32024L1654",
+  "court_rulings": [],
+  "date_document": "2024-05-31",
+  "date_publication": "2024-06-19",
+  "date_signature": "2024-05-31",
+  "eli": "http://data.europa.eu/eli/dir/2024/1654/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2024-07-09",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1654",
+  "in_force": true,
+  "oj_ref": "OJ L, 2024/1654, 19.6.2024",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2021/0244(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32024L1654",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32024L1654",
+   "published": "2025-04-02",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1654"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2024/1654 of the European Parliament and of the Council of 31 May 2024 amending Directive (EU) 2019/1153 as regards access by competent authorities to centralised bank account registries through the interconnection system and technical measures to facilitate the use of transaction records",
+  "transposition_dates": [
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2027-07-10",
+    "labels": []
+   },
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2029-07-10",
+    "labels": []
+   }
+  ],
+  "transposition_deadlines": [
+   "2027-07-10",
+   "2029-07-10"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32025L0794",
+   "32026L0470"
+  ],
+  "amends": [
+   "32019L1937",
+   "32023R2859"
+  ],
+  "celex": "32024L1760",
+  "court_rulings": [],
+  "date_document": "2024-06-13",
+  "date_publication": "2024-07-05",
+  "date_signature": "2024-06-13",
+  "eli": "http://data.europa.eu/eli/dir/2024/1760/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2024-07-25",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1760",
+  "in_force": true,
+  "oj_ref": "OJ L, 2024/1760, 5.7.2024",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2022/0051(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32024L1760",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32024L1760",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1760"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2024/1760 of the European Parliament and of the Council of 13 June 2024 on corporate sustainability due diligence and amending Directive (EU) 2019/1937 and Regulation (EU) 2023/2859 (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "37.1"
+    ],
+    "date": "2028-07-26",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "37.1"
+    ],
+    "date": "2029-07-26",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2028-07-26",
+   "2029-07-26"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32009L0102",
+   "32017L1132"
+  ],
+  "celex": "32025L0025",
+  "court_rulings": [],
+  "date_document": "2024-12-19",
+  "date_publication": "2025-01-10",
+  "date_signature": "2024-12-19",
+  "eli": "http://data.europa.eu/eli/dir/2025/25/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2025-01-30",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L0025",
+  "in_force": true,
+  "oj_ref": "OJ L, 2025/25, 10.1.2025",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2023/0089(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32025L0025",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32025L0025",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L0025"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2025/25 of the European Parliament and of the Council of 19 December 2024 amending Directives 2009/102/EC and (EU) 2017/1132 as regards further expanding and upgrading the use of digital tools and processes in company law (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "4.1"
+    ],
+    "date": "2027-07-31",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "4.2"
+    ],
+    "date": "2028-07-31",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "4.3"
+    ],
+    "date": "2028-08-01",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "4.3"
+    ],
+    "date": "2029-08-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2027-07-31",
+   "2028-07-31",
+   "2028-08-01",
+   "2029-08-01"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32006L0112"
+  ],
+  "celex": "32025L0516",
+  "court_rulings": [],
+  "date_document": "2025-03-11",
+  "date_publication": "2025-03-25",
+  "date_signature": null,
+  "eli": "http://data.europa.eu/eli/dir/2025/516/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2025-04-14",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L0516",
+  "in_force": true,
+  "oj_ref": "OJ L, 2025/516, 25.3.2025",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2022/0407(CNS)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32025L0516",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32025L0516",
+   "published": "2025-04-14",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L0516"
+  },
+  "subjects": [],
+  "title": "Council Directive (EU) 2025/516 of 11 March 2025 amending Directive 2006/112/EC as regards VAT rules for the digital age",
+  "transposition_dates": [
+   {
+    "articles": [
+     "6.1"
+    ],
+    "date": "2025-04-14",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "6.2"
+    ],
+    "date": "2026-12-31",
+    "labels": [
+     "ADOPTION",
+     "AU+TARD"
+    ]
+   },
+   {
+    "articles": [
+     "6.2"
+    ],
+    "date": "2027-01-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "6.3"
+    ],
+    "date": "2028-06-30",
+    "labels": [
+     "ADOPTION",
+     "AU+TARD"
+    ]
+   },
+   {
+    "articles": [
+     "6.3"
+    ],
+    "date": "2028-07-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "6.4"
+    ],
+    "date": "2029-06-30",
+    "labels": [
+     "ADOPTION",
+     "AU+TARD"
+    ]
+   },
+   {
+    "articles": [
+     "6.4"
+    ],
+    "date": "2029-07-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "6.3"
+    ],
+    "date": "2030-01-01",
+    "labels": [
+     "APPLICATION",
+     "AU+TARD"
+    ]
+   },
+   {
+    "articles": [
+     "6.5"
+    ],
+    "date": "2030-06-30",
+    "labels": [
+     "ADOPTION",
+     "AU+TARD"
+    ]
+   },
+   {
+    "articles": [
+     "6.5"
+    ],
+    "date": "2030-07-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "6.5"
+    ],
+    "date": "2035-01-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2025-04-14",
+   "2026-12-31",
+   "2027-01-01",
+   "2028-06-30",
+   "2028-07-01",
+   "2029-06-30",
+   "2029-07-01",
+   "2030-01-01",
+   "2030-06-30",
+   "2030-07-01",
+   "2035-01-01"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32011L0016"
+  ],
+  "celex": "32025L0872",
+  "court_rulings": [],
+  "date_document": "2025-04-14",
+  "date_publication": "2025-05-06",
+  "date_signature": null,
+  "eli": "http://data.europa.eu/eli/dir/2025/872/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2025-05-07",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L0872",
+  "in_force": true,
+  "oj_ref": "OJ L, 2025/872, 6.5.2025",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2024/0276(CNS)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32025L0872",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32025L0872",
+   "published": "2025-05-07",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L0872"
+  },
+  "subjects": [],
+  "title": "Council Directive (EU) 2025/872 of 14 April 2025 amending Directive 2011/16/EU on administrative cooperation in the field of taxation",
+  "transposition_dates": [
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2025-12-31",
+    "labels": [
+     "ADOPTION",
+     "AU+TARD"
+    ]
+   },
+   {
+    "articles": [
+     "2.1"
+    ],
+    "date": "2026-01-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "2.3"
+    ],
+    "date": "2027-12-31",
+    "labels": [
+     "ADOPTION"
+    ]
+   },
+   {
+    "articles": [
+     "2.3"
+    ],
+    "date": "2028-01-01",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2025-12-31",
+   "2026-01-01",
+   "2027-12-31",
+   "2028-01-01"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32025L2206"
+  ],
+  "amends": [
+   "32018R1724",
+   "32022L2561"
+  ],
+  "celex": "32025L2205",
+  "court_rulings": [],
+  "date_document": "2025-10-22",
+  "date_publication": "2025-11-05",
+  "date_signature": "2025-10-22",
+  "eli": "http://data.europa.eu/eli/dir/2025/2205/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2025-11-25",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L2205",
+  "in_force": true,
+  "oj_ref": "OJ L, 2025/2205, 5.11.2025",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2023/0053(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [
+   "32006L0126",
+   "32012R0383"
+  ],
+  "source": {
+   "identifier": "32025L2205",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32025L2205",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025L2205"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2025/2205 of the European Parliament and of the Council of 22 October 2025 on driving licences, amending Regulation (EU) 2018/1724 of the European Parliament and of the Council and Directive (EU) 2022/2561 of the European Parliament and of the Council, and repealing Directive 2006/126/EC of the European Parliament and of the Council and Commission Regulation (EU) No 383/2012 (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "29.2"
+    ],
+    "date": "2027-11-26",
+    "labels": [
+     "ADOPTION",
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "29.1",
+     "29.3"
+    ],
+    "date": "2028-11-26",
+    "labels": [
+     "ADOPTION",
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "29.1"
+    ],
+    "date": "2029-11-26",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2027-11-26",
+   "2028-11-26",
+   "2029-11-26"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32006L0043",
+   "32013L0034",
+   "32022L2464",
+   "32024L1760"
+  ],
+  "celex": "32026L0470",
+  "court_rulings": [],
+  "date_document": "2026-02-24",
+  "date_publication": "2026-02-26",
+  "date_signature": "2026-02-24",
+  "eli": "http://data.europa.eu/eli/dir/2026/470/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2026-03-18",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L0470",
+  "in_force": true,
+  "oj_ref": "OJ L, 2026/470, 26.2.2026",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2025/0045(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32026L0470",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L0470",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L0470"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2026/470 of the European Parliament and of the Council of 24 February 2026 amending Directives 2006/43/EC, 2013/34/EU, (EU) 2022/2464 and (EU) 2024/1760 as regards certain corporate sustainability reporting requirements and certain corporate sustainability due diligence requirements (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "5.1"
+    ],
+    "date": "2027-03-19",
+    "labels": []
+   },
+   {
+    "articles": [
+     "5.1"
+    ],
+    "date": "2028-07-26",
+    "labels": []
+   }
+  ],
+  "transposition_deadlines": [
+   "2027-03-19",
+   "2028-07-26"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32014L0049"
+  ],
+  "celex": "32026L0804",
+  "court_rulings": [],
+  "date_document": "2026-03-30",
+  "date_publication": "2026-04-20",
+  "date_signature": "2026-03-30",
+  "eli": "http://data.europa.eu/eli/dir/2026/804/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2026-05-10",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L0804",
+  "in_force": true,
+  "oj_ref": "OJ L, 2026/804, 20.4.2026",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2023/0115(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32026L0804",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L0804",
+   "published": "2026-09-15",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L0804"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2026/804 of the European Parliament and of the Council of 30 March 2026 amending Directive 2014/49/EU as regards the scope of deposit protection, the use of deposit guarantee schemes funds, cross-border cooperation, and transparency (Text with EEA relevance)",
+  "transposition_dates": [
+   {
+    "articles": [
+     "3.1"
+    ],
+    "date": "2028-05-11",
+    "labels": [
+     "ADOPTION",
+     "APPLICATION"
+    ]
+   },
+   {
+    "articles": [
+     "3.1"
+    ],
+    "date": "2029-05-11",
+    "labels": [
+     "APPLICATION"
+    ]
+   }
+  ],
+  "transposition_deadlines": [
+   "2028-05-11",
+   "2029-05-11"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32017L1371"
+  ],
+  "celex": "32026L1021",
+  "court_rulings": [],
+  "date_document": "2026-04-29",
+  "date_publication": "2026-05-11",
+  "date_signature": "2026-04-29",
+  "eli": "http://data.europa.eu/eli/dir/2026/1021/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2026-05-31",
+  "entry_into_force_pending": false,
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L1021",
+  "in_force": true,
+  "oj_ref": "OJ L, 2026/1021, 11.5.2026",
+  "other_application_dates": [],
+  "partial_application_dates": [],
+  "procedure_refs": [
+   "2023/0135(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32026L1021",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L1021",
+   "published": "2026-06-01",
+   "retrieved_at": "2026-10-23T02:18:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L1021"
+  },
+  "subjects": [],
+  "title": "Directive (EU) 2026/1021 of the European Parliament and of the Council of 29 April 2026 on combatting corruption, replacing Council Framework Decision 2003/568/JHA and the Convention on the fight against corruption involving officials of the European Communities or officials of Member States of the European Union and amending Directive (EU) 2017/1371 of the European Parliament and of the Council",
+  "transposition_dates": [
+   {
+    "articles": [
+     "37.1"
+    ],
+    "date": "2028-06-01",
+    "labels": []
+   },
+   {
+    "articles": [
+     "37.1"
+    ],
+    "date": "2029-06-01",
+    "labels": []
+   }
+  ],
+  "transposition_deadlines": [
+   "2028-06-01",
+   "2029-06-01"
+  ]
+ }
+]

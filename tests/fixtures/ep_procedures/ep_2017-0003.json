@@ -1,0 +1,160 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2017-0003",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2017-0003-DEC-ADCP-2017-10-19",
+     "type": "Decision",
+     "activity_date": "2017-10-19",
+     "activity_id": "2017-0003-DEC-ADCP-2017-10-19",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/LIBE-PR-606011-DEPOT-2017-06-09",
+     "type": "Activity",
+     "activity_date": "2017-06-09",
+     "activity_id": "LIBE-PR-606011-DEPOT-2017-06-09",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-PR-606011"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2017-0003-DEC-PLEIN1-2017-10-25",
+     "type": "Decision",
+     "activity_date": "2017-10-25",
+     "activity_id": "2017-0003-DEC-PLEIN1-2017-10-25",
+     "had_activity_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    },
+    {
+     "id": "eli/dl/event/2017-0003-DEPOT-2017-10-23",
+     "type": "Activity",
+     "activity_date": "2017-10-23",
+     "activity_id": "2017-0003-DEPOT-2017-10-23",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-8-2017-0324"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/ITRE-PA-602722-DEPOT-2017-05-22",
+     "type": "Activity",
+     "activity_date": "2017-05-22",
+     "activity_id": "ITRE-PA-602722-DEPOT-2017-05-22",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/ITRE-PA-602722"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2017-0003-ANPRO-2017-02-16",
+     "type": "Activity",
+     "activity_date": "2017-02-16",
+     "activity_id": "2017-0003-ANPRO-2017-02-16",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/JURI-PA-605986-DEPOT-2017-06-06",
+     "type": "Activity",
+     "activity_date": "2017-06-06",
+     "activity_id": "JURI-PA-605986-DEPOT-2017-06-06",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/JURI-PA-605986"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/IMCO-PA-604857-DEPOT-2017-05-29",
+     "type": "Activity",
+     "activity_date": "2017-05-29",
+     "activity_id": "IMCO-PA-604857-DEPOT-2017-05-29",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/IMCO-PA-604857"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/LIBE-PR-606011",
+    "eli/dl/doc/JURI-PA-605986",
+    "eli/dl/doc/JURI-AD-605986",
+    "eli/dl/doc/ITRE-PA-602722",
+    "eli/dl/doc/A-8-2017-0324",
+    "eli/dl/doc/IMCO-AD-604857",
+    "eli/dl/doc/ITRE-AD-602722",
+    "eli/dl/doc/IMCO-PA-604857"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2017-0003-MAIN-LIBE",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/LIBE"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2017-0003-NMCP-96932-LIBE-2024-09-30",
+     "type": "Participation",
+     "activity_date": "2024-09-30",
+     "had_participant_person": [
+      "person/96932"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/LIBE",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 2102
+    }
+   ],
+   "process_id": "2017-0003",
+   "process_title": {
+    "et": "Eraelu austamine ja isikuandmete kaitse elektroonilise side puhul ning direktiivi 2002/58/EÜ kehtetuks tunnistamine (privaatsust ja elektroonilist sidet käsitlev määrus)",
+    "ga": "Meas ar an saol príobháideach agus cosaint sonraí pearsanta i gcumarsáid leictreonach agus lena n-aisghairtear Treoir 2002/58/CE (Rialachán maidir le Príobháideachas agus Cumarsáid Leictreonach)",
+    "sk": "Rešpektovanie súkromného života a ochrana osobných údajov v elektronických komunikáciách a zrušenie smernice 2002/58/ES (smernica o súkromí a elektronických komunikáciách)",
+    "ro": "Respectarea vieții private și protecția datelor cu caracter personal în comunicațiile electronice și abrogarea Directivei 2002/58/CE (Regulamentul privind viața privată și comunicațiile electronice)",
+    "da": "Respekt for privatlivets fred og beskyttelse af personoplysninger i forbindelse med elektronisk kommunikation og ophævelse af direktiv 2002/58/EF (forordning om databeskyttelse og elektronisk kommunikation)",
+    "el": "•\tΣεβασμός της ιδιωτικής ζωής και προστασία των δεδομένων προσωπικού χαρακτήρα στις ηλεκτρονικές επικοινωνίες και κατάργηση της οδηγίας 2002/58/ΕΚ (κανονισμός για την ιδιωτική ζωή και τις ηλεκτρονικές επικοινωνίες)",
+    "lt": "Teisė į privatų gyvenimą ir asmens duomenų apsauga elektroninių ryšių sektoriuje ir Direktyvos 2002/58/EB panaikinimas (Reglamentas dėl privatumo ir elektroninių ryšių)",
+    "pl": "Poszanowanie życia prywatnego oraz ochrona danych osobowych w łączności elektronicznej i uchylenie dyrektywy 2002/58/WE (rozporządzenie w sprawie prywatności i łączności elektronicznej)",
+    "de": "Achtung des Privatlebens und Schutz personenbezogener Daten in der elektronischen Kommunikation und Aufhebung der Richtlinie 2002/58/EG (Verordnung über Privatsphäre und elektronische Kommunikation)",
+    "es": "Respeto de la vida privada y protección de los datos personales en el sector de las comunicaciones electrónicas y derogación de la Directiva 2002/58/CE (Reglamento sobre la privacidad y las comunicaciones electrónicas)",
+    "sv": "Respekt för privatlivet och skydd av personuppgifter i samband med elektronisk kommunikation och upphävande av direktiv 2002/58/EG (förordning om integritet och elektronisk kommunikation)",
+    "fi": "Yksityiselämän kunnioitus ja henkilötietojen suoja sähköisessä viestinnässä ja direktiivin 2002/58/EY kumoaminen (sähköisen viestinnän tietosuoja-asetus)",
+    "en": "Respect for private life and the protection of personal data in electronic communications and repealing Directive 2002/58/EC (Regulation on Privacy and Electronic Communications)",
+    "sl": "Spoštovanje zasebnega življenja in varstva osebnih podatkov na področju elektronskih komunikacij ter razveljavitev Direktive 2002/58/ES (uredba o zasebnosti in elektronskih komunikacijah)",
+    "fr": "Respect de la vie privée et protection des données à caractère personnel dans les communications électroniques et abrogation de la directive 2002/58/CE (règlement \"vie privée et communications électroniques\")",
+    "mt": "Ir-rispett għall-ħajja privata u l-protezzjoni ta' data personali f'komunikazzjoni elettronika u t-tħassir tad-Direttiva 2002/58/KE (Regolament dwar il-Privatezza u l-Komunikazzjoni Elettronika)",
+    "bg": "Зачитането на личния живот и защитата на личните данни в електронните съобщения и отмяна на Директива 2002/58/ЕО (Регламент относно правото на неприкосновеност на личния живот и електронните съобщения)",
+    "nl": "De eerbiediging van het privéleven en de bescherming van persoonsgegeven in elektronische communicatie en intrekking van Richtlijn 2002/58/EG (richtlijn betreffende privacy en elektronische communicatie)",
+    "hr": "Poštovanje privatnog života i zaštita osobnih podataka u elektroničkim komunikacijama te stavljanje izvan snage Direktive 2002/58/EZ (Direktiva o privatnosti i elektroničkim komunikacijama)",
+    "cs": "Respektování soukromí a ochrana osobních údajů v odvětví elektronických komunikací a zrušení směrnice 2002/58/ES (regulace soukromí a elektronické komunikace)",
+    "pt": "Respeito pela vida privada e proteção dos dados pessoais nas comunicações eletrónicas e revogação da Diretiva 2002/58/CE (Regulamento relativo à privacidade e às comunicações eletrónicas)",
+    "hu": "Az elektronikus hírközlés során a magánélet tiszteletben tartása és a személyes adatok védelme, valamint a 2002/58/EK irányelv hatályon kívül helyezése (elektronikus hírközlési adatvédelmi rendelet)",
+    "it": "Rispetto della vita privata e tutela dei dati personali nelle comunicazioni elettroniche e abrogazione della direttiva 2002/58/CE (regolamento sulla vita privata e le comunicazioni elettroniche)",
+    "lv": "Priekšlikums par privātās dzīves neaizskaramību un personas datu aizsardzību elektronisko sakaru jomā un ar ko atceļ Direktīvu 2002/58/EK (Privātuma un elektronisko sakaru regula)"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "label": "2017/0003(COD)",
+   "identifierYear": "2017"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

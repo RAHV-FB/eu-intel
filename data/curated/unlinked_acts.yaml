@@ -1,0 +1,59 @@
+# Acts whose own text cites a step of a procedure, where no official record we hold links the act to that
+# procedure.
+#
+# The build links an act to a file only through the official records: Cellar's procedure links, or the Legislative
+# Observatory's list of final acts. When neither has the act, the file reads as still awaiting the Council's decision,
+# although an act citing the file's steps may be in force. An entry here does not link the act: the file's status
+# names the act and says what its text cites, and that the official records do not link the two. The file is not
+# shown as still being decided, and no "no recorded update" line is shown for it. Its timeline, dates and acts are
+# unchanged.
+#
+# An entry applies only while the file has no act in our data and its status still awaits a decision, and only if the
+# file records Parliament's opinion on the day the act's citation gives (else a warning is logged and it is ignored).
+#
+# Fields:
+#   procedure   the procedure reference, e.g. "2025/0806(CNS)"
+#   celex       the act
+#   label       the act's number as its title gives it, e.g. "Council Regulation (EU) 2026/415"
+#   title       the act's official title, verbatim
+#   date        the date the act bears
+#   published   the date of the Official Journal issue that publishes it, as the act's header gives it
+#   opinion     the date of Parliament's opinion that the act cites
+#   quote       the act's citation of Parliament's opinion and its footnote, verbatim
+#   also_cites  the act's other citations of the file's documents and their footnotes, verbatim
+#   initiative  optional; the text the act cites that the file's proposal step transmitted, as the status names it
+#   document    with `initiative`: the document of the file's proposal step that transmitted it (the status names the
+#               text only if the file's proposal step cites this document)
+#   not_linked  what the official records say of the act and the procedure
+#   reviewed    date of the check
+#
+# Last review: 2026-10-23. Checked: every file whose status rested on the Legislative Train's "Adopted" with no act
+# linked (one: 2025/0806(CNS)).
+
+- procedure: "2025/0806(CNS)"
+  celex: "32026R0415"
+  label: "Council Regulation (EU) 2026/415"
+  title: >-
+    Council Regulation (EU) 2026/415 of 16 December 2025 amending Regulation (EC) No 2533/98 concerning the
+    collection of statistical information by the European Central Bank
+  date: "2025-12-16"
+  published: "2026-02-20"  # "OJ L series 2026/415 20.2.2026"
+  opinion: "2025-11-26"  # the file's "Decision by Parliament" of 26/11/2025, T10-0297/2025
+  quote: "Having regard to the Opinion of the European Parliament (2), ... (2) Opinion of 26 November 2025"
+  also_cites:
+    # Cellar: OJ C/2025/3224 is 52025HB0017, "Recommendation for a Council Regulation amending Regulation (EC)
+    # No 2533/98 ... (ECB/2025/17) (submitted by the European Central Bank to the Council)"
+    - "Having regard to the Recommendation of the European Central Bank (1), ... (1) OJ C, C/2025/3224, 17.6.2025"
+    # Cellar: OJ C/2025/6326 is 32025A06326, the Commission Opinion of 5 November 2025, C(2025)7526, which the
+    # Legislative Observatory lists for the file
+    - "Having regard to the Opinion of the European Commission (3), ... (3) OJ C, C/2025/6326, 19.11.2025"
+  initiative: "Recommendation of the European Central Bank ECB/2025/17"
+  # the file's "Legislative proposal published" of 18/06/2025; ST 9737/25 is the cover note of the President of the
+  # ECB, "Subject: Recommendation for a Council Regulation amending Regulation (EC) No 2533/98 concerning the
+  # collection of statistical information by the European Central Bank (ECB/2025/17)"
+  document: "09737/2025"
+  not_linked: >-
+    Cellar records no procedure for the act (no dossier link; checked by SPARQL 2026-10-23); the Legislative
+    Observatory gives the file's stage as "Awaiting final decision" and lists no final act; the EP's procedure
+    record lists none.
+  reviewed: "2026-10-23"

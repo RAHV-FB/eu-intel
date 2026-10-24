@@ -1,0 +1,457 @@
+/* Homepage: home-hero, editorial selection, sourced lists, topics. */
+
+/* ---------- home-hero ---------- */
+.home-hero {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding-block: var(--sp-7) var(--sp-6);
+}
+
+.home-hero__title {
+  font-size: clamp(2rem, 1.2rem + 3.6vw, var(--fs-3xl));
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: var(--navy);
+  max-width: 30ch;
+  margin-bottom: var(--sp-4);
+}
+
+.home-hero__lead {
+  font-size: var(--fs-md);
+  color: var(--text-2);
+  max-width: 40rem;
+  margin-bottom: var(--sp-2);
+}
+
+/* the site is not an EU institution's: said next to what it does, not only in the footer */
+.home-hero__independent {
+  max-width: 40rem;
+  margin: 0 0 var(--sp-5);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-2);
+}
+
+.home-hero__guide {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.home-hero__search {
+  max-width: 44rem;
+}
+
+.home-hero__examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+  max-width: 48rem;
+}
+
+/* slightly narrower chips, so that from tablet width up the examples fit on one line (no chip left alone on a second) */
+.home-hero__examples .lx-chip {
+  padding-inline: 0.625rem;
+}
+
+.home-hero__try {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  margin-right: var(--sp-1);
+}
+
+.home-hero__examples ul {
+  display: contents;
+  list-style: none;
+}
+
+.home-hero__fresh {
+  margin: var(--sp-5) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.home-hero__fresh-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--st-done);
+  margin-right: var(--sp-2);
+  vertical-align: 1px;
+}
+
+@media (min-width: 48rem) {
+  .home-hero {
+    padding-block: var(--sp-8) var(--sp-7);
+  }
+}
+
+/* ---------- featured cards ---------- */
+.fcards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* a card never grows wider than the screen, e.g. with larger text spacing */
+  gap: var(--sp-4);
+}
+
+@media (min-width: 48rem) {
+  .fcards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 72rem) {
+  .fcards--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.fcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4);
+  transition: border-color var(--t-fast);
+}
+
+@media (min-width: 48rem) {
+  .fcard {
+    padding: var(--sp-5);
+  }
+}
+
+.fcard:hover {
+  border-color: var(--border-strong);
+}
+
+.fcard__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+/* a long stage badge ("Negotiations with the Council") wraps instead of widening the card on narrow screens */
+.fcard__top .badge {
+  white-space: normal;
+}
+
+.fcard__topic {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--blue-muted);
+  letter-spacing: 0.02em;
+}
+
+.fcard__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.375rem;
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-tight);
+}
+
+.fcard__title a {
+  color: var(--navy);
+  text-decoration: none;
+}
+
+.fcard__title a:hover {
+  color: var(--eu-blue);
+  text-decoration: underline;
+}
+
+.fcard__what {
+  margin: 0;
+  color: var(--text);
+}
+
+.fcard__facts {
+  margin: 0;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.fcard__facts dt {
+  font-weight: var(--fw-semibold);
+  color: var(--text-2);
+  margin-bottom: 2px;
+}
+
+.fcard__facts dd {
+  margin: 0;
+  line-height: var(--lh-snug);
+}
+
+.fcard__facts time {
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.fcard__foot {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
+.fcard__more {
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+}
+
+.fcard__more:hover {
+  text-decoration: underline;
+}
+
+/* ---------- sourced lists ---------- */
+.hl-grid {
+  display: grid;
+  gap: var(--sp-6) var(--sp-6);
+}
+
+@media (min-width: 48rem) {
+  .hl-grid {
+    /* fills the row whether 2, 3 or more lists have items */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  }
+}
+
+.hl {
+  min-width: 0;
+}
+
+.hl__heading {
+  font-size: var(--fs-md);
+  margin: 0 0 var(--sp-1);
+}
+
+.hl__desc {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  line-height: var(--lh-snug);
+}
+
+.hl__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 2px solid var(--navy);
+}
+
+.hl__row {
+  display: grid;
+  grid-template-columns: 6.25rem minmax(0, 1fr);
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.hl__date {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+
+.hl__title {
+  color: var(--navy);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+a.hl__title:hover {
+  color: var(--eu-blue);
+  text-decoration: underline;
+}
+
+.hl__sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--sp-2);
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  line-height: var(--lh-snug);
+}
+
+.hl__badge {
+  font-weight: var(--fw-semibold);
+  color: var(--text-2);
+}
+
+.hl__badge::first-letter {
+  text-transform: uppercase;
+}
+
+/* on phones the title has the full width, and the date starts the line under it */
+@media (max-width: 29.99rem) {
+  .hl__row {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'title title'
+      'date sub';
+    gap: 2px var(--sp-2);
+  }
+  .hl__body {
+    display: contents;
+  }
+  .hl__title {
+    grid-area: title;
+  }
+  .hl__date {
+    grid-area: date;
+    padding-top: 0;
+    margin-top: 2px;
+  }
+  .hl__sub {
+    grid-area: sub;
+  }
+}
+
+@media (max-width: 39.99rem) {
+  .hl--preview .hl__row:nth-child(n + 4) {
+    display: none;
+  }
+}
+
+.hl-empty {
+  margin: var(--sp-6) 0 0;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.hl-empty strong {
+  color: var(--text-2);
+  font-weight: var(--fw-semibold);
+}
+
+.hl__empty {
+  margin: 0;
+  padding: var(--sp-3) 0;
+  border-top: 2px solid var(--border-strong);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.hl__more {
+  display: inline-block;
+  margin-top: var(--sp-3);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+}
+
+.hl__more:hover {
+  text-decoration: underline;
+}
+
+/* ---------- topic-grid ---------- */
+.topic-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+@media (min-width: 40rem) {
+  .topic-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .topic-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.topic-grid__link {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px var(--sp-3);
+  height: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+
+.topic-grid__link:hover {
+  background: var(--blue-paler);
+  border-color: var(--blue-muted);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.topic-grid__label {
+  font-weight: var(--fw-semibold);
+  color: var(--eu-blue);
+}
+
+.topic-grid__count {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.topic-grid__desc {
+  grid-column: 1 / -1;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: var(--lh-snug);
+}
+
+/* ---------- guide teaser ---------- */
+.home__guide {
+  max-width: 46rem;
+  padding: var(--sp-5);
+  background: var(--blue-paler);
+  border-radius: var(--radius-lg);
+}
+
+.home__guide h2 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  color: var(--text);
+  padding-bottom: 0;
+  border-bottom: 0;
+  margin-bottom: var(--sp-2);
+}
+
+/* While home.json loads, the loading box keeps the place of the sections it is replaced by, so that the guide
+   teaser below does not jump down (layout shift); its text stays at the top, in view. */
+.home .state--loading {
+  min-height: 70vh;
+  align-items: flex-start;
+}
+
+.home__guide p {
+  color: var(--text-2);
+}

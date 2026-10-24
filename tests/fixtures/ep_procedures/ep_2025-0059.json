@@ -1,0 +1,513 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2025-0059",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/MTG-PL-2026-06-16-PVCRE-ITM-11",
+     "type": "Activity",
+     "activity_date": "2026-06-16",
+     "activity_id": "MTG-PL-2026-06-16-PVCRE-ITM-11",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0048",
+      "eli/dl/doc/C-10-2025-0047"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-10-2026-06-16-ITM-011",
+      "eli/dl/doc/PV-10-2026-06-16-ITM-011"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2025-0059-DEC-VOAGT-2026-06-15",
+     "type": "Decision",
+     "activity_date": "2026-06-15",
+     "activity_id": "2025-0059-DEC-VOAGT-2026-06-15",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/LIBE-AG-790008"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_APPROVE_PROVISIONAL_AGREEMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-06-17-PVCRE-ITM-9-2",
+     "type": "Activity",
+     "activity_date": "2026-06-17",
+     "activity_id": "MTG-PL-2026-06-17-PVCRE-ITM-9-2",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-10-2026-06-17-ITM-009-02",
+      "eli/dl/doc/PV-10-2026-06-17-ITM-009-02"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2025-0059-DEC-PLEIN1-2026-03-26",
+     "type": "Decision",
+     "activity_date": "2026-03-26",
+     "activity_id": "2025-0059-DEC-PLEIN1-2026-03-26",
+     "had_activity_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    },
+    {
+     "id": "eli/dl/event/2025-0059-PUB-2026-10-15",
+     "type": "Activity",
+     "activity_date": "2026-10-15",
+     "activity_id": "2025-0059-PUB-2026-10-15",
+     "had_activity_type": "def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL"
+    },
+    {
+     "id": "eli/dl/event/2025-0059-DEC-DCPL-2026-06-17",
+     "type": "Decision",
+     "activity_date": "2026-06-17",
+     "activity_id": "2025-0059-DEC-DCPL-2026-06-17",
+     "had_activity_type": "def/ep-activities/PLENARY_ADOPT_POSITION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0059-SIGN-2026-10-07",
+     "type": "Activity",
+     "activity_date": "2026-10-07",
+     "activity_id": "2025-0059-SIGN-2026-10-07",
+     "had_activity_type": "def/ep-activities/SIGNATURE"
+    },
+    {
+     "id": "eli/dl/event/LIBE-AM-781171-DEPOT-2025-12-01",
+     "type": "Activity",
+     "activity_date": "2025-12-01",
+     "activity_id": "LIBE-AM-781171-DEPOT-2025-12-01",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-AM-781171"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0059-MEET-TRI1-2026-03-26",
+     "type": "Activity",
+     "activity_date": "2026-03-26",
+     "activity_id": "2025-0059-MEET-TRI1-2026-03-26",
+     "had_activity_type": "def/ep-activities/INTERINSTITUTIONAL_NEGOTIATION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0059-DEPOT-2026-03-10",
+     "type": "Activity",
+     "activity_date": "2026-03-10",
+     "activity_id": "2025-0059-DEPOT-2026-03-10",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0048"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0059-MEET-TRI1-2026-06-01",
+     "type": "Activity",
+     "activity_date": "2026-06-01",
+     "activity_id": "2025-0059-MEET-TRI1-2026-06-01",
+     "had_activity_type": "def/ep-activities/INTERINSTITUTIONAL_NEGOTIATION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0059-MEET-TRI1-2026-05-20",
+     "type": "Activity",
+     "activity_date": "2026-05-20",
+     "activity_id": "2025-0059-MEET-TRI1-2026-05-20",
+     "had_activity_type": "def/ep-activities/INTERINSTITUTIONAL_NEGOTIATION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0059-DEC-ADCP-2026-03-09",
+     "type": "Decision",
+     "activity_date": "2026-03-09",
+     "activity_id": "2025-0059-DEC-ADCP-2026-03-09",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/LIBE-AM-781176-DEPOT-2025-12-01",
+     "type": "Activity",
+     "activity_date": "2025-12-01",
+     "activity_id": "LIBE-AM-781176-DEPOT-2025-12-01",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-AM-781176"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/LIBE-AM-781173-DEPOT-2025-12-01",
+     "type": "Activity",
+     "activity_date": "2025-12-01",
+     "activity_id": "LIBE-AM-781173-DEPOT-2025-12-01",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-AM-781173"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-10-2026-0048-AM-001-001-DEPOT-2026-06-15",
+     "type": "Activity",
+     "activity_date": "2026-06-15",
+     "activity_id": "A-10-2026-0048-AM-001-001-DEPOT-2026-06-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0048-AM-001-001"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-10-2026-0048-AM-003-003-DEPOT-2026-06-15",
+     "type": "Activity",
+     "activity_date": "2026-06-15",
+     "activity_id": "A-10-2026-0048-AM-003-003-DEPOT-2026-06-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0048-AM-003-003"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/A-10-2026-0048-AM-002-002-DEPOT-2026-06-15",
+     "type": "Activity",
+     "activity_date": "2026-06-15",
+     "activity_id": "A-10-2026-0048-AM-002-002-DEPOT-2026-06-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0048-AM-002-002"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2025-0059-MEET-TRI1-2026-04-22",
+     "type": "Activity",
+     "activity_date": "2026-04-22",
+     "activity_id": "2025-0059-MEET-TRI1-2026-04-22",
+     "had_activity_type": "def/ep-activities/INTERINSTITUTIONAL_NEGOTIATION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-06-17-VOT-ITM-992855",
+     "type": "Activity",
+     "activity_date": "2026-06-17",
+     "activity_id": "MTG-PL-2026-06-17-VOT-ITM-992855",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0048"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-10-2026-06-17-VOT-ITM-002"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2025-0059-ANPRO-2025-06-16",
+     "type": "Activity",
+     "activity_date": "2025-06-16",
+     "activity_id": "2025-0059-ANPRO-2025-06-16",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/LIBE-AM-781175-DEPOT-2025-12-01",
+     "type": "Activity",
+     "activity_date": "2025-12-01",
+     "activity_id": "LIBE-AM-781175-DEPOT-2025-12-01",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-AM-781175"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/LIBE-PR-779352-DEPOT-2025-10-30",
+     "type": "Activity",
+     "activity_date": "2025-10-30",
+     "activity_id": "LIBE-PR-779352-DEPOT-2025-10-30",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-PR-779352"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/LIBE-AM-781174-DEPOT-2025-12-01",
+     "type": "Activity",
+     "activity_date": "2025-12-01",
+     "activity_id": "LIBE-AM-781174-DEPOT-2025-12-01",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-AM-781174"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/LIBE-AM-781178-DEPOT-2025-12-01",
+     "type": "Activity",
+     "activity_date": "2025-12-01",
+     "activity_id": "LIBE-AM-781178-DEPOT-2025-12-01",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-AM-781178"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/LIBE-AM-781177-DEPOT-2025-12-01",
+     "type": "Activity",
+     "activity_date": "2025-12-01",
+     "activity_id": "LIBE-AM-781177-DEPOT-2025-12-01",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-AM-781177"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-03-26-PVCRE-ITM-7-1",
+     "type": "Activity",
+     "activity_date": "2026-03-26",
+     "activity_id": "MTG-PL-2026-03-26-PVCRE-ITM-7-1",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-10-2026-03-26-ITM-007-01",
+      "eli/dl/doc/CRE-10-2026-03-26-ITM-007-01"
+     ]
+    },
+    {
+     "id": "eli/dl/event/A-10-2026-0048-AM-004-004-DEPOT-2026-06-15",
+     "type": "Activity",
+     "activity_date": "2026-06-15",
+     "activity_id": "A-10-2026-0048-AM-004-004-DEPOT-2026-06-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0048-AM-004-004"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-03-26-VOT-ITM-987075",
+     "type": "Activity",
+     "activity_date": "2026-03-26",
+     "activity_id": "MTG-PL-2026-03-26-VOT-ITM-987075",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2026-0048"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-10-2026-03-26-VOT-ITM-001"
+     ]
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/SP-2026-07-27-TA-10-2026-0207",
+    "eli/dl/doc/LIBE-AG-790008",
+    "eli/dl/doc/C-10-2026-0246",
+    "eli/dl/doc/LIBE-PR-779352",
+    "eli/dl/doc/A-10-2026-0048"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2025-0059-NMSR-197534-2025-05-05",
+     "type": "Participation",
+     "activity_date": "2025-05-05",
+     "had_participant_person": [
+      "person/197534"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 2101
+    },
+    {
+     "id": "eli/dl/participation/2025-0059-NMSR-256957-2025-04-30",
+     "type": "Participation",
+     "activity_date": "2025-04-30",
+     "had_participant_person": [
+      "person/256957"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ESN",
+     "precedenceOrder": 2108
+    },
+    {
+     "id": "eli/dl/participation/2025-0059-MAIN-LIBE",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/LIBE"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2025-0059-NMCP-197781-LIBE-2025-05-12",
+     "type": "Participation",
+     "activity_date": "2025-05-12",
+     "had_participant_person": [
+      "person/197781"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/LIBE",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 2105
+    },
+    {
+     "id": "eli/dl/participation/2025-0059-NMSR-257012-2025-05-05",
+     "type": "Participation",
+     "activity_date": "2025-05-05",
+     "had_participant_person": [
+      "person/257012"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 2107
+    },
+    {
+     "id": "eli/dl/participation/2025-0059-OAB-BUDG",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/BUDG"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_BUDGETARY_ASSESSMENT"
+    },
+    {
+     "id": "eli/dl/participation/2025-0059-NMSR-192254-2025-05-02",
+     "type": "Participation",
+     "activity_date": "2025-05-02",
+     "had_participant_person": [
+      "person/192254"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PFE",
+     "precedenceOrder": 2103
+    },
+    {
+     "id": "eli/dl/participation/2025-0059-NMSR-123562-2025-04-30",
+     "type": "Participation",
+     "activity_date": "2025-04-30",
+     "had_participant_person": [
+      "person/123562"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 2104
+    },
+    {
+     "id": "eli/dl/participation/2025-0059-NMSR-256915-2025-04-30",
+     "type": "Participation",
+     "activity_date": "2025-04-30",
+     "had_participant_person": [
+      "person/256915"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 2106
+    },
+    {
+     "id": "eli/dl/participation/2025-0059-NMSR-256899-2025-04-30",
+     "type": "Participation",
+     "activity_date": "2025-04-30",
+     "had_participant_person": [
+      "person/256899"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 2102
+    }
+   ],
+   "process_id": "2025-0059",
+   "process_title": {
+    "fi": "Yhteisen järjestelmän perustaminen unionissa laittomasti oleskelevien kolmansien maiden kansalaisten palauttamiseksi ja Euroopan parlamentin ja neuvoston direktiivin 2008/115/EY, neuvoston direktiivin 2001/40/EY ja neuvoston päätöksen 2004/191/EY kumoaminen",
+    "da": "Et fælles system for tilbagesendelse af tredjelandsstatsborgere med ulovligt ophold i Unionen og ophævelse af Europa-Parlamentets og Rådets direktiv 2008/115/EF, Rådets direktiv 2001/40/EF og Rådets afgørelse 2004/191/EF",
+    "en": "Establishing a common system for the return of third-country nationals staying illegally in the Union, and repealing Directive 2008/115/EC of the European Parliament and the Council, Council Directive 2001/40/EC and Council Decision 2004/191/EC",
+    "nl": "Vaststelling van een gemeenschappelijk systeem voor de terugkeer van illegaal in de Unie verblijvende onderdanen van derde landen en intrekking van Richtlijn 2008/115/EG van het Europees Parlement en de Raad, Richtlijn 2001/40/EG van de Raad en Beschikking 2004/191/EG van de Raad",
+    "it": "Istituzione di un sistema comune per il rimpatrio dei cittadini di paesi terzi il cui soggiorno nell'Unione è irregolare e abrogazione della direttiva 2008/115/CE del Parlamento europeo e del Consiglio, della direttiva 2001/40/CE del Consiglio e della decisione 2004/191/CE del Consiglio",
+    "lt": "Bendros neteisėtai Sąjungoje esančių trečiųjų šalių piliečių grąžinimo sistemos nustatymas ir Europos Parlamento ir Tarybos direktyvos 2008/115/EB, Tarybos direktyvos 2001/40/EB ir Tarybos sprendimo 2004/191/EB panaikinimas",
+    "es": "Establecimiento de un sistema común para el retorno de los nacionales de terceros países en situación irregular en la Unión y derogación de la Directiva 2008/115/CE del Parlamento Europeo y del Consejo, la Directiva 2001/40/CE del Consejo y la Decisión 2004/191/CE del Consejo",
+    "cs": "Zavedení společného systému navracení státních příslušníků třetích zemí neoprávněně pobývajících v Unii a zrušení směrnice Evropského parlamentu a Rady 2008/115/ES, směrnice Rady 2001/40/ES a rozhodnutí Rady 2004/191/ES\n",
+    "sl": "Vzpostavitev skupnega sistema za vračanje državljanov tretjih držav, ki nezakonito prebivajo v Uniji, ter razveljavitev Direktive 2008/115/ES Evropskega parlamenta in Sveta, Direktive Sveta 2001/40/ES in Odločbe Sveta 2004/191/ES",
+    "hu": "Az Unióban jogellenesen tartózkodó harmadik országbeli állampolgárok visszaküldésére vonatkozó közös rendszer létrehozása, valamint a 2008/115/EK európai parlamenti és tanácsi irányelv, a 2001/40/EK tanácsi irányelv és a 2004/191/EK tanácsi határozat hatályon kívül helyezése",
+    "lv": "Kopīgas sistēmas izveidošana to trešo valstu valstspiederīgo atgriešanai, kuri Savienībā uzturas nelikumīgi, un Eiropas Parlamenta un Padomes Direktīvas 2008/115/EK, Padomes Direktīvas 2001/40/EK un Padomes Lēmuma 2004/191/EK atcelšana",
+    "pl": "Ustanowienie wspólnego systemu powrotów obywateli państw trzecich nielegalnie przebywających w Unii oraz uchylenie dyrektywy Parlamentu Europejskiego i Rady 2008/115/WE, dyrektywy Rady 2001/40/WE i decyzji Rady 2004/191/WE",
+    "pt": "Estabelecimento de um sistema comum de regresso dos nacionais de países terceiros em situação irregular na União e revogação da Diretiva 2008/115/CE do Parlamento Europeu e do Conselho, da Diretiva 2001/40/CE do Conselho e da Decisão 2004/191/CE do Conselho",
+    "sv": "Inrättande av ett gemensamt system för återvändande av tredjelandsmedborgare som vistas olagligt i unionen och upphävande av Europaparlamentets och rådets direktiv 2008/115/EG, rådets direktiv 2001/40/EG och rådets beslut 2004/191/EG",
+    "bg": "Създаване на обща система за връщане на граждани на трети страни, които пребивават незаконно в Съюза, и отмяна на Директива 2008/115/ЕО на Европейския парламент и на Съвета, Директива 2001/40/ЕО на Съвета и Решение № 2004/191/ЕО на Съвета",
+    "sk": "Vytvorenie spoločného systému pre návrat štátnych príslušníkov tretích krajín, ktorí sa v Únii zdržiavajú neoprávnene, a zrušenie smernice Európskeho parlamentu a Rady 2008/115/ES, smernice Rady 2001/40/ES a rozhodnutia Rady 2004/191/ES",
+    "et": "Ühise süsteemi loomine liidus ebaseaduslikult viibivate kolmandate riikide kodanike tagasisaatmiseks ning Euroopa Parlamendi ja nõukogu direktiivi 2008/115/EÜ, nõukogu direktiivi 2001/40/EÜ ja nõukogu otsuse 2004/191/EÜ kehtetuks tunnistamine",
+    "de": "Einrichtung eines gemeinsamen Systems für die Rückkehr von illegal in der Union aufhältigen Drittstaatsangehörigen und Aufhebung der Richtlinie 2008/115/EG des Europäischen Parlaments und des Rates, der Richtlinie 2001/40/EG des Rates und der Entscheidung 2004/191/EG des Rates",
+    "hr": "Uspostava zajedničkog sustava za vraćanje državljana trećih zemalja koji nezakonito borave u Uniji te stavljanje izvan snage Direktive 2008/115/EZ Europskog parlamenta i Vijeća, Direktive Vijeća 2001/40/EZ i Odluke Vijeća 2004/191/EZ",
+    "ga": "Comhchóras a bhunú chun náisiúnaigh tríú tír atá ag fanacht go neamhdhleathach san Aontas a chur ar ais, agus Treoir 2008/115/CE ó Pharlaimint na hEorpa agus ón gComhairle, Treoir 2001/40/CE ón gComhairle agus Cinneadh 2004/191/CE ón gComhairle a aisghairm",
+    "ro": "Stabilirea unui sistem comun de returnare a resortisanților țărilor terțe cu ședere ilegală în Uniune și abrogarea Directivei 2008/115/CE a Parlamentului European și a Consiliului, a Directivei 2001/40/CE a Consiliului și a Deciziei 2004/191/CE a Consiliului",
+    "mt": "L-istabbiliment ta’ sistema komuni għar-ritorn ta’ ċittadini ta’ pajjiżi terzi li jkunu qegħdin illegalment fl-Unjoni, u t-tħassir tad-Direttiva 2008/115/KE tal-Parlament Ewropew u tal-Kunsill, tad-Direttiva tal-Kunsill 2001/40/KE u tad-Deċiżjoni tal-Kunsill 2004/191/KE",
+    "fr": "Établissement d'un système commun en matière de retour des ressortissants de pays tiers en séjour irrégulier dans l'Union, et abrogation de la directive 2008/115/CE du Parlement européen et du Conseil, de la directive 2001/40/CE du Conseil et de la décision 2004/191/CE du Conseil",
+    "el": "Θέσπιση κοινού συστήματος επιστροφής των υπηκόων τρίτων χωρών που διαμένουν παράνομα στην Ένωση και κατάργηση της οδηγίας 2008/115/ΕΚ του Ευρωπαϊκού Κοινοβουλίου και του Συμβουλίου, της οδηγίας 2001/40/EΚ του Συμβουλίου και της απόφασης 2004/191/ΕΚ του Συμβουλίου"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "was_scheduled_in": [
+    {
+     "id": "eli/dl/event/MTG-PL-2026-06-17-OJ-ITM-V-82",
+     "type": "ForeseenActivity",
+     "activity_date": "2026-06-17",
+     "activity_id": "MTG-PL-2026-06-17-OJ-ITM-V-82",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-10-2026-06-17"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "V-82"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-06-16-OJ-ITM-D-82",
+     "type": "ForeseenActivity",
+     "activity_date": "2026-06-16",
+     "activity_id": "MTG-PL-2026-06-16-OJ-ITM-D-82",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-10-2026-06-16"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "D-82"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2026-03-26-OJ-ITM-V-50",
+     "type": "ForeseenActivity",
+     "activity_date": "2026-03-26",
+     "activity_id": "MTG-PL-2026-03-26-OJ-ITM-V-50",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-10-2026-03-26"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "V-50"
+    }
+   ],
+   "label": "2025/0059(COD)",
+   "identifierYear": "2025"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

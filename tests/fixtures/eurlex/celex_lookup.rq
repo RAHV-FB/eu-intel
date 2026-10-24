@@ -1,0 +1,7 @@
+PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+PREFIX ann: <http://publications.europa.eu/ontology/annotation#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX cmr: <http://publications.europa.eu/ontology/cdm/cmr#>
+SELECT DISTINCT ?w ?celex WHERE { VALUES ?celex { "32024R1689"^^xsd:string "32016R0679"^^xsd:string "32022L2464"^^xsd:string "32022L2555"^^xsd:string "32017R0745"^^xsd:string "32024D0592"^^xsd:string "32023R1781"^^xsd:string "32019D1096"^^xsd:string "32020R0127"^^xsd:string "32016R2031"^^xsd:string "32022L2041"^^xsd:string "32020R1055"^^xsd:string "32019R1157"^^xsd:string "32017R1001"^^xsd:string } ?w cdm:resource_legal_id_celex ?celex }

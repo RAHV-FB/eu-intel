@@ -1,0 +1,172 @@
+{
+ "memberState": [
+  {
+   "language": "EN",
+   "key": "AT",
+   "title": "Austria",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "BE",
+   "title": "Belgium",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "BG",
+   "title": "Bulgaria",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "CY",
+   "title": "Cyprus",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "CZ",
+   "title": "Czechia",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "DE",
+   "title": "Germany",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "DK",
+   "title": "Denmark",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "EE",
+   "title": "Estonia",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "EL",
+   "title": "Greece",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "ES",
+   "title": "Spain",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "FI",
+   "title": "Finland",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "FR",
+   "title": "France",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "HR",
+   "title": "Croatia",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "HU",
+   "title": "Hungary",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "IE",
+   "title": "Ireland",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "IT",
+   "title": "Italy",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "LT",
+   "title": "Lithuania",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "LU",
+   "title": "Luxembourg",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "LV",
+   "title": "Latvia",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "MT",
+   "title": "Malta",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "NL",
+   "title": "Netherlands",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "PL",
+   "title": "Poland",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "PT",
+   "title": "Portugal",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "RO",
+   "title": "Romania",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "SE",
+   "title": "Sweden",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "SI",
+   "title": "Slovenia",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "SK",
+   "title": "Slovakia",
+   "active": true
+  },
+  {
+   "language": "EN",
+   "key": "UK",
+   "title": "United Kingdom",
+   "active": true
+  }
+ ]
+}

@@ -1,0 +1,132 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2020-07-08/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: ; others keep their first 3 ids (published counts unchanged).",
+ "decisions": {
+  "data": [
+   {
+    "activity_date": "2020-07-08",
+    "activity_id": "MTG-PL-2020-07-08-DEC-115855",
+    "activity_label": {
+     "en": "A9-0116/2020 - Ismail Ertug - Am 12PC2= 23= 08/07/2020 23:08:07.468",
+     "fr": "A9-0116/2020 - Ismail Ertug - Am 12PC2= 23="
+    },
+    "activity_start_date": "2020-07-09T00:08:07+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197935",
+     "person/197631",
+     "person/197763"
+    ],
+    "had_voter_against": [
+     "person/101585",
+     "person/190464",
+     "person/197790"
+    ],
+    "had_voter_favor": [
+     "person/197649",
+     "person/197839",
+     "person/124970"
+    ],
+    "had_voter_intended_against": [
+     "person/197533"
+    ],
+    "had_voter_intended_favor": [
+     "person/97968"
+    ],
+    "id": "eli/dl/event/MTG-PL-2020-07-08-DEC-115855",
+    "notation_votingId": "115855",
+    "number_of_votes_abstention": 8,
+    "number_of_votes_against": 513,
+    "number_of_votes_favor": 168,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2020-07-08-RCV-ITM-117"
+    ],
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2020-07-08",
+    "activity_id": "MTG-PL-2020-07-08-DEC-116206",
+    "activity_label": {
+     "en": "A9-0116/2020 - Ismail Ertug - Proposal for rejection (Rule 67(1)) 08/07/2020 19:17:56.922",
+     "fr": "A9-0116/2020 - Ismail Ertug - Proposition de rejet (article 67, paragraphe 1, du règlement)"
+    },
+    "activity_start_date": "2020-07-08T20:17:56+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197935",
+     "person/197631",
+     "person/185341"
+    ],
+    "had_voter_against": [
+     "person/197508",
+     "person/197711",
+     "person/197770"
+    ],
+    "had_voter_favor": [
+     "person/119431",
+     "person/124887",
+     "person/97968"
+    ],
+    "had_voter_intended_abstention": [
+     "person/197413"
+    ],
+    "had_voter_intended_against": [
+     "person/197431",
+     "person/124765"
+    ],
+    "id": "eli/dl/event/MTG-PL-2020-07-08-DEC-116206",
+    "notation_votingId": "116206",
+    "number_of_votes_abstention": 8,
+    "number_of_votes_against": 513,
+    "number_of_votes_favor": 174,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2020-07-08-RCV-ITM-009"
+    ],
+    "type": "Vote"
+   }
+  ]
+ },
+ "sitting": "MTG-PL-2020-07-08",
+ "vote_results": {
+  "data": [
+   {
+    "activity_date": "2020-07-08",
+    "activity_id": "MTG-PL-2020-07-08-VOT-ITM-884777",
+    "activity_label": {
+     "fr": "Adaptation aux évolutions du secteur du transport par route"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-9-2020-0116"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2020-07-08-OJ-ITM-V-123"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2020-07-08-VOT-ITM-884777",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2020-07-08-VOT-ITM-884777"
+      ],
+      "id": "eli/dl/event/MTG-PL-2020-07-08"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2020-07-08-VOT-ITM-884777"
+      ],
+      "id": "eli/dl/proc/2017-0123"
+     }
+    ],
+    "notation_dlvId": "884777",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2020-07-08-VOT-ITM-010"
+    ],
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Adaptation aux évolutions du secteur du transport par route</title><label>Recommandation pour la deuxième lecture: Ismail Ertug (A9-0116/2020)</label></structuredLabel>"
+    },
+    "type": "Activity"
+   }
+  ]
+ }
+}

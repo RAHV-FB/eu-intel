@@ -1,0 +1,691 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2021-0106",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2021-0106-DEC-VOAGT-2024-02-13",
+     "type": "Decision",
+     "activity_date": "2024-02-13",
+     "activity_id": "2021-0106-DEC-VOAGT-2024-02-13",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/CJ40-AG-758862"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_APPROVE_PROVISIONAL_AGREEMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEC-ADCP-ENVI-2022-03-15",
+     "type": "Decision",
+     "activity_date": "2022-03-15",
+     "activity_id": "2021-0106-DEC-ADCP-ENVI-2022-03-15",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/ENVI-AD-699056"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2021-0106-SIGN-2024-06-13",
+     "type": "Activity",
+     "activity_date": "2024-06-13",
+     "activity_id": "2021-0106-SIGN-2024-06-13",
+     "had_activity_type": "def/ep-activities/SIGNATURE"
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEC-ADCP-2023-05-11",
+     "type": "Decision",
+     "activity_date": "2023-05-11",
+     "activity_id": "2021-0106-DEC-ADCP-2023-05-11",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEC-DCPL-2024-03-13",
+     "type": "Decision",
+     "activity_date": "2024-03-13",
+     "activity_id": "2021-0106-DEC-DCPL-2024-03-13",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/TA-9-2024-0138"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_AMEND_PROPOSAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/ITRE-PA-719801-DEPOT-2022-03-03",
+     "type": "Activity",
+     "activity_date": "2022-03-03",
+     "activity_id": "ITRE-PA-719801-DEPOT-2022-03-03",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/ITRE-PA-719801"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/CJ40-PR-731563-DEPOT-2022-04-20",
+     "type": "Activity",
+     "activity_date": "2022-04-20",
+     "activity_id": "CJ40-PR-731563-DEPOT-2022-04-20",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/CJ40-PR-731563"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2023-06-14-PVCRE-ITM-10-6",
+     "type": "Activity",
+     "activity_date": "2023-06-14",
+     "activity_id": "MTG-PL-2023-06-14-PVCRE-ITM-10-6",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/C-9-2021-0146",
+      "eli/dl/doc/A-9-2023-0188"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2023-06-14-ITM-010-06",
+      "eli/dl/doc/PV-9-2023-06-14-ITM-010-06"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2021-0106-ANPRO-2021-06-07",
+     "type": "Activity",
+     "activity_date": "2021-06-07",
+     "activity_id": "2021-0106-ANPRO-2021-06-07",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEPOT-2023-05-22",
+     "type": "Activity",
+     "activity_date": "2023-05-22",
+     "activity_id": "2021-0106-DEPOT-2023-05-22",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0188"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/JURI-PA-719827-DEPOT-2022-03-02",
+     "type": "Activity",
+     "activity_date": "2022-03-02",
+     "activity_id": "JURI-PA-719827-DEPOT-2022-03-02",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/JURI-PA-719827"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEC-REFBAK-2023-06-14",
+     "type": "Decision",
+     "activity_date": "2023-06-14",
+     "activity_id": "2021-0106-DEC-REFBAK-2023-06-14",
+     "had_activity_type": "def/ep-activities/PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEC-DCPL-2023-06-14",
+     "type": "Decision",
+     "activity_date": "2023-06-14",
+     "activity_id": "2021-0106-DEC-DCPL-2023-06-14",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/TA-9-2023-0236"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_AMEND",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEC-ADCP-JURI-2022-09-05",
+     "type": "Decision",
+     "activity_date": "2022-09-05",
+     "activity_id": "2021-0106-DEC-ADCP-JURI-2022-09-05",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/JURI-AD-719827"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/TRAN-PA-730085-DEPOT-2022-03-29",
+     "type": "Activity",
+     "activity_date": "2022-03-29",
+     "activity_id": "TRAN-PA-730085-DEPOT-2022-03-29",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/TRAN-PA-730085"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941757",
+     "type": "Activity",
+     "activity_date": "2024-03-13",
+     "activity_id": "MTG-PL-2024-03-13-VOT-ITM-941757",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0188"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-9-2024-03-13-VOT-ITM-002"
+     ]
+    },
+    {
+     "id": "eli/dl/event/ENVI-PA-699056-DEPOT-2021-12-10",
+     "type": "Activity",
+     "activity_date": "2021-12-10",
+     "activity_id": "ENVI-PA-699056-DEPOT-2021-12-10",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/ENVI-PA-699056"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-03-13-PVCRE-ITM-8-2",
+     "type": "Activity",
+     "activity_date": "2024-03-13",
+     "activity_id": "MTG-PL-2024-03-13-PVCRE-ITM-8-2",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2024-03-13-ITM-008-02",
+      "eli/dl/doc/PV-9-2024-03-13-ITM-008-02"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEC-ADCP-ITRE-2022-06-14",
+     "type": "Decision",
+     "activity_date": "2022-06-14",
+     "activity_id": "2021-0106-DEC-ADCP-ITRE-2022-06-14",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/ITRE-AD-719801"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-03-12-PVCRE-ITM-12",
+     "type": "Activity",
+     "activity_date": "2024-03-12",
+     "activity_id": "MTG-PL-2024-03-12-PVCRE-ITM-12",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/C-9-2021-0146",
+      "eli/dl/doc/A-9-2023-0188"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2024-03-12-ITM-012",
+      "eli/dl/doc/PV-9-2024-03-12-ITM-012"
+     ]
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2023-06-13-PVCRE-ITM-8",
+     "type": "Activity",
+     "activity_date": "2023-06-13",
+     "activity_id": "MTG-PL-2023-06-13-PVCRE-ITM-8",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0188",
+      "eli/dl/doc/C-9-2021-0146"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2023-06-13-ITM-008",
+      "eli/dl/doc/PV-9-2023-06-13-ITM-008"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2021-0106-PUB-2024-07-12",
+     "type": "Activity",
+     "activity_date": "2024-07-12",
+     "activity_id": "2021-0106-PUB-2024-07-12",
+     "had_activity_type": "def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2023-06-14-VOT-ITM-939243",
+     "type": "Activity",
+     "activity_date": "2023-06-14",
+     "activity_id": "MTG-PL-2023-06-14-VOT-ITM-939243",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2023-0188"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-9-2023-06-14-VOT-ITM-006"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEC-ADCP-TRAN-2022-07-12",
+     "type": "Decision",
+     "activity_date": "2022-07-12",
+     "activity_id": "2021-0106-DEC-ADCP-TRAN-2022-07-12",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/TRAN-AD-730085"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2021-0106-DEC-ADCP-CULT-2022-06-15",
+     "type": "Decision",
+     "activity_date": "2022-06-15",
+     "activity_id": "2021-0106-DEC-ADCP-CULT-2022-06-15",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/CULT-AD-719637"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/CULT-PA-719637-DEPOT-2022-02-21",
+     "type": "Activity",
+     "activity_date": "2022-02-21",
+     "activity_id": "CULT-PA-719637-DEPOT-2022-02-21",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/CULT-PA-719637"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/CJ40-PR-731563",
+    "eli/dl/doc/ENVI-PA-699056",
+    "eli/dl/doc/TRAN-PA-730085",
+    "eli/dl/doc/JURI-PA-719827",
+    "eli/dl/doc/CULT-PA-719637",
+    "eli/dl/doc/ENVI-AD-699056",
+    "eli/dl/doc/TA-9-2023-0236",
+    "eli/dl/doc/A-9-2023-0188",
+    "eli/dl/doc/CULT-AD-719637",
+    "eli/dl/doc/ITRE-AD-719801",
+    "eli/dl/doc/C-10-2024-0023",
+    "eli/dl/doc/ITRE-PA-719801",
+    "eli/dl/doc/SP-2024-350-TA-9-2023-0236",
+    "eli/dl/doc/JURI-AD-719827",
+    "eli/dl/doc/TRAN-AD-730085",
+    "eli/dl/doc/TA-9-2024-0138",
+    "eli/dl/doc/CJ40-AG-758862"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-96852-2022-01-24",
+     "type": "Participation",
+     "activity_date": "2022-01-24",
+     "had_participant_person": [
+      "person/96852"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 2107
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-197493-2022-01-24",
+     "type": "Participation",
+     "activity_date": "2022-01-24",
+     "had_participant_person": [
+      "person/197493"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ID",
+     "precedenceOrder": 2100
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-204421-2021-12-01",
+     "type": "Participation",
+     "activity_date": "2021-12-01",
+     "had_participant_person": [
+      "person/204421"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ID",
+     "precedenceOrder": 1400
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMCOR-124867-IMCO-2021-12-01",
+     "type": "Participation",
+     "activity_date": "2021-12-01",
+     "had_participant_person": [
+      "person/124867"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/IMCO",
+     "participation_role": "def/ep-roles/RAPPORTEUR_CO",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1402
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-197844-2022-01-24",
+     "type": "Participation",
+     "activity_date": "2022-01-24",
+     "had_participant_person": [
+      "person/197844"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 2102
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-AVI-ENVI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/ENVI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-197870-2021-12-01",
+     "type": "Participation",
+     "activity_date": "2021-12-01",
+     "had_participant_person": [
+      "person/197870"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1406
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-23699-2021-12-01",
+     "type": "Participation",
+     "activity_date": "2021-12-01",
+     "had_participant_person": [
+      "person/23699"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 1407
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-AVI-TRAN",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/TRAN"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-197444-2021-12-01",
+     "type": "Participation",
+     "activity_date": "2021-12-01",
+     "had_participant_person": [
+      "person/197444"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1405
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMCP-98341-ITRE-2022-01-11",
+     "type": "Participation",
+     "activity_date": "2022-01-11",
+     "had_participant_person": [
+      "person/98341"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/ITRE",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1301
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMCP-197784-ENVI-2021-09-15",
+     "type": "Participation",
+     "activity_date": "2021-09-15",
+     "had_participant_person": [
+      "person/197784"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/ENVI",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1105
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMCP-197394-TRAN-2021-11-04",
+     "type": "Participation",
+     "activity_date": "2021-11-04",
+     "had_participant_person": [
+      "person/197394"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/TRAN",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1502
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-96761-2022-01-24",
+     "type": "Participation",
+     "activity_date": "2022-01-24",
+     "had_participant_person": [
+      "person/96761"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 2101
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-124988-2021-12-01",
+     "type": "Participation",
+     "activity_date": "2021-12-01",
+     "had_participant_person": [
+      "person/124988"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1401
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMCP-96761-JURI-2022-01-10",
+     "type": "Participation",
+     "activity_date": "2022-01-10",
+     "had_participant_person": [
+      "person/96761"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/JURI",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 2001
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-AHE-JURI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/JURI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION_ASSOCIATED"
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-124884-2021-12-01",
+     "type": "Participation",
+     "activity_date": "2021-12-01",
+     "had_participant_person": [
+      "person/124884"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 1404
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-AHE-CULT",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/CULT"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION_ASSOCIATED"
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-197776-2022-01-24",
+     "type": "Participation",
+     "activity_date": "2022-01-24",
+     "had_participant_person": [
+      "person/197776"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 2104
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMCP-197546-CULT-2021-07-13",
+     "type": "Participation",
+     "activity_date": "2021-07-13",
+     "had_participant_person": [
+      "person/197546"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/CULT",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1906
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMSR-197460-2022-01-24",
+     "type": "Participation",
+     "activity_date": "2022-01-24",
+     "had_participant_person": [
+      "person/197460"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 2106
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-AHE-ITRE",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/ITRE"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION_ASSOCIATED"
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-MHE-IMCO",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/IMCO"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-MHE-LIBE",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/LIBE"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2021-0106-NMCOR-197665-LIBE-2021-12-01",
+     "type": "Participation",
+     "activity_date": "2021-12-01",
+     "had_participant_person": [
+      "person/197665"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/LIBE",
+     "participation_role": "def/ep-roles/RAPPORTEUR_CO",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 2105
+    }
+   ],
+   "process_id": "2021-0106",
+   "process_title": {
+    "nl": "Geharmoniseerde regels betreffende artificiële intelligentie (wet op de artificiële intelligentie) en wijziging van bepaalde wetgevingshandelingen van de Unie",
+    "ro": "Norme armonizate privind inteligența artificială (Legea privind inteligența artificială) și  modificarea anumitor acte legislative ale Uniunii",
+    "sl": "Harmonizirana pravila o umetni inteligenci (akt o umetni inteligenci) in sprememba nekaterih zakonodajnih aktov Unije",
+    "ga": "Rialacha comhchuibhithe maidir leis an Intleacht Shaorga (Gníomh um an Intleacht Shaorga) agus lena leasaítear Gníomhartha áirithe Reachtacha de chuid an Aontais",
+    "da": "Harmoniserede regler for kunstig intelligens (forordningen om kunstig intelligens) og om ændring af visse af Unionens lovgivningsmæssige retsakter",
+    "de": "Harmonisierte Vorschriften für künstliche Intelligenz (Gesetz über künstliche Intelligenz) und Änderung bestimmter Rechtsakte der Union",
+    "pl": "Zharmonizowane przepisy dotyczące sztucznej inteligencji (akt w sprawie sztucznej inteligencji) oraz zmiana niektórych unijnych aktów ustawodawczych Unii",
+    "es": "Normas armonizadas en materia de inteligencia artificial (Ley de Inteligencia Artificial) y modificación de determinados actos legislativos de la Unión",
+    "bg": "Хармонизирани правила относно изкуствения интелект (Законодателен акт за изкуствения интелект) и за изменение на някои законодателни актове на Съюза",
+    "fi": "Tekoälyä koskevat yhdenmukaistetut säännöt (tekoälysäädös) ja tiettyjen unionin säädösten muuttaminen",
+    "mt": "Regoli armonizzati dwar l-Intelliġenza Artifiċjali (l-Att dwar l-Intelliġenza Artifiċjali) u emenda ta' ċerti atti leġiżlattivi tal-Unjoni",
+    "cs": "Harmonizovaná pravidla pro umělou inteligenci (akt o umělé inteligenci) a změna určitých legislativních aktů Unie",
+    "lt": "Suderintos dirbtinio intelekto taisyklės (Dirbtinio intelekto aktas) ir tam tikrų Sąjungos teisėkūros procedūra priimtų aktų dalinis keitimas",
+    "hu": "A mesterséges intelligenciára vonatkozó harmonizált szabályok (a mesterséges intelligenciáról szóló jogszabály) és egyes uniós jogalkotási aktusok módosítása",
+    "pt": "Regras harmonizadas em matéria de inteligência artificial (Regulamento Inteligência Artificial) e alteração de determinados atos legislativos da União",
+    "sv": "Harmoniserade regler för artificiell intelligens (rättsakt om artificiell intelligens) och ändring av vissa unionslagstiftningsakter",
+    "it": "Regole armonizzate sull'intelligenza artificiale (legge sull'intelligenza artificiale) e modifica di alcuni atti legislativi dell'Unione",
+    "et": "Tehisintellekti käsitlevad ühtlustatud õigusnormid (tehisintellekti käsitlev õigusakt) ja teatavate liidu õigusaktide muutmine",
+    "el": "Εναρμονισμένοι κανόνες σχετικά με την τεχνητή νοημοσύνη (πράξη για την τεχνητή νοημοσύνη) και τροποποίηση ορισμένων νομοθετικών πράξεων της Ένωσης",
+    "sk": "Harmonizované pravidlá v oblasti umelej inteligencie (akt o umelej inteligencii) a zmena niektorých legislatívnych aktov Únie",
+    "lv": "Saskaņotas normas mākslīgā intelekta jomā (Mākslīgā intelekta akts) un grozījumu izdarīšana dažos Savienības leģislatīvos aktos",
+    "en": "Harmonised rules on Artificial Intelligence (Artificial Intelligence Act) and amending certain Union Legislative Acts\n",
+    "fr": "Règles harmonisées concernant l’intelligence artificielle (règlement sur l’intelligence artificielle) et modification de certains actes législatifs de l’Union",
+    "hr": "Usklađena pravila o umjetnoj inteligenciji (Akt o umjetnoj inteligenciji) i izmjena određenih zakonodavnih akata Unije"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "was_scheduled_in": [
+    {
+     "id": "eli/dl/event/MTG-PL-2024-03-13-OJ-ITM-V-102",
+     "type": "ForeseenActivity",
+     "activity_date": "2024-03-13",
+     "activity_id": "MTG-PL-2024-03-13-OJ-ITM-V-102",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-9-2024-03-13"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "V-102"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-03-12-OJ-ITM-D-102",
+     "type": "ForeseenActivity",
+     "activity_date": "2024-03-12",
+     "activity_id": "MTG-PL-2024-03-12-OJ-ITM-D-102",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-9-2024-03-12"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "D-102"
+    }
+   ],
+   "label": "2021/0106(COD)",
+   "identifierYear": "2021"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

@@ -1,0 +1,881 @@
+/**
+ * Public data contract: the static JSON files under public/data/ produced by
+ * `python -m pipeline build` (pipeline/build.py) and consumed by the frontend.
+ *
+ * Rules
+ * - Dates are "YYYY-MM-DD" strings; timestamps are ISO 8601 UTC.
+ * - Optional/nullable fields mean "not available in our sources" — the UI must say so,
+ *   never guess. `basis` fields tell whether a statement is recorded at source or derived by us.
+ * - Every institutional fact shown should be traceable through a SourceRef.
+ *
+ * Files (all paths relative to `${BASE_URL}data/`):
+ *   meta.json                       Meta
+ *   home.json                       HomeData
+ *   dossiers/index.json             DossierSummary[]
+ *   dossiers/<id>.json              DossierDetail            (id like "2021-0106")
+ *   votes/index.json                EpVoteSummary[]          (roll-call votes on whole texts + final, mandate and
+ *                                                            negotiation-decision votes linked to procedures)
+ *   votes/titles.json               EpVoteTitle[]            (the same votes in the same order, with only what the vote
+ *                                                            tables of the MEP and group pages show)
+ *   votes/<id>.json                 EpVoteDetail
+ *   council/index.json              CouncilVote[]
+ *   people/meps.json                MepSummary[]
+ *   people/meps/<id>.json           MepDetail
+ *   people/groups.json              GroupSummary[]
+ *   people/groups/<id>.json         GroupDetail              (id = slug, e.g. "epp", "s-d", "renew")
+ *   people/parties.json             PartySummary[]
+ *   people/parties/<id>.json        PartyDetail              (id = EP org id)
+ *   countries/index.json            CountrySummary[]
+ *   countries/<code>.json           CountryDetail            (code = ISO alpha-2, e.g. "ES")
+ *   topics.json                     Topic[]
+ *   search.json                     SearchDoc[]
+ *   activity.json                   ActivityItem[]
+ *   feeds/updates.xml, feeds/<topic>.xml   Atom feeds
+ */
+
+export type ISODate = string;
+export type ISODateTime = string;
+
+export type Institution =
+  | 'EP'
+  | 'EP and Council' // timeline only: the signature of an ordinary-procedure act, by both Presidents (Art. 297(1) TFEU)
+  | 'Council'
+  | 'European Council'
+  | 'Commission'
+  | 'EUR-Lex'
+  | 'OEIL'
+  | 'LegislativeTrain'
+  | 'CJEU';
+
+export interface SourceRef {
+  institution: Institution;
+  url: string;
+  label?: string | null;
+  identifier?: string | null;
+  retrieved_at?: ISODateTime | null;
+  published?: ISODate | null;
+}
+
+export interface DocRef {
+  id: string; // "COM(2021)0206", "A9-0188/2023"
+  label?: string | null;
+  kind?: string | null;
+  date?: ISODate | null;
+  url?: string | null;
+}
+
+// ---------------------------------------------------------------- meta
+
+export interface SourceStatusInfo {
+  id: string; // "ep_people", "ep_procedures", "ep_votes", "eurlex", "council", "implementation", "train"
+  name: string; // "European Parliament – MEPs and political groups"
+  institution: Institution;
+  url: string; // documentation / landing page of the source
+  licence: string; // short reuse/attribution statement
+  status: 'ok' | 'partial' | 'failed' | 'unavailable';
+  fetched_at?: ISODateTime | null; // last successful retrieval
+  records: Record<string, number>;
+  note?: string | null; // retrieval log from the pipeline (technical detail)
+  summary?: string | null; // plain-language note: what this release holds from the source, known gaps
+}
+
+/** The limits of the dataset, stated next to lists and counts (meta.json `scope`). */
+export interface CoverageScope {
+  procedure_types: string[]; // ["COD", "CNS", "APP"]
+  procedures_from_year?: number | null; // procedures with this reference year or later
+  acts_from?: ISODate | null; // adopted acts dated on or after this
+  ep_votes_from?: ISODate | null; // first and last Parliament vote listed
+  ep_votes_to?: ISODate | null;
+  council_votes_from?: ISODate | null; // first and last Council vote listed (council/index.json)
+  council_votes_to?: ISODate | null;
+  ep_roll_call_votes: number; // all roll-call votes in the source data (incl. amendments)
+  dossiers_without_topic: number; // files that no topic covers
+  other_type_dossiers?: number; // files of another procedure type (NLE) shown because EUR-Lex records them as CNS/APP
+}
+
+export interface Meta {
+  built_at: ISODateTime; // when public/data was generated
+  snapshot_at?: ISODateTime | null; // latest successful source retrieval across sources
+  sources: SourceStatusInfo[];
+  counts: {
+    dossiers: number;
+    legal_acts: number;
+    meps: number;
+    meps_active: number;
+    ep_votes: number;
+    ep_votes_with_ballots: number;
+    council_votes: number;
+    national_measures: number;
+    infringements: number;
+  };
+  coverage_notes: string[]; // plain-language statements of what is and isn't covered
+  scope?: CoverageScope;
+}
+
+// ---------------------------------------------------------------- topics
+
+export interface Topic {
+  slug: string; // "tech"
+  label: string; // "Technology & AI"
+  description: string;
+  count: number; // dossiers in this topic
+}
+
+// ---------------------------------------------------------------- dossiers
+
+export type LifecycleStage =
+  | 'proposed' // proposal tabled; under examination
+  | 'parliament_position' // Parliament adopted its position; Council has not concluded
+  | 'negotiations' // interinstitutional negotiations under way
+  | 'provisional_agreement' // provisional agreement reached; awaiting formal adoption
+  | 'adopted' // formally adopted; not yet published
+  | 'published' // published in the Official Journal; not yet in force
+  | 'in_force' // in force (some provisions may apply later)
+  | 'takes_effect_on_notification' // decision addressed to specific recipients; EUR-Lex records no notification date
+  | 'no_longer_in_force' // repealed, expired or otherwise no longer in force according to EUR-Lex
+  | 'withdrawn'
+  | 'rejected'
+  | 'lapsed'
+  | 'unknown';
+
+export type Basis = 'source' | 'derived' | 'unknown';
+
+export type LegalInstrument = 'regulation' | 'directive' | 'decision' | 'recommendation' | 'other';
+
+export interface DossierSummary {
+  id: string; // "2021-0106"
+  ref: string; // "2021/0106(COD)"
+  type: string; // "COD" | "CNS" | "APP" | ...
+  type_label: string; // "Ordinary legislative procedure"
+  title: string; // human-readable: curated short title if any, else cleaned official title
+  official_title: string | null; // null for a split procedure's parent known only from EUR-Lex: no title of its own is recorded
+  short?: string | null; // one-sentence curated description (only for curated dossiers)
+  topics: string[]; // topic slugs
+  stage: LifecycleStage;
+  status_label: string; // "Approved by Parliament", "In force", ...
+  started?: ISODate | null; // proposal date: the earliest recorded proposal or COM document (a consent file's Commission proposal precedes the Council draft)
+  last_event?: ISODate | null;
+  // adoption: Parliament's second-reading approval, else the Council's adoption dated by its voting result; a Council act's own date
+  // when no vote is linked; Parliament's decision for acts it adopts with the Council's consent (never after publication)
+  adopted?: ISODate | null;
+  published?: ISODate | null; // publication of the final act in the Official Journal
+  next_date?: ISODate | null; // earliest legally fixed future date (application / transposition deadline), if any
+  instrument?: LegalInstrument | null; // final act type if adopted, or proposed instrument if known
+  celex: string[];
+  featured: boolean;
+  officially_blocked: boolean; // only true when an official source (Legislative Train) says so
+  has_ep_votes: boolean;
+  has_council_votes: boolean;
+}
+
+export interface DossierStatus {
+  stage: LifecycleStage;
+  label: string;
+  explanation: string; // 1–2 plain sentences
+  since?: ISODate | null;
+  basis: Basis;
+  named_acts?: NamedAct[]; // acts the explanation names by `label` (e.g. the repealing act), to link them
+}
+
+/** An act named in a status explanation. */
+export interface NamedAct {
+  celex: string;
+  label: string; // "Directive (EU) 2021/555" (official title), "Regulation 2017/1430" (from the CELEX id), or the CELEX id;
+  // or a procedure reference ("2016/0400A(COD)", celex ''): a split procedure's part, the main file of a Parliament report
+  url: string; // EUR-Lex (OEIL for a procedure)
+  dossier?: string | null; // its legislative file on this site, if any
+}
+
+export interface NextStep {
+  text: string;
+  institution?: Institution | null;
+  basis: Basis;
+}
+
+export interface Stall {
+  days_since_last_event: number;
+  text?: string | null; // neutral description, e.g. "No recorded procedural update in 412 days"
+  last_event_date?: ISODate | null;
+  official_label?: string | null; // e.g. Legislative Train status, verbatim
+  official_source_url?: string | null;
+  official_label_date?: ISODate | null; // the Legislative Train file's "information updated as of" date
+  official_text?: string | null; // sentence citing the official classification
+}
+
+export interface ApplicationInfo {
+  entry_into_force?: ISODate | null;
+  entry_into_force_pending?: boolean; // EUR-Lex gives no entry-into-force date: the act enters into force on a condition not yet met
+  entry_into_force_condition?: string | null; // that condition, when the Treaty or EUR-Lex states it (one sentence)
+  effect_on_notification?: boolean; // a decision that takes effect on notification to its addressee; EUR-Lex records no date
+  application_dates: ISODate[]; // further dates recorded by EUR-Lex for (parts of) the act
+  partial_application_dates?: ISODate[]; // those of application_dates from which only some provisions apply
+  partial_on_entry_into_force?: boolean; // EUR-Lex also marks the entry-into-force date as one from which some provisions apply
+  // EUR-Lex gives the date from which the act in general (partial false), or some provisions, apply as not recorded; the
+  // articles it refers to ("Art. 99"). At most one of each kind.
+  application_unrecorded?: { partial: boolean; articles: string[] }[];
+  application_detail?: { date: ISODate; partial: boolean; provisions?: string | null }[]; // checked against the act's text
+  dates_note?: { reason: string; sources: { label: string; url: string }[]; reviewed?: ISODate | null } | null; // why dates were corrected
+  transposition_deadlines: ISODate[]; // directives only: deadlines to transpose (general and further), not application or other dates
+  transposition?: TranspositionDateInfo[]; // directives only: every recorded date, classified
+  future: boolean; // true if any of the above lies in the future
+  after_end_of_validity?: ISODate[]; // dates above that EUR-Lex records for after the end of the act's validity
+}
+
+/** A directive's transposition date as classified from EUR-Lex's own annotations (and, where they cannot tell, a
+ * check of the act's text: data/curated/transposition.yaml). */
+export interface TranspositionDateInfo {
+  date: ISODate;
+  // deadline: general transposition deadline; further_deadline: deadline for specific provisions (earlier or
+  // later); application: a date from which national measures (must or may) apply; other: a date EUR-Lex records
+  // whose role the data do not establish (e.g. an optional "may apply" date), never shown as a deadline
+  kind: 'deadline' | 'further_deadline' | 'application' | 'other';
+  articles: string[]; // "Art. 48(1)"
+  exceptions?: string | null; // the general application date: what the text provides beside it (checked), one sentence
+}
+
+export type EventKind =
+  | 'proposal'
+  | 'referral'
+  | 'committee_opinion'
+  | 'committee_report'
+  | 'negotiation_mandate'
+  | 'plenary_debate'
+  | 'plenary_vote'
+  | 'ep_position'
+  | 'provisional_agreement'
+  | 'council_position'
+  | 'council_adoption'
+  | 'signature'
+  | 'publication'
+  | 'entry_into_force'
+  | 'application'
+  | 'transposition_deadline'
+  | 'transposition_application'
+  | 'end_of_validity' // an act no longer in force: from the day after its end of validity, or its repeal's date
+  | 'withdrawal'
+  | 'rejection'
+  | 'lapsed'
+  | 'other';
+
+export interface TimelineEvent {
+  id: string;
+  date: ISODate;
+  kind: EventKind;
+  title: string; // plain English
+  detail?: string | null;
+  institution: Institution;
+  state: 'done' | 'scheduled'; // 'scheduled' only for legally fixed future dates (application, transposition)
+  key: boolean; // milestone worth showing in the compact timeline
+  docs: DocRef[];
+  source?: SourceRef | null;
+  vote_id?: string | null; // EP vote linked to this event, if any
+  after_end_of_validity?: ISODate | null; // an act's date recorded for after its validity ended (that end date)
+  // a joint debate: the other files debated with this one, each with its report on the item when cited; a file not
+  // in our data has id/ref/title null and is named by its report
+  joint_with?: { id: string | null; ref: string | null; title: string | null; report: DocRef | null }[];
+}
+
+export interface LegalActSummary {
+  celex: string;
+  eli?: string | null;
+  act_type: LegalInstrument;
+  title: string;
+  date_document?: ISODate | null;
+  date_publication?: ISODate | null;
+  entry_into_force?: ISODate | null;
+  other_application_dates: ISODate[];
+  transposition_deadlines: ISODate[];
+  in_force?: boolean | null;
+  end_of_validity?: ISODate | null;
+  eurlex_url: string;
+  amends: string[];
+  amended_by: string[];
+  repeals: string[];
+  repealed_by: string[];
+  partly_repeals?: string[]; // repeals EUR-Lex limits to some provisions or marks as partial
+  partly_repealed_by?: string[];
+  court_rulings: CourtRulingInfo[]; // Court of Justice judgments recorded by EUR-Lex as annulling / invalidating
+  // a regulation: Member States that took part after its adoption (Protocol No 21, Article 4), each with the Commission
+  // decision confirming it ("Commission Decision (EU) 2024/2088", 2024-07-31); absent when none is recorded
+  opted_in?: { country: string; decision: string; label: string; date?: ISODate | null; url: string }[];
+}
+
+export interface CourtRulingInfo {
+  case_number?: string | null; // "C-19/23"
+  celex: string;
+  date?: ISODate | null;
+  ecli?: string | null;
+  effect: 'annulment' | 'invalidity';
+  kind_label: string; // "Action for annulment" | "Preliminary ruling on validity"
+  provisions: string[]; // "Article 5(1)"; empty when EUR-Lex does not record specific provisions
+  summary: string;
+  url: string;
+}
+
+export interface EditorialInfo {
+  short_title: string;
+  what: string;
+  why: string;
+  aliases: string[];
+  sources: { label: string; url: string }[];
+  reviewed: ISODate;
+}
+
+export interface DossierDetail extends DossierSummary {
+  // act numbers, verified common names, and the package a file belongs to ("Pact on Migration and Asylum")
+  known_as?: { acts: string[]; names: string[]; part_of?: string[] } | null;
+  editorial?: EditorialInfo | null;
+  status: DossierStatus;
+  next_step: NextStep;
+  stall?: Stall | null;
+  application?: ApplicationInfo | null;
+  timeline: TimelineEvent[]; // ascending by date
+  // Acts EUR-Lex lists as amending the file's acts that are not in our data (no dated step), as on the home card
+  // (FeaturedItem.latest_note): said under the latest step, which may be older than they are
+  latest_note?: string | null;
+  acts: LegalActSummary[];
+  ep_votes: EpVoteSummary[]; // votes linked to this dossier via official ids, newest first
+  // Parliament's latest approval of the Council's position at second reading to which no vote is linked (no vote on the
+  // text as a whole is needed; Art. 294(7)(a) TFEU): Parliament's "Approval without vote" record when it has one, whether
+  // proposals to amend or reject the position, or parts of the text, were voted, and a first-reading decision before the
+  // votes covered
+  ep_approval_without_vote?: {
+    date: ISODate;
+    record: SourceRef | null;
+    amendments_voted: boolean;
+    rejection_voted: boolean;
+    parts_voted: boolean; // split or separate votes on parts of the Council's position
+    first_reading: ISODate | null;
+  } | null;
+  council_votes: CouncilVote[];
+  // Split procedures only: Council votes that cite this (parent) reference, listed on the part whose act they adopted
+  council_votes_in_parts?: { id: string; date: ISODate; dossier_id: string; dossier_ref: string }[];
+  implementation?: DossierImplementation | null; // directives only (the file's first directive)
+  implementation_more?: DossierImplementation[]; // the file's further directives, one table each (2013/0400(CNS))
+  // former: OEIL lists the committee in that role only under a "Former …" heading (e.g. "Former committee responsible"),
+  // in the current parliamentary term or an earlier one; set only when true
+  committees: { code: string; name?: string | null; role: string; former?: boolean }[];
+  // group / group_code: the political group held in that role (not the MEP's current group); null when not established
+  rapporteurs: {
+    mep_id?: string | null;
+    name: string;
+    group?: string | null; // slug in people/groups.json
+    group_code?: string | null; // official code at the time, e.g. "The Left", "GUE/NGL", "ALDE"
+    country?: string | null;
+    role: string; // rapporteur | shadow | opinion_rapporteur | shadow_opinion
+    committee?: string | null;
+    former?: boolean; // OEIL lists it only under a "Former …" heading (current or earlier term), or, if OEIL does not list it, the EP API dates it to an earlier term; set only when true
+    has_page?: boolean; // people/meps/<mep_id>.json exists (MEPs of the terms covered); set only when true
+  }[];
+  documents: DocRef[];
+  related: { id: string; title: string; relation: string; ref?: string; status_label?: string }[]; // only officially established relations; "Split into" parts also carry their reference and status
+  dates_set_for?: { id: string; title: string; dates: ISODate[] }[]; // dates this file's act set for another act (checked)
+  oeil_url: string | null; // null where OEIL has no file under this reference (e.g. a split procedure's parent)
+  eurlex_only?: boolean; // built from the EUR-Lex act alone: the procedure's own steps are not in our data
+  started_from_parts?: boolean; // a split parent's `started` and proposal document are the ones all its parts record; set only when true
+  sources: SourceRef[];
+  changes: ActivityItem[]; // verified changes detected between snapshots for this dossier
+}
+
+// ---------------------------------------------------------------- EP votes
+
+export type VoteKind =
+  | 'final'
+  | 'mandate' // Parliament's negotiating mandate: amended text referred back to committee for negotiations
+  | 'amendment'
+  | 'split_or_separate'
+  | 'resolution'
+  | 'motion'
+  | 'procedural'
+  | 'other';
+/** What a motion or procedural vote, or a final vote on discharge, decides, where Parliament's published texts say so. */
+export type VoteKindDetail =
+  | 'reject_proposal' // motion to reject the Commission proposal: "adopted" = Parliament rejected the proposal
+  | 'reject_council_position' // second reading: motion to reject the Council's position
+  | 'censure' // motion of censure on the Commission
+  | 'objection' // objection to a delegated or implementing act: "adopted" = Parliament objects
+  | 'no_objection' // recommendation to raise no objections to one: "adopted" = Parliament does not object
+  | 'negotiation_decision' // vote on a committee's decision to enter into interinstitutional negotiations
+  // final vote on a discharge report's proposal to grant, postpone or refuse discharge (where the record says which)
+  | 'grant_discharge'
+  | 'postpone_discharge'
+  | 'refuse_discharge'
+  | 'recommendation'; // a recommendation of Parliament (9th term: Rules 118, 114(4) and 208(12) of its Rules of Procedure)
+export type VoteOutcome = 'adopted' | 'rejected' | 'lapsed' | 'unknown';
+/**
+ * What a final vote decides: "commission_election" for the vote titled "Election of the Commission"; else by the type
+ * of its one linked procedure; else by the procedure symbol ending its subject ("***I", "***", "*"); else, for an NLE
+ * file, by its label naming the consent procedure (pipeline/build.py final_role).
+ */
+export type FinalRole =
+  | 'legislative' // a proposed law (ordinary legislative procedure)
+  | 'consent' // Parliament gives or refuses its consent
+  | 'consultation' // Parliament's opinion on a proposal (consultation procedure)
+  | 'budget' // the budget, an amending budget or the mobilisation of a special instrument
+  | 'discharge' // a proposal for a decision on discharge
+  | 'commission_election' // the vote of consent on the Commission as a body (Art. 17(7) TEU)
+  | 'parliament_decision'; // Parliament's organisation, Rules of Procedure or interinstitutional agreements
+
+export interface VoteMargin {
+  rule: 'votes_cast' | 'component_members' | 'two_thirds_cast';
+  rule_label: string; // "Simple majority of votes cast (abstentions not counted)"
+  threshold: number; // votes in favour needed
+  distance: number; // votes_for - threshold (signed)
+  relative: number; // distance / votes counted towards the threshold
+  label: string; // "Majority reached: 12 votes more than needed" (the vote's majority, not a law passing)
+  component_members?: number | null; // Members in office on the day, for rules based on component Members
+  // two_thirds_cast only: the two conditions (Art. 234 / 354 TFEU), both to be met; threshold is the larger
+  votes_cast?: number; // for + against
+  two_thirds_of_cast?: number; // two thirds of votes_cast, rounded up
+  majority_of_members?: number; // a majority of component_members
+}
+
+/** A run of text and its language ("fr", "de"), or null for the page language, references and names. */
+export type LangRun = [lang: string | null, text: string];
+
+export interface EpVoteSummary {
+  id: string;
+  date: ISODate;
+  title: string; // EP label (may be technical, or the title in French, English and German); see `display_title`
+  display_title: string; // human-readable: dossier title + what was voted
+  // only when display_title is Parliament's own label with French passages: its runs, for lang attributes
+  display_title_parts?: LangRun[];
+  kind: VoteKind;
+  kind_detail?: VoteKindDetail | null;
+  kind_label: string; // "Final vote on the text", "Vote on consent", "Amendment", ...
+  final_role?: FinalRole | null; // final votes only: what the vote decides, where the procedure establishes it
+  outcome: VoteOutcome;
+  outcome_note?: string | null; // what the outcome means, e.g. for a motion to reject or an objection
+  // how the outcome was established: EP open data decision, the sitting's official minutes, or calculated from
+  // the recorded counts (under the applicable majority rule, or under every rule when none is established);
+  // null when unknown
+  outcome_basis?: 'published' | 'minutes' | 'derived' | null;
+  for: number | null;
+  against: number | null;
+  abstain: number | null;
+  dossier_id?: string | null;
+  dossier_ref?: string | null;
+  procedure_ref?: string | null; // official procedure reference, also when the procedure is not a tracked file
+  // what tells the vote apart from another of the same day with the same title, as appended to display_title
+  // ("motion B10-0432/2026", "amendments 1, 2 and 7"); absent when no other vote shares its title
+  distinction?: string;
+  // the published subject of the vote, only when display_title and title lack some of its words (keyword search)
+  subject?: string | null;
+  topics: string[];
+  margin?: VoteMargin | null; // null when the applicable threshold cannot be established
+  has_ballots: boolean;
+  source: SourceRef;
+}
+
+/** votes/titles.json: the votes of votes/index.json, in its order, with only what the vote tables of the MEP and group
+ * pages show: date, title, the line of kind of vote, procedure reference and distinction, and the result. `title` is
+ * there only for a vote with no `display_title` (none today), which VoteTitle then falls back to. */
+export type EpVoteTitle = Pick<
+  EpVoteSummary,
+  'id' | 'date' | 'display_title' | 'display_title_parts' | 'distinction' | 'kind_label' | 'procedure_ref' | 'outcome'
+> &
+  Partial<Pick<EpVoteSummary, 'title'>>;
+
+export type BallotPosition = 'for' | 'against' | 'abstain';
+
+export interface PositionCounts {
+  for: number;
+  against: number;
+  abstain: number;
+}
+
+export interface GroupBreakdown extends PositionCounts {
+  group: string; // group slug ("epp"); group membership at the date of the vote
+  group_code: string; // "EPP"
+  majority?: BallotPosition | null; // position of the plurality of the group's recorded votes
+  cohesion?: number | null; // share of the group's recorded votes matching its majority (0..1)
+}
+
+export interface CountryBreakdown extends PositionCounts {
+  country: string; // MEPs' country of representation (NOT the Member State's Council position)
+}
+
+export interface Ballot {
+  mep: string; // MEP id
+  pos: BallotPosition;
+  group?: string | null; // group slug at vote date
+  country?: string | null;
+  party?: string | null; // national party org id at vote date
+  intended?: BallotPosition | null; // correction recorded after the vote (does not change the result)
+}
+
+/** An MEP with no recorded vote who stated afterwards how they had intended to vote. */
+export interface VoteIntention {
+  mep: string;
+  intended: BallotPosition;
+  group?: string | null;
+  country?: string | null;
+}
+
+export interface EpVoteDetail extends EpVoteSummary {
+  title_parts?: LangRun[] | null; // `title` in runs by language when it has French or German passages
+  // what was voted, as published in English (vote item or minutes block title, else the title of its procedure),
+  // without Parliament's procedure symbol ("***I"), which subject_procedure gives in words
+  subject?: string | null;
+  subject_procedure?: string | null; // "ordinary legislative procedure, first reading"
+  procedure_url?: string | null; // Legislative Observatory (OEIL) file of procedure_ref
+  reference_text?: string | null; // the text voted on; Parliament's fixed French terms are given in English
+  reference_text_lang?: string; // "fr" when reference_text is still French
+  majority_rule?: 'votes_cast' | 'component_members' | 'two_thirds_cast' | 'unknown'; // established rule, if any
+  doc_ids: string[];
+  attendees?: number | null;
+  groups: GroupBreakdown[];
+  countries: CountryBreakdown[];
+  ballots: Ballot[]; // empty when has_ballots = false
+  intentions?: VoteIntention[]; // stated intentions of MEPs without a recorded vote
+  mep_names: Record<string, string>; // id -> display name for ballots
+  reconciliation: { matches: boolean; note?: string | null }; // ballots vs official totals
+}
+
+// ---------------------------------------------------------------- Council votes
+
+export type CouncilPosition = 'for' | 'against' | 'abstain' | 'not_participating';
+
+export interface CouncilAssessment {
+  rule: 'qmv' | 'unanimity' | 'simple_majority';
+  states_for: number;
+  states_required: number;
+  // Only when legal_basis is null under QMV: Member States needed if the Council did NOT act on a Commission
+  // proposal (72%, TFEU Art. 238(2)); states_required is then the figure for a Commission proposal (55%)
+  states_required_alt?: number | null;
+  // Percentage 0–100 of the population of the Member States TAKING PART in the vote. Equal to the share of
+  // the EU population only when states_not_participating is 0.
+  population_for_pct?: number | null;
+  population_required_pct?: number | null; // percentage 0–100, e.g. 65
+  adopted_by_rule?: boolean | null;
+  blocking_minority_existed?: boolean | null;
+  single_state_veto_possible: boolean; // true only under unanimity
+  note: string;
+  legal_basis?: string | null; // e.g. "TEU Art. 16(4)"; null when the threshold's legal basis is not established
+  states_against?: number | null;
+  states_abstain?: number | null;
+  states_not_participating?: number | null; // not taking part under the Treaties (opt-outs); not abstentions
+  states_participating?: number | null; // thresholds are computed over these Member States only
+  // Minimum number of Member States in a blocking minority under the applicable rule (4 under TEU Art. 16(4);
+  // computed under TFEU Art. 238(3)(a)); null where no such clause applies or the legal basis is not established
+  blocking_minority_min_states?: number | null;
+}
+
+/**
+ * What the Council voted on. 'first_reading_position': the Council's position at first reading — the act is NOT
+ * adopted by this vote (Parliament must still approve it at second reading). 'act': adoption of the act itself.
+ * 'other': another item (budget procedure, approval of a joint text or statement, consent, ...).
+ */
+export type CouncilVoteOn = 'act' | 'first_reading_position' | 'other';
+
+export interface CouncilVote {
+  id: string; // ST number of the voting-result note, or of another Council document for a curated record (CM-5860-2022)
+  date: ISODate;
+  title: string;
+  // For lists: the title without legal-form boilerplate, plus the item voted on when it is neither the act nor the
+  // Council's first-reading position (pipeline: council_vote_label)
+  display_title?: string;
+  dossier_id?: string | null;
+  dossier_ref?: string | null;
+  configuration?: string | null;
+  stage?: string | null; // item(s) voted on as listed in the voting-result document, "; "-separated
+  vote_on?: CouncilVoteOn | null; // normalised from the subject; null when the document names no item
+  // For a vote_on 'other': the item(s) voted on as shown (pipeline: council_vote_items): the subject's items, the
+  // derogation from the eight-week period for national parliaments, or, in the budget procedure, the items without
+  // "Adoption of the legislative act"; null when no item remains
+  vote_on_label?: string | null;
+  // Set when vote_on differs from what the voting-result document's own label says, citing the procedure
+  // record that shows it (e.g. its reference document is the Council's first-reading position)
+  vote_on_note?: string | null;
+  // Set when the date is the day the act's text gives for the Council's decision, not the first day of a meeting
+  // held over several days (data/curated/council_dates.yaml)
+  date_note?: string | null;
+  meeting?: string | null; // meeting reference as published
+  written_procedure?: boolean | null; // adopted by written procedure rather than at a meeting
+  council_doc?: string | null; // e.g. "PE-CONS 24/24"
+  voting_rule: 'qmv' | 'unanimity' | 'simple_majority' | 'unknown';
+  outcome: 'adopted' | 'not_adopted' | 'unknown';
+  // Set only where the act's legal basis requires unanimity but the voting sheet prints "qualified majority"
+  // (data/curated/council_votes.yaml): what the sheet prints, and why the rule shown differs
+  sheet_voting_rule?: 'qmv' | null;
+  voting_rule_note?: string | null;
+  // Set only where, under that rule, the vote did not adopt the act although the sheet marks it adopted
+  sheet_outcome?: 'adopted' | null;
+  outcome_note?: string | null;
+  // With a correction: the texts it was checked against (the act, the Council's documents), as listed there
+  correction_sources?: { label: string; url: string }[];
+  // A curated record taken from another Council document than a voting-result note: what it is
+  source_note?: string | null;
+  positions: Record<string, CouncilPosition>; // ISO2 -> position
+  // Only when positions is empty: why we could not read them from the published voting sheet (the Council
+  // does publish them). Plain language, specific.
+  positions_note?: string | null;
+  assessment?: CouncilAssessment | null;
+  statements: string[];
+  source: SourceRef;
+}
+
+// ---------------------------------------------------------------- people
+
+export interface MepSummary {
+  id: string;
+  name: string;
+  sort: string;
+  country: string; // ISO2
+  group?: string | null; // group slug: current, or last known for former MEPs
+  group_code?: string | null;
+  party?: string | null; // party org id (current or last)
+  party_label?: string | null;
+  active: boolean;
+  terms: number[];
+}
+
+export interface MembershipPeriod {
+  id: string; // org id or slug
+  label: string;
+  code?: string | null;
+  from?: ISODate | null;
+  to?: ISODate | null; // null = ongoing
+  role?: string | null;
+}
+
+export interface MepDetail extends MepSummary {
+  groups: MembershipPeriod[];
+  parties: MembershipPeriod[];
+  committees: MembershipPeriod[];
+  rapporteur_for: { dossier_id: string; title: string; role: string; committee?: string | null; former?: boolean }[];
+  votes: { vote_id: string; pos: BallotPosition }[]; // positions on indexed votes with ballots, newest first
+  official_url: string;
+  source: SourceRef;
+}
+
+export interface GroupSummary {
+  id: string; // slug
+  code: string; // "EPP"
+  name: string; // full official name
+  active: boolean; // exists in current term
+  terms: number[];
+  members: number; // current members (active MEPs)
+  countries: Record<string, number>; // current members by country
+}
+
+export interface GroupDetail extends GroupSummary {
+  member_ids: string[]; // current members
+  parties: { id: string; label: string; country: string; members: number }[];
+  votes: { vote_id: string; majority?: BallotPosition | null; cohesion?: number | null; counts: PositionCounts }[];
+  source: SourceRef;
+}
+
+export interface PartySummary {
+  id: string;
+  label: string;
+  code?: string | null;
+  country: string;
+  members_active: number;
+  members_total: number; // all MEPs in our dataset ever recorded in this party
+  groups: string[]; // group slugs its MEPs belonged to (all periods in dataset)
+  terms?: number[]; // parliamentary terms this record covers (EP open data has one record per party per term)
+}
+
+/** Another party record, linked from a party page. */
+export interface PartyRef {
+  id: string;
+  label: string;
+  terms: number[];
+  start?: ISODate | null; // the record's period (EP corporate body `temporal`)
+  end?: ISODate | null;
+  members_active: number;
+  meps?: number; // in now_parties: how many of this record's MEPs sit under that record today
+}
+
+export interface PartyDetail extends PartySummary {
+  start?: ISODate | null; // the record's period (EP corporate body `temporal`); end null while it is open
+  end?: ISODate | null;
+  meps: {
+    id: string;
+    name: string;
+    active: boolean; // still in this party record and a sitting MEP
+    mep_active?: boolean; // the MEP sits in Parliament today (whatever their party)
+    now_party?: string | null; // for a sitting MEP who left this record: the party record they are in now
+    from?: ISODate | null;
+    to?: ISODate | null;
+  }[];
+  group_history: { group: string; from?: ISODate | null; to?: ISODate | null; meps: number }[];
+  // memberships Parliament records in this record that run outside the record's own period (`start`–`end`)
+  outside_period?: { id: string; name: string; from?: ISODate | null; to?: ISODate | null }[];
+  same_name?: PartyRef[]; // records with the same name and country (the same party in other terms)
+  now_parties?: PartyRef[]; // the records this record's sitting MEPs are in now, most MEPs first
+  source: SourceRef;
+}
+
+// ---------------------------------------------------------------- countries
+
+export interface CountryIndicatorValue {
+  indicator: string;
+  label: string;
+  value: number | null;
+  unit: string;
+  period: string;
+  definition: string;
+  source: SourceRef;
+}
+
+export interface CountrySummary {
+  code: string;
+  name: string;
+  meps_active: number;
+  groups: Record<string, number>; // active MEPs by group slug
+  council_positions: { for: number; against: number; abstain: number; not_participating: number };
+  indicators: CountryIndicatorValue[];
+  open_infringements?: number | null; // null if infringement data unavailable
+}
+
+export interface CountryDetail extends CountrySummary {
+  meps: { id: string; name: string; group?: string | null; party_label?: string | null }[];
+  parties: { id: string; label: string; members_active: number }[];
+  council_votes: {
+    vote_id: string;
+    date: ISODate;
+    title: string; // official title, as published
+    // the official title without leading legal-form boilerplate, and the item voted on for an 'other' vote
+    // (pipeline: council_vote_label)
+    display_title?: string;
+    pos: CouncilPosition;
+    dossier_id?: string | null;
+    vote_on?: CouncilVoteOn | null;
+    vote_on_label?: string | null; // as CouncilVote.vote_on_label
+    stage?: string | null; // item(s) voted on, as the voting-result document lists them
+    outcome?: CouncilVote['outcome'];
+  }[];
+  transposition: {
+    celex: string;
+    title: string;
+    act?: string | null; // the directive's own number as its official title cites it: "Directive (EU) 2022/2555", "Directive 2014/35/EU"
+    names?: string[]; // names its file is known by (official short titles, curated common names): "NIS 2 Directive"
+    dossier_id?: string | null;
+    deadline?: ISODate | null;
+    measures: number; // notified measures in the dataset
+    status: TranspositionStatus;
+    // not_required: the directive's provision and its condition, "Art. 33(4): for as long as no rail system …";
+    // not_participating (Denmark, a directive building upon the Schengen acquis): Protocol No 22, Art. 4, and its decision
+    status_note?: string | null;
+    status_note_url?: string | null; // Denmark's notification of that decision to the Council
+  }[];
+  infringements: InfringementInfo[];
+}
+
+export type TranspositionStatus =
+  | 'measures_notified' // at least one national measure in the dataset
+  | 'none_found' // no measures found in the available dataset (NOT proof of non-compliance)
+  | 'deadline_not_reached'
+  | 'no_deadline' // EUR-Lex records no transposition deadline (e.g. codifications)
+  | 'not_participating' // recorded as not participating in the Council's adoption (Treaty opt-out): not bound
+  | 'not_required' // the directive's own text exempts the country or is not addressed to it (quoted in exemption)
+  | 'unavailable';
+
+export interface InfringementInfo {
+  id: string;
+  country: string;
+  celex?: string | null;
+  title: string;
+  non_communication?: boolean | null;
+  latest_stage?: string | null;
+  latest_decision_date?: ISODate | null;
+  status: 'open' | 'closed' | 'unknown';
+  source: SourceRef;
+}
+
+export interface DossierImplementation {
+  celex: string;
+  deadline?: ISODate | null;
+  countries: {
+    country: string;
+    measures: number;
+    status: TranspositionStatus;
+    latest_notification?: ISODate | null; // latest date a measure was notified to the Commission
+    opted_in?: string | null; // CELEX of the Commission decision confirming the country took part after adoption
+    // not_participating (Denmark, a directive building upon the Schengen acquis): Protocol No 22, Art. 4, and its decision
+    status_note?: string | null;
+    status_note_url?: string | null; // Denmark's notification of that decision to the Council
+    infringements: InfringementInfo[];
+  }[];
+  nim_url: string; // EUR-Lex national transposition page
+  source: SourceRef;
+  note: string;
+  participation_unknown?: string[]; // DK/IE: neither the recitals nor a Council vote say whether they are bound
+  act?: string; // the directive's number, e.g. "Council Directive (EU) 2015/121"
+  infringements_from?: ISODate | null; // set when cases closed before this date are not in the data (deadline earlier)
+  // the directive's own exemption from transposition, quoted; countries: the rows marked not_required; named: countries
+  // it exempts from some provisions only (Directive (EU) 2016/797, Art. 57(5)), whose rows are not marked
+  exemption?: { provision: string; quote: string; countries?: string[] | null; named?: string[] | null } | null;
+}
+
+// ---------------------------------------------------------------- home & activity
+
+export interface ActivityItem {
+  id: string;
+  date: ISODate; // date of the underlying event (not the detection date)
+  detected_at?: ISODateTime | null; // when our snapshot first recorded it (null for the first snapshot)
+  kind:
+    | 'new_dossier'
+    | 'milestone'
+    | 'ep_vote'
+    | 'council_vote'
+    | 'status_change'
+    | 'publication'
+    | 'deadline'
+    | 'implementation';
+  title: string;
+  dossier_id?: string | null;
+  vote_id?: string | null;
+  source?: SourceRef | null;
+}
+
+export interface HomeListItem {
+  dossier_id?: string | null;
+  vote_id?: string | null;
+  title: string;
+  subtitle?: string | null;
+  date?: ISODate | null;
+  badge?: string | null;
+}
+
+export interface FeaturedItem {
+  dossier: DossierSummary;
+  what: string;
+  why: string;
+  status: DossierStatus;
+  latest?: TimelineEvent | null;
+  // Amending acts EUR-Lex lists for the file's act that are not in our data, so `latest` may be older than they are
+  latest_note?: string | null;
+  next_step: NextStep;
+  source: SourceRef;
+  oeil_url?: string | null; // the human-readable procedure file on the Legislative Observatory
+}
+
+export interface HomeData {
+  featured: FeaturedItem[];
+  lists: {
+    id: 'recently_adopted' | 'under_debate' | 'close_votes' | 'rejected' | 'stalled' | 'upcoming';
+    title: string;
+    description: string;
+    items: HomeListItem[];
+  }[];
+  topics: Topic[];
+}
+
+// ---------------------------------------------------------------- search
+
+export type SearchKind = 'dossier' | 'act' | 'mep' | 'group' | 'party' | 'country' | 'topic' | 'vote' | 'page';
+
+export interface SearchDoc {
+  id: string; // unique within kind
+  k: SearchKind;
+  t: string; // title
+  s?: string; // subtitle (status, country, group...)
+  a?: string; // aliases / alternative names, space-separated
+  x?: string; // extra keywords (identifiers, subjects)
+  u: string; // app route, e.g. "/legislation/2021-0106"
+  w?: number; // static boost (e.g. featured dossiers, active MEPs)
+  d?: ISODate; // relevant date for display/sorting
+}

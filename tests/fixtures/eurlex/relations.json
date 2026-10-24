@@ -1,0 +1,1013 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "w",
+   "rel",
+   "celex",
+   "ax",
+   "loc",
+   "role"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32013R0168"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32008R0300"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32004L0109"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32001L0083"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32013L0034"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32013R1306"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32013R0167"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32014R0652"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32009R1223"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32013R1307"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32002R0178"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32014R0910"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32009R1071"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32006L0043"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32016L0797"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32018L1972"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32014R0537"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32014R1143"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32009R1072"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32012R1024"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32013R0228"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32020L1828"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32014R0090"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32018R1139"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32021R0694"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32019R2144"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amends"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32018R0858"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32017R0625"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32025L0794"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32020R0561"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32020R1055R(03)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32023R2411"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32023R0502"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32023R0607"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32024R0568"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32023R2197"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32024R3115"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32024R1860"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32025R2457"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32026L0470"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32025R1920"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32026R1392"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32026R1359"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32026R1451"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "amended_by"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32026R1744"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32000L0029"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/f16b8c3a-b10c-11e6-871e-01aa75ed71a1/edd922ec-de71-4bcc-98b3-35c8dcb88cf1"
+    },
+    "loc": {
+     "type": "literal",
+     "value": "32017R0625 {AR|http://publications.europa.eu/resource/authority/fd_370/AR} 165 {PO|http://publications.europa.eu/resource/authority/fd_370/PO} 16"
+    },
+    "role": {
+     "type": "literal",
+     "value": "{V|http://publications.europa.eu/resource/authority/fd_330/V}"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "31993L0042"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/83bdc18f-315d-11e7-9412-01aa75ed71a1/c54aa122-8461-46b9-a972-68626089b116"
+    },
+    "loc": {
+     "type": "literal",
+     "value": "{AR|http://publications.europa.eu/resource/authority/fd_370/AR} 11 {PA|http://publications.europa.eu/resource/authority/fd_370/PA} 13"
+    },
+    "role": {
+     "type": "literal",
+     "value": "{A|http://publications.europa.eu/resource/authority/fd_375/A}"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "31990L0385"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/83bdc18f-315d-11e7-9412-01aa75ed71a1/9c731198-5871-4bee-a1bf-080f97b55d1f"
+    },
+    "loc": {
+     "type": "literal",
+     "value": "{AR|http://publications.europa.eu/resource/authority/fd_370/AR} 9 {PA|http://publications.europa.eu/resource/authority/fd_370/PA} 9"
+    },
+    "role": {
+     "type": "literal",
+     "value": "{A|http://publications.europa.eu/resource/authority/fd_375/A}"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "31993L0042"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/83bdc18f-315d-11e7-9412-01aa75ed71a1/39431ad9-2b7b-457a-ac5f-3a2f98cc0ae9"
+    },
+    "role": {
+     "type": "literal",
+     "value": "{AP|http://publications.europa.eu/resource/authority/fd_375/AP}"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "31990L0385"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/83bdc18f-315d-11e7-9412-01aa75ed71a1/2523f8ae-d567-4b38-b9c8-ca5e8cc6ef11"
+    },
+    "role": {
+     "type": "literal",
+     "value": "{AP|http://publications.europa.eu/resource/authority/fd_375/AP}"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32015R2424"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/2d2217a2-525b-11e7-a5ca-01aa75ed71a1/30771f67-3d49-4218-8ccf-5f2b1fb45c6b"
+    },
+    "loc": {
+     "type": "literal",
+     "value": "{AR|http://publications.europa.eu/resource/authority/fd_370/AR} 1"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32016L1148"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/9b84d482-85bd-11ed-9887-01aa75ed71a1/42e21ed3-aa7e-417c-93b8-619b22487f64"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32009R0207"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/2d2217a2-525b-11e7-a5ca-01aa75ed71a1/c4711555-5ab9-4b5d-9096-57d521835c82"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "31995L0046"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/3e485e15-11bd-11e6-ba9a-01aa75ed71a1/919e328d-6b6b-40dd-9fc2-aec5175ce13b"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32007L0033"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/f16b8c3a-b10c-11e6-871e-01aa75ed71a1/d534c215-4094-4596-88e1-34fb5810043e"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "31993L0085"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/f16b8c3a-b10c-11e6-871e-01aa75ed71a1/a57a0a4b-ce45-493b-bfa0-b3e3e360ceed"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "31998L0057"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/f16b8c3a-b10c-11e6-871e-01aa75ed71a1/a6f97e5d-84f1-4602-9b51-7b27d8433f52"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "31969L0464"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/f16b8c3a-b10c-11e6-871e-01aa75ed71a1/adbfd672-2ca2-478f-b446-2061ce38b448"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "32006L0091"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/f16b8c3a-b10c-11e6-871e-01aa75ed71a1/ac691fdb-c856-404b-aa0f-e9557d0d2552"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "rel": {
+     "type": "literal",
+     "value": "repeals"
+    },
+    "celex": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "31974L0647"
+    },
+    "ax": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/.well-known/genid/f16b8c3a-b10c-11e6-871e-01aa75ed71a1/942dff5a-6555-4ecd-b7b3-1435b9886944"
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,193 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2018-0329",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/LIBE-PR-648370-DEPOT-2020-02-21",
+     "type": "Activity",
+     "activity_date": "2020-02-21",
+     "activity_id": "LIBE-PR-648370-DEPOT-2020-02-21",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/LIBE-PR-648370"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2018-0329-ANPRO-2018-10-22",
+     "type": "Activity",
+     "activity_date": "2018-10-22",
+     "activity_id": "2018-0329-ANPRO-2018-10-22",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/LIBE-PR-648370"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2018-0329-OAR-JURI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/JURI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION_RECAST"
+    },
+    {
+     "id": "eli/dl/participation/2018-0329-NMSR-197781-2024-10-24",
+     "type": "Participation",
+     "activity_date": "2024-10-24",
+     "had_participant_person": [
+      "person/197781"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 5
+    },
+    {
+     "id": "eli/dl/participation/2018-0329-NMSR-257012-2024-10-24",
+     "type": "Participation",
+     "activity_date": "2024-10-24",
+     "had_participant_person": [
+      "person/257012"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 7
+    },
+    {
+     "id": "eli/dl/participation/2018-0329-NMSR-123562-2024-10-24",
+     "type": "Participation",
+     "activity_date": "2024-10-24",
+     "had_participant_person": [
+      "person/123562"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 4
+    },
+    {
+     "id": "eli/dl/participation/2018-0329-NMSR-72779-2024-10-24",
+     "type": "Participation",
+     "activity_date": "2024-10-24",
+     "had_participant_person": [
+      "person/72779"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1
+    },
+    {
+     "id": "eli/dl/participation/2018-0329-NMSR-256957-2024-10-24",
+     "type": "Participation",
+     "activity_date": "2024-10-24",
+     "had_participant_person": [
+      "person/256957"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ESN",
+     "precedenceOrder": 8
+    },
+    {
+     "id": "eli/dl/participation/2018-0329-MAIN-LIBE",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/LIBE"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2018-0329-NMSR-256899-2024-10-24",
+     "type": "Participation",
+     "activity_date": "2024-10-24",
+     "had_participant_person": [
+      "person/256899"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 2
+    },
+    {
+     "id": "eli/dl/participation/2018-0329-NMCP-197772-LIBE-2024-10-17",
+     "type": "Participation",
+     "activity_date": "2024-10-17",
+     "had_participant_person": [
+      "person/197772"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/LIBE",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 2106
+    },
+    {
+     "id": "eli/dl/participation/2018-0329-NMSR-192254-2024-10-24",
+     "type": "Participation",
+     "activity_date": "2024-10-24",
+     "had_participant_person": [
+      "person/192254"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PFE",
+     "precedenceOrder": 3
+    }
+   ],
+   "process_id": "2018-0329",
+   "process_title": {
+    "fr": "Normes et procédures communes applicables dans les États membres au retour des ressortissants de pays tiers en séjour irrégulier (refonte)",
+    "cs": "Společné normy a postupy v členských státech při navracení neoprávněně pobývajících státních příslušníků třetích zemí (přepracované znění)",
+    "sv": "Gemensamma normer och förfaranden för återvändande av tredjelandsmedborgare som vistas olagligt i medlemsstaterna (omarbetning)",
+    "da": "Fælles standarder og procedurer i medlemsstaterne for tilbagesendelse af tredjelandsstatsborgere med ulovligt ophold (omarbejdning)",
+    "pl": "Wspólne normy i procedury stosowane przez państwa członkowskie w odniesieniu do powrotów nielegalnie przebywających obywateli państw trzecich (wersja przekształcona)",
+    "lt": "Bendri neteisėtai esančių trečiųjų šalių piliečių grąžinimo standartai ir tvarka valstybėse narėse (nauja redakcija)",
+    "es": "Normas y procedimientos comunes en los Estados miembros para el retorno de los nacionales de terceros países en situación irregular (refundición)",
+    "ro": "Standardele și procedurile comune aplicabile în statele membre pentru returnarea resortisanților țărilor terțe aflați în situație de ședere ilegală (reformare)",
+    "ga": "Caighdeáin choiteanna agus nósanna imeachta coiteanna sna Ballstáit i ndáil le náisiúnaigh tríú tír atá ag fanacht go neamhdhleathach a fhilleadh (athmhúnlú)",
+    "hr": "Zajednički standardi i postupci država članica za vraćanje državljana trećih zemalja s nezakonitim boravkom (preinaka)",
+    "mt": "Standards u proċeduri komuni fl-Istati Membri għar-ritorn ta' ċittadini ta' pajjiżi terzi li jkunu qegħdin fil-pajjiż illegalment (riformulazzjoni)",
+    "fi": "Jäsenvaltioissa sovellettavat yhteiset vaatimukset ja menettelyt laittomasti oleskelevien kolmansien maiden kansalaisten palauttamiseksi (uudelleenlaadittu teksti)",
+    "et": "Ühised nõuded ja kord liikmesriikides ebaseaduslikult viibivate kolmandate riikide kodanike tagasisaatmisel (uuesti sõnastatud)",
+    "hu": "A harmadik országok jogellenesen tartózkodó állampolgárainak visszatérésével kapcsolatban a tagállamokban használt közös normák és eljárások (átdolgozás)",
+    "de": "Gemeinsame Normen und Verfahren in den Mitgliedstaaten zur Rückführung illegal aufhältiger Drittstaatsangehöriger (Neufassung)",
+    "bg": "Общи стандарти и процедури, приложими в държавите членки за връщане на незаконно пребиваващи граждани на трети страни (преработен текст)",
+    "pt": "Normas e procedimentos comuns nos Estados-Membros para o regresso de nacionais de países terceiros em situação irregular (reformulação)",
+    "sl": "Skupni standardi in postopki v državah članicah za vračanje nezakonito prebivajočih državljanov tretjih držav (prenovitev)",
+    "el": "Κοινοί κανόνες και διαδικασίες στα κράτη μέλη για την επιστροφή των παρανόμως διαμενόντων υπηκόων τρίτων χωρών (αναδιατύπωση)",
+    "en": "Common standards and procedures in Member States for returning illegally staying third-country nationals (recast)",
+    "lv": "Kopēji standarti un procedūras dalībvalstīs attiecībā uz to trešo valstu valstspiederīgo atgriešanu (pārstrādāta redakcija)",
+    "nl": "Gemeenschappelijke normen en procedures in de lidstaten voor de terugkeer van onderdanen van derde landen die illegaal op hun grondgebied verblijven (herschikking)",
+    "sk": "Spoločné normy a postupy členských štátov na účely návratu štátnych príslušníkov tretích krajín, ktorí sa neoprávnene zdržiavajú na ich území (prepracované znenie)",
+    "it": "Norme e procedure comuni applicabili negli Stati membri al rimpatrio di cittadini di paesi terzi il cui soggiorno è irregolare (rifusione)"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "label": "2018/0329(COD)",
+   "identifierYear": "2018"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

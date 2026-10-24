@@ -1,0 +1,70 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "w",
+   "d",
+   "c"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "d": {
+     "type": "literal",
+     "value": "2024-07-06"
+    },
+    "c": {
+     "type": "literal",
+     "value": "{V|http://publications.europa.eu/resource/authority/fd_361/V} {ART|http://publications.europa.eu/resource/authority/fd_361/ART} 5.1"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "d": {
+     "type": "literal",
+     "value": "2024-11-15"
+    },
+    "c": {
+     "type": "literal",
+     "value": "{V|http://publications.europa.eu/resource/authority/fd_361/V} {ART|http://publications.europa.eu/resource/authority/fd_361/ART} 17.1"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "d": {
+     "type": "literal",
+     "value": "2024-10-17"
+    },
+    "c": {
+     "type": "literal",
+     "value": "{ADOPTION|http://publications.europa.eu/resource/authority/fd_361/ADOPTION} {V|http://publications.europa.eu/resource/authority/fd_361/V} {ART|http://publications.europa.eu/resource/authority/fd_361/ART} 41.1"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "d": {
+     "type": "literal",
+     "value": "2024-10-18"
+    },
+    "c": {
+     "type": "literal",
+     "value": "{APPLICATION|http://publications.europa.eu/resource/authority/fd_361/APPLICATION} {V|http://publications.europa.eu/resource/authority/fd_361/V} {ART|http://publications.europa.eu/resource/authority/fd_361/ART} 41.1"
+    }
+   }
+  ]
+ }
+}
