@@ -222,8 +222,11 @@ derived), check the result, and enable the schedule.
 The `e2e` job in `ci.yml` (Playwright + axe-core on the built site) runs on every push to `main` and every pull
 request; a manual run (*Actions → CI → Run workflow*) can skip it by unticking "Run Playwright e2e + accessibility tests".
 
-It reuses the site built by the `check` job (uploaded as the `site-dist` artifact), installs Chromium, runs
-`npx playwright test`, and uploads the HTML report and traces as the `playwright-report` artifact.
+It runs once per browser engine (Chromium, Firefox and WebKit, the engine of Safari; one failing engine does not
+cancel the others). Each run reuses the site built by the `check` job (uploaded as the `site-dist` artifact),
+installs its browser, runs `npx playwright test --project=<browser>` (`E2E_BROWSERS` adds the Firefox and WebKit
+projects to `playwright.config.ts`; locally only Chromium runs unless it is set), and uploads the HTML report and
+traces as the `playwright-report-<browser>` artifact.
 
 ## Free-plan limits
 

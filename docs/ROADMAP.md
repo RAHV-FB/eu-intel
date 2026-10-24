@@ -65,8 +65,8 @@ so that nobody reads a gap as a fact about EU law.
   scripted requests); a few may lead to pages that no longer exist.
 - Status labels and explanations are written when the data is built (weekly); sentences about dates that have
   since passed are reworded on the reader's date, and the page notes when a status may be out of date.
-- The site is tested in Chromium only (layouts, keyboard, accessibility checks); Safari and Firefox are not
-  covered by the automated tests.
+- The automated tests (layouts, keyboard use, axe-core accessibility rules) run in Chromium, Firefox and WebKit
+  (Safari's engine) on Linux, not on real phones or tablets, and no screen reader has been used to test the site.
 - The EP Legislative Train's statuses are used only for its own "Blocked" classification and as a caveat when it
   reports a file as adopted before the official records do; its other statuses lag or lead the records.
 - National parties appear once per parliamentary term (the source records them as separate bodies; a few have
