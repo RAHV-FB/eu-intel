@@ -280,6 +280,8 @@ test.describe('a page whose own data could not be loaded', () => {
       await page.route(`**/data/${file}`, (r) => r.abort());
       await open(page, path);
       await expect(page.locator('main h1')).toHaveText(/could not be loaded/);
+      // the tab says so too, not the name of a page that is not shown
+      await expect(page).toHaveTitle(/could not be loaded/);
       await expect(page.locator('main .lead')).toHaveText('Check your connection, then reload the page. The rest of the site is not affected.');
       await expect(page.locator('main')).not.toContainText('Failed to fetch');
       await expect(page.getByRole('link', { name: 'Browse legislation' })).toBeVisible();

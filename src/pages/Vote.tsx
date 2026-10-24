@@ -32,7 +32,10 @@ export default function Vote() {
   // the file's Council votes, if any: the page links on to how the Member States voted on the same file
   const { data: dossier } = useData<DossierDetail>(v?.dossier_id ? `dossiers/${v.dossier_id}.json` : null);
   const notFound = !validId || (!!v && !Array.isArray(v.ballots)) || isMissing(error);
-  useDocumentTitle(notFound ? 'Vote not found' : v ? v.display_title || v.title : 'Parliament vote', v && !notFound ? formatDate(v.date) : null);
+  useDocumentTitle(
+    notFound ? 'Vote not found' : v ? v.display_title || v.title : error ? 'Vote could not be loaded' : 'Parliament vote',
+    v && !notFound ? formatDate(v.date) : null,
+  );
   // a link to a section (/votes/166051#meps) lands on it once the vote has loaded
   useHashScroll(!loading && !!v);
 
