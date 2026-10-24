@@ -57,6 +57,9 @@ export default function Home() {
             What the EU is deciding, where a law stands, who voted for it and what happens next — in plain
             language, with every fact linked to the official record.
           </p>
+          <p className="home-hero__independent">
+            An independent, nonpartisan project — not an official EU website. <Link to="/about">About this site</Link>
+          </p>
           <div className="home-hero__search">
             <SearchBox placeholder={PAGE_PLACEHOLDERS} />
           </div>
@@ -74,6 +77,9 @@ export default function Home() {
               ))}
             </ul>
           </div>
+          <p className="home-hero__guide">
+            New to the EU? <Link to="/how-the-eu-works">How EU laws are made</Link>
+          </p>
           <Freshness meta={meta.data} />
         </div>
       </section>
@@ -102,22 +108,6 @@ export default function Home() {
           </section>
         )}
 
-        {lists.length > 0 && (
-          <section className="section" aria-labelledby="lists-title">
-            <div className="lx-head">
-              <div>
-                <p className="lx-kicker">From the official records</p>
-                <h2 id="lists-title">What’s moving</h2>
-              </div>
-              <p className="lx-head__note">
-                Generated automatically from Parliament, Council and EUR-Lex data. Each item opens a page on this site that links to
-                the official records.
-              </p>
-            </div>
-            <HomeLists lists={lists} />
-          </section>
-        )}
-
         {topics.length > 0 && (
           <section className="section" aria-labelledby="topics-title">
             <div className="lx-head">
@@ -139,6 +129,22 @@ export default function Home() {
           </section>
         )}
 
+        {lists.length > 0 && (
+          <section className="section" aria-labelledby="lists-title">
+            <div className="lx-head">
+              <div>
+                <p className="lx-kicker">From the official records</p>
+                <h2 id="lists-title">What’s moving</h2>
+              </div>
+              <p className="lx-head__note">
+                Generated automatically from Parliament, Council and EUR-Lex data.{' '}
+                <Link to="/about#selection">How these lists are built</Link>.
+              </p>
+            </div>
+            <HomeLists lists={lists} />
+          </section>
+        )}
+
         <section className="section home__guide" aria-labelledby="guide-title">
           <h2 id="guide-title">New to how EU laws are made?</h2>
           <p>
@@ -146,7 +152,7 @@ export default function Home() {
             Member States apply the result. Our short guide explains each step and the words you’ll meet on this site.
           </p>
           <Link to="/how-the-eu-works" className="btn">
-            Read the guide (5 minutes)
+            Read the guide (about 10 minutes)
           </Link>
         </section>
       </div>

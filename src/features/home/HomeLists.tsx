@@ -15,6 +15,12 @@ const MORE: Partial<Record<HomeList['id'], { to: string; label: string }>> = {
   rejected: { to: '/votes?kind=final&outcome=rejected', label: 'All final votes Parliament rejected' },
 };
 
+/**
+ * Phones show the first three rows of a list, as a preview (each list links to the full one); a list whose description
+ * says which rows it holds (Stalled: "3 of 14 shown", then files without a recorded step) keeps all its rows.
+ */
+const WHOLE_ON_PHONES = new Set<HomeList['id']>(['stalled']);
+
 function itemHref(it: HomeListItem): string | null {
   if (it.dossier_id) return dossierPath(it.dossier_id);
   if (it.vote_id) return `/votes/${encodeURIComponent(it.vote_id)}`;
@@ -57,7 +63,7 @@ export function HomeLists({ lists }: { lists: HomeList[] }) {
             const more = MORE[l.id];
             const headingId = `hl-${l.id}`;
             return (
-              <section key={l.id} className="hl" aria-labelledby={headingId}>
+              <section key={l.id} className={WHOLE_ON_PHONES.has(l.id) ? 'hl' : 'hl hl--preview'} aria-labelledby={headingId}>
                 <h3 id={headingId} className="hl__heading">
                   {l.title}
                 </h3>

@@ -32,7 +32,22 @@
   font-size: var(--fs-md);
   color: var(--text-2);
   max-width: 40rem;
-  margin-bottom: var(--sp-5);
+  margin-bottom: var(--sp-2);
+}
+
+/* the site is not an EU institution's: said next to what it does, not only in the footer */
+.home-hero__independent {
+  max-width: 40rem;
+  margin: 0 0 var(--sp-5);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-2);
+}
+
+.home-hero__guide {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
 }
 
 .home-hero__search {
@@ -107,8 +122,14 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--sp-5);
+  padding: var(--sp-4);
   transition: border-color var(--t-fast);
+}
+
+@media (min-width: 48rem) {
+  .fcard {
+    padding: var(--sp-5);
+  }
 }
 
 .fcard:hover {
@@ -160,8 +181,6 @@
 
 .fcard__facts {
   margin: 0;
-  display: grid;
-  gap: var(--sp-3);
   padding-top: var(--sp-3);
   border-top: 1px solid var(--border);
   font-size: var(--fs-sm);
@@ -188,23 +207,17 @@
   font-variant-numeric: tabular-nums;
 }
 
-.fcard__note {
-  display: block;
-  margin-top: var(--sp-1);
-}
-
 .fcard__foot {
   margin-top: auto;
-  padding-top: var(--sp-2);
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
-  gap: var(--sp-2);
+  gap: var(--sp-1) var(--sp-4);
+  font-size: var(--fs-sm);
 }
 
 .fcard__more {
-  font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   text-decoration: none;
 }
@@ -296,6 +309,37 @@ a.hl__title:hover {
 
 .hl__badge::first-letter {
   text-transform: uppercase;
+}
+
+/* on phones the title has the full width, and the date starts the line under it */
+@media (max-width: 29.99rem) {
+  .hl__row {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'title title'
+      'date sub';
+    gap: 2px var(--sp-2);
+  }
+  .hl__body {
+    display: contents;
+  }
+  .hl__title {
+    grid-area: title;
+  }
+  .hl__date {
+    grid-area: date;
+    padding-top: 0;
+    margin-top: 2px;
+  }
+  .hl__sub {
+    grid-area: sub;
+  }
+}
+
+@media (max-width: 39.99rem) {
+  .hl--preview .hl__row:nth-child(n + 4) {
+    display: none;
+  }
 }
 
 .hl-empty {
