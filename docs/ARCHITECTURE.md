@@ -80,8 +80,13 @@ the UI; every institutional fact on a page has a reachable origin.
   status tags with icons drawn in CSS (`StatusIcon`), `.row-link` for a row's title or name, `.ref` for procedure
   references (monospace only for identifiers), metadata separated by dots that never open a line (`.dot-list`),
   and the loading, empty, error and not-found states.
-- Strict CSP meta (`default-src 'self'`), no third-party fonts/scripts, no cookies. The optional watchlist writes
-  nothing to `localStorage` before the visitor's first "Follow" click (pages check for storage by reading only).
+- Strict CSP meta: `default-src 'self'`, and scripts and styles only from the site's own files, none inline
+  (`scripts/check_privacy.mjs` fails a build with `'unsafe-inline'` or an inline style). React sets its `style` props
+  through the CSSOM, which the policy does not restrict; only the dev server's page allows inline styles, which it
+  injects (`vite.config.ts`). Styles a reader applies through the browser (a user style sheet, CSS an extension
+  inserts) are not subject to the policy, but a bookmarklet that adds an inline `<style>` element is refused, so the
+  e2e text-spacing check loads its style sheet as a file. No third-party fonts/scripts, no cookies. The optional
+  watchlist writes nothing to `localStorage` before the visitor's first "Follow" click (pages check for storage by reading only).
   After that the list changes on clicks only, except that opening the page of a followed file records what the
   visitor last saw there (`markSeen`: its stage, status label and latest event, when one of them changed), as
   /privacy says ("when you last viewed it").
@@ -99,8 +104,8 @@ the UI; every institutional fact on a page has a reachable origin.
 - `ci.yml`: lint, Python tests, validate, build data, validate the built data, typecheck (app and e2e tests),
   vitest, build site, privacy check; then a Playwright e2e and accessibility job on the built site (runs by
   default; a manual run can skip it).
-- `pages.yml`: deploy to GitHub Pages on push to `main`, manual dispatch, or after a successful refresh (validate,
-  build data, validate the built data, build site).
+- `pages.yml`: deploy to GitHub Pages once CI has passed on a push to `main`, after a successful refresh, or on
+  manual dispatch (validate, build data, validate the built data, check its dated wording, build site).
 - `refresh.yml`: scheduled weekly `fetch` (incremental; a manual run can do a full refresh) → `validate` → build
   and record activity → `validate --built` → commit snapshot.
 

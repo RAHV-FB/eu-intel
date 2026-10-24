@@ -80,6 +80,15 @@ test.describe('metadata of the shells', () => {
     expect(await missing.text()).toContain('<meta name="robots" content="noindex" />');
     expect(home).not.toContain('name="robots"');
   });
+
+  test('the text for browsers without JavaScript links to the data on the site', async ({ request }) => {
+    const html = await (await request.get(pagesUrl('legislation/2021-0106/'))).text();
+    const noscript = /<noscript>([\s\S]*?)<\/noscript>/.exec(html)?.[1] ?? '';
+    expect(noscript).not.toContain('directory of the repository'); // the built JSON is not in the repository
+    const href = /<a href="([^"]+)">data\/meta\.json<\/a>/.exec(noscript)?.[1];
+    expect(href).toBe(`${BASE_PATH}data/meta.json`);
+    expect((await request.get(`${PAGES_ORIGIN}${href}`)).status()).toBe(200);
+  });
 });
 
 test.describe('privacy notice and links', () => {
@@ -110,6 +119,75 @@ test.describe('privacy notice and links', () => {
     await open(page, `legislation/${AI_ACT_ID}/`);
     const eu = page.locator('main a[target="_blank"]').first();
     await expect(eu).toHaveAccessibleName(/\(opens official website in a new tab\)$/);
+  });
+
+  test('About and Privacy say who maintains the site and where to report an error', async ({ page }) => {
+    await open(page, 'about/');
+    const contact = page.locator('#contact');
+    await expect(contact).toContainText('The site is maintained by RAHV-FB, the GitHub account that owns the project’s public repository');
+    await expect(contact).toContainText('To report an error or a missing record');
+    const issues = contact.getByRole('link', { name: /issue tracker/ });
+    await expect(issues).toHaveAttribute('href', 'https://github.com/RAHV-FB/eu-intel/issues');
+    await expect(issues).toHaveAccessibleName('repository’s issue tracker (opens in a new tab)');
+    await open(page, 'privacy/');
+    const who = page.locator('section', { has: page.getByRole('heading', { name: 'Who “we” are' }) });
+    await expect(who).toContainText('“We” on this page means the site’s maintainer, RAHV-FB');
+    await expect(who.getByRole('link', { name: 'who maintains the site' })).toHaveAttribute('href', `${BASE_PATH}about#contact`);
+    await expect(who.getByRole('link', { name: /issue tracker on GitHub/ })).toHaveAttribute('href', 'https://github.com/RAHV-FB/eu-intel/issues');
+    // the link lands on the maintainer paragraph below the sticky header, not under it
+    await who.getByRole('link', { name: 'who maintains the site' }).click();
+    await expect(page).toHaveURL(/\/about#contact$/);
+    await settle(page);
+    await page.waitForTimeout(1200); // past the second for which the page keeps the target in place (useHashScroll)
+    const { top, header, scrolled } = await page.evaluate(() => ({
+      top: document.getElementById('contact')!.getBoundingClientRect().top,
+      header: document.querySelector('.site-header')!.getBoundingClientRect().bottom,
+      scrolled: window.scrollY,
+    }));
+    expect(scrolled).toBeGreaterThan(0);
+    expect(top).toBeGreaterThanOrEqual(header);
+  });
+
+  test('no page breaks the Content-Security-Policy, which allows no inline styles; style props still apply', async ({ page }) => {
+    // the securitypolicyviolation event is fired in every engine, whether or not it logs the violation to the console
+    await page.addInitScript(() => {
+      const w = window as unknown as { cspViolations: string[] };
+      w.cspViolations = [];
+      window.addEventListener('securitypolicyviolation', (e) => w.cspViolations.push(`${e.violatedDirective} ${e.blockedURI}`), true);
+    });
+    const routes = [
+      '', 'legislation/', `legislation/${AI_ACT_ID}/`, 'votes/', 'votes/199380/', 'people/', 'people/groups/renew/',
+      'people/meps/197619/', 'people/parties/5719/', 'countries/IE/', 'how-the-eu-works/', 'about/', 'privacy/',
+      'following/', 'search/?q=climate',
+    ];
+    for (const route of routes) {
+      await page.goto(pagesUrl(route)); // the prerendered shell, as GitHub Pages serves it
+      await settle(page);
+      expect(await page.evaluate(() => (window as unknown as { cspViolations: string[] }).cspViolations), route).toEqual([]);
+    }
+    // a React style prop (set through the CSSOM, which the policy does not restrict): the largest country's share bar
+    await page.goto(pagesUrl('people/groups/renew/'));
+    await settle(page);
+    const bar = page.locator('.share-bar').first();
+    await expect(bar).toHaveAttribute('style', /width: 100%/);
+    expect((await bar.boundingBox())?.width).toBeGreaterThan(0);
+    // an interaction that re-renders with style props: sorting the countries
+    await page.getByRole('button', { name: /^Members/ }).first().click();
+    expect(await page.evaluate(() => (window as unknown as { cspViolations: string[] }).cspViolations)).toEqual([]);
+  });
+
+  test('only links to official EU websites are announced as official', async ({ page }) => {
+    // the project's own GitHub pages (editorial policy, data/curated, issues) and GitHub's privacy statement are not
+    let others = 0;
+    for (const path of ['about/', 'privacy/', `legislation/${AI_ACT_ID}/`]) {
+      await open(page, path);
+      for (const link of await page.locator('main a[target="_blank"]:visible').all()) {
+        const official = /(^|\.)europa\.eu$/.test(new URL((await link.getAttribute('href'))!).hostname);
+        if (!official) others++;
+        await expect(link).toHaveAccessibleName(official ? / \(opens official website in a new tab\)$/ : / \(opens in a new tab\)$/);
+      }
+    }
+    expect(others).toBeGreaterThanOrEqual(6); // About: repository, issues, editorial policy, data/curated; Privacy: 2
   });
 
   test('the Atom feed links say they are for feed readers', async ({ page }) => {

@@ -5,6 +5,8 @@ import '../features/guide/guide.css';
 import '../features/votes/common.css';
 
 const GITHUB_PRIVACY = 'https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement';
+/** The project's issue tracker (About.tsx REPOSITORY), where errors are reported and questions asked. */
+const ISSUES = 'https://github.com/RAHV-FB/eu-intel/issues';
 
 export default function Privacy() {
   useDocumentTitle('Privacy');
@@ -100,6 +102,15 @@ export default function Privacy() {
             The site links to official EU websites (such as those of the European Parliament, the Council, the Commission and EUR-Lex) and
             occasionally to other sites. Those websites have their own privacy policies and may use cookies or analytics; please check them
             when you visit. Our external links open in a new tab and are set not to send the address of the page you came from.
+          </p>
+        </section>
+
+        <section aria-labelledby="who-h">
+          <h2 id="who-h">Who “we” are</h2>
+          <p>
+            “We” on this page means the site’s maintainer, RAHV-FB (see <Link to="/about#contact">who maintains the site</Link>).
+            Questions about this notice can be asked in the project’s{' '}
+            <ExtLink href={ISSUES} official={false}>issue tracker on GitHub</ExtLink>; issues there are public.
           </p>
         </section>
 

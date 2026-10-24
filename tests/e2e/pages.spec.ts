@@ -371,7 +371,11 @@ test('an MEP’s membership data links the EP Open Data API record', async ({ pa
 test('home cards do not scroll sideways at 320px with increased text spacing (WCAG 1.4.12)', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await open(page, './');
-  await page.addStyleTag({ content: '*{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important} p{margin-bottom:2em!important}' });
+  // the reader's own style sheet, from the site's origin: the CSP (style-src 'self') refuses an inline <style>
+  const spacing = '*{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important} p{margin-bottom:2em!important}';
+  await page.route('**/e2e-text-spacing.css', (route) => route.fulfill({ contentType: 'text/css', body: spacing }));
+  await page.addStyleTag({ url: 'e2e-text-spacing.css' });
+  expect(await page.evaluate(() => getComputedStyle(document.body).wordSpacing)).not.toBe('0px'); // it applies
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
 

@@ -864,6 +864,57 @@ def test_record_needing_oeil_title_is_not_dropped_while_oeil_is_down(snapshot_di
     assert "2021-0211" not in state["unavailable"] and "2021-0211" in state["pending"]
 
 
+class TitleAsList(FakeHttp):
+    """The EP API gives process_title as a list holding the same title (a change of format at the source), for the
+    ids in `only` (all ids when None): build_procedure rejects the record ("has several titles")."""
+
+    def __init__(self, only: set[str] | None = None):
+        super().__init__()
+        self.only = only
+
+    def get(self, url, params=None, **kw):
+        body = super().get(url, params=params, **kw)
+        pid = url.rsplit("/", 1)[1]
+        if url.startswith(f"{m.EP_API}/procedures/") and (self.only is None or pid in self.only):
+            d = json.loads(body)
+            for x in d["data"]:
+                x["process_title"] = [x["process_title"]]
+            return json.dumps(d).encode()
+        return body
+
+
+def test_records_that_stop_validating_are_kept_beyond_the_removal_cap(snapshot_dir):
+    """A run whose re-read records all fail validation keeps the stored ones ("partial") instead of deleting them:
+    validate compares the file with the count this run writes to the manifest, so the drop would pass it."""
+    m.fetch(FakeHttp())
+    before = records_by_id(snapshot_dir)
+    http = TitleAsList()
+    status = m.fetch(http)
+    refetched = set(http.detail_calls)
+    assert {"2023-0448", "2023-0126", "2018-0329"} <= refetched < set(before)  # the open files, not the terminal ones
+    assert records_by_id(snapshot_dir) == before  # nothing removed, nothing changed
+    assert status.status == "partial" and status.records["procedures"] == len(before)
+    assert f"{len(refetched)} stored files were kept although their EP record no longer passes validation" in status.note
+    assert "2023-0448 (EP record 2023-0448 has several titles)" in status.note
+    assert set(state_of(snapshot_dir)["unavailable"]) == refetched  # retried by the next run
+
+
+def test_records_that_stop_validating_are_removed_up_to_the_cap(snapshot_dir, monkeypatch):
+    m.fetch(FakeHttp())
+    before = records_by_id(snapshot_dir)
+    monkeypatch.setattr(m, "MAX_SHRINK", 0.1)  # 1 of the 13 stored records
+    status = m.fetch(TitleAsList({"2023-0448"}))
+    assert set(records_by_id(snapshot_dir)) == set(before) - {"2023-0448"}  # removed, not kept stale
+    assert status.status == "ok" and "stored files were kept" not in status.note
+    # the cap counts over the whole run, across chunks: the first is removed, the next one kept
+    m.fetch(FakeHttp())
+    monkeypatch.setattr(m, "CHUNK_SIZE", 1)
+    status = m.fetch(TitleAsList({"2023-0448", "2023-0126"}))
+    assert set(records_by_id(snapshot_dir)) == set(before) - {"2023-0448"}
+    assert records_by_id(snapshot_dir)["2023-0126"] == before["2023-0126"]
+    assert status.status == "partial" and "1 stored files were kept" in status.note
+
+
 def test_oeil_page_check():
     info = m.parse_oeil((FIX / "oeil_2021-0106.html").read_bytes())
     assert info.has_basic_info and info.reference == "2021/0106(COD)"
