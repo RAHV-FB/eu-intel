@@ -96,6 +96,10 @@ open http://127.0.0.1:4174/eu-intel/).
   without OEIL data, an act or notice kept or lost), and only those dossiers keep their stored stage until a later
   run refreshes them. A partial fetch without that list (e.g. a restored state file) suspends all status changes for
   the run. The build log warns in both cases, with the date since when.
+- **A record count differs from the manifest's** within that margin, in either direction: `validate` warns
+  (`manifest-count`). Records re-derived offline need their source's manifest entry recounted with them, or the
+  About page's technical details give the counts of before (the EP votes entry, recounted on 24 October 2026: the
+  vote kinds re-derived on 23 October had left it at 2,995 ballots for the 2,996 stored).
 - **The built data fails validation**: after the build, `python -m pipeline validate --built` checks the claims
   the build derived against the rules and the files' own dates (`pipeline/validate.py`, e.g. a vote margin that
   contradicts its outcome, a withdrawn file with an act, Council adoption steps on more than one day, a step

@@ -226,6 +226,8 @@ def check_size(
         )
     elif n < floor:
         rep.error(f"{source}/{name}.json: {n} records, fewer than the {floor} a complete snapshot has", source)
+    if n is not None and count and n != count:  # e.g. records re-derived offline without rewriting the manifest
+        rep.warn("manifest-count", f"{source}/{name}.json: {n} records, but _manifest.json records {count}")
 
 
 def _dates(obj: Any, path: str = "") -> list[tuple[str, str]]:

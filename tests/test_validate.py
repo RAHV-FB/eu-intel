@@ -380,6 +380,25 @@ def test_a_shrink_of_up_to_five_percent_of_the_manifest_count_is_not_an_error(tm
     assert any("94 records, but _manifest.json records 100" in e for e in check(snap, today=TODAY).errors)
 
 
+def test_a_file_whose_count_differs_from_the_manifest_in_either_direction_is_a_warning(tmp_path: Path):
+    # data/snapshot/ep_votes/ballots.json held 2,996 records after an offline re-derivation that left the manifest at
+    # 2,995, so the About page's technical details gave 2,995 next to a summary of 2,996
+    snap = _copy(tmp_path)
+    votes = snap / "ep_votes" / "votes.json"
+    _edit(votes, lambda r: r.extend(dict(r[0], id=f"X{i}") for i in range(100 - len(r))))
+    n = 100
+    m = json.loads((snap / "_manifest.json").read_text())
+    m["ep_votes"]["records"] = {"votes": n}
+    (snap / "_manifest.json").write_text(json.dumps(m), encoding="utf-8")
+    assert not check(snap, today=TODAY).warnings.get("manifest-count")
+    for recorded in (n - 1, n + 1):  # more records than recorded, or (within the 5% allowed) fewer
+        m["ep_votes"]["records"] = {"votes": recorded}
+        (snap / "_manifest.json").write_text(json.dumps(m), encoding="utf-8")
+        rep = check(snap, today=TODAY)
+        assert rep.errors == []
+        assert rep.warnings["manifest-count"] == [f"ep_votes/votes.json: {n} records, but _manifest.json records {recorded}"]
+
+
 def test_a_missing_file_is_an_error_only_where_the_manifest_or_the_floor_expects_it(tmp_path: Path):
     """ep_procedures/procedures.json deleted: `_load` returned None without a word and `validate` exit 0, and a build
     with 1238 dossiers instead of 1577 was made. implementation/indicators is absent in the committed snapshot and
