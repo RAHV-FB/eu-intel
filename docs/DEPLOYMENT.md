@@ -12,7 +12,12 @@ All actions are pinned to full commit SHAs (with the version in a comment); Depe
 (`.github/dependabot.yml`) proposes weekly grouped updates. The Python runtime dependencies in `pyproject.toml` have a
 ceiling at the next major version (`httpx<1`, `pydantic<3`, `lxml<7`, `pyyaml<7`), so that a major release, which can change an
 API, does not reach the unattended refresh and deploy before CI has run on it; Dependabot's pip entry proposes raising a ceiling
-once a release passes it. Minor and patch releases are taken as they come.
+once a release passes it. Within those ranges the versions are pinned, with the sha256 hashes of their files, in
+`requirements.txt`, which the refresh, the deploy and CI install with `pip install --require-hashes -r requirements.txt`
+(the pipeline runs from the checkout, `python -m pipeline`): the refresh job holds a token that can push to `main`, and
+an unattended run installs only the files CI has tested. Dependabot proposes updates of the pins; CI runs on them before
+they reach `main`. To regenerate the file (Python 3.12, as the workflows use): `uv pip compile pyproject.toml
+--python-version 3.12 --generate-hashes -o requirements.txt` (or `pip-compile --generate-hashes`).
 
 ## One-time setup (repository owner)
 

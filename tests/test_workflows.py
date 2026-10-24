@@ -125,3 +125,33 @@ def test_the_deploy_checks_the_dated_wording_of_the_built_data():
     s = steps("pages.yml", "build")
     check = index(s, "npx vitest run src/lib/format.test.ts")
     assert index(s, "python -m pipeline validate --built") < check < index(s, "npm run build")
+
+
+@pytest.mark.parametrize(("name", "job"), [("refresh.yml", "refresh"), ("pages.yml", "build"), ("ci.yml", "check")])
+def test_python_packages_are_installed_from_the_hashed_requirements(name, job):
+    # the refresh holds a token that can push to main: it installs only the pinned files, as the deploy and CI do
+    s = steps(name, job)
+    index(s, "python -m pip install --require-hashes -r requirements.txt")
+    if name != "ci.yml":  # nothing else: the pipeline runs from the checkout
+        assert "pip install -e" not in "\n".join(x.get("run") or "" for x in s)
+
+
+def test_the_hashed_requirements_pin_every_runtime_dependency_within_pyproject():
+    from packaging.requirements import Requirement
+
+    root = WORKFLOWS.parent.parent
+    text = (root / "requirements.txt").read_text(encoding="utf-8")
+    entries = [b for b in re.split(r"^(?=\S)", text, flags=re.M) if b and not b.startswith("#")]
+
+    def norm(name: str) -> str:  # a distribution name as PEP 503 normalises it
+        return re.sub(r"[-_.]+", "-", name).lower()
+
+    pins = {}
+    for entry in entries:
+        m = re.match(r"([A-Za-z0-9_.-]+)==(\S+) \\\n", entry)
+        assert m and "--hash=sha256:" in entry, entry.splitlines()[0]
+        pins[norm(m[1])] = m[2]
+    deps = re.search(r"^dependencies = \[(.*?)^\]", (root / "pyproject.toml").read_text(encoding="utf-8"), re.M | re.S)
+    for dep in re.findall(r'"([^"]+)"', deps.group(1)):
+        req = Requirement(dep)
+        assert req.specifier.contains(pins[norm(req.name)]), dep

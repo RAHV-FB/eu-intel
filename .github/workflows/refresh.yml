@@ -82,14 +82,16 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
-        # poppler-utils (pdftoppm) renders Council voting-result sheets for the council source.
+        # poppler-utils (pdftoppm) renders Council voting-result sheets for the council source. The Python packages are
+        # the pinned, hash-checked runtime dependencies (requirements.txt): this job can push to main, and an unattended
+        # run must not install a release CI has not tested. The pipeline runs from the checkout (python -m pipeline).
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq poppler-utils
-          python -m pip install -e .
+          python -m pip install --require-hashes -r requirements.txt
 
       - name: Fetch official sources
         id: fetch
