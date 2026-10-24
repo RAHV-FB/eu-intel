@@ -35,7 +35,7 @@ python -m venv .venv && . .venv/bin/activate      # or: uv venv && uv pip instal
 pip install -e '.[dev]'
 python -m pipeline validate      # check the committed snapshot (offline)
 python -m pipeline build         # snapshot + curated data -> public/data (offline, deterministic)
-python -m pipeline validate --built   # check the snapshot again and the claims in public/data
+python -m pipeline validate --built   # check the snapshot again, that public/data is complete, and its claims
 
 # Frontend (React + TypeScript + Vite)
 npm ci
@@ -56,7 +56,7 @@ records are read again, the others reused); `EU_INTEL_FULL_REFRESH=1` re-reads e
 | --- | --- |
 | `ruff check .` | Python lint |
 | `pytest` | Offline unit tests (network tests are deselected; run them with `pytest -m network`) |
-| `python -m pipeline validate` | Snapshot schema and invariants; once built, the claims in `public/data` against the rules and the files' own dates (`--built` fails if there is no build) |
+| `python -m pipeline validate` | Snapshot schema and invariants, and that no file is missing or emptied (against the manifest's record counts and minimum counts); once built, the claims in `public/data` against the rules and the files' own dates (`--built` fails if there is no build, or if it is incomplete: a missing or unreadable file, an empty list, a count of zero) |
 | `npm run typecheck` · `npx vitest run` | TypeScript types · frontend unit tests |
 | `BASE_PATH=/eu-intel/ npm run build` | Production build under the Pages subpath, with prerendered route shells |
 | `node scripts/check_privacy.mjs` | No third-party loads, trackers, cookie writes or raw-HTML injection in `dist/` and `src/` |

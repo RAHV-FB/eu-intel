@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import type { DossierDetail, DossierSummary, Meta, Topic } from '../types/data';
+import type { DossierDetail, DossierSummary, Meta } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDate } from '../lib/format';
 import { changeSince, getWatchlist, markSeen, type ChangeInfo } from '../lib/watchlist';
-import { ErrorState, ExtLink, Loading, NotFound, PageHeader, Term } from '../components/ui';
-import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, dossierPath, isMissing, isSameTitle, useDocumentTitle } from '../features/legislation/labels';
+import { ErrorState, ExtLink, Loading, LookupNotice, NotFound, PageHeader, Term } from '../components/ui';
+import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, dossierPath, isMissing, isSameTitle, useDocumentTitle, useTopics } from '../features/legislation/labels';
 import { todayISO } from '../features/legislation/explorer';
 import { DossierSummaryPanel } from '../features/legislation/dossier/Summary';
 import { WhereIsIt } from '../features/legislation/dossier/WhereIsIt';
@@ -45,9 +45,9 @@ function DossierPage({ id }: { id: string }) {
   const d = raw && raw.id === id && Array.isArray(raw.timeline) ? raw : undefined;
   const malformed = !!raw && !d;
   const { data: meta } = useData<Meta>('meta.json');
-  const { data: topics } = useData<Topic[]>('topics.json');
+  const { topics, failed: topicsFailed } = useTopics();
   const notFound = !valid || malformed || isMissing(error);
-  useDocumentTitle(d?.title ?? (notFound ? 'Legislative file not found' : 'Legislation'));
+  useDocumentTitle(d?.title ?? (notFound ? 'Legislative file not found' : 'Legislation'), d?.ref);
 
   // "Changed since you last looked" for followed files; then record that the visitor has now seen it.
   const [change, setChange] = useState<ChangeInfo | null>(null);
@@ -79,7 +79,7 @@ function DossierPage({ id }: { id: string }) {
 
   const today = todayISO();
   const active = ACTIVE_STAGES.has(d.stage);
-  const topicLabel = (slug: string) => topics?.find((t) => t.slug === slug)?.label ?? slug;
+  const topicLabel = (slug: string) => topics.find((t) => t.slug === slug)?.label ?? slug;
   const primaryAct = d.acts[0];
 
   const nav = [
@@ -109,6 +109,7 @@ function DossierPage({ id }: { id: string }) {
           </li>
         </ol>
       </nav>
+      <LookupNotice failed={topicsFailed && d.topics.length > 0} what="Topic names" />
 
       <header className="dz-head" id="summary">
         <h1 className={`dz-title${d.title.length > 110 ? ' dz-title--long' : ''}`}>{d.title}</h1>

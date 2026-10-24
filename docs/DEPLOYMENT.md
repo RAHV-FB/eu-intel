@@ -9,7 +9,10 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Three
 | `refresh.yml` (Data refresh) | Mondays 05:17 UTC, manual (optionally a full refresh) | fetch all sources (incremental, see below) → validate → build with activity recording → validate the built data → commit `data/snapshot/` + `data/state/` to `main` | `contents: write` (this job only) |
 
 All actions are pinned to full commit SHAs (with the version in a comment); Dependabot
-(`.github/dependabot.yml`) proposes weekly grouped updates.
+(`.github/dependabot.yml`) proposes weekly grouped updates. The Python runtime dependencies in `pyproject.toml` have a
+ceiling at the next major version (`httpx<1`, `pydantic<3`, `lxml<7`, `pyyaml<7`), so that a major release, which can change an
+API, does not reach the unattended refresh and deploy before CI has run on it; Dependabot's pip entry proposes raising a ceiling
+once a release passes it. Minor and patch releases are taken as they come.
 
 ## One-time setup (repository owner)
 
@@ -40,7 +43,10 @@ builds with `BASE_PATH=<base_path>/`. `vite.config.ts` uses it as Vite's `base`,
 the data build takes them from `SITE_URL`, which `pages.yml` sets to the Pages URL
 (`steps.pages.outputs.base_url`, e.g. `https://rahv-fb.github.io/eu-intel` or the custom domain); without it
 (CI, local builds) they point at `https://rahv-fb.github.io/eu-intel/`. `SITE_URL` sets the links only: the ids
-(`feeds.TAG_BASE`) never change with it, as an Atom id must not when a feed moves (RFC 4287, section 4.2.6).
+(`feeds.TAG_BASE`) never change with it, as an Atom id must not when a feed moves (RFC 4287, section 4.2.6). `pages.yml` gives
+the site build the same `SITE_URL`, from which `scripts/prerender-routes.mjs` writes each page's `<link rel="canonical">`
+(`<SITE_URL><route>/`, the address of the prerendered page, which is also the address the Atom entries link to); without it
+(CI, local builds, forks) the pages have none, so that they do not point at another host. `404.html` carries `noindex`.
 
 Pages has no server-side rewrites, so `scripts/prerender-routes.mjs` writes an `index.html` for every known route
 (`/legislation/2021-0106/`, `/votes/<id>/`, …) so that deep links return HTTP 200 with a route-specific
@@ -79,8 +85,10 @@ open http://127.0.0.1:4174/eu-intel/).
   its own budget (`EU_INTEL_FETCH_BUDGET_S`). EP procedures also stops starting files once 8 in a row have failed
   (an EP API or OEIL outage; files that already failed in an earlier run do not count), and the EP procedure list
   starts at the page size that worked last time (kept in `_state.json`).
-- **Validation fails** for one source (a structural error, or for `ep_people` a count of sitting MEPs that does
-  not match their open political-group memberships): that source's snapshot directory and manifest entry are
+- **Validation fails** for one source (a structural error; a file that is missing, or has more than 5% fewer records
+  than `_manifest.json` records for it, or fewer than the minimum for a complete snapshot, `MIN_RECORDS` in
+  `pipeline/validate.py`, so that an emptied file is not built and deployed as an empty section; or for `ep_people` a
+  count of sitting MEPs that does not match their open political-group memberships): that source's snapshot directory and manifest entry are
   restored from the previous commit (marked `partial`), the whole snapshot must then validate, and the other
   sources' new data is committed. The activity log (`data/state`) is committed only after a successful build.
   Status changes are recorded only from complete procedure and EUR-Lex data: a partial fetch lists in its
@@ -91,7 +99,10 @@ open http://127.0.0.1:4174/eu-intel/).
 - **The built data fails validation**: after the build, `python -m pipeline validate --built` checks the claims
   the build derived against the rules and the files' own dates (`pipeline/validate.py`, e.g. a vote margin that
   contradicts its outcome, a withdrawn file with an act, Council adoption steps on more than one day, a step
-  listed before the one it follows, a single-state veto outside unanimity). If it fails, the run commits nothing
+  listed before the one it follows, a single-state veto outside unanimity), and that the build is complete: every file of
+  `PUBLIC_FILES` present and readable, the lists that are never empty (dossiers, votes, Council votes, MEPs, groups,
+  parties, countries, topics, search) not empty, no count in `meta.json` that is zero or below the snapshot's, and every
+  file the dossier and vote indexes list written. If it fails, the run commits nothing
   (neither the snapshot nor `data/state`) and fails, so nothing is deployed; `main` keeps the last snapshot whose
   build passed, and the next run fetches again. A build that fails outright still commits the snapshot without
   `data/state` (above).
@@ -137,11 +148,74 @@ by its time budget stays a full refresh in the next runs until it completes.
   can use its source's whole time budget): `gh workflow run refresh.yml -f sources=ep_procedures -f
   full_refresh=true`. Locally: `EU_INTEL_FULL_REFRESH=1 python -m pipeline fetch ep_procedures`.
 - **Redeploy** without data changes: *Actions → Deploy to GitHub Pages → Run workflow* (`gh workflow run pages.yml`).
-- **Roll back**: revert the offending commit on `main` (a data refresh is a single commit); the push redeploys.
+- **Roll back** a data refresh: see "Rolling back a bad data refresh" below. A plain `git revert` is enough only when the bad
+  refresh is the latest commit that touched `data/`.
 - **Refresh locally** (e.g. to debug a source): `EU_INTEL_NO_CACHE=1 python -m pipeline fetch ep_votes`, then
   `python -m pipeline validate && EU_INTEL_RECORD_ACTIVITY=1 python -m pipeline build && python -m pipeline
   validate --built`, review the diff, commit. If the last check fails, do not commit: the build has already
   written the activity it recorded to `data/state`.
+
+## Rolling back a bad data refresh
+
+For data on the site that is wrong because of a refresh (a commit "Data refresh YYYY-MM-DD" by `github-actions[bot]`, which
+changes only `data/snapshot/` and `data/state/`). Fixing the cause and rolling back are two jobs: the next scheduled refresh
+starts from whatever `main` holds and fetches again, so a rollback alone does not last.
+
+1. **Stop the refresh from moving `main`.** Cancel a run that is going (*Actions → Data refresh → the run → Cancel workflow*, or
+   `gh run list --workflow refresh.yml --status in_progress`, then `gh run cancel <run-id>`; likewise for `--status queued`): when
+   its push is rejected, a refresh re-applies its own data files on top of `main`, and it would overwrite your restore. Then
+   disable the schedule: `gh workflow disable refresh.yml` (or *Actions → Data refresh → ⋯ → Disable workflow*), which does not stop a
+   run that is already going.
+2. **Find the last good commit.** `git log --format='%h %ad %s' --date=short -- data/snapshot data/state` lists the commits that
+   changed data; take the one before the bad refresh (`data/snapshot/_manifest.json` in it has each source's `fetched_at`).
+3. **Put that commit's data back in a new commit on `main`.**
+   - If the bad refresh is the newest commit that changed data (`git log -1 --format=%h -- data/snapshot data/state` prints its
+     hash), `git revert <bad-sha>` applies cleanly.
+   - Otherwise do not revert it. Every refresh rewrites `_manifest.json` and usually `ep_votes/_state.json`, so reverting an older
+     refresh after a newer one stops with conflicts, and a hand-merged partial revert is a snapshot that never existed. Restore
+     the good commit's data instead:
+     `git restore --source=<good-sha> --staged --worktree -- data/snapshot data/state`, then `python -m pipeline validate`, then
+     `git commit -m "Restore data from <good-sha>"` and `git push origin main`.
+
+     Use `restore`, not `git checkout <good-sha> -- data/snapshot data/state`: `checkout` stops with "pathspec 'data/state' did
+     not match" when the good commit predates the first refresh (no `data/state` yet), and it keeps files added since, while
+     `restore` removes them. Afterwards `git diff <good-sha> HEAD -- data/snapshot data/state` prints nothing.
+4. **Check the deploy.** The push runs *Deploy to GitHub Pages* (and CI). When it has succeeded, the footer's "Data last
+   refreshed" (`snapshot_at` in `https://rahv-fb.github.io/eu-intel/data/meta.json`) shows the date of the restored data.
+   `built_at` moves with every deploy, so it does not show that the data is the good one.
+5. **While you prepare that, an earlier version can be deployed again.** *Actions → Deploy to GitHub Pages*, an earlier successful
+   run, *Re-run all jobs* (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`,
+   then `gh run rerun <run-id>`). A re-run uses the commit of the original run (`actions/checkout` in `pages.yml` takes no `ref`),
+   so it builds and deploys that commit's data; GitHub allows re-runs for 30 days. It changes what is published only: `main`
+   still has the bad data, and the next push to `main`, or the deploy that follows the next refresh, publishes `main` again. Step 3 must
+   follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).
+6. **Fix the cause.** The next refresh starts from the restored data and fetches again. If the cause is at the source, the same
+   data comes back: hold that source back (below), and keep the schedule disabled until it is corrected. If the cause was how
+   the pipeline reads or derives a source, fix the code and run a full refresh of that source ("What a weekly run
+   re-reads"); otherwise the records a run does not re-read keep the old derivation. Then switch the schedule back on
+   (`gh workflow enable refresh.yml`).
+
+### Holding one source back
+
+The weekly run fetches every source and has no switch to skip one. To keep a source at the data of a good commit, restore just
+that source and its manifest entry (what the refresh does for a source that fails validation):
+
+    git show <good-sha>:data/snapshot/_manifest.json > /tmp/manifest_good.json
+    git restore --source=<good-sha> --staged --worktree -- data/snapshot/<source>
+    python -m pipeline restore-manifest --previous /tmp/manifest_good.json --reason "Held at the data of <date>: <why>." <source>
+    python -m pipeline validate
+
+then commit and push as in step 3. The manifest entry is marked `partial` with the reason, and the About page shows its last
+successful retrieval. Then disable the schedule (step 1) and refresh by hand without that source, naming the others in the `sources`
+input of *Run workflow* (the names are `ep_people ep_procedures ep_votes eurlex council implementation optouts train`; those not
+listed are not fetched and keep their files and manifest entries):
+
+    gh workflow run refresh.yml -f sources="ep_people ep_procedures eurlex council implementation optouts train"
+
+(that holds back `ep_votes`). Sources read the files of earlier ones in that order, so a held-back `ep_people` or
+`ep_procedures` leaves the later sources working from its older records. To let the source go again, run it once by hand
+(`-f sources=ep_votes`, with `-f full_refresh=true` for `ep_procedures`, `ep_votes` or `train` after a change to how they are
+derived), check the result, and enable the schedule.
 
 ## End-to-end tests in CI
 

@@ -6,7 +6,7 @@ import { isMissing } from '../features/guide/missing';
 import { useHashScroll } from '../features/guide/useHashScroll';
 import { COUNTRY_NAMES, formatDate, formatNumber, pct } from '../lib/format';
 import { useParamState } from '../lib/urlState';
-import { ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Tag, Term } from '../components/ui';
+import { ErrorState, ExtLink, Loading, LookupNotice, NotFound, PageHeader, SourceLink, Tag, Term } from '../components/ui';
 import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { useGroups } from '../features/people/labels';
@@ -163,6 +163,7 @@ export default function Country() {
           MEPs elected in {c.name}. In Parliament they sit in European <Term id="political-group">political groups</Term> and vote
           individually — not as a national delegation, and not on behalf of the government.
         </p>
+        <LookupNotice failed={groups.failed} what="Political group names" />
         <dl className="facts card">
           <div>
             <dt>Current MEPs</dt>

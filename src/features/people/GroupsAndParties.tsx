@@ -7,7 +7,7 @@ import { Disclosure, EmptyState } from '../../components/ui';
 import { CollapsibleFilters, PHONE_WIDTH } from '../../components/CollapsibleFilters';
 import { useMediaQuery } from '../../components/useMediaQuery';
 import { SortTh, useSortable } from '../votes/sortable';
-import { partyNameKey, termLabel, termYears } from './labels';
+import { partyNameKey, termLabel, termYears, type GroupLabel } from './labels';
 import './people.css';
 
 type GKey = 'code' | 'name' | 'members' | 'countries';
@@ -97,7 +97,7 @@ const PAGE = 60;
 const PSHOW_RESET = ['pshow']; // a new search starts from the first page
 type PKey = 'label' | 'country' | 'active' | 'total';
 
-export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; groups: Map<string, GroupSummary> }) {
+export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; groups: Map<string, GroupLabel> }) {
   const [params, patch] = useParamState();
   // rows shown: kept in the address like the filters, so that Back from a party returns to the same list
   const shown = shownParam(params, 'pshow', PAGE);

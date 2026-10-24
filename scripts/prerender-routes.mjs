@@ -2,12 +2,16 @@
 // Writes dist/<route>/index.html copies of the SPA shell with a route-specific <title> and description,
 // plus dist/404.html as a fallback for anything else. Reads route lists from dist/data/*.json (party pages from
 // the party files themselves: two parties without a recorded name are left out of parties.json).
+// SITE_URL (the Pages URL, as the data build takes it for the Atom feeds) gives each page its canonical address,
+// <SITE_URL><route>/; without it a page has none (a local or fork build must not point at another host).
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const DIST = 'dist';
-const shell = readFileSync(join(DIST, 'index.html'), 'utf8');
+// (the home page's canonical link is written into dist/index.html below: a second run starts without it)
+const shell = readFileSync(join(DIST, 'index.html'), 'utf8').replace(/\s*<link rel="canonical"[^>]*>/g, '');
 const SITE = 'EU Legislative Intelligence';
+const SITE_URL = process.env.SITE_URL ? `${process.env.SITE_URL.replace(/\/+$/, '')}/` : null;
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const readJson = (p) => {
@@ -44,11 +48,30 @@ const partyTitle = (p) => {
   return `${p.label} (${countryName(p.country)}, ${term}${sameTerm ? `, ${period}` : ''})`;
 };
 
-function page(route, title, description) {
-  let html = shell.replace(/<title>[^<]*<\/title>/, `<title>${esc(title ? `${title} – ${SITE}` : SITE)}</title>`);
+// A page title as useDocumentTitle (src/features/legislation/labels.ts: TITLE_MAX, shortTitle, documentTitle) sets it once
+// the page has loaded: cut at a word boundary, so that the title before and after loading is the same. The title in
+// dossiers/index.json is already cut at 180 characters by the same rule (pipeline/build.py _truncate), which leaves the
+// cut at 120 unchanged.
+const TITLE_MAX = 120;
+const shortTitle = (title, max = TITLE_MAX) => {
+  if (title.length <= max) return title;
+  const head = title.slice(0, max);
+  const space = head.lastIndexOf(' ');
+  const cut = space > 0 ? head.slice(0, space) : title.slice(0, max - 1);
+  return `${cut.replace(/[\s,;:(]+$/, '')}…`;
+};
+const documentTitle = (title, qualifier) => (title ? `${shortTitle(title)}${qualifier ? ` (${qualifier})` : ''} – ${SITE}` : SITE);
+
+// Replacement functions, not strings: `$&`, `$'` or a `$$` in a title or description is text, not a replacement pattern.
+const withHead = (html, tag) => (tag ? html.replace('</head>', () => `  ${tag}\n  </head>`) : html);
+const canonical = (route) => (SITE_URL ? `<link rel="canonical" href="${esc(SITE_URL + (route ? `${route.split('/').map(encodeURIComponent).join('/')}/` : ''))}" />` : '');
+
+function page(route, title, description, qualifier) {
+  let html = shell.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(documentTitle(title, qualifier))}</title>`);
   if (description) {
-    html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${esc(description)}" />`);
+    html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/, () => `<meta name="description" content="${esc(description)}" />`);
   }
+  html = withHead(html, canonical(route));
   const out = join(DIST, route, 'index.html');
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, html);
@@ -56,20 +79,22 @@ function page(route, title, description) {
 
 const routes = [
   ['legislation', 'Legislation', 'Search and filter EU legislative files: proposals, adopted laws and their status.'],
-  ['votes', 'Votes', 'How the European Parliament voted: final votes, close votes, political groups and countries.'],
-  ['people', 'People & Parties', 'Members of the European Parliament, political groups and national parties.'],
+  ['votes', 'Parliament votes', 'How the European Parliament voted: final votes, close votes, political groups and countries.'],
+  ['people', 'MEPs', 'Members of the European Parliament, political groups and national parties.'],
   ['countries', 'Countries', 'How each EU Member State takes part in EU decisions and applies EU law.'],
-  ['how-the-eu-works', 'How the EU Works', 'A plain-language guide to how EU laws are proposed, negotiated, adopted and applied.'],
+  ['how-the-eu-works', 'How the EU works', 'A plain-language guide to how EU laws are proposed, negotiated, adopted and applied.'],
   ['about', 'About & methodology', 'Data sources, coverage, methodology and limitations.'],
   ['privacy', 'Privacy', 'Privacy notice: no tracking, no cookies, no analytics.'],
   ['following', 'Followed legislation', null],
   ['search', 'Search', null],
 ];
+// titles as the pages set them with useDocumentTitle (/people/ is the MEPs view until a view is chosen in the address)
 for (const [r, t, d] of routes) page(r, t, d);
 
 let n = routes.length;
 for (const d of readJson('dossiers/index.json')) {
-  page(`legislation/${d.id}`, d.title, d.short || `${d.ref}: ${d.status_label}.${d.official_title ? ` ${d.official_title}` : ''}`.slice(0, 300));
+  // the procedure reference tells apart files of the same title (Energy performance of buildings: 2021/0426(COD), 2016/0381(COD))
+  page(`legislation/${d.id}`, d.title, d.short || `${d.ref}: ${d.status_label}.${d.official_title ? ` ${d.official_title}` : ''}`.slice(0, 300), d.ref);
   n++;
 }
 for (const v of readJson('votes/index.json')) {
@@ -82,7 +107,8 @@ for (const v of readJson('votes/index.json')) {
   const result = counts.length
     ? `${counts.map(([k, label]) => `${k} ${label}`).join(', ')}.`
     : `${v.outcome_note ?? `${v.kind_label}.`} No vote counts are recorded.`;
-  page(`votes/${v.id}`, v.display_title, `European Parliament vote of ${v.date}: ${result}`);
+  // the date tells apart votes of the same title (a motion to reject on a file, voted twice)
+  page(`votes/${v.id}`, v.display_title, `European Parliament vote of ${formatDate(v.date)}: ${result}`, formatDate(v.date));
   n++;
 }
 for (const m of readJson('people/meps.json')) {
@@ -90,7 +116,7 @@ for (const m of readJson('people/meps.json')) {
   n++;
 }
 for (const g of readJson('people/groups.json')) {
-  page(`people/groups/${g.id}`, g.name, null);
+  page(`people/groups/${g.id}`, `${g.code} – ${g.name}`, null);
   n++;
 }
 const partyDir = join(DIST, 'data', 'people', 'parties');
@@ -108,5 +134,7 @@ for (const c of readJson('countries/index.json')) {
   page(`countries/${c.code}`, c.name, `${c.name} in the EU: MEPs, Council votes and implementation of EU law.`);
   n++;
 }
-writeFileSync(join(DIST, '404.html'), shell);
+// the home page keeps its address; the fallback for unknown addresses (served with status 404) is not for search engines
+writeFileSync(join(DIST, 'index.html'), withHead(shell, canonical('')));
+writeFileSync(join(DIST, '404.html'), withHead(shell, '<meta name="robots" content="noindex" />'));
 console.log(`prerender-routes: wrote ${n} route shells + 404.html`);

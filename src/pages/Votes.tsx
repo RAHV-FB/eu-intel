@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { EpVoteSummary, Topic, VoteKind, VoteOutcome } from '../types/data';
+import type { EpVoteSummary, VoteKind, VoteOutcome } from '../types/data';
 import { useData } from '../lib/data';
 import { formatNumber, plural } from '../lib/format';
 import { loadSearch, type SearchEngine } from '../lib/search';
 import { clearAllParams, shownParam, useParamState, useParamText } from '../lib/urlState';
-import { EmptyState, ErrorState, Loading, PageHeader, Term } from '../components/ui';
+import { EmptyState, ErrorState, Loading, LookupNotice, PageHeader, Term } from '../components/ui';
 import { CollapsibleFilters } from '../components/CollapsibleFilters';
 import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 // the filter panel and labelled controls of /legislation, so that both lists look and work alike
 import '../features/legislation/common.css';
 import '../features/legislation/legislation.css';
-import { useDocumentTitle } from '../features/legislation/labels';
+import { useDocumentTitle, useTopics } from '../features/legislation/labels';
 import { CloseVoteMethod, VoteKindGuide, VoteListItem } from '../features/votes/components';
 import { KIND_LABEL, OUTCOME_LABEL, isClose } from '../features/votes/labels';
 import { matchVoteDetails, voteHaystacks } from '../features/votes/keyword';
@@ -36,7 +36,7 @@ function countBy<T>(rows: T[], key: (r: T) => string | null | undefined): Map<st
 export default function Votes() {
   useDocumentTitle('Parliament votes');
   const { data, error, loading } = useData<EpVoteSummary[]>('votes/index.json');
-  const topicsState = useData<Topic[]>('topics.json');
+  const topicsState = useTopics();
   const [params, patch] = useParamState();
   // rows shown: kept in the address like the filters, so that Back from a vote returns to the same list
   const shown = shownParam(params, 'show', PAGE);
@@ -79,9 +79,9 @@ export default function Votes() {
 
   const topicLabel = useMemo(() => {
     const m = new Map<string, string>();
-    for (const t of topicsState.data ?? []) m.set(t.slug, t.label);
+    for (const t of topicsState.topics) m.set(t.slug, t.label);
     return (slug: string) => m.get(slug) ?? slug;
-  }, [topicsState.data]);
+  }, [topicsState.topics]);
 
   // keyword search: whole words in the vote titles and references, or the search index's matches on the
   // linked legislative file (its common names); the index is loaded only once there is a query
@@ -164,6 +164,7 @@ export default function Votes() {
 
       {loading && <Loading label="Loading votes…" />}
       {error && <ErrorState error={error} title="The vote list could not be loaded" />}
+      <LookupNotice failed={topicsState.failed} what="Topic names" />
 
       {data && data.length === 0 && (
         <EmptyState title="No Parliament votes are available yet">

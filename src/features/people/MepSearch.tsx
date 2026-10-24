@@ -1,19 +1,19 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import type { GroupSummary, MepSummary } from '../../types/data';
+import type { MepSummary } from '../../types/data';
 import { countryName, formatNumber } from '../../lib/format';
 import { clearAllParams, shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { EmptyState } from '../../components/ui';
 import { CollapsibleFilters } from '../../components/CollapsibleFilters';
 import { SortTh, useSortable } from '../votes/sortable';
-import { FULL_TERM_MIN_MEPS, termLabel } from './labels';
+import { FULL_TERM_MIN_MEPS, termLabel, type GroupLabel } from './labels';
 import './people.css';
 
 const PAGE = 60;
 const SHOW_RESET = ['show']; // a new search starts from the first page
 type Key = 'name' | 'country' | 'group' | 'party';
 
-export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<string, GroupSummary> }) {
+export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<string, GroupLabel> }) {
   const [params, patch] = useParamState();
   // rows shown: kept in the address like the filters, so that Back from an MEP returns to the same list
   const shown = shownParam(params, 'show', PAGE);
@@ -101,7 +101,7 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
               {opts.groupIds.map((g) => (
                 <option key={g} value={g}>
                   {groups.get(g)?.code ?? g}
-                  {groups.get(g) && !groups.get(g)!.active ? ' (earlier term)' : ''}
+                  {groups.get(g)?.active === false ? ' (earlier term)' : ''}
                 </option>
               ))}
             </select>

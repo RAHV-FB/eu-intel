@@ -7,6 +7,8 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from pipeline.validate import check
 
 FIX = Path(__file__).parent / "fixtures" / "build" / "snapshot"
@@ -313,3 +315,173 @@ def test_public_vote_margin_must_agree_with_an_established_outcome(tmp_path: Pat
         "public votes/index.json: vote 1: margin distance -3 contradicts outcome 'adopted'",
         "public votes/index.json: vote 2: margin label 'Majority reached: 3 votes more than needed' contradicts outcome 'rejected'",
     ]
+
+
+# ------------------------------------------------------------------------------ emptied or missing data
+def _records(snap: Path) -> None:
+    """Give the fixture manifest the record counts a refresh writes (the committed manifest's `records`)."""
+    m = json.loads((snap / "_manifest.json").read_text())
+    for source, name in [("ep_votes", "votes"), ("ep_votes", "ballots"), ("ep_procedures", "procedures")]:
+        m[source]["records"] = {**m[source]["records"], name: len(json.loads((snap / source / f"{name}.json").read_text()))}
+    (snap / "_manifest.json").write_text(json.dumps(m), encoding="utf-8")
+
+
+def test_a_file_emptied_below_its_manifest_count_is_an_error_of_its_source(tmp_path: Path):
+    """In a copy of the committed snapshot, ep_votes votes.json and ballots.json set to [] gave `validate`, `build` and
+    `validate --built` exit 0, and a site with 0 plenary votes would have been deployed."""
+    from pipeline.validate import validate_by_source
+
+    snap = _copy(tmp_path)
+    _records(snap)
+    assert check(snap, today=TODAY).errors == []
+    _edit(snap / "ep_votes" / "votes.json", lambda r: r.clear())
+    _edit(snap / "ep_votes" / "ballots.json", lambda r: r.clear())
+    rep = check(snap, today=TODAY)
+    assert rep.errors == [
+        "ep_votes/votes.json: 0 records, but _manifest.json records 4 (more than 5% fewer): an emptied or truncated file",
+        "ep_votes/ballots.json: 0 records, but _manifest.json records 3 (more than 5% fewer): an emptied or truncated file",
+    ]
+    assert list(rep.errors_by_source) == ["ep_votes"]  # so a refresh restores that source and keeps the others
+    assert validate_by_source(snap, out=io.StringIO(), today=TODAY) == ["ep_votes"]
+
+
+def test_a_shrink_of_up_to_five_percent_of_the_manifest_count_is_not_an_error(tmp_path: Path):
+    snap = _copy(tmp_path)
+    m = json.loads((snap / "_manifest.json").read_text())
+    m["ep_votes"]["records"] = {"votes": 100}
+    (snap / "_manifest.json").write_text(json.dumps(m), encoding="utf-8")
+    votes = snap / "ep_votes" / "votes.json"
+    _edit(votes, lambda r: r.extend(dict(r[0], id=f"X{i}") for i in range(97)))  # 100 records
+    assert check(snap, today=TODAY).errors == []
+    _edit(votes, lambda r: r.__delitem__(slice(95, None)))  # 95: the limit
+    assert check(snap, today=TODAY).errors == []
+    _edit(votes, lambda r: r.pop())  # 94 of 100
+    assert any("94 records, but _manifest.json records 100" in e for e in check(snap, today=TODAY).errors)
+
+
+def test_a_missing_file_is_an_error_only_where_the_manifest_or_the_floor_expects_it(tmp_path: Path):
+    """ep_procedures/procedures.json deleted: `_load` returned None without a word and `validate` exit 0, and a build
+    with 1238 dossiers instead of 1577 was made. implementation/indicators is absent in the committed snapshot and
+    nothing records it, so its absence is not an error."""
+    snap = _copy(tmp_path)
+    assert not (snap / "implementation" / "indicators.json").exists()
+    assert check(snap, today=TODAY).errors == []
+    _records(snap)
+    (snap / "ep_procedures" / "procedures.json").unlink()
+    assert check(snap, today=TODAY).errors == [
+        "ep_procedures/procedures.json: file missing, but _manifest.json records 3 records"
+    ]
+    m = json.loads((snap / "_manifest.json").read_text())
+    m["ep_procedures"]["records"] = {}
+    (snap / "_manifest.json").write_text(json.dumps(m), encoding="utf-8")
+    assert check(snap, today=TODAY).errors == []  # nothing says it should be there
+    floors = {("ep_procedures", "procedures"): 800, ("implementation", "indicators"): 10}
+    assert check(snap, today=TODAY, min_records=floors).errors == [
+        "ep_procedures/procedures.json: file missing, but a complete snapshot has at least 800",
+        "implementation/indicators.json: file missing, but a complete snapshot has at least 10",
+    ]
+
+
+def test_the_committed_snapshot_is_held_to_floors_a_fixture_is_not(tmp_path: Path):
+    """A source module that wrote an emptied file and the manifest with it passes the comparison with the manifest:
+    the floors (about half of today's counts) stop it. They apply to the committed snapshot only."""
+    from pipeline import validate as val
+
+    assert val._floors(val.SNAPSHOT) is val.MIN_RECORDS and val._floors(tmp_path) is None
+    snap = _copy(tmp_path)
+    m = json.loads((snap / "_manifest.json").read_text())
+    m["council"]["records"] = {"votes": 0}
+    (snap / "_manifest.json").write_text(json.dumps(m), encoding="utf-8")
+    _edit(snap / "council" / "votes.json", lambda r: r.clear())
+    assert check(snap, today=TODAY).errors == []  # consistent with its manifest, and no floor in a fixture
+    errors = check(snap, today=TODAY, min_records=val.MIN_RECORDS).errors
+    assert "council/votes.json: 0 records, fewer than the 350 a complete snapshot has" in errors
+
+
+def test_the_floors_are_well_below_what_the_committed_snapshot_holds():
+    from pipeline import validate as val
+
+    for (source, name), floor in val.MIN_RECORDS.items():
+        n = len(json.loads((val.SNAPSHOT / source / f"{name}.json").read_text(encoding="utf-8")))
+        assert 0 < floor <= 0.6 * n, (source, name, floor, n)
+
+
+# ------------------------------------------------------------------------------ the built output must be complete
+@pytest.fixture(scope="module")
+def built(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    from pipeline.build import build
+
+    base = tmp_path_factory.mktemp("built")
+    curated = FIX.parent / "curated"
+    assert build(out=base / "public", snapshot=FIX, curated=curated, state=base / "state", today=TODAY) == 0
+    return base / "public"
+
+
+def _built_copy(built: Path, tmp_path: Path) -> Path:
+    pub = tmp_path / "public"
+    shutil.copytree(built, pub)
+    return pub
+
+
+def test_a_complete_build_passes_with_built(built: Path):
+    assert check(FIX, public=built, today=TODAY, built=True).errors == []
+
+
+def test_built_files_that_are_missing_or_unreadable_are_errors_only_with_built(built: Path, tmp_path: Path):
+    """After a build, deleting public/data/home.json and dossiers/index.json, or truncating home.json, still gave
+    `validate --built` exit 0 (two warnings); home.json was never parsed."""
+    pub = _built_copy(built, tmp_path)
+    (pub / "home.json").unlink()
+    (pub / "dossiers" / "index.json").unlink()
+    (pub / "topics.json").write_text('{"truncat', encoding="utf-8")
+    (pub / "feeds" / "updates.xml").write_text("<feed><entry>", encoding="utf-8")
+    loose = check(FIX, public=pub, today=TODAY)
+    assert loose.errors == [] and len(loose.warnings["public-missing"]) == 2  # without --built: as before
+    errors = check(FIX, public=pub, today=TODAY, built=True).errors
+    assert "public/data/home.json is missing (run `python -m pipeline build`)" in errors
+    assert "public/data/dossiers/index.json is missing (run `python -m pipeline build`)" in errors
+    assert any(e.startswith("public topics.json: unreadable JSON") for e in errors)
+    assert any(e.startswith("public feeds/updates.xml: unreadable XML") for e in errors)
+    assert len(errors) == 4
+
+
+def test_a_build_from_an_emptied_snapshot_is_an_error_with_built(built: Path, tmp_path: Path):
+    """ep_votes votes.json and ballots.json set to [] built 3445 files instead of 6445 with meta count ep_votes 0, and
+    `validate --built` said OK, 0 errors."""
+    pub = _built_copy(built, tmp_path)
+    (pub / "votes" / "index.json").write_text("[]", encoding="utf-8")
+    meta = json.loads((pub / "meta.json").read_text())
+    meta["counts"]["ep_votes"] = 0
+    (pub / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+    errors = check(FIX, public=pub, today=TODAY, built=True).errors
+    assert errors == [
+        "public votes/index.json: not a list with records (the build found none; check data/snapshot)",
+        "public meta.json: count 'ep_votes' is 0, but ep_votes/votes.json has 4 records",
+    ]
+    assert check(FIX, public=pub, today=TODAY).errors == []  # not checked without --built
+
+
+def test_built_counts_below_the_snapshot_and_unwritten_files_are_errors(built: Path, tmp_path: Path):
+    pub = _built_copy(built, tmp_path)
+    meta = json.loads((pub / "meta.json").read_text())
+    meta["counts"]["meps"] = 2  # of the snapshot's 4
+    meta["counts"]["dossiers"] = 0
+    (pub / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+    ids = [d["id"] for d in json.loads((pub / "dossiers" / "index.json").read_text())]
+    (pub / "dossiers" / f"{ids[0]}.json").unlink()
+    errors = check(FIX, public=pub, today=TODAY, built=True).errors
+    assert errors == [
+        "public meta.json: count 'meps' is 2, but ep_people/meps.json has 4 records",
+        "public meta.json: count 'dossiers' is 0, but ep_procedures/procedures.json has 3 records",
+        f"public dossiers/index.json: 1 of {len(ids)} listed files not written (e.g. ['{ids[0]}'])",
+    ]
+
+
+def test_an_unreadable_built_file_is_an_error_not_a_crash(built: Path, tmp_path: Path):
+    pub = _built_copy(built, tmp_path)
+    some = next(p for p in (pub / "dossiers").glob("*.json") if p.name != "index.json")
+    some.write_text("{", encoding="utf-8")
+    (pub / "council" / "index.json").write_text("[{", encoding="utf-8")
+    errors = check(FIX, public=pub, today=TODAY, built=True).errors
+    assert sum(e.startswith(f"public dossiers/{some.name}: unreadable JSON") for e in errors) == 1
+    assert sum(e.startswith("public council/index.json: unreadable JSON") for e in errors) == 1  # reported once

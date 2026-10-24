@@ -173,8 +173,12 @@ def test_validate_built_needs_the_built_output_and_fails_on_its_contradictions(s
     assert "built output not checked" in capsys.readouterr().out
     assert cli.main(["validate", "--built"]) == 1
     assert f"ERROR no built output in {root / 'public' / 'data'}" in capsys.readouterr().out
+    # a complete build of the fixture (a partial public/data is an error with --built: tests/test_validate.py)
+    from pipeline.build import build
+
+    assert build(out=root / "public" / "data", snapshot=snap, curated=FIX.parent / "curated", state=root / "state",
+                 today="2026-10-22") == 0  # fmt: skip
     votes = root / "public" / "data" / "votes"
-    votes.mkdir(parents=True)
     margin = {"rule": "votes_cast", "threshold": 264, "distance": 235, "relative": 0.4459,
               "label": "Majority reached: 235 votes more than needed"}  # fmt: skip
     (votes / "156022.json").write_text(json.dumps({"id": "156022", "outcome": "adopted", "margin": margin}))

@@ -29,6 +29,11 @@
 .state--error .meta {
   color: var(--text-2);
 }
+/* one line above a list or filter whose labels could not be loaded */
+.state--note {
+  padding: var(--sp-3) var(--sp-4);
+  margin-block: var(--sp-4);
+}
 
 .spinner {
   width: 1rem;

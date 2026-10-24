@@ -634,7 +634,7 @@ def test_two_motions_to_reject_on_one_file_that_day_are_told_apart():
     # each entry opens its own vote
     xml = atom("t", "s", "feeds/updates.xml", list(items.values()), "https://example.org/eu-intel/", "x")
     links = [e.find(f"{ATOM}link[@rel='alternate']").get("href") for e in ET.fromstring(xml).findall(f"{ATOM}entry")]
-    assert sorted(links) == ["https://example.org/eu-intel/votes/195775", "https://example.org/eu-intel/votes/195807"]
+    assert sorted(links) == ["https://example.org/eu-intel/votes/195775/", "https://example.org/eu-intel/votes/195807/"]
     # two votes of the day whose titles tell them apart by nothing say how each was carried
     summary["195775"]["display_title"] = summary["195807"]["display_title"]
     assert sorted(i["title"] for i in snapshot_items(b)) == [

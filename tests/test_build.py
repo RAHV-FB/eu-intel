@@ -552,6 +552,29 @@ def test_feed_ids_stay_when_the_site_moves():
     assert all(x.startswith("https://eu-intel.example.org/") for x in moved_links) and links != moved_links
 
 
+def test_feed_links_are_the_addresses_of_the_pages_that_are_served():
+    """Every entry linked https://rahv-fb.github.io/eu-intel/votes/199567 and legislation/<id>: GitHub Pages answers
+    those with a 301 to the prerendered page at <route>/ (scripts/prerender-routes.mjs), so each click cost a redirect.
+    The ids come from the activity ids, not the links, and do not change."""
+    from pipeline.analysis.feeds import atom
+
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    items = [
+        {"id": "status:2099-0001:in_force", "date": "2026-10-20", "title": "T", "kind": "status_change",
+         "dossier_id": "2099-0001", "detected_at": "2026-10-21T05:00:00Z"},
+        {"id": "vote:199567", "date": "2026-10-19", "title": "V", "kind": "ep_vote", "vote_id": "199567", "detected_at": None},
+        {"id": "council:Y", "date": "2026-10-17", "title": "D", "kind": "council_vote", "detected_at": None,
+         "source": {"url": "https://data.consilium.europa.eu/doc/document/ST-1-2026-INIT/en/pdf"}},
+    ]  # fmt: skip
+    root = ET.fromstring(atom("t", "s", "feeds/updates.xml", items, "https://rahv-fb.github.io/eu-intel/", "x"))
+    links = [e.find("a:link[@rel='alternate']", ns).get("href") for e in root.findall("a:entry", ns)]
+    assert links == [
+        "https://rahv-fb.github.io/eu-intel/legislation/2099-0001/",
+        "https://rahv-fb.github.io/eu-intel/votes/199567/",
+        "https://data.consilium.europa.eu/doc/document/ST-1-2026-INIT/en/pdf",  # no page on the site: the document
+    ]
+
+
 def test_missing_sources_build_empty_sections(tmp_path: Path):
     snap = tmp_path / "snapshot"
     shutil.copytree(FIX / "snapshot" / "ep_people", snap / "ep_people")
