@@ -31,6 +31,10 @@ so that nobody reads a gap as a fact about EU law.
   and the laws shown from their EUR-Lex record only). They are listed under "No topic assigned".
 - Some files have a Parliament position but no listed vote: mostly second-reading approvals without a
   roll-call vote, and a few votes the source does not link to a procedure.
+- A decision of Parliament that its open data records only as a vote, and that no listed vote dates, is shown as
+  "Vote in Parliament": 2018/0229(COD), InvestEU, on 18 April 2019, which the Legislative Observatory lists as
+  "Decision by Parliament, 1st reading" (T8-0433/2019, among the file's documents). That Observatory entry is not
+  read as a decision: it also names votes after which the file went back to committee for negotiations.
 - EUR-Lex does not always record an act's dates correctly: it may miss a change made by an amending act, or
   give the application date or another act's date as the act's entry into force. Corrections checked against
   the acts' texts are kept in `data/curated/act_dates.yaml` (listed in DATA_SOURCES.md, "Corrections"); other
