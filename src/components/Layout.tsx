@@ -236,7 +236,7 @@ function Footer() {
               <Link to="/privacy">Privacy</Link>
             </li>
             <li>
-              <a href={`${import.meta.env.BASE_URL}data/feeds/updates.xml`}>Atom feed</a>
+              <a href={`${import.meta.env.BASE_URL}data/feeds/updates.xml`}>Atom feed (for feed readers)</a>
             </li>
           </ul>
         </nav>

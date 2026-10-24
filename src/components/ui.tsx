@@ -130,8 +130,18 @@ export function institutionLabel(i: string): string {
   return INSTITUTION_LABEL[i] ?? i;
 }
 
-/** External official link. Opens in a new tab, never sends a referrer. */
-export function ExtLink({ href, children, className }: { href: string | null | undefined; children: ReactNode; className?: string }) {
+/** External official link. Opens in a new tab, never sends a referrer. `official={false}` for a site that is not an EU source. */
+export function ExtLink({
+  href,
+  children,
+  className,
+  official = true,
+}: {
+  href: string | null | undefined;
+  children: ReactNode;
+  className?: string;
+  official?: boolean;
+}) {
   const url = safeUrl(href);
   if (!url) return <>{children}</>;
   return (
@@ -140,7 +150,7 @@ export function ExtLink({ href, children, className }: { href: string | null | u
       <span className="ext" aria-hidden="true">
         ↗
       </span>
-      <span className="visually-hidden"> (opens official website in a new tab)</span>
+      <span className="visually-hidden"> ({official ? 'opens official website in a new tab' : 'opens in a new tab'})</span>
     </a>
   );
 }

@@ -426,7 +426,7 @@ export default function Legislation() {
             <div className="lx-results-tools">
               {state.topic && !noTopic && (
                 <a className="lx-linkbtn" href={`${DATA_BASE}feeds/${encodeURIComponent(state.topic)}.xml`}>
-                  Atom feed for this topic
+                  Atom feed for this topic (for feed readers)
                 </a>
               )}
               {anyFilter && (

@@ -283,11 +283,17 @@ export function countryName(code: string | null | undefined): string {
   return COUNTRY_NAMES[code] ?? code;
 }
 
-/** Only allow http(s) links to be rendered from ingested data. */
+// Hosts that give http:// addresses in the official data (Parliament's RegData files, ELI identifiers) and answer them with a
+// 301 to the same path on https, where the document is served (checked with curl on a sample of both, 24 October 2026).
+const HTTPS_HOSTS = new Set(['www.europarl.europa.eu', 'data.europa.eu']);
+
+/** Only allow http(s) links to be rendered from ingested data. An http:// address on a host that serves it over https is
+ *  opened as https://, so the first request is not sent in clear. The stored identifier (an ELI) is shown as published. */
 export function safeUrl(u: string | null | undefined): string | undefined {
   if (!u) return undefined;
   try {
     const url = new URL(u);
+    if (url.protocol === 'http:' && url.port === '' && HTTPS_HOSTS.has(url.hostname)) url.protocol = 'https:';
     return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : undefined;
   } catch {
     return undefined;

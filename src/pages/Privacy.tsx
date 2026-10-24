@@ -27,8 +27,10 @@ export default function Privacy() {
               site needs comes from the same website.
             </li>
             <li>
-              <strong>Your browser does the work.</strong> Search and filters run in your browser; what you type is not sent to us or
-              anyone else.
+              <strong>Your browser does the work.</strong> Search and filters run in your browser, and the site does not send what you
+              type anywhere. The search terms and filters you use are part of the page address, though, so they appear in your
+              browser history and in any link you share. GitHub, the host, receives that address when a page is loaded from it; no
+              other third party does (see “Hosting”).
             </li>
             <li>
               <strong>“Follow” stays on your device.</strong> If you choose to follow a legislative file, the list is stored only in your
@@ -42,12 +44,21 @@ export default function Privacy() {
           <p>
             The site is a set of static files hosted on GitHub Pages, a service of GitHub, Inc. As with any website, your browser has to
             connect to the hosting servers to load pages. GitHub may process technical connection data — such as your IP address, the
-            pages requested and your browser’s user agent — for example in server logs, to deliver the site and keep the service secure.
-            We do not receive or use this data. GitHub’s processing is described in the{' '}
-            <ExtLink href={GITHUB_PRIVACY}>GitHub General Privacy Statement</ExtLink>.
+            pages requested (the full address, including any search terms or filters in it) and your browser’s user agent — for example
+            in server logs, to deliver the site and keep the service secure. We do not receive or use this data. GitHub’s processing is
+            described in the <ExtLink href={GITHUB_PRIVACY} official={false}>
+              GitHub General Privacy Statement
+            </ExtLink>.
           </p>
           <p>
             The same applies if you subscribe to one of our Atom feeds: your feed reader fetches the feed file from GitHub Pages.
+          </p>
+          <p>
+            Search terms and filters are written into the page address (for example <span className="mono">/search?q=climate</span>) so
+            that the Back button works and a link can be shared. Your browser keeps that address in its history, like any other. GitHub
+            receives it whenever the page is loaded from it: when you reload, open a bookmark or restore a tab, or when someone opens a
+            link you shared. No other third party receives it, and our external links are set not to pass on the address of the page
+            you came from.
           </p>
         </section>
 
@@ -66,6 +77,10 @@ export default function Privacy() {
             This information never leaves your device: it is not sent to us or to anyone else, and it is not a cookie. You can remove
             individual files or clear the whole list on the <Link to="/following">Following</Link> page, or by clearing this site’s data
             in your browser settings. If your browser blocks storage, the feature simply does not save anything.
+          </p>
+          <p>
+            The share link on the Following page is the exception, and only when you copy and send it: the identifiers of the files you
+            follow are then part of that link’s address, with the same consequences as for search terms (see “Hosting”).
           </p>
         </section>
 
