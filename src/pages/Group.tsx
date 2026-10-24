@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { BallotPosition, EpVoteSummary, GroupDetail, MepSummary, Meta, PositionCounts } from '../types/data';
+import type { BallotPosition, EpVoteTitle, GroupDetail, MepSummary, Meta, PositionCounts } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber, pct } from '../lib/format';
@@ -18,7 +18,7 @@ import '../features/people/people.css';
 
 type CountryRow = { country: string; members: number };
 type PartyRow = GroupDetail['parties'][number];
-type VoteRow = { vote_id: string; majority?: BallotPosition | null; cohesion?: number | null; counts: PositionCounts; v?: EpVoteSummary };
+type VoteRow = { vote_id: string; majority?: BallotPosition | null; cohesion?: number | null; counts: PositionCounts; v?: EpVoteTitle };
 
 const VOTES_PAGE = 40;
 
@@ -26,7 +26,7 @@ export default function Group() {
   const { id = '' } = useParams();
   const { data: g, error, loading } = useData<GroupDetail>(`people/groups/${encodeURIComponent(id)}.json`);
   const meps = useData<MepSummary[]>(g && g.member_ids.length > 0 ? 'people/meps.json' : null);
-  const votesIndex = useData<EpVoteSummary[]>(g && g.votes.length > 0 ? 'votes/index.json' : null);
+  const votesIndex = useData<EpVoteTitle[]>(g && g.votes.length > 0 ? 'votes/titles.json' : null);
   const meta = useData<Meta>('meta.json');
   const noVoteData = meta.data ? meta.data.counts.ep_votes_with_ballots === 0 : false;
   // votes shown: kept in the address, so that Back from a vote returns to the same list

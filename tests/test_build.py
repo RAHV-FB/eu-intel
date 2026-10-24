@@ -4,6 +4,7 @@ tests use real snapshot records (tests/fixtures/procedure_records.json)."""
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import xml.etree.ElementTree as ET
 from datetime import date
@@ -30,7 +31,7 @@ FIX = Path(__file__).parent / "fixtures" / "build"
 TODAY = "2026-10-22"
 
 REQUIRED = [
-    "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "council/index.json",
+    "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json",
     "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
     "topics.json", "search.json", "activity.json", "feeds/updates.xml",
 ]  # fmt: skip
@@ -238,6 +239,29 @@ def test_vote_breakdowns_use_membership_on_vote_date(out: Path):
     v4 = load(out, "votes/V4.json")
     assert v4["outcome"] == "unknown" and v4["margin"] is None  # never "Majority reached" without a known outcome
     assert v4["has_ballots"] is False and v4["ballots"] == [] and v4["for"] == 300
+
+
+def test_vote_titles_hold_what_the_mep_and_group_vote_tables_show(out: Path):
+    """MEP and group pages read votes/titles.json instead of the whole index (2.5 MB, 3,000 votes in the October 2026
+    build): the same votes in the same order, the fields their tables show and nothing else."""
+    index, titles = load(out, "votes/index.json"), load(out, "votes/titles.json")
+    assert [t["id"] for t in titles] == [v["id"] for v in index] == ["V3", "V1", "V4"]
+    # the fields src/pages/Mep.tsx and Group.tsx render: date, VoteTitle, VoteRowMeta, result (Mep)
+    shown = {"id", "date", "display_title", "display_title_parts", "distinction", "kind_label", "procedure_ref", "outcome"}
+    for t, v in zip(titles, index, strict=True):
+        assert t == {k: v[k] for k in shown if v.get(k)}  # as in the index, an empty field is left out
+        assert {"date", "display_title", "kind_label", "outcome"} <= set(t)
+    assert next(t for t in titles if t["id"] == "V1")["procedure_ref"] == "2099/0001(COD)"
+    assert "procedure_ref" not in next(t for t in titles if t["id"] == "V3")  # the index leaves out what is None
+    assert {"margin", "topics", "source", "for", "has_ballots"}.isdisjoint(set().union(*titles))
+    # the type in src/types/data.ts names the same fields (all but `title`, there only for an empty display_title)
+    ts = DATA_TS.read_text(encoding="utf-8")
+    pick = re.search(r"export type EpVoteTitle = Pick<\s*EpVoteSummary,\s*(.*?)>", ts, re.S)
+    assert pick and set(re.findall(r"'(\w+)'", pick.group(1))) == shown
+    required = _interfaces()["EpVoteSummary"][0] & shown  # the type makes these required: no entry may lack them
+    assert all(required <= set(t) for t in titles)
+    text, whole = (out / "votes/titles.json").read_text(encoding="utf-8"), (out / "votes/index.json").read_text(encoding="utf-8")
+    assert text == json.dumps(titles, ensure_ascii=False, separators=(",", ":")) and len(text) < len(whole)
 
 
 def test_groups_merge_across_terms_and_people_files(out: Path):

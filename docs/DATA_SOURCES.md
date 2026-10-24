@@ -352,6 +352,13 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - `distinction` in `votes/index.json`: what tells a vote apart from another of the same day with the same title, as
   appended to `display_title` ("motion B10-0432/2026"); group and MEP vote tables, which cut long titles on phones,
   show it with the kind of vote and the procedure reference on a line of its own.
+- `votes/titles.json`: the same votes as `votes/index.json`, in the same order, with only the fields the vote tables
+  of the MEP and political group pages show (`id`, `date`, `display_title`, `display_title_parts`, `distinction`,
+  `kind_label`, `procedure_ref`, `outcome`), so those pages do not download the whole index (in the build of
+  24 October 2026, 3,000 votes: 0.8 MB, 120 KB compressed, against 2.5 MB and 305 KB). A field without a value is
+  left out, as in the index; `title` is written only for a vote with no `display_title` (none in the index). The
+  values are those of the index entry. `validate --built` fails if the file is missing, or lists other votes than
+  the index, or the same votes in another order.
 
 ### EUR-Lex / Cellar (`eurlex`) — ok
 - 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 21 final acts that OEIL

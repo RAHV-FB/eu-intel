@@ -246,6 +246,47 @@ test.describe('what a vote decided', () => {
   });
 });
 
+test.describe('vote tables of MEP and group pages', () => {
+  // They read votes/titles.json (the votes of the index with only the fields they show), not the 2.5 MB votes/index.json
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const RESULT: Record<string, string> = { adopted: 'Adopted', rejected: 'Rejected', lapsed: 'Lapsed' };
+  type Row = { id: string; date: string; display_title: string; kind_label: string; procedure_ref?: string | null; distinction?: string; outcome: string };
+
+  for (const [path, section, mep] of [
+    ['people/meps/124858/', 'v-h', true],
+    ['people/groups/s-d/', 'gv-h', false],
+  ] as const) {
+    test(`${path} shows each vote’s date, title, line and result without requesting votes/index.json`, async ({ page, request }) => {
+      const requested: string[] = [];
+      page.on('request', (r) => requested.push(new URL(r.url()).pathname));
+      await open(page, path);
+      expect(requested.filter((p) => p.endsWith('/data/votes/index.json'))).toEqual([]);
+      expect(requested.filter((p) => p.endsWith('/data/votes/titles.json'))).toHaveLength(1);
+
+      const index = (await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/votes/index.json`)).json()) as Row[];
+      const byId = new Map(index.map((v) => [v.id, v]));
+      const rows = page.locator(`section[aria-labelledby="${section}"] tbody tr`);
+      await expect(rows.first()).toBeVisible();
+      for (let i = 0; i < 6; i++) {
+        const row = rows.nth(i);
+        const href = (await row.locator('a[href*="/votes/"]').first().getAttribute('href')) ?? '';
+        const v = byId.get(decodeURIComponent(href.split('/votes/')[1]));
+        expect(v, `vote of row ${i} (${href}) is in the index`).toBeDefined();
+        const [y, m, d] = v!.date.split('-').map(Number);
+        await expect(row.locator('a[href*="/votes/"]').first()).toHaveText(v!.display_title);
+        // innerText: the MEP table's cells carry a label for phones, hidden here
+        await expect(row.locator('td').first()).toHaveText(`${d} ${MONTHS[m - 1]} ${y}`, { useInnerText: true });
+        const line = [v!.kind_label, v!.procedure_ref, v!.distinction].filter(Boolean).join(' · ');
+        if (line) await expect(row.locator('.vote-row-meta')).toHaveText(line);
+        else await expect(row.locator('.vote-row-meta')).toHaveCount(0);
+        if (mep) await expect(row.locator('td').last()).toContainText(RESULT[v!.outcome] ?? '—');
+        // no placeholder where the vote's details belong (a title may itself end in "…")
+        await expect(row.locator('.muted').filter({ hasText: /^(…|Not loaded)$/ })).toHaveCount(0);
+      }
+    });
+  }
+});
+
 test('an MEP’s membership data links the EP Open Data API record', async ({ page }) => {
   await open(page, 'people/meps/124858/');
   await expect(page.getByRole('link', { name: /EP Open Data API – MEP 124858/ })).toHaveAttribute(

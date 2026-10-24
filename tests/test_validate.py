@@ -427,6 +427,31 @@ def test_a_complete_build_passes_with_built(built: Path):
     assert check(FIX, public=built, today=TODAY, built=True).errors == []
 
 
+def test_vote_titles_must_be_the_votes_of_the_index_in_its_order(built: Path, tmp_path: Path):
+    """The MEP and group pages look their votes up in votes/titles.json by id instead of reading votes/index.json: a
+    vote missing from it shows as "Vote <id>" with no date or result, one that the index lacks is never shown."""
+    pub = _built_copy(built, tmp_path)
+    path = pub / "votes" / "titles.json"
+    titles = json.loads(path.read_text(encoding="utf-8"))
+    ids = [t["id"] for t in titles]
+    assert len(ids) == 3 and check(FIX, public=pub, today=TODAY, built=True).errors == []
+
+    def errors_for(rows: list) -> list[str]:
+        path.write_text(json.dumps(rows), encoding="utf-8")
+        return check(FIX, public=pub, today=TODAY, built=True).errors
+
+    head = "public votes/titles.json: not the votes of votes/index.json in its order"
+    assert errors_for(titles[1:]) == [f"{head} (2 entries against 3, 1 missing (e.g. ['{ids[0]}']))"]
+    assert errors_for([*titles, {**titles[0], "id": "V99"}]) == [f"{head} (4 entries against 3, 1 not in the index (e.g. ['V99']))"]
+    assert errors_for([titles[1], titles[0], titles[2]]) == [f"{head} (3 entries against 3, in another order)"]
+    assert errors_for([titles[0], titles[0], titles[2]]) == [f"{head} (3 entries against 3, 1 missing (e.g. ['{ids[1]}']))"]
+    assert errors_for(titles) == []
+    # the file itself is one of the built files that must exist
+    path.unlink()
+    assert check(FIX, public=pub, today=TODAY, built=True).errors == ["public/data/votes/titles.json is missing (run `python -m pipeline build`)"]
+    assert len(check(FIX, public=pub, today=TODAY).warnings["public-missing"]) == 1  # a warning without --built
+
+
 def test_built_files_that_are_missing_or_unreadable_are_errors_only_with_built(built: Path, tmp_path: Path):
     """After a build, deleting public/data/home.json and dossiers/index.json, or truncating home.json, still gave
     `validate --built` exit 0 (two warnings); home.json was never parsed."""
@@ -450,12 +475,14 @@ def test_a_build_from_an_emptied_snapshot_is_an_error_with_built(built: Path, tm
     `validate --built` said OK, 0 errors."""
     pub = _built_copy(built, tmp_path)
     (pub / "votes" / "index.json").write_text("[]", encoding="utf-8")
+    (pub / "votes" / "titles.json").write_text("[]", encoding="utf-8")  # the build writes both from the same votes
     meta = json.loads((pub / "meta.json").read_text())
     meta["counts"]["ep_votes"] = 0
     (pub / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
     errors = check(FIX, public=pub, today=TODAY, built=True).errors
     assert errors == [
         "public votes/index.json: not a list with records (the build found none; check data/snapshot)",
+        "public votes/titles.json: not a list with records (the build found none; check data/snapshot)",
         "public meta.json: count 'ep_votes' is 0, but ep_votes/votes.json has 4 records",
     ]
     assert check(FIX, public=pub, today=TODAY).errors == []  # not checked without --built

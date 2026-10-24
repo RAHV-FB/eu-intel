@@ -1169,6 +1169,18 @@ def _vote_index_entry(v: dict) -> dict:
     return out
 
 
+def _vote_title_entry(e: dict) -> dict:
+    """EpVoteTitle for votes/titles.json, from the entry of votes/index.json: only what the vote tables of the MEP
+    and group pages show (date, title, the line of kind, procedure reference and distinction, result), so those
+    pages need not download the whole index. A key without a value is left out; `title` stays only as the fallback
+    of a vote with no display title (none in the index today)."""
+    keep = ("id", "date", "display_title", "display_title_parts", "distinction", "kind_label", "procedure_ref", "outcome")
+    out = {k: e[k] for k in keep if e.get(k)}
+    if not e.get("display_title"):
+        out["title"] = e["title"]
+    return out
+
+
 def _valid_on(start: str | None, end: str | None, d: str) -> bool:
     return (start is None or start <= d) and (end is None or d <= end)
 
@@ -2409,6 +2421,7 @@ class Builder:
             det = self.ep_vote_detail(v)
             self.files[f"votes/{v.id}.json"] = det
         self.files["votes/index.json"] = [_vote_index_entry(self.vote_summary[v.id]) for v in idx]
+        self.files["votes/titles.json"] = [_vote_title_entry(e) for e in self.files["votes/index.json"]]
 
     def members_in_office(self, d: str) -> int:
         """MEPs whose political-group membership (non-attached included) covers day `d` in the EP's
@@ -5397,7 +5410,7 @@ def build(
     sizes = {
         k: len(json.dumps(v, ensure_ascii=False, separators=(",", ":")).encode()) for k, v in files.items()
     }
-    for k in ("dossiers/index.json", "votes/index.json", "search.json", "home.json", "people/meps.json"):
+    for k in ("dossiers/index.json", "votes/index.json", "votes/titles.json", "search.json", "home.json", "people/meps.json"):
         log.info("%-22s %8.1f KB", k, sizes.get(k, 0) / 1024)
     total = sum(sizes.values())
     log.info("wrote %d files (%.1f MB) to %s", len(files) + len(extra), total / 1e6, out)

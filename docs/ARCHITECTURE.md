@@ -63,7 +63,10 @@ the UI; every institutional fact on a page has a reachable origin.
 - `scripts/prerender-routes.mjs` writes an `index.html` per known route (correct `<title>`, HTTP 200 on direct
   navigation) plus `404.html` as SPA fallback — no server rewrites needed.
 - `src/types/data.ts` is the **public data contract**. Pages lazy-load only the JSON they need:
-  `home.json` for the homepage, `dossiers/index.json` for the explorer, `dossiers/<id>.json` per law, etc.
+  `home.json` for the homepage, `dossiers/index.json` for the explorer, `dossiers/<id>.json` per law, etc. The vote
+  tables of the MEP and political group pages read `votes/titles.json` (the votes of `votes/index.json`, in its order,
+  with only the date, title, kind of vote, procedure reference, distinction and result they show), not the whole
+  index, which only the votes list needs.
 - Search: `search.json` + an in-browser engine (`src/lib/search.ts`): accent/case folding, aliases, identifier
   matching, prefix, word-family ("fish" -> "fisheries", ranked below whole words) and bounded fuzzy matching
   (flagged `approximate` and ranked last; /search, the header suggestions, /legislation and /votes say so), static

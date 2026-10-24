@@ -20,6 +20,7 @@ from pipeline.build import (
     VOTE_OUTCOME_NOTES,
     Builder,
     _vote_index_entry,
+    _vote_title_entry,
     act_label,
     build_search_docs,
     commission_cod_proposal,
@@ -780,6 +781,35 @@ def test_vote_index_writes_document_numbers_with_a_hyphen():
     v = votes("175067")["175067"]
     assert v.title.startswith("A10–0049/2025 – Gilles Boyer")
     assert _vote_index_entry({"title": v.title, "source": {}})["title"].startswith("A10-0049/2025 – Gilles Boyer")
+
+
+def test_vote_titles_entry_keeps_only_what_the_mep_and_group_tables_show():
+    # 112160, 30 Jan 2020, "Gender pay gap", told apart from 112117 by its motion number: the vote tables of the MEP
+    # and group pages show its date, title, the line "kind of vote · distinction" and (MEP page) the result
+    v = votes("112160")["112160"]
+    assert (v.date, v.outcome, v.n_for, v.n_against, v.n_abstain) == ("2020-01-30", "adopted", 493, 82, 79)
+    summary = {
+        "id": v.id, "date": v.date, "title": v.title, "kind": v.kind, "kind_detail": None, "final_role": None,
+        "display_title": "Gender pay gap — vote on the resolution (motion B9-0073/2020)",
+        "distinction": "motion B9-0073/2020", "kind_label": "Vote on a resolution", "outcome": v.outcome,
+        "outcome_basis": "published", "outcome_note": None, "for": v.n_for, "against": v.n_against,
+        "abstain": v.n_abstain, "dossier_id": None, "dossier_ref": None, "procedure_ref": None, "subject": None,
+        "topics": [], "margin": None, "has_ballots": True, "source": v.source.model_dump(),
+    }  # fmt: skip
+    entry = _vote_index_entry(summary)
+    assert _vote_title_entry(entry) == {
+        "id": "112160", "date": "2020-01-30", "outcome": "adopted", "kind_label": "Vote on a resolution",
+        "display_title": "Gender pay gap — vote on the resolution (motion B9-0073/2020)",
+        "distinction": "motion B9-0073/2020",
+    }  # fmt: skip
+    # French passages of Parliament's own label keep their runs; a procedure reference is kept when there is one
+    parts = [[None, "Gender pay gap — "], ["fr", "ensemble du texte"]]
+    entry |= {"display_title": "Gender pay gap — ensemble du texte", "display_title_parts": parts, "procedure_ref": "2019/2870(RSP)"}
+    got = _vote_title_entry(entry)
+    assert got["display_title_parts"] == parts and got["procedure_ref"] == "2019/2870(RSP)" and "title" not in got
+    # a vote with no display title is shown by Parliament's label (VoteTitle's fallback): the only case in which
+    # the label is written
+    assert _vote_title_entry(entry | {"display_title": ""})["title"] == entry["title"]
 
 
 def test_rejection_titles_fit_the_procedure():

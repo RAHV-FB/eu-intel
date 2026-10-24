@@ -67,8 +67,8 @@ MIN_RECORDS: dict[tuple[str, str], int] = {
 }  # fmt: skip
 # Built lists that are never empty (activity.json can be, before the first recorded change).
 BUILT_LISTS = [
-    "dossiers/index.json", "votes/index.json", "council/index.json", "people/meps.json", "people/groups.json",
-    "people/parties.json", "countries/index.json", "topics.json", "search.json",
+    "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json", "people/meps.json",
+    "people/groups.json", "people/parties.json", "countries/index.json", "topics.json", "search.json",
 ]  # fmt: skip
 # meta.json counts and the snapshot file each is counted from: a count of zero is an error when that file has records;
 # the first four are the file's own size, so they may not fall below it (the others are derived and can differ).
@@ -80,7 +80,7 @@ BUILT_COUNTS = {
 }  # fmt: skip
 SAME_SIZE_COUNTS = ("legal_acts", "meps", "national_measures", "infringements")
 PUBLIC_FILES = [
-    "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "council/index.json",
+    "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json",
     "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
     "topics.json", "search.json", "activity.json", "feeds/updates.xml",
 ]  # fmt: skip
@@ -626,6 +626,21 @@ def check_built(public: Path, data: dict[tuple[str, str], list[Any]], rep: Repor
             rep.error(f"public {f}: not a list with records (the build found none; check data/snapshot)", "public")
     if docs.get("home.json") is not None and not (isinstance(docs["home.json"], dict) and docs["home.json"]):
         rep.error("public home.json: empty", "public")
+    # the titles of the MEP and group vote tables are the index's votes, in its order (the pages look them up by id)
+    index, titles = docs.get("votes/index.json"), docs.get("votes/titles.json")
+    if isinstance(index, list) and isinstance(titles, list):
+        listed = [e.get("id") if isinstance(e, dict) else None for e in index]
+        titled = [e.get("id") if isinstance(e, dict) else None for e in titles]
+        if listed != titled:
+            absent, extra = set(listed) - set(titled), set(titled) - set(listed)
+            how = f"{len(titled)} entries against {len(listed)}"
+            if absent:
+                how += f", {len(absent)} missing (e.g. {sorted(absent, key=str)[:3]})"
+            if extra:
+                how += f", {len(extra)} not in the index (e.g. {sorted(extra, key=str)[:3]})"
+            if not (absent or extra) and len(titled) == len(listed):
+                how += ", in another order"
+            rep.error(f"public votes/titles.json: not the votes of votes/index.json in its order ({how})", "public")
     meta = docs.get("meta.json")
     if meta is not None:
         counts = meta.get("counts") if isinstance(meta, dict) else None
