@@ -466,6 +466,20 @@ test.describe('legislative files', () => {
     await expect(page.locator('#details li', { hasText: 'Barry Andrews' })).toContainText('Rapporteur for an opinion (AFET)');
   });
 
+  test('a rapporteur with no MEP page here is named without a link; one OEIL links under another id is listed once', async ({ page }) => {
+    await open(page, 'legislation/2011-0023/'); // Timothy Kirkhope (4542) sat before 2019: people/meps/4542 is not written
+    await page.locator('#details summary').click();
+    const kirkhope = page.locator('#details li', { hasText: 'Timothy Kirkhope' });
+    await expect(kirkhope).toContainText('Rapporteur (LIBE)');
+    await expect(kirkhope.getByRole('link')).toHaveCount(0);
+    await expect(page.locator('#details')).toContainText('A name without a link has no MEP page on this site');
+    await open(page, 'legislation/2026-0172/'); // OEIL: "CHRIST Marie-Sophie (EPP)" under 10006693; EP Open Data: 277057
+    await page.locator('#details summary').click();
+    const christ = page.locator('#details li', { hasText: /CHRIST Marie-Sophie|Marie-Sophie Christ/ });
+    await expect(christ).toHaveCount(1);
+    await expect(christ.getByRole('link', { name: 'Marie-Sophie Christ' })).toHaveAttribute('href', `${BASE_PATH}people/meps/277057`);
+  });
+
   test('a committee of an earlier term is former, not joint; a joint debate names the other files', async ({ page }) => {
     await open(page, 'legislation/2023-0131/'); // OEIL: "Committee responsible SANT", "Former committee responsible ENVI"
     await page.locator('#details summary').click();

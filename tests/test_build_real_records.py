@@ -954,17 +954,13 @@ def test_no_component_member_count_before_parliament_took_note_of_three_mandates
     assert Builder.component_members(me, "2020-02-10") == 704  # type: ignore[arg-type]
 
 
-def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
-    # 2021/0106(COD), AI Act. OEIL's key players: "KONEČNÁ Kateřina (The Left)", "MADISON Jaak (ID)",
-    # ENVI "SOLÍS PÉREZ Susana (Renew)". Konečná is in PfE since 2026-10-21 and Madison left ID in 2024: their
-    # current groups must not be shown. 2016/0107(COD): Pascal Durand was a shadow rapporteur in the 8th term,
-    # listed by OEIL as "DURAND Pascal (Verts/ALE)" (that file's roles come from OEIL, with no date).
+def _rapporteur_builder(ids: set[str]) -> SimpleNamespace:
+    """What Builder.rapporteur_entries reads, with the MEPs `ids` (of data/snapshot/ep_people) and all the orgs."""
     from collections import defaultdict
 
     from pipeline.build import group_slug
     from pipeline.models.entities import Mep, Organization
 
-    ids = {"23699", "197493", "197784", "124693"}
     meps = {k: Mep.model_validate(v) for k, v in records("ep_people/meps.json", ids).items()}
     orgs = [Organization.model_validate(o) for o in json.loads((SNAP / "ep_people" / "orgs.json").read_text("utf-8"))]
     group_orgs: dict[str, list[Organization]] = defaultdict(list)
@@ -976,8 +972,18 @@ def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
         org_slug={o.id: s for s, os_ in group_orgs.items() for o in os_},
         mep_groups={i: sorted((x.start, x.end, x.org_id) for x in m.memberships if x.kind == "group")
                     for i, m in meps.items()},
+        mep_by_name={f"{m.family_name} {m.given_name}".casefold(): [m] for m in meps.values()},
     )  # fmt: skip
     me.group_at = lambda mep_id, d: Builder.group_at(me, mep_id, d)  # type: ignore[arg-type]
+    return me
+
+
+def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
+    # 2021/0106(COD), AI Act. OEIL's key players: "KONEČNÁ Kateřina (The Left)", "MADISON Jaak (ID)",
+    # ENVI "SOLÍS PÉREZ Susana (Renew)". Konečná is in PfE since 2026-10-21 and Madison left ID in 2024: their
+    # current groups must not be shown. 2016/0107(COD): Pascal Durand was a shadow rapporteur in the 8th term,
+    # listed by OEIL as "DURAND Pascal (Verts/ALE)" (that file's roles come from OEIL, with no date).
+    me = _rapporteur_builder({"23699", "197493", "197784", "124693"})
     p = procs("2021-0106", "2016-0107")
     ai = {r["mep_id"]: r for r in Builder.rapporteur_entries(me, p["2021-0106"])}  # type: ignore[arg-type]
     assert (ai["23699"]["group"], ai["23699"]["group_code"], ai["23699"]["role"]) == ("the-left", "The Left", "shadow")
@@ -987,6 +993,32 @@ def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
     )  # fmt: skip
     durand = [r for r in Builder.rapporteur_entries(me, p["2016-0107"]) if r["mep_id"] == "124693"]  # type: ignore[arg-type]
     assert [(r["group"], r["group_code"]) for r in durand] == [("greens-efa", "Greens/EFA")]
+
+
+def test_rapporteurs_link_only_mep_pages_and_take_the_ep_id_of_an_oeil_person_id():
+    # 2026/0172(COD): OEIL links "CHRIST Marie-Sophie (EPP)" to /meps/en/10006693, an address with no page on the
+    # EP site (404) nor here; she is 277057 in EP Open Data, and the EP API lists her as a shadow rapporteur of the
+    # file too: the page listed her twice, once linked to "We couldn't find this MEP". 2026/0115(COD): OEIL's
+    # "SCHNURRBUSCH Volker (ESN)" (10001806) is the file's only entry for Volker Schnurrbusch (267485). 2025/0221(COD):
+    # the EP API lists him as a shadow and a shadow for an opinion, and OEIL's 10001806 as a shadow again.
+    # 2011/0023(COD): Timothy Kirkhope (4542) sat before 2019 and has no MEP page here: his name is not a link.
+    me = _rapporteur_builder({"277057", "267485"})
+    p = procs("2026-0172", "2026-0115", "2025-0221", "2011-0023")
+    assert {r.mep_id for r in p["2026-0172"].rapporteurs} >= {"10006693", "277057"}  # as stored
+
+    def entries(pid: str, *ids: str) -> list[tuple]:
+        return [(r["mep_id"], r["name"], r["role"], r["group_code"], r["country"], r.get("has_page"))
+                for r in Builder.rapporteur_entries(me, p[pid]) if r["mep_id"] in ids]  # type: ignore[arg-type]  # fmt: skip
+
+    assert entries("2026-0172", "10006693", "277057") == [("277057", "Marie-Sophie Christ", "shadow", "EPP", "DE", True)]
+    assert entries("2026-0115", "10001806", "267485") == [("267485", "Volker Schnurrbusch", "shadow", "ESN", "DE", True)]
+    assert sorted(x[2] for x in entries("2025-0221", "10001806", "267485")) == ["shadow", "shadow_opinion"]
+    assert entries("2011-0023", "4542") == [("4542", "Timothy Kirkhope", "rapporteur", "ECR", None, None)]
+    for pid, x in p.items():
+        out = Builder.rapporteur_entries(me, x)  # type: ignore[arg-type]
+        assert all(bool(r.get("has_page")) == (r["mep_id"] in me.mep) for r in out), pid
+        keys = [(r["mep_id"], r["role"], r["committee"]) for r in out]
+        assert len(keys) == len(set(keys)), pid
 
 
 def test_snapshot_rapporteur_committees_are_among_the_files_committees():

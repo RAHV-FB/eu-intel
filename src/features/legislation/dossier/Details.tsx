@@ -269,11 +269,13 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
               political group they belonged to in that role, where the records establish it. “Former” means that the Legislative Observatory
               lists the MEP only under a “Former …” heading for this file, in the current parliamentary term or an earlier one; where it
               does not list the MEP, it means that Parliament’s open data records the appointment in an earlier term.
+              {d.rapporteurs.some((r) => !r.has_page) && ' A name without a link has no MEP page on this site, which covers the parliamentary terms since 2019.'}
             </p>
             <ul className="dz-list">
               {d.rapporteurs.map((r, i) => (
                 <li key={`${r.mep_id ?? r.name}-${i}`}>
-                  {r.mep_id ? <Link to={`/people/meps/${encodeURIComponent(r.mep_id)}`}>{r.name}</Link> : r.name}
+                  {/* MEPs of earlier terms have no page here: their name is not a link, as groups before 2019 */}
+                  {r.mep_id && r.has_page ? <Link to={`/people/meps/${encodeURIComponent(r.mep_id)}`}>{r.name}</Link> : r.name}
                   <span className="meta">
                     {' '}
                     — {rapporteurRoleLabel(r.role, r.committee, r.former)}

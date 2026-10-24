@@ -933,6 +933,18 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   2021/0379(COD), dated 9 December 2021, ECR member from 11 October 2022), so for them `date` is not the
   appointment in a group. Checked against the EP API's own `politicalGroup` on each participation (the cached
   API records of that snapshot): the membership on `date` agrees on all 5,494 entries it covers.
+- OEIL person ids (`build.py` `rapporteur_entries`): the OEIL key players link a few MEPs of the 10th term by a
+  person id that EP Open Data does not use, and under which the EP website has no page: 17 entries of the
+  snapshot, for 6 MEPs (e.g. 2026/0172(COD) "CHRIST Marie-Sophie (EPP)", /meps/en/10006693, who is 277057 in EP
+  Open Data; the EP API record of 277057 gives no other id). The build gives such an entry the id and name of the
+  one MEP whose "FAMILY Given" name is the one OEIL prints and who belonged to the group it prints, and leaves it
+  out where the file lists that MEP in that role already (16 entries on 15 files had listed the MEP twice; OEIL's
+  `former` flag then applies to the entry listed, as in `oeil_rapporteurs`). The pages list 12,582 entries.
+  2026/0115(COD): the only entry for Volker Schnurrbusch (OEIL 10001806, EP 267485), now also on his page.
+- `has_page` (set only when true): the MEP has a page here (people/meps: the MEPs of the terms covered), and the
+  name links to it; 9,534 of the 12,582 entries. The others, MEPs who sat only before 2019 (e.g. Timothy Kirkhope,
+  4542, on 2011/0023(COD)), are named without a link, as groups before 2019 are. `validate` reports an error when
+  a linked page is not written, or when one MEP is listed twice in the same role and committee.
   2021/0106(COD): Konečná The Left, Madison ID, Solís Pérez Renew, as in OEIL.
 
 ### National implementation (`implementation`) — partial

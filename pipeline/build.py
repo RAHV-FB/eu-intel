@@ -2022,6 +2022,10 @@ class Builder:
             p = [(x.start, x.end, x.org_id) for x in m.memberships if x.kind == "party"]
             self.mep_groups[m.id] = sorted(g, key=lambda t: (t[0] or "", t[1] or "9999"))
             self.mep_parties[m.id] = sorted(p, key=lambda t: (t[0] or "", t[1] or "9999"))
+        # "FAMILY Given", as the OEIL key players print an MEP (rapporteur_entries)
+        self.mep_by_name: dict[str, list[Mep]] = defaultdict(list)
+        for m in s.meps:
+            self.mep_by_name[" ".join(f"{m.family_name} {m.given_name}".casefold().split())].append(m)
         self.ballots = {b.vote_id: b for b in s.ballots}
         self.optouts = {o.celex: o for o in s.optouts if o.status == "ok"}
         self.train_by_ref: dict[str, list[TrainFile]] = defaultdict(list)
@@ -2179,10 +2183,39 @@ class Builder:
     def rapporteur_entries(self, p: Procedure) -> list[dict]:
         """A file's rapporteurs with the political group they held in that role, never their current group:
         their group membership on the date the EP API gives for the appointment, else the group the OEIL file
-        prints next to the name (older files). Left out when neither establishes it (memberships start July 2019)."""
+        prints next to the name (older files). Left out when neither establishes it (memberships start July 2019).
+        `has_page`: the MEP has a page (people/meps: the terms covered), set only when true.
+
+        The OEIL key players link a few MEPs of the current term by a person id that EP Open Data does not use
+        (2026/0172(COD): "CHRIST Marie-Sophie (EPP)", /meps/en/10006693, an address with no page; EP Open Data's
+        277057, listed by the EP API as a shadow rapporteur of the same file). Such an entry takes the id and name of
+        the one MEP of the printed name who sat in the printed group, and is left out where the file lists that MEP in
+        the same role already (the former flag OEIL gives then applies to that entry, as in
+        ep_procedures.oeil_rapporteurs)."""
         familiar = _lazy("pipeline.sources.ep_people", "GROUP_CODES") or {}
+        rapps, rekeyed = list(p.rapporteurs), set()
+        for i, r in enumerate(rapps):
+            if r.mep_id not in self.mep and r.group:
+                slug = group_slug(familiar.get(r.group, r.group))
+                found = [m for m in self.mep_by_name.get(" ".join(r.name.casefold().split()), [])
+                         if slug in {self.org_slug.get(g) for _, _, g in self.mep_groups.get(m.id, [])}]  # fmt: skip
+                if len(found) == 1:
+                    rapps[i] = r.model_copy(update={"mep_id": found[0].id, "name": found[0].name})
+                    rekeyed.add(i)
+        flags: dict[int, list[bool]] = defaultdict(list)  # entry -> the former flags of the OEIL entries it stands for
+        listed: set[int] = set()
+        for i in sorted(rekeyed):
+            r = rapps[i]
+            for j, x in enumerate(rapps):
+                if j not in rekeyed and (x.mep_id, x.role) == (r.mep_id, r.role) and x.committee in (None, r.committee):
+                    flags[j].append(r.former)
+                    listed.add(i)
         out = []
-        for r in p.rapporteurs:
+        for i, r in enumerate(rapps):
+            if i in listed:
+                continue
+            if i in flags:
+                r = r.model_copy(update={"former": all(flags[i])})
             m = self.mep.get(r.mep_id or "")
             slug = code = None
             gid = self.group_at(m.id, r.date) if m and r.date else None
@@ -2195,7 +2228,7 @@ class Builder:
             out.append({
                 "mep_id": r.mep_id, "name": r.name, "group": slug, "group_code": code,
                 "country": m.country if m else None, "role": r.role, "committee": r.committee,
-                **({"former": True} if r.former else {}),
+                **({"former": True} if r.former else {}), **({"has_page": True} if m else {}),
             })  # fmt: skip
         return out
 
@@ -4334,11 +4367,11 @@ class Builder:
         s = self.s
         rapp_for: dict[str, list[dict]] = defaultdict(list)
         for pid in self.dossier_ids:
-            for r in self.proc[pid].rapporteurs:
-                if r.mep_id:
-                    rapp_for[r.mep_id].append({"dossier_id": pid, "title": self.dossier_summary[pid]["title"],
-                                               "role": r.role, "committee": r.committee,
-                                               **({"former": True} if r.former else {})})  # fmt: skip
+            for r in self.rapporteur_entries(self.proc[pid]):  # under their EP Open Data ids, as the file lists them
+                if r["mep_id"]:
+                    rapp_for[r["mep_id"]].append({"dossier_id": pid, "title": self.dossier_summary[pid]["title"],
+                                                  "role": r["role"], "committee": r["committee"],
+                                                  **({"former": True} if r.get("former") else {})})  # fmt: skip
         self.mep_summary: dict[str, dict] = {}
         for m in sorted(s.meps, key=lambda m: m.id):
             gid = self.current_or_last(self.mep_groups.get(m.id, []))

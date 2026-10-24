@@ -138,6 +138,28 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     for (const d of all) for (const r of d.rapporteurs) expect(r.committee, `${d.id} ${r.mep_id}`).not.toBe('null');
   });
 
+  it('links a rapporteur only to an MEP page that is written, and lists an MEP once per role (2026-0172)', () => {
+    const pages = new Set(readdirSync(new URL('people/meps/', DATA)).map((f) => f.replace(/\.json$/, '')));
+    let linked = 0;
+    let unlinked = 0;
+    for (const d of all) {
+      const seen = new Set<string>();
+      for (const r of d.rapporteurs) {
+        expect(!!r.has_page, `${d.id} ${r.mep_id}`).toBe(!!r.mep_id && pages.has(r.mep_id));
+        if (r.has_page) linked += 1;
+        else unlinked += 1;
+        const key = `${r.mep_id} ${r.role} ${r.committee ?? ''}`;
+        expect(seen.has(key), `${d.id} ${key}`).toBe(false);
+        seen.add(key);
+      }
+    }
+    expect(linked).toBeGreaterThan(0);
+    expect(unlinked).toBeGreaterThan(0); // e.g. Timothy Kirkhope (4542) on 2011-0023, who sat before 2019
+    // OEIL links her as 10006693, which neither the EP website nor this site has a page for
+    const christ = all.find((d) => d.id === '2026-0172')!.rapporteurs.filter((r) => /christ/i.test(r.name));
+    expect(christ.map((r) => [r.mep_id, r.name, r.role, r.has_page])).toEqual([['277057', 'Marie-Sophie Christ', 'shadow', true]]);
+  });
+
   it('calls a file joint only when two committees lead it now, and labels earlier-term roles former', () => {
     for (const d of all) {
       const joint = new Set(d.committees.filter((c) => c.role === 'joint' && !c.former).map((c) => c.code));
