@@ -8,7 +8,7 @@
 Every string value that is an http(s) URL anywhere under the data directory is a candidate. URLs are
 deduplicated, grouped by host and sampled (seeded by ISO week so successive runs rotate through the set),
 then requested one at a time with a per-host delay: HEAD first, falling back to a streamed GET (body not
-read) when HEAD is not supported.
+read) when HEAD is refused or answers 404/410 (some servers, such as the EP Open Data API, answer HEAD with 404).
 
 Classification
   ok            2xx after redirects
@@ -136,8 +136,9 @@ def classify(url: str, r: httpx.Response) -> tuple[str, str]:
 def check(client: httpx.Client, url: str) -> tuple[int | None, str | None, str, str]:
     try:
         r = client.head(url)
-        if r.status_code in (403, 405, 501):
-            # Some servers reject HEAD (or only allow GET for scripts): retry with GET, body not downloaded.
+        if r.status_code in (403, 404, 405, 410, 501):
+            # Some servers reject HEAD (or only allow GET for scripts), and the EP Open Data API answers HEAD with
+            # 404 for records it serves to GET: retry with GET, body not downloaded.
             time.sleep(0.5)
             with client.stream("GET", url) as g:
                 r = g
