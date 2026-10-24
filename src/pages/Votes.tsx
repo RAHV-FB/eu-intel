@@ -298,7 +298,10 @@ export default function Votes() {
               {keywordMatch?.partial && filtered.length > 0 && (
                 <>
                   {' '}
-                  · no whole-word matches for “{q.trim()}”, so these have words in their titles that start with it
+                  · no whole-word matches for “{q.trim()}”, so{' '}
+                  {keywordMatch.wordStart
+                    ? 'these have words in their titles, or in the names of their files, that start with it'
+                    : 'these match only another form of a word (a longer word built on it, or another ending)'}
                 </>
               )}
               {keywordMatch?.approximate && filtered.length > 0 && (

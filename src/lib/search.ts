@@ -6,15 +6,19 @@
  *                            or "2016/0224A", CELEX "32024R1689" or "CELEX:32024R1689", "COM(2021)206", act number
  *                            "2024/1689", "Regulation (EU) 2024/1689", "Directive 2014/24/EU", also as readers write
  *                            it: "EU Regulation 2016/679", "Reg. (EU) 2016/679", "Dir 2019/1937", "EU 2016/679";
- *                            a file's id as in its address, "2023-0134"
+ *                            as its official title begins ("Regulation (EU) 2016/679 of the European Parliament and of
+ *                            the Council of 27 April 2016 on …"); an act's EUR-Lex or ELI address ("…?uri=CELEX:
+ *                            32016R0679", "…/eli/reg/2016/679/oj"); a file's id as in its address, "2023-0134"
  *   2. exact name            title or alias equals the query ("AI Act", "EPP", "Spain", "Spanish"), also after "EU"
  *                            ("EU GDPR"); a country, group or party next to the words for MEPs ("Spanish MEPs",
- *                            "EPP MEPs"), flagged `meps`
+ *                            "EPP MEPs", "Patriots for Europe MEPs"), flagged `meps`; not one of several names
+ *                            holding a word ("party MEPs"), nor a group for the Parliament ("European Parliament MEPs")
  *   3. name starts with the query as whole words, or contains it as a phrase; a file's name next to another act
  *      type than its own ("GDPR directive"), unless a file of that act type has the other words
  *   4. every meaningful word matches a whole word, exactly or as its singular/plural ("battery" ~ "batteries");
  *      "EU" need not match, but counts ("EU Data Act"); "MEP(s)" is "Member(s) of the European Parliament", not
- *      "Member States"; the act type of a file's acts ("directive") is matched as that whole word only.
+ *      "Member States", and so is that phrase; the act type of a file's acts ("directive") is matched as that whole
+ *      word only; two words written apart that the index has as one match as that word ("cyber security").
  *      Only when no document matches that way, one word may match an everyday synonym ("ai law" -> "act"), or an
  *      act type another ("USB-C regulation" -> the "directive" a file's entry has for its act).
  *      A generic word ("rules", "law") also matches through its synonyms one step below ("asylum rules" ->
@@ -131,15 +135,36 @@ const ID_RE = /^(?:\d{4}\/\d{4}[a-z]?(?:\([a-z]{3}\))?|\d{1,4}\/\d{1,4}|\d{5}[a-
 const ACT_CITATION_HEAD =
   /^(?:celex\s*)?(?:(?:eu|ec|eec)\s+)?(?:(?:commission|council)\s+)?(?:(?:implementing|delegated)\s+)?(?:(?:regulation|directive|decision|reg|dir|dec)s?\s*)?(?:\((?:eu|ec|eec|euratom)(?:\s+euratom)?\)\s*|(?:eu|ec|eec|euratom)(?:\s+euratom)?\s+)?(?:(?:no|nr|n)\s+)?/;
 const ACT_CITATION_TAIL = /(\d)(?:\/(?:eu|ec|eec|euratom|jha|cfsp)(?:\s+euratom)?|\s+\(?(?:eu|ec|eec)\)?)$/;
+// what follows an act's number in its official title, as copied from EUR-Lex or the Official Journal: "Regulation (EU)
+// 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons …"
+const ACT_TITLE_REST = /^(.*?\d{1,4}\/\d{1,4}(?:\/[a-z]+)?(?:\s+euratom|\s+\(?(?:eu|ec|eec)\)?)?)\s+(?:of|on)\s.*$/;
+
+/** A normalized act citation without the institutions, date and subject its official title adds after the number;
+ * other text as it is ("2/2024 on Gaza" is no citation). */
+export function citationHead(n: string): string {
+  return ACT_CITATION_TYPE.test(n) ? n.replace(ACT_TITLE_REST, '$1') : n;
+}
 
 /** An act citation reduced to its number: "Regulation (EU) 2024/1689" -> "2024/1689". */
 function bareCitation(query: string): string {
-  return normalize(query).replace(ACT_CITATION_HEAD, '').replace(ACT_CITATION_TAIL, '$1');
+  return citationHead(normalize(query)).replace(ACT_CITATION_HEAD, '').replace(ACT_CITATION_TAIL, '$1');
 }
 
-/** Identifier forms of a query: as typed, and with an act citation reduced to its number ("2024/1689"). */
+const ELI_TYPE: Record<string, string> = { reg: 'r', dir: 'l', dec: 'd' };
+
+/** The act an EUR-Lex or ELI address names, as its CELEX number: "https://eur-lex.europa.eu/legal-content/EN/TXT/
+ * ?uri=CELEX:32016R0679" or "http://data.europa.eu/eli/reg/2016/679/oj" -> "32016r0679". */
+function addressCelex(query: string): string | null {
+  const celex = /\bcelex(?::|%3a)\s*(\d{5}[a-z]{1,2}\d{1,4})/i.exec(query);
+  if (celex) return celex[1].toLowerCase();
+  const eli = /\beli\/(reg|dir|dec)(?:_impl|_del)?\/(\d{4})\/(\d{1,4})(?![\d])/i.exec(query);
+  return eli ? `3${eli[2]}${ELI_TYPE[eli[1].toLowerCase()]}${eli[3].padStart(4, '0')}` : null;
+}
+
+/** Identifier forms of a query: as typed, with an act citation reduced to its number ("2024/1689"), and the CELEX
+ * number of an act's address. */
 function idCandidates(query: string): string[] {
-  return [...new Set([idKey(normalize(query)), idKey(bareCitation(query))])].filter(Boolean);
+  return [...new Set([idKey(normalize(query)), idKey(bareCitation(query)), addressCelex(query) ?? ''])].filter(Boolean);
 }
 
 /** The whole query is an identifier or an act citation ("2023/0134(COD)", "COM(2016) 26", "Directive 2014/24/EU"). */
@@ -155,7 +180,7 @@ const ACT_CITATION_TYPE =
  * "d2014/376", "Directive 2014/24/EU" -> "l2014/24", "Regulation (EU) 2024/1689" -> "r2024/1689". Before 2015
  * regulations and decisions were numbered "number/year", directives "year/number". */
 function citedActKeys(query: string): string[] {
-  const n = normalize(query);
+  const n = citationHead(normalize(query));
   const type = ACT_CITATION_TYPE.exec(n);
   const num = /(\d{1,4})\/(\d{1,4})(?:\/[a-z]+)?(?:\s+euratom|\s+\(?(?:eu|ec|eec)\)?)?$/.exec(n);
   if (!type || !num) return [];
@@ -277,11 +302,20 @@ const MEP_WORDS = new Set(['mep', 'meps']);
 const MEP_QUALIFIERS = new Set(['mep', 'meps', 'member', 'members']);
 const MEP_PHRASE = 'member of the european parliament';
 const MEP_KINDS = new Set<SearchKind>(['country', 'group', 'party']);
+// "members of the European Parliament", "members of parliament", "European Parliament members" (normalized, spaced)
+const MEP_LONG = / (?:members? (?:of )?(?:the )?(?:european )?parliament|(?:european )?parliament members?) /g;
+// the Parliament the MEPs sit in, which names none of its groups ("European Parliament MEPs", "MEPs in parliament")
+const MEP_PARLIAMENT = / (?:members? of )?(?:the )?(?:european parliament|parliament|ep) /g;
 
-/** The query asks for MEPs ("MEPs", "Spanish MEPs", "members of the European Parliament"). */
+/** The words of a text, with "members of the European Parliament" (or "members of parliament") as "meps", so that
+ * "members" does not match "Member States". */
+export function mepWords(text: string): string[] {
+  return ` ${words(text).join(' ')} `.replace(MEP_LONG, ' meps ').split(' ').filter(Boolean);
+}
+
+/** The query asks for MEPs ("MEPs", "Spanish MEPs", "members of the European Parliament", "members of parliament"). */
 export function isMepQuery(query: string): boolean {
-  const ws = words(query);
-  return ws.some((w) => MEP_WORDS.has(w)) || ` ${ws.map(singular).join(' ')} `.includes(` ${MEP_PHRASE} `);
+  return mepWords(query).some((w) => MEP_WORDS.has(w));
 }
 
 // Words ending in "s" that are not plurals of a shorter word.
@@ -297,14 +331,21 @@ const PLURAL_IRREGULAR: Record<string, string> = {
   vetoes: 'veto', embargoes: 'embargo', potatoes: 'potato', tomatoes: 'tomato', heroes: 'hero', echoes: 'echo',
   volcanoes: 'volcano',
 }; // prettier-ignore
+// Plurals in "-ses" of words in "-s" (a general rule would turn "cases" into "cas" and "uses" into "us")
+const PLURAL_SES: Record<string, string> = {
+  gases: 'gas', buses: 'bus', minibuses: 'minibus', trolleybuses: 'trolleybus', omnibuses: 'omnibus', bonuses: 'bonus',
+  viruses: 'virus', statuses: 'status', censuses: 'census', prospectuses: 'prospectus', surpluses: 'surplus',
+  campuses: 'campus', consensuses: 'consensus',
+}; // prettier-ignore
 
 /** Light English singular form, applied to index and query words alike: batteries -> battery, cars -> car,
- * taxes -> tax, processes -> process, crises -> crisis, wolves -> wolf, vetoes -> veto. Not a full stemmer:
- * other inflections are left alone. */
+ * taxes -> tax, processes -> process, crises -> crisis, wolves -> wolf, vetoes -> veto, gases -> gas. Not a full
+ * stemmer: other inflections are left alone. */
 export function singular(w: string): string {
   if (w.length <= 3 || /\d/.test(w) || NOT_PLURAL.has(w)) return w;
   if (PLURAL_IS[w]) return PLURAL_IS[w];
   if (PLURAL_IRREGULAR[w]) return PLURAL_IRREGULAR[w];
+  if (PLURAL_SES[w]) return PLURAL_SES[w];
   if (w.endsWith('ies') && w.length > 4) return `${w.slice(0, -3)}y`;
   if (/(?:ss|sh|ch|x)es$/.test(w)) return w.slice(0, -2);
   if (w.endsWith('s') && !/(?:ss|us|is)$/.test(w)) return w.slice(0, -1);
@@ -700,27 +741,38 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     const unqualified = qWords.filter((w) => !QUALIFIERS.has(w)).join(' ');
     if (unqualified && unqualified !== phrase) exactNames(unqualified, 20);
     // the MEPs of a country, group or party ("Spanish MEPs", "MEPs from Spain", "EPP MEPs", "members of the
-    // European Parliament from Greece"): that country, group or party, as for its name
+    // European Parliament from Greece", "Patriots for Europe MEPs"): that country, group or party, as for its name.
+    // The Parliament names none of them ("European Parliament MEPs", "members of parliament" ask for all MEPs).
     if (qWords.some((w) => MEP_QUALIFIERS.has(w))) {
-      const rest = ` ${phrase} `
-        .replace(/ members? of (?:the )?european parliament /g, ' ')
-        .split(' ')
-        .filter((w) => w && !MEP_QUALIFIERS.has(w) && !STOP.has(w))
-        .join(' ');
-      if (rest && rest !== phrase) {
-        for (const i of namesOf(rest)) {
+      const rest = (s: string) => {
+        const left = s.split(' ').filter((w) => w && !MEP_QUALIFIERS.has(w));
+        // stop words in a name are kept ("Socialists and Democrats"), not those around it ("MEPs from Spain")
+        while (left.length && STOP.has(left[0])) left.shift();
+        while (left.length && STOP.has(left[left.length - 1])) left.pop();
+        return [left.join(' '), left.filter((w) => !STOP.has(w)).join(' ')];
+      };
+      const rests = rest(` ${phrase} `.replace(MEP_PARLIAMENT, ' ')).filter((r) => r && r !== phrase);
+      // a name with the words for the Parliament in it: "The Left group in the European Parliament - GUE/NGL MEPs"
+      for (const r of new Set([rest(phrase)[0], ...rests].filter(Boolean))) {
+        for (const i of new Set([...namesOf(r), ...namesOf(`the ${r}`)])) {
           if (!MEP_KINDS.has(prepared[i].doc.k)) continue;
           bump(i, TIER.exact + boost(i));
           result.meps.add(i);
         }
-        // or a name holding it ("Fidesz MEPs": "Fidesz-Magyar Polgári Szövetség-…")
-        if (!result.meps.size) {
-          prepared.forEach((p, i) => {
-            if (!MEP_KINDS.has(p.doc.k) || !p.names.some((n) => ` ${n} `.includes(` ${rest} `))) return;
-            bump(i, TIER.starts + boost(i));
-            result.meps.add(i);
-          });
+        if (result.meps.size) break;
+      }
+      // or the one name holding it ("Fidesz MEPs": "Fidesz-Magyar Polgári Szövetség-…", recorded for each term); not
+      // a word of several names, which names none of them ("party MEPs", "Europe MEPs")
+      for (const r of result.meps.size ? [] : new Set(rests)) {
+        const holding = [...prepared.keys()].filter(
+          (i) => MEP_KINDS.has(prepared[i].doc.k) && prepared[i].names.some((n) => ` ${n} `.includes(` ${r} `)),
+        );
+        if (new Set(holding.map((i) => prepared[i].title)).size !== 1) continue;
+        for (const i of holding) {
+          bump(i, TIER.starts + boost(i));
+          result.meps.add(i);
         }
+        break;
       }
     }
     // synonym variants of the whole phrase ("ai law" -> "ai act"), just below exact names
@@ -769,12 +821,14 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
       return result;
     }
 
-    // 4-7. words; "EU" next to other words need not match, like a stop word, but counts as one ("eu" or "european")
-    const meaningful = qWords.filter((w) => !STOP.has(w));
+    // 4-7. words; "EU" next to other words need not match, like a stop word, but counts as one ("eu" or "european");
+    // "members of the European Parliament" is "MEPs", not "Member States" and "European Parliament" anywhere
+    const wq = mepWords(query);
+    const meaningful = wq.filter((w) => !STOP.has(w));
     const required = meaningful.some((w) => !QUALIFIERS.has(w)) ? meaningful.filter((w) => !QUALIFIERS.has(w)) : meaningful;
-    const req = required.length ? required : qWords;
+    const req = required.length ? required : wq;
     const per = req.map((w) => wordMatches(w, prefixWord(w), familyWord(w)));
-    const optional = qWords
+    const optional = wq
       .filter((w) => required.length && !required.includes(w))
       .map((w) => wordMatches(w, false))
       .map((m) => new Map([...m.syn, ...m.base]));
@@ -886,22 +940,58 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     return result;
   }
 
+  /** The query with two words written apart that the index has as one ("cyber security" -> "cybersecurity", "eco
+   * design" -> "ecodesign"), each pair on its own; none for an identifier. */
+  function joinedForms(query: string): string[] {
+    if (isIdentifier(query)) return [];
+    const ws = words(query);
+    const part = (w: string) => w.length >= 3 && !STOP.has(w) && !PARTICLES.has(w) && !/\d/.test(w);
+    const out: string[] = [];
+    for (let k = 0; k + 1 < ws.length && out.length < 2; k++) {
+      const joined = ws[k] + ws[k + 1];
+      if (part(ws[k]) && part(ws[k + 1]) && joined.length >= 7 && bySingular.has(singular(joined))) {
+        out.push([...ws.slice(0, k), joined, ...ws.slice(k + 2)].join(' '));
+      }
+    }
+    return out;
+  }
+
+  /** `run` on the query and on its joined forms, each document with its best score. */
+  function runForms(query: string, forms: string[], prefix: Parameters<typeof run>[1], typos?: Set<string>): RunResult {
+    const res = run(query, prefix, typos);
+    for (const f of forms) {
+      const r = run(f, prefix, typos);
+      for (const [i, s] of r.scores) {
+        if ((res.scores.get(i) ?? -Infinity) >= s) continue;
+        res.scores.set(i, s);
+        if (r.similar.has(i)) res.similar.set(i, r.similar.get(i)!);
+        else res.similar.delete(i);
+        if (r.forms.has(i)) res.forms.add(i);
+        else res.forms.delete(i);
+      }
+      for (const i of r.meps) res.meps.add(i);
+      for (const w of r.typos) res.typos.add(w);
+    }
+    return res;
+  }
+
   function search(query: string, opts: SearchOptions = {}): SearchHit[] {
     const limit = opts.limit ?? 50;
     const kinds = opts.kinds?.length ? new Set(opts.kinds) : null;
-    let res = run(query, opts.typing ? 'last' : 'none');
+    const forms = joinedForms(query);
+    let res = runForms(query, forms, opts.typing ? 'last' : 'none');
     let fallback = false;
     // an identifier matches only as such (tiers 1-3): no word starts, no word families
     if (!opts.typing && !isIdentifier(query)) {
       // nothing matched whole words: fall back to words starting with those typed ("pharma package")
       if (res.scores.size === 0) {
-        res = run(query, 'all');
+        res = runForms(query, forms, 'all');
         fallback = true;
       } else {
         // related word forms, below every whole-word match: "fish" -> "fisheries", "farming" -> "farm"; not of
         // a word that is a typo of an index word ("packageing": "packaging", not "package"); a form also ranks
         // above the same file's approximate match ("labeling": "labelling")
-        for (const [i, s] of run(query, 'family', res.typos).scores) {
+        for (const [i, s] of runForms(query, forms, 'family', res.typos).scores) {
           if ((res.scores.get(i) ?? 0) < s && s >= TIER.prefix && s < TIER.syn) res.scores.set(i, s);
         }
       }
