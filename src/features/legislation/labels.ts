@@ -9,11 +9,35 @@ import type { DossierSummary, LegalInstrument, LifecycleStage, TranspositionStat
 
 export const SITE_TITLE = 'EU Legislative Intelligence';
 
-/** Sets document.title to "<title> – EU Legislative Intelligence" (or just the site name). */
-export function useDocumentTitle(title: string | null | undefined) {
+/** The longest page title in the tab, the history and the route announcement (the heading keeps the full title). */
+export const TITLE_MAX = 120;
+
+/**
+ * A title cut at a word boundary, with "…", to at most `max` characters. scripts/prerender-routes.mjs applies the same
+ * rule to the (already shortened) title in dossiers/index.json, so a page's title is the same before and after it loads:
+ * the cut of the full title and of its 180-character index form are the same string (src/features/legislation/titles.test.ts).
+ */
+export function shortTitle(title: string, max = TITLE_MAX): string {
+  if (title.length <= max) return title;
+  const head = title.slice(0, max);
+  const space = head.lastIndexOf(' ');
+  const cut = space > 0 ? head.slice(0, space) : title.slice(0, max - 1);
+  return `${cut.replace(/[\s,;:(]+$/, '')}…`;
+}
+
+/** "<title> (<qualifier>) – EU Legislative Intelligence", or just the site name: the whole text of document.title. */
+export function documentTitle(title: string | null | undefined, qualifier?: string | null): string {
+  return title ? `${shortTitle(title)}${qualifier ? ` (${qualifier})` : ''} – ${SITE_TITLE}` : SITE_TITLE;
+}
+
+/**
+ * Sets document.title (see documentTitle). The qualifier tells apart pages of the same title: a file's procedure reference,
+ * the date of a vote.
+ */
+export function useDocumentTitle(title: string | null | undefined, qualifier?: string | null) {
   useEffect(() => {
-    document.title = title ? `${title} – ${SITE_TITLE}` : SITE_TITLE;
-  }, [title]);
+    document.title = documentTitle(title, qualifier);
+  }, [title, qualifier]);
 }
 
 /** Short filter labels for each lifecycle stage (the badge text itself comes from the data). */

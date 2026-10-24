@@ -80,6 +80,8 @@ jobs:
         env:
           # "/eu-intel" for a project site, "" for a custom domain -> "/eu-intel/" or "/".
           BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+          # Canonical address of each page (scripts/prerender-routes.mjs): the Pages URL, as for the Atom feeds above.
+          SITE_URL: ${{ steps.pages.outputs.base_url }}/
         run: |
           echo "BASE_PATH=$BASE_PATH"
           npm run build

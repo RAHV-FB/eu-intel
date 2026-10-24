@@ -50,3 +50,11 @@ def test_actions_are_pinned_to_commit_shas():
             for step in job.get("steps", []):
                 if "uses" in step:
                     assert re.fullmatch(r"[\w.-]+/[\w.-]+@[0-9a-f]{40}", step["uses"]), (path.name, step["uses"])
+
+
+def test_the_site_build_gets_the_pages_url_for_the_canonical_links():
+    # scripts/prerender-routes.mjs writes <link rel="canonical"> only when SITE_URL is set, so that a local or fork build
+    # does not point at the owner's host; the deploy sets it from the Pages URL, as it does for the Atom feeds
+    build = next(x for x in steps("pages.yml", "build") if "npm run build" in (x.get("run") or ""))
+    assert build["env"]["SITE_URL"] == "${{ steps.pages.outputs.base_url }}/"
+    assert "SITE_URL" not in str(next(x for x in steps("ci.yml", "check") if "npm run build" in (x.get("run") or "")))

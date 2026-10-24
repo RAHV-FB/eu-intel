@@ -47,7 +47,7 @@ function DossierPage({ id }: { id: string }) {
   const { data: meta } = useData<Meta>('meta.json');
   const { data: topics } = useData<Topic[]>('topics.json');
   const notFound = !valid || malformed || isMissing(error);
-  useDocumentTitle(d?.title ?? (notFound ? 'Legislative file not found' : 'Legislation'));
+  useDocumentTitle(d?.title ?? (notFound ? 'Legislative file not found' : 'Legislation'), d?.ref);
 
   // "Changed since you last looked" for followed files; then record that the visitor has now seen it.
   const [change, setChange] = useState<ChangeInfo | null>(null);

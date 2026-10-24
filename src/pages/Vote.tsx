@@ -28,7 +28,7 @@ export default function Vote() {
   const { data: v, error, loading } = useData<EpVoteDetail>(validId ? `votes/${encodeURIComponent(id)}.json` : null);
   const groupsState = useData<GroupSummary[]>('people/groups.json');
   const notFound = !validId || (!!v && !Array.isArray(v.ballots)) || isMissing(error);
-  useDocumentTitle(notFound ? 'Vote not found' : v ? v.display_title || v.title : 'Parliament vote');
+  useDocumentTitle(notFound ? 'Vote not found' : v ? v.display_title || v.title : 'Parliament vote', v && !notFound ? formatDate(v.date) : null);
 
   // "All votes" returns to the list as it was filtered, when the vote was opened from it (VoteListItem)
   const fromList = (useLocation().state as { votesList?: unknown } | null)?.votesList;

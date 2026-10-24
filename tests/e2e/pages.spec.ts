@@ -191,7 +191,7 @@ test.describe('prerendered metadata (GitHub Pages semantics)', () => {
     );
     const vote = /<meta name="description" content="([^"]*)"/.exec((await get(request, 'votes/195653/')).html)?.[1];
     expect(vote).toBe(
-      "European Parliament vote of 2026-07-09: Parliament approved the committee's decision to enter into negotiations with the Council. No vote counts are recorded.",
+      "European Parliament vote of 9 Jul 2026: Parliament approved the committee's decision to enter into negotiations with the Council. No vote counts are recorded.",
     );
     const party = await get(request, 'people/parties/5719/');
     expect(party.status).toBe(200);
@@ -200,7 +200,7 @@ test.describe('prerendered metadata (GitHub Pages semantics)', () => {
 
   test('one abstention is "1 abstention"', async ({ request }) => {
     const vote = /<meta name="description" content="([^"]*)"/.exec((await get(request, 'votes/139917/')).html)?.[1];
-    expect(vote).toBe('European Parliament vote of 2022-02-16: 688 for, 6 against, 1 abstention.');
+    expect(vote).toBe('European Parliament vote of 16 Feb 2022: 688 for, 6 against, 1 abstention.');
   });
 });
 
