@@ -5,6 +5,7 @@ import {
   createSearchEngine,
   dossierScores,
   familyStems,
+  filterKey,
   hasWord,
   isIdentifier,
   isMepQuery,
@@ -943,6 +944,26 @@ describe('words written apart', () => {
     expect(all('micro plastic')).toEqual(['2023-0373']);
     expect(all('security')).toEqual(['2016-0030']); // the words typed alone are unchanged
     expect(all('von der')).toEqual(['256966']); // name particles are not joined
+  });
+});
+
+describe('list filters', () => {
+  it('compare names and labels accent- and case-insensitively, with hyphens as spaces', () => {
+    const has = (name: string, typed: string) => filterKey(name).includes(filterKey(typed));
+    expect(has('Iratxe García Pérez', 'Garcia')).toBe(true);
+    expect(has('Iratxe García Pérez', 'García')).toBe(true);
+    expect(has('Iratxe García Pérez', 'garcia perez')).toBe(true);
+    expect(has('José Manuel García-Margallo y Marfil', 'Garcia Margallo')).toBe(true);
+    expect(has('Łukasz Kohut', 'Lukasz')).toBe(true);
+    expect(has('Dragoş Pîslaru', 'Dragoș')).toBe(true); // comma below, as a Romanian keyboard types it, and the cedilla
+    expect(has('Dragoş Pîslaru', 'Dragos')).toBe(true);
+    expect(has('Sinn Féin', 'Sinn Fein')).toBe(true);
+    expect(has('Bündnis 90/Die Grünen', 'Bundnis')).toBe(true);
+    expect(has('Se Acabó La Fiesta', 'se acabo la fiesta')).toBe(true);
+    expect(has('Fratelli d’Italia', "Fratelli d'Italia")).toBe(true);
+    expect(has('Fratelli d’Italia', 'Fratelli d')).toBe(true); // while the name is typed
+    expect(has('Iratxe García Pérez', 'Garcia Lopez')).toBe(false);
+    expect(filterKey('  ')).toBe('');
   });
 });
 

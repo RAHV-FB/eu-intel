@@ -1,8 +1,8 @@
 /**
  * Search and list-filter regressions on the built site: MEP queries that name no political group, true result
  * counts above 1,000, one status region for a query whose parts find results, the result-group links, a long
- * pasted query on a 320px screen and the vote list's wording for other forms of a word. Uses real records (ids
- * below); see playwright.config.ts to run.
+ * pasted query on a 320px screen, the vote list's wording for other forms of a word, and accent-insensitive name
+ * and party filters. Uses real records (ids below); see playwright.config.ts to run.
  */
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
@@ -108,5 +108,26 @@ test.describe('vote list wording', () => {
     await expect(page.locator('.results-bar__count')).not.toContainText('start with it');
     await open(page, 'votes?q=artific');
     await expect(page.locator('.results-bar__count')).toContainText('that start with it');
+  });
+});
+
+test.describe('name and party filters fold accents', () => {
+  test('the vote page lists the same MEPs for "Garcia" as for "García"', async ({ page }) => {
+    await open(page, 'votes/166051/?bl-q=Garc%C3%ADa'); // AI Act, final vote
+    const accented = await page.locator('.results-bar__count').filter({ hasText: 'recorded vote' }).textContent();
+    expect(count(accented)).toBeGreaterThan(0);
+    await open(page, 'votes/166051/?bl-q=Garcia');
+    await expect(page.locator('.results-bar__count').filter({ hasText: 'recorded vote' })).toHaveText(accented!);
+    await expect(page.getByRole('row', { name: /Iratxe García Pérez/ })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('People finds "Sinn Féin" for "Sinn Fein" and "Łukasz" for "Lukasz"', async ({ page }) => {
+    await open(page, 'people?party=Sinn%20Fein');
+    await expect(page.getByRole('row', { name: /Sinn Féin/ }).first()).toBeVisible();
+    await open(page, 'people?q=Lukasz&status=all');
+    await expect(page.getByRole('row', { name: /Łukasz/ }).first()).toBeVisible();
+    await open(page, 'people?view=parties&pq=Sinn%20Fein&pscope=all');
+    await expect(page.getByRole('row', { name: /Sinn Féin/ }).first()).toBeVisible();
   });
 });

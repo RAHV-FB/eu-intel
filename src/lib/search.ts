@@ -114,6 +114,20 @@ export function normalize(s: string): string {
     .trim();
 }
 
+/** A name or label as the "contains" filters of lists compare it, accent- and case-insensitively, with hyphens as
+ * spaces and other punctuation kept (so that a name being typed, "Fratelli d", still matches): "García-Margallo" ->
+ * "garcia margallo", "Sinn Féin" -> "sinn fein", "Dragoș" and "Dragoş" -> "dragos", "Łukasz" -> "lukasz". */
+export function filterKey(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[ßæœøłđðþıħ]/g, (c) => SPECIAL[c] ?? c)
+    .replace(new RegExp(APOSTROPHE, 'g'), "'")
+    .replace(/[\s‐-―−-]+/g, ' ')
+    .trim();
+}
+
 /** Words of a normalized string ("s&d" is one word). */
 export function words(s: string): string[] {
   return normalize(s)

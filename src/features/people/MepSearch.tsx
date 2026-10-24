@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { GroupSummary, MepSummary } from '../../types/data';
 import { countryName, formatNumber } from '../../lib/format';
+import { filterKey } from '../../lib/search';
 import { clearAllParams, shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { EmptyState } from '../../components/ui';
 import { CollapsibleFilters } from '../../components/CollapsibleFilters';
@@ -42,19 +43,29 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
     return { countries, groupIds, terms };
   }, [meps, groups]);
 
+  // names and parties as the filters compare them, accent-insensitively ("Garcia" finds García), once one is typed; the
+  // sort key holds other spellings EP data records ("ALBURQUERQUE")
+  const typed = !!(q.trim() || party.trim());
+  const keys = useMemo(
+    () =>
+      typed ? new Map(meps.map((m) => [m, { name: filterKey(m.name), sort: filterKey(m.sort), party: filterKey(m.party_label ?? '') }])) : null,
+    [meps, typed],
+  );
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    const pNeedle = party.trim().toLowerCase();
-    return meps.filter(
-      (m) =>
+    const needle = filterKey(q);
+    const pNeedle = filterKey(party);
+    return meps.filter((m) => {
+      const k = keys?.get(m);
+      return (
         (status === 'all' || (status === 'current' ? m.active : !m.active)) &&
         (!country || m.country === country) &&
         (!group || m.group === group) &&
         (!term || m.terms.includes(Number(term))) &&
-        (!pNeedle || (m.party_label ?? '').toLowerCase().includes(pNeedle)) &&
-        (!needle || m.name.toLowerCase().includes(needle) || m.sort.toLowerCase().includes(needle)),
-    );
-  }, [meps, q, country, group, party, status, term]);
+        (!pNeedle || !!k?.party.includes(pNeedle)) &&
+        (!needle || !!k?.name.includes(needle) || !!k?.sort.includes(needle))
+      );
+    });
+  }, [meps, keys, q, country, group, party, status, term]);
 
   const { sorted, sort, toggle } = useSortable<MepSummary, Key>(
     filtered,
