@@ -92,10 +92,55 @@
   font-size: var(--fs-sm);
 }
 
-.explainers {
-  display: grid;
-  gap: var(--sp-3);
+/* ---------- vote list page (/votes): the filter panel is /legislation's (.lx-filters) ---------- */
+.votes-filters {
   margin-bottom: var(--sp-5);
+}
+/* "About this list" sits on the count's line; opened, its text takes the full width below it */
+.votes-results > .linkish {
+  margin-left: auto;
+}
+.votes-about[open] {
+  flex-basis: 100%;
+}
+.votes-about > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--eu-blue);
+  list-style: none;
+}
+.votes-about > summary::-webkit-details-marker {
+  display: none;
+}
+.votes-about > summary::before {
+  content: '▸';
+  margin-right: var(--sp-2);
+  transition: transform var(--t-fast);
+}
+.votes-about[open] > summary::before {
+  transform: rotate(90deg);
+}
+.votes-about__body {
+  margin-top: var(--sp-2);
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.votes-about__body > :first-child {
+  margin-top: 0;
+}
+.votes-about__body > p,
+.votes-about__body > .stack {
+  max-width: 48rem;
+}
+.votes-about__h {
+  font-size: var(--fs-base);
+  margin: var(--sp-5) 0 var(--sp-2);
 }
 
 /* ---------- vote detail ---------- */

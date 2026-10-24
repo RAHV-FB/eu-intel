@@ -289,6 +289,7 @@ test.describe('filters kept in the address keep what is typed', () => {
     await page.locator('#inf-nc').check(); // failed with "did not change its state" while the address caught up
     await expect(page).toHaveURL(/inf-nc=1/);
     await open(page, 'votes');
+    await page.locator('form[aria-label="Filter votes"] .lx-more summary').click(); // "Close votes only" is under "More filters"
     await page.locator('#vf-close').check();
     await expect(page).toHaveURL(/close=1/);
     await page.locator('#vf-year').focus();

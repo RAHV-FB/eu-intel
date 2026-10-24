@@ -295,11 +295,13 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   voted on (vote 142787 rejected a proposal to postpone, so discharge was granted; 149084 adopted a refusal).
   *Under discussion* badges name the procedure in plain words ("Ordinary procedure", "Consultation procedure",
   "Consent procedure", else the procedure's type label), not its code; a bare "Consent" next to a file not yet
-  adopted could read as consent given. The lists' descriptions say that decisions on budget discharge (for the
-  EU's general budget and for the budgets of EU agencies and bodies: 149084, "Discharge 2020: European Border
-  and Coast Guard Agency") are not listed. A featured card's `latest_note` names the amending acts EUR-Lex
-  lists for the file's act that are not in our EUR-Lex data (so the timeline cannot date them): the latest step
-  shown may be older than they are (2021/0366(COD): Delegated Regulation 2026/2102).
+  adopted could read as consent given. The lists' descriptions are kept short (the full rules are on the About
+  page, `#selection`) and say that budget discharge decisions are not listed, without limiting this to the EU's
+  general budget (the budgets of EU agencies and bodies are left out too: 149084, "Discharge 2020: European
+  Border and Coast Guard Agency"). A featured item's `latest_note` names the amending acts EUR-Lex lists for the
+  file's act that are not in our EUR-Lex data (so the timeline cannot date them): the latest step may be older
+  than they are (2021/0366(COD): Delegated Regulation 2026/2102). The homepage card is an overview (status, what
+  the file does, the next date fixed in law or the next step) and shows neither the latest step nor this note.
 - Feeds and activity: a final vote not already a file's milestone is titled by Parliament's step when the file is
   a consultation or consent procedure (CNS, APP, or the "*" / "***" symbol ending the vote's published subject):
   "Parliament delivered its opinion" / "a negative opinion", "Parliament gave its consent" / "did not give its

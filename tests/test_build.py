@@ -296,13 +296,17 @@ def test_home_lists_only_from_real_data(out: Path):
     }
     stalled = lists["stalled"]["items"]
     assert stalled and stalled[0]["dossier_id"] == "2099-0002"
-    assert "amendment is not a rejected law" in lists["rejected"]["description"]
+    rejected_desc = lists["rejected"]["description"]
+    assert "Amendments, objections, motions of censure and budget discharge decisions are not listed" in rejected_desc
     assert all(i.get("vote_id") != "V2" for i in lists["rejected"]["items"])  # amendment rejections excluded
     upcoming = lists["upcoming"]["items"]
     assert upcoming and all(TODAY < i["date"] <= "2027-10-22" for i in upcoming)
     assert "discharge" in lists["rejected"]["description"] and "discharge" in lists["close_votes"]["description"]
-    # agency discharges are excluded too (149084, Frontex 2020), not only the EU's general budget
-    assert "budgets of EU agencies and bodies" in lists["close_votes"]["description"]
+    # agency discharges are excluded too (149084, Frontex 2020): the descriptions do not limit it to the general budget
+    assert "Budget discharge decisions are not listed" in lists["close_votes"]["description"]
+    assert not any("general budget" in x["description"] for x in home["lists"])
+    # short enough to read at a glance on the homepage; the full rules are on the About page (#selection)
+    assert all(len(x["description"].split()) <= 40 for x in home["lists"]), [x["description"] for x in home["lists"]]
     # a bare "Consent" next to a file under discussion could read as consent given
     from pipeline.build import HOME_PROCEDURE_BADGES
 
@@ -1580,7 +1584,8 @@ def test_home_close_votes_are_close_as_the_votes_page_defines_it(votes_out: Path
         assert v["kind"] == "final" and abs(v["margin"]["relative"]) <= CLOSE_RELATIVE
         assert i["subtitle"] == v["margin"]["label"]
     assert [i["date"] for i in close] == sorted((i["date"] for i in close), reverse=True)  # newest first
-    assert "within 5%" in lists["close_votes"]["description"]
+    # the same rule in words: the distance from the majority needed, as a share of the votes cast (relative)
+    assert "no more than 5% of the votes cast above or below the majority needed" in lists["close_votes"]["description"]
 
 
 def test_negotiation_decision_vote_is_listed_and_linked(votes_out: Path):
