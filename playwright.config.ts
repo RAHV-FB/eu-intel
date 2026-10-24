@@ -36,7 +36,14 @@ export default defineConfig({
     locale: 'en-GB',
     timezoneId: 'Europe/Brussels',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Chromium always; Firefox and WebKit when E2E_BROWSERS names them (CI runs each in its own job, after installing
+  // that browser: see .github/workflows/ci.yml), e.g. E2E_BROWSERS=firefox,webkit npx playwright test
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    ...(['firefox', 'webkit'] as const)
+      .filter((b) => (process.env.E2E_BROWSERS ?? '').split(',').includes(b))
+      .map((b) => ({ name: b, use: { ...devices[b === 'firefox' ? 'Desktop Firefox' : 'Desktop Safari'] } })),
+  ],
   webServer: [
     {
       command: `npx vite preview --host 127.0.0.1 --port ${new URL(PREVIEW_ORIGIN).port} --strictPort`,
