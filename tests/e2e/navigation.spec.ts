@@ -230,6 +230,9 @@ test.describe('phone menu on short screens', () => {
       const last = links.last();
       await expect(last).toHaveText('Search');
       await last.focus();
+      // Firefox does not scroll a partly visible element on focus: scroll as a visitor would, which still fails if
+      // the menu cannot scroll far enough to show the whole link
+      await last.scrollIntoViewIfNeeded();
       const r = await box(last);
       expect(r.top).toBeGreaterThanOrEqual(0);
       expect(r.bottom).toBeLessThanOrEqual(height);
