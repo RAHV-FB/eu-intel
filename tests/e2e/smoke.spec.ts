@@ -243,7 +243,8 @@ test.describe('accessibility (axe-core, WCAG 2.2 AA rules)', () => {
 // ------------------------------------------------------------------ mobile
 
 test.describe('mobile layout', () => {
-  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+  // Firefox has no mobile emulation (isMobile): there the phone width alone is tested
+  test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: async ({ browserName }, use) => use(browserName !== 'firefox') });
 
   test('menu button reveals the primary navigation', async ({ page }) => {
     await open(page, 'about');
