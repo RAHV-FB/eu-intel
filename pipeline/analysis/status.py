@@ -720,8 +720,9 @@ REJECTION_ENDS = {
 }
 
 
-def _cod_stage(events: list[Event]) -> _S:
-    """Ordinary legislative procedure (Art. 294 TFEU), from recorded events only."""
+def _cod_stage(events: list[Event], committees: bool = True) -> _S:
+    """Ordinary legislative procedure (Art. 294 TFEU), from recorded events only. `committees`: Parliament's
+    committees on the file are recorded."""
     sig = _last(events, EventKind.signature)
     if sig:
         return _S(
@@ -965,6 +966,23 @@ def _cod_stage(events: list[Event]) -> _S:
             "derived",
         )
     start = _last(events, EventKind.referral) or _last(events, EventKind.proposal)
+    if not committees and not _last(events, EventKind.referral):
+        # 2016/0141(COD): OEIL lists the proposal of 4 May 2016 and two Council debates, no committee of Parliament
+        # and no referral to one ("Preparatory phase in Parliament")
+        s = _S(
+            "proposed",
+            "Proposal under examination",
+            "No referral of the proposal to a Parliament committee is recorded. Parliament and EU governments in "
+            "the Council must both agree before it can become law.",
+            start.date if start else None,
+            "derived",
+        )
+        s.next_step = NextStep(
+            text="Parliament refers the proposal to one of its committees, which prepares and votes on a report.",
+            institution="EP",
+            basis="derived",
+        )
+        return s
     return _S(
         "proposed",
         "Proposal under examination",
@@ -1616,7 +1634,7 @@ def classify(
         s = _acts_stage(proc, acts, events, today, others)
     if s is None:
         if ptype in ("COD", "SYN"):
-            s = _cod_stage(events)
+            s = _cod_stage(events, committees=bool(proc.committees))
         elif parliament_adopts(proc, acts):
             s = _ep_act_stage(proc, events)
         elif ptype in ("CNS", "APP", "AVC"):

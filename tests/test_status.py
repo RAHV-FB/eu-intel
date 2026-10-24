@@ -608,6 +608,23 @@ def test_rejection_at_first_reading_is_parliaments_position_and_does_not_end_the
         )
 
 
+def test_proposal_without_a_committee_referral_is_not_said_to_be_examined_by_parliament():
+    # 2016/0141(COD) (visa exemption for Turkey): OEIL lists the proposal of 4 May 2016 and two Council debates (20 May
+    # and 10 June 2016), no committee of Parliament and no referral to one; "Preparatory phase in Parliament"
+    s = classify(rec("2016-0141"), [], [], TODAY)
+    assert (s.stage, s.label, s.since) == ("proposed", "Proposal under examination", "2016-05-04")
+    assert s.explanation.startswith("No referral of the proposal to a Parliament committee is recorded.")
+    assert s.next_step.text == (
+        "Parliament refers the proposal to one of its committees, which prepares and votes on a report."
+    )
+    assert (s.next_step.institution, s.stall.last_event_date if s.stall else None) == ("EP", "2016-06-10")
+    # once referred (OEIL "Committee referral announced in Parliament, 1st reading"), its committee reports
+    referral = _event("referral", "2016-06-20", "def/ep-activities/REFERRAL",
+                      "Announced in Parliament and referred to committee")  # fmt: skip
+    s = classify(_with_events(rec("2016-0141"), referral), [], [], TODAY)
+    assert s.explanation.startswith("Parliament is examining the proposal.")
+    assert s.next_step.text == "Parliament's responsible committee prepares and votes on its report."
+
 
 def test_mandate_decision_alone_is_not_negotiations():
     # the plenary endorsing the committee's decision to negotiate (EP activity code containing

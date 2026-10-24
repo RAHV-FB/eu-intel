@@ -187,6 +187,14 @@ describe.skipIf(!built)('dossiers on the built data', () => {
       expect([d.next_step.institution, d.next_step.basis], id).toEqual(['Council', 'source']);
     }
   });
+
+  it('does not say Parliament is examining a proposal no committee was given (2016/0141(COD))', () => {
+    const d = all.find((x) => x.id === '2016-0141')!;
+    expect(d.status.explanation).toMatch(/^No referral of the proposal to a Parliament committee is recorded\./);
+    expect(d.next_step.text).toBe('Parliament refers the proposal to one of its committees, which prepares and votes on a report.');
+    for (const x of all.filter((y) => y.type === 'COD' && y.status.label === 'Proposal under examination' && !y.committees.length))
+      expect(x.status.explanation, x.id).not.toContain('Parliament is examining');
+  });
 });
 
 describe('steps dated in the act', () => {

@@ -830,6 +830,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   adopted". The stage stays `rejected`, so the explorer's group is "Withdrawn, rejected or lapsed", not "Ended without
   becoming law", and the guide's group heading likewise. Before, the next step said "A rejection normally ends the
   procedure".
+- A proposal under the ordinary procedure with no committee of Parliament and no referral recorded (2016/0141(COD):
+  only the proposal of 4 May 2016 and two Council debates in OEIL, "Preparatory phase in Parliament") is not said to
+  be examined by Parliament: its status says that no referral to a Parliament committee is recorded and its next step
+  is the referral (6 files on 24 October 2026, five of them proposals of the last weeks).
 - Type of act (`instrument`): the type of the file's adopted act; for a file without a linked act of a known type,
   the type of act proposed as the OEIL procedure file records it ("Legislative instrument"), else as the procedure
   title names it. On 23 October 2026 OEIL's entry named the same type as the English title of the Commission
