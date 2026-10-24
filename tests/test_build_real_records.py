@@ -427,10 +427,12 @@ def test_council_summary_counts_every_vote_listed():
     assert len(me.council_public) == 4  # type: ignore[attr-defined]
     st = SimpleNamespace(fetched_at="2026-10-23T00:00:00Z", records={}, status="ok")
     summary = Builder.source_summary(me, "council", st)  # type: ignore[arg-type]
+    # the breakdown after the colon divides all 4 votes listed (2 + 2), not the 3 with positions: the About page said
+    # "748 votes …, 746 of them with each Member State's position: 746 from the … documents and 2 adoptions …"
     assert summary.startswith(
-        "4 votes of the Council of the EU (2020–2022), 3 of them with each Member State's position: 2 from the "
-        "Council's voting-result documents and 2 adoptions by written procedure from the Council's communication on "
-        "its outcome (CM 5860/22). 1 voting-result document could not be read and is shown without positions."
+        "4 votes of the Council of the EU (2020–2022): 2 from the Council's voting-result documents and 2 adoptions by "
+        "written procedure from the Council's communication on its outcome (CM 5860/22). 3 of them record each Member "
+        "State's position. 1 voting-result document could not be read and is shown without positions."
     )
 
 

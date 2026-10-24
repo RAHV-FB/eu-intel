@@ -442,6 +442,20 @@ test('"Show all … Council votes" moves focus to the first vote it adds; the so
   );
 });
 
+test('a country page counts the Council votes that record its position out of all those listed', async ({ page, request }) => {
+  // 748 votes listed (About, council/index.json), 746 with positions: the two voting-result documents that could not
+  // be read record none, so Ireland's counts add up to 746, and the page said "746 in total"
+  const meta = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/meta.json`)).json();
+  const ie = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/countries/IE.json`)).json();
+  const n = (x: number) => x.toLocaleString('en-GB');
+  const counted = Object.values(ie.council_positions as Record<string, number>).reduce((a, b) => a + b, 0);
+  expect(counted).toBeLessThan(meta.counts.council_votes);
+  await open(page, 'countries/IE/');
+  await expect(page.locator('#participation .note', { hasText: /^Counts of / })).toHaveText(
+    `Counts of the ${n(counted)} Council votes in our dataset that record Ireland’s position (of ${n(meta.counts.council_votes)} votes in total), by that position.`,
+  );
+});
+
 test.describe('legislative files', () => {
   test('a rapporteur’s committee is the one OEIL names, never "null"', async ({ page }) => {
     await open(page, 'legislation/2021-0240/');

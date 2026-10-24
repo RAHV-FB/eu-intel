@@ -125,7 +125,11 @@ describe.skipIf(!built)('Council votes on the built data', () => {
     const coverage = meta.coverage_notes.find((n) => n.startsWith('Council votes:'))!;
     expect(meta.counts.council_votes).toBe(listed.length);
     expect(summary.startsWith(`${formatNumber(listed.length)} votes of the Council of the EU`)).toBe(true);
-    expect(summary).toContain(`${formatNumber(withPositions)} of them with each Member State's position`);
+    // the breakdown divides the votes listed; those with positions are counted in a sentence of their own
+    expect(summary).toContain(`${formatNumber(withPositions)} of them record each Member State's position.`);
+    expect(summary).not.toMatch(/of them with each Member State's position:/);
+    const parts = /: ([\d,]+) from the Council's voting-result documents and ([\d,]+) adoptions? by written procedure/.exec(summary);
+    if (parts) expect(Number(parts[1].replace(/,/g, '')) + Number(parts[2].replace(/,/g, ''))).toBe(listed.length);
     expect(coverage.startsWith(`Council votes: ${formatNumber(listed.length)} votes`)).toBe(true);
     for (const c of read<CountrySummary[]>('countries/index.json')) {
       const p = c.council_positions;

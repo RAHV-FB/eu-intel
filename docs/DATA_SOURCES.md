@@ -1040,8 +1040,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - `procedure_refs`: the interinstitutional files on page 1, a split part also when written with a space or slash
   before its letter ("2016/0360 A (COD)" in ST 9252/19, the adoption of Regulation (EU) 2019/876; "2016/0224/A(COD)").
 - 746 voting results 2019-01 → 2026-10 (748 Council votes listed and counted on the About page, with the curated
-  records CM-5860-2022 and CM-5860-2022-2, 746 of them with positions, as the country pages count them; the About page's source card
-  and coverage note give these figures and how they divide); 744 with positions; rules: 702 QMV, 44 unanimity (as
+  records CM-5860-2022 and CM-5860-2022-2, 746 of them with positions, as the country pages count them, of 748; the About page's source card
+  and coverage note give these figures and how the 748 divide); 744 with positions; rules: 702 QMV, 44 unanimity (as
   the sheets print them); 2 notes without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
   unreadable). `meta.json` (`sources[council].note`) gives the counts of each release. Verified against the
   rendered sheets: AI Act (ST 10199/24, 27 in favour), Copyright Directive 2019 (6 against, 3 abstentions),

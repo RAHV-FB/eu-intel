@@ -123,7 +123,8 @@ export default function Country() {
   const cp = c.council_positions;
   const councilTotal = cp.for + cp.against + cp.abstain + cp.not_participating;
   const councilSource = meta.data?.sources.find((s) => s.id === 'council');
-  const councilDataExists = (meta.data?.counts.council_votes ?? 0) > 0;
+  const councilListed = meta.data?.counts.council_votes ?? 0; // every Council vote listed, with or without positions
+  const councilDataExists = councilListed > 0;
   const implSource = meta.data?.sources.find((s) => s.id === 'implementation');
   const votesShown = allVotes ? c.council_votes : c.council_votes.slice(0, COUNCIL_ROWS);
 
@@ -321,7 +322,17 @@ export default function Country() {
               ))}
             </dl>
             <p className="note mt-3">
-              Counts of Council votes in our dataset ({formatNumber(councilTotal)} in total), by {c.name}’s recorded position.
+              {councilListed > councilTotal ? (
+                // the votes without positions (a voting-result document that could not be read) are not counted
+                <>
+                  Counts of the {formatNumber(councilTotal)} Council votes in our dataset that record {c.name}’s position (of{' '}
+                  {formatNumber(councilListed)} votes in total), by that position.
+                </>
+              ) : (
+                <>
+                  Counts of Council votes in our dataset ({formatNumber(councilTotal)} in total), by {c.name}’s recorded position.
+                </>
+              )}
             </p>
             {c.council_votes.length > 0 && (
               <div className="table-wrap table-card mt-5">

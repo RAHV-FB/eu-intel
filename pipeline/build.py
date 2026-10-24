@@ -4960,8 +4960,9 @@ class Builder:
                          f"{'adoption' if n == 1 else 'adoptions'} by written procedure from the Council's "
                          f"{'communication' if len(docs) == 1 else 'communications'} on its outcome "
                          f"({', '.join(docs)})") if n else ""  # fmt: skip
-                out.append(f"{len(listed):,} votes of the Council of the EU ({dates[0][:4]}–{dates[-1][:4]}), "
-                           f"{with_pos:,} of them with each Member State's position{extra}.")  # fmt: skip
+                # the breakdown divides the votes listed; the votes with positions are counted on their own
+                out.append(f"{len(listed):,} votes of the Council of the EU ({dates[0][:4]}–{dates[-1][:4]}){extra}. "
+                           f"{with_pos:,} of them record each Member State's position.")  # fmt: skip
                 if unread:
                     out.append(f"{unread:,} voting-result {'document' if unread == 1 else 'documents'} could not be "
                                f"read and {'is' if unread == 1 else 'are'} shown without positions.")  # fmt: skip
