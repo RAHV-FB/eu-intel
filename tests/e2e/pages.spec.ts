@@ -60,6 +60,17 @@ test.describe('country page directive search', () => {
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('a directive row says when the country is in an open non-communication case for it, as the law page does', async ({ page }) => {
+    // NIS2, France: 15 measures, "Measures notified", and INFR(2024)0274 (non-communication) referred to the Court
+    await open(page, 'countries/FR/?tr-q=2022%2F2555');
+    const row = page.locator('tr', { has: page.locator('td.impl-dir', { hasText: 'Directive (EU) 2022/2555' }) });
+    await expect(row).toContainText('Measures notified');
+    await expect(row.locator('td.hide-narrow').last()).toContainText('Commission case open for non-communication of transposition measures');
+    await open(page, 'legislation/2020-0359/');
+    const fr = page.locator('#national tr', { has: page.getByRole('link', { name: 'France', exact: true }) });
+    await expect(fr).toContainText('Commission case open for non-communication of transposition measures');
+  });
+
   test('says when nothing matches and offers the site search', async ({ page }) => {
     await open(page, 'countries/IE/?tr-q=zzqx');
     await expect(page.getByRole('link', { name: 'Search the whole site' })).toHaveAttribute('href', `${BASE_PATH}search?q=zzqx`);

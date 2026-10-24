@@ -427,7 +427,7 @@ export default function Country() {
           transposition is complete or correct. <strong>“No measures found in the available dataset” is not proof of non-compliance</strong>{' '}
           — for example, some directives do not require national measures from every Member State, and the dataset may be incomplete.
         </p>
-        <TranspositionTable rows={c.transposition} countryName={c.name} />
+        <TranspositionTable rows={c.transposition} countryName={c.name} infringements={c.infringements} />
 
         <h3>Infringement cases</h3>
         <InfringementNote />

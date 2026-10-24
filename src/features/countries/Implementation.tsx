@@ -37,9 +37,23 @@ const PAGE = 25;
 const TR_RESET = ['tr-show'];
 const INF_RESET = ['inf-show'];
 
-export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countryName: string }) {
+export function TranspositionTable({
+  rows,
+  countryName,
+  infringements = NO_CASES,
+}: {
+  rows: TRow[];
+  countryName: string;
+  infringements?: InfringementInfo[];
+}) {
   // filters, order and rows shown are kept in the address (tr-…), so that Back from a file returns to the same list
   const [params, patch] = useParamState();
+  // directives this country is in an open non-communication case for, said under the status as the law page's table
+  // says it (NIS2, France: "Measures notified", and INFR(2024)0274 referred to the Court on 8 July 2026)
+  const nonComm = useMemo(
+    () => new Set(infringements.filter((i) => i.status === 'open' && i.non_communication && i.celex).map((i) => i.celex)),
+    [infringements],
+  );
   const status = params.get('tr-status') ?? '';
   const qBox = useParamText('tr-q', TR_RESET);
   const q = qBox.value;
@@ -172,6 +186,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                     <span className="only-narrow impl-dir__more">
                       <TranspositionStatusLabel status={r.status} />
                       {r.status_note && <StatusNote r={r} />}
+                      {nonComm.has(r.celex) && <NonCommunicationCase />}
                       <span className="meta as-block">
                         Deadline: {r.deadline ? formatDate(r.deadline) : 'not recorded'}
                       </span>
@@ -195,6 +210,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                     {/* the exemption's provision and condition (Directive (EU) 2016/798, Art. 33(4)), or Denmark's
                         position on a directive building upon the Schengen acquis (Protocol No 22, Art. 4) */}
                     {r.status_note && <StatusNote r={r} />}
+                    {nonComm.has(r.celex) && <NonCommunicationCase />}
                   </td>
                 </tr>
               ))}
@@ -231,9 +247,14 @@ function StatusNote({ r }: { r: { status_note?: string | null; status_note_url?:
   );
 }
 
+function NonCommunicationCase() {
+  return <span className="meta as-block">Commission case open for non-communication of transposition measures</span>;
+}
+
 const STATUS_LABEL: Record<InfringementInfo['status'], string> = { open: 'Open', closed: 'Closed', unknown: 'Status not recorded' };
 
 const NO_DIRECTIVES: TRow[] = [];
+const NO_CASES: InfringementInfo[] = [];
 
 export function InfringementTable({ rows, directives = NO_DIRECTIVES }: { rows: InfringementInfo[]; directives?: TRow[] }) {
   // kept in the address (inf-…) like the directives' filters; open cases are the default, "all" is inf-status=all
