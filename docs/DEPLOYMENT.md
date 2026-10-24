@@ -5,7 +5,7 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Three
 | Workflow | Trigger | Does | Permissions |
 | --- | --- | --- | --- |
 | `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, pytest (offline), `pipeline validate`, `pipeline build`, `pipeline validate --built`, typecheck, vitest, site build with `BASE_PATH=/eu-intel/`, privacy check; Playwright e2e and accessibility tests on the built site | `contents: read` |
-| `pages.yml` (Deploy to GitHub Pages) | push to `main`, manual, after a successful *Data refresh* | validate → build data → validate the built data → build site with the Pages base path → privacy check → size check → upload → deploy | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
+| `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`, after a successful *Data refresh*, manual | validate → build data → validate the built data → check its dated wording (`src/lib/format.test.ts`) → build site with the Pages base path → privacy check → size check → upload → deploy | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
 | `refresh.yml` (Data refresh) | Mondays 05:17 UTC, manual (optionally a full refresh) | fetch all sources (incremental, see below) → validate → build with activity recording → validate the built data → commit `data/snapshot/` + `data/state/` to `main` | `contents: write` (this job only) |
 
 All actions are pinned to full commit SHAs (with the version in a comment); Dependabot
@@ -24,7 +24,8 @@ once a release passes it. Minor and patch releases are taken as they come.
    organisation/repository must not forbid `contents: write` for `GITHUB_TOKEN`.
 3. **If `main` is protected** by a ruleset or branch protection that blocks direct pushes, add
    `github-actions[bot]` (or the "GitHub Actions" app) to the bypass list, or the refresh commit will be rejected.
-   Required status checks on `main` also block bot pushes unless bypassed.
+   Required status checks on `main` also block bot pushes unless bypassed. (The deploy waits for CI by itself, see
+   "Deploys and CI" below; protection is not needed for that.)
 4. **Environment**: enabling Pages creates the `github-pages` environment, which by default only accepts
    deployments from `main`. Keep it that way (manual runs from other branches will build but not deploy).
 5. Optional: a custom domain (*Settings → Pages → Custom domain*). The base path then becomes `/` automatically,
@@ -112,13 +113,26 @@ open http://127.0.0.1:4174/eu-intel/).
 - **Push rejected** because `main` moved during the run: the job resets onto the new `main`, re-applies only the
   data files this run changed (this run's version wins for those; `_manifest.json` is merged per source) and
   pushes again, up to five times. Do not commit snapshot data by hand while a refresh is running.
-- **Deploy build fails** (validation of the snapshot or of the built data, data build, TypeScript, Vite, privacy
-  check, > 900 MB): the deploy job does not run and the previous deployment stays live. Fix and push, or re-run
-  the workflow.
+- **Deploy build fails** (validation of the snapshot or of the built data, data build, the dated-wording check,
+  TypeScript, Vite, privacy check, > 900 MB): the deploy job does not run and the previous deployment stays live. Fix
+  and push, or re-run the workflow.
 - Deploys are serialised (`concurrency: pages`, never cancelled mid-flight).
+- **Deploys and CI**: a push to `main` runs CI, and the deploy starts only when the whole CI run (lint, tests, build
+  and the browser tests in the three engines) has passed: `pages.yml` runs on `workflow_run` of *CI* for a push to
+  `main` that succeeded. It builds the commit CI tested; if `main` has moved on since only by data refresh commits
+  (changes to `data/snapshot` and `data/state` alone), it builds `main`, so that it does not take that data off the
+  site. A failed or cancelled CI run (a newer push cancels it) deploys nothing; CI on pull requests and manual CI
+  runs never deploy. Some of CI's data tests (`src/**/*.data.test.ts`) pin values of the committed snapshot, such as
+  the date of the latest Council vote: after a refresh changes one, a push fails CI until the test is brought up to
+  date, and its deploy waits for that (the refreshed data itself is deployed by the refresh's own deploy).
 - Commits made by the refresh use `GITHUB_TOKEN`, which by design does not trigger `push` workflows; the deploy
-  is chained with `workflow_run` instead, and CI does not run on refresh commits: the refresh and the deploy each
-  validate the snapshot and the built data, but pytest, vitest and the browser tests do not run on them.
+  is chained with `workflow_run` instead, and CI does not run on refresh commits. The refresh and the deploy each
+  validate the snapshot and the built data, and the deploy runs the checks of `src/lib/format.test.ts` on it (every
+  date a next step, status explanation or timeline step states as still ahead is restated correctly once it has
+  passed, and no dated wording is unknown to `src/lib/format.ts`); pytest, the other vitest data tests (they pin values
+  of the committed snapshot) and the browser tests do not run on refreshed data. A deploy after a refresh builds the
+  latest `main`: a code commit pushed while CI has not yet passed on it is published with it, so do not leave a
+  commit that failed CI on `main` (fix or revert it).
 
 ## What a weekly run re-reads
 
@@ -150,6 +164,7 @@ by its time budget stays a full refresh in the next runs until it completes.
   can use its source's whole time budget): `gh workflow run refresh.yml -f sources=ep_procedures -f
   full_refresh=true`. Locally: `EU_INTEL_FULL_REFRESH=1 python -m pipeline fetch ep_procedures`.
 - **Redeploy** without data changes: *Actions → Deploy to GitHub Pages → Run workflow* (`gh workflow run pages.yml`).
+  A manual run builds the branch it is started on, without waiting for CI.
 - **Roll back** a data refresh: see "Rolling back a bad data refresh" below. A plain `git revert` is enough only when the bad
   refresh is the latest commit that touched `data/`.
 - **Refresh locally** (e.g. to debug a source): `EU_INTEL_NO_CACHE=1 python -m pipeline fetch ep_votes`, then
@@ -182,14 +197,16 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
      Use `restore`, not `git checkout <good-sha> -- data/snapshot data/state`: `checkout` stops with "pathspec 'data/state' did
      not match" when the good commit predates the first refresh (no `data/state` yet), and it keeps files added since, while
      `restore` removes them. Afterwards `git diff <good-sha> HEAD -- data/snapshot data/state` prints nothing.
-4. **Check the deploy.** The push runs *Deploy to GitHub Pages* (and CI). When it has succeeded, the footer's "Data last
+4. **Check the deploy.** The push runs CI, and *Deploy to GitHub Pages* once CI has passed. CI's data tests pin values of the
+   current snapshot, so they can fail on restored data; the restore is then deployed by hand, *Actions → Deploy to GitHub Pages →
+   Run workflow* on `main` (`gh workflow run pages.yml --ref main`), which does not wait for CI. When it has succeeded, the footer's "Data last
    refreshed" (`snapshot_at` in `https://rahv-fb.github.io/eu-intel/data/meta.json`) shows the date of the restored data.
    `built_at` moves with every deploy, so it does not show that the data is the good one.
 5. **While you prepare that, an earlier version can be deployed again.** *Actions → Deploy to GitHub Pages*, an earlier successful
    run, *Re-run all jobs* (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`,
-   then `gh run rerun <run-id>`). A re-run uses the commit of the original run (`actions/checkout` in `pages.yml` takes no `ref`),
-   so it builds and deploys that commit's data; GitHub allows re-runs for 30 days. It changes what is published only: `main`
-   still has the bad data, and the next push to `main`, or the deploy that follows the next refresh, publishes `main` again. Step 3 must
+   then `gh run rerun <run-id>`). A re-run builds the commit of the original run (a re-run keeps the original event and commit),
+   so it deploys that commit's data; GitHub allows re-runs for 30 days. It changes what is published only: `main`
+   still has the bad data, and the next deploy (after CI passes on a push to `main`, or after the next refresh) publishes `main` again. Step 3 must
    follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).
 6. **Fix the cause.** The next refresh starts from the restored data and fetches again. If the cause is at the source, the same
    data comes back: hold that source back (below), and keep the schedule disabled until it is corrected. If the cause was how

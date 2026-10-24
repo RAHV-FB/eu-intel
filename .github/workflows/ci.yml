@@ -3,6 +3,7 @@
 #
 # The Playwright e2e/accessibility job runs on every push to main and every pull request against the site
 # built by the check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
+# A successful run for a push to main starts the deploy (pages.yml, workflow_run).
 name: CI
 
 on:

@@ -1,19 +1,18 @@
 # Build and deploy the static site to GitHub Pages.
 #
-# Triggers: push to main, manual dispatch, and completion of a successful "Data refresh" run (commits
-# pushed with GITHUB_TOKEN do not trigger `push` workflows, so the refresh hands over via workflow_run).
-# Any failure in the build job (validation of the snapshot or of the built data, data build, site build, privacy
-# check, size check) stops the run before deploy; the previous deployment stays live.
+# Triggers (workflow_run): a successful "CI" run for a push to main, so that code is deployed only once its tests
+# have passed, and a successful "Data refresh" run (commits pushed with GITHUB_TOKEN do not trigger `push`
+# workflows, so the refresh hands over this way); and manual dispatch.
+# Any failure in the build job (validation of the snapshot or of the built data, data build, the dated-wording check,
+# site build, privacy check, size check) stops the run before deploy; the previous deployment stays live.
 #
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions" (docs/DEPLOYMENT.md).
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
   workflow_run:
-    workflows: ["Data refresh"]
+    workflows: ["CI", "Data refresh"]
     types: [completed]
     branches: [main]
 
@@ -33,14 +32,35 @@ env:
 jobs:
   build:
     name: Build site
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    # CI also runs on pull requests and manual runs: only a successful run for a push to main deploys
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.name == 'Data refresh' || github.event.workflow_run.event == 'push')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      # On workflow_run this checks out the latest commit on main, i.e. including the refresh commit.
+      # On workflow_run this checks out the latest commit on main, i.e. including the refresh commit; after CI, the
+      # next step goes back to the commit CI tested.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: ${{ github.event.workflow_run.name == 'CI' && 50 || 1 }}
+
+      - name: Build the commit CI tested
+        if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'CI' }}
+        env:
+          CI_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          # If main has moved on since only by data refresh commits (data/snapshot, data/state), build main: its code is
+          # the code CI tested, and this deploy does not take the refreshed data off the site. Otherwise build the commit
+          # CI tested (a newer code commit is deployed by its own CI run).
+          if git merge-base --is-ancestor "$CI_SHA" HEAD &&
+            git diff --quiet "$CI_SHA" HEAD -- . ':(exclude)data/snapshot' ':(exclude)data/state'; then
+            echo "Building $(git rev-parse HEAD): CI passed on $CI_SHA; later commits change only data/snapshot and data/state."
+          else
+            git checkout --quiet --detach "$CI_SHA"
+            echo "Building $CI_SHA, the commit CI passed."
+          fi
 
       - name: Configure Pages
         id: pages
@@ -75,6 +95,12 @@ jobs:
       - name: Validate built data
         # The built-output checks of pipeline/validate.py; --built fails if public/data is missing.
         run: python -m pipeline validate --built
+
+      - name: Check the dated wording of the built data
+        # The checks of src/lib/format.test.ts on this build: every date a next step, status explanation or timeline
+        # step states as still ahead is restated correctly once it has passed, and no dated wording is unknown to
+        # src/lib/format.ts. They do not depend on the committed snapshot, unlike the other data tests (run by CI).
+        run: npx vitest run src/lib/format.test.ts
 
       - name: Build site
         env:

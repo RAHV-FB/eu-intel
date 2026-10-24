@@ -78,8 +78,8 @@ All of the above except the link checks run in CI on every push to `main`, every
   gets its previous files and manifest entry back from the last commit, and the other sources' new data is
   committed; nothing is committed if the snapshot still fails after that, or if the built data fails validation.
   `data/state/` is committed only after a successful build.
-- **Deploy** ([pages.yml](.github/workflows/pages.yml)): on push to `main`, on demand, and after each successful
-  refresh. A failed build or validation never deploys; the previous version stays online.
+- **Deploy** ([pages.yml](.github/workflows/pages.yml)): once CI has passed on a push to `main`, after each successful
+  refresh, and on demand. A failed CI run, build or validation never deploys; the previous version stays online.
 
 Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time Pages setup.
 
