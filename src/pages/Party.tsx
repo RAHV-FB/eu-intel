@@ -4,7 +4,7 @@ import type { PartyDetail, PartyRef } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
-import { ErrorState, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
+import { ErrorState, Loading, LookupNotice, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { partyRecordTitle, periodText, recordPeriod, termYears, useGroups } from '../features/people/labels';
 import { SortTh, useSortable } from '../features/votes/sortable';
@@ -130,6 +130,8 @@ export default function Party() {
           )}
         </div>
       )}
+
+      <LookupNotice failed={groups.failed} what="Political group names" />
 
       <dl className="facts card">
         {closed ? (

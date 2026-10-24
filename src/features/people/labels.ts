@@ -113,11 +113,36 @@ export function periodText(from?: string | null, to?: string | null): string {
   return `${formatDate(from)} – ${formatDate(to)}`;
 }
 
-/** Group lookup (slug → summary) from people/groups.json. */
+/** What the pages need of a political group to name it. */
+export type GroupLabel = Pick<GroupSummary, 'id' | 'code' | 'name'> & { active?: boolean };
+
+/**
+ * The political groups' slug, code and official name as people/groups.json gives them, shown when that file cannot be
+ * loaded, so that a group reads "Renew" and not "renew". src/features/people/labels.test.ts compares them with the built data.
+ */
+export const GROUP_FALLBACK: GroupLabel[] = [
+  { id: 'epp', code: 'EPP', name: "Group of the European People's Party (Christian Democrats)" },
+  { id: 's-d', code: 'S&D', name: 'Group of the Progressive Alliance of Socialists and Democrats in the European Parliament' },
+  { id: 'pfe', code: 'PfE', name: 'Patriots for Europe Group' },
+  { id: 'ecr', code: 'ECR', name: 'European Conservatives and Reformists Group' },
+  { id: 'renew', code: 'Renew', name: 'Renew Europe Group' },
+  { id: 'greens-efa', code: 'Greens/EFA', name: 'Group of the Greens/European Free Alliance' },
+  { id: 'the-left', code: 'The Left', name: 'The Left group in the European Parliament - GUE/NGL' },
+  { id: 'esn', code: 'ESN', name: 'Europe of Sovereign Nations Group' },
+  { id: 'ni', code: 'NI', name: 'Non-attached Members' },
+  { id: 'id', code: 'ID', name: 'Identity and Democracy Group' },
+];
+
+/** Group lookup (slug → code and name) from people/groups.json; `failed` when that file could not be loaded (the lookup
+ * is then GROUP_FALLBACK, without what that file adds: whether a group sits in the current term, its members). */
 export function useGroups() {
   const state = useData<GroupSummary[]>('people/groups.json');
-  const byId = useMemo(() => new Map((state.data ?? []).map((g) => [g.id, g])), [state.data]);
-  return { ...state, byId };
+  const failed = !!state.error;
+  const byId = useMemo(
+    () => new Map<string, GroupLabel>((state.data ?? (failed ? GROUP_FALLBACK : [])).map((g) => [g.id, g])),
+    [state.data, failed],
+  );
+  return { ...state, byId, failed };
 }
 
 export const EP_MEP_URL = (id: string) => `https://www.europarl.europa.eu/meps/en/${encodeURIComponent(id)}`;

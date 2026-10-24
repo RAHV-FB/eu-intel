@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import type { MepSummary, PartySummary } from '../types/data';
 import { useData } from '../lib/data';
-import { EmptyState, ErrorState, Loading, PageHeader } from '../components/ui';
+import { EmptyState, ErrorState, Loading, LookupNotice, PageHeader } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { MepSearch } from '../features/people/MepSearch';
 import { GroupsOverview, PartiesBrowse, PartyVsGroup } from '../features/people/GroupsAndParties';
@@ -46,6 +46,7 @@ export default function People() {
 
       {state.loading && <Loading />}
       {state.error && <ErrorState error={state.error} title="This list could not be loaded" />}
+      {view !== 'groups' && <LookupNotice failed={groups.failed} what="Political group names" />}
 
       {view === 'meps' &&
         meps.data &&

@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import type { EpVoteDetail, GroupSummary } from '../types/data';
+import type { EpVoteDetail } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
-import { Disclosure, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term, VoteBar } from '../components/ui';
+import { Disclosure, ErrorState, ExtLink, Loading, LookupNotice, NotFound, PageHeader, SourceLink, Term, VoteBar } from '../components/ui';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
+import { useGroups } from '../features/people/labels';
 import { CloseVoteMethod, MarginText, OutcomeBadge } from '../features/votes/components';
 import { BallotList, CountryBreakdownTable, GroupBreakdownTable } from '../features/votes/Breakdowns';
 import { LangText, VoteTitle } from '../features/votes/VoteTitle';
@@ -26,7 +27,7 @@ export default function Vote() {
   // vote ids are EP voting ids (digits); anything else, e.g. /votes/index, is not a vote page
   const validId = /^\d+$/.test(id);
   const { data: v, error, loading } = useData<EpVoteDetail>(validId ? `votes/${encodeURIComponent(id)}.json` : null);
-  const groupsState = useData<GroupSummary[]>('people/groups.json');
+  const groups = useGroups();
   const notFound = !validId || (!!v && !Array.isArray(v.ballots)) || isMissing(error);
   useDocumentTitle(notFound ? 'Vote not found' : v ? v.display_title || v.title : 'Parliament vote', v && !notFound ? formatDate(v.date) : null);
 
@@ -34,12 +35,12 @@ export default function Vote() {
   const fromList = (useLocation().state as { votesList?: unknown } | null)?.votesList;
   const listUrl = typeof fromList === 'string' && /^\/votes(\?|$)/.test(fromList) ? fromList : '/votes';
 
-  const groupNames = useMemo(() => new Map((groupsState.data ?? []).map((g) => [g.id, g.name])), [groupsState.data]);
+  const groupNames = useMemo(() => new Map([...groups.byId].map(([id, g]) => [id, g.name])), [groups.byId]);
   const groupCodes = useMemo(() => {
-    const m = new Map((groupsState.data ?? []).map((g) => [g.id, g.code]));
+    const m = new Map([...groups.byId].map(([id, g]) => [id, g.code]));
     for (const g of v?.groups ?? []) m.set(g.group, g.group_code);
     return m;
-  }, [groupsState.data, v]);
+  }, [groups.byId, v]);
 
   if (!validId || (v && !Array.isArray(v.ballots))) return <NotFound what="vote" />;
   if (loading) return <div className="container page"><Loading label="Loading vote…" /></div>;
@@ -236,6 +237,7 @@ export default function Vote() {
               voted individually. “Group majority” is the most common position among members with a recorded vote; cohesion is the share
               of them who voted that way.
             </p>
+            <LookupNotice failed={groups.failed} what="Political group names" />
             {v.groups.length > 0 ? (
               <GroupBreakdownTable rows={v.groups} groupNames={groupNames} />
             ) : (

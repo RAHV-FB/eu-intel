@@ -38,6 +38,17 @@ export function ErrorState({ error, title = 'Something went wrong' }: { error?: 
   );
 }
 
+/** A short alert for a lookup file (`what`: "Political group names", "Topic names") that did not load while the page
+ *  itself works: the names are then those of a built-in list (useGroups, useTopics). */
+export function LookupNotice({ failed, what }: { failed: boolean; what: string }) {
+  if (!failed) return null;
+  return (
+    <div className="state state--error state--note" role="alert">
+      {what} could not be loaded. The names shown here come from a built-in list; reload the page to try again.
+    </div>
+  );
+}
+
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="state state--empty">

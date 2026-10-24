@@ -1,13 +1,13 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { DossierSummary, LegalInstrument, Meta, Topic } from '../types/data';
+import type { DossierSummary, LegalInstrument, Meta } from '../types/data';
 import { useData, DATA_BASE } from '../lib/data';
 import { formatNumber } from '../lib/format';
 import { legislationScope } from '../lib/scope';
 import { loadSearch, similarWords, type SearchEngine } from '../lib/search';
 import { useWatchlist } from '../lib/watchlist';
 import { clearAllParams, useParamState, useParamText, type ParamPatch } from '../lib/urlState';
-import { EmptyState, ErrorState, Loading, PageHeader } from '../components/ui';
+import { EmptyState, ErrorState, Loading, LookupNotice, PageHeader } from '../components/ui';
 import { useMediaQuery } from '../components/useMediaQuery';
 import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 import {
@@ -18,6 +18,7 @@ import {
   dossierYear,
   stageFilterLabel,
   useDocumentTitle,
+  useTopics,
 } from '../features/legislation/labels';
 import {
   PAGE_SIZE,
@@ -59,9 +60,9 @@ export default function Legislation() {
   const [params, patch] = useParamState();
   const state = useMemo(() => readState(params), [params]);
   const index = useData<DossierSummary[]>('dossiers/index.json');
-  const topicsData = useData<Topic[]>('topics.json');
+  const topicsData = useTopics();
   const meta = useData<Meta>('meta.json');
-  const topics = topicsData.data ?? [];
+  const topics = topicsData.topics;
   const topicLabel = (slug: string) => (slug === NO_TOPIC ? NO_TOPIC_LABEL : (topics.find((t) => t.slug === slug)?.label ?? slug));
   const watch = useWatchlist();
   const followed = useMemo(() => new Set(watch.map((w) => w.id)), [watch]);
@@ -381,6 +382,7 @@ export default function Legislation() {
 
       {index.loading && <Loading label="Loading legislative files…" />}
       {index.error && <ErrorState error={index.error} title="The list of legislative files could not be loaded" />}
+      <LookupNotice failed={topicsData.failed} what="Topic names" />
 
       {index.data && (
         <>

@@ -3,9 +3,9 @@
  * Used by the legislation explorer, the dossier page, the homepage and the watchlist.
  */
 import { useEffect } from 'react';
-import { NotFoundError } from '../../lib/data';
+import { NotFoundError, useData } from '../../lib/data';
 import { institutionLabel } from '../../components/ui';
-import type { DossierSummary, LegalInstrument, LifecycleStage, TranspositionStatus } from '../../types/data';
+import type { DossierSummary, LegalInstrument, LifecycleStage, Topic, TranspositionStatus } from '../../types/data';
 
 export const SITE_TITLE = 'EU Legislative Intelligence';
 
@@ -137,6 +137,33 @@ export function dossierYear(d: Pick<DossierSummary, 'started' | 'ref'>): number 
 export function isSameTitle(a: string | null | undefined, b: string | null | undefined): boolean {
   const n = (s: string | null | undefined) => (s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
   return n(a) === n(b);
+}
+
+/** A topic as the pages use it to label a filter, a chip or a tag. */
+export type TopicLabel = Pick<Topic, 'slug' | 'label'> & Partial<Pick<Topic, 'description' | 'count'>>;
+
+/**
+ * The topics' labels as topics.json gives them (data/curated/topics.yaml), shown when that file cannot be loaded, so that a
+ * topic filter is not empty and tags do not read "tech". titles.test.ts compares them with the built data.
+ */
+export const TOPIC_FALLBACK: TopicLabel[] = [
+  { slug: 'tech', label: 'Technology & AI' },
+  { slug: 'economy', label: 'Economy & Trade' },
+  { slug: 'environment', label: 'Environment & Energy' },
+  { slug: 'migration', label: 'Migration & Borders' },
+  { slug: 'agriculture', label: 'Agriculture & Food' },
+  { slug: 'rights', label: 'Rights & Justice' },
+  { slug: 'security', label: 'Security & Defence' },
+  { slug: 'transport', label: 'Transport' },
+  { slug: 'social', label: 'Employment & Social Policy' },
+  { slug: 'health', label: 'Health & Consumers' },
+];
+
+/** The topics from topics.json; `failed` when that file could not be loaded (the labels are then the fallback above). */
+export function useTopics() {
+  const state = useData<Topic[]>('topics.json');
+  const failed = !!state.error;
+  return { ...state, failed, topics: (state.data ?? (failed ? TOPIC_FALLBACK : [])) as TopicLabel[] };
 }
 
 export const EURLEX_CELEX = (celex: string) =>

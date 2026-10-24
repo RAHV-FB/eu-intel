@@ -1,6 +1,6 @@
 /**
  * Page titles: cut at a word boundary, the same before and after a page loads (scripts/prerender-routes.mjs writes the title of
- * the shell, useDocumentTitle sets it live).
+ * the shell, useDocumentTitle sets it live), and the topic labels shown when topics.json cannot be loaded.
  * The data tests read the built site (public/data) and are skipped when it has not been built.
  */
 import { execFileSync } from 'node:child_process';
@@ -8,8 +8,8 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync,
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { DossierDetail, DossierSummary } from '../../types/data';
-import { SITE_TITLE, TITLE_MAX, documentTitle, shortTitle } from './labels';
+import type { DossierDetail, DossierSummary, Topic } from '../../types/data';
+import { SITE_TITLE, TITLE_MAX, TOPIC_FALLBACK, documentTitle, shortTitle } from './labels';
 
 const ROOT = new URL('../../../', import.meta.url);
 const DATA = new URL('public/data/', ROOT);
@@ -80,6 +80,12 @@ describe.skipIf(!built)('on the built data', () => {
     }
     expect(longer).toBeGreaterThan(100);
   }, 60_000);
+
+  it('has fallback topic labels that are those of topics.json, in its order', () => {
+    // TOPIC_FALLBACK is what the pages show when topics.json cannot be loaded: add a new topic there too
+    const topics = read<Topic[]>('topics.json');
+    expect(TOPIC_FALLBACK).toEqual(topics.map((t) => ({ slug: t.slug, label: t.label })));
+  });
 });
 
 // scripts/prerender-routes.mjs on a small site: the titles of its shells are those of the loaded pages, a `$` in a title is
