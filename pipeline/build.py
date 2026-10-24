@@ -5257,7 +5257,9 @@ def build_search_docs(b: Builder) -> list[dict]:
         d = b.dossier_summary[pid]
         p = b.proc[pid]
         cur = b.curated_of.get(pid) or {}
-        acts = b.acts_of.get(pid, [])
+        # the acts the file keeps, not every act EUR-Lex links to it: Regulation (EU) 2026/2280, which EUR-Lex also
+        # links to 2018/0329(COD), is the act of 2025/0059(COD), and 2018/0329(COD) is no "regulation"
+        acts = getattr(b, "dossier_acts", {}).get(pid, b.acts_of.get(pid, []))
         alts = _as_list(cur.get("aliases")) + named.get(pid, []) + short_names(p.title)
         alts += [n for a in acts if (n := act_short_name(a.title))]
         alts += train_names(b.train_of.get(pid, []))

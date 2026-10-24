@@ -52,7 +52,7 @@
   ep_subjects:
     - "3.70"      # Environmental policy
     - "3.60"      # Energy policy
-  search_aliases: ["climate", "climate change", "emissions", "CO2", "carbon", "environment", "nature", "biodiversity", "pollution", "waste", "plastic", "recycling", "energy", "renewables", "gas", "electricity", "green deal", "deforestation"]
+  search_aliases: ["climate", "climate change", "emissions", "CO2", "carbon", "environment", "nature", "biodiversity", "pollution", "waste", "plastic", "recycling", "energy", "renewables", "gas", "electricity", "green deal", "European Green Deal", "deforestation"]
 
 - slug: migration
   label: "Migration & Borders"

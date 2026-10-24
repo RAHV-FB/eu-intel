@@ -67,6 +67,39 @@ test('a query whose parts find results on their own is announced once', async ({
   await expectNoSeriousA11yViolations(page);
 });
 
+test.describe('queries typed in capitals, names and words with a number', () => {
+  test('a query typed in capitals finds what it finds in lowercase, on the results page and in the explorer', async ({ page }) => {
+    // "FISH" gave 2 results and "fish" 55; /legislation?q=FARMING said "0 files match"
+    const status = page.locator('main [role="status"]').first();
+    await open(page, search('fish'));
+    const lower = count(await status.textContent());
+    await open(page, search('FISH'));
+    expect(count(await status.textContent())).toBe(lower);
+    expect(lower).toBeGreaterThan(20);
+    await open(page, 'legislation?q=farming');
+    const files = await page.locator('.lx-count').textContent();
+    await open(page, 'legislation?q=FARMING');
+    await expect(page.locator('.lx-count')).toHaveText(files!);
+    expect(count(files)).toBeGreaterThan(0);
+  });
+
+  test('"Anna Maria" lists Anna Maria Cisint, and "euro7" the Euro 7 Regulation', async ({ page }) => {
+    await open(page, search('Anna Maria'));
+    await expect(page.locator('#r-people .sr-item__title')).toHaveText(['Anna Maria Cisint']); // not Annamária Vicsek first
+    await open(page, search('euro7'));
+    await expect(page.locator('main .sr-item__title').first()).toContainText('(Euro 7)'); // was "No results"
+  });
+
+  test('suggestions stay while the last word has one or two letters', async ({ page }) => {
+    await open(page, './');
+    const box = page.getByRole('combobox').first();
+    await box.click();
+    await box.fill('minimum wa');
+    await expect(page.getByRole('option').first()).toBeVisible(); // the list disappeared until "minimum wag"
+    await expect(box).toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
 test.describe('result groups', () => {
   test('one group of results has no links to the groups', async ({ page }) => {
     await open(page, search('AI Act'));

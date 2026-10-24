@@ -15,6 +15,7 @@ import {
   similarWords,
   singular,
   stemSpellings,
+  typedAbbreviations,
   wordSet,
   type SearchHit,
 } from './search';
@@ -1046,6 +1047,62 @@ describe('query parts', () => {
     expect(parts('Ursula von der Leyen')).toEqual(['Ursula: ', 'von der Leyen: ']);
     expect(parts('Ireland')).toBeUndefined();
     expect(parts('2021/0106(COD)')).toBeUndefined();
+  });
+});
+
+describe('capitals, people’s names, words with a number, short last words and names after "European"', () => {
+  // TEST-ONLY documents with the titles of real files and the names of real MEPs (search.json entries, shortened)
+  const docs: SearchDoc[] = [
+    { id: '2018-0074', k: 'dossier', t: 'Multiannual plan for fish stocks in the Western Waters and adjacent waters', s: '2018/0074(COD) · In force', x: '2018/0074(COD) 2018/0074 regulation', u: '/legislation/2018-0074', w: 1.2, d: '2019-07-25' },
+    { id: '2018-0193', k: 'dossier', t: 'Fisheries control', s: '2018/0193(COD) · In force', x: '2018/0193(COD) 2018/0193 regulation', u: '/legislation/2018-0193', w: 1.2, d: '2026-01-10' },
+    { id: '2022-0365', k: 'dossier', t: 'Type-approval of motor vehicles and engines ... with respect to their emissions and battery durability (Euro 7)', s: '2022/0365(COD) · In force', x: '2022/0365(COD) 2022/0365 regulation', u: '/legislation/2022-0365', w: 1.2, d: '2024-05-28' },
+    { id: '2020-0310', k: 'dossier', t: 'Adequate minimum wages in the European Union', s: '2020/0310(COD) · In force', x: '2020/0310(COD) 2020/0310 directive', u: '/legislation/2020-0310', w: 1.2, d: '2025-11-11' },
+    { id: '2020-0036', k: 'dossier', t: 'Establishing the framework for achieving climate neutrality and amending Regulation (EU) 2018/1999 (European Climate Law)', s: '2020/0036(COD) · In force', a: 'European Climate Law', x: '2020/0036(COD) 2020/0036 regulation', u: '/legislation/2020-0036', w: 1.2, d: '2026-03-18' },
+    { id: '2025-0524', k: 'dossier', t: '2040 climate target (European Climate Law amendment)', s: '2025/0524(COD) · In force', a: '2040 climate target | Climate Law amendment', x: '2025/0524(COD) 2025/0524 regulation', u: '/legislation/2025-0524', w: 3, d: '2026-04-07' },
+    { id: 'council', k: 'page', t: 'The Council of the European Union', s: 'How the EU works', a: 'Council of the EU | Council of the European Union', u: '/how-the-eu-works#council', w: 2 },
+    { id: 'european-council', k: 'page', t: 'The European Council (heads of state or government)', s: 'How the EU works', a: 'European Council | summit', u: '/how-the-eu-works#european-council', w: 2 },
+    { id: '256859', k: 'mep', t: 'Annamária Vicsek', s: 'MEP · Hungary · PfE', u: '/people/meps/256859', w: 1.5 },
+    { id: '257131', k: 'mep', t: 'Anna Maria Cisint', s: 'MEP · Italy · PfE', u: '/people/meps/257131', w: 1.5 },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`);
+  const typed = (q: string) => e.search(q, { limit: 8, typing: true }).map((h) => h.doc.id);
+
+  it('reads a query typed all in capitals as its words, and capitals inside a word as an abbreviation', () => {
+    expect(typedAbbreviations('FISH')).toEqual(new Set());
+    expect(typedAbbreviations('CHILDREN AND FAMILIES')).toEqual(new Set());
+    expect(typedAbbreviations('AMLA regulation')).toEqual(new Set(['amla']));
+    expect(typedAbbreviations('SAFE loans')).toEqual(new Set(['safe']));
+    expect(typedAbbreviations('MiCA')).toEqual(new Set(['mica']));
+    expect(all('fish')).toEqual(['2018-0074', '2018-0193*']);
+    expect(all('FISH')).toEqual(all('fish')); // caps lock: "Fisheries control" too
+    expect(all('FISH stocks')).toEqual(['2018-0074']); // "FISH" among lowercase words is an abbreviation: whole word only
+  });
+
+  it('matches a person’s name as typed, not as one word ("Anna Maria" is not "Annamária")', () => {
+    expect(all('Anna Maria')).toEqual(['257131']);
+    expect(all('Annamaria')).toEqual(['256859']);
+  });
+
+  it('matches a word and a number written together as the index has them apart', () => {
+    for (const q of ['euro7', 'EURO7', 'Euro 7', 'Euro-7']) expect(all(q), q).toEqual(['2022-0365']);
+    expect(typed('euro7')).toEqual(['2022-0365']);
+  });
+
+  it('keeps suggestions while the last word has one or two letters', () => {
+    expect(typed('minimum wa')).toEqual(['2020-0310']);
+    expect(typed('minimum w')).toEqual(['2020-0310']);
+    expect(typed('minimum wag')).toEqual(['2020-0310']);
+    expect(typed('Anna Ma')).toEqual(['257131', '256859']); // those of "Anna", as typed first
+    expect(all('minimum wa')).toEqual([]); // the results page: as typed
+    expect(typed('EU')).not.toEqual([]);
+    expect(typed('EU-US')).toEqual([]); // "EU" alone is no subject
+  });
+
+  it('ranks a name given without its leading "European" as that name, for two words or more', () => {
+    expect(all('climate law')).toEqual(['2020-0036', '2025-0524']); // not the amendment first
+    expect(all('EU climate law')[0]).toBe('2020-0036');
+    expect(all('council')[0]).toBe('council'); // one word: not the European Council
   });
 });
 

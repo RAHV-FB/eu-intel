@@ -599,7 +599,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   naming its acts in words is not checked ("Amendment to the fuel quality directive ...", 2012/0288(COD)).
 - Search index (`search.json`): a file's keywords (`x`) hold its procedure reference and number, its acts' CELEX
   ids and numbers, its COM references and the types of its acts as EUR-Lex records them (`act_type`:
-  "regulation", "directive", "decision"), so that "whistleblower directive" finds Directive (EU) 2019/1937. The
+  "regulation", "directive", "decision"), so that "whistleblower directive" finds Directive (EU) 2019/1937. These
+  are the acts the file keeps (its `celex`), not an act EUR-Lex also links to it that is another file's: Regulation
+  (EU) 2026/2280 lists 2018/0329(COD) and 2025/0059(COD), and only 2025/0059(COD) has it; a file without an act has
+  no type keyword (2018/0329(COD) was listed as a "Regulation"). The
   search matches an act type only as that whole word (or its plural), never as a form, the start or a misspelling
   of another word: "regulated" does not find every file that produced a regulation; the search page shows the act
   types next to each file, so that a match on them is visible.

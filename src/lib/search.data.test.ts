@@ -5,7 +5,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { CountryDetail, DossierSummary, EpVoteSummary, SearchDoc } from '../types/data';
-import { createSearchEngine, queryParts, similarWords, type SearchHit } from './search';
+import { actTypes, createSearchEngine, queryParts, similarWords, type SearchHit } from './search';
 import { buildHaystacks, keywordScores } from '../features/legislation/explorer';
 import { matchVoteDetails, matchVotes, voteHaystacks } from '../features/votes/keyword';
 
@@ -147,12 +147,67 @@ describe.skipIf(!built)('search on the built index', () => {
       expect(keywordScores(rows, hay, engine, q, partial).size, q).toBe(page);
       expect(partial.has(related), q).toBe(true);
     }
-    // the 2,3-letter words and abbreviations stay whole: "ai" is not "aid", "SAFE" not "safeguard"
+    // the 2,3-letter words and abbreviations stay whole: "ai" is not "aid", "EPP" not "EPPO", "safe" not "safeguard"
     expect(engine.search('ai', { limit: 100 }).some((h) => h.partial)).toBe(false);
     expect(engine.search('car', { limit: 100 }).some((h) => h.partial)).toBe(false);
-    expect(engine.search('SAFE', { limit: 100 }).some((h) => h.partial)).toBe(false);
+    expect(engine.search('EPP', { limit: 100 }).some((h) => h.partial)).toBe(false);
     expect(ids('safe', 50)).not.toContain('dossier:2016-0030'); // "safeguard the security of gas supply"
+    expect(ids('SAFE', 50)).not.toContain('dossier:2016-0030');
     expect(ids('euro', 50)).not.toContain('dossier:2013-0256'); // Eurojust
+  });
+
+  it('reads a query typed in capitals as its words: caps lock makes no abbreviations', () => {
+    // "FISH" found 2 results and "fish" 55; "FARMING" on /legislation said "0 files match"
+    const hay = buildHaystacks(rows);
+    for (const q of ['fish', 'children', 'farming', 'trade', 'travelers', 'banning', 'safe']) {
+      expect(ids(q.toUpperCase(), 5000), q).toEqual(ids(q, 5000));
+      expect([...keywordScores(rows, hay, engine, q.toUpperCase()).keys()], q).toEqual([...keywordScores(rows, hay, engine, q).keys()]);
+    }
+    expect(ids('CHILDREN', 50)).toContain('dossier:2022-0155'); // "... combat child sexual abuse online"
+    expect(keywordScores(rows, hay, engine, 'FARMING').size).toBeGreaterThan(0);
+    // capitals among lowercase words still mark an abbreviation, matched as that whole word
+    expect(ids('MiCA', 50)).toEqual(['dossier:2020-0265']);
+    expect(ids('AMLA regulation', 50)).toEqual(['dossier:2021-0240']);
+  });
+
+  it('ranks the person named as typed first, not a name written as one word', () => {
+    // "Anna Maria" listed Annamária Vicsek (256859) above Anna Maria Cisint (257131)
+    expect(ids('Anna Maria').filter((k) => k.startsWith('mep:'))).toEqual(['mep:257131']);
+    expect(typed('Anna Maria')[0]).toBe('mep:257131');
+    expect(top('Annamaria')).toBe('mep:256859');
+    expect(top('cyber security act')).toBe('dossier:2017-0225'); // other names still join: "Cybersecurity Act"
+  });
+
+  it('finds "euro7" and "covid19" as the titles write them apart, and keeps suggestions while a word is begun', () => {
+    expect(top('euro7')).toBe('dossier:2022-0365'); // "... (Euro 7)": was "No results"
+    expect(typed('euro7')[0]).toBe('dossier:2022-0365');
+    expect(ids('covid19', 50)).toEqual(ids('covid 19', 50));
+    expect(ids('covid19', 50).length).toBeGreaterThan(10);
+    // the list disappeared at "minimum wa", "asylum pa" and "Fratelli d'It", and came back a letter later
+    for (const q of ['minimum wa', 'asylum pa', "Fratelli d'It", 'Spanish ME', 'Anna Ma']) expect(typed(q).length, q).toBeGreaterThan(0);
+    expect(typed('minimum wa')).toContain('dossier:2020-0310'); // Adequate minimum wages
+    expect(typed("Fratelli d'It")).toContain(typed("Fratelli d'Ita")[0]);
+  });
+
+  it('ranks a law named without its leading "European" first, and the European Green Deal at its topic', () => {
+    expect(top('climate law')).toBe('dossier:2020-0036'); // European Climate Law, not its 2040 amendment
+    expect(top('EU climate law')).toBe('dossier:2020-0036');
+    expect(top('european green deal')).toBe('topic:environment'); // the Greens/EFA group came first
+    expect(top('council')).toBe('page:council'); // one word: not the European Council
+  });
+
+  it('gives a file the types of the acts it keeps only', () => {
+    // 2018/0329(COD), a directive proposal with no act, was listed as a "Regulation": EUR-Lex also links it to
+    // Regulation (EU) 2026/2280, the act of 2025/0059(COD)
+    const doc = read<SearchDoc[]>('search.json').find((d) => d.k === 'dossier' && d.id === '2018-0329')!;
+    expect(actTypes(doc)).toEqual([]);
+    const L: Record<string, string> = { R: 'regulation', L: 'directive', D: 'decision' };
+    const celex = new Map(rows.map((r) => [r.id, r.celex]));
+    for (const d of read<SearchDoc[]>('search.json')) {
+      if (d.k !== 'dossier' || !celex.has(d.id)) continue;
+      const letters = new Set(celex.get(d.id)!.filter((c) => c[0] === '3' && L[c[5]]).map((c) => L[c[5]]));
+      expect(new Set(actTypes(d)), d.id).toEqual(letters);
+    }
   });
 
   it('does not answer a name query with another person through name particles', () => {
