@@ -228,7 +228,7 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
             </div>
           )}
           <div>
-            <dt>Proposed</dt>
+            <dt>Proposed{d.started_from_parts && ' (as recorded for its parts)'}</dt>
             <dd>{d.started ? formatDate(d.started, true) : <span className="meta">Not recorded</span>}</dd>
           </div>
           <div>

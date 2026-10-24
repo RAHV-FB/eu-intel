@@ -62,6 +62,22 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     expect(latestDone(d.timeline, today)!.title).toBe('Parliament sent the file back to committee to negotiate with the Council');
   });
 
+  it('dates a split parent by the proposal all its parts record, and lists that proposal (2016-0224)', () => {
+    // 2016/0224(COD) read "Proposed: Not recorded"; 2016/0224A and B(COD) record COM(2016)0467 of 13 July 2016
+    const parents = all.filter((d) => d.related.some((r) => r.relation === 'Split into'));
+    for (const d of parents) {
+      const parts = d.related.filter((r) => r.relation === 'Split into').map((r) => all.find((x) => x.id === r.id)!);
+      if (!d.started_from_parts) continue;
+      for (const x of parts) expect(x.started, `${d.id} ${x.id}`).toBe(d.started);
+      const coms = parts.map((x) => x.documents.filter((doc) => doc.id.startsWith('COM(')).map((doc) => doc.id).join());
+      expect(new Set(coms).size, d.id).toBe(1);
+      expect(d.documents.map((doc) => doc.id), d.id).toContain(coms[0]);
+    }
+    const p224 = all.find((d) => d.id === '2016-0224')!;
+    expect([p224.started, p224.started_from_parts, p224.documents.some((doc) => doc.id === 'COM(2016)0467')]).toEqual(['2016-07-13', true, true]);
+    for (const d of all) if (d.started_from_parts) expect(parents, d.id).toContain(d);
+  });
+
   it('never shows a generated name as a split parent’s official title, and tells its parts apart', () => {
     const parents = all.filter((d) => d.related.some((r) => r.relation === 'Split into'));
     expect(parents.length).toBe(12);

@@ -845,6 +845,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   are the parts' OEIL procedure files ("... 2016/0400A(COD) (separate file)"), not the EUR-Lex record of one part's
   act that the parent's record was built from; a Legislative Train page on one part, which records the proposal's
   reference ("... – 2016/0400B(COD)", procedure 2016/0400(COD)), is cited on that part's page.
+- No split parent records a proposal of its own (all 12; the page read "Proposed: Not recorded"). Where every part
+  records the same single Commission proposal, as all 12 do, the parent takes its date (`started`, with
+  `started_from_parts`: "Proposed (as recorded for its parts)") and lists that document: 2016/0224(COD),
+  COM(2016)0467 of 13 July 2016, the proposal of 2016/0224A and B(COD).
 - File counts on the About page: `counts.dossiers` (1,577) is the number of file pages, which is the number of
   procedures recorded by Parliament (1,564, the `ep_procedures` snapshot) plus 13 files that have no usable
   Parliament record: 3 adopted laws shown from their EUR-Lex record only (2011-0901, 2018-0900, 2020-3521) and 10

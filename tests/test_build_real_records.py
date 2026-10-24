@@ -1717,6 +1717,22 @@ def test_split_parts_and_the_main_file_of_a_report_are_linked_from_the_status_te
     assert report["next_step"]["text"] == "None for this report. See the main procedure 2020/0112(APP) for the proposal."
 
 
+def test_a_split_parent_is_dated_by_the_proposal_all_its_parts_record():
+    # 2016/0224(COD) records no proposal (its page read "Proposed: Not recorded"); 2016/0224A and B(COD) both record
+    # the Commission proposal COM(2016)0467 of 13 July 2016, from which the file was split
+    p = procs("2016-0224", "2016-0224A", "2016-0224B")
+    me = SimpleNamespace(proc=p, split_children={"2016-0224": ["2016-0224A", "2016-0224B"]},
+                         proposal_date=Builder.proposal_date)  # fmt: skip
+    assert Builder.proposal_date(p["2016-0224"]) is None
+    doc = Builder.parts_proposal(me, "2016-0224")  # type: ignore[arg-type]
+    assert doc is not None and (doc.id, doc.date) == ("COM(2016)0467", "2016-07-13")
+    assert Builder.parts_proposal(me, "2016-0224A") is None  # not a split parent
+    # parts that record different proposals date nothing
+    me.proc = {**p, "2016-0224B": p["2016-0224B"].model_copy(update={"documents": [
+        d.model_copy(update={"id": "COM(2016)0468"}) if d.id == "COM(2016)0467" else d for d in p["2016-0224B"].documents]})}  # fmt: skip
+    assert Builder.parts_proposal(me, "2016-0224") is None
+
+
 def _classified(pid: str, today: str = "2026-10-23", **kw):
     """(status, procedure as the build gives it to classify) of a snapshot file, without acts or train files."""
     from datetime import date

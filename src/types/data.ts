@@ -368,6 +368,7 @@ export interface DossierDetail extends DossierSummary {
   dates_set_for?: { id: string; title: string; dates: ISODate[] }[]; // dates this file's act set for another act (checked)
   oeil_url: string | null; // null where OEIL has no file under this reference (e.g. a split procedure's parent)
   eurlex_only?: boolean; // built from the EUR-Lex act alone: the procedure's own steps are not in our data
+  started_from_parts?: boolean; // a split parent's `started` and proposal document are the ones all its parts record; set only when true
   sources: SourceRef[];
   changes: ActivityItem[]; // verified changes detected between snapshots for this dossier
 }

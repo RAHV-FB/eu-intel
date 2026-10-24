@@ -146,6 +146,15 @@ test.describe('split parents and Parliament reports', () => {
     await expect(page.locator('.dz-fact', { hasText: 'What happens next' })).toContainText('None on this file: each separate file listed above has its own next step.');
   });
 
+  test('a split parent gives the proposal date and document that all its parts record', async ({ page }) => {
+    await open(page, 'legislation/2016-0224/'); // 2016/0224A and B(COD): COM(2016)0467 of 13 July 2016
+    await page.locator('#details summary').click();
+    const proposed = page.locator('#details .dz-kv > div', { has: page.locator('dt', { hasText: /^Proposed/ }) });
+    await expect(proposed.locator('dt')).toHaveText('Proposed (as recorded for its parts)');
+    await expect(proposed.locator('dd')).toHaveText('13 July 2016');
+    await expect(page.locator('#details')).toContainText('COM(2016)0467');
+  });
+
   test('a report links its main file in the status and the next step', async ({ page }) => {
     await open(page, 'legislation/2020-0112R/');
     const facts = page.locator('.dz-facts');

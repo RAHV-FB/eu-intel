@@ -4063,6 +4063,16 @@ class Builder:
             events.append(e.model_copy(update={"date": earlier[-1]}) if earlier and e.institution == "Council" else e)
         return p if events == p.events else p.model_copy(update={"events": events})
 
+    def parts_proposal(self, pid: str) -> DocRef | None:
+        """The Commission proposal that every part of a split procedure records as its own, for the parent, which
+        records none (2016/0224(COD): COM(2016)0467 of 13 July 2016, the proposal of 2016/0224A and B(COD)). None
+        when the parts record different proposals, or more than one."""
+        parts = [self.proc[c] for c in self.split_children.get(pid, []) if c in self.proc]
+        coms = [[d for d in x.documents if d.id.startswith("COM(") and d.date] for x in parts]
+        if not coms or any(len(c) != 1 for c in coms) or len({(c[0].id, c[0].date) for c in coms}) != 1:
+            return None
+        return coms[0][0] if all(self.proposal_date(x) == coms[0][0].date for x in parts) else None
+
     def build_dossiers(self) -> None:
         self.dossier_summary: dict[str, dict] = {}
         self.dossier_detail: dict[str, dict] = {}
@@ -4112,6 +4122,7 @@ class Builder:
                 blocked = bool(st.get("stall") and st["stall"].get("official_label"))
             else:
                 blocked = any("block" in t.status.lower() for t in self.train_of.get(pid, []))
+            from_parts = None if self.proposal_date(p) else self.parts_proposal(pid)
             summ = {
                 "id": pid,
                 "ref": p.reference,
@@ -4126,7 +4137,7 @@ class Builder:
                 "topics": self.topics_for(p),
                 "stage": st["status"].get("stage", "unknown"),
                 "status_label": st["status"].get("label") or STAGE_LABELS.get(st["status"].get("stage"), ""),
-                "started": self.proposal_date(p),
+                "started": self.proposal_date(p) or (from_parts.date if from_parts else None),
                 "last_event": done[-1]["date"] if done else None,
                 "adopted": adopted,
                 "published": published,
@@ -4196,7 +4207,9 @@ class Builder:
                 "committees": [{"code": c.code, "name": c.name, "role": c.role, **({"former": True} if c.former else {})}
                                for c in p.committees],  # fmt: skip
                 "rapporteurs": rapps,
-                "documents": [d.model_dump(mode="json") for d in p.documents],
+                "documents": [d.model_dump(mode="json") for d in [*p.documents, *([from_parts] if from_parts else [])]],
+                # a split parent's proposal date and document are those all its parts record (parts_proposal)
+                **({"started_from_parts": True} if from_parts else {}),
                 "related": [],
                 "oeil_url": oeil,
                 # built from the EUR-Lex act alone: the procedure's own steps are not in our data
