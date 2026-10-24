@@ -128,8 +128,8 @@ SOURCES: dict[str, dict[str, str]] = {
         "acknowledgement of the source.",
     },
     "optouts": {
-        "name": "EUR-Lex / Publications Office (Cellar) – directives' texts: Danish and Irish participation "
-        "(Protocols No 21 and 22)",
+        "name": "EUR-Lex / Publications Office (Cellar) – directives' texts and Commission decisions: Danish and "
+        "Irish participation (Protocols No 21 and 22)",
         "institution": "EUR-Lex",
         "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
         "licence": "© European Union, https://eur-lex.europa.eu. Reuse authorised under Commission "
@@ -5108,6 +5108,12 @@ class Builder:
                           f"Ireland by {bound_not('IE'):,}"
                           + (f" (not counting {later:,} in which the Commission later confirmed Ireland's "
                              "participation)" if later else "") + "." if stating else "None of them contains it."))  # fmt: skip
+            # regulations' texts are not read: only the Commission decisions confirming a later participation are
+            regs = getattr(s, "regulation_opt_ins", None) or []
+            if regs:
+                out.append(f"{len(regs):,} Commission decisions confirming a Member State's participation in a "
+                           f"regulation after its adoption (Protocol No 21, Article 4), for {len({r.celex for r in regs}):,} "
+                           "regulations, found by their titles; regulations' own texts are not read.")
         elif sid == "train":
             blocked = sum(1 for t in s.train if t.status.strip().lower() == "blocked")
             out.append(f"{len(s.train):,} files on Parliament's Legislative Train Schedule, {blocked:,} of them "

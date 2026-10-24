@@ -302,3 +302,22 @@ def test_about_summary_counts_the_directives_that_contain_the_statement():
         f"{stating:,} of them contain it: they declare Denmark not bound by {dk:,} and Ireland by {ie:,} "
         "(not counting 2 in which the Commission later confirmed Ireland's participation)."
     )
+
+
+def test_the_source_summary_counts_the_commission_decisions_on_later_participation_in_regulations():
+    # the About page described this source as directives' texts only, after regulations' opt-in decisions were read too
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder
+
+    regs = [
+        RegulationOptIn(decision="32024D2088", celex="32024R1351", country="IE", title="Commission Decision (EU) 2024/2088"),
+        RegulationOptIn(decision="32024D2089", celex="32024R1348", country="IE", title="Commission Decision (EU) 2024/2089"),
+    ]
+    st = SourceStatus(source="optouts", status="ok", fetched_at=PREVIOUS, attempted_at=PREVIOUS)
+    me = SimpleNamespace(s=SimpleNamespace(regulation_opt_ins=regs), optouts={})
+    summary = Builder.source_summary(me, "optouts", st)  # type: ignore[arg-type]
+    assert summary.endswith(
+        "2 Commission decisions confirming a Member State's participation in a regulation after its adoption "
+        "(Protocol No 21, Article 4), for 2 regulations, found by their titles; regulations' own texts are not read."
+    )

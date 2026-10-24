@@ -163,8 +163,8 @@ export default function Country() {
         <p className="csection__kicker">1 · European Parliament</p>
         <h2 id="rep-h">Representation</h2>
         <p className="section-intro">
-          MEPs elected in {c.name}. In Parliament they sit in European <Term id="political-group">political groups</Term> and vote
-          individually — not as a national delegation, and not on behalf of the government.
+          MEPs elected in {c.name}. In Parliament they sit in European <Term id="political-group">political groups</Term>, or as
+          non-attached members, and vote individually — not as a national delegation, and not on behalf of the government.
         </p>
         <LookupNotice failed={groups.failed} what="Political group names" />
         <dl className="facts facts--inline">

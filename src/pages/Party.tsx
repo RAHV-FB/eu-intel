@@ -183,7 +183,14 @@ export default function Party() {
           </>
         )}
         <div>
-          <dt>European political groups</dt>
+          <dt>
+            {/* the non-attached (NI) are not a political group */}
+            {!p.groups.includes('ni')
+              ? 'European political groups'
+              : p.groups.length > 1
+                ? 'European political groups and non-attached members'
+                : 'Non-attached members'}
+          </dt>
           <dd>
             {p.groups.length ? (
               <ul className="inline-list">

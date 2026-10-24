@@ -32,6 +32,9 @@ test.describe('party records', () => {
     const lead = page.locator('.page-header .lead');
     await expect(lead).toContainText('Its MEPs sit in Parliament as non-attached members, outside any political group.');
     await expect(lead).not.toContainText('in a European political group');
+    // nor are they listed under "European political groups": NI is not a group
+    await expect(page.locator('.facts dt', { hasText: 'Non-attached members' })).toHaveCount(1);
+    await expect(page.locator('.facts')).not.toContainText('European political groups');
     // within a status, by name as the Name column sorts: "Ľuboš Blaha" came last, after "Monika Beňová"
     await expect(page.locator('section[aria-labelledby="pm-h"] tbody th a')).toHaveText([
       'Erik Kaliňák',
@@ -42,6 +45,7 @@ test.describe('party records', () => {
     ]);
     await open(page, 'people/parties/5253/'); // Fidesz 2019–2024: EPP, then NI from 5 Mar 2021
     await expect(page.locator('.page-header .lead')).toContainText('Its MEPs sat in Parliament in a European political group or as non-attached members.');
+    await expect(page.locator('.facts dt', { hasText: 'European political groups and non-attached members' })).toHaveCount(1);
   });
 
   for (const width of [320, 390]) {
