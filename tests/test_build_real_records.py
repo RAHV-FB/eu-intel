@@ -418,6 +418,16 @@ def test_council_vote_in_the_budget_procedure_is_not_the_adoption_of_an_act():
     assert council_vote_label(cv.title, on, cv.stage, cv.procedure_refs) == cv.title
 
 
+def test_a_council_title_printed_without_a_space_is_listed_with_it():
+    # ST 14021/20, the Own Resources Decision: the note's subject reads "Council Decisionon the system of own
+    # resources", which the law page, the country pages and the Council index showed as it is; the title stays
+    from pipeline.build import council_display_title
+
+    cv = council("ST-14021-2020")["ST-14021-2020"]
+    assert cv.title.startswith("Council Decisionon the system of own resources")
+    assert council_display_title(cv.title, cv.vote_on).startswith("Council Decision on the system of own resources")
+
+
 def test_council_summary_counts_every_vote_listed():
     # the About page's source card said "746 voting results …, 744 of them with each Member State's position", its
     # records table 747 Council votes, and the country pages count 745 with positions: CM-5860-2022 (curated, from the

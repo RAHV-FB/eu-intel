@@ -1552,6 +1552,11 @@ _CV_FORM = re.compile(
     r"(?:\s+council\b(?!\s+(?:implementing\s+|delegated\s+)?(?:regulation|directive|decision)\b))?)?",
     re.IGNORECASE,
 )
+# a kind of act at the start of a title glued to the word after it ("Council Decisionon the system of ...")
+_CV_GLUED = re.compile(
+    r"^((?:council\s+)?(?:implementing\s+|delegated\s+)?(?:regulation|directive|decision))(?=(?:on|of|amending)\s)",
+    re.IGNORECASE,
+)
 
 
 def council_display_title(title: str, vote_on: str | None = None) -> str:
@@ -1565,11 +1570,13 @@ def council_display_title(title: str, vote_on: str | None = None) -> str:
       - a leading "Proposal for a" before the kind of act is dropped;
       - "Position of the Council at first reading with a view to the adoption of a" is dropped only when the
         vote is recorded as being on that position (vote_on), which lists show separately;
-      - a legal form printed twice in a row, or a doubled "Council", counts as one.
+      - a legal form printed twice in a row, or a doubled "Council", counts as one;
+      - a kind of act printed without the space before its subject is read with it: "Council Decisionon the system
+        of own resources" (ST 14021/20, as the note's subject prints it) -> "Council Decision on the system ...".
     Anything else, or a title that would keep fewer than two words after the kind of act, is returned as
     published (with runs of whitespace collapsed)."""
     official = re.sub(r"\s+", " ", (title or "").strip())
-    t = official
+    t = _CV_GLUED.sub(r"\1 ", official, count=1)
     if vote_on == "first_reading_position":
         t = _CV_POSITION.sub("", t, count=1)
     t = _CV_PROPOSAL.sub("", t, count=1)
