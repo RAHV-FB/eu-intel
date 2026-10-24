@@ -296,8 +296,8 @@ export default function Country() {
         <p className="callout">
           Most Council decisions use <Term id="qmv">qualified majority voting</Term>: a decision passes with at least 55% of Member States
           representing at least 65% of the EU population. <strong>One country voting against cannot normally block a decision on its own</strong>{' '}
-          — a blocking minority needs at least four Member States representing more than 35% of the EU population. Only where <Term id="unanimity">unanimity</Term> is required can a single country
-          block.
+          — a blocking minority needs at least four Member States representing more than 35% of the EU population, or 13 Member States whatever their population. Only where <Term id="unanimity">unanimity</Term> is required can a single country’s
+          vote block a decision.
         </p>
 
         {councilTotal === 0 ? (

@@ -77,7 +77,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   unanimity: {
     term: 'Unanimity',
-    short: 'All participating Member States must agree. A single “no” vote blocks the decision; abstaining does not.',
+    short: 'No participating Member State may vote against: a single “no” vote blocks the decision, but an abstention does not.',
     href: '/how-the-eu-works#council-voting',
   },
   'roll-call': {
@@ -94,7 +94,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   'entry-into-force': {
     term: 'Entry into force',
     short:
-      'The date from which an act is part of the EU legal order: the date the act sets or, if it sets none, the twentieth day after publication. Its rules may start to apply later, sometimes in phases.',
+      'The date from which an act is part of the EU legal order: the date the act sets or, if it sets none, the twentieth day after publication (a non-legislative decision addressed to specific recipients takes effect when they are notified). Its rules may start to apply later, sometimes in phases.',
     href: '/how-the-eu-works#instruments',
   },
   celex: {
@@ -120,7 +120,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   'blocking-minority': {
     term: 'Blocking minority',
     short:
-      'Under qualified majority voting, at least four Member States representing more than 35% of the EU population can stop a decision. One country cannot do so alone.',
+      'Under qualified majority voting, at least four Member States representing more than 35% of the EU population, or 13 Member States whatever their population, can stop a decision by not voting in favour. One country’s vote cannot do so alone.',
     href: '/how-the-eu-works#council-voting',
   },
   'absolute-majority': {
