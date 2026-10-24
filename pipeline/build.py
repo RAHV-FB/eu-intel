@@ -2800,7 +2800,8 @@ class Builder:
                 assessment["single_state_veto_possible"] = False
             when, date_note = self.council_vote_date(cv, p, vote_on)
             rec = {
-                "id": cv.id, "date": when, "title": cv.title,
+                # a kind of act glued to the next word with the space (ST 14021/20: "Council Decisionon the system …")
+                "id": cv.id, "date": when, "title": _CV_GLUED.sub(r"\1 ", cv.title, count=1),
                 "display_title": council_vote_label(cv.title, vote_on, cv.stage, cv.procedure_refs), "dossier_id": did,
                 "dossier_ref": p.reference if p else None, "configuration": cv.configuration,
                 "stage": cv.stage, "vote_on": vote_on,

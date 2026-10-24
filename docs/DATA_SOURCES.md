@@ -1118,8 +1118,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   abstention (27, was 26). The records are the adoptions read so far from such communications; others may be
   missing.
 - `display_title` (lists: country pages, activity): the title without legal-form boilerplate (a kind of act glued
-  to the next word is read with the space: ST 14021/20's subject "Council Decisionon the system of own resources"
-  is listed as "Council Decision on …"; `title` keeps it as printed), and for a vote on
+  to the next word is read with the space, there and in the published `title`: ST 14021/20's subject "Council
+  Decisionon the system of own resources" is shown as "Council Decision on …"; the snapshot keeps it as printed),
+  and for a vote on
   another item than the act or the Council's first-reading position, the item voted on, as the subject lists it:
   "Amendments of the European Parliament to the Council's position on the draft budget for 2027 – Non-approval of
   the European Parliament's amendment(s)" (ST 14700/26), so that a country's "For" reads as support for the

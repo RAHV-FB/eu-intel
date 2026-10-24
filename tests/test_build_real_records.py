@@ -418,14 +418,17 @@ def test_council_vote_in_the_budget_procedure_is_not_the_adoption_of_an_act():
     assert council_vote_label(cv.title, on, cv.stage, cv.procedure_refs) == cv.title
 
 
-def test_a_council_title_printed_without_a_space_is_listed_with_it():
+def test_a_council_title_printed_without_a_space_is_published_with_it():
     # ST 14021/20, the Own Resources Decision: the note's subject reads "Council Decisionon the system of own
-    # resources", which the law page, the country pages and the Council index showed as it is; the title stays
+    # resources", which the law page's vote card, the country pages and the Council index showed as it is
     from pipeline.build import council_display_title
 
     cv = council("ST-14021-2020")["ST-14021-2020"]
-    assert cv.title.startswith("Council Decisionon the system of own resources")
+    assert cv.title.startswith("Council Decisionon the system of own resources")  # the snapshot keeps it as printed
     assert council_display_title(cv.title, cv.vote_on).startswith("Council Decision on the system of own resources")
+    rec = _built_council(["ST-14021-2020"], ["2018-0135"]).council_records["ST-14021-2020"]  # type: ignore[attr-defined]
+    assert rec["title"] == cv.title.replace("Decisionon", "Decision on", 1)
+    assert rec["display_title"].startswith("Council Decision on the system of own resources")
 
 
 def test_council_summary_counts_every_vote_listed():
