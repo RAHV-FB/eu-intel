@@ -108,6 +108,10 @@ describe('scripts/prerender-routes.mjs', () => {
         'legislation/2099-0003/index.html',
         'votes/1/index.html',
         'people/groups/renew/index.html',
+        'people/groups/ni/index.html',
+        'people/groups/id/index.html',
+        'search/index.html',
+        'following/index.html',
         'people/index.html',
         'votes/index.html',
         'how-the-eu-works/index.html',
@@ -128,7 +132,14 @@ describe('scripts/prerender-routes.mjs', () => {
       JSON.stringify(TITLES.map((title, i) => ({ id: `2099-000${i + 1}`, ref: `2099/000${i + 1}(COD)`, title, status_label: 'In force', short: `Costs $& and $' ${i}` }))),
     );
     put('dist/data/votes/index.json', JSON.stringify([{ id: '1', display_title: TITLES[1], date: '2026-07-09', for: 1, against: 2, abstain: 3 }]));
-    put('dist/data/people/groups.json', JSON.stringify([{ id: 'renew', code: 'Renew', name: 'Renew Europe Group' }]));
+    put(
+      'dist/data/people/groups.json',
+      JSON.stringify([
+        { id: 'renew', code: 'Renew', name: 'Renew Europe Group', active: true, terms: [9, 10] },
+        { id: 'ni', code: 'NI', name: 'Non-attached Members', active: true, terms: [9, 10] },
+        { id: 'id', code: 'ID', name: 'Identity and Democracy Group', active: false, terms: [9] },
+      ]),
+    );
     mkdirSync(join(dir, 'src/lib'), { recursive: true });
     copyFileSync(new URL('src/lib/format.ts', ROOT), join(dir, 'src/lib/format.ts'));
     const env = { ...process.env };
@@ -163,6 +174,24 @@ describe('scripts/prerender-routes.mjs', () => {
     expect(titleOf(f['people/index.html'])).toBe('MEPs – EU Legislative Intelligence'); // People.tsx, before a view is chosen
     expect(titleOf(f['votes/index.html'])).toBe('Parliament votes – EU Legislative Intelligence'); // Votes.tsx
     expect(titleOf(f['how-the-eu-works/index.html'])).toBe('How the EU works – EU Legislative Intelligence'); // HowEuWorks.tsx
+  });
+
+  it('describes the group, search and following pages, not the home page', () => {
+    const f = withSite();
+    const descriptionOf = (html: string) => /<meta name="description" content="([^"]*)"/.exec(html)?.[1];
+    const home = descriptionOf(f['index.html']);
+    expect(descriptionOf(f['people/groups/renew/index.html'])).toBe(
+      'Political group in the European Parliament (2019–2024 and 2024–2029 terms): its members by country and national party, and how they voted.',
+    );
+    // the non-attached members are no group (Group.tsx), and a group of an earlier term has no current members
+    expect(descriptionOf(f['people/groups/ni/index.html'])).toBe(
+      'Members of the European Parliament who belong to no political group (2019–2024 and 2024–2029 terms): by country and national party, and how they voted.',
+    );
+    expect(descriptionOf(f['people/groups/id/index.html'])).toBe(
+      'Political group in the European Parliament in the 2019–2024 term, not a group in the current term: how its members voted.',
+    );
+    for (const name of ['people/groups/renew/index.html', 'search/index.html', 'following/index.html'])
+      expect(descriptionOf(f[name]), name).not.toBe(home);
   });
 
   it('writes a canonical link only when SITE_URL is set, and noindex only on the page for unknown addresses', () => {

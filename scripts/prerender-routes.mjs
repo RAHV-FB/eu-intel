@@ -85,8 +85,8 @@ const routes = [
   ['how-the-eu-works', 'How the EU works', 'A plain-language guide to how EU laws are proposed, negotiated, adopted and applied.'],
   ['about', 'About & methodology', 'Data sources, coverage, methodology and limitations.'],
   ['privacy', 'Privacy', 'Privacy notice: no tracking, no cookies, no analytics.'],
-  ['following', 'Followed legislation', null],
-  ['search', 'Search', null],
+  ['following', 'Followed legislation', 'The EU legislative files you follow: their status and what changed since you last looked. The list is kept only in your browser.'],
+  ['search', 'Search', 'Search EU legislative files, adopted acts, Parliament votes, MEPs, political groups, national parties, countries and topics.'],
 ];
 // titles as the pages set them with useDocumentTitle (/people/ is the MEPs view until a view is chosen in the address)
 for (const [r, t, d] of routes) page(r, t, d);
@@ -116,7 +116,15 @@ for (const m of readJson('people/meps.json')) {
   n++;
 }
 for (const g of readJson('people/groups.json')) {
-  page(`people/groups/${g.id}`, `${g.code} – ${g.name}`, null);
+  // as the page's header puts it (Group.tsx): the non-attached members form no group, and a group has no vote of its own
+  const terms = termYears(g.terms);
+  const description =
+    g.id === 'ni'
+      ? `Members of the European Parliament who belong to no political group${terms ? ` (${terms})` : ''}: by country and national party, and how they voted.`
+      : g.active
+        ? `Political group in the European Parliament${terms ? ` (${terms})` : ''}: its members by country and national party, and how they voted.`
+        : `Political group in the European Parliament${terms ? ` in the ${terms}` : ''}, not a group in the current term: how its members voted.`;
+  page(`people/groups/${g.id}`, `${g.code} – ${g.name}`, description);
   n++;
 }
 const partyDir = join(DIST, 'data', 'people', 'parties');
