@@ -86,6 +86,8 @@ test.describe('queries typed in capitals, names and words with a number', () => 
   test('"Anna Maria" lists Anna Maria Cisint, and "euro7" the Euro 7 Regulation', async ({ page }) => {
     await open(page, search('Anna Maria'));
     await expect(page.locator('#r-people .sr-item__title')).toHaveText(['Anna Maria Cisint']); // not Annamária Vicsek first
+    await open(page, search('Chris Mac Manus'));
+    await expect(page.locator('#r-people .sr-item__title').first()).toHaveText('Chris MacManus'); // a name typed apart
     await open(page, search('euro7'));
     await expect(page.locator('main .sr-item__title').first()).toContainText('(Euro 7)'); // was "No results"
   });

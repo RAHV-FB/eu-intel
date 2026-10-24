@@ -20,8 +20,9 @@
  *   4. every meaningful word matches a whole word, exactly or as its singular/plural ("battery" ~ "batteries");
  *      "EU" need not match, but counts ("EU Data Act"); "MEP(s)" is "Member(s) of the European Parliament", not
  *      "Member States", and so is that phrase; the act type of a file's acts ("directive") is matched as that whole
- *      word only; two words written apart that the index has as one match as that word ("cyber security"), except
- *      in people's names ("Anna Maria" is not "Annamária").
+ *      word only; two words written apart that the index has as one match as that word ("cyber security"), in
+ *      people's names only when the words as typed match no one ("Chris Mac Manus": "MacManus"; "Anna Maria" is
+ *      not "Annamária").
  *      Only when no document matches that way, one word may match an everyday synonym ("ai law" -> "act"), or an
  *      act type another ("USB-C regulation" -> the "directive" a file's entry has for its act).
  *      A generic word ("rules", "law") also matches through its synonyms one step below ("asylum rules" ->
@@ -985,13 +986,15 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
   }
 
   /** `run` on the query and on its joined forms, each document with its best score; a person's name only as typed
-   * ("Anna Maria" is not "Annamária"). */
+   * when the query as typed matches a person ("Anna Maria" is not "Annamária"), otherwise also joined ("Chris Mac
+   * Manus": "Chris MacManus"). */
   function runForms(query: string, forms: string[], prefix: Parameters<typeof run>[1], typos?: Set<string>): RunResult {
     const res = run(query, prefix, typos);
+    const people = [...res.scores.keys()].some((i) => prepared[i].doc.k === 'mep');
     for (const f of forms) {
       const r = run(f, prefix, typos);
       for (const [i, s] of r.scores) {
-        if ((res.scores.get(i) ?? -Infinity) >= s || prepared[i].doc.k === 'mep') continue;
+        if ((res.scores.get(i) ?? -Infinity) >= s || (people && prepared[i].doc.k === 'mep')) continue;
         res.scores.set(i, s);
         if (r.similar.has(i)) res.similar.set(i, r.similar.get(i)!);
         else res.similar.delete(i);

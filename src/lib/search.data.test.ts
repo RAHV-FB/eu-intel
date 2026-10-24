@@ -176,6 +176,12 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(typed('Anna Maria')[0]).toBe('mep:257131');
     expect(top('Annamaria')).toBe('mep:256859');
     expect(top('cyber security act')).toBe('dossier:2017-0225'); // other names still join: "Cybersecurity Act"
+    // a name that matches no one as typed still joins: these gave "No results"
+    expect(top('Chris Mac Manus')).toBe('mep:205452'); // Chris MacManus
+    expect(top('mac manus')).toBe('mep:205452');
+    expect(typed('Chris Mac Manus')[0]).toBe('mep:205452');
+    expect(top('Fitz Gerald')).toBe('mep:197720'); // Frances Fitzgerald
+    expect(top('Frances Fitz Gerald')).toBe('mep:197720');
   });
 
   it('finds "euro7" and "covid19" as the titles write them apart, and keeps suggestions while a word is begun', () => {

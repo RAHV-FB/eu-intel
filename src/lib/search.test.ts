@@ -1063,6 +1063,7 @@ describe('capitals, people’s names, words with a number, short last words and 
     { id: 'european-council', k: 'page', t: 'The European Council (heads of state or government)', s: 'How the EU works', a: 'European Council | summit', u: '/how-the-eu-works#european-council', w: 2 },
     { id: '256859', k: 'mep', t: 'Annamária Vicsek', s: 'MEP · Hungary · PfE', u: '/people/meps/256859', w: 1.5 },
     { id: '257131', k: 'mep', t: 'Anna Maria Cisint', s: 'MEP · Italy · PfE', u: '/people/meps/257131', w: 1.5 },
+    { id: '205452', k: 'mep', t: 'Chris MacManus', s: 'Former MEP · Ireland · The Left', u: '/people/meps/205452', w: 0.7 },
   ]; // prettier-ignore
   const e = createSearchEngine(docs);
   const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`);
@@ -1082,6 +1083,9 @@ describe('capitals, people’s names, words with a number, short last words and 
   it('matches a person’s name as typed, not as one word ("Anna Maria" is not "Annamária")', () => {
     expect(all('Anna Maria')).toEqual(['257131']);
     expect(all('Annamaria')).toEqual(['256859']);
+    // a name that matches no one as typed is still matched joined
+    expect(all('Chris Mac Manus')).toEqual(['205452']);
+    expect(typed('mac manus')).toEqual(['205452']);
   });
 
   it('matches a word and a number written together as the index has them apart', () => {
