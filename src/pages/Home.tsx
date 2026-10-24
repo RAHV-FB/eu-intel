@@ -152,7 +152,7 @@ export default function Home() {
             Member States apply the result. Our short guide explains each step and the words you’ll meet on this site.
           </p>
           <Link to="/how-the-eu-works" className="btn">
-            Read the guide (about 10 minutes)
+            Read the guide (about 12 minutes)
           </Link>
         </section>
       </div>
