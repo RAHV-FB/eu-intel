@@ -1,6 +1,6 @@
 import type { DossierDetail, EventKind, ISODate, LifecycleStage, TimelineEvent } from '../../../types/data';
-import { ExtLink, Term, institutionLabel } from '../../../components/ui';
-import { asOfToday, formatDate, noUpdateText } from '../../../lib/format';
+import { ExtLink, Term } from '../../../components/ui';
+import { formatDate, noUpdateText } from '../../../lib/format';
 import { institutionSuffix } from '../labels';
 
 interface Step {
@@ -95,7 +95,7 @@ export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
 
       <dl className="dz-where">
         <div>
-          <dt>Latest milestone</dt>
+          <dt>Stage reached</dt>
           <dd>
             {milestone ? (
               <>
@@ -109,24 +109,22 @@ export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
             )}
           </dd>
         </div>
-        <div>
-          <dt>Next institutional step</dt>
-          <dd>
-            {asOfToday(d.next_step.text, today)}
-            {d.next_step.institution && <span className="meta"> ({institutionLabel(d.next_step.institution)})</span>}
-            {d.next_step.basis !== 'source' && (
-              <span className="meta"> — {d.next_step.basis === 'derived' ? 'derived from the stage reached' : 'not determinable from the records'}</span>
-            )}
-          </dd>
-        </div>
         {stall && (
           <div>
             <dt>Recorded activity</dt>
             <dd>
               {stall.days_since_last_event > 0 || (stall.last_event_date && stall.last_event_date < today) ? (
-                <>{noUpdateText(stall.days_since_last_event, stall.last_event_date, today)}.</>
+                <>
+                  {noUpdateText(stall.days_since_last_event, stall.last_event_date, today)}
+                  {stall.last_event_date && (
+                    <>
+                      ; the last was recorded on <time dateTime={stall.last_event_date}>{formatDate(stall.last_event_date, true)}</time>
+                    </>
+                  )}
+                  .
+                </>
               ) : (
-                <>A procedural update was recorded today.</>
+                <>A procedural step was recorded today.</>
               )}{' '}
               <span className="meta">
                 This measures only the official procedure file; work can continue between recorded steps.

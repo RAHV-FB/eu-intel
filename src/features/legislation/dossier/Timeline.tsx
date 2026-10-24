@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { ActivityItem, ISODate, TimelineEvent } from '../../../types/data';
-import { EmptyState, ExtLink, SourceLink, institutionLabel } from '../../../components/ui';
+import { ExtLink, SourceLink, institutionLabel } from '../../../components/ui';
 import { eventOn, formatDate, formatDateTime, safeUrl } from '../../../lib/format';
 import { dossierPath } from '../labels';
 
@@ -148,7 +148,7 @@ export function Timeline({
         </p>
       )}
       {events.length === 0 ? (
-        <EmptyState title="No dated steps are recorded for this file." />
+        <p className="dz-none">No dated steps are recorded for this file.</p>
       ) : (
         <>
           <ol className="tl" id={listId}>

@@ -142,12 +142,24 @@ describe('dated statements on the visitor’s date', () => {
 
   it('counts the days without a recorded procedural step on the visitor’s date, in the singular for one', () => {
     // 2026/0325(COD): last recorded step 22 October 2026, counted as 1 day by the build of 23 October
-    expect(noUpdateText(1, '2026-10-22', '2026-10-23')).toBe('No recorded procedural update in 1 day');
-    expect(noUpdateText(1, '2026-10-22', '2026-12-03')).toBe('No recorded procedural update in 42 days');
-    expect(noUpdateText(3787, '2016-06-10', '2026-10-23')).toBe('No recorded procedural update in 3,787 days');
+    expect(noUpdateText(1, '2026-10-22', '2026-10-23')).toBe('No recorded procedural step for 1 day');
+    expect(noUpdateText(1, '2026-10-22', '2026-12-03')).toBe('No recorded procedural step for 42 days');
     // never fewer than the build counted (a visitor's clock behind the build's), nor a guess without the date
-    expect(noUpdateText(352, '2025-11-05', '2026-10-01')).toBe('No recorded procedural update in 352 days');
-    expect(noUpdateText(5, null, '2027-01-01')).toBe('No recorded procedural update in 5 days');
+    expect(noUpdateText(352, '2025-11-05', '2026-10-01')).toBe('No recorded procedural step for 352 days');
+    expect(noUpdateText(5, null, '2027-01-01')).toBe('No recorded procedural step for 5 days');
+  });
+
+  it('says from a year on how many whole years the days make, never "in" (which reads as days from now)', () => {
+    // 2016/0141(COD): last recorded step 10 June 2016, 3,788 days by the build of 24 October 2026
+    expect(noUpdateText(3788, '2016-06-10', '2026-10-24')).toBe('No recorded procedural step for 3,788 days (over 10 years)');
+    expect(noUpdateText(3787, '2016-06-10', '2026-10-23')).toBe('No recorded procedural step for 3,787 days (over 10 years)');
+    // a whole number of years on the anniversary; less than a year (365 days into a leap year) gives no years
+    expect(noUpdateText(365, '2025-06-10', '2026-06-10')).toBe('No recorded procedural step for 365 days (1 year)');
+    expect(noUpdateText(366, '2025-06-10', '2026-06-11')).toBe('No recorded procedural step for 366 days (over 1 year)');
+    expect(noUpdateText(365, '2024-01-01', '2024-12-31')).toBe('No recorded procedural step for 365 days');
+    // the years follow the days counted, also when the build counted more than the visitor's clock gives
+    expect(noUpdateText(800, '2024-06-10', '2025-01-01')).toBe('No recorded procedural step for 800 days (over 2 years)');
+    expect(noUpdateText(800, null, '2027-01-01')).toBe('No recorded procedural step for 800 days');
   });
 
   it('gives a timeline step the state and title the build would give it on the visitor’s date', () => {
@@ -248,7 +260,7 @@ describe.skipIf(!built)('dated statements in the built data', () => {
   it('reads on the day it was built as the build wrote it', () => {
     for (const [id, text] of texts) expect(asOfToday(text, buildDay), id).toBe(text);
     // the days without a recorded step: as many as the build's own text gives, in the same number ("1 day")
-    const days = (t: string) => /in ([\d,]+ days?)\b/.exec(t)?.[1].replace(/,/g, '');
+    const days = (t: string) => /([\d,]+ days?)\b/.exec(t)?.[1].replace(/,/g, '');
     for (const d of all)
       if (d.stall?.text && d.stall.days_since_last_event > 0)
         expect(days(noUpdateText(d.stall.days_since_last_event, d.stall.last_event_date, buildDay)), d.id).toBe(days(d.stall.text));

@@ -78,7 +78,7 @@ the UI; every institutional fact on a page has a reachable origin.
 - Dates that the data states as still ahead (the home page's "Coming up", "Scheduled" timeline steps, next steps,
   status explanations) are compared with the visitor's date, since the data is rebuilt only weekly
   (`src/lib/format.ts`): a date that has passed is restated as the build would state it on that day (past tense,
-  left out of a list of later dates, the step's past title, "Latest verified development"), and a transposition
+  left out of a list of later dates, the step's past title, "Latest recorded step"), and a transposition
   deadline passes only once its day is over. The status label stays as built; when its explanation states a date
   that has passed since, the dossier page says the status is as recorded at the last data refresh.
   `format.test.ts` checks every built next step, status explanation and dated timeline step with the clock moved

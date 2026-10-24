@@ -29,12 +29,27 @@ export function daysSince(d: ISODate, today = new Date()): number {
   return Math.round((t - Date.UTC(y, m - 1, day)) / 86_400_000);
 }
 
-/** "No recorded procedural update in 9 days" on `today`: the build counts the days since a file's last recorded step
- * (`days`) on its own date, up to a week before the visitor's; `last` is that step's date. Never fewer than the
- * build counted. */
+/** Whole calendar years from `from` to `to`. */
+function fullYears(from: ISODate, to: ISODate): number {
+  const [fy, fm, fd] = from.split('-').map(Number);
+  const [ty, tm, td] = to.split('-').map(Number);
+  return ty - fy - (tm < fm || (tm === fm && td < fd) ? 1 : 0);
+}
+
+/** "No recorded procedural step for 9 days" on `today`, and from a year on "for 3,788 days (over 10 years)": the
+ * build counts the days since a file's last recorded step (`days`) on its own date, up to a week before the
+ * visitor's; `last` is that step's date. Never fewer than the build counted. The years are whole calendar years from
+ * `last`, so they are given only with its date. */
 export function noUpdateText(days: number, last: ISODate | null | undefined, today: ISODate): string {
   const n = last ? Math.max(days, daysSince(last, new Date(`${today}T00:00:00Z`))) : days;
-  return `No recorded procedural update in ${plural(n, 'day')}`;
+  let span = '';
+  if (last) {
+    const [y, m, d] = last.split('-').map(Number);
+    const end = new Date(Date.UTC(y, m - 1, d) + n * 86_400_000).toISOString().slice(0, 10);
+    const years = fullYears(last, end);
+    if (years >= 1) span = ` (${end.slice(5) === last.slice(5) ? '' : 'over '}${plural(years, 'year')})`;
+  }
+  return `No recorded procedural step for ${plural(n, 'day')}${span}`;
 }
 
 export function isFuture(d: ISODate, today = new Date()): boolean {

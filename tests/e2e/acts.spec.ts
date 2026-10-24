@@ -7,6 +7,8 @@ import type { Page } from '@playwright/test';
 import { expect, open, test } from './fixtures';
 
 const status = (page: Page) => page.locator('.dz-fact', { hasText: 'Current status' });
+// the status itself and the date it holds from, under the title
+const statusLine = (page: Page) => page.locator('.dz-statusline');
 
 test.describe('act validity', () => {
   test('a repeal that takes effect on the recorded end of validity is dated from that day', async ({ page }) => {
@@ -15,7 +17,7 @@ test.describe('act validity', () => {
     await expect(status(page)).toContainText(
       'EUR-Lex gives 1 July 2016 as the end of its validity and records it as repealed by Regulation (EU) 2015/2219 with effect from 1 July 2016.',
     );
-    await expect(status(page)).toContainText('Since 1 Jul 2016');
+    await expect(statusLine(page)).toHaveText(/No longer in force\s*since 1 July 2016/);
   });
 
   test('a repeal in stages states the recorded dates and no single day', async ({ page }) => {
@@ -23,7 +25,7 @@ test.describe('act validity', () => {
     await open(page, 'legislation/2013-0080/');
     await expect(status(page)).toContainText('with effect from 12 November 2025, except for some provisions');
     await expect(status(page)).toContainText("EUR-Lex gives 12 May 2026 as the end of the act's validity.");
-    await expect(status(page)).not.toContainText('Since');
+    await expect(statusLine(page)).not.toContainText('since');
   });
 
   test('a partial repeal is labelled as EUR-Lex’s classification', async ({ page }) => {
@@ -40,11 +42,9 @@ test.describe('act validity', () => {
     // gives that date (MA, "V ART 46") and the one of Art. 46(b) (MA/PART) as 1001-01-01
     await open(page, 'legislation/2022-0424/');
     const when = page.locator('.dz-when');
-    await expect(when.locator('div', { hasText: 'Rules apply from' })).toContainText(
-      'Not recorded: EUR-Lex gives no date (it refers to Art. 46).',
-    );
-    await expect(when.locator('div', { hasText: 'Some provisions apply from' })).toContainText(
-      'EUR-Lex gives no date for some provisions (it refers to Art. 46(b)).',
+    await expect(when.locator('li', { hasText: 'Rules apply from' })).toHaveText(/^Not recorded\s*Rules apply from\s*EUR-Lex gives no date \(it refers to Art\. 46\)\.$/);
+    await expect(when.locator('li', { hasText: 'Some provisions apply from' })).toHaveText(
+      /^Not recorded\s*Some provisions apply from\s*EUR-Lex gives no date for some provisions \(it refers to Art\. 46\(b\)\)\.$/,
     );
     await expect(status(page)).toContainText('EUR-Lex records no date from which the act in general applies (it refers to Art. 46)');
   });
@@ -52,8 +52,8 @@ test.describe('act validity', () => {
   test('never reads an application date EUR-Lex gives as not recorded as applying now', async ({ page }) => {
     // ETIAS, Regulation (EU) 2018/1240, Art. 96: "This Regulation shall apply from the date determined by the Commission"
     await open(page, 'legislation/2016-0357A/');
-    await expect(page.locator('.dz-when').locator('div', { hasText: 'Rules apply from' })).toContainText(
-      'Not recorded: EUR-Lex gives no date (it refers to Art. 96).',
+    await expect(page.locator('.dz-when').locator('li', { hasText: 'Rules apply from' })).toHaveText(
+      /^Not recorded\s*Rules apply from\s*EUR-Lex gives no date \(it refers to Art\. 96\)\.$/,
     );
     await expect(page.locator('.dz-facts')).toContainText('EUR-Lex records no date from which this regulation in general applies');
   });

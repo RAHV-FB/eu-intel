@@ -5,7 +5,7 @@ import { ExtLink, SourceLink, Term } from '../../../components/ui';
 import { StackLabel } from '../../../components/StackedTable';
 import { countryName, formatDate, formatNumber, safeUrl } from '../../../lib/format';
 import { ACTIVE_STAGES, ADOPTED_STAGES, TRANSPOSITION_LABEL } from '../labels';
-import { SplitLinks, splitParts } from './Split';
+import { SplitNote, splitParts } from './Split';
 import { transpositionDates } from './Summary';
 
 const STATUS_ORDER: TranspositionStatus[] = [
@@ -290,9 +290,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
         )}
       </p>
     ) : splitParts(d).length > 0 ? (
-      <p className="dz-none">
-        This proposal was split into separate files; each shows how its own act applies: <SplitLinks parts={splitParts(d)} />.
-      </p>
+      <SplitNote>each separate file shows how its own act applies</SplitNote>
     ) : d.related.some((r) => r.relation === 'Report on') ? (
       <p className="dz-none">This is a resolution of Parliament, not a legislative act, so nothing applies in the Member States.</p>
     ) : (

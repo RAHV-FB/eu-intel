@@ -4,10 +4,10 @@ import type { DossierDetail, DossierSummary, Meta, Topic } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDate } from '../lib/format';
 import { changeSince, getWatchlist, markSeen, type ChangeInfo } from '../lib/watchlist';
-import { ErrorState, ExtLink, Loading, NotFound, PageHeader, Term } from '../components/ui';
+import { ErrorState, ExtLink, Loading, NotFound, PageHeader, StatusBadge, Term } from '../components/ui';
 import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, dossierPath, isMissing, isSameTitle, useDocumentTitle } from '../features/legislation/labels';
 import { todayISO } from '../features/legislation/explorer';
-import { DossierSummaryPanel } from '../features/legislation/dossier/Summary';
+import { DossierSummaryPanel, commissionProposal } from '../features/legislation/dossier/Summary';
 import { WhereIsIt } from '../features/legislation/dossier/WhereIsIt';
 import { Timeline } from '../features/legislation/dossier/Timeline';
 import { splitParts } from '../features/legislation/dossier/Split';
@@ -81,6 +81,7 @@ function DossierPage({ id }: { id: string }) {
   const active = ACTIVE_STAGES.has(d.stage);
   const topicLabel = (slug: string) => topics?.find((t) => t.slug === slug)?.label ?? slug;
   const primaryAct = d.acts[0];
+  const proposal = commissionProposal(d);
 
   const nav = [
     { id: 'summary', label: 'Summary' },
@@ -113,6 +114,15 @@ function DossierPage({ id }: { id: string }) {
       <header className="dz-head" id="summary">
         <h1 className={`dz-title${d.title.length > 110 ? ' dz-title--long' : ''}`}>{d.title}</h1>
         {d.known_as && <KnownAs k={d.known_as} />}
+        {/* "Is it law yet?" on the first screen of every file: the status, explained under "Current status" below */}
+        <p className="dz-statusline">
+          <StatusBadge stage={d.status.stage} label={d.status.label} blocked={d.officially_blocked} />
+          {d.status.since && (
+            <span className="dz-statusline__since">
+              since <time dateTime={d.status.since}>{formatDate(d.status.since, true)}</time>
+            </span>
+          )}
+        </p>
         {/* Without an editorial summary, "What is it?" below already shows the official title in full. */}
         {d.editorial && d.official_title && !isSameTitle(d.title, d.official_title) && <OfficialTitle text={d.official_title} />}
         {change && (
@@ -128,6 +138,21 @@ function DossierPage({ id }: { id: string }) {
           </p>
         )}
       </header>
+
+      {/* below 64rem the sidebar's "On this page" is not shown: the same sections, as a row of links under the head */}
+      <nav className="dz-jump" aria-label="On this page">
+        <ul>
+          {nav
+            .filter((n) => n.id !== 'summary')
+            .map((n) => (
+              <li key={n.id}>
+                <a className="lx-chip" href={`#${n.id}`}>
+                  {n.label}
+                </a>
+              </li>
+            ))}
+        </ul>
+      </nav>
 
       <div className="dz-layout">
         <div className="dz-main-top">
@@ -175,12 +200,6 @@ function DossierPage({ id }: { id: string }) {
                   <dd>{formatDate(d.published)}</dd>
                 </div>
               )}
-              {d.last_event && (
-                <div>
-                  <dt>Latest recorded step</dt>
-                  <dd>{formatDate(d.last_event)}</dd>
-                </div>
-              )}
               {primaryAct && (
                 <div>
                   <dt>
@@ -213,7 +232,14 @@ function DossierPage({ id }: { id: string }) {
             <ul className="dz-official-links">
               {d.oeil_url && (
                 <li>
-                  <ExtLink href={d.oeil_url}>Procedure file (OEIL)</ExtLink>
+                  <ExtLink href={d.oeil_url}>Procedure file (Legislative Observatory)</ExtLink>
+                </li>
+              )}
+              {proposal && (
+                <li>
+                  <ExtLink href={proposal.url!}>
+                    Commission proposal (<span className="mono">{proposal.id}</span>)
+                  </ExtLink>
                 </li>
               )}
               {primaryAct && (

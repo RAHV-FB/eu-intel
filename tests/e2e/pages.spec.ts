@@ -116,9 +116,23 @@ test.describe('split parents and Parliament reports', () => {
     await open(page, 'legislation/2016-0400/');
     await expect(page.locator('.dz-what')).not.toContainText('Its official title is');
     const parts = page.locator('.dz-what a');
-    await expect(parts).toHaveText([/^2016\/0400A\(COD\) – Adapting/, /^2016\/0400B\(COD\) – Adapting/]);
-    await expect(page.locator('.dz-what')).toContainText('(Withdrawn by the Commission)');
+    await expect(parts).toHaveText([/^2016\/0400A\(COD\) Adapting/, /^2016\/0400B\(COD\) Adapting/]);
+    await expect(page.locator('.dz-parts li').nth(1)).toContainText('Withdrawn by the Commission');
     await expectNoSeriousA11yViolations(page);
+  });
+
+  test('a split parent lists its separate files once; the other sections point to that list', async ({ page }) => {
+    await open(page, 'legislation/2016-0400/');
+    await expect(page.locator('.dz-what .dz-label')).toHaveText(['This proposal was split into']);
+    // the parts are linked from the list only (Details & sources is collapsed and lists the related files on request)
+    await expect(page.locator('main a[href$="/legislation/2016-0400A"]:not(#details a)')).toHaveCount(1);
+    await expect(page.locator('main a[href$="/legislation/2016-0400B"]:not(#details a)')).toHaveCount(1);
+    for (const id of ['ep-votes', 'council-votes', 'national']) {
+      const note = page.locator(`#${id} .dz-none`);
+      await expect(note).toContainText('This proposal was split');
+      await expect(note.getByRole('link', { name: 'See the separate files' })).toHaveAttribute('href', '#split-parts');
+    }
+    await expect(page.locator('.dz-fact', { hasText: 'What happens next' })).toContainText('None on this file: each separate file listed above has its own next step.');
   });
 
   test('a report links its main file in the status and the next step', async ({ page }) => {
@@ -130,7 +144,7 @@ test.describe('split parents and Parliament reports', () => {
 
   test('the latest development is the milestone of the same day', async ({ page }) => {
     await open(page, 'legislation/2025-0418/');
-    await expect(page.locator('.dz-fact', { hasText: 'Latest verified development' })).toContainText(
+    await expect(page.locator('.dz-fact', { hasText: 'Latest recorded step' })).toContainText(
       'Parliament sent the file back to committee to negotiate with the Council',
     );
   });
@@ -428,7 +442,8 @@ test.describe('legislative files', () => {
     const last: string = d.stall.last_event_date;
     const built: number = d.stall.days_since_last_event;
     const day = (n: number) => new Date(Date.parse(`${last}T12:00:00Z`) + n * 86_400_000);
-    const text = (n: number) => `No recorded procedural update in ${n} ${n === 1 ? 'day' : 'days'}.`;
+    const long = new Date(`${last}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    const text = (n: number) => `No recorded procedural step for ${n} ${n === 1 ? 'day' : 'days'}; the last was recorded on ${long}.`;
     await page.clock.install({ time: day(built) });
     await open(page, 'legislation/2026-0325/');
     await expect(page.locator('.dz-where')).toContainText(text(built));
