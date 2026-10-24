@@ -134,6 +134,18 @@ test.describe('privacy notice and links', () => {
     await expect(who).toContainText('“We” on this page means the site’s maintainer, RAHV-FB');
     await expect(who.getByRole('link', { name: 'who maintains the site' })).toHaveAttribute('href', `${BASE_PATH}about#contact`);
     await expect(who.getByRole('link', { name: /issue tracker on GitHub/ })).toHaveAttribute('href', 'https://github.com/RAHV-FB/eu-intel/issues');
+    // the link lands on the maintainer paragraph below the sticky header, not under it
+    await who.getByRole('link', { name: 'who maintains the site' }).click();
+    await expect(page).toHaveURL(/\/about#contact$/);
+    await settle(page);
+    await page.waitForTimeout(1200); // past the second for which the page keeps the target in place (useHashScroll)
+    const { top, header, scrolled } = await page.evaluate(() => ({
+      top: document.getElementById('contact')!.getBoundingClientRect().top,
+      header: document.querySelector('.site-header')!.getBoundingClientRect().bottom,
+      scrolled: window.scrollY,
+    }));
+    expect(scrolled).toBeGreaterThan(0);
+    expect(top).toBeGreaterThanOrEqual(header);
   });
 
   test('no page breaks the Content-Security-Policy, which allows no inline styles; style props still apply', async ({ page }) => {

@@ -91,7 +91,8 @@
 .prose h3 {
   margin-top: var(--sp-5);
 }
-.prose div[id] {
+.prose div[id],
+.prose p[id] {
   scroll-margin-top: calc(var(--header-h) + 3.5rem);
 }
 .prose p,
