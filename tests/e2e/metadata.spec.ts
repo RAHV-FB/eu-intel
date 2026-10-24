@@ -112,6 +112,35 @@ test.describe('privacy notice and links', () => {
     await expect(eu).toHaveAccessibleName(/\(opens official website in a new tab\)$/);
   });
 
+  test('About and Privacy say who maintains the site and where to report an error', async ({ page }) => {
+    await open(page, 'about/');
+    const contact = page.locator('#contact');
+    await expect(contact).toContainText('The site is maintained by RAHV-FB, the GitHub account that owns the project’s public repository');
+    await expect(contact).toContainText('To report an error or a missing record');
+    const issues = contact.getByRole('link', { name: /issue tracker/ });
+    await expect(issues).toHaveAttribute('href', 'https://github.com/RAHV-FB/eu-intel/issues');
+    await expect(issues).toHaveAccessibleName('repository’s issue tracker (opens in a new tab)');
+    await open(page, 'privacy/');
+    const who = page.locator('section', { has: page.getByRole('heading', { name: 'Who “we” are' }) });
+    await expect(who).toContainText('“We” on this page means the site’s maintainer, RAHV-FB');
+    await expect(who.getByRole('link', { name: 'who maintains the site' })).toHaveAttribute('href', `${BASE_PATH}about#contact`);
+    await expect(who.getByRole('link', { name: /issue tracker on GitHub/ })).toHaveAttribute('href', 'https://github.com/RAHV-FB/eu-intel/issues');
+  });
+
+  test('only links to official EU websites are announced as official', async ({ page }) => {
+    // the project's own GitHub pages (editorial policy, data/curated, issues) and GitHub's privacy statement are not
+    let others = 0;
+    for (const path of ['about/', 'privacy/', `legislation/${AI_ACT_ID}/`]) {
+      await open(page, path);
+      for (const link of await page.locator('main a[target="_blank"]:visible').all()) {
+        const official = /(^|\.)europa\.eu$/.test(new URL((await link.getAttribute('href'))!).hostname);
+        if (!official) others++;
+        await expect(link).toHaveAccessibleName(official ? / \(opens official website in a new tab\)$/ : / \(opens in a new tab\)$/);
+      }
+    }
+    expect(others).toBe(6);
+  });
+
   test('the Atom feed links say they are for feed readers', async ({ page }) => {
     await open(page, '');
     const feed = page.getByRole('navigation', { name: 'Footer' }).getByRole('link', { name: 'Atom feed (for feed readers)' });
