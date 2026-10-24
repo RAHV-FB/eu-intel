@@ -4822,14 +4822,18 @@ class Builder:
                 out.append(f"For {rec['unavailable']:,} further procedure references, Parliament's data had no "
                            "usable record in the latest retrieval.")  # fmt: skip
         elif sid == "ep_votes":
+            # the votes listed (votes/index.json, meta counts), then the retrieved snapshot they are chosen from
             dates = sorted(v.date for v in s.votes)
+            listed = sorted(v.date for v in self.indexed_votes)
             rc = sum(1 for v in s.votes if v.method == "VOTE_ELECTRONIC_ROLLCALL")
-            with_b = sum(1 for v in s.votes if v.has_ballots)
-            if dates:
-                out.append(f"{len(s.votes):,} plenary votes from {_long_date(dates[0])} to {_long_date(dates[-1])}, "
-                           f"{rc:,} of them by roll call. How each MEP voted is kept for {with_b:,} roll-call votes "
-                           "on whole texts, resolutions, motions and negotiating mandates, not for votes on "
-                           "amendments or split and separate votes.")  # fmt: skip
+            with_b = sum(1 for v in self.indexed_votes if v.id in self.ballots and v.has_ballots)
+            if listed:
+                out.append(f"{len(listed):,} plenary votes from {_long_date(listed[0])} to {_long_date(listed[-1])} are "
+                           f"listed, {with_b:,} of them with each MEP's recorded vote (votes on whole texts, "
+                           "resolutions, motions and negotiating mandates). They are chosen from the "
+                           f"{len(s.votes):,} plenary votes in the data retrieved (from {_long_date(dates[0])}, "
+                           f"{rc:,} of them by roll call); the others, mostly votes on amendments and on parts of "
+                           "texts, are not listed.")  # fmt: skip
         elif sid == "eurlex":
             out.append(f"{len(s.acts):,} adopted legal acts with their dates of signature, publication, entry into "
                        "force and application.")  # fmt: skip
@@ -4907,14 +4911,26 @@ class Builder:
         else:
             notes.append("MEPs: not available in this release.")
         n_ep = len(self.dossier_summary) - len(self.stub_ids)
+        eurlex_only = [i for i in self.stub_ids if not self.split_children.get(i)]  # split parents have no act
+        split_parents = [i for i in self.stub_ids if self.split_children.get(i)]
         if avail("ep_procedures") and n_ep:
-            notes.append(f"Legislation: {n_ep:,} procedures recorded by the European Parliament. Status is derived "
-                         "from the recorded procedural steps and EUR-Lex dates.")  # fmt: skip
+            note = (f"Legislation: {n_ep:,} procedures recorded by the European Parliament. Status is derived "
+                    "from the recorded procedural steps and EUR-Lex dates.")  # fmt: skip
+            if eurlex_only or split_parents:  # the files counted beside these (meta counts.dossiers)
+                also = ["these procedures"]
+                if split_parents:
+                    also.append(f"{len(split_parents):,} original {'proposal' if len(split_parents) == 1 else 'proposals'} "
+                                "that Parliament split into separate procedures (each has a page of its own, with no "
+                                "usable Parliament record, that links its parts)")  # fmt: skip
+                if eurlex_only:
+                    also.append(f"the {len(eurlex_only):,} adopted {'law' if len(eurlex_only) == 1 else 'laws'} noted next")
+                note += (f" The {len(self.dossier_summary):,} legislative files in the table below are "
+                         f"{', '.join(also[:-1])} and {also[-1]}.")  # fmt: skip
+            notes.append(note)
         else:
             notes.append(
                 "Legislation: the European Parliament procedure data was not available for this release."
             )
-        eurlex_only = [i for i in self.stub_ids if not self.split_children.get(i)]  # split parents have no act
         if eurlex_only:
             notes.append(f"{len(eurlex_only):,} adopted laws are shown from their EUR-Lex record only (procedure "
                          "reference, title and legal dates), because the European Parliament procedure record is "
@@ -4936,7 +4952,7 @@ class Builder:
         else:
             notes.append("Parliament votes: not available in this release.")
         if avail("eurlex"):
-            notes.append(f"Adopted acts: {len(s.acts)} legal acts from EUR-Lex/Cellar, linked to procedures only "
+            notes.append(f"Adopted acts: {len(s.acts):,} legal acts from EUR-Lex/Cellar, linked to procedures only "
                          "through the procedure reference recorded by the Publications Office or Parliament.")  # fmt: skip
         else:
             notes.append("Adopted acts (EUR-Lex): not available in this release, so adoption, entry-into-force "
@@ -4955,7 +4971,8 @@ class Builder:
                     "the Council, not of MEPs. Only a vote under unanimity can be blocked by a single country.")  # fmt: skip
             if unread:
                 note += (
-                    f" {unread} voting-result document(s) could not be read and are shown without positions."
+                    f" {unread:,} voting-result {'document' if unread == 1 else 'documents'} could not be read and "
+                    f"{'is' if unread == 1 else 'are'} shown without positions."
                 )
             notes.append(note)
         else:

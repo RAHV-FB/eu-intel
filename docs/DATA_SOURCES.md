@@ -88,6 +88,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Counts: the API leaves out a count of zero (decision 162156 of 12 Dec 2023 has 604 for, 5 abstentions and no
   "against"; the minutes print 604 | 0 | 5). When a decision publishes any count, a missing one is the number of
   MEPs listed in that position, i.e. 0; a decision without counts (show of hands) keeps all three empty.
+- The About page's source card counts the votes listed (`votes/index.json`; in the build of 24 October 2026: 3,000,
+  from 18 July 2019 to 22 October 2026, 2,996 with each MEP's recorded vote) and says in the same text what they are
+  chosen from, the snapshot (35,465 votes from 15 July 2019, 26,267 by roll call; 32,465 are not listed, 30,624 of
+  them votes on amendments or on parts of a text). The technical log below it keeps the retrieval's own counts.
 - Procedure links keep the letter of a split procedure's reference (`2021/0211A(COD)`), and document numbers
   are read with any hyphen-like character (`A9‑0256/2020`, U+2011). A vote item that names neither procedure
   nor document (a secret ballot) is linked through the report in its structured label.
@@ -769,6 +773,14 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   are the parts' OEIL procedure files ("... 2016/0400A(COD) (separate file)"), not the EUR-Lex record of one part's
   act that the parent's record was built from; a Legislative Train page on one part, which records the proposal's
   reference ("... – 2016/0400B(COD)", procedure 2016/0400(COD)), is cited on that part's page.
+- File counts on the About page: `counts.dossiers` (1,577) is the number of file pages, which is the number of
+  procedures recorded by Parliament (1,564, the `ep_procedures` snapshot) plus 13 files that have no usable
+  Parliament record: 3 adopted laws shown from their EUR-Lex record only (2011-0901, 2018-0900, 2020-3521) and 10
+  split parents (2016-0282, -0357, -0360, -0400, 2018-0063, -0152, -0330, 2019-0001, 2021-0211, 2022-0132). The 14
+  references in `_state.json` `unavailable` (the source card's "14 further procedure references") are these 13 and
+  2026-0324, which has no English title in the EP record or OEIL and is not a file here. The coverage note
+  "Legislation: …" gives the split. The two split parents that do have a Parliament record (2016-0224, 2023-0077) are
+  among the 1,564.
 - The explorer's status filter groups these files (stage `unknown`) as "Other (split files, Parliament reports,
   final act or stage not recorded)": each row's own badge says which.
 - An R/M file (Parliament's interim or accompanying report, e.g. 2020/0112R(APP)) links the main procedure in
@@ -789,11 +801,14 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   opinions on the legal basis or the recast technique), other (budgetary assessment). From the EP API's committee
   participations and, where the file has an OEIL procedure file, its key players, whose headers are the roles: a
   committee OEIL lists keeps the role(s) OEIL gives it, and a committee only the API names keeps the API's role.
-- `former`: the committee is listed in that role only under OEIL's "Former …" headers, i.e. in an earlier
-  parliamentary term (2023/0131(COD): "Committee responsible SANT", "Former committee responsible ENVI"; the EP API
-  gives both as committee leads, 2023-0131-MAIN-SANT and 2023-0131-MHE-ENVI). A committee also listed in that role
-  for the current term is shown once, as current. The page says "former committee responsible", "former committee
-  for opinion".
+- `former`: the committee is listed in that role only under OEIL's "Former …" headers (2023/0131(COD): "Committee
+  responsible SANT", "Former committee responsible ENVI"; the EP API gives both as committee leads,
+  2023-0131-MAIN-SANT and 2023-0131-MHE-ENVI). OEIL does not say why, and uses the header within one term as well as
+  for an earlier one: the committees for opinion DEVE, ENVI and INTA of 2025/0385(COD), proposed on 3 December 2025
+  (10th term), are "Former committee for opinion" (OEIL for INTA: "The committee decided not to give an opinion";
+  checked on OEIL on 24 October 2026). So `former` means "listed by OEIL as former", not "of an earlier parliamentary
+  term". A committee also listed in that role as current is shown once, as current. The page says "former committee
+  responsible", "former committee for opinion", and explains the word.
 - Joint: only two or more distinct committees responsible in the current term. One committee can lead a file in two
   terms (2023/0226(COD): participations 2023-0226-MHE-ENVI and 2023-0226-MAIN-ENVI; OEIL "Committee responsible
   ENVI", "Former committee responsible ENVI"), which was shown as "joint committee responsible" on 12 files with a
@@ -824,8 +839,16 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   a "Former …" header, or, for one OEIL does not list, an EP API participation of an earlier parliamentary term
   than the file's latest participations (2023/0290(COD): the shadows of the 9th term, Basso, Mazurek, Kouloglou and
   Botoş, beside those of the 10th; 2013/0072(COD): the TRAN rapporteurs before the file went to conciliation). An
-  appointment OEIL lists for the current term is never former. 790 of the 12,598 entries are former. The page says
+  appointment that OEIL lists as current is never former. 790 of the 12,598 entries are former. The page says
   that the list combines both sources.
+  OEIL's header does not mean "of an earlier parliamentary term": it is also used within the current term
+  (2025/0429(COD), proposed on 19 December 2025: OEIL lists "Committee responsible LIBE" with no rapporteur, then
+  "Former committee responsible LIBE / Former rapporteur SIPPEL Birgit (S&D) 15/01/2026", and the EP API gives the
+  participation 2025-0429-NMCP-96932-LIBE-2026-01-15, RAPPORTEUR, `parliamentary_term` org/ep-10; in 2025/0385(COD),
+  proposed on 3 December 2025, the rapporteurs for opinion Maij (DEVE, 26/02/2026) and Ozdoba (ENVI) are "Former
+  rapporteur for opinion", all participations of the 10th term). The word on the page therefore stands for what the
+  flag records: "listed by OEIL as former" or, without an OEIL listing, "of an earlier term in the EP API". OEIL does
+  not give the reason. (Checked on OEIL and the EP API on 24 October 2026.)
 - `committee`: the committee the participation is `participation_in_name_of`. Where the EP API names none
   ("org/null"), or one that is not among the file's committees, the rapporteur (or rapporteur for an opinion)
   takes the committee OEIL's key players list the MEP under in that role, when they list exactly one: 2021/0240(COD)
@@ -1047,11 +1070,14 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   procedure opened by OEIL's "Legislative proposal published" with its COM document and no other initiator's
   document counts as one), both numbers of Member States are given (`states_required` 55%,
   `states_required_alt` 72%); the note says that the sheet's footnote on the threshold is part of the image we
-  do not read, and that the vote is not linked to a procedure file in our data (13 votes, mostly budget votes) or
-  that our record of the procedure names no proposal (2018/0900(COD)). An ordinary procedure whose recorded
-  proposal is the Court of Justice's request (OEIL "CJEC | Legislative proposal", `court_request`) is not on a
-  Commission proposal: 72% of Member States, TFEU Art. 238(2) (2022/0906(COD), ST 8001/24; Regulation (EU,
-  Euratom) 2024/2019 "Having regard to the request of the Court of Justice", Art. 281 TFEU, second paragraph).
+  do not read, and that the vote is not linked to a procedure file in our data (12 votes, 10 of them budget votes)
+  or that our record of the procedure names no proposal (2018/0900(COD), ST 8363/19): 13 votes carry the note in
+  all (counted in the build of 24 October 2026). 14 of the 747 Council votes have no procedure link: those 12 and
+  the two under unanimity (ST 6475/24, ST 14429/19), which need no threshold and carry no such note. An ordinary
+  procedure whose recorded proposal is the Court of Justice's request (OEIL "CJEC | Legislative proposal",
+  `court_request`) is not on a Commission proposal: 72% of Member States, TFEU Art. 238(2) (2022/0906(COD),
+  ST 8001/24; Regulation (EU, Euratom) 2024/2019 "Having regard to the request of the Court of Justice", Art. 281
+  TFEU, second paragraph).
   The Council's consent to Parliament's own regulation ("Consent of the Council (Article 228(4) TFEU)",
   ST 9947/21, the Ombudsman Statute) is never on a Commission proposal: 72% of Member States, TFEU Art. 238(2).
 

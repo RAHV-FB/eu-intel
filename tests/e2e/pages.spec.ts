@@ -437,3 +437,76 @@ test.describe('legislative files', () => {
     await expect(page.locator('.dz-where')).toContainText(text(built + 40));
   });
 });
+
+test.describe('About and the guide', () => {
+  test('About states the selection criteria and the hand-checked corrections, not "never written by hand"', async ({ page }) => {
+    await open(page, 'about/');
+    await expect(page.locator('.prose')).not.toContainText('never written by hand');
+    const selection = page.locator('#selection');
+    await expect(selection).toContainText('Each meets at least two of these criteria');
+    await expect(selection).toContainText('officially recognised delay');
+    await expect(selection).toContainText('at least one adopted act and at least one pending proposal');
+    await expect(selection).toContainText('no more than two on the same topic');
+    await expect(selection).toContainText('reviewed at least every three months');
+    const corrections = page.locator('#corrections');
+    await expect(corrections.getByRole('heading', { name: 'Corrections checked against official texts' })).toBeVisible();
+    await expect(corrections).toContainText('Dates checked against the act’s text');
+    await expect(corrections).toContainText('The day the Council adopted an act');
+    await expect(corrections.getByRole('link', { name: /data\/curated folder/ })).toHaveAttribute(
+      'href',
+      'https://github.com/RAHV-FB/eu-intel/tree/main/data/curated',
+    );
+    // the selection text links to it
+    await selection.getByRole('link', { name: 'Corrections checked against official texts' }).click();
+    await expect(page).toHaveURL(/about\/?#corrections$/);
+    await expect(corrections.getByRole('heading', { name: 'Corrections checked against official texts' })).toBeInViewport();
+  });
+
+  test('the file count and the Parliament vote count on About say what they count', async ({ page, request }) => {
+    const meta = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/meta.json`)).json();
+    await open(page, 'about/');
+    const n = (x: number) => x.toLocaleString('en-GB');
+    const row = page.getByRole('row', { name: /^Legislative files/ });
+    await expect(row).toContainText(n(meta.counts.dossiers));
+    await expect(page.locator('#coverage')).toContainText(`The ${n(meta.counts.dossiers)} legislative files in the table below are`);
+    // the source card gives the votes listed first, and the snapshot they are chosen from
+    const card = page.locator('article', { has: page.getByRole('heading', { name: /plenary votes/ }) });
+    await expect(card).toContainText(`${n(meta.counts.ep_votes)} plenary votes from`);
+    await expect(card).toContainText('are listed');
+    await expect(card).toContainText('They are chosen from the');
+    await expect(page.locator('#coverage')).toContainText(`Adopted acts: ${n(meta.counts.legal_acts)} legal acts`);
+  });
+
+  test('the guide separates signature and publication from entry into force and application', async ({ page }) => {
+    await open(page, 'how-the-eu-works/');
+    const steps = page.locator('.pathway__steps li');
+    await expect(steps.filter({ hasText: 'Signature & publication' })).toContainText('Entry into force is a separate step.');
+    await expect(steps.filter({ hasText: 'Entry into force & application' })).toContainText('twentieth day after publication');
+    await expect(page.locator('.prose')).not.toContainText(/it is EU law|applicable law|legally exists/);
+    await expect(page.locator('#olp')).toContainText('Article 297(1) TFEU');
+  });
+
+  test('the guide explains the status labels, and About links to the explanation', async ({ page }) => {
+    await open(page, 'about/');
+    await page.locator('#methodology').getByRole('link', { name: /guide explains each label/ }).click();
+    await expect(page).toHaveURL(/how-the-eu-works\/?#status-labels$/);
+    const section = page.locator('#status-labels');
+    await expect(section.getByRole('heading', { name: 'Status labels on this site', level: 2 })).toBeInViewport();
+    for (const label of ['Provisional agreement reached', 'Signed, awaiting publication', 'Published, not yet in force', 'In force', 'No longer in force']) {
+      await expect(section.locator('.badge', { hasText: new RegExp(`^\\W*${label}$`) })).toBeVisible();
+    }
+    await expect(section.getByRole('heading', { name: 'Not adopted: not law yet' })).toBeVisible();
+    await expect(section.getByRole('link', { name: 'the legislation explorer' })).toHaveAttribute('href', `${BASE_PATH}legislation`);
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('"former" rapporteurs are explained as the Observatory lists them, also within the current term', async ({ page }) => {
+    // 2025/0429(COD), proposed 19 December 2025: OEIL "Former rapporteur SIPPEL Birgit (S&D) 15/01/2026"; EP API term ep-10
+    await open(page, 'legislation/2025-0429/');
+    await page.locator('#details summary').click();
+    await expect(page.locator('#details li', { hasText: 'Birgit Sippel' })).toContainText('Former rapporteur (LIBE)');
+    const note = page.locator('#details .dz-sub', { has: page.getByRole('heading', { name: 'Rapporteurs and shadow rapporteurs' }) }).locator('p.meta');
+    await expect(note).toContainText('lists the MEP only under a “Former …” heading for this file, in the current parliamentary term or an earlier one');
+    await expect(note).not.toContainText('marks an appointment in an earlier parliamentary term');
+  });
+});

@@ -93,7 +93,8 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   'entry-into-force': {
     term: 'Entry into force',
-    short: 'The date a law legally exists. Its rules may start to apply later, sometimes in phases.',
+    short:
+      'The date from which an act is part of the EU legal order: the date the act sets or, if it sets none, the twentieth day after publication. Its rules may start to apply later, sometimes in phases.',
     href: '/how-the-eu-works#instruments',
   },
   celex: {
@@ -134,7 +135,8 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   'official-journal': {
     term: 'Official Journal of the EU',
-    short: 'The EU’s official publication. Adopted laws are published in it, and enter into force on the date they set.',
+    short:
+      'The EU’s official publication. Adopted legislative acts are published in it. They enter into force on the date they set or, if they set none, on the twentieth day after publication.',
     href: '/how-the-eu-works#olp',
   },
   'reasoned-opinion': {

@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ExtLink, PageHeader, Term } from '../components/ui';
+import { ExtLink, PageHeader, StatusBadge, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { PathwayDiagram } from '../features/guide/PathwayDiagram';
+import { STATUS_LABEL_GROUPS } from '../features/guide/statusLabels';
 import { useHashScroll } from '../features/guide/useHashScroll';
 import '../features/guide/guide.css';
 import '../features/votes/common.css';
@@ -23,6 +24,7 @@ const TOC: { group: string; items: { id: string; label: string }[] }[] = [
     items: [
       { id: 'olp', label: 'Ordinary legislative procedure' },
       { id: 'special', label: 'Special legislative procedures' },
+      { id: 'status-labels', label: 'Status labels on this site' },
       { id: 'parliament-voting', label: 'How Parliament votes' },
       { id: 'council-voting', label: 'How the Council votes' },
     ],
@@ -254,8 +256,9 @@ export default function HowEuWorks() {
             </p>
             <p>
               Once adopted, the act is signed by the Presidents of Parliament and the Council and published in the{' '}
-              <em>Official Journal of the EU</em>. It enters into force on the date it sets — often the twentieth day after publication —
-              and may apply later.
+              <em>Official Journal of the EU</em> (Article 297(1) TFEU). Adoption, signature and publication are separate steps from
+              entry into force: the act enters into force on the date it specifies or, if it specifies none, on the twentieth day after
+              publication. Its rules may apply from a later date.
             </p>
           </Section>
 
@@ -281,6 +284,40 @@ export default function HowEuWorks() {
             <p>
               In these areas the Council often has to decide by <Term id="unanimity">unanimity</Term>. In a few cases Parliament adopts an
               act itself with the Council’s consent, for example on the rules governing MEPs’ duties.
+            </p>
+          </Section>
+
+          <Section id="status-labels" title="Status labels on this site">
+            <p>
+              A file’s label says how far its procedure has come, worked out from the steps recorded by Parliament and EUR-Lex (see{' '}
+              <Link to="/about#methodology">how status is worked out</Link>). An act is adopted, signed, published, enters into force
+              and, from the date it sets, applies; the labels are grouped by which of these steps it has reached. Labels of other steps
+              before adoption, such as “Committee report adopted”, mean that nothing has been adopted yet.
+            </p>
+            {STATUS_LABEL_GROUPS.map((g) => (
+              <div key={g.id} className="statuslabels">
+                <h3>{g.heading}</h3>
+                <dl>
+                  {g.rows.map((r) => (
+                    <div key={r.labels[0].label} className="statuslabels__row">
+                      <dt>
+                        {r.labels.map((x) => (
+                          <StatusBadge key={x.label} stage={x.stage} label={x.label} />
+                        ))}
+                      </dt>
+                      <dd>
+                        {r.text}
+                        {r.also && <span className="statuslabels__also"> Also shown as: {r.also.map((x) => `“${x.label}”`).join(', ')}.</span>}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
+            <p>
+              “Split into separate procedures” and “Parliament report (not a legislative act)” name no stage; the file’s page explains
+              them. “Officially reported as blocked” beside a label is the classification of Parliament’s Legislative Train Schedule,
+              not a stage. See where every file stands in <Link to="/legislation">the legislation explorer</Link>.
             </p>
           </Section>
 
