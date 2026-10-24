@@ -190,6 +190,10 @@ describe('scripts/prerender-routes.mjs', () => {
     expect(descriptionOf(f['people/groups/id/index.html'])).toBe(
       'Political group in the European Parliament in the 2019–2024 term, not a group in the current term: how its members voted.',
     );
+    // the search index has no votes (Search.tsx sends them to /votes)
+    expect(descriptionOf(f['search/index.html'])).toBe(
+      'Search EU legislation, MEPs, political groups, national parties, countries, topics and guides. Parliament votes are searched on the votes page.',
+    );
     for (const name of ['people/groups/renew/index.html', 'search/index.html', 'following/index.html'])
       expect(descriptionOf(f[name]), name).not.toBe(home);
   });

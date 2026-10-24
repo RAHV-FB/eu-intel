@@ -86,7 +86,7 @@ const routes = [
   ['about', 'About & methodology', 'Data sources, coverage, methodology and limitations.'],
   ['privacy', 'Privacy', 'Privacy notice: no tracking, no cookies, no analytics.'],
   ['following', 'Followed legislation', 'The EU legislative files you follow: their status and what changed since you last looked. The list is kept only in your browser.'],
-  ['search', 'Search', 'Search EU legislative files, adopted acts, Parliament votes, MEPs, political groups, national parties, countries and topics.'],
+  ['search', 'Search', 'Search EU legislation, MEPs, political groups, national parties, countries, topics and guides. Parliament votes are searched on the votes page.'],
 ];
 // titles as the pages set them with useDocumentTitle (/people/ is the MEPs view until a view is chosen in the address)
 for (const [r, t, d] of routes) page(r, t, d);
