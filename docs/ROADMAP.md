@@ -61,8 +61,10 @@ so that nobody reads a gap as a fact about EU law.
   (`transposition.yaml`); for the others the general deadline sentence is shown.
 - Which Member States a regulation binds is not read from its text: Treaty opt-outs (Denmark, Ireland) are read
   from directives' texts only (`optouts`), so a regulation's page says that it binds the Member States it binds and
-  names only those the Council's voting record lists as not taking part; acts implementing enhanced cooperation are
-  recognised from their title. Reading regulations' recitals needs a fetch of their texts (about 800).
+  names only those the Council's voting record lists as not taking part, and a later participation that a Commission
+  decision confirms (Protocol No 21, Article 4); acts implementing enhanced cooperation are recognised from their
+  title. Reading regulations' recitals needs a fetch of their texts (about 800). A later participation that no
+  Commission decision titled "confirming the participation of ..." records is not read.
 - Amending acts known only by their CELEX id (outside our EUR-Lex data, such as delegated acts) are named by the
   number in that id ("Regulation 2026/2102"), not by their full type, unless a curated date correction cites
   their text ("Delegated Regulation 2026/2102").

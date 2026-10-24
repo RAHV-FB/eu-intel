@@ -475,7 +475,7 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   "Coming up", which then lacks it, and for an amending directive's deadline, which the next step then leaves out.
 - A regulation's next step says that it "applies directly; no national transposition is needed", never "in all EU
   countries": which Member States it binds is in its text, which our data do not read for regulations (`optouts`
-  reads directives only). A regulation under a Treaty opt-out does not bind Denmark or Ireland (Regulation (EU)
+  reads directives' texts only). A regulation under a Treaty opt-out does not bind Denmark or Ireland (Regulation (EU)
   2024/1348, recital 107: "Denmark is not taking part in the adoption of this Regulation and is not bound by it or
   subject to its application"; Ireland may take part later, Commission Decision (EU) 2024/2089), and one whose
   title says it is "implementing enhanced cooperation" binds only the Member States taking part (Art. 20(4) TEU:
@@ -485,9 +485,17 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   24 October 2026). Before, 689 regulations' next steps said "in all EU countries". The page's "How it applies in
   the Member States" says that a regulation binds the Member States it binds, and names those that the Council's
   latest recorded vote with positions on the file records as not taking part, pointing to the regulation's
-  recitals (Return Regulation: "records Denmark and Ireland as not taking part"; 60 regulation files); it does not
-  say "not bound", since a Member State may take part after adoption (Ireland: Commission Decisions (EU) 2024/2088
-  and 2024/2089, "confirming the participation of Ireland in Regulation (EU) 2024/1351" and "... 2024/1348").
+  recitals for the Member States not bound by it when it was adopted (Return Regulation: "records Denmark and
+  Ireland as not taking part"; 60 regulation files); it does not say "not bound", since a Member State may take
+  part after adoption. Such a later participation, as a Commission decision confirms it (`optouts`, regulations:
+  16 regulations of 16 files on 24 October 2026), is named with the decision, its date and a link (the AMMR's page:
+  "Ireland opted in after its adoption: Commission Decision (EU) 2024/2088 of 31 July 2024 confirms its
+  participation in the regulation (Protocol No 21, Article 4)"; each of the 16 decisions cites "Protocol No 21 ...
+  and in particular Article 4 thereof"); for 13 of the 41 regulation files whose Council vote records Ireland as
+  not taking part, the recitals' "not bound" no longer applies to Ireland. Without such a decision, a file whose
+  Council vote records Ireland as not taking part says "Our data record no Commission decision confirming that
+  Ireland has taken part since." Before 24 October 2026 the sentence read "The regulation's text (its recitals) says
+  which Member States it binds", and no regulation page named a later opt-in.
 - Status of an adopted act not yet recorded as published: "It is not recorded as published in the Official Journal
   yet; once published, it enters into force on the date it sets or, if it sets none, on the twentieth day after
   publication (Article 297(1) TFEU). Its rules can apply from later dates." (signed acts of the ordinary procedure,
@@ -505,7 +513,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   `validate` fails a build in which a withdrawn file has an act or adoption steps after the withdrawal, or is
   withdrawn before its proposal.
 - Corrections: where Cellar's date metadata is wrong or was not updated after an amendment, the build applies
-  `data/curated/act_dates.yaml`, each date citing the article that sets it (DSA Art. 93, AI Act Art. 113 as
+  `data/curated/act_dates.yaml`, each date citing the article that sets it (DSA Art. 93, with its Art. 92: the
+  Regulation applies earlier to designated very large online platforms and search engines, from four months after
+  the provider was notified of its designation "where that date is earlier than 17 February 2024", a rule that sets
+  no calendar date and is stated in the note and beside 17 February 2024; AI Act Art. 113 as
   amended by Regulation 2026/1744, Return Regulation Art. 50, and three acts whose entry into force is tied to
   another act's: Regulation 2021/768 Art. 9, Decision 2015/457 Art. 3(2), Regulation 608/2014 Art. 9, where
   Cellar gives the application date or the other act's date). Dates a corrigendum set, which the text as first
@@ -513,12 +524,16 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   1 July 2026" as published, 12 June 2026 after the corrigendum OJ L, 2025/90929; also Regulations (EU) 2024/1347,
   2024/1359, 2024/1252 and 2022/2560); corrigenda are otherwise not read. An entry with a reason only explains
   recorded dates (Directives (EU) 2016/797 and 2016/798: 31 October 2020, the optional extension added by Directive
-  (EU) 2020/700). A date set by an amending act cites that act in
+  (EU) 2020/700; the own resources decisions 2014/335/EU, Euratom, Art. 11, and (EU, Euratom) 2020/2053, Art. 12:
+  in force on the first day of the month after the last Member State's notification of its approval, as the third
+  paragraph of Art. 311 TFEU requires, "That decision shall not enter into force until it is approved by the Member
+  States in accordance with their respective constitutional requirements", after the date from which they apply).
+  A date set by an amending act cites that act in
   the timeline, and the amending act's page lists the dates it set (`dates_set_for`; the Deforestation Regulation's
   dates set by Regulation (EU) 2025/2650 and Delegated Regulation (EU) 2026/2102); the status sentence says
   that the act's text, not EUR-Lex, sets the later dates. A checked date on the entry-into-force day is named in
   the entry-into-force event. A curated date's timeline step cites the text it was checked against as its source
-  ("Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)"), not EUR-Lex's record of the act, and no
+  ("Regulation (EU) 2022/2065, Articles 92 and 93 (checked 24 October 2026)"), not EUR-Lex's record of the act, and no
   step dated in the act (entry into force, application, transposition dates) is credited to an institution in
   "Latest recorded step". Dates EUR-Lex gives as not recorded and a later decision set cite that decision
   (Clinical Trials Regulation: Commission Decision (EU) 2021/1240, published 31 July 2021, the notice of its Art.
@@ -609,6 +624,17 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   Decision 2020/2053: Articles 2, 4 and 5, for the calculation of revenue and of the United Kingdom correction for
   earlier years) is a checked note in `data/curated/act_dates.yaml`. A partial repeal never makes an act "no
   longer in force", which follows EUR-Lex's in-force flag and end of validity.
+- The end of an act's validity is its last timeline step (`build.py` `timeline`, kind `end_of_validity`), once the
+  end of validity has passed: "No longer in force" on the day from which the status gives it as no longer in force
+  (the day after the end of validity, or the date from which Cellar records the repeal as taking effect; Regulation
+  (EU) 2019/982: validity ended 31 October 2023, "No longer in force" 1 November 2023), with the status's sentence
+  on the end of validity and the repealing act; for a repeal in stages, which gives no single day, "Validity ended
+  (date recorded by EUR-Lex)" on the end of validity EUR-Lex gives (Directive 2014/61/EU, 12 May 2026). An end of
+  validity earlier than the act itself (a retroactive repeal) is no step; its status explains it. The step is the
+  file's "Latest recorded step" (and `last_event`, the lists' "updated" date) and closes "When it applies", where
+  the general note that a regulation applies directly is not shown for an act no longer in force. On 24 October
+  2026 148 of the 150 files no longer in force have the step (the other 2 ended retroactively); before, the latest
+  step of 146 of them was dated before the day they ceased to be in force.
 - Known gaps (snapshot of 23 October 2026): 372 of 1,269 acts without signature date, 24 of 303 directives without
   transposition date, implicit repeals are used only from the end-of-validity annotation, partial ends of validity
   are described only for decisions that take effect on notification, acts whose procedure is only in free text are
@@ -984,7 +1010,7 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   rows found only because their title cites that number (amending acts) or only because the site search finds
   their file say so.
 
-### Opt-outs in directives' recitals (`optouts`) — ok
+### Opt-outs in directives' recitals and later opt-ins (`optouts`) — ok
 - Denmark (Protocol No 22) and Ireland (Protocol No 21) are not bound by most justice and home affairs measures
   unless they opt in; each such directive says so in its recitals in standard wording ("… is not taking part in
   the adoption of this Directive and is not bound by it"). The source reads the English text of every directive in
@@ -996,6 +1022,19 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   decision ("The participation of Ireland in Directive (EU) 2024/1346 is confirmed", Commission Decision (EU)
   2024/2087). One Cellar query per run finds such decisions by title; for those directives Ireland is treated as
   bound and the row links the decision (2 directives: 2023/2843 and 2024/1346).
+- The same query finds the decisions confirming a participation in a regulation ("The participation of Ireland in
+  Regulation (EU) 2024/1351 is confirmed", Commission Decision (EU) 2024/2088, Article 1). They are kept in
+  `optouts/regulations.json`, one record per decision with the regulation, the country and the decision's title,
+  whose number and date the regulation's page gives (`opted_in` on the act; titles numbering the regulation
+  "(EU) 2024/1351", or "(EU) No 516/2014" before 2015). Regulations' recitals are not read, so this records only the
+  later participation, not who was bound at adoption. On 24 October 2026: 16 decisions, all for Ireland, on 16
+  regulations of the EUR-Lex snapshot (13 of them from 2021 on, among them the six Pact on Migration and Asylum
+  regulations of 14 May 2024: Decisions (EU) 2024/2088, 2024/2089, 2024/2092, 2024/2093, 2024/2099 and 2024/2100).
+  The answer's other titles are not such opt-ins: enhanced cooperation (EPPO, divorce law, unitary patent),
+  Denmark in PESCO (a Council decision), and the United Kingdom of Great Britain and Northern Ireland in Regulation
+  (EU) 2016/794. The file was first derived offline on 24 October 2026 by replaying `fetch` over the cached Cellar
+  answer of 23 October 2026 (30 rows) with the network blocked: `directives.json` came out byte-identical and
+  `regulations.json` holds the 16 records; the manifest entry keeps that run's retrieval time, with the count added.
 - A directive that builds upon the Schengen acquis adds to Denmark's recital that Denmark decides under Article 4 of
   Protocol No 22 whether to implement it in its national law (Directive (EU) 2023/977, recital 40); the sentence is
   quoted and the record lists Denmark under `schengen_art4` (matcher version 3; of the 36 directives Denmark is not

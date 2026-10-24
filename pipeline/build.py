@@ -49,6 +49,7 @@ from pipeline.models.entities import (
     Organization,
     Procedure,
     ProcedureNotice,
+    RegulationOptIn,
     SourceStatus,
     TrainFile,
 )
@@ -1006,6 +1007,20 @@ def celex_act_label(celex: str) -> str | None:
     return f"{kind} {m.group(1)}/{int(m.group(3))}"
 
 
+# "Commission Decision (EU) 2024/2088 of 31 July 2024 confirming the participation of Ireland in Regulation ..."
+OPT_IN_TITLE_RE = re.compile(r"^(Commission Decision (?:\([^)]*\) )?\d{4}/\d{1,4}) of (\d{1,2}) ([A-Z][a-z]+) (\d{4})\b")
+
+
+def opt_in_info(r: RegulationOptIn) -> dict:
+    """A country's participation in a regulation after its adoption (Protocol No 21, Article 4): the Commission decision
+    confirming it, by the number and date its title gives, and its EUR-Lex page."""
+    m = OPT_IN_TITLE_RE.match(r.title)
+    when = f"{m[4]}-{_MONTHS.index(m[3]) + 1:02d}-{int(m[2]):02d}" if m and m[3] in _MONTHS else None
+    return {"country": r.country, "decision": r.decision,
+            "label": m[1] if m else f"Commission decision (CELEX {r.decision})", "date": when,
+            "url": f"https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:{r.decision}"}  # fmt: skip
+
+
 def _squash(text: Any) -> str:
     return " ".join(str(text or "").split())
 
@@ -1194,8 +1209,8 @@ def mark_after_end_of_validity(timeline: list[dict], acts: list[LegalAct]) -> li
         eov = a.end_of_validity
         if not eov or eov < (a.date_document or a.date_publication or ""):
             continue
-        for e in timeline:
-            if e["id"].startswith(f"act-{a.celex}-") and e["date"] > eov:
+        for e in timeline:  # (the end of validity itself is dated from the day after it: timeline, end_of_validity)
+            if e["id"].startswith(f"act-{a.celex}-") and e["date"] > eov and e.get("kind") != "end_of_validity":
                 e["after_end_of_validity"] = eov
     return timeline
 
@@ -1950,6 +1965,7 @@ class Snapshot:
         self.train = _load("train", "files", TrainFile, i, root)
         self.notices = _load("eurlex", "procedure_notices", ProcedureNotice, i, root)
         self.optouts = _load("optouts", "directives", DirectiveOptOut, i, root)
+        self.regulation_opt_ins = _load("optouts", "regulations", RegulationOptIn, i, root)
 
     def _manifest(self) -> dict[str, SourceStatus]:
         if self.root == SNAPSHOT:
@@ -3530,6 +3546,23 @@ class Builder:
                                "identifier": r.ecli or r.celex, "retrieved_at": None, "published": r.date},
                     "vote_id": None,
                 })  # fmt: skip
+            # the end of the act's validity, as its status states it (status.py `_no_longer_in_force`): on the day from
+            # which it is no longer in force (32019R0982: validity ended on 31 October 2023, no longer in force since 1
+            # November 2023), or, for a repeal in stages, which gives no single day, on the end of validity EUR-Lex
+            # gives (32014L0061). Not an end earlier than the act itself, a retroactive repeal its status explains.
+            eov, ended = a.end_of_validity, _lazy("pipeline.analysis.status", "_no_longer_in_force")
+            if ended and eov and eov < self.today and eov >= (a.date_document or a.date_publication or ""):
+                s = ended(a, self.act)
+                d = s.since or eov
+                text = re.sub(r"^The act was adopted and published(?:, but |\. )", "", s.explanation)
+                out.append({
+                    "id": f"act-{a.celex}-end_of_validity-{d}", "date": d, "kind": "end_of_validity",
+                    "title": "No longer in force" if s.since else "Validity ended (date recorded by EUR-Lex)",
+                    "detail": f"{label}. {text[:1].upper()}{text[1:]}", "institution": "EUR-Lex", "state": "done",
+                    "key": True, "docs": [{"id": r.celex, "label": r.label, "kind": "act", "date": None, "url": r.url}
+                                          for r in s.named_acts],
+                    "source": src, "vote_id": None,
+                })  # fmt: skip
         positions = {x["date"] for x in out if x["kind"] == "council_position"}
         out.sort(key=lambda x: (x["date"], x["state"] == "scheduled", *day_rank(x, positions), x["id"]))
         return out
@@ -3627,6 +3660,9 @@ class Builder:
             **({"partly_repeals": a.partly_repeals} if a.partly_repeals else {}),  # partial repeals, when recorded
             **({"partly_repealed_by": a.partly_repealed_by} if a.partly_repealed_by else {}),
             "court_rulings": [ruling_summary(r) for r in getattr(a, "court_rulings", [])],
+            # a regulation: Member States that took part after its adoption, as Commission decisions confirm
+            **({"opted_in": ins} if (ins := [opt_in_info(r) for r in self.s.regulation_opt_ins if r.celex == a.celex])
+               else {}),
         }  # fmt: skip
 
     def transposition_status(self, celex: str, country: str, deadline: str | None) -> str:

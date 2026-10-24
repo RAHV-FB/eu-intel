@@ -251,6 +251,7 @@ export type EventKind =
   | 'application'
   | 'transposition_deadline'
   | 'transposition_application'
+  | 'end_of_validity' // an act no longer in force: from the day after its end of validity, or its repeal's date
   | 'withdrawal'
   | 'rejection'
   | 'lapsed'
@@ -294,6 +295,9 @@ export interface LegalActSummary {
   partly_repeals?: string[]; // repeals EUR-Lex limits to some provisions or marks as partial
   partly_repealed_by?: string[];
   court_rulings: CourtRulingInfo[]; // Court of Justice judgments recorded by EUR-Lex as annulling / invalidating
+  // a regulation: Member States that took part after its adoption (Protocol No 21, Article 4), each with the Commission
+  // decision confirming it ("Commission Decision (EU) 2024/2088", 2024-07-31); absent when none is recorded
+  opted_in?: { country: string; decision: string; label: string; date?: ISODate | null; url: string }[];
 }
 
 export interface CourtRulingInfo {
