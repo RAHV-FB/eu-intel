@@ -6,7 +6,7 @@ import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
 import { shownParam, useParamState } from '../lib/urlState';
 import { ballotScope } from '../lib/scope';
-import { EmptyState, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
+import { EmptyState, ErrorState, ExtLink, LoadFailed, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { EP_MEP_URL, periodText, rapporteurRoleLabel, roleLabel, termShort, useGroups } from '../features/people/labels';
@@ -50,7 +50,7 @@ export default function Mep() {
   // votes shown: kept in the address, so that Back from a vote returns to the same list
   const [params, patch] = useParamState();
   const shown = shownParam(params, 'show', VOTES_PAGE);
-  useDocumentTitle(m ? m.name : isMissing(error) ? 'MEP not found' : 'MEP');
+  useDocumentTitle(m ? m.name : isMissing(error) ? 'MEP not found' : error ? 'MEP could not be loaded' : 'MEP');
 
   const voteById = useMemo(() => new Map((votesIndex.data ?? []).map((v) => [v.id, v])), [votesIndex.data]);
   // a vote's date and result while the vote list loads, or when it failed to: not "—", which means not recorded
@@ -58,7 +58,7 @@ export default function Mep() {
 
   if (loading) return <div className="container page"><Loading label="Loading MEP…" /></div>;
   if (isMissing(error)) return <NotFound what="MEP" />;
-  if (error || !m) return <div className="container page"><ErrorState error={error} title="This MEP could not be loaded" /></div>;
+  if (error || !m) return <LoadFailed title="This MEP could not be loaded" />;
 
   const currentGroup = m.groups.find((g) => !g.to) ?? null;
   const currentParty = m.parties.find((p) => !p.to) ?? null;
@@ -71,7 +71,7 @@ export default function Mep() {
 
   return (
     <div className="container page">
-      <p className="meta" style={{ marginBottom: 'var(--sp-3)' }}>
+      <p className="meta mb-3">
         <Link to="/people">← People & Parties</Link>
       </p>
       <PageHeader
@@ -110,9 +110,7 @@ export default function Mep() {
             {currentGroup ? (
               <>
                 {currentGroup.code ?? currentGroup.label}
-                <span className="meta" style={{ display: 'block', fontWeight: 400 }}>
-                  {currentGroup.label}
-                </span>
+                <span className="meta as-block">{currentGroup.label}</span>
               </>
             ) : m.group_code ? (
               <>{m.group_code} (last recorded)</>
@@ -139,13 +137,17 @@ export default function Mep() {
         </div>
       </dl>
 
-      <div className="grid grid--2 section" style={{ marginTop: 'var(--sp-6)' }}>
+      <div className="grid grid--2 section">
         <section aria-labelledby="g-h">
-          <h2 id="g-h">Political group membership</h2>
+          <h2 id="g-h" className="section-title">
+            Political group membership
+          </h2>
           {m.groups.length ? <History items={m.groups} link={groupHref} /> : <p className="meta">No group membership recorded.</p>}
         </section>
         <section aria-labelledby="p-h">
-          <h2 id="p-h">National party</h2>
+          <h2 id="p-h" className="section-title">
+            National party
+          </h2>
           {m.parties.length ? (
             <History items={m.parties} link={(p) => `/people/parties/${encodeURIComponent(p.id)}`} />
           ) : (
@@ -178,11 +180,13 @@ export default function Mep() {
         {m.rapporteur_for.length === 0 ? (
           <p className="meta">No rapporteur or shadow rapporteur role recorded on a legislative file in our dataset.</p>
         ) : (
-          <ul className="stack" style={{ paddingLeft: '1.1rem' }}>
+          <ul className="roles">
             {m.rapporteur_for.map((r) => (
               <li key={`${r.dossier_id}-${r.role}-${r.committee ?? ''}`}>
-                <Link to={dossierPath(r.dossier_id)}>{r.title}</Link>{' '}
-                <span className="meta">· {rapporteurRoleLabel(r.role, r.committee, r.former)}</span>
+                <Link className="row-link" to={dossierPath(r.dossier_id)}>
+                  {r.title}
+                </Link>{' '}
+                <span className="meta roles__role">{rapporteurRoleLabel(r.role, r.committee, r.former)}</span>
               </li>
             ))}
           </ul>
@@ -207,10 +211,10 @@ export default function Mep() {
         ) : (
           <>
             {votesIndex.error && (
-              <div style={{ marginBottom: 'var(--sp-3)' }}>
+              <div className="mb-3">
                 <ErrorState
                   error={votesIndex.error}
-                  title="The titles, dates and results of these votes could not be loaded. Each vote’s own page has them; reloading this page may help."
+                  title="The titles, dates and results of these votes could not be loaded. Each vote’s own page has them."
                 />
               </div>
             )}

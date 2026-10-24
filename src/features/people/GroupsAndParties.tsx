@@ -30,7 +30,9 @@ export function GroupsOverview({ groups }: { groups: GroupSummary[] }) {
 
   return (
     <section aria-labelledby="groups-h">
-      <h2 id="groups-h">Political groups in the current Parliament</h2>
+      <h2 id="groups-h" className="section-title">
+        Political groups in the current Parliament
+      </h2>
       <p className="section-intro">
         {formatNumber(current.filter((g) => g.id !== 'ni').length)} political groups
         {current.some((g) => g.id === 'ni') ? ' and the non-attached members (NI), who belong to no group' : ''} — {formatNumber(total)}{' '}
@@ -74,12 +76,14 @@ export function GroupsOverview({ groups }: { groups: GroupSummary[] }) {
         </div>
       )}
       {earlier.length > 0 && (
-        <div style={{ marginTop: 'var(--sp-6)' }}>
+        <div className="mt-5">
           <h3>Groups from earlier terms in our dataset</h3>
           <ul className="member-grid">
             {earlier.map((g) => (
               <li key={g.id}>
-                <Link to={`/people/groups/${encodeURIComponent(g.id)}`}>{g.code}</Link>
+                <Link className="row-link" to={`/people/groups/${encodeURIComponent(g.id)}`}>
+                  {g.code}
+                </Link>
                 <span className="meta">
                   {g.name}
                   {g.terms.length > 0 && <> · {g.terms.map(termLabel).join(', ')}</>}
@@ -144,7 +148,9 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
 
   return (
     <section aria-labelledby="parties-h">
-      <h2 id="parties-h">National parties</h2>
+      <h2 id="parties-h" className="section-title">
+        National parties
+      </h2>
       <p className="section-intro">
         MEPs are elected on national lists. These are the national parties (and independent lists) recorded for MEPs in our dataset, with
         the European political groups their MEPs joined.
@@ -175,7 +181,7 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
           </div>
         </CollapsibleFilters>
       </form>
-      <p className="results-bar__count" aria-live="polite" style={{ marginBottom: 'var(--sp-3)' }}>
+      <p className="results-bar__count mb-3" aria-live="polite">
         {formatNumber(filtered.length)} {filtered.length === 1 ? 'party' : 'parties'}
       </p>
       {filtered.length === 0 ? (
@@ -205,7 +211,7 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
               <tbody>
                 {sorted.slice(0, shown).map((p) => (
                   <tr key={p.id}>
-                    <th scope="row" style={{ fontWeight: 500 }}>
+                    <th scope="row">
                       <Link to={`/people/parties/${encodeURIComponent(p.id)}`}>{p.label}</Link>
                       {p.code && p.code !== p.label && <span className="meta"> ({p.code})</span>}
                       {(sharedName.get(`${p.country}|${partyNameKey(p.label)}`) ?? 0) > 1 && p.terms?.length ? (

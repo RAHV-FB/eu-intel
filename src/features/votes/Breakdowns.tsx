@@ -100,7 +100,7 @@ export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown
                 <tr className="has-more">
                   <th scope="row" id={th}>
                     <Link to={`/people/groups/${encodeURIComponent(r.group)}`}>{r.group_code}</Link>
-                    {groupNames?.get(r.group) && <span className="meta hide-sm" style={{ fontWeight: 400 }}>{groupNames.get(r.group)}</span>}
+                    {groupNames?.get(r.group) && <span className="meta hide-sm">{groupNames.get(r.group)}</span>}
                   </th>
                   <td className="num">{formatNumber(r.for)}</td>
                   <td className="num">{formatNumber(r.against)}</td>
@@ -352,11 +352,11 @@ export function BallotList({
             <tbody>
               {sorted.slice(0, shown).map((b) => (
                 <tr key={b.mep}>
-                  <th scope="row" style={{ fontWeight: 500 }}>
+                  <th scope="row">
                     <Link to={`/people/meps/${encodeURIComponent(b.mep)}`}>{names[b.mep] ?? `MEP ${b.mep}`}</Link>
                     {/* phones: the group and country columns are hidden and shown here, so the vote stays beside the name */}
                     {(b.group || b.country) && (
-                      <span className="only-narrow meta" style={{ fontWeight: 400 }}>
+                      <span className="only-narrow meta">
                         {[b.group ? groupCodes.get(b.group) ?? b.group : null, b.country ? countryName(b.country) : null]
                           .filter(Boolean)
                           .join(' · ')}

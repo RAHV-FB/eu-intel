@@ -5,18 +5,6 @@
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding-block: var(--sp-7) var(--sp-6);
-  position: relative;
-}
-
-.home-hero::before {
-  /* thin gold rule: the one decorative accent on the page */
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--eu-blue) 0 72%, var(--eu-gold) 72% 100%);
 }
 
 .home-hero__title {
@@ -45,7 +33,12 @@
   align-items: center;
   gap: var(--sp-2);
   margin-top: var(--sp-4);
-  max-width: 44rem;
+  max-width: 48rem;
+}
+
+/* slightly narrower chips, so that from tablet width up the examples fit on one line (no chip left alone on a second) */
+.home-hero__examples .lx-chip {
+  padding-inline: 0.625rem;
 }
 
 .home-hero__try {
@@ -169,11 +162,8 @@
 }
 
 .fcard__facts dt {
-  font-size: var(--fs-xs);
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-3);
+  color: var(--text-2);
   margin-bottom: 2px;
 }
 
@@ -265,6 +255,7 @@
 }
 
 .hl__title {
+  color: var(--navy);
   font-weight: var(--fw-medium);
   line-height: var(--lh-snug);
   text-decoration: none;
@@ -276,6 +267,7 @@
 }
 
 a.hl__title:hover {
+  color: var(--eu-blue);
   text-decoration: underline;
 }
 
@@ -401,8 +393,19 @@ a.hl__title:hover {
 }
 
 .home__guide h2 {
+  font-family: var(--font-sans);
   font-size: var(--fs-md);
+  color: var(--text);
+  padding-bottom: 0;
+  border-bottom: 0;
   margin-bottom: var(--sp-2);
+}
+
+/* While home.json loads, the loading box keeps the place of the sections it is replaced by, so that the guide
+   teaser below does not jump down (layout shift); its text stays at the top, in view. */
+.home .state--loading {
+  min-height: 70vh;
+  align-items: flex-start;
 }
 
 .home__guide p {

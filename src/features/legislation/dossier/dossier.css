@@ -146,10 +146,8 @@
 .dz-label {
   margin: 0 0 var(--sp-1);
   font-family: var(--font-sans);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
   color: #445f93; /* darker than --blue-muted: ≥ 5.5:1 on white and on --blue-paler */
 }
 
@@ -161,12 +159,14 @@
 
 .dz-block p {
   margin: 0;
+  max-width: 34em; /* at most about 75 characters a line */
 }
 
 .dz-what__text {
   font-size: var(--fs-md);
   line-height: var(--lh-body);
   color: var(--text);
+  max-width: 34em;
 }
 
 .dz-nocurated {
@@ -247,6 +247,7 @@
 .dz-fact .badge {
   white-space: normal;
   margin: 2px 0 var(--sp-1);
+  max-width: 100%;
 }
 
 .dz-fact__date {
@@ -289,6 +290,7 @@
 
 .dz-dates__note {
   margin: var(--sp-3) 0 0;
+  max-width: var(--measure);
 }
 
 .dz-upcoming {
@@ -386,11 +388,9 @@
 
 .dz-toc__title {
   margin: 0 0 var(--sp-2);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-3);
+  color: var(--text-2);
 }
 
 .dz-toc ul {
@@ -430,28 +430,15 @@
   }
 }
 
-.dz-section > h2 {
-  font-family: var(--font-serif);
-  font-size: var(--fs-xl);
-  font-weight: var(--fw-bold);
-  letter-spacing: -0.015em;
-  color: var(--navy);
-  padding-bottom: var(--sp-2);
-  border-bottom: 2px solid var(--navy);
-  margin-bottom: var(--sp-4);
-}
+/* section titles (.dz-section > h2): base.css */
 
 .dz-intro {
   color: var(--text-2);
-  max-width: 46rem;
+  max-width: var(--measure);
 }
 
+/* a note box of the "not the same as" kind (.callout--distinction, base.css), in small type */
 .dz-callout {
-  max-width: 46rem;
-  padding: var(--sp-3) var(--sp-4);
-  border-left: 3px solid var(--eu-gold);
-  background: #fffbea;
-  border-radius: 0 var(--radius) var(--radius) 0;
   font-size: var(--fs-sm);
   color: var(--text-2);
 }
@@ -1068,11 +1055,9 @@
 }
 
 .dz-kv dt {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--text-2);
 }
 
 .dz-kv dd {

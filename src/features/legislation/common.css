@@ -23,28 +23,19 @@
 }
 
 /* ---------- section heads ---------- */
+/* A section title with a note beside it; the title's style: .section-title in base.css */
 .lx-head {
   display: grid;
   gap: var(--sp-2);
   margin-bottom: var(--sp-5);
-  padding-bottom: var(--sp-3);
-  border-bottom: 1px solid var(--border);
-}
-
-.lx-head h2 {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: var(--fs-xl);
-  font-weight: var(--fw-bold);
-  letter-spacing: -0.015em;
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .lx-kicker {
   margin: 0 0 var(--sp-1);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   color: var(--blue-muted);
 }
 

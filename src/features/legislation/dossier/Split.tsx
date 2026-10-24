@@ -22,7 +22,7 @@ export function SplitLinks({ parts }: { parts: DossierDetail['related'] }) {
           <Link to={dossierPath(r.id)}>
             {r.ref && (
               <>
-                <span className="mono">{r.ref}</span> –{' '}
+                <span className="ref">{r.ref}</span> –{' '}
               </>
             )}
             {shorten(r.title)}

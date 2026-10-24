@@ -4,7 +4,7 @@ import type { EpVoteDetail, GroupSummary } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
-import { Disclosure, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term, VoteBar } from '../components/ui';
+import { Disclosure, ExtLink, LoadFailed, Loading, NotFound, PageHeader, SourceLink, Term, VoteBar } from '../components/ui';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, MarginText, OutcomeBadge } from '../features/votes/components';
 import { BallotList, CountryBreakdownTable, GroupBreakdownTable } from '../features/votes/Breakdowns';
@@ -44,7 +44,7 @@ export default function Vote() {
   if (!validId || (v && !Array.isArray(v.ballots))) return <NotFound what="vote" />;
   if (loading) return <div className="container page"><Loading label="Loading vote…" /></div>;
   if (isMissing(error)) return <NotFound what="vote" />;
-  if (error || !v) return <div className="container page"><ErrorState error={error} title="This vote could not be loaded" /></div>;
+  if (error || !v) return <LoadFailed title="This vote could not be loaded" />;
 
   const corrections = v.ballots.filter((b) => b.intended && b.intended !== b.pos);
   const intentions = v.intentions ?? [];
@@ -89,7 +89,7 @@ export default function Vote() {
               procedureRef && (
                 <>
                   {' '}
-                  · Procedure <span className="mono">{procedureRef}</span>
+                  · Procedure <span className="ref">{procedureRef}</span>
                 </>
               )
             )}
@@ -180,7 +180,7 @@ export default function Vote() {
               <dt>
                 <Term id="procedure-reference">Procedure</Term>
               </dt>
-              <dd className="mono">
+              <dd className="ref">
                 {v.dossier_id ? (
                   <Link to={dossierPath(v.dossier_id)}>{procedureRef}</Link>
                 ) : v.procedure_url ? (
@@ -194,7 +194,7 @@ export default function Vote() {
           {v.reference_text && (
             <div>
               <dt>Text voted on</dt>
-              <dd className="mono" lang={v.reference_text_lang}>
+              <dd lang={v.reference_text_lang}>
                 {v.reference_text}
               </dd>
             </div>

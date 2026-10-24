@@ -121,7 +121,7 @@ function Item({
               {change.stageChanged && change.previousLabel ? ` (was “${change.previousLabel}”)` : ''}
             </span>
           )}
-          <span className="meta mono">{d.ref}</span>
+          <span className="meta ref">{d.ref}</span>
         </div>
         <p className="following__latest">
           {latest ? (
@@ -256,7 +256,7 @@ export default function Following() {
         }
       />
 
-      <div className="following__privacy" id="about-storage">
+      <div className="callout following__privacy" id="about-storage">
         <p>
           <strong>What is stored, and where.</strong> When you click “Follow”, this site saves in this browser’s local storage
           the identifier of each file you follow (for example <span className="mono">2021-0106</span>), when you followed it
@@ -292,7 +292,7 @@ export default function Following() {
       </p>
 
       {shared && (
-        <div className="following__shared-note" style={{ marginTop: 'var(--sp-5)' }}>
+        <div className="following__shared-note mt-5">
           <p>
             {sharedIds.length
               ? `This shared list has ${plural(sharedIds.length)}. It is not saved in your browser unless you choose to follow them.`

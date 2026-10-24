@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import type { Basis, LifecycleStage, SourceRef } from '../types/data';
 import { GLOSSARY } from '../content/glossary';
 import { formatNumber, plural, safeUrl } from '../lib/format';
+import { NAV } from './nav';
+import { PAGE_PLACEHOLDERS, SearchBox } from './SearchBox';
 
 // ------------------------------------------------------------------ page scaffolding
 
@@ -29,11 +31,40 @@ export function Loading({ label = 'Loading…' }: { label?: string }) {
   );
 }
 
+function ReloadButton() {
+  return (
+    <button type="button" className="btn" onClick={() => window.location.reload()}>
+      Reload the page
+    </button>
+  );
+}
+
+/** Part of a page could not be loaded: what is missing, how to try again, and the technical reason in small print. */
 export function ErrorState({ error, title = 'Something went wrong' }: { error?: Error; title?: string }) {
   return (
     <div className="state state--error" role="alert">
       <strong>{title}</strong>
-      {error && <p className="meta">{error.message}</p>}
+      <p>Reload the page to try again. The rest of the site is not affected.</p>
+      <ReloadButton />
+      {error && <p className="meta">Details: {error.message}</p>}
+    </div>
+  );
+}
+
+/**
+ * A page whose own data could not be loaded (a dropped connection, a server error): a heading, what to do and where
+ * to go, as on any other page. A record that does not exist is NotFound instead.
+ */
+export function LoadFailed({ title }: { title: string }) {
+  return (
+    <div className="container page">
+      <PageHeader title={title} lead="Check your connection, then reload the page. The rest of the site is not affected." />
+      <p>
+        <ReloadButton />
+      </p>
+      <p>
+        <Link to="/legislation">Browse legislation</Link> · <Link to="/">Go to the homepage</Link>
+      </p>
     </div>
   );
 }
@@ -50,10 +81,18 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
 export function NotFound({ what = 'page' }: { what?: string }) {
   return (
     <div className="container page">
-      <PageHeader title={`We couldn't find this ${what}`} lead="It may not be in our dataset yet, or the link may be wrong." />
-      <p>
-        <Link to="/legislation">Browse legislation</Link> · <Link to="/">Go to the homepage</Link>
-      </p>
+      <PageHeader title={`We couldn’t find this ${what}`} lead="It may not be in our dataset yet, or the link may be wrong. Try searching for it." />
+      <div className="not-found__search">
+        <SearchBox placeholder={PAGE_PLACEHOLDERS} label="Search the site" />
+      </div>
+      <h2 className="not-found__title">Or browse the site</h2>
+      <ul className="not-found__links">
+        {NAV.map((n) => (
+          <li key={n.to}>
+            <Link to={n.to}>{n.label}</Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -76,23 +115,20 @@ const STAGE_TONE: Record<LifecycleStage, string> = {
   unknown: 'inactive',
 };
 
-const STAGE_ICON: Record<string, string> = {
-  progress: '◔',
-  agreement: '◑',
-  done: '●',
-  inactive: '○',
-  critical: '✕',
-  alert: '!',
-};
+/**
+ * The shape beside a status label, drawn in CSS (components.css): done ●, inactive ○, agreement ◑, progress ◔,
+ * critical ✕, alert ■. Decorative: the label says the same in words.
+ */
+export function StatusIcon({ tone }: { tone: string }) {
+  return <span aria-hidden="true" className={`status-icon status-icon--${tone}`} />;
+}
 
-/** Lifecycle status pill: text label + icon; color is never the only signal. */
+/** Lifecycle status tag: text label + icon; color is never the only signal. */
 export function StatusBadge({ stage, label, blocked }: { stage: LifecycleStage; label: string; blocked?: boolean }) {
   const tone = blocked ? 'alert' : STAGE_TONE[stage];
   return (
     <span className={`badge badge--${tone}`}>
-      <span aria-hidden="true" className="badge__icon">
-        {STAGE_ICON[tone]}
-      </span>
+      <StatusIcon tone={tone} />
       {label}
     </span>
   );

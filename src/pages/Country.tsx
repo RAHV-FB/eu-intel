@@ -6,7 +6,7 @@ import { isMissing } from '../features/guide/missing';
 import { useHashScroll } from '../features/guide/useHashScroll';
 import { COUNTRY_NAMES, formatDate, formatNumber, pct } from '../lib/format';
 import { useParamState } from '../lib/urlState';
-import { ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Tag, Term } from '../components/ui';
+import { ExtLink, LoadFailed, Loading, NotFound, PageHeader, SourceLink, Tag, Term } from '../components/ui';
 import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { useGroups } from '../features/people/labels';
@@ -31,7 +31,7 @@ function FormerMemberState({ code }: { code: string }) {
   const elected = meps.data?.filter((m) => m.country === code && !m.active).length;
   return (
     <div className="container page">
-      <p className="meta" style={{ marginBottom: 'var(--sp-3)' }}>
+      <p className="meta mb-3">
         <Link to="/countries">← All countries</Link>
       </p>
       <PageHeader eyebrow="Former Member State" title={name} lead={`The ${name} was a Member State of the European Union until 31 January 2020.`} />
@@ -79,7 +79,9 @@ export default function Country() {
         ? 'Country not found'
         : c
           ? c.name
-          : COUNTRY_NAMES[upper],
+          : error
+            ? `${COUNTRY_NAMES[upper]} could not be loaded`
+            : COUNTRY_NAMES[upper],
   );
 
   const groupRows = useMemo<GroupRow[]>(
@@ -116,7 +118,7 @@ export default function Country() {
   if (!valid) return <NotFound what="country" />;
   if (loading) return <div className="container page"><Loading label="Loading country…" /></div>;
   if (isMissing(error)) return <NotFound what="country" />;
-  if (error || !c) return <div className="container page"><ErrorState error={error} title="This country could not be loaded" /></div>;
+  if (error || !c) return <LoadFailed title="This country could not be loaded" />;
 
   const cp = c.council_positions;
   const councilTotal = cp.for + cp.against + cp.abstain + cp.not_participating;
@@ -127,7 +129,7 @@ export default function Country() {
 
   return (
     <div className="container page">
-      <p className="meta" style={{ marginBottom: 'var(--sp-3)' }}>
+      <p className="meta mb-3">
         <Link to="/countries">← All countries</Link>
       </p>
       <PageHeader
@@ -163,7 +165,7 @@ export default function Country() {
           MEPs elected in {c.name}. In Parliament they sit in European <Term id="political-group">political groups</Term> and vote
           individually — not as a national delegation, and not on behalf of the government.
         </p>
-        <dl className="facts card">
+        <dl className="facts facts--inline">
           <div>
             <dt>Current MEPs</dt>
             <dd className="big">{formatNumber(c.meps_active)}</dd>
@@ -178,7 +180,7 @@ export default function Country() {
           </div>
         </dl>
 
-        <div className="grid grid--2" style={{ marginTop: 'var(--sp-5)' }}>
+        <div className="grid grid--2 mt-5">
           <div>
             <h3>MEPs by political group</h3>
             {groupRows.length === 0 ? (
@@ -203,9 +205,9 @@ export default function Country() {
                   <tbody>
                     {gs.sorted.map((r) => (
                       <tr key={r.group}>
-                        <th scope="row" style={{ fontWeight: 500 }}>
+                        <th scope="row">
                           <Link to={`/people/groups/${encodeURIComponent(r.group)}`}>{r.code}</Link>
-                          {r.name && <span className="meta" style={{ display: 'block', fontWeight: 400 }}>{r.name}</span>}
+                          {r.name && <span className="meta as-block">{r.name}</span>}
                         </th>
                         <td className="num">{formatNumber(r.meps)}</td>
                         <td className="num">{pct(r.meps, c.meps_active)}</td>
@@ -221,13 +223,15 @@ export default function Country() {
             {c.parties.length === 0 ? (
               <p className="meta">No national parties recorded.</p>
             ) : (
-              <ul className="stack" style={{ listStyle: 'none', padding: 0 }}>
+              <ul className="party-list">
                 {[...c.parties]
                   .filter((p) => p.members_active > 0)
                   .sort((a, b) => b.members_active - a.members_active || a.label.localeCompare(b.label))
                   .map((p) => (
-                    <li key={p.id} style={{ marginTop: 'var(--sp-2)' }}>
-                      <Link to={`/people/parties/${encodeURIComponent(p.id)}`}>{p.label}</Link>{' '}
+                    <li key={p.id}>
+                      <Link className="row-link" to={`/people/parties/${encodeURIComponent(p.id)}`}>
+                        {p.label}
+                      </Link>{' '}
                       <span className="meta">
                         · {formatNumber(p.members_active)} {p.members_active === 1 ? 'MEP' : 'MEPs'}
                       </span>
@@ -239,11 +243,11 @@ export default function Country() {
         </div>
 
         {c.meps.length > 0 && (
-          <div style={{ marginTop: 'var(--sp-5)' }}>
+          <div className="mt-5">
             <button type="button" className="btn" aria-expanded={showMeps} aria-controls="country-meps" onClick={() => patch({ meps: showMeps ? null : 'all' })}>
               {showMeps ? 'Hide the list of MEPs' : `Show all ${formatNumber(c.meps.length)} current MEPs from ${c.name}`}
             </button>
-            <div id="country-meps" hidden={!showMeps} style={{ marginTop: 'var(--sp-3)' }}>
+            <div id="country-meps" hidden={!showMeps} className="mt-3">
               {showMeps && (
               <div className="table-wrap table-card">
                 <table className="table">
@@ -264,7 +268,7 @@ export default function Country() {
                   <tbody>
                     {ms.sorted.map((m) => (
                       <tr key={m.id}>
-                        <th scope="row" style={{ fontWeight: 500 }}>
+                        <th scope="row">
                           <Link to={`/people/meps/${encodeURIComponent(m.id)}`}>{m.name}</Link>
                         </th>
                         <td>{m.group ? groups.byId.get(m.group)?.code ?? m.group : '—'}</td>
@@ -296,7 +300,7 @@ export default function Country() {
         </p>
 
         {councilTotal === 0 ? (
-          <div className="state state--empty" style={{ marginTop: 'var(--sp-4)' }}>
+          <div className="state state--empty mt-5">
             <strong>{councilDataExists ? `No Council votes recorded for ${c.name} in our dataset` : 'Council vote data unavailable'}</strong>
             <div className="meta">
               {councilDataExists
@@ -307,7 +311,7 @@ export default function Country() {
           </div>
         ) : (
           <>
-            <dl className="facts card" style={{ marginTop: 'var(--sp-4)' }}>
+            <dl className="facts facts--inline mt-5">
               {(['for', 'against', 'abstain', 'not_participating'] as const).map((k) => (
                 <div key={k}>
                   <dt>{COUNCIL_POSITION_LABEL[k]}</dt>
@@ -315,11 +319,11 @@ export default function Country() {
                 </div>
               ))}
             </dl>
-            <p className="note" style={{ marginTop: 'var(--sp-2)' }}>
+            <p className="note mt-3">
               Counts of Council votes in our dataset ({formatNumber(councilTotal)} in total), by {c.name}’s recorded position.
             </p>
             {c.council_votes.length > 0 && (
-              <div className="table-wrap table-card" style={{ marginTop: 'var(--sp-4)' }}>
+              <div className="table-wrap table-card mt-5">
                 {/* Explicit roles: on phones the rows are laid out as cards (table--stack), not as table cells. */}
                 <table className="table table--stack" role="table">
                   <caption className="visually-hidden">Council votes and {c.name}’s position, newest first</caption>
@@ -366,7 +370,7 @@ export default function Country() {
               </div>
             )}
             {councilSource && (
-              <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
+              <p className="note mt-3">
                 Source: <ExtLink href={councilSource.url}>{councilSource.name}</ExtLink>
               </p>
             )}
@@ -415,11 +419,11 @@ export default function Country() {
 
         <h3>Infringement cases</h3>
         <InfringementNote />
-        <div style={{ marginTop: 'var(--sp-4)' }}>
+        <div className="mt-3">
           <InfringementTable rows={c.infringements} directives={c.transposition} />
         </div>
         {implSource && (
-          <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
+          <p className="note mt-3">
             Sources: <ExtLink href={implSource.url}>{implSource.name}</ExtLink>
             {implSource.fetched_at && <> · retrieved {formatDate(implSource.fetched_at.slice(0, 10))}</>}
           </p>

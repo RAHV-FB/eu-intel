@@ -10,13 +10,6 @@ export const OUTCOME_LABEL: Record<VoteOutcome, string> = {
 /** Shown next to an outcome we calculated because neither Parliament's open data nor the minutes give it. */
 export const DERIVED_OUTCOME = 'Outcome calculated from the recorded counts';
 
-export const OUTCOME_ICON: Record<VoteOutcome, string> = {
-  adopted: '●',
-  rejected: '✕',
-  lapsed: '○',
-  unknown: '○',
-};
-
 export const KIND_LABEL: Record<VoteKind, string> = {
   final: 'Final vote',
   mandate: 'Negotiating mandate',

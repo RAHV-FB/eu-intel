@@ -51,11 +51,14 @@ export function SearchBox({
   autoFocus,
   placeholder = PLACEHOLDERS,
   initial = '',
+  label,
 }: {
   compact?: boolean;
   autoFocus?: boolean;
   placeholder?: readonly string[];
   initial?: string;
+  /** names the search landmark when the page has a second one (the header's) */
+  label?: string;
 }) {
   const [q, setQ] = useState(initial);
   const [engine, setEngine] = useState<SearchEngine | null>(null);
@@ -137,7 +140,7 @@ export function SearchBox({
   }, [active, hits, listId, showList]);
 
   return (
-    <form role="search" className={`searchbox${compact ? ' searchbox--compact' : ''}`} onSubmit={onSubmit}>
+    <form role="search" aria-label={label} className={`searchbox${compact ? ' searchbox--compact' : ''}`} onSubmit={onSubmit}>
       <label className="visually-hidden" htmlFor={`${listId}-input`}>
         Search legislation, people, parties and countries
       </label>

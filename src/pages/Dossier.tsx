@@ -4,7 +4,7 @@ import type { DossierDetail, DossierSummary, Meta, Topic } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDate } from '../lib/format';
 import { changeSince, getWatchlist, markSeen, type ChangeInfo } from '../lib/watchlist';
-import { ErrorState, ExtLink, Loading, NotFound, PageHeader, Term } from '../components/ui';
+import { ExtLink, LoadFailed, Loading, NotFound, PageHeader, Term } from '../components/ui';
 import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, dossierPath, isMissing, isSameTitle, useDocumentTitle } from '../features/legislation/labels';
 import { todayISO } from '../features/legislation/explorer';
 import { DossierSummaryPanel } from '../features/legislation/dossier/Summary';
@@ -64,12 +64,7 @@ function DossierPage({ id }: { id: string }) {
   useHashScroll(!loading && !!d);
 
   if (notFound) return <NotFound what="legislative file" />;
-  if (error)
-    return (
-      <div className="container page">
-        <ErrorState error={error} title="This legislative file could not be loaded" />
-      </div>
-    );
+  if (error) return <LoadFailed title="This legislative file could not be loaded" />;
   if (loading || !d)
     return (
       <div className="container page">
@@ -104,7 +99,7 @@ function DossierPage({ id }: { id: string }) {
               <Link to={`/legislation?topic=${encodeURIComponent(d.topics[0])}`}>{topicLabel(d.topics[0])}</Link>
             </li>
           )}
-          <li aria-current="page" className="mono">
+          <li aria-current="page" className="ref">
             {d.ref}
           </li>
         </ol>
@@ -142,7 +137,7 @@ function DossierPage({ id }: { id: string }) {
                 <dt>
                   <Term id="procedure-reference">Procedure</Term>
                 </dt>
-                <dd className="mono">{d.ref}</dd>
+                <dd className="ref">{d.ref}</dd>
               </div>
               <div>
                 <dt>Type</dt>

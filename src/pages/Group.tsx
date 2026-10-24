@@ -6,7 +6,7 @@ import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber, pct } from '../lib/format';
 import { shownParam, useParamState } from '../lib/urlState';
 import { ballotScope } from '../lib/scope';
-import { EmptyState, ErrorState, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
+import { EmptyState, ErrorState, LoadFailed, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { termLabel } from '../features/people/labels';
 import { MiniBar, Pos } from '../features/votes/Breakdowns';
@@ -32,7 +32,9 @@ export default function Group() {
   // votes shown: kept in the address, so that Back from a vote returns to the same list
   const [params, patch] = useParamState();
   const shown = shownParam(params, 'show', VOTES_PAGE);
-  useDocumentTitle(g ? `${g.code} – ${g.name}` : isMissing(error) ? 'Political group not found' : 'Political group');
+  useDocumentTitle(
+    g ? `${g.code} – ${g.name}` : isMissing(error) ? 'Political group not found' : error ? 'Political group could not be loaded' : 'Political group',
+  );
 
   const countryRows = useMemo<CountryRow[]>(
     () => Object.entries(g?.countries ?? {}).map(([country, members]) => ({ country, members })),
@@ -77,7 +79,7 @@ export default function Group() {
 
   if (loading) return <div className="container page"><Loading label="Loading group…" /></div>;
   if (isMissing(error)) return <NotFound what="political group" />;
-  if (error || !g) return <div className="container page"><ErrorState error={error} title="This group could not be loaded" /></div>;
+  if (error || !g) return <LoadFailed title="This group could not be loaded" />;
 
   const isNi = g.id === 'ni';
   const totalMembers = countryRows.reduce((n, r) => n + r.members, 0) || g.members;
@@ -85,7 +87,7 @@ export default function Group() {
 
   return (
     <div className="container page">
-      <p className="meta" style={{ marginBottom: 'var(--sp-3)' }}>
+      <p className="meta mb-3">
         <Link to="/people?view=groups">← Political groups</Link>
       </p>
       <PageHeader
@@ -108,7 +110,7 @@ export default function Group() {
         }
       />
 
-      <dl className="facts card">
+      <dl className="facts facts--inline">
         <div>
           <dt>Current members</dt>
           <dd className="big">{formatNumber(g.members)}</dd>
@@ -122,7 +124,7 @@ export default function Group() {
           <dd className="big">{formatNumber(g.parties.length)}</dd>
         </div>
       </dl>
-      <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
+      <p className="note mt-3">
         {isNi
           ? 'Non-attached members are MEPs who have not joined any political group. They are listed together here for convenience; they do not form a group and do not act together.'
           : 'A political group brings together MEPs from national parties in several countries.'}{' '}
@@ -131,7 +133,9 @@ export default function Group() {
 
       <div className="grid grid--2 section">
         <section aria-labelledby="bc-h">
-          <h2 id="bc-h">Current members by country</h2>
+          <h2 id="bc-h" className="section-title">
+            Current members by country
+          </h2>
           {countryRows.length === 0 ? (
             <p className="meta">No current members recorded.</p>
           ) : (
@@ -157,16 +161,13 @@ export default function Group() {
                 <tbody>
                   {c.sorted.map((r) => (
                     <tr key={r.country}>
-                      <th scope="row" style={{ fontWeight: 500 }}>
+                      <th scope="row">
                         <Link to={`/countries/${r.country}`}>{countryName(r.country)}</Link>
                       </th>
                       <td className="num">{formatNumber(r.members)}</td>
                       <td className="num">{pct(r.members, totalMembers)}</td>
-                      <td style={{ width: '35%' }}>
-                        <span
-                          aria-hidden="true"
-                          style={{ display: 'block', height: 8, borderRadius: 2, background: 'var(--blue-muted)', width: `${(r.members / maxCountry) * 100}%`, minWidth: 2, marginTop: '0.45em' }}
-                        />
+                      <td className="share-cell">
+                        <span aria-hidden="true" className="share-bar" style={{ width: `${(r.members / maxCountry) * 100}%` }} />
                       </td>
                     </tr>
                   ))}
@@ -177,7 +178,9 @@ export default function Group() {
         </section>
 
         <section aria-labelledby="np-h">
-          <h2 id="np-h">National parties</h2>
+          <h2 id="np-h" className="section-title">
+            National parties
+          </h2>
           {g.parties.length === 0 ? (
             <p className="meta">No national parties recorded.</p>
           ) : (
@@ -200,12 +203,10 @@ export default function Group() {
                 <tbody>
                   {p.sorted.map((r) => (
                     <tr key={r.id}>
-                      <th scope="row" className="wrap-anywhere" style={{ fontWeight: 500 }}>
+                      <th scope="row" className="wrap-anywhere">
                         <Link to={`/people/parties/${encodeURIComponent(r.id)}`}>{r.label}</Link>
                         {/* phones: the country column is hidden and shown here, so the MEP count stays on screen */}
-                        <span className="only-narrow meta" style={{ fontWeight: 400 }}>
-                          {countryName(r.country)}
-                        </span>
+                        <span className="only-narrow meta">{countryName(r.country)}</span>
                       </th>
                       <td className="hide-narrow">{countryName(r.country)}</td>
                       <td className="num">{formatNumber(r.members)}</td>
@@ -227,17 +228,16 @@ export default function Group() {
         ) : (
           <>
             {meps.error && (
-              <div style={{ marginBottom: 'var(--sp-3)' }}>
-                <ErrorState
-                  error={meps.error}
-                  title="The members’ names could not be loaded, so they are listed by their Parliament identifier. Reloading this page may help."
-                />
+              <div className="mb-3">
+                <ErrorState error={meps.error} title="The members’ names could not be loaded, so they are listed by their Parliament identifier." />
               </div>
             )}
             <ul className="member-grid">
               {members.map((m) => (
                 <li key={m.id}>
-                  <Link to={`/people/meps/${encodeURIComponent(m.id)}`}>{m.name}</Link>
+                  <Link className="row-link" to={`/people/meps/${encodeURIComponent(m.id)}`}>
+                    {m.name}
+                  </Link>
                   {m.country && <span className="meta">{countryName(m.country)}</span>}
                 </li>
               ))}
@@ -266,11 +266,8 @@ export default function Group() {
         ) : (
           <>
             {votesIndex.error && (
-              <div style={{ marginBottom: 'var(--sp-3)' }}>
-                <ErrorState
-                  error={votesIndex.error}
-                  title="The titles and dates of these votes could not be loaded. Each vote’s own page has them; reloading this page may help."
-                />
+              <div className="mb-3">
+                <ErrorState error={votesIndex.error} title="The titles and dates of these votes could not be loaded. Each vote’s own page has them." />
               </div>
             )}
             <div className="table-wrap table-card">

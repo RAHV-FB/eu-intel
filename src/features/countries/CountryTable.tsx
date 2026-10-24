@@ -148,7 +148,7 @@ export function CountryTable({
         <tbody>
           {sorted.map((r) => (
             <tr key={r.code}>
-              <th scope="row" style={{ fontWeight: 500 }}>
+              <th scope="row">
                 <Link to={`/countries/${r.code}`}>{r.name}</Link>
               </th>
               <td className="num grp-start">{formatNumber(r.meps_active)}</td>
