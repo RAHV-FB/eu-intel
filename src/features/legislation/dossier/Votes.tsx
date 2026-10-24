@@ -6,7 +6,7 @@ import { formatDate } from '../../../lib/format';
 import { CouncilVoteCard } from '../../council/CouncilVoteCard';
 import { MarginText, OutcomeBadge } from '../../votes/components';
 import { VoteTitle } from '../../votes/VoteTitle';
-import { SplitLinks } from './Split';
+import { SplitNote } from './Split';
 
 const PRIMARY: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'other'];
 
@@ -135,9 +135,7 @@ export function ParliamentVotes({
         (see the next section).
       </p>
       {votes.length === 0 && split.length > 0 ? (
-        <p className="dz-none">
-          This proposal was split into separate files; Parliament’s votes are shown on them: <SplitLinks parts={split} />.
-        </p>
+        <SplitNote>Parliament’s votes are shown on each separate file</SplitNote>
       ) : votes.length === 0 && approval ? (
         <ApprovalWithoutVote a={approval} />
       ) : votes.length === 0 ? (
@@ -237,9 +235,7 @@ export function CouncilVotes({
           ))}
         </div>
       ) : split.length > 0 ? (
-        <p className="dz-none">
-          This proposal was split into separate files; the Council’s votes are shown on them: <SplitLinks parts={split} />.
-        </p>
+        <SplitNote>the Council’s votes are shown on each separate file</SplitNote>
       ) : unavailable ? (
         <p className="dz-none">
           Council voting results are not available in this release, so we cannot show how Member States voted on this file.

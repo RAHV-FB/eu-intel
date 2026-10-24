@@ -4519,7 +4519,7 @@ class Builder:
 
     # ---------------------------------------------------------------- home
     def latest_event(self, pid: str) -> dict | None:
-        """The latest recorded step, as the dossier page shows it ("Latest verified development")."""
+        """The latest recorded step, as the dossier page shows it ("Latest recorded step")."""
         done = [e for e in self.dossier_detail[pid]["timeline"] if e["state"] == "done" and e["date"] <= self.today
                 and not e.get("after_end_of_validity")]  # fmt: skip
         return done[-1] if done else None
@@ -4533,8 +4533,10 @@ class Builder:
             return None
         names = [celex_act_label(c) or c for c in cs]
         listed = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
-        return (f"EUR-Lex also lists {listed} as amending this act; {'its' if len(cs) == 1 else 'their'} dates are not "
-                "in our data, so the step above may not be the latest.")
+        one = len(cs) == 1
+        return (f"EUR-Lex also lists {listed} as amending this act. {'That act is' if one else 'Those acts are'} not in "
+                f"our data, so {'its' if one else 'their'} publication is not shown and the step above may not be the "
+                "latest.")
 
     def home_rejection_note(self, v: dict) -> str:
         """What a rejection on the home "Rejected" list meant, in the words of the file's timeline where the vote

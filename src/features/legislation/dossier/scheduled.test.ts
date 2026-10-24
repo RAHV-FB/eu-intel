@@ -1,5 +1,5 @@
 /**
- * Steps the build scheduled, on the visitor's date: "Latest verified development" and the next date fixed in law
+ * Steps the build scheduled, on the visitor's date: "Latest recorded step" and the next date fixed in law
  * (Summary.tsx) read them the way the timeline shows them (format.ts eventOn).
  */
 import { existsSync, readFileSync } from 'node:fs';
@@ -20,7 +20,7 @@ describe.skipIf(!existsSync(file))('a scheduled step once its date has come', ()
     expect(tl.at(-1)).toMatchObject({ kind: 'transposition_deadline', state: 'scheduled', date: '2026-11-23' });
     expect(nextScheduled(tl, '2026-11-23')?.title).toBe('Deadline for Member States to transpose the directive');
     expect(latestDone(tl, '2026-11-23')?.title).toBe('Entered into force');
-    // the timeline showed it done from 24 November, but "Latest verified development" kept the entry into force
+    // the timeline showed it done from 24 November, but "Latest recorded step" kept the entry into force
     expect(latestDone(tl, '2026-11-24')).toMatchObject({
       kind: 'transposition_deadline',
       state: 'done',

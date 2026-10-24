@@ -1,6 +1,6 @@
 /**
  * Dossier pages on the real build (public/data): split procedures' parents, Parliament's R/M reports and the
- * "Latest verified development". Skipped when the data has not been built.
+ * "Latest recorded step". Skipped when the data has not been built.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -18,7 +18,7 @@ const read = <T>(name: string): T => JSON.parse(readFileSync(new URL(name, DATA)
 const ev = (id: string, date: string, key: boolean): TimelineEvent =>
   ({ id, date, key, state: 'done', title: id, kind: 'other', institution: 'EP' }) as unknown as TimelineEvent;
 
-describe('latest verified development', () => {
+describe('the latest recorded step', () => {
   it('takes the key step of the latest day, whatever the order of that day’s steps', () => {
     const tl = [ev('vote', '2026-09-15', false), ev('referral', '2026-09-15', true), ev('tabled', '2026-09-15', false)];
     expect(latestDone(tl, '2026-10-23')?.id).toBe('referral');

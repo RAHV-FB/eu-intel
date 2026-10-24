@@ -63,6 +63,45 @@
   font-weight: var(--fw-medium);
 }
 
+/* the status, right under the title: "In force since 1 August 2024" */
+.dz-statusline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  margin: 0 0 var(--sp-3);
+}
+
+.dz-statusline .badge {
+  white-space: normal;
+}
+
+.dz-statusline__since {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "On this page" below 64rem: the sections as a row of chips under the head (the sidebar's list is not shown) */
+.dz-jump {
+  margin: 0 0 var(--sp-5);
+}
+
+.dz-jump ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 64rem) {
+  .dz-jump {
+    display: none;
+  }
+}
+
 .dz-official {
   margin: 0;
   color: var(--text-2);
@@ -174,6 +213,53 @@
   font-size: var(--fs-sm);
 }
 
+/* a split proposal's separate files: reference, title (two lines at most) and status */
+.dz-parts {
+  list-style: none;
+  margin: var(--sp-1) 0 0;
+  padding: 0;
+}
+
+.dz-parts li {
+  display: grid;
+  gap: 2px;
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--border);
+}
+
+.dz-parts li:last-child {
+  padding-bottom: 0;
+}
+
+.dz-parts a {
+  display: grid;
+  gap: 2px;
+  text-decoration: none;
+}
+
+.dz-parts__ref {
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.dz-parts__title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.dz-parts__status {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.dz-what__source {
+  margin-top: var(--sp-2) !important;
+}
+
 .dz-what__official {
   margin-top: var(--sp-1) !important;
   font-family: var(--font-serif);
@@ -211,13 +297,16 @@
   border-top: 1px solid var(--border);
 }
 
+/* one fact per row, its label beside it from 48rem: the text runs at a readable length (about 65 characters) */
 @media (min-width: 48rem) {
-  .dz-facts {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .dz-fact {
+    display: grid;
+    grid-template-columns: 10rem minmax(0, 1fr);
+    column-gap: var(--sp-5);
+    align-items: baseline;
   }
-  .dz-fact + .dz-fact {
-    border-top: 0;
-    border-left: 1px solid var(--border);
+  .dz-fact dd {
+    max-width: 40rem;
   }
 }
 
@@ -263,32 +352,51 @@
   border-top: 1px solid var(--border);
 }
 
-.dz-dates {
-  margin: var(--sp-2) 0 0;
-  display: grid;
-  gap: var(--sp-3) var(--sp-6);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
-}
-
-.dz-dates dt {
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-}
-
-.dz-dates dd {
-  margin: 2px 0 0;
-}
-
-.dz-dates ul {
+/* "When it applies": one schedule in time order, the date beside what applies from it */
+.dz-sched {
   list-style: none;
-  margin: 0;
+  margin: var(--sp-2) 0 0;
   padding: 0;
+  max-width: 50rem;
+}
+
+.dz-sched li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px var(--sp-5);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--border);
+}
+
+.dz-sched li:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+@media (min-width: 40rem) {
+  .dz-sched li {
+    grid-template-columns: 10rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+}
+
+.dz-sched__date {
   font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
 
+.dz-sched__none {
+  color: var(--text-2);
+  font-weight: var(--fw-medium);
+}
+
+.dz-sched__what {
+  min-width: 0;
+  line-height: var(--lh-snug);
+}
+
 .dz-dates__note {
   margin: var(--sp-3) 0 0;
+  max-width: 46rem;
 }
 
 .dz-upcoming {
@@ -980,9 +1088,11 @@
 
 .dz-dates__prov {
   display: block;
+  margin-top: 2px;
   font-size: var(--fs-sm, 0.875rem);
+  font-weight: var(--fw-regular);
   line-height: 1.35;
-  margin-bottom: var(--sp-2);
+  color: var(--text-2);
 }
 
 .tp-case {

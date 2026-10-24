@@ -41,7 +41,10 @@ export function FollowButton({ dossier, showHint = true }: { dossier: Snap; show
               You follow this file; it is saved in this browser only. <Link to="/following">See everything you follow</Link>.
             </>
           ) : (
-            <>Saved only in this browser. No account, nothing sent anywhere.</>
+            <>
+              Saved only in this browser: no account, no alerts, nothing sent anywhere. Check the{' '}
+              <Link to="/following">Following page</Link> for changes.
+            </>
           )}
         </p>
       )}

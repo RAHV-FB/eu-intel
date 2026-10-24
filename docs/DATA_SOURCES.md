@@ -481,7 +481,7 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   the entry-into-force event. A curated date's timeline step cites the text it was checked against as its source
   ("Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)"), not EUR-Lex's record of the act, and no
   step dated in the act (entry into force, application, transposition dates) is credited to an institution in
-  "Latest verified development". Dates EUR-Lex gives as not recorded and a later decision set cite that decision
+  "Latest recorded step". Dates EUR-Lex gives as not recorded and a later decision set cite that decision
   (Clinical Trials Regulation: Commission Decision (EU) 2021/1240, published 31 July 2021, the notice of its Art.
   82(3), so it applies from 31 January 2022; EPPO: Commission Implementing Decision (EU) 2021/856, tasks from 1 June
   2021); fifteen regulations for a withdrawal of the United Kingdom without a withdrawal agreement have a note

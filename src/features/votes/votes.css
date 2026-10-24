@@ -301,3 +301,41 @@
     max-width: calc(100vw - 4rem);
   }
 }
+
+/* ---------- vote page: "On this page" ---------- */
+/* sections reached from it (or a shared link such as /votes/166051#meps) stop below the sticky header */
+.vote-page [id] {
+  scroll-margin-top: calc(var(--header-h) + var(--sp-4));
+}
+@media (min-width: 64rem) {
+  .vote-page [id] {
+    scroll-margin-top: calc(var(--header-h) + 2.75rem + var(--sp-4));
+  }
+}
+.vote-jump {
+  margin: calc(-1 * var(--sp-3)) 0 var(--sp-5);
+}
+.vote-jump ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.vote-jump a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--eu-blue);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+.vote-jump a:hover {
+  background: var(--blue-pale);
+}
