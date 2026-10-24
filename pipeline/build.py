@@ -3496,12 +3496,17 @@ class Builder:
                 if kind in ("entry_into_force", "application", "transposition_deadline", "transposition_application"):
                     if cite := act_date_source(cur, d):  # corrected date: cite the text it was checked against
                         doc |= {"label": _squash(cite.get("label")), "url": cite.get("url")}
+                        own = cite is (cur.get("sources") or [None])[0]  # the act's own text
+                        if not own:  # an amending act or a corrigendum: its CELEX where the entry gives one, else
+                            # its label; never the act's CELEX and date (Regulation (EU) 2026/1744 for the AI Act)
+                            doc |= {"id": cite.get("celex") or doc["label"], "date": None}
                         # the date is that text's, not EUR-Lex's record of the act (Regulation (EU) 2022/2065, Art.
                         # 93(2): 17 February 2024, where EUR-Lex records 17 February 2022)
                         checked = f" (checked {_long_date(cur['reviewed'])})" if cur.get("reviewed") else ""
                         source = {"institution": "EUR-Lex", "url": cite.get("url"),
                                   "label": f"{_squash(cite.get('label'))}{checked}",
-                                  "identifier": cite.get("celex") or a.celex, "retrieved_at": None, "published": None}  # fmt: skip
+                                  "identifier": cite.get("celex") or (a.celex if own else None), "retrieved_at": None,
+                                  "published": None}  # fmt: skip
                     elif a.amended_by:  # Cellar's current record, which may reflect later amendments
                         doc["label"] = f"EUR-Lex record, CELEX {a.celex}"
                 detail, chk = label, a.transposition_checked

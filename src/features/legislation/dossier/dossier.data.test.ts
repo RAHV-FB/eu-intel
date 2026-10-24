@@ -242,6 +242,23 @@ describe.skipIf(!built)('application dates, act names and sources on the built d
     expect(dsa.source?.label).toBe('Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)');
   });
 
+  it('gives a checked date’s text its own identifier, not the CELEX of the act it dates (AI Act, EUDR, AMMR)', () => {
+    // the AI Act's 27 July 2026 read "Regulation (EU) 2026/1744, Article 1, point (40) ↗ 32024R1689", the AI Act's CELEX
+    const doc = (id: string, date: string) => byId(id).timeline.find((e) => e.kind === 'application' && e.date === date)!.docs[0];
+    expect([doc('2021-0106', '2026-07-27').id, doc('2021-0106', '2026-07-27').date]).toEqual(['32026R1744', null]);
+    expect(doc('2021-0366', '2027-12-30').id).toBe('32026R2102');
+    const ammr = doc('2020-0279', '2026-06-12');
+    expect(ammr.label).toMatch(/^Corrigendum to Regulation \(EU\) 2024\/1351/);
+    expect(ammr.id).toBe(ammr.label); // the entry gives no CELEX for the corrigendum: none is shown
+    for (const d of all)
+      for (const e of d.timeline)
+        if (e.source?.label?.includes('(checked '))
+          for (const x of e.docs) {
+            const m = /^3(\d{4})[A-Z](\d{4})$/.exec(x.id);
+            if (m) expect([`${m[1]}/${Number(m[2])}`, `${Number(m[2])}/${m[1]}`].some((num) => x.label?.includes(num)), `${d.id} ${e.id}`).toBe(true);
+          }
+  });
+
   it('names an act by its number in its steps, never by a type word and its CELEX id', () => {
     for (const d of all) for (const e of d.timeline) expect(e.detail ?? '', `${d.id} ${e.id}`).not.toMatch(/^(?:Regulation|Directive|Decision|Act) 3\d{4}[A-Z]\d{4}/);
     expect(byId('2016-0002').timeline.find((e) => e.kind === 'entry_into_force')?.detail).toBe('Directive (EU) 2019/884');

@@ -518,7 +518,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   dates set by Regulation (EU) 2025/2650 and Delegated Regulation (EU) 2026/2102); the status sentence says
   that the act's text, not EUR-Lex, sets the later dates. A checked date on the entry-into-force day is named in
   the entry-into-force event. A curated date's timeline step cites the text it was checked against as its source
-  ("Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)"), not EUR-Lex's record of the act, and no
+  ("Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)"), not EUR-Lex's record of the act. Where that
+  text is another one than the act's own, the step's document is identified by its CELEX id where the entry gives
+  one (32026R1744 for the AI Act's dates set by Regulation (EU) 2026/1744), else by its label alone (the corrigenda,
+  Commission Decision (EU) 2021/1240), never by the act's CELEX id and date. No
   step dated in the act (entry into force, application, transposition dates) is credited to an institution in
   "Latest recorded step". Dates EUR-Lex gives as not recorded and a later decision set cite that decision
   (Clinical Trials Regulation: Commission Decision (EU) 2021/1240, published 31 July 2021, the notice of its Art.
