@@ -4,6 +4,8 @@ import type { Ballot, BallotPosition, CountryBreakdown, GroupBreakdown, Position
 import { countryName, formatNumber, pct } from '../../lib/format';
 import { filterKey } from '../../lib/search';
 import { shownParam, useParamState, useParamText } from '../../lib/urlState';
+import { ResultCount } from '../../components/ResultCount';
+import { useFocusRevealed } from '../../components/useFocusRevealed';
 import { SortTh, useSortable } from './sortable';
 import { POSITION_LABEL, cohesionText } from './labels';
 import './votes.css';
@@ -287,7 +289,13 @@ export function BallotList({
   );
 
   const set = (key: string) => (v: string) => patch({ [key]: v, 'bl-show': null });
-  const setShown = (n: number) => patch({ 'bl-show': n > BALLOT_PAGE ? String(n) : null });
+  const visible = sorted.slice(0, shown);
+  // "Show more MEPs" and "Show all" move keyboard focus to the first MEP they show
+  const more = useFocusRevealed<HTMLTableSectionElement>(visible.length);
+  const setShown = (n: number) => {
+    more.reveal();
+    patch({ 'bl-show': n > BALLOT_PAGE ? String(n) : null });
+  };
 
   return (
     <div>
@@ -328,11 +336,11 @@ export function BallotList({
           </select>
         </div>
       </form>
-      <p className="results-bar__count" aria-live="polite" style={{ marginBottom: 'var(--sp-2)' }}>
+      <ResultCount className="results-bar__count" style={{ marginBottom: 'var(--sp-2)' }}>
         {filtered.length === ballots.length
           ? `${formatNumber(ballots.length)} MEPs with a recorded vote`
           : `${formatNumber(filtered.length)} of ${formatNumber(ballots.length)} MEPs with a recorded vote`}
-      </p>
+      </ResultCount>
       {filtered.length > 0 && (
         <div className="table-wrap table-card">
           <table className="table">
@@ -353,8 +361,8 @@ export function BallotList({
                 </SortTh>
               </tr>
             </thead>
-            <tbody>
-              {sorted.slice(0, shown).map((b) => (
+            <tbody ref={more.ref}>
+              {visible.map((b) => (
                 <tr key={b.mep}>
                   <th scope="row">
                     <Link to={`/people/meps/${encodeURIComponent(b.mep)}`}>{names[b.mep] ?? `MEP ${b.mep}`}</Link>

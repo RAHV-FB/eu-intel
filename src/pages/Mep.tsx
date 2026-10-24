@@ -8,6 +8,7 @@ import { shownParam, useParamState } from '../lib/urlState';
 import { ballotScope } from '../lib/scope';
 import { EmptyState, ErrorState, ExtLink, LoadFailed, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { RowTitle, StackLabel } from '../components/StackedTable';
+import { useFocusRevealed } from '../components/useFocusRevealed';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { EP_MEP_URL, periodText, rapporteurRoleLabel, roleLabel, termShort, useGroups } from '../features/people/labels';
 import { Pos } from '../features/votes/Breakdowns';
@@ -55,6 +56,8 @@ export default function Mep() {
   const voteById = useMemo(() => new Map((votesIndex.data ?? []).map((v) => [v.id, v])), [votesIndex.data]);
   // a vote's date and result while the vote list loads, or when it failed to: not "—", which means not recorded
   const unknown = votesIndex.error ? <span className="muted">Not loaded</span> : <span className="muted">…</span>;
+  // "Show more votes" moves keyboard focus to the first vote it shows
+  const more = useFocusRevealed<HTMLTableSectionElement>(Math.min(shown, m?.votes.length ?? 0));
 
   if (loading) return <div className="container page"><Loading label="Loading MEP…" /></div>;
   if (isMissing(error)) return <NotFound what="MEP" />;
@@ -230,7 +233,7 @@ export default function Mep() {
                     <th scope="col" role="columnheader">Result</th>
                   </tr>
                 </thead>
-                <tbody role="rowgroup">
+                <tbody role="rowgroup" ref={more.ref}>
                   {m.votes.slice(0, shown).map((b) => {
                     const v = voteById.get(b.vote_id);
                     return (
@@ -259,7 +262,14 @@ export default function Mep() {
             </div>
             {m.votes.length > shown && (
               <div className="more">
-                <button type="button" className="btn" onClick={() => patch({ show: String(shown + VOTES_PAGE) })}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    more.reveal();
+                    patch({ show: String(shown + VOTES_PAGE) });
+                  }}
+                >
                   Show more votes
                 </button>
                 <span className="meta">

@@ -45,6 +45,8 @@ function useDossiers(ids: string[]): Record<string, Loaded> {
   return map;
 }
 
+const LINK_COPIED = 'Link copied to your clipboard.';
+
 /** The element that receives focus for an item (its title), after an action removed the control that had it. */
 const itemTitle = (id: string) => document.querySelector<HTMLElement>(`[data-follow-title="${CSS.escape(id)}"]`);
 
@@ -142,7 +144,7 @@ function Item({
       </div>
       <div className="following__item-actions">
         {!shared && change?.changed && (
-          <button type="button" className="btn" onClick={() => onSeen(d)}>
+          <button type="button" className="btn" onClick={() => onSeen(d)} aria-label={`Mark as seen: ${d.title}`}>
             Mark as seen
           </button>
         )}
@@ -234,13 +236,19 @@ export default function Following() {
     afterRender(() => itemTitle(d.id), `Marked ${d.title} as seen.`);
   };
 
+  // the result is said in the page's status region; the help text under the link is not a status message
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setAnnouncement(LINK_COPIED);
+      setTimeout(() => {
+        setCopied(false);
+        setAnnouncement((a) => (a === LINK_COPIED ? '' : a));
+      }, 2500);
     } catch {
       (document.getElementById(shareId) as HTMLInputElement | null)?.select();
+      setAnnouncement('The link could not be copied. Copy it from the link field.');
     }
   };
 
@@ -426,9 +434,9 @@ export default function Following() {
                 {copied ? 'Copied' : 'Copy link'}
               </button>
             </div>
-            <p className="meta" role="status">
+            <p className="meta">
               {copied
-                ? 'Link copied to your clipboard.'
+                ? LINK_COPIED
                 : 'Anyone with this link sees the same files with their current status. The link contains only the file identifiers.'}
             </p>
           </div>
