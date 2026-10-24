@@ -8,7 +8,9 @@ the schema in pipeline/models/entities.py, duplicate ids, malformed dates; and, 
 claims that contradict the rules or the dossier's own dates (a veto outside unanimity, a withdrawn file
 with an adopted act or withdrawn before its proposal, an adoption after publication, a vote margin next to an
 outcome that is not established or on the other side of the threshold from it); and a count of sitting MEPs that
-a complete list of current Members cannot give (see the people checks).
+a complete list of current Members cannot give (see the people checks); a snapshot file that is missing or holds
+fewer records than the manifest records for it, or than a complete snapshot can; and, with --built, a built output
+that is incomplete (a missing or unreadable file, an empty list, a count of zero or below the snapshot's).
 Everything else is reported as a warning: dangling references, official totals that differ from the
 recorded individual votes (official discrepancies are facts, not bugs), implausible dates,
 transposition data on non-directives, "veto" wording outside unanimity, odd act/procedure pairs.
@@ -19,6 +21,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from collections.abc import Callable
 from datetime import date, timedelta
@@ -47,6 +50,35 @@ CITED_NUMBER_RE = re.compile(
 CELEX_CITED_TYPE = {"R": "Regulation", "L": "Directive", "D": "Decision", "F": "Framework Decision"}
 MAX_SITTING = 751  # Members of the European Parliament (Article 14(2) TEU)
 MAX_NOT_SITTING = 0.05  # share of MEPs with an open political-group membership allowed not to be marked sitting
+MAX_SHRINK = 0.05  # share of the records the manifest records for a file that the file may lack (as the fetch guards)
+# Fewest records in each file of the committed snapshot, about half of what it holds today: a source module that wrote
+# an emptied or truncated file and the manifest with it would pass the comparison with the manifest. Applied to the
+# committed snapshot only (check's min_records); a file without an entry here has no floor.
+MIN_RECORDS: dict[tuple[str, str], int] = {
+    ("ep_people", "meps"): 600, ("ep_people", "orgs"): 300,
+    ("ep_procedures", "procedures"): 800,
+    ("ep_votes", "votes"): 15000, ("ep_votes", "ballots"): 1500,
+    ("eurlex", "acts"): 600,
+    ("council", "votes"): 350,
+    ("implementation", "measures"): 30000, ("implementation", "infringements"): 3500,
+    ("implementation", "coverage"): 250,
+    ("train", "files"): 700,
+    ("optouts", "directives"): 150,
+}  # fmt: skip
+# Built lists that are never empty (activity.json can be, before the first recorded change).
+BUILT_LISTS = [
+    "dossiers/index.json", "votes/index.json", "council/index.json", "people/meps.json", "people/groups.json",
+    "people/parties.json", "countries/index.json", "topics.json", "search.json",
+]  # fmt: skip
+# meta.json counts and the snapshot file each is counted from: a count of zero is an error when that file has records;
+# the first four are the file's own size, so they may not fall below it (the others are derived and can differ).
+BUILT_COUNTS = {
+    "legal_acts": ("eurlex", "acts"), "meps": ("ep_people", "meps"),
+    "national_measures": ("implementation", "measures"), "infringements": ("implementation", "infringements"),
+    "dossiers": ("ep_procedures", "procedures"), "ep_votes": ("ep_votes", "votes"),
+    "council_votes": ("council", "votes"),
+}  # fmt: skip
+SAME_SIZE_COUNTS = ("legal_acts", "meps", "national_measures", "infringements")
 PUBLIC_FILES = [
     "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "council/index.json",
     "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
@@ -168,6 +200,34 @@ def _load(snapshot: Path, source: str, name: str, model_name: str, rep: Report) 
     return out
 
 
+def check_size(
+    snapshot: Path,
+    source: str,
+    name: str,
+    n: int | None,
+    recorded: dict[str, dict[str, int]],
+    floors: dict[tuple[str, str], int],
+    rep: Report,
+) -> None:
+    """A file that is missing, or holds more than MAX_SHRINK fewer records than its manifest entry records for it, or
+    fewer than the floor for a complete snapshot, is an error of its source (an emptied or truncated file would
+    otherwise be built and deployed as an empty section). `n` is None when `_load` read nothing."""
+    count = recorded.get(source, {}).get(name) or 0
+    floor = floors.get((source, name)) or 0
+    if n is None:
+        if (count or floor) and not (snapshot / source / f"{name}.json").exists():
+            what = f"_manifest.json records {count} records" if count else f"a complete snapshot has at least {floor}"
+            rep.error(f"{source}/{name}.json: file missing, but {what}", source)
+    elif n < (1 - MAX_SHRINK) * count:
+        rep.error(
+            f"{source}/{name}.json: {n} records, but _manifest.json records {count} "
+            f"(more than {MAX_SHRINK:.0%} fewer): an emptied or truncated file",
+            source,
+        )
+    elif n < floor:
+        rep.error(f"{source}/{name}.json: {n} records, fewer than the {floor} a complete snapshot has", source)
+
+
 def _dates(obj: Any, path: str = "") -> list[tuple[str, str]]:
     """All (field path, value) pairs for date-like fields of a model dump."""
     out: list[tuple[str, str]] = []
@@ -188,10 +248,19 @@ def _dates(obj: Any, path: str = "") -> list[tuple[str, str]]:
     return out
 
 
-def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | None = None) -> Report:
+def check(
+    snapshot: Path = SNAPSHOT,
+    public: Path | None = None,
+    today: str | None = None,
+    built: bool = False,
+    min_records: dict[tuple[str, str], int] | None = None,
+) -> Report:
+    """`built`: the built output must be complete (see check_built). `min_records`: the fewest records per
+    (source, file); MIN_RECORDS for the committed snapshot, none for a test fixture."""
     rep = Report()
     today = today or date.today().isoformat()
     data: dict[tuple[str, str], list[Any]] = {}
+    recorded: dict[str, dict[str, int]] = {}  # source -> the record counts its manifest entry gives
     # manifest
     man = snapshot / "_manifest.json"
     if man.exists():
@@ -199,7 +268,7 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
             raw = json.loads(man.read_text(encoding="utf-8"))
             for k, v in raw.items():
                 try:
-                    E.SourceStatus.model_validate(v)
+                    recorded[str(k)] = E.SourceStatus.model_validate(v).records
                 except ValidationError as e:
                     rep.error(f"_manifest.json[{k}]: {e.errors()[0]['msg']}", str(k))
         except (OSError, json.JSONDecodeError, AttributeError) as e:
@@ -209,6 +278,7 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
     # schema + duplicates + date format
     for source, name, model_name, key in FILES:
         recs = _load(snapshot, source, name, model_name, rep)
+        check_size(snapshot, source, name, None if recs is None else len(recs), recorded, min_records or {}, rep)
         if recs is None:
             continue
         data[(source, name)] = recs
@@ -475,12 +545,15 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
 
     # built output (optional): derived claims must respect the rules too
     if public is not None and public.exists():
-        for f in PUBLIC_FILES:
-            if not (public / f).exists():
-                rep.warn("public-missing", f"public/data/{f} missing (run `python -m pipeline build`)")
-        cpath = public / "council" / "index.json"
-        if cpath.exists():
-            for cv in json.loads(cpath.read_text(encoding="utf-8")):
+        docs: dict[str, Any] = {}  # the public files read so far (None: unreadable, reported once)
+        if built:
+            check_built(public, data, rep, docs)
+        else:
+            for f in PUBLIC_FILES:
+                if not (public / f).exists():
+                    rep.warn("public-missing", f"public/data/{f} missing (run `python -m pipeline build`)")
+        if (public / "council" / "index.json").exists():
+            for cv in _public_json(public, "council/index.json", rep, docs) or []:
                 a = cv.get("assessment") or {}
                 if a.get("single_state_veto_possible") and cv.get("voting_rule") != "unanimity":
                     rep.error(
@@ -489,7 +562,9 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
         owners: dict[str, list[str]] = {}
         for f in sorted((public / "dossiers").glob("*.json")):
             if f.name != "index.json":
-                d = json.loads(f.read_text(encoding="utf-8"))
+                d = _public_json(public, f"dossiers/{f.name}", rep)
+                if d is None:
+                    continue
                 for msg in dossier_contradictions(d):
                     rep.error(f"public dossiers/{f.name}: {msg}", "public")
                 # a key report that no step carries has no tabling or vote of its own on the timeline
@@ -507,11 +582,70 @@ def check(snapshot: Path = SNAPSHOT, public: Path | None = None, today: str | No
             if len(ids) > 1:
                 rep.warn("act-on-two-dossiers", f"{c} is shown on {', '.join(ids)}; check which procedure adopted it")
         for f in sorted((public / "votes").glob("*.json")):
-            recs = json.loads(f.read_text(encoding="utf-8"))
+            recs = _public_json(public, f"votes/{f.name}", rep)
+            if recs is None:
+                continue
             for v in recs if isinstance(recs, list) else [recs]:
                 for msg in margin_contradictions(v):
                     rep.error(f"public votes/{f.name}: {msg}", "public")
     return rep
+
+
+def _public_json(public: Path, rel: str, rep: Report, cache: dict[str, Any] | None = None) -> Any:
+    """A built JSON file, or None if it cannot be read (reported as an error, once when a cache is given)."""
+    if cache is not None and rel in cache:
+        return cache[rel]
+    try:
+        doc = json.loads((public / rel).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        rep.error(f"public {rel}: unreadable JSON ({e})", "public")
+        doc = None
+    if cache is not None:
+        cache[rel] = doc
+    return doc
+
+
+def check_built(public: Path, data: dict[tuple[str, str], list[Any]], rep: Report, docs: dict[str, Any]) -> None:
+    """The built output of a complete build (`validate --built`, after `pipeline build`). Nothing in a build from an
+    emptied or partial snapshot contradicts itself, so it is checked for what it must hold: every PUBLIC_FILES entry
+    present and readable, the lists that are never empty not empty, the counts of meta.json not zero when the snapshot
+    has records of that kind (nor below the snapshot's size, for the counts that are its size), and every detail file
+    that the dossier and vote indexes list written. `data`: the snapshot records read by check()."""
+    for f in PUBLIC_FILES:
+        if not (public / f).exists():
+            rep.error(f"public/data/{f} is missing (run `python -m pipeline build`)", "public")
+        elif f.endswith(".xml"):
+            try:
+                ET.parse(public / f)
+            except (OSError, ET.ParseError) as e:
+                rep.error(f"public {f}: unreadable XML ({e})", "public")
+        else:
+            _public_json(public, f, rep, docs)
+    for f in BUILT_LISTS:
+        if docs.get(f) is not None and not (isinstance(docs[f], list) and docs[f]):
+            rep.error(f"public {f}: not a list with records (the build found none; check data/snapshot)", "public")
+    if docs.get("home.json") is not None and not (isinstance(docs["home.json"], dict) and docs["home.json"]):
+        rep.error("public home.json: empty", "public")
+    meta = docs.get("meta.json")
+    if meta is not None:
+        counts = meta.get("counts") if isinstance(meta, dict) else None
+        if not isinstance(counts, dict):
+            rep.error("public meta.json: no counts", "public")
+        else:
+            for key, (source, name) in BUILT_COUNTS.items():
+                have, n = len(data.get((source, name), [])), counts.get(key)
+                if not isinstance(n, int):
+                    rep.error(f"public meta.json: count {key!r} is {n!r}", "public")
+                elif have and n == 0:
+                    rep.error(f"public meta.json: count {key!r} is 0, but {source}/{name}.json has {have} records", "public")
+                elif key in SAME_SIZE_COUNTS and n < (1 - MAX_SHRINK) * have:
+                    rep.error(f"public meta.json: count {key!r} is {n}, but {source}/{name}.json has {have} records", "public")
+    for index, folder in (("dossiers/index.json", "dossiers"), ("votes/index.json", "votes")):
+        entries = docs.get(index)
+        if isinstance(entries, list):
+            missing = [e["id"] for e in entries if isinstance(e, dict) and not (public / folder / f"{e.get('id')}.json").exists()]
+            if missing:
+                rep.error(f"public {index}: {len(missing)} of {len(entries)} listed files not written (e.g. {missing[:3]})", "public")
 
 
 ADOPTION_STEPS = ("council_adoption", "signature", "publication")
@@ -578,6 +712,11 @@ def margin_contradictions(v: dict) -> list[str]:
     return []
 
 
+def _floors(snapshot: Path) -> dict[tuple[str, str], int] | None:
+    """MIN_RECORDS for the committed snapshot; a snapshot somewhere else (a test fixture) has none."""
+    return MIN_RECORDS if snapshot == SNAPSHOT else None
+
+
 def validate(built: bool = False) -> int:
     """The snapshot checks and the built-output checks. The built output is checked only if it exists, so the
     workflows run this again after `python -m pipeline build` with built=True: without public/data that is an error
@@ -585,7 +724,7 @@ def validate(built: bool = False) -> int:
     from pipeline import snapshot as snapshot_module
 
     public = ROOT / "public" / "data"
-    rep = check(snapshot_module.SNAPSHOT, public=public)
+    rep = check(snapshot_module.SNAPSHOT, public=public, built=built, min_records=_floors(snapshot_module.SNAPSHOT))
     if built and not public.exists():
         rep.error(f"no built output in {public}: run `python -m pipeline build` first", "public")
     rep.print(sys.stdout)
@@ -599,7 +738,8 @@ def validate_by_source(snapshot: Path | None = None, out=sys.stdout, today: str 
     so that the refresh can restore just those sources' previous files instead of discarding the run."""
     from pipeline import snapshot as snapshot_module
 
-    rep = check(snapshot or snapshot_module.SNAPSHOT, today=today)
+    snapshot = snapshot or snapshot_module.SNAPSHOT
+    rep = check(snapshot, today=today, min_records=_floors(snapshot))
     rep.print(out)
     for source, errs in sorted(rep.errors_by_source.items()):
         print(f"validate: {source}: {len(errs)} errors, e.g. {errs[0]}", file=out)
