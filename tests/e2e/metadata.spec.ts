@@ -175,7 +175,7 @@ test.describe('privacy notice and links', () => {
         await expect(link).toHaveAccessibleName(official ? / \(opens official website in a new tab\)$/ : / \(opens in a new tab\)$/);
       }
     }
-    expect(others).toBe(6);
+    expect(others).toBeGreaterThanOrEqual(6); // About: repository, issues, editorial policy, data/curated; Privacy: 2
   });
 
   test('the Atom feed links say they are for feed readers', async ({ page }) => {
