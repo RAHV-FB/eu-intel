@@ -191,6 +191,15 @@ class DirectiveOptOut(Model):
     source: SourceRef
 
 
+class RegulationOptIn(Model):
+    """A Member State's participation in a regulation after its adoption (Protocol No 21, Article 4), as a Commission
+    decision confirms it, found by its title in Cellar (pipeline/sources/optouts.py). Regulations' recitals are not
+    read: this says only that the country took part later, not who was bound at adoption."""
+
+    decision: str  # CELEX of the Commission decision, e.g. "32024D2088"
+    celex: str  # the regulation, e.g. "32024R1351"
+    country: str  # "IE"
+    title: str  # the decision's English title in Cellar (whitespace normalized): its number and date
 class TranspositionDate(Model):
     """One `directive_date_transposition` value with Cellar's annotation of what it is."""
 

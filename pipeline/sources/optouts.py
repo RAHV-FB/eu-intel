@@ -18,20 +18,24 @@ Ireland may still take part after adoption (Protocol No 21, Article 4): the Comm
 participation in a decision, e.g. Commission Decision (EU) 2024/2087, Article 1: "The participation of
 Ireland in Directive (EU) 2024/1346 is confirmed." Such decisions are found by their title in Cellar and
 recorded on the directive (`opted_in`); the recitals' "not bound" no longer applies to that country.
-Such a decision is a published act that Cellar keeps, so an opt-in recorded earlier that is missing from a
-later answer means that answer was incomplete (a query Cellar cut short can still answer HTTP 200): the
-recorded opt-in is kept and the run is "partial".
+Decisions confirming a participation in a regulation are recorded too (Commission Decision (EU) 2024/2088,
+Article 1: "The participation of Ireland in Regulation (EU) 2024/1351 is confirmed."), although regulations'
+recitals are not read. Such a decision is a published act that Cellar keeps, so an opt-in recorded earlier
+that is missing from a later answer means that answer was incomplete (a query Cellar cut short can still
+answer HTTP 200): the recorded opt-in is kept and the run is "partial".
 
 Produces data/snapshot/optouts/directives.json: one record per directive of the EUR-Lex snapshot whose
 text has been read, with the countries its recitals declare not bound, the sentences quoted, and later
-opt-ins. The text of an adopted act does not change, so each directive is read once (again when the
+opt-ins; and data/snapshot/optouts/regulations.json: one record per Commission decision confirming a
+participation in a regulation, with the decision's title (its number and date). The text of an adopted act
+does not change, so each directive is read once (again when the
 recital matcher changes, PARSER_VERSION); texts that could not be fetched are retried on the next run. A text
 read before that cannot be fetched again keeps its earlier reading (the run is "partial" until it is re-read).
 Stops starting new downloads after EU_INTEL_FETCH_BUDGET_S.
 
 Requests: GET https://publications.europa.eu/resource/celex/{CELEX} with Accept: application/xhtml+xml
 (else text/html) and Accept-Language: eng (Cellar content negotiation; the English expression); one Cellar
-SPARQL query for decisions titled "confirming the participation of Ireland/Denmark in Directive ...".
+SPARQL query for decisions titled "confirming the participation of Ireland/Denmark in Directive/Regulation ...".
 """
 
 from __future__ import annotations
@@ -43,7 +47,7 @@ import time
 from typing import Any
 
 from pipeline.http import HttpError
-from pipeline.models.entities import DirectiveOptOut, LegalAct, SourceRef, SourceStatus
+from pipeline.models.entities import DirectiveOptOut, LegalAct, RegulationOptIn, SourceRef, SourceStatus
 from pipeline.snapshot import fetch_deadline, now_iso, read_manifest, read_records, upsert_records
 from pipeline.sources.eurlex import ENG, PREFIXES
 
@@ -71,10 +75,13 @@ SCHENGEN_ART4_RE = re.compile(
     re.IGNORECASE,
 )  # the text can have a space before a comma, where a footnote or an element ends ("Schengen acquis , Denmark")
 # "Commission Decision (EU) 2024/2087 of 31 July 2024 confirming the participation of Ireland in Directive (EU)
-# 2024/1346 of the European Parliament ..."; older titles number the directive "2013/33/EU"
+# 2024/1346 of the European Parliament ..."; older titles number the directive "2013/33/EU"; a regulation: "... in
+# Regulation (EU) 2024/1351 ...", before 2015 "Regulation (EU) No 516/2014" (number, then year)
 OPT_IN_RE = re.compile(
-    r"confirming the participation of (Ireland|Denmark) in Directive (?:\((?:EU|EC)\) )?(\d{4})/(\d{1,4})\b"
+    r"confirming the participation of (Ireland|Denmark) in (Directive|Regulation) (?:\((?:EU|EC)\) )?"
+    r"(?:(\d{4})/(\d{1,4})|No (\d{1,4})/(\d{4}))\b"
 )
+ACT_SECTOR = {"Directive": "L", "Regulation": "R"}
 
 
 def plain_text(body: bytes) -> str:
@@ -125,13 +132,21 @@ def opt_ins_query() -> str:
 
 
 def opt_ins(rows: list[dict[str, str]]) -> dict[str, dict[str, str]]:
-    """Directive CELEX -> {country: CELEX of the Commission decision confirming its participation}."""
+    """Directive or regulation CELEX -> {country: CELEX of the Commission decision confirming its participation}."""
     out: dict[str, dict[str, str]] = {}
     for r in sorted(rows, key=lambda r: r.get("celex", "")):
         m = OPT_IN_RE.search(re.sub(r"\s+", " ", r.get("title") or ""))  # titles use no-break spaces
         if m and re.fullmatch(r"3\d{4}D\d{4}", r.get("celex") or ""):
-            out.setdefault(f"3{m[2]}L{int(m[3]):04d}", {})[COUNTRIES[m[1]]] = r["celex"]
+            year, number = (m[3], m[4]) if m[3] else (m[6], m[5])
+            out.setdefault(f"3{year}{ACT_SECTOR[m[2]]}{int(number):04d}", {})[COUNTRIES[m[1]]] = r["celex"]
     return out
+
+
+def regulation_opt_ins(rows: list[dict[str, str]]) -> list[RegulationOptIn]:
+    """The decisions of the answer that confirm a participation in a regulation, each with its title."""
+    titles = {r.get("celex"): " ".join((r.get("title") or "").split()) for r in rows}
+    return [RegulationOptIn(decision=d, celex=celex, country=c, title=titles[d])
+            for celex, by in opt_ins(rows).items() if celex[5] == "R" for c, d in sorted(by.items())]  # fmt: skip
 
 
 def fetch_text(http: Any, celex: str) -> bytes:
@@ -154,10 +169,11 @@ def fetch(http: Any) -> SourceStatus:
     out: list[DirectiveOptOut] = []
     unavailable = 0
     try:
-        later = opt_ins(http.sparql(opt_ins_query(), use_cache=False))
+        rows = http.sparql(opt_ins_query(), use_cache=False)
+        later, regulations = opt_ins(rows), regulation_opt_ins(rows)
     except Exception as e:  # noqa: BLE001 - keep the opt-ins already recorded
         log.warning("optouts: opt-in decisions not fetched: %r", e)
-        later = None
+        later, regulations = None, []
     for celex in todo:
         if deadline is not None and time.monotonic() > deadline:
             break
@@ -189,9 +205,15 @@ def fetch(http: Any) -> SourceStatus:
         out += [r for c, r in done.items() if c not in fresh]
         kept = [f"{r.celex} {c} ({d})" for r in out for c, d in sorted(stored(r.celex).items())
                 if c not in later.get(r.celex, {})]  # fmt: skip
+        # regulations: the decisions recorded earlier stay (upsert), those this answer lacks are reported
+        answered = {r.decision for r in regulations}
+        kept += [f"{r.celex} {r.country} ({r.decision})" for r in read_records(SOURCE_ID, "regulations",
+                 RegulationOptIn) if r.decision not in answered]  # fmt: skip
+        upsert_records(SOURCE_ID, "regulations", RegulationOptIn, regulations, id_of=lambda r: r.decision)
     out = [r.model_copy(update={"opted_in": {**stored(r.celex), **(later or {}).get(r.celex, {})}}) for r in out]
     total = upsert_records(SOURCE_ID, "directives", DirectiveOptOut, out, id_of=lambda r: r.celex)
     merged = read_records(SOURCE_ID, "directives", DirectiveOptOut)
+    n_regulations = len(read_records(SOURCE_ID, "regulations", RegulationOptIn))
     ok = [r for r in merged if r.status == "ok" and r.parser >= PARSER_VERSION]
     pending = len([c for c in directives if c not in {r.celex for r in ok}])
     by_country = {c: sum(1 for r in ok if c in r.not_bound and c not in r.opted_in) for c in ("DK", "IE")}
@@ -204,13 +226,13 @@ def fetch(http: Any) -> SourceStatus:
         fetched_at=now_iso() if read_now or later is not None or prev is None else prev.fetched_at,
         attempted_at=attempted,
         records={"directives_read": len(ok), "pending": pending, "not_bound_DK": by_country["DK"],
-                 "not_bound_IE": by_country["IE"]},  # fmt: skip
+                 "not_bound_IE": by_country["IE"], "regulations": n_regulations},  # fmt: skip
         note=(
             f"{len(ok)} of {len(directives)} directives read ({len(todo)} this run, {unavailable} unavailable); "
             f"recitals declare Denmark not bound by {by_country['DK']} and Ireland by {by_country['IE']}"
             f" (net of {n_opt_in} later opt-ins confirmed by the Commission"
             + ("" if later is not None else ", as last recorded: the query failed this run")
-            + ")"
+            + f"); {n_regulations} later opt-ins to regulations confirmed by the Commission"
             + (f"; this run's answer lacked {len(kept)} opt-ins recorded earlier, kept: {', '.join(kept)}"
                if kept else "")  # fmt: skip
             + (f"; {pending} pending, resumed next run" if pending else "")

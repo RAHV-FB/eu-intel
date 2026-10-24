@@ -349,6 +349,19 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
     const enhanced = !!act && /\bimplementing enhanced cooperation\b/i.test(act.title);
     const cv = [...d.council_votes].sort((a, b) => b.date.localeCompare(a.date)).find((v) => Object.keys(v.positions).length > 0);
     const absent = cv ? Object.keys(cv.positions).filter((c) => cv.positions[c] === 'not_participating').sort() : [];
+    // a Member State can take part after adoption: the recitals then no longer say whom it binds (AMMR, Regulation
+    // (EU) 2024/1351, recital 91: Ireland "is not bound by it"; Commission Decision (EU) 2024/2088, Article 1: "The
+    // participation of Ireland in Regulation (EU) 2024/1351 is confirmed", citing Protocol No 21, Article 4)
+    const optedIn = d.acts.filter((a) => a.act_type === 'regulation').flatMap((a) => a.opted_in ?? []);
+    const later = optedIn.map((o) => (
+      <span key={o.decision}>
+        {' '}
+        {countryName(o.country)} opted in after its adoption: <ExtLink href={o.url}>{o.label}</ExtLink>
+        {o.date && <> of {formatDate(o.date, true)}</>} confirms its participation in the regulation (Protocol No 21,
+        Article 4).
+      </span>
+    ));
+    const noLater = absent.includes('IE') && !optedIn.some((o) => o.country === 'IE');
     body = (
       <>
         <p className="dz-lede">
@@ -363,11 +376,16 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
           .
           {enhanced && ' This one implements enhanced cooperation, so it binds only the Member States taking part in it (Article 20(4) TEU).'}
         </p>
-        {cv && absent.length > 0 && (
+        {cv && absent.length > 0 ? (
           <p className="meta">
             The Council’s vote of {formatDate(cv.date)} records {namesList(absent)} as not taking part. The regulation’s{' '}
-            {act ? <ExtLink href={act.eurlex_url}>text</ExtLink> : 'text'} (its recitals) says which Member States it binds.
+            {act ? <ExtLink href={act.eurlex_url}>text</ExtLink> : 'text'} (its recitals) says which Member States were not
+            bound by it when it was adopted.
+            {later}
+            {noLater && ' Our data record no Commission decision confirming that Ireland has taken part since.'}
           </p>
+        ) : (
+          later.length > 0 && <p className="meta">{later}</p>
         )}
       </>
     );

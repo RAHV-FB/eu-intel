@@ -82,10 +82,23 @@ type ScheduleStep = { date?: ISODate; when?: string; what: React.ReactNode; note
 
 /**
  * The dates an act sets, in one chronological schedule: what EUR-Lex records (entry into force, the dates from which
- * the act or some provisions apply, a directive's transposition dates), each with the provisions it covers. Dates
- * EUR-Lex gives as not recorded follow the dated steps; an entry into force without a date comes first.
+ * the act or some provisions apply, a directive's transposition dates), each with the provisions it covers, and the
+ * end of its validity (`noLonger`: the timeline's end_of_validity steps). Dates EUR-Lex gives as not recorded follow the
+ * dated steps; an entry into force without a date comes first.
  */
-export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; today: ISODate; instrument?: string | null }) {
+export function KeyDates({
+  app,
+  today,
+  instrument,
+  stage,
+  noLonger = [],
+}: {
+  app: ApplicationInfo;
+  today: ISODate;
+  instrument?: string | null;
+  stage?: string;
+  noLonger?: TimelineEvent[];
+}) {
   const steps: ScheduleStep[] = [];
   // the glossary term is offered once, on its first step
   const termed = new Set<string>();
@@ -166,6 +179,8 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
   dated(4, () => 'Transposition deadline for specific provisions', withArticles(further));
   dated(5, () => 'Application date for national measures', withArticles(applies));
   dated(6, () => 'Other date recorded by EUR-Lex', withArticles(other));
+  // "No longer in force" (from the day after the end of validity, or the repeal's date), as the status says
+  for (const e of noLonger) steps.push({ date: e.date, rank: 7, what: e.title });
   if (!steps.length) return <p className="meta">No application dates are recorded for this act in EUR-Lex.</p>;
   // an entry into force without a date first, then the dated steps in time order, then the dates not recorded
   const place = (s: ScheduleStep) => (s.date ? 1 : s.rank === 0 ? 0 : 2);
@@ -203,7 +218,7 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
         provisions each date covers{other.length > 0 && ' and what the other dates are'}.
       </p>
     )}
-    {instrument === 'regulation' && (
+    {instrument === 'regulation' && stage !== 'no_longer_in_force' && (
       <p className="dz-dates__note meta">
         A <Term id="regulation">regulation</Term> applies directly, without national transposition, in the Member States it
         binds.
@@ -436,7 +451,13 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
       {when && d.application && (
         <div className="dz-block dz-when" id={when}>
           <h3 className="dz-label">When it applies</h3>
-          <KeyDates app={d.application} today={today} instrument={d.instrument} />
+          <KeyDates
+            app={d.application}
+            today={today}
+            instrument={d.instrument}
+            stage={d.stage}
+            noLonger={d.timeline.filter((e) => e.kind === 'end_of_validity')}
+          />
           {amendedBy.length > 0 && !d.application.dates_note && (
             <p className="meta dz-amended-note">
               This act has since been amended (see {amendedLinks}). The dates above are those EUR-Lex currently records

@@ -78,12 +78,13 @@
  "optouts": {
   "attempted_at": "2026-10-23T05:00:01Z",
   "fetched_at": "2026-10-23T05:00:21Z",
-  "note": "303 of 303 directives read (0 this run, 0 unavailable); recitals declare Denmark not bound by 36 and Ireland by 17 (net of 2 later opt-ins confirmed by the Commission); 303 records",
+  "note": "303 of 303 directives read (0 this run, 0 unavailable); recitals declare Denmark not bound by 36 and Ireland by 17 (net of 2 later opt-ins confirmed by the Commission); 16 later opt-ins to regulations confirmed by the Commission; 303 records",
   "records": {
    "directives_read": 303,
    "not_bound_DK": 36,
    "not_bound_IE": 17,
-   "pending": 0
+   "pending": 0,
+   "regulations": 16
   },
   "source": "optouts",
   "status": "ok"

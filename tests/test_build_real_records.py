@@ -1778,8 +1778,10 @@ def test_publication_is_dated_by_the_official_journal():
         assert [(x["date"], x["title"], x["institution"]) for x in pubs] == [
             (oj, "Published in the Official Journal of the EU", "EUR-Lex")], pid  # fmt: skip
         assert f"The European Parliament's procedure record gives {ep} for its publication." in pubs[0]["detail"]
-    # the latest step of 2018/0069 is the entry into force of 10 July 2019, not the EP's 25 July 2019
-    assert [x["date"] for x in tl if x["state"] == "done"][-1] == "2019-07-10"
+    # the latest step of 2018/0069 before its end of validity is the entry into force of 10 July 2019, not the EP's
+    # 25 July 2019
+    assert [(x["date"], x["kind"]) for x in tl if x["state"] == "done"][-2:] == [
+        ("2019-07-10", "entry_into_force"), ("2023-11-01", "end_of_validity")]  # fmt: skip
     # an EP record on the act's own publication day stays (2021/0106(COD), AI Act, 12 July 2024)
     p, a = procs("2021-0106")["2021-0106"], acts("32024R1689")["32024R1689"]
     tl = Builder.timeline(stand_in(), p, [a], [])  # type: ignore[arg-type]
@@ -2075,7 +2077,115 @@ def test_a_date_checked_against_the_text_cites_that_text_as_its_source():
     tl = Builder.timeline(me, procs("2020-0361")["2020-0361"], [a], [])  # type: ignore[arg-type]
     step = next(x for x in tl if x["kind"] == "application" and x["date"] == "2024-02-17")
     assert step["source"]["url"] == step["docs"][0]["url"] == "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"
-    assert step["source"]["label"] == "Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)"
+    assert step["source"]["label"] == "Regulation (EU) 2022/2065, Articles 92 and 93 (checked 24 October 2026)"
+
+
+def test_the_dsa_schedule_says_that_designated_very_large_platforms_were_covered_earlier():
+    """DSA, Art. 92: "This Regulation shall apply to providers of very large online platforms and of very large online
+    search engines designated pursuant to Article 33(4) from four months after the notification to the provider
+    concerned referred to in Article 33(6) where that date is earlier than 17 February 2024." "When it applies" cited
+    Article 93 only, so the Regulation seemed to apply to them only from 17 February 2024."""
+    from pipeline.build import apply_act_dates, load_act_dates
+
+    cur = load_act_dates()
+    me = stand_in(today="2026-10-24", act_dates=cur)
+    a = apply_act_dates(acts("32022R2065")["32022R2065"], cur["32022R2065"])
+    info = Builder.application_info(me, [a])  # type: ignore[arg-type]
+    assert "under Article 92 the Regulation applies to providers of very large online platforms" in info["dates_note"]["reason"]
+    assert "where that date is earlier than 17 February 2024" in info["dates_note"]["reason"]
+    general = next(x for x in info["application_detail"] if x["date"] == "2024-02-17")
+    assert general["provisions"] == ("The Regulation in general (Art. 93(2)), unless it applied earlier to a designated "
+                                     "very large online platform or search engine (Art. 92)")  # fmt: skip
+
+
+def test_the_own_resources_decision_says_why_it_entered_into_force_after_it_applied():
+    """Decision (EU, Euratom) 2020/2053, Art. 12: it "shall enter into force on the first day of the first month following
+    receipt of the last of the notifications" of the Member States' approval, and "shall apply from 1 January 2021";
+    Art. 311 TFEU, third paragraph: such a decision "shall not enter into force until it is approved by the Member
+    States". The 2018/0135(CNS) page gave 1 January 2021 and 1 June 2021 without the reason (that of the 2014 decision,
+    2011/0183(CNS), had one)."""
+    from pipeline.build import load_act_dates
+
+    cur = load_act_dates()
+    a = acts("32020D2053")["32020D2053"]
+    assert (a.entry_into_force, a.other_application_dates) == ("2021-06-01", ["2021-01-01"])  # EUR-Lex, kept
+    info = Builder.application_info(stand_in(act_dates=cur), [a])  # type: ignore[arg-type]
+    note = info["dates_note"]
+    assert note["reason"].startswith("Under Article 12 the Decision applies from 1 January 2021 and enters into force")
+    assert '"shall not enter into force until it is approved by the Member States' in note["reason"]
+    assert [s["label"] for s in note["sources"]] == [
+        "Decision (EU, Euratom) 2020/2053, Article 12", "Treaty on the Functioning of the European Union, Article 311"]
+    assert (info["entry_into_force"], info["application_dates"]) == ("2021-06-01", ["2021-01-01"])
+
+
+# ------------------------------------------------------------------- the end of an act's validity on the timeline
+def end_steps(pid: str, *celex: str, today: str = "2026-10-24") -> list[dict]:
+    a = acts(*celex)
+    me = stand_in(today=today, act=a)
+    from pipeline.build import mark_after_end_of_validity
+
+    tl = mark_after_end_of_validity(Builder.timeline(me, procs(pid)[pid], list(a.values()), []), list(a.values()))  # type: ignore[arg-type]
+    return [x for x in tl if x["kind"] == "end_of_validity"]
+
+
+def test_an_act_no_longer_in_force_has_its_end_as_the_latest_step():
+    """A "No longer in force" page gave an earlier event as its "Latest recorded step": Regulation (EU) 2019/982
+    (2018/0069(COD)), validity ended 31 October 2023 (Cellar: "AI/PAR 32023R2124", implicitly repealed), showed its
+    entry into force of 10 July 2019; the timeline listed no end of validity in any of the 150 such files."""
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+
+    p, a = procs("2018-0069")["2018-0069"], acts("32019R0982", "32023R2124")
+    st = classify(p, [a["32019R0982"]], [], date.fromisoformat("2026-10-24"), others=a)
+    me = stand_in(today="2026-10-24", act=a)
+    tl = Builder.timeline(me, p, [a["32019R0982"]], [])  # type: ignore[arg-type]
+    done = [x for x in tl if x["state"] == "done"]
+    assert (done[-1]["date"], done[-1]["kind"], done[-1]["title"]) == (st.since, "end_of_validity", "No longer in force")
+    assert st.stage == "no_longer_in_force"
+    assert done[-1]["date"] == "2023-11-01" and done[-1]["key"] and done[-1]["institution"] == "EUR-Lex"
+    assert done[-1]["detail"] == ("Regulation (EU) 2019/982. Its validity ended on 31 October 2023. EUR-Lex records it as "
+                                  "implicitly repealed by Regulation (EU) 2023/2124. Regulation (EU) 2023/2124 is a recast: "
+                                  "the rules continue in it, with the amendments it makes, and it is in force.")  # fmt: skip
+    assert [d["id"] for d in done[-1]["docs"]] == ["32023R2124"]
+    assert done[-1]["source"]["identifier"] == "32019R0982"
+
+
+def test_an_expired_act_a_repeal_in_stages_and_a_retroactive_end():
+    # 2020/0259(COD): Regulation (EU) 2021/1232 (CSAM interim derogation), validity ended 3 April 2026, no repealing act;
+    # it is not marked as dated after its own end of validity
+    s = end_steps("2020-0259", "32021R1232")
+    assert [(x["date"], x["title"], x["detail"], x["docs"]) for x in s] == [
+        ("2026-04-04", "No longer in force", "Regulation (EU) 2021/1232. Its validity ended on 3 April 2026.", [])]
+    assert "after_end_of_validity" not in s[0]
+    # Directive 2014/61/EU (2013/0080(COD)), repealed by Regulation (EU) 2024/1309 with effect from 12 November 2025
+    # except for some provisions (its Art. 18(2)): no single day, so the step is EUR-Lex's end of validity
+    s = end_steps("2013-0080", "32014L0061")
+    assert [(x["date"], x["title"]) for x in s] == [("2026-05-12", "Validity ended (date recorded by EUR-Lex)")]
+    assert "except for some provisions" in s[0]["detail"]
+    # Council Regulation 1377/2014 (2014/0332(NLE)): Cellar's end of validity, 31 December 2013, is before the act
+    assert end_steps("2014-0332", "32014R1377") == []
+    # an end of validity still ahead is no step (Regulation (EU) 2021/1232, built before 3 April 2026)
+    assert end_steps("2020-0259", "32021R1232", today="2026-04-03") == []
+
+
+# ------------------------------------------------------------------- later participation in a regulation
+def test_a_regulation_lists_the_member_states_that_opted_in_after_its_adoption():
+    """AMMR, Regulation (EU) 2024/1351, recital 91: Ireland "is not bound by it or subject to its application"; Commission
+    Decision (EU) 2024/2088 of 31 July 2024, Article 1: "The participation of Ireland in Regulation (EU) 2024/1351 is
+    confirmed." The page pointed to the recitals for whom the regulation binds; opt-ins were read for directives only.
+    The same for the Qualification Regulation (EU) 2024/1347 (Commission Decision (EU) 2024/2099)."""
+    from pipeline.models.entities import RegulationOptIn
+
+    ins = [RegulationOptIn.model_validate(r) for r in records("optouts/regulations.json", {"32024D2088", "32024D2099"},
+                                                                "decision").values()]  # fmt: skip
+    me = SimpleNamespace(s=SimpleNamespace(regulation_opt_ins=ins))
+    a = acts("32024R1351", "32024R1347", "32024L1346")
+    assert Builder.act_summary(me, a["32024R1351"])["opted_in"] == [  # type: ignore[arg-type]
+        {"country": "IE", "decision": "32024D2088", "label": "Commission Decision (EU) 2024/2088", "date": "2024-07-31",
+         "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024D2088"}]  # fmt: skip
+    assert Builder.act_summary(me, a["32024R1347"])["opted_in"][0]["label"] == "Commission Decision (EU) 2024/2099"  # type: ignore[arg-type]
+    assert "opted_in" not in Builder.act_summary(me, a["32024L1346"])  # type: ignore[arg-type]  # its table has it
 
 
 def test_older_act_titles_that_begin_with_the_number_give_the_number():

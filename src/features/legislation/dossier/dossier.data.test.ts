@@ -217,7 +217,43 @@ describe.skipIf(!built)('application dates, act names and sources on the built d
         }
     expect(n).toBeGreaterThan(20);
     const dsa = byId('2020-0361').timeline.find((e) => e.kind === 'application' && e.date === '2024-02-17')!;
-    expect(dsa.source?.label).toBe('Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)');
+    expect(dsa.source?.label).toBe('Regulation (EU) 2022/2065, Articles 92 and 93 (checked 24 October 2026)');
+  });
+
+  it('gives an act no longer in force its end as the latest step, on the day its status gives (2018-0069, 2020-0259)', () => {
+    // 146 of the 150 such files showed an earlier step (Regulation (EU) 2019/982: "10 July 2019 Entered into force",
+    // validity ended 31 October 2023); the other 4 are a repeal in stages (no single day: EUR-Lex's end of validity)
+    // and an end of validity earlier than the act itself (no step)
+    const ended = all.filter((d) => d.stage === 'no_longer_in_force');
+    expect(ended.length).toBeGreaterThan(100);
+    let n = 0;
+    for (const d of ended) {
+      const step = d.timeline.find((e) => e.kind === 'end_of_validity');
+      if (!step) continue;
+      n++;
+      expect(latestDone(d.timeline, '2026-10-24')?.id, d.id).toBe(step.id);
+      if (d.status.since) expect([step.date, step.title, d.last_event], d.id).toEqual([d.status.since, 'No longer in force', d.status.since]);
+      else expect(step.title, d.id).toBe('Validity ended (date recorded by EUR-Lex)');
+    }
+    expect(n).toBeGreaterThan(ended.length - 5);
+    expect(all.filter((d) => d.stage !== 'no_longer_in_force' && d.timeline.some((e) => e.kind === 'end_of_validity'))).toEqual([]);
+    expect(latestDone(byId('2018-0069').timeline, '2026-10-24')).toMatchObject({ date: '2023-11-01', title: 'No longer in force' });
+    expect(institutionSuffix('No longer in force', 'EUR-Lex', 'end_of_validity')).toBe('');
+  });
+
+  it('names the Commission decision by which Ireland took part in a regulation after its adoption (AMMR, Qualification)', () => {
+    // Commission Decisions (EU) 2024/2088 and 2024/2099 of 31 July 2024, Art. 1: "The participation of Ireland in
+    // Regulation (EU) 2024/1351 [2024/1347] is confirmed."
+    for (const [id, celex, decision] of [['2020-0279', '32024R1351', '2024/2088'], ['2016-0223', '32024R1347', '2024/2099']]) {
+      const act = byId(id).acts.find((a) => a.celex === celex)!;
+      expect(act.opted_in, id).toEqual([
+        { country: 'IE', decision: `3${decision.replace('/', 'D')}`, label: `Commission Decision (EU) ${decision}`, date: '2024-07-31',
+          url: `https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:3${decision.replace('/', 'D')}` },
+      ]);
+    }
+    const withOptIn = all.filter((d) => d.acts.some((a) => a.opted_in?.length)).map((d) => d.id);
+    expect(withOptIn.length).toBeGreaterThanOrEqual(13);
+    for (const d of all) for (const a of d.acts) if (a.opted_in) expect(a.act_type, `${d.id} ${a.celex}`).toBe('regulation');
   });
 
   it('names an act by its number in its steps, never by a type word and its CELEX id', () => {

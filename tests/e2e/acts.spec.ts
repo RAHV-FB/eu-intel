@@ -20,6 +20,21 @@ test.describe('act validity', () => {
     await expect(statusLine(page)).toHaveText(/No longer in force\s*since 1 July 2016/);
   });
 
+  test('an act no longer in force has its end as the latest step and in its schedule', async ({ page }) => {
+    // Regulation (EU) 2019/982: validity ended 31 October 2023 (Cellar), implicitly repealed by Regulation (EU)
+    // 2023/2124; the latest step was its entry into force of 10 July 2019
+    await open(page, 'legislation/2018-0069/');
+    await expect(statusLine(page)).toHaveText(/No longer in force\s*since 1 November 2023/);
+    const latest = page.locator('.dz-fact', { hasText: 'Latest recorded step' });
+    await expect(latest).toContainText('1 November 2023');
+    await expect(latest).toContainText('No longer in force');
+    await expect(latest).not.toContainText('Entered into force');
+    const when = page.locator('#when-it-applies');
+    await expect(when.locator('.dz-sched li').last()).toContainText('No longer in force');
+    await expect(when).not.toContainText('A regulation applies directly');
+    await expect(page.locator('#timeline')).toContainText('Its validity ended on 31 October 2023.');
+  });
+
   test('a repeal in stages states the recorded dates and no single day', async ({ page }) => {
     // Directive 2014/61/EU: Regulation (EU) 2024/1309, Art. 18
     await open(page, 'legislation/2013-0080/');
@@ -94,8 +109,32 @@ test.describe('where an act applies', () => {
     const national = page.locator('#national');
     await expect(national).toContainText('in the Member States it binds');
     await expect(national).toContainText('records Denmark and Ireland as not taking part');
+    await expect(national).toContainText('says which Member States were not bound by it when it was adopted.');
+    await expect(national).toContainText('Our data record no Commission decision confirming that Ireland has taken part since.');
     await expect(page.locator('main')).not.toContainText('all EU countries');
     await expect(page.locator('main')).not.toContainText('applies directly in every Member State');
+  });
+
+  test('a regulation Ireland opted into after its adoption says so, with the Commission decision', async ({ page }) => {
+    // AMMR, Regulation (EU) 2024/1351, recital 91: Ireland "is not bound by it"; Commission Decision (EU) 2024/2088,
+    // Art. 1: "The participation of Ireland in Regulation (EU) 2024/1351 is confirmed." Qualification Regulation (EU)
+    // 2024/1347: Commission Decision (EU) 2024/2099
+    for (const [id, label] of [
+      ['2020-0279', 'Commission Decision (EU) 2024/2088'],
+      ['2016-0223', 'Commission Decision (EU) 2024/2099'],
+    ]) {
+      await open(page, `legislation/${id}/`);
+      const national = page.locator('#national');
+      await expect(national).toContainText('records Denmark and Ireland as not taking part');
+      // (the link's text is followed by the visually hidden "opens official website in a new tab")
+      await expect(national).toContainText(`Ireland opted in after its adoption: ${label}`);
+      await expect(national).toContainText(
+        'of 31 July 2024 confirms its participation in the regulation (Protocol No 21, Article 4).',
+      );
+      await expect(national.getByRole('link', { name: label })).toHaveAttribute('href', /CELEX:32024D20(88|99)$/);
+      await expect(national).not.toContainText('says which Member States it binds');
+      await expect(national).not.toContainText('no Commission decision confirming');
+    }
   });
 
   test('a regulation implementing enhanced cooperation binds only the Member States taking part', async ({ page }) => {
@@ -119,5 +158,26 @@ test.describe('where an act applies', () => {
     await expect(page.locator('.dz-fact', { hasText: 'Latest recorded step' })).toContainText(
       'EUR-Lex also lists Delegated Regulation 2026/2102 as amending this act. That act is not in our data',
     );
+  });
+});
+
+test.describe('dates checked against the act’s text', () => {
+  test('the DSA says that it applied earlier to designated very large platforms and search engines (Art. 92)', async ({ page }) => {
+    // Regulation (EU) 2022/2065, Art. 92: from four months after the notification of the designation, "where that date is
+    // earlier than 17 February 2024"
+    await open(page, 'legislation/2020-0361/');
+    const when = page.locator('#when-it-applies');
+    await expect(when).toContainText('unless it applied earlier to a designated very large online platform or search engine (Art. 92)');
+    await expect(when.locator('.dz-dates__note').first()).toContainText('under Article 92 the Regulation applies to providers of very large online platforms');
+    await expect(when.getByRole('link', { name: 'Regulation (EU) 2022/2065, Articles 92 and 93' })).toBeVisible();
+  });
+
+  test('the own-resources decision says why it entered into force after it applied (Art. 311 TFEU)', async ({ page }) => {
+    // Decision (EU, Euratom) 2020/2053, Art. 12; Art. 311 TFEU, third paragraph
+    await open(page, 'legislation/2018-0135/');
+    const note = page.locator('#when-it-applies .dz-dates__note').first();
+    await expect(note).toContainText('Dates checked against the act’s text.');
+    await expect(note).toContainText('third paragraph of Article 311 TFEU');
+    await expect(note).toContainText('1 June 2021, as EUR-Lex records');
   });
 });

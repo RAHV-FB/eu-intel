@@ -177,9 +177,16 @@ export function isMissing(e: unknown): boolean {
   return e instanceof NotFoundError || e instanceof SyntaxError;
 }
 
-/** Steps whose date the act itself sets (entry into force, application, transposition dates): EUR-Lex records them,
- * it does not take them, so no institution is named after their title. */
-const ACT_DATED_KINDS: ReadonlySet<string> = new Set(['entry_into_force', 'application', 'transposition_deadline', 'transposition_application']);
+/** Steps whose date the act itself sets (entry into force, application, transposition dates), or a repealing act or
+ * the end of its validity does: EUR-Lex records them, it does not take them, so no institution is named after their
+ * title. */
+const ACT_DATED_KINDS: ReadonlySet<string> = new Set([
+  'entry_into_force',
+  'application',
+  'transposition_deadline',
+  'transposition_application',
+  'end_of_validity',
+]);
 
 /** Institution label to append after an event title, or '' when the title already names it or the step is dated in
  * the act (`kind`). */
