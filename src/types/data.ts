@@ -324,6 +324,9 @@ export interface DossierDetail extends DossierSummary {
   stall?: Stall | null;
   application?: ApplicationInfo | null;
   timeline: TimelineEvent[]; // ascending by date
+  // Acts EUR-Lex lists as amending the file's acts that are not in our data (no dated step), as on the home card
+  // (FeaturedItem.latest_note): said under the latest step, which may be older than they are
+  latest_note?: string | null;
   acts: LegalActSummary[];
   ep_votes: EpVoteSummary[]; // votes linked to this dossier via official ids, newest first
   // Parliament's latest approval of the Council's position at second reading to which no vote is linked (no vote on the
@@ -388,7 +391,7 @@ export type VoteKindDetail =
   | 'grant_discharge'
   | 'postpone_discharge'
   | 'refuse_discharge'
-  | 'recommendation'; // a recommendation of Parliament (Rule 118 external policies, Rule 208(12) committee of inquiry)
+  | 'recommendation'; // a recommendation of Parliament (9th term: Rules 118, 114(4) and 208(12) of its Rules of Procedure)
 export type VoteOutcome = 'adopted' | 'rejected' | 'lapsed' | 'unknown';
 /**
  * What a final vote decides: "commission_election" for the vote titled "Election of the Commission"; else by the type

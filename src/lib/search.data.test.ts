@@ -330,12 +330,15 @@ describe.skipIf(!built)('search on the built index', () => {
       ['2023/0134(COD)', '2023-0134'],
       ['2011/0297(COD)', '2011-0297'],
       ['COM(2011)0349', '2011-0153'],
-      ['Directive 2014/24/EU', '2011-0438'],
+      ['Directive 2014/23/EU', '2011-0437'],
     ];
     for (const [q, id] of only) {
       expect(ids(q, 50), q).toEqual([`dossier:${id}`]);
       expect(keywordScores(rows, hay, engine, q).size, q).toBe(1);
     }
+    // the owner first, then a file whose title cites it: Directive (EU) 2026/806 (2023/0112(COD)) amends "Directive
+    // 2014/59/EU ... and Directive 2014/24/EU as regards valuation services in resolution", its official title
+    expect(ids('Directive 2014/24/EU', 50)).toEqual(['dossier:2011-0438', 'dossier:2023-0112']);
     expect(ids('2008/0028(COD)', 50)).toEqual([]); // "Food information to consumers", not in the data
     expect(ids('COM(2008) 40', 50)).toEqual([]);
     expect(ids('2024/1689', 10)).toEqual(expect.arrayContaining(['dossier:2021-0106', 'dossier:2025-0359'])); // cites it

@@ -964,8 +964,9 @@ def discharge_proposal(s: Signals) -> KindDetail | None:
 # ("Recommendation (text as a whole)", "Draft recommendation B9-0260/2023", "Proposal for a European Parliament
 # recommendation to the Council and the Commission"), or the subject of an own-initiative report ("Recommendation to the
 # Council on the EU priorities for the 69th session of the UN Human Rights Council", 171157): a recommendation to the
-# Council, the Commission or the High Representative (Rule 118 of the 9th-term Rules of Procedure) or of a committee of
-# inquiry (Rule 208(12)). Not a resolution about a Council Recommendation ("Council Recommendation on …", 126251; the
+# Council, the Commission or the High Representative (Rule 118 of the 9th-term Rules of Procedure, or Rule 114(4) on an
+# international agreement under negotiation: A9-0200/2022, "having regard to Rules 114(4) and 54 of its Rules of
+# Procedure") or of a committee of inquiry (Rule 208(12)). Not a resolution about a Council Recommendation ("Council Recommendation on …", 126251; the
 # topical resolution 170765 "Recommendation on smoke- and aerosol-free environments", 2024/2911(RSP)), nor a report
 # "with recommendations to the Commission" (INL), nor a committee's "Recommendation for a decision" (166075, on
 # Parliament's Rules of Procedure). Records that call the text only a motion for a resolution (143769, A9-0164/2022)

@@ -95,6 +95,14 @@ def test_council_adoption_then_signature_is_not_publication():
     assert (s.stage, s.label, s.since) == ("adopted", "Signed, awaiting publication", "2024-06-13")
     assert s.next_step.institution == "EUR-Lex"
     assert s.stage != "published"
+    # publication does not make the act "applicable law": it enters into force on the date it sets or the twentieth
+    # day after publication (Art. 297(1) TFEU), and its rules can apply later (AI Act: from 2 August 2026)
+    assert "applicable law" not in s.explanation
+    assert s.explanation.endswith(
+        "It is not recorded as published in the Official Journal yet; once published, it enters into force on the date "
+        "it sets or, if it sets none, on the twentieth day after publication (Article 297(1) TFEU). Its rules can apply "
+        "from later dates."
+    )
 
 
 def test_published_but_not_yet_in_force():
@@ -823,6 +831,11 @@ def test_council_act_never_recorded_as_published_has_no_pending_publication_step
     assert "only after publication" not in s.explanation and "No publication" in s.explanation
     assert s.next_step.basis == "unknown" and "since 23 January 2017" in s.next_step.text
     assert classify(rec("2016-0810"), [], [], date(2017, 2, 1)).next_step.text.startswith("Publication")
+    # before that: never "applicable law only after publication", as a Council act can enter into force on its
+    # adoption (Council Decision 2014/161/EU: 11 March 2014, published 25 March 2014) or take effect on notification
+    early = classify(rec("2016-0810"), [], [], date(2017, 2, 1)).explanation
+    assert "applicable law" not in early and "only after publication" not in early
+    assert "which can be the day of its adoption" in early and early.endswith("(Article 297 TFEU).")
 
 
 def test_procedure_completed_without_any_recorded_act_is_not_called_adopted():

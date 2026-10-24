@@ -45,6 +45,16 @@ describe.skipIf(!built)('Council votes on the built data', () => {
     expect(d.adopted).toBe('2022-12-15');
   });
 
+  it('records the Pillar Two Directive’s adoption from the same communication, Hungary abstaining (CM 5860/22, point 2)', () => {
+    // "all delegations voted in favour of, except for Hungary that abstained"; "completed on 15 December 2022 at 22:11"
+    const cm = votes.get('CM-5860-2022-2')!;
+    expect([cm.dossier_id, cm.date, cm.voting_rule, cm.outcome, cm.positions.HU]).toEqual(['2021-0433', '2022-12-15', 'unanimity', 'adopted', 'abstain']);
+    expect(Object.values(cm.positions).filter((p) => p === 'for')).toHaveLength(26);
+    expect(cm.source_note).toContain('Council Directive (EU) 2022/2523 of 14 December 2022');
+    const hu = read<CountryDetail>('countries/HU.json');
+    expect(hu.council_votes.find((r) => r.vote_id === 'CM-5860-2022-2')?.pos).toBe('abstain');
+  });
+
   it('names the item voted on in country rows: Member States voted for the non-approval of Parliament’s amendments', () => {
     const de = read<CountryDetail>('countries/DE.json');
     const row = de.council_votes.find((r) => r.vote_id === 'ST-14700-2026')!;

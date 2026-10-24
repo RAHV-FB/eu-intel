@@ -195,7 +195,8 @@ export function KeyDates({ app, today, instrument }: { app: ApplicationInfo; tod
     )}
     {instrument === 'regulation' && (
       <p className="dz-dates__note meta">
-        A <Term id="regulation">regulation</Term> applies directly in every Member State.
+        A <Term id="regulation">regulation</Term> applies directly, without national transposition, in the Member States it
+        binds.
       </p>
     )}
     </>
@@ -349,6 +350,7 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
                   )}
                 </p>
                 <SourceLink source={latest.source} />
+                {d.latest_note && <p className="meta">{d.latest_note}</p>}
               </>
             ) : (
               <p className="dz-fact__text meta">No dated procedural step is recorded.</p>

@@ -30,7 +30,7 @@ test.describe('act validity', () => {
     // Decision (EU) 2024/867 has no repeal article (Art. 6: Decision (EU) 2020/1531 "remains applicable ...")
     await open(page, 'legislation/2020-0160/');
     await page.locator('#details summary').click();
-    const related = page.locator('#details .dz-sub', { hasText: 'Related legislative files' });
+    const related = page.locator('#details .dz-sub', { hasText: 'Related acts and files' });
     await expect(related).toContainText('Partly repealed by (EUR-Lex): Decision (EU) 2024/867');
     await expect(page.locator('#details .dz-kv--rel')).toContainText('Partly repealed by (EUR-Lex)');
   });
@@ -82,5 +82,42 @@ test.describe('type of act', () => {
     const select = page.getByLabel('Type of act');
     await expect(select.locator('option', { hasText: /^Directive / })).toHaveText(/^Directive \(\d[\d,]*, of which \d[\d,]* as proposed\)$/);
     await expect(page.locator('.lx-field', { has: select })).toContainText('for files without one (proposals, and acts adopted but not yet published or linked)');
+  });
+});
+
+test.describe('where an act applies', () => {
+  test('a regulation is not said to apply in all EU countries, and the Council’s record of who did not take part is given', async ({ page }) => {
+    // Return Regulation (EU) 2026/2280, recital 67: Denmark "is not bound by it or subject to its application"; recital
+    // 68: Ireland the same; the Council's voting result ST 13916/26 records both as not participating
+    await open(page, 'legislation/2025-0059/');
+    await expect(page.locator('.dz-facts')).toContainText('The regulation applies directly; no national transposition is needed.');
+    const national = page.locator('#national');
+    await expect(national).toContainText('in the Member States it binds');
+    await expect(national).toContainText('records Denmark and Ireland as not taking part');
+    await expect(page.locator('main')).not.toContainText('all EU countries');
+    await expect(page.locator('main')).not.toContainText('applies directly in every Member State');
+  });
+
+  test('a regulation implementing enhanced cooperation binds only the Member States taking part', async ({ page }) => {
+    // EPPO, Council Regulation (EU) 2017/1939, recital 110; Art. 20(4) TEU: "shall bind only participating Member States"
+    await open(page, 'legislation/2013-0255/');
+    await expect(page.locator('.dz-facts')).toContainText('only in the Member States taking part in the enhanced cooperation it implements');
+    await expect(page.locator('#national')).toContainText('This one implements enhanced cooperation');
+  });
+
+  test('a country with an open non-communication case is not said to have notified incompletely (NIS2, Ireland)', async ({ page }) => {
+    // INFR(2024)0279: caseType "Non-communication of transposition measures for directives", no measure notified
+    await open(page, 'legislation/2020-0359/');
+    const national = page.locator('#national');
+    await expect(national).toContainText('Commission case open for non-communication of transposition measures');
+    await expect(national).not.toContainText('incomplete notification');
+  });
+
+  test('the latest step says that an amending act outside our data is not dated (EUDR)', async ({ page }) => {
+    // Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026, in force on 18 September 2026 (Cellar)
+    await open(page, 'legislation/2021-0366/');
+    await expect(page.locator('.dz-fact', { hasText: 'Latest verified development' })).toContainText(
+      'EUR-Lex also lists Delegated Regulation 2026/2102 as amending this act. That act is not in our data',
+    );
   });
 });

@@ -290,7 +290,7 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
 
         {d.related.length > 0 && (
           <div className="dz-sub">
-            <h3>Related legislative files</h3>
+            <h3>Related acts and files</h3>
             <p className="meta">Only relations established in official records are listed.</p>
             <ul className="dz-list">
               {d.related.map((r) => (

@@ -25,12 +25,13 @@
 #
 # records: a Council adoption that no voting-result document records, as the Council's communication on the
 #   outcome of a written procedure states it (each delegation's vote in words). Shown like a voting result, with
-#   that document as its source. Fields as in data/snapshot/council/votes.json (CouncilVote), plus reviewed.
-#   Not a complete list of such adoptions: CM 5860/22 also records, point 2, the adoption of the Pillar Two
-#   Directive (2021/0433(CNS)), "all delegations voted in favour of, except for Hungary that abstained", in the
-#   written procedure "completed on 15 December 2022 at 22:11", while the act is "Council Directive (EU)
-#   2022/2523 of 14 December 2022" ("Done at Brussels, 14 December 2022"). The two dates are not reconciled by
-#   these texts, so that adoption is not recorded here.
+#   that document as its source. Fields as in data/snapshot/council/votes.json (CouncilVote), plus reviewed and
+#   note (shown on the vote). A record is dated by the communication: the day the written procedure was completed.
+#   Where the act gives another date, the note quotes both and does not reconcile them: CM 5860/22, point 2, records
+#   the adoption of the Pillar Two Directive (2021/0433(CNS)) in the written procedure "completed on 15 December
+#   2022 at 22:11", and the act is "Council Directive (EU) 2022/2523 of 14 December 2022" ("Done at Brussels, 14
+#   December 2022"). These are the adoptions recorded so far, from the communications read (CM 5860/22, both items
+#   that adopt an act of a file on this site); other written procedures may have been missed.
 #
 # Last full review: 2026-10-23.
 
@@ -121,3 +122,42 @@ records:
       each delegation's vote in words. The Council's voting-result documents that the Publications Office (Cellar)
       lists, from which this site's other Council votes come, include none for this adoption.
     reviewed: "2026-10-23"
+
+  # CM 5860/22, point 2: "(a) all delegations voted in favour of, except for Hungary that abstained, the adoption of
+  # the Council Directive on ensuring a global minimum level of taxation for multinational and large-scale domestic
+  # groups, as set out in document 8778/22; (b) all delegations voted in favour of the approval of the accompanying
+  # Council statement set out in document 15349/22 + COR 1. The required unanimity has been reached. Therefore, the
+  # above Directive of the Council is adopted and the accompanying statement is approved. The statement by Sweden is
+  # reproduced in the Annex to this CM." Unanimity: the Directive's legal basis is Article 115 TFEU ("Having regard to
+  # the Treaty on the Functioning of the European Union, and in particular Article 115 thereof").
+  - id: "CM-5860-2022-2"
+    date: "2022-12-15"
+    title: "Council Directive on ensuring a global minimum level of taxation for multinational and large-scale domestic groups"
+    procedure_refs: ["2021/0433(CNS)"]
+    stage: "Adoption"
+    vote_on: act
+    written_procedure: true
+    voting_rule: unanimity
+    act_type: directive
+    outcome: adopted
+    positions: {AT: for, BE: for, BG: for, CY: for, CZ: for, DE: for, DK: for, EE: for, ES: for, FI: for, FR: for,
+                GR: for, HR: for, HU: abstain, IE: for, IT: for, LT: for, LU: for, LV: for, MT: for, NL: for, PL: for,
+                PT: for, RO: for, SE: for, SI: for, SK: for}
+    statements:
+      - "Council statement (document 15349/22 + COR 1), approved with the Directive"
+      - "Statement by Sweden on the Council Directive on ensuring a global minimum level of taxation for multinational and large-scale domestic groups"
+    source:
+      institution: Council
+      url: "https://data.consilium.europa.eu/doc/document/CM-5860-2022-INIT/EN/pdf"
+      label: "Council of the EU – Outcome of the written procedure, CM 5860/22"
+      identifier: "CM 5860/22"
+      retrieved_at: "2026-10-24T09:00:00Z"
+      published: "2022-12-15"
+    note: >-
+      Recorded from the Council's communication on the outcome of the written procedure (CM 5860/22), which states
+      each delegation's vote in words; the Council's voting-result documents that the Publications Office (Cellar)
+      lists include none for this adoption. The communication says the written procedure "was completed on 15
+      December 2022 at 22:11", the date shown here, which the Legislative Observatory and Cellar's date of the
+      document also give. The Directive itself is dated 14 December 2022: "Council Directive (EU) 2022/2523 of 14
+      December 2022", "Done at Brussels, 14 December 2022".
+    reviewed: "2026-10-24"

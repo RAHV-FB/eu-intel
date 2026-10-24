@@ -7,6 +7,7 @@ attributes they read.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -419,14 +420,15 @@ def test_council_vote_in_the_budget_procedure_is_not_the_adoption_of_an_act():
 def test_council_summary_counts_every_vote_listed():
     # the About page's source card said "746 voting results …, 744 of them with each Member State's position", its
     # records table 747 Council votes, and the country pages count 745 with positions: CM-5860-2022 (curated, from the
-    # Council's communication on the written procedure) is listed and counted, so the summary counts it too
-    me = _built_council(["ST-15907-2022", "ST-7085-2020"], ["2022-0369"])
-    assert len(me.council_public) == 3  # type: ignore[attr-defined]
+    # Council's communication on the written procedure) is listed and counted, so the summary counts it too; so is
+    # CM-5860-2022-2, the Pillar Two Directive's adoption recorded in the same communication (one document named once)
+    me = _built_council(["ST-15907-2022", "ST-7085-2020"], ["2022-0369", "2021-0433"])
+    assert len(me.council_public) == 4  # type: ignore[attr-defined]
     st = SimpleNamespace(fetched_at="2026-10-23T00:00:00Z", records={}, status="ok")
     summary = Builder.source_summary(me, "council", st)  # type: ignore[arg-type]
     assert summary.startswith(
-        "3 votes of the Council of the EU (2020–2022), 2 of them with each Member State's position: 2 from the "
-        "Council's voting-result documents and 1 adoption by written procedure from the Council's communication on "
+        "4 votes of the Council of the EU (2020–2022), 3 of them with each Member State's position: 2 from the "
+        "Council's voting-result documents and 2 adoptions by written procedure from the Council's communication on "
         "its outcome (CM 5860/22). 1 voting-result document could not be read and is shown without positions."
     )
 
@@ -478,14 +480,41 @@ def test_featured_card_names_amending_acts_the_timeline_cannot_date():
     # EUDR (2021/0366(COD)): EUR-Lex lists Delegated Regulation (EU) 2026/2102 as amending Regulation (EU) 2023/1115,
     # but it is not in our EUR-Lex data; the card's latest step (23 December 2025) is older than it
     a = acts("32023R1115", "32024R3234", "32025R2650")
-    me = SimpleNamespace(dossier_acts={"2021-0366": [a["32023R1115"]]}, act=a)
+    me = SimpleNamespace(dossier_acts={"2021-0366": [a["32023R1115"]]}, act=a, checked_act_types={},
+                         latest_event=lambda pid: {"date": "2025-12-23"})  # fmt: skip
+    me.celex_label = lambda c: Builder.celex_label(me, c)  # type: ignore[arg-type]
     note = Builder.undated_amendments_note(me, "2021-0366")  # type: ignore[arg-type]
     assert note == (
-        "EUR-Lex also lists Regulation 2026/2102 as amending this act; its dates are not in our data, so the step "
-        "above may not be the latest."
+        "EUR-Lex also lists Regulation 2026/2102 as amending this act. That act is not in our data, so its publication "
+        "is not shown and the step above may not be the latest."
     )
+    # its type as the text checked for data/curated/act_dates.yaml gives it ("Delegated Regulation (EU) 2026/2102,
+    # Annex"; Cellar: "Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU)
+    # 2023/1115"), as in the related files, where it read "Regulation 2026/2102" next to the legislative acts
+    me.checked_act_types = {"32026R2102": "Delegated Regulation"}
+    assert note.replace("Regulation 2026", "Delegated Regulation 2026") == Builder.undated_amendments_note(me, "2021-0366")  # type: ignore[arg-type]
+    # an amending act of a year before the latest step predates it: no note
+    me.latest_event = lambda pid: {"date": "2027-01-04"}
+    assert Builder.undated_amendments_note(me, "2021-0366") is None  # type: ignore[arg-type]
+    me.latest_event = lambda pid: {"date": "2025-12-23"}
     me.act = {**a, "32026R2102": a["32025R2650"]}
     assert Builder.undated_amendments_note(me, "2021-0366") is None  # type: ignore[arg-type]
+
+
+def test_an_act_known_only_by_its_celex_id_takes_its_type_from_the_checked_text():
+    # data/curated/act_dates.yaml (EUDR) cites "Delegated Regulation (EU) 2026/2102, Annex", celex 32026R2102; the
+    # Batteries Regulation's Commission Delegated Regulation (EU) 2026/1770 is named by no checked text
+    from pipeline.build import checked_act_types, load_act_dates
+
+    kinds = checked_act_types(load_act_dates())
+    assert kinds["32026R2102"] == "Delegated Regulation"
+    assert all(re.fullmatch(r"(?:(?:Implementing|Delegated) )?(?:Regulation|Directive|Decision)", k) for k in kinds.values())
+    # a label whose number is not the CELEX id's is not used
+    assert checked_act_types({"x": {"sources": [{"label": "Delegated Regulation (EU) 2026/2103", "celex": "32026R2102"}]}}) == {}
+    me = SimpleNamespace(checked_act_types=kinds)
+    assert Builder.celex_label(me, "32026R2102") == "Delegated Regulation 2026/2102"  # type: ignore[arg-type]
+    assert Builder.celex_label(me, "32026R1770") == "Regulation 2026/1770"  # type: ignore[arg-type]
+    assert Builder.celex_label(me, "32013R1303") is None  # type: ignore[arg-type]
 
 
 # ------------------------------------------------------------------- Parliament's decisions in the timeline
@@ -1776,6 +1805,32 @@ def test_council_position_by_written_procedure_is_dated_by_cellar():
         ("2020-04-15", True), ("2020-04-07", True), ("2020-04-07", True)]  # fmt: skip
 
 
+# ------------------------------------------------------------------- where a regulation applies
+def test_a_regulation_is_never_said_to_apply_in_all_eu_countries():
+    # The next step read "The regulation applies directly in all EU countries" for every regulation. Return Regulation
+    # (EU) 2026/2280, recital 67: "Denmark is not taking part in the adoption of this Regulation and is not bound by it
+    # or subject to its application"; Art. 50: "directly applicable in the Member States in accordance with the
+    # Treaties". EPPO, Council Regulation (EU) 2017/1939, recital 110: "Member States of the European Union which do
+    # not participate in enhanced cooperation on the establishment of the EPPO are not bound by this Regulation";
+    # Regulation (EU) 2026/467, recital 43: "This Regulation does not apply to Member States which do not participate
+    # in the enhanced cooperation"; Art. 20(4) TEU: such acts "shall bind only participating Member States".
+    from datetime import date
+
+    from pipeline.analysis.status import classify, regulation_applies
+
+    files = {"2025-0059": "32026R2280", "2013-0255": "32017R1939", "2026-0008": "32026R0467", "2016-0224A": "32024R1348"}
+    a, p = acts(*files.values()), procs(*files)
+    text = {pid: classify(p[pid], [a[c]], [], date(2026, 10, 23), others=a).next_step.text for pid, c in files.items()}
+    assert not [t for t in text.values() if "all EU countries" in t or "every Member State" in t]
+    assert text["2025-0059"].startswith("The regulation applies directly; no national transposition is needed.")
+    for pid in ("2013-0255", "2026-0008"):
+        assert text[pid].startswith(
+            "The regulation applies directly only in the Member States taking part in the enhanced cooperation it "
+            "implements (Article 20(4) TEU); no national transposition is needed."
+        ), pid
+    assert regulation_applies(a["32024R1348"]) == "applies directly"
+
+
 # ------------------------------------------------------------------- application dates EUR-Lex gives as not recorded
 def test_application_date_given_as_not_recorded_is_never_read_as_applying_from_entry_into_force():
     # ETIAS, Regulation (EU) 2018/1240, Art. 96: "This Regulation shall apply from the date determined by the Commission
@@ -1790,8 +1845,9 @@ def test_application_date_given_as_not_recorded_is_never_read_as_applying_from_e
     s = classify(procs("2016-0357A")["2016-0357A"], list(a.values()), [], date(2026, 10, 23), others=a)
     assert s.stage == "in_force"
     assert "EUR-Lex records no date from which the act in general applies (it refers to Art. 96)." in s.explanation
+    # nor "in all EU countries": which Member States a regulation binds is for its text to say (test_a_regulation_is_...)
     assert s.next_step.text.startswith(
-        "A regulation applies directly in all EU countries; no national transposition is needed. EUR-Lex records no date "
+        "A regulation applies directly; no national transposition is needed. EUR-Lex records no date "
         "from which this regulation in general applies (it refers to Art. 96)."
     )
     assert [(x.partial, x.articles) for x in s.application.application_unrecorded] == [(False, ["Art. 96"])]
@@ -1858,6 +1914,126 @@ def test_act_steps_name_the_act_and_the_first_application_date_is_not_further():
     assert {x["detail"] for x in tl if x["id"].startswith("act-")} == {"Regulation (EU) 2025/40"}
 
 
+def test_the_date_an_act_applies_from_in_general_is_when_its_rules_start_also_after_dates_for_some_provisions():
+    # Asylum Procedure Regulation, Regulation (EU) 2024/1348, Art. 79(2): "This Regulation shall apply from 12 June
+    # 2026"; Cellar records 27 February 2026 for some provisions (MA/PART) and 12 June 2026 (MA). The headline read
+    # "Further provisions started to apply" for 12 June 2026, where "When it applies" reads "Rules apply from".
+    me = stand_in(today="2026-10-23")
+    cases = {"2016-0224A": "32024R1348", "2016-0106": "32017R2226", "2023-0226": "32026R1388", "2023-0252": "32023R2663"}
+    a, p = acts(*cases.values()), procs(*cases)
+    app = {pid: {x["date"]: x["title"] for x in Builder.timeline(me, p[pid], [a[c]], []) if x["kind"] == "application"}  # type: ignore[arg-type]
+           for pid, c in cases.items()}  # fmt: skip
+    assert app["2016-0224A"] == {"2026-02-27": "Some provisions started to apply (date recorded by EUR-Lex)",
+                                 "2026-06-12": "Rules started to apply (date recorded by EUR-Lex)"}  # fmt: skip
+    # EES, Regulation (EU) 2017/2226: some provisions from its entry into force; Cellar "MA V ART 73 ET 32025D1544"
+    assert app["2016-0106"] == {"2025-10-12": "Rules started to apply (date recorded by EUR-Lex)"}
+    # NGT, Regulation (EU) 2026/1388, Art. 38: "It shall apply from 17 July 2028. However, Articles 29, 30 and 31 shall
+    # apply from 16 July 2026" (its entry into force)
+    assert app["2023-0226"] == {"2028-07-17": "Rules start to apply (date recorded by EUR-Lex)"}
+    # a later date that is not partial either is further (EUR-Lex: 28 November 2023 and 1 January 2024)
+    assert app["2023-0252"] == {"2023-11-28": "Rules started to apply (date recorded by EUR-Lex)",
+                                "2024-01-01": "Further provisions started to apply (date recorded by EUR-Lex)"}  # fmt: skip
+
+
+def test_an_application_date_before_the_act_itself_is_said_to_be_retroactive():
+    # Regulation (EU) 2021/23, Art. 97: "It shall apply from 12 August 2022 with the exception of: Article 95 which
+    # shall apply from 4 July 2020"; the act is "of 16 December 2020". The step sat between the January 2020
+    # negotiation steps and the September 2020 agreement with nothing to say it was retroactive.
+    from pipeline.build import apply_act_dates, load_act_dates
+
+    me = stand_in(today="2026-10-23")
+    a = acts("32021R0023")["32021R0023"]
+    tl = {x["date"]: x for x in Builder.timeline(me, procs("2016-0365")["2016-0365"], [a], []) if x["kind"] == "application"}  # type: ignore[arg-type]
+    assert tl["2020-07-04"]["title"] == "Some provisions started to apply retroactively (date recorded by EUR-Lex)"
+    assert tl["2020-07-04"]["detail"] == (
+        "Regulation (EU) 2021/23. This date is earlier than the act itself, dated 16 December 2020: what applies from "
+        "it does so retroactively."
+    )
+    assert [x["title"] for d, x in sorted(tl.items()) if "retroactiv" in x["title"] + x["detail"]] == [tl["2020-07-04"]["title"]]
+    # a checked date that already says so is not marked twice (Council Regulation (EU, Euratom) 2021/768, Art. 9)
+    cur = load_act_dates()
+    me = stand_in(today="2026-10-23", act_dates=cur)
+    own = apply_act_dates(acts("32021R0768")["32021R0768"], cur["32021R0768"])
+    step = next(x for x in Builder.timeline(me, procs("2018-0132")["2018-0132"], [own], []) if x["kind"] == "application")  # type: ignore[arg-type]
+    assert (step["date"], step["title"]) == ("2021-01-01", "Started to apply: The Regulation in general, retroactively (Art. 9)")
+    assert "earlier than the act" not in step["detail"]
+
+
+def test_a_second_reading_approval_decided_by_a_rejected_motion_to_reject_says_so():
+    # 2017/0121(COD), 8 Jul 2020: the only roll-call was 116204, "A9-0114/2020 - Kateřina Konečná - Proposal for
+    # rejection (Rule 67(1))", rejected 218-469-7; the step "Parliament approved the Council's position at second
+    # reading" linked it as "How MEPs voted" with nothing to say no vote on the approval was held. 2017/0122(COD):
+    # vote 116205 of 8 July 2020, the decision recorded on 9 July (remote voting)
+    from pipeline.build import REJECTED_MOTION_APPROVAL
+
+    v = votes("116204", "116205")
+    assert [(x.kind_detail, x.outcome) for x in v.values()] == [("reject_council_position", "rejected")] * 2
+    p = procs("2017-0121", "2017-0122")
+    me = SimpleNamespace(indexed_vote_ids=set(v), council_of={}, today="2026-10-23")
+    step = {pid: next(x for x in Builder.timeline(me, p[pid], [], [v[vid]]) if x["id"] == sid)  # type: ignore[arg-type]
+            for pid, vid, sid in (("2017-0121", "116204", "2017-0121-DEC-DCPL-2020-07-08"),
+                                  ("2017-0122", "116205", "2017-0122-DEC-DCPL-2020-07-09"))}  # fmt: skip
+    assert (step["2017-0121"]["vote_id"], step["2017-0121"]["detail"]) == ("116204", REJECTED_MOTION_APPROVAL)
+    assert "Article 294(7)(a) TFEU" in REJECTED_MOTION_APPROVAL and "motion to reject" in REJECTED_MOTION_APPROVAL
+    assert step["2017-0122"]["vote_id"] == "116205"
+    assert step["2017-0122"]["detail"] == (
+        "Parliament's vote records date this vote 8 July 2020; its procedure record dates the decision 9 July 2020. "
+        + REJECTED_MOTION_APPROVAL
+    )
+
+
+def test_a_debate_is_joint_only_with_files_whose_own_record_shows_the_debate():
+    # EP item MTG-PL-2020-10-20-PVCRE-ITM-5, "Common agricultural policy - support for strategic plans ... - financing,
+    # management and monitoring - ... amendment of the CMO and other Regulations (debate)": the three CAP files. It
+    # also cites A9-0198/2020, A9-0199/2020 and A9-0200/2020, reports dated after the debate; A9-0200/2020 is the VAT
+    # Northern Ireland report of 2020/0165(CNS), tabled on 29 October 2020, whose record shows no debate that day.
+    # MTG-PL-2021-06-08-PVCRE-ITM-20, "European Social Fund Plus (ESF+) 2021-2027 ***II (continuation of debate)",
+    # also cites C9-0196/2021 of 2018/0258(COD), which was debated on its own the day before (item 22).
+    ids = ["2018-0216", "2018-0217", "2018-0218", "2020-0165", "2018-0258", "2018-0206", "2021-0204", "2021-0206",
+           "2021-0207", "2021-0211A", "2021-0214"]  # fmt: skip
+    ps = procs(*ids)
+    me = SimpleNamespace(indexed_vote_ids=set(), council_of={}, today="2026-10-23", procedures=list(ps.values()), proc=ps,
+                         curated_of={}, adopted_title=lambda p: None)  # fmt: skip
+    me.dossier_title = lambda p: Builder.dossier_title(me, p)  # type: ignore[arg-type]
+    Builder.index_file_documents(me)  # type: ignore[arg-type]
+    tl = {pid: Builder.joint_debates(me, ps[pid], Builder.timeline(me, ps[pid], [], [])) for pid in ids}  # type: ignore[arg-type]
+    cap = {"2018-0216", "2018-0217", "2018-0218"}
+    for pid in cap:
+        step = next(e for e in tl[pid] if e["id"] == "MTG-PL-2020-10-20-PVCRE-ITM-5")
+        assert step["title"] == "Joint debate in Parliament"
+        assert {j["id"] for j in step["joint_with"]} == cap - {pid}, pid
+        assert not {"A-9-2020-0198", "A-9-2020-0199", "A-9-2020-0200"} & {d["id"] for d in step["docs"]}
+    assert not [e for e in tl["2020-0165"] if e["kind"] == "plenary_debate"]
+    # the customs equipment file keeps its own debate of 7 June 2021 and not the ESF+ item of 8 June
+    assert [(e["date"], e["title"]) for e in tl["2018-0258"] if e["kind"] == "plenary_debate" and e["date"] >= "2021"] == [
+        ("2021-06-07", "Debate in Parliament")]  # fmt: skip
+    esf = next(e for e in tl["2018-0206"] if e["id"] == "MTG-PL-2021-06-08-PVCRE-ITM-20")
+    assert (esf["title"], esf.get("joint_with")) == ("Debate in Parliament", None)
+    # a file whose own record shows a debate in Parliament that day (OEIL) is named: item 2 of 7 June 2022, "... (joint
+    # debate – Fit for 55 (part 1))", cites A9-0162/2022 of 2021/0211A(COD), whose OEIL file has "Debate in Parliament"
+    fit = next(e for e in tl["2021-0204"] if e["id"] == "MTG-PL-2022-06-07-PVCRE-ITM-2")
+    assert [j["id"] for j in fit["joint_with"]] == ["2021-0206", "2021-0207", "2021-0211A", "2021-0214"]
+
+
+def test_the_pillar_two_directive_adoption_is_recorded_from_the_councils_communication():
+    # CM 5860/22, point 2: "(a) all delegations voted in favour of, except for Hungary that abstained, the adoption of
+    # the Council Directive on ensuring a global minimum level of taxation ... The required unanimity has been
+    # reached"; the written procedure "was completed on 15 December 2022 at 22:11". The page said that no Council vote
+    # is linked to the file; Council Directive (EU) 2022/2523 is "of 14 December 2022".
+    from pipeline.build import council_vote_event
+
+    me = _built_council([], ["2021-0433"])
+    cm = me.council_records["CM-5860-2022-2"]  # type: ignore[attr-defined]
+    assert (cm["dossier_id"], cm["date"], cm["voting_rule"], cm["outcome"], cm["vote_on"], cm["written_procedure"]) == (
+        "2021-0433", "2022-12-15", "unanimity", "adopted", "act", True)  # fmt: skip
+    assert cm["positions"]["HU"] == "abstain" and sum(x == "for" for x in cm["positions"].values()) == 26
+    assert cm["source"]["identifier"] == "CM 5860/22"
+    assert '"was completed on 15 December 2022 at 22:11"' in cm["source_note"]
+    assert '"Council Directive (EU) 2022/2523 of 14 December 2022"' in cm["source_note"]
+    assert len(cm["statements"]) == 2 and cm["statements"][1].startswith("Statement by Sweden")
+    assert council_vote_event(cm)["title"] == "Council adopted the act (written procedure)"
+
+
 def test_a_date_checked_against_the_text_cites_that_text_as_its_source():
     # DSA, Regulation (EU) 2022/2065, Art. 93(2): 17 February 2024 (EUR-Lex records 17 February 2022); the step's
     # source said "EUR-Lex / Cellar – CELEX 32022R2065", the record that lacks the date
@@ -1895,6 +2071,26 @@ def test_a_procedure_title_that_does_not_describe_the_adopted_act_gives_way_to_t
     assert Builder.dossier_title(me, p["2023-0393"]) == (  # type: ignore[arg-type]
         "Extending Directive (EU) 2024/2841 to third-country nationals legally residing in a Member State")
     assert Builder.dossier_title(me, p["2021-0395"]).startswith("Amending Directives 2011/99/EU and 2014/41/EU")  # type: ignore[arg-type]
+    assert Builder.adopted_title(me, p["2016-0002"]) is None  # type: ignore[arg-type]
+
+
+def test_an_amending_title_that_leaves_out_an_act_the_law_amends_gives_way_to_the_acts():
+    # Regulation (EU) 2026/1744 is "amending Regulations (EU) 2024/1689, (EU) 2018/1139 and (EU) 2023/1230"; the header
+    # of 2025/0359(COD) gave the proposal's "Amending Regulations (EU) 2024/1689 and (EU) 2018/1139" as its official
+    # title. Regulation (EU) 2024/886 also amends Directives 98/26/EC and (EU) 2015/2366, which 2022/0341(COD)'s
+    # title leaves out. 2012/0288(COD) names its directives in words ("the fuel quality directive"): not checked.
+    from pipeline.build import celex_numbers, title_misfit
+
+    pairs = {"2025-0359": "32026R1744", "2022-0341": "32024R0886", "2012-0288": "32015L1513", "2016-0002": "32019L0884"}
+    p, a = procs(*pairs), acts(*pairs.values())
+    assert {pid: title_misfit(p[pid].title, a[c].title, a[c].amends) for pid, c in pairs.items()} == {
+        "2025-0359": True, "2022-0341": True, "2012-0288": False, "2016-0002": False}  # fmt: skip
+    # without the act's amendment links, only the earlier rule applies
+    assert not title_misfit(p["2025-0359"].title, a["32026R1744"].title)
+    assert celex_numbers("31998L0026") == {"1998/26", "26/1998", "98/26"}
+    me = SimpleNamespace(curated_of={}, acts_of={pid: [a[c]] for pid, c in pairs.items()},
+                         act_dossiers={c: {pid} for pid, c in pairs.items()})  # fmt: skip
+    assert "(EU) 2023/1230" in (Builder.adopted_title(me, p["2025-0359"]) or "")  # type: ignore[arg-type]
     assert Builder.adopted_title(me, p["2016-0002"]) is None  # type: ignore[arg-type]
 
 

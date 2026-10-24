@@ -662,6 +662,14 @@ JOINT_ACT_RE = re.compile(
 )
 VOTE_EVENT_KINDS = {"ep_position", "plenary_vote", "rejection"}
 REJECTION_MOTIONS = ("reject_proposal", "reject_council_position")  # EpVote.kind_detail of motions to reject the text
+# a second-reading approval decided by a rejected motion to reject the Council's position, the step linking that
+# motion: no vote on the text as a whole is held (Art. 294(7)(a) TFEU: if Parliament "approves the Council's position
+# at first reading or has not taken a decision, the act concerned shall be deemed to have been adopted in the wording
+# which corresponds to the position of the Council")
+REJECTED_MOTION_APPROVAL = (
+    "Parliament held no vote on the text as a whole: it rejected a motion to reject the Council's position, and the "
+    "act is deemed adopted in the wording of that position (Article 294(7)(a) TFEU). The vote link opens that motion."
+)
 EP_VOTE_RECORDS = ("PLENARY_VOTE", "PLENARY_VOTE_RESULTS")  # an item of the sitting, not a decision
 _VOTE_EVENT_ID = re.compile(r"^vote-(\d+)-")  # a step built from a vote (with_recorded_events: "vote-199592-…")
 # a vote on a request to deal with a file by urgent procedure, as the EP labels it (the 2020 remote sittings only in
@@ -873,13 +881,31 @@ TITLE_PLACEHOLDER_RE = re.compile(r"\[(?:X+|…|\.\.\.)\]|\bX{3,}\b|\.\.\./\.\.\
 TITLE_NUMBER_RE = re.compile(r"\b\d{1,4}/\d{1,4}\b")  # an act cited by its number: "2014/41", "1316/2013"
 
 
-def title_misfit(title: str, act_title: str) -> bool:
+def celex_numbers(celex: str) -> set[str]:
+    """The numbers an act's title can cite it by: "2023/1230" (from 2015), "1024/2012" (regulations before 2015),
+    "98/26" (directives and decisions before 1999 give a two-digit year)."""
+    m = CELEX_ACT_RE.match(celex)
+    if not m:
+        return set()
+    year, n = m.group(1), str(int(m.group(3)))
+    return {f"{year}/{n}", f"{n}/{year}", f"{year[2:]}/{n}"}
+
+
+def title_misfit(title: str, act_title: str, amends: list[str] | tuple[str, ...] = ()) -> bool:
     """A procedure's title that does not describe the act it adopted: it has a drafting placeholder, or it cites acts
     (by number) that the act's official title does not. Directive (EU) 2023/2843 amends Directive 2011/99/EU and no
-    Framework Decision 2002/465/JHA; its procedure's title (2021/0395(COD), the proposal's) says the reverse."""
+    Framework Decision 2002/465/JHA; its procedure's title (2021/0395(COD), the proposal's) says the reverse. Also an
+    "Amending …" title that cites acts by number but leaves out one the act amends (`amends`, Cellar) and its title
+    cites: Regulation (EU) 2026/1744 is "amending Regulations (EU) 2024/1689, (EU) 2018/1139 and (EU) 2023/1230",
+    its procedure's title (2025/0359(COD)) "Amending Regulations (EU) 2024/1689 and (EU) 2018/1139"."""
     if TITLE_PLACEHOLDER_RE.search(title or ""):
         return True
-    return bool(set(TITLE_NUMBER_RE.findall(title or "")) - set(TITLE_NUMBER_RE.findall(act_title or "")))
+    cited, in_act = set(TITLE_NUMBER_RE.findall(title or "")), set(TITLE_NUMBER_RE.findall(act_title or ""))
+    if cited - in_act:
+        return True
+    if not cited or not re.match(r"amend", title or "", re.I):  # a title naming its acts in words is not checked
+        return False
+    return any((ns := celex_numbers(c) & in_act) and not ns & cited for c in amends)
 
 
 PARLIAMENT_REPORT_RE = re.compile(r"(\d{4}-\d{4})([RM])")
@@ -954,6 +980,19 @@ def act_label(a: LegalAct) -> str:
 
 
 CELEX_ACT_RE = re.compile(r"^3(\d{4})([RLD])(\d{4})$")
+# the type of act a checked text's label gives ("Delegated Regulation (EU) 2026/2102, Annex" -> "Delegated Regulation")
+CHECKED_ACT_TYPE_RE = re.compile(r"^((?:Implementing |Delegated )?(?:Regulation|Directive|Decision))\b")
+
+
+def checked_act_types(act_dates: dict[str, dict]) -> dict[str, str]:
+    """CELEX -> type of act, as the label of a text checked for data/curated/act_dates.yaml gives it, for the texts
+    that name an act by its CELEX id and number: an act outside our EUR-Lex data is then "Delegated Regulation
+    2026/2102" ("Delegated Regulation (EU) 2026/2102, Annex", celex 32026R2102), not only the type its CELEX id gives."""
+    return {
+        x["celex"]: m.group(1) for e in act_dates.values() for x in e.get("sources") or []
+        if x.get("celex") and (m := CHECKED_ACT_TYPE_RE.match(_squash(x.get("label"))))
+        and celex_numbers(x["celex"]) & set(TITLE_NUMBER_RE.findall(_squash(x.get("label"))))
+    }  # fmt: skip
 
 
 def celex_act_label(celex: str) -> str | None:
@@ -1927,6 +1966,7 @@ class Builder:
         self.act_dates = load_act_dates(curated)
         if self.act_dates:
             snap.acts = [apply_act_dates(a, self.act_dates.get(a.celex)) for a in snap.acts]
+        self.checked_act_types = checked_act_types(self.act_dates)
         self.council_fixes, self.council_extra, self.council_extra_notes = load_council_votes(curated)
         self.transposition_checks = load_transposition_checks(curated)
         if self.transposition_checks:
@@ -2277,7 +2317,7 @@ class Builder:
         acts = self.acts_of.get(p.id, [])
         if len(acts) != 1 or self.act_dossiers.get(acts[0].celex) != {p.id}:
             return None
-        return acts[0].title if title_misfit(p.title, acts[0].title) else None
+        return acts[0].title if title_misfit(p.title, acts[0].title, acts[0].amends) else None
 
     def dossier_title(self, p: Procedure) -> str:
         cur = self.curated_of.get(p.id)
@@ -2287,12 +2327,19 @@ class Builder:
         names = short_names(title)
         return names[0] if names else clean_title(title)
 
+    def celex_label(self, celex: str) -> str | None:
+        """An act known only by its CELEX id: "Regulation 2026/2102" (celex_act_label), its type as a checked text
+        gives it (checked_act_types): "Delegated Regulation 2026/2102"."""
+        label = celex_act_label(celex)
+        kind = self.checked_act_types.get(celex)
+        return f"{kind} {label.split(' ', 1)[1]}" if label and kind else label
+
     def related_act_title(self, celex: str, pid: str | None, topic: bool = False) -> str:
         """A related act by its number ('Directive (EU) 2025/794'), followed by its file's short title when it
         has one (curated, or an official short name) or, with topic, by its file's title unless that is a
         run-on 'Amending …' title. Its file's title, or its CELEX id, when no number is known."""
         a = self.act.get(celex)
-        label = act_label(a) if a and act_label(a) != celex else celex_act_label(celex)
+        label = act_label(a) if a and act_label(a) != celex else self.celex_label(celex)
         title = self.dossier_summary[pid]["title"] if pid else None
         if not label:
             return _truncate(title, 160) if title else f"Act {celex} (EUR-Lex)"
@@ -3222,6 +3269,7 @@ class Builder:
                     # (2025/0429(COD), 26 Mar 2026: 228-311-92, OEIL "rejected the proposal", T10-0095/2026)
                     title = rejection_title(p)
                 amends_position = (e.raw_type or "").endswith("PLENARY_AMEND_COUNCIL_POSITION")
+                approves = (e.raw_type or "").endswith("/PLENARY_APPROVE_COUNCIL_POSITION")
                 if vote_id is None and SECOND_READING_DECISION_RE.search(e.raw_type or "") and not amends_position:
                     # second reading: the votes deciding it are the motions to reject the Council's position (not when
                     # Parliament amended it: then its amendments decided, which are not listed; 2025/0429(COD), 9 Jul
@@ -3235,6 +3283,8 @@ class Builder:
                             f"Parliament voted on {len(motions)} motions to reject the Council's position and rejected "
                             "each of them; the vote link opens the first."
                         )
+                    elif len(motions) == 1 and not detail and motions[0].outcome == "rejected" and approves:
+                        detail = REJECTED_MOTION_APPROVAL  # 2017/0121(COD), 8 Jul 2020: vote 116204, 218-469-7
             elif kind in ("ep_position", "plenary_vote") and (near := decision_vote_near(e, votes_by_date)):
                 # no vote held on the decision's date: the one deciding vote recorded within DECISION_VOTE_DAYS of it
                 # (remote voting, 2020-22: results were recorded the next day)
@@ -3243,6 +3293,9 @@ class Builder:
                     f"Parliament's vote records date this vote {_long_date(near.date)}; its procedure record dates "
                     f"the decision {_long_date(e.date)}."
                 )
+                if (near.kind_detail == "reject_council_position" and near.outcome == "rejected"
+                        and (e.raw_type or "").endswith("/PLENARY_APPROVE_COUNCIL_POSITION")):  # fmt: skip
+                    detail = f"{detail} {REJECTED_MOTION_APPROVAL}"  # 2017/0122(COD): vote 116205 of 8 July 2020
             elif kind == "negotiation_mandate" and e.raw_type == ENDORSE_NEGOTIATIONS_EVENT:
                 negotiation.append(len(out))  # linked below, once every event of the day is linked
             if title == "Parliament voted on consent" and (consent := _lazy("pipeline.analysis.status", "_consent_outcome")):
@@ -3347,11 +3400,15 @@ class Builder:
                                   f"Entered into force and started to apply: {prov}"))  # fmt: skip
                 else:
                     synth.append(("entry_into_force", a.entry_into_force, "Enters into force", None))
+            # the dates from which the act applies in general (MA, not marked PART): the first is when its rules start
+            # to apply, also after dates for some provisions (Regulation (EU) 2024/1348, Art. 79(2): "This Regulation
+            # shall apply from 12 June 2026", after 27 February 2026 for some provisions; Regulation (EU) 2026/1388,
+            # Art. 38: "It shall apply from 17 July 2028. However, Articles 29, 30 and 31 shall apply from 16 July
+            # 2026"); "Further" only for a later one (EUR-Lex records 28 November 2023, then 1 January 2024, for
+            # Regulation (EU) 2023/2663)
+            general = [x for x in a.other_application_dates if x not in a.partial_application_dates]
             for d in a.other_application_dates:
-                # "Further" only after an earlier application date (PPWR, Regulation (EU) 2025/40, Art. 71: "It shall
-                # apply from 12 August 2026", the first date from which any of it applies)
-                earlier = (any(x < d for x in a.other_application_dates) or a.partial_on_entry_into_force
-                           or bool(a.entry_into_force and provisions.get(a.entry_into_force)))  # fmt: skip
+                earlier = bool(general) and d > general[0]
                 if provisions.get(d):
                     synth.append(("application", d, f"Starts to apply: {provisions[d]}",
                                   f"Started to apply: {provisions[d]}"))  # fmt: skip
@@ -3408,6 +3465,19 @@ class Builder:
                     detail = f"{label}. Exceptions in its text: {chk.exceptions}"
                 elif kind == "transposition_application" and chk and chk.application_exceptions and d == chk.applies_from:
                     detail = f"{label}. {chk.application_exceptions}"  # a later date for some measures (CSDDD Art. 37(1))
+                if (kind in ("application", "transposition_application") and a.date_document and d < a.date_document
+                        and "retroactiv" not in title.lower()):  # fmt: skip
+                    # a date before the act existed, at its own date on the timeline (Regulation (EU) 2021/23, Art.
+                    # 97: "Article 95 which shall apply from 4 July 2020", in the act "of 16 December 2020"); the
+                    # curated own-resources dates already say "retroactively" (32014R0608, 32021R0768)
+                    title = re.sub(r"(?i)^((?:some provisions |further provisions |rules )?started to apply)",
+                                   r"\1 retroactively", title)  # fmt: skip
+                    what = ("the national measures are to apply retroactively from it" if kind == "transposition_application"
+                            else "what applies from it does so retroactively")  # fmt: skip
+                    # (Directive (EU) 2022/642 of 12 April 2022: 1 January 2022 for the national measures, as EUR-Lex
+                    # records)
+                    detail = (f"{detail.rstrip('.')}. This date is earlier than the act itself, dated "
+                              f"{_long_date(a.date_document)}: {what}.")  # fmt: skip
                 if kind == "publication" and ep_pubs and len(act_pubs) == 1:  # the EP's record gives another day
                     detail = (f"{label}. The European Parliament's procedure record gives "
                               f"{' and '.join(_long_date(x) for x in sorted(ep_pubs))} for its publication.")  # fmt: skip
@@ -3456,36 +3526,54 @@ class Builder:
         (a joint debate cites the documents of every file debated), the sitting's records left out."""
         self.files_of_doc: dict[str, set[str]] = defaultdict(set)
         self.docs_of_file: dict[str, set[str]] = {}
+        self.debates_of_file: dict[str, tuple[set[str], set[str]]] = {}  # the debate steps' ids and days
         for p in self.procedures:
             ids = {d.id for d in p.documents} | {
                 d.id for e in p.events if not (e.raw_type or "").endswith("/PLENARY_DEBATE") for d in e.docs}  # fmt: skip
             self.docs_of_file[p.id] = {i for i in ids if not SITTING_RECORD_RE.match(i)}
             for i in self.docs_of_file[p.id]:
                 self.files_of_doc[i].add(p.id)
+            debates = [e for e in p.events if e.kind == EventKind.plenary_debate]
+            self.debates_of_file[p.id] = ({e.id for e in debates}, {e.date for e in debates})
 
     def joint_debates(self, p: Procedure, tl: list[dict]) -> list[dict]:
-        """A debate whose item cites another file's documents, or a report no file in our data lists, was a joint
-        debate (the EP's item 15 of 25 March 2026, "Deposit protection and early intervention measures (joint debate)",
-        cites the reports of 2023/0111, 2023/0112 and 2023/0115(COD)). Its step keeps this file's documents and the
-        sitting's records, and names the other files (`joint_with`): each file in our data with its report on the item,
-        and each report of a file that is not, as OEIL's own procedure file shows the debate without them."""
+        """A debate item that the EP's records give to other files as well was a joint debate (the EP's item 15 of 25
+        March 2026, "Deposit protection and early intervention measures (joint debate)", cites the reports of
+        2023/0111, 2023/0112 and 2023/0115(COD), and each file's record lists it). Another file is named (`joint_with`)
+        only when the item cites its documents and its own record lists the item, or a debate in Parliament that day
+        (OEIL: 2021/0211A(COD), 7 June 2022, "(joint debate – Fit for 55 (part 1))"): a document cited on the item is
+        not enough by itself. The EP's item 5 of 20 October 2020, "Common agricultural policy ... (debate)", also cites
+        A9-0200/2020, the report on 2020/0165(CNS) tabled on 29 October 2020, whose record lists no debate that day,
+        and A9-0198/2020 and A9-0199/2020, reports of files not in our data, which no record of ours shows debated: none
+        of them is named. Its step keeps this file's documents and the sitting's records. An item that cites none of
+        this file's documents but those of a file whose record lists it is that file's debate, and is left out
+        (2018/0258(COD): item 20 of 8 June 2021, "European Social Fund Plus (ESF+) 2021-2027 ***II (continuation of
+        debate)", cites C9-0196/2021 too; its own debate was item 22 of 7 June 2021)."""
         mine = self.docs_of_file.get(p.id, set())
-        for x in tl:
+        drop: set[int] = set()
+        for i, x in enumerate(tl):
             if x["kind"] != "plenary_debate":
                 continue
             others = [d for d in x["docs"] if not SITTING_RECORD_RE.match(d["id"]) and d["id"] not in mine]
-            files = sorted({f for d in others for f in self.files_of_doc.get(d["id"], ()) if f != p.id})
+            cited = sorted({f for d in others for f in self.files_of_doc.get(d["id"], ()) if f != p.id})
             unlisted = [d for d in others if not self.files_of_doc.get(d["id"]) and EP_REPORT_ID_RE.fullmatch(d["id"])]
-            if not files and not unlisted:
+            if not cited and not unlisted:
+                continue
+            files = [f for f in cited if x["id"] in self.debates_of_file[f][0] or x["date"] in self.debates_of_file[f][1]]
+            own = [d for d in x["docs"] if not SITTING_RECORD_RE.match(d["id"]) and d["id"] in mine]
+            if files and not own:
+                drop.add(i)
+                continue
+            x["docs"] = [d for d in x["docs"] if SITTING_RECORD_RE.match(d["id"]) or d["id"] in mine]
+            if not files:
                 continue
             x["title"] = "Joint debate in Parliament"
-            x["docs"] = [d for d in x["docs"] if SITTING_RECORD_RE.match(d["id"]) or d["id"] in mine]
             x["joint_with"] = [{
                 "id": f, "ref": self.proc[f].reference, "title": _truncate(self.dossier_title(self.proc[f]), 160),
                 "report": next((d for d in others if EP_REPORT_ID_RE.fullmatch(d["id"])
                                 and f in self.files_of_doc.get(d["id"], ())), None),
-            } for f in files] + [{"id": None, "ref": None, "title": None, "report": d} for d in unlisted]  # fmt: skip
-        return tl
+            } for f in files]  # fmt: skip
+        return [x for i, x in enumerate(tl) if i not in drop]
 
     def approval_without_vote(self, p: Procedure, tl: list[dict], votes: list[EpVote]) -> dict | None:
         """Parliament's latest approval of the Council's position at second reading (PLENARY_APPROVE_COUNCIL_POSITION)
@@ -4074,6 +4162,10 @@ class Builder:
             det["next_step"] = self.derived_next_step(det)
             det["next_step"] = self.amending_deadlines(det, acts)
             self.dossier_detail[pid] = det
+            # said under "Latest verified development" as on the home page (2021/0366(COD): Delegated Regulation (EU)
+            # 2026/2102 "of 13 July 2026", in force on 18 September 2026 as Cellar records, after the file's latest
+            # dated step, of 23 December 2025)
+            det["latest_note"] = self.undated_amendments_note(pid)
         # officially established relations between dossiers (act amends/repeals another dossier's act)
         # a partial repeal is EUR-Lex's classification of the link, which the repealing act's text need not state
         # (Decision (EU) 2024/867, Art. 6: Decision (EU) 2020/1531 "remains applicable to the extent referred to in
@@ -4528,13 +4620,21 @@ class Builder:
         """The acts that EUR-Lex lists as amending the file's acts but that are not in our EUR-Lex data, so the
         timeline has no dated step for them (2021/0366(COD): Delegated Regulation (EU) 2026/2102). Said next to
         the latest step, which may be older than they are."""
-        cs = sorted({c for a in self.dossier_acts.get(pid, []) for c in a.amended_by if c not in self.act})
+        latest = self.latest_event(pid)
+        since = latest["date"][:4] if latest else ""  # an act of an earlier year (its CELEX id) predates that step
+        cs = sorted({c for a in self.dossier_acts.get(pid, []) for c in a.amended_by
+                     if c not in self.act and c[1:5] >= since})  # fmt: skip
         if not cs:
             return None
-        names = [celex_act_label(c) or c for c in cs]
+        if len(cs) > 3:
+            return (f"EUR-Lex also lists {len(cs)} acts that are not in our data as amending this act, so their "
+                    "publication is not shown and the step above may not be the latest.")
+        names = [self.celex_label(c) or c for c in cs]
         listed = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
-        return (f"EUR-Lex also lists {listed} as amending this act; {'its' if len(cs) == 1 else 'their'} dates are not "
-                "in our data, so the step above may not be the latest.")
+        one = len(cs) == 1
+        return (f"EUR-Lex also lists {listed} as amending this act. {'That act is' if one else 'Those acts are'} not in "
+                f"our data, so {'its' if one else 'their'} publication is not shown and the step above may not be the "
+                "latest.")
 
     def home_rejection_note(self, v: dict) -> str:
         """What a rejection on the home "Rejected" list meant, in the words of the file's timeline where the vote
@@ -4842,10 +4942,11 @@ class Builder:
                 with_pos = sum(1 for c in listed if c.positions)
                 unread = sum(1 for c in s.council if not c.positions)
                 n = len(self.council_extra)
+                docs = list(dict.fromkeys(c.source.identifier or c.id for c in self.council_extra))  # CM 5860/22: two
                 extra = (f": {len(s.council):,} from the Council's voting-result documents and {n:,} "
                          f"{'adoption' if n == 1 else 'adoptions'} by written procedure from the Council's "
-                         f"{'communication' if n == 1 else 'communications'} on its outcome "
-                         f"({', '.join(c.source.identifier or c.id for c in self.council_extra)})") if n else ""  # fmt: skip
+                         f"{'communication' if len(docs) == 1 else 'communications'} on its outcome "
+                         f"({', '.join(docs)})") if n else ""  # fmt: skip
                 out.append(f"{len(listed):,} votes of the Council of the EU ({dates[0][:4]}–{dates[-1][:4]}), "
                            f"{with_pos:,} of them with each Member State's position{extra}.")  # fmt: skip
                 if unread:
@@ -4946,9 +5047,10 @@ class Builder:
             dates = sorted(c.date for c in listed)
             unread = sum(1 for c in s.council if not c.positions)
             n = len(self.council_extra)
+            docs = list(dict.fromkeys(c.source.identifier or c.id for c in self.council_extra))
             extra = (f" and, for {n} {'adoption' if n == 1 else 'adoptions'} by written procedure, from the Council's "
-                     f"{'communication' if n == 1 else 'communications'} on its outcome "
-                     f"({', '.join(c.source.identifier or c.id for c in self.council_extra)})") if n else ""  # fmt: skip
+                     f"{'communication' if len(docs) == 1 else 'communications'} on its outcome "
+                     f"({', '.join(docs)})") if n else ""  # fmt: skip
             note = (f"Council votes: {len(listed):,} votes of the Council of the EU "
                     f"({dates[0][:4]}–{dates[-1][:4]}), with each Member State government's position read from the "
                     f"official Council voting-result documents{extra}. These are positions of national governments in "

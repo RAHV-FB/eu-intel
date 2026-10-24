@@ -182,17 +182,19 @@
     responsible for examining an asylum application and creates a solidarity mechanism through which
     other Member States support those under migratory pressure.
   why: >-
-    It determines in which country an asylum seeker's application is examined, and requires every
-    Member State to contribute to an annual solidarity pool, choosing between relocating applicants,
-    financial contributions or other support measures.
+    It determines in which country an asylum seeker's application is examined, and requires each Member
+    State bound by it to contribute to an annual solidarity pool, choosing between relocating applicants,
+    financial contributions or other support measures. Denmark is not bound by it (recital 90); Ireland
+    takes part (Commission Decision (EU) 2024/2088).
   aliases: ["AMMR", "Asylum and Migration Management Regulation", "Dublin reform", "Migration Pact"]
   topics: ["migration"]
   featured: false
   feature_order: null
   sources:
     - {label: "Regulation (EU) 2024/1351 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1351/oj"}
+    - {label: "Commission Decision (EU) 2024/2088 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dec/2024/2088/oj"}
     - {label: "Legislative Observatory – 2020/0279(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2020/0279(COD)"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-10-24"
 
 - id: "2016-0224A"
   reference: "2016/0224A(COD)"
@@ -211,8 +213,8 @@
     Applications from people who have misled the authorities, are considered a security risk, or come from
     countries whose nationals have an EU-wide recognition rate of 20% or lower must be examined in an
     accelerated procedure and, where made at the external border, in principle in the border procedure,
-    subject to exceptions and capacity limits; the same procedural guarantees and deadlines apply in all
-    Member States.
+    subject to exceptions and capacity limits; the same procedural guarantees and deadlines apply in every
+    Member State bound by it, which excludes Denmark (recital 107).
   aliases: ["APR", "Asylum Procedure Regulation", "asylum procedures", "Migration Pact"]
   topics: ["migration"]
   featured: false
@@ -221,16 +223,18 @@
     - {label: "Regulation (EU) 2024/1348 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2024/1348/oj"}
     - {label: "Regulation (EU) 2026/463 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/463/oj"}
     - {label: "Regulation (EU) 2026/464 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/464/oj"}
+    - {label: "Commission Decision (EU) 2024/2089 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dec/2024/2089/oj"}
     - {label: "Legislative Observatory – 2016/0224A(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2016/0224A(COD)"}
-  reviewed: "2026-10-23"
+  reviewed: "2026-10-24"
 
 - id: "2025-0059"
   reference: "2025/0059(COD)"
   celex: ["32026R2280"]
   short_title: "Return Regulation"
   what: >-
-    Replaces the 2008 Return Directive, from 17 October 2027, with a directly applicable regulation
-    on returning non-EU nationals who have no right to stay in the EU, including a European Return
+    Replaces the 2008 Return Directive from 17 October 2027, for the Member States bound by it (not
+    Denmark or Ireland: recitals 67 and 68), with a directly applicable regulation on returning
+    non-EU nationals with no right to stay in the EU, including a European Return
     Order to help Member States recognise each other's return decisions; the rules allowing returns
     to 'return hubs' in non-EU countries under agreements with those countries apply from 16 October
     2026.
@@ -247,7 +251,7 @@
     - {label: "Regulation (EU) 2026/2280 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/2280/oj"}
     - {label: "Council press release, 1 October 2026", url: "https://www.consilium.europa.eu/en/press/press-releases/2026/10/01/council-adopts-new-rules-on-return-for-those-with-no-right-to-stay-in-the-eu/"}
     - {label: "Legislative Observatory – 2025/0059(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0059(COD)"}
-  reviewed: "2026-10-23"
+  reviewed: "2026-10-24"
 
 # ------------------------------------------------------------------------ Environment & Energy
 

@@ -103,8 +103,14 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     expect([scope?.council_votes_from, scope?.council_votes_to]).toEqual(['2019-01-28', '2026-10-19']);
     const none = all.filter((d) => d.council_votes.length === 0 && !d.related.some((r) => r.relation === 'Split into'));
     const within = none.filter((d) => noCouncilVoteNote(d.timeline, d.adopted, scope).includes('within the period'));
-    expect(within.map((d) => d.id)).toContain('2021-0433');
+    // Council Directive (EU) 2020/1151 (2018/0173(CNS)), adopted 29 July 2020; the Pillar Two Directive (2021/0433(CNS))
+    // has its adoption from CM 5860/22, "completed on 15 December 2022 at 22:11", Hungary abstaining
+    expect(within.map((d) => d.id)).toContain('2018-0173');
     expect(within.map((d) => d.id)).not.toContain('2016-0360A');
+    const pillar2 = all.find((d) => d.id === '2021-0433')!;
+    expect(pillar2.council_votes.map((v) => [v.id, v.date, v.positions.HU])).toEqual([['CM-5860-2022-2', '2022-12-15', 'abstain']]);
+    expect(pillar2.adopted).toBe('2022-12-15');
+    expect(pillar2.acts[0].date_document).toBe('2022-12-14'); // "Council Directive (EU) 2022/2523 of 14 December 2022"
     for (const d of none) {
       const step = [...d.timeline].reverse().find((e) => e.state === 'done' && (e.kind === 'council_adoption' || e.kind === 'council_position'));
       if (step || d.adopted) expect(noCouncilVoteNote(d.timeline, d.adopted, scope), d.id).not.toContain('under discussion');
@@ -224,10 +230,71 @@ describe.skipIf(!built)('application dates, act names and sources on the built d
     expect(byId('2022-0396').timeline.find((e) => e.kind === 'application' && e.date === '2026-08-12')?.title).toBe(
       'Rules started to apply (date recorded by EUR-Lex)',
     );
-    // Regulation (EU) 2026/1388, Art. 38: some provisions apply from its entry into force, so 17 July 2028 is further
+    // Regulation (EU) 2026/1388, Art. 38: "It shall apply from 17 July 2028. However, Articles 29, 30 and 31 shall apply
+    // from 16 July 2026": the date it applies from in general, after some provisions, is when its rules start to apply
     expect(byId('2023-0226').timeline.find((e) => e.kind === 'application' && e.date === '2028-07-17')?.title).toBe(
-      'Further provisions start to apply (date recorded by EUR-Lex)',
+      'Rules start to apply (date recorded by EUR-Lex)',
     );
+    // Asylum Procedure Regulation, Regulation (EU) 2024/1348, Art. 79(2): "This Regulation shall apply from 12 June 2026"
+    // (after 27 February 2026 for some provisions); the headline read "Further provisions started to apply"
+    expect(byId('2016-0224A').timeline.find((e) => e.kind === 'application' && e.date === '2026-06-12')?.title).toBe(
+      'Rules started to apply (date recorded by EUR-Lex)',
+    );
+    // "Further" only after a first date from which the act applies in general (EUR-Lex: 28 November 2023, 1 January 2024)
+    const further = all.flatMap((d) => d.timeline.filter((e) => e.kind === 'application' && e.title.startsWith('Further')).map((e) => `${d.id} ${e.date}`));
+    expect(further).toEqual(['2023-0252 2024-01-01']);
+  });
+
+  it('marks an application date earlier than the act itself as retroactive (Regulation (EU) 2021/23, Art. 97)', () => {
+    // "Article 95 which shall apply from 4 July 2020", in the act "of 16 December 2020"
+    const step = byId('2016-0365').timeline.find((e) => e.kind === 'application' && e.date === '2020-07-04')!;
+    expect(step.title).toBe('Some provisions started to apply retroactively (date recorded by EUR-Lex)');
+    expect(step.detail).toContain('earlier than the act itself, dated 16 December 2020');
+    for (const d of all)
+      for (const e of d.timeline) {
+        const act = d.acts.find((a) => e.docs.some((x) => x.id === a.celex));
+        if ((e.kind === 'application' || e.kind === 'transposition_application') && act?.date_document && e.date < act.date_document)
+          expect(`${e.title} ${e.detail ?? ''}`, `${d.id} ${e.id}`).toMatch(/retroactiv/);
+      }
+  });
+
+  it('never says a regulation applies in all EU countries, and names enhanced cooperation where its title does', () => {
+    // Return Regulation (EU) 2026/2280, recital 67: Denmark "is not bound by it or subject to its application";
+    // Art. 20(4) TEU: acts adopted in the framework of enhanced cooperation "shall bind only participating Member States"
+    for (const d of all) expect(d.next_step.text, d.id).not.toMatch(/applies directly in (?:all EU countries|every Member State)/);
+    expect(byId('2025-0059').next_step.text).toMatch(/^The regulation applies directly; no national transposition is needed\./);
+    for (const id of ['2013-0255', '2016-0059', '2016-0060', '2026-0008'])
+      expect(byId(id).next_step.text, id).toContain('only in the Member States taking part in the enhanced cooperation it implements (Article 20(4) TEU)');
+  });
+
+  it('gives the official title of the adopted act where the procedure’s title leaves out an act it amends (2025-0359)', () => {
+    // Regulation (EU) 2026/1744: "amending Regulations (EU) 2024/1689, (EU) 2018/1139 and (EU) 2023/1230"
+    expect(byId('2025-0359').official_title).toContain('(EU) 2023/1230');
+    expect(byId('2022-0341').official_title).toContain('Directives 98/26/EC and (EU) 2015/2366');
+    expect(byId('2012-0288').official_title).toMatch(/^Amendment to the fuel quality directive/);
+  });
+
+  it('says under the latest step that an amending act outside our data is not dated, and names its type (EUDR)', () => {
+    // Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU) 2023/1115 (Cellar)
+    const eudr = byId('2021-0366');
+    expect(eudr.latest_note).toBe(
+      'EUR-Lex also lists Delegated Regulation 2026/2102 as amending this act. That act is not in our data, so its publication is not shown and the step above may not be the latest.',
+    );
+    expect(eudr.related.filter((r) => r.relation === 'Amended by').map((r) => r.title)).toContain('Delegated Regulation 2026/2102');
+  });
+
+  it('names as debated together only files whose own record shows that debate (CAP, 20 October 2020; customs, 8 June 2021)', () => {
+    // EP item MTG-PL-2020-10-20-PVCRE-ITM-5 names the three CAP files only; it also cites the VAT Northern Ireland
+    // report A9-0200/2020, tabled on 29 October 2020
+    for (const id of ['2018-0216', '2018-0217', '2018-0218']) {
+      const step = byId(id).timeline.find((e) => e.id === 'MTG-PL-2020-10-20-PVCRE-ITM-5')!;
+      expect(step.joint_with?.map((j) => j.ref).sort(), id).toEqual(
+        ['2018/0216(COD)', '2018/0217(COD)', '2018/0218(COD)'].filter((r) => r !== byId(id).ref),
+      );
+    }
+    // MTG-PL-2021-06-08-PVCRE-ITM-20, "European Social Fund Plus (ESF+) 2021-2027 ***II (continuation of debate)"
+    expect(byId('2018-0258').timeline.filter((e) => e.kind === 'plenary_debate' && e.date === '2021-06-08')).toEqual([]);
+    for (const d of all) for (const e of d.timeline) for (const j of e.joint_with ?? []) expect(j.id, `${d.id} ${e.id}`).not.toBeNull();
   });
 
   it('titles a file after its adopted act where the procedure’s title is a placeholder or names other acts', () => {
