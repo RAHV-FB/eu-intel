@@ -40,6 +40,10 @@ describe.skipIf(!built)('home lists and feed on the built data', () => {
     if (eudr) expect(eudr.latest_note ?? '').toContain('Regulation 2026/2102');
   });
 
+  it('describes each list in a few words; the full rules are on the About page', () => {
+    for (const l of home.lists) expect(l.description.split(/\s+/).length, l.id).toBeLessThanOrEqual(40);
+  });
+
   it('lists the officially blocked files in a stated order and says how many of them it shows', () => {
     const stalled = list('stalled');
     const blocked = stalled.items.filter((i) => i.badge === 'Officially blocked');

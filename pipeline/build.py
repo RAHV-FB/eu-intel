@@ -4705,24 +4705,20 @@ class Builder:
              "description": "Legislative files with a recorded procedural step in the last 120 days that are not yet adopted.",
              "items": under_debate},
             {"id": "close_votes", "title": "Close votes",
-             "description": "The most recent final Parliament votes on a whole text that were close: the votes in favour "
-                            f"were within {CLOSE_RELATIVE:.0%} of the votes counted towards the applicable majority. "
-                            "Decisions on budget discharge (for the EU's general budget and for the budgets of EU "
-                            "agencies and bodies) are not listed.",
+             "description": "The most recent final votes on a whole text where the votes in favour were no more than "
+                            f"{CLOSE_RELATIVE:.0%} of the votes cast above or below the majority needed. Budget discharge "
+                            "decisions are not listed.",
              "items": close_votes},
             {"id": "rejected", "title": "Rejected",
-             "description": "Proposals and texts Parliament rejected in plenary, newest first: final votes on a whole text "
-                            "it voted down, and motions to reject a proposal or the Council's position that it adopted, "
-                            "with what happened to the file next. A rejected amendment is not a rejected law, so "
-                            "amendments are not listed; nor are rejected objections or motions of censure, or "
-                            "decisions on budget discharge (for the EU's general budget and for the budgets of EU "
-                            "agencies and bodies).",
+             "description": "Final votes in which Parliament rejected a text, and motions it adopted to reject a proposal "
+                            "or the Council's position, newest first, with what happened next. Amendments, objections, "
+                            "motions of censure and budget discharge decisions are not listed.",
              "items": rej_items[:12]},
             {"id": "stalled", "title": "Stalled",
-             "description": "Files officially reported as blocked (Legislative Train"
-                            + (f"; {n_blocked_shown} of {n_blocked} shown: the Train's most recent classifications, "
-                               "longest without a recorded procedural step first" if n_blocked_shown < n_blocked else "")
-                            + "), then ordinary-procedure files with no recorded procedural update for a year or more. "
+             "description": "Files Parliament's Legislative Train reports as blocked"
+                            + (f" ({n_blocked_shown} of {n_blocked} shown, the latest reports first)"
+                               if n_blocked_shown < n_blocked else "")
+                            + ", then ordinary-procedure files with no recorded procedural update for a year or more. "
                             "Dates are each file's last recorded procedural step.",
              "items": stalled_items},
             {"id": "upcoming", "title": "Coming up",
