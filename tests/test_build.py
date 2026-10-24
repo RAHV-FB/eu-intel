@@ -1760,3 +1760,103 @@ def test_topics_exclusions_and_curated_order():
     assert Builder.topics_for(me, proc("2023-0999", ["3.50.01"])) == ["tech"]  # type: ignore[arg-type]
     assert Builder.topics_for(me, proc("2021-0106", ["3.40.06"])) == ["tech", "economy"]  # type: ignore[arg-type]
     assert Builder.topics_for(me, proc("2021-0297", ["6.30.01"])) == ["economy"]  # type: ignore[arg-type]
+
+
+def _ep_vote(vid: str, day: str, method: str = "VOTE_ELECTRONIC_ROLLCALL", ballots: bool = False):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(id=vid, date=day, method=method, has_ballots=ballots)
+
+
+def test_ep_votes_source_card_counts_the_votes_listed_and_names_the_snapshot():
+    # About said "35,465 plenary votes from 15 July 2019 to 22 October 2026" (the snapshot) under "In this release",
+    # beside "Parliament votes 3,000" and "covered from 18 July 2019" (the votes listed)
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder
+
+    snapshot = [
+        _ep_vote("1", "2019-07-15", "VOTE_ELECTRONIC_ROLLCALL"),  # an amendment vote, not listed
+        _ep_vote("2", "2019-07-18", "VOTE_ELECTRONIC_ROLLCALL", True),
+        _ep_vote("3", "2026-10-22", "VOTE_ELECTRONIC_ROLLCALL", True),
+        _ep_vote("4", "2026-10-22", "VOTE_ELECTRONIC_ROLLCALL", True),  # listed, but its ballots were not published
+        _ep_vote("5", "2026-10-22", "VOTE_ELECTRONIC"),
+    ]
+    me = SimpleNamespace(
+        s=SimpleNamespace(votes=snapshot), indexed_votes=snapshot[1:4], ballots={"2": 1, "3": 1}
+    )
+    st = SimpleNamespace(fetched_at="2026-10-23T00:00:00Z", records={}, status="ok")
+    summary = Builder.source_summary(me, "ep_votes", st)  # type: ignore[arg-type]
+    assert summary == (
+        "3 plenary votes from 18 July 2019 to 22 October 2026 are listed, 2 of them with each MEP's recorded vote "
+        "(votes on whole texts, resolutions, motions and negotiating mandates). They are chosen from the 5 plenary "
+        "votes in the data retrieved (from 15 July 2019, 4 of them by roll call); the others, mostly votes on "
+        "amendments and on parts of texts, are not listed."
+    )
+
+
+def _legislation_notes(dossiers: int, stubs: list[str], split: dict[str, list[str]]) -> list[str]:
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder
+
+    manifest = {"ep_procedures": SimpleNamespace(fetched_at="2026-10-23T00:00:00Z")}
+    me = SimpleNamespace(
+        s=SimpleNamespace(manifest=manifest, acts=[], council=[], measures=[], infringements=[], indicators=[]),
+        dossier_summary={str(i): {} for i in range(dossiers)}, stub_ids=stubs, split_children=split,
+        indexed_votes=[], council_extra=[], measure_celexes=[],
+    )  # fmt: skip
+    return Builder.coverage_notes(me, {})  # type: ignore[arg-type]
+
+
+def test_coverage_notes_explain_the_files_beside_the_parliament_procedures():
+    # About showed 1,577 "Legislative files (procedures)" beside "1,564 procedures": 3 adopted laws shown from EUR-Lex
+    # only (2011-0901, 2018-0900, 2020-3521) and 10 split parents (2016-0282, …) have no Parliament record
+    parents = ["2016-0282", "2016-0357", "2016-0360", "2016-0400", "2018-0063", "2018-0152", "2018-0330", "2019-0001",
+               "2021-0211", "2022-0132"]  # fmt: skip
+    only = ["2011-0901", "2018-0900", "2020-3521"]
+    notes = _legislation_notes(1577, [*only, *parents], {p: [f"{p}A", f"{p}B"] for p in parents})
+    legislation = next(n for n in notes if n.startswith("Legislation: "))
+    assert legislation.startswith("Legislation: 1,564 procedures recorded by the European Parliament.")
+    assert legislation.endswith(
+        "The 1,577 legislative files in the table below are these procedures, 10 original proposals that Parliament "
+        "split into separate procedures (each has a page of its own, with no usable Parliament record, that links "
+        "its parts) and the 3 adopted laws noted next."
+    )
+    assert notes[notes.index(legislation) + 1].startswith("3 adopted laws are shown from their EUR-Lex record only")
+    # without such files the note stays as it was
+    plain = next(n for n in _legislation_notes(5, [], {}) if n.startswith("Legislation: "))
+    assert plain == (
+        "Legislation: 5 procedures recorded by the European Parliament. Status is derived from the recorded "
+        "procedural steps and EUR-Lex dates."
+    )
+    only_acts = next(n for n in _legislation_notes(5, ["2011-0901"], {}) if n.startswith("Legislation: "))
+    assert only_acts.endswith("The 5 legislative files in the table below are these procedures and the 1 adopted law noted next.")
+
+
+def test_coverage_notes_format_counts_and_pluralise_unread_documents():
+    # "Adopted acts: 1269 legal acts" (no thousands separator) and "2 voting-result document(s)"
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder
+
+    def cv(i: int, pos: dict) -> SimpleNamespace:
+        return SimpleNamespace(date=f"2020-0{i}-01", positions=pos, source=SimpleNamespace(identifier=None), id=str(i))
+
+    manifest = {k: SimpleNamespace(fetched_at="2026-10-23T00:00:00Z") for k in ("eurlex", "council")}
+    base = dict(
+        manifest=manifest, acts=list(range(1269)), measures=[], infringements=[], indicators=[],
+    )  # fmt: skip
+
+    def notes(votes: list) -> list[str]:
+        me = SimpleNamespace(
+            s=SimpleNamespace(council=votes, **base), dossier_summary={}, stub_ids=[], split_children={},
+            indexed_votes=[], council_extra=[], measure_celexes=[],
+        )  # fmt: skip
+        return Builder.coverage_notes(me, {})  # type: ignore[arg-type]
+
+    assert any(n.startswith("Adopted acts: 1,269 legal acts from EUR-Lex/Cellar") for n in notes([cv(1, {"DE": "for"})]))
+    one = next(n for n in notes([cv(1, {}), cv(2, {"DE": "for"})]) if n.startswith("Council votes"))
+    assert one.endswith("1 voting-result document could not be read and is shown without positions.")
+    two = next(n for n in notes([cv(1, {}), cv(2, {}), cv(3, {"DE": "for"})]) if n.startswith("Council votes"))
+    assert two.endswith("2 voting-result documents could not be read and are shown without positions.")
