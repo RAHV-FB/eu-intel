@@ -15,6 +15,8 @@
  *   dossiers/<id>.json              DossierDetail            (id like "2021-0106")
  *   votes/index.json                EpVoteSummary[]          (roll-call votes on whole texts + final, mandate and
  *                                                            negotiation-decision votes linked to procedures)
+ *   votes/titles.json               EpVoteTitle[]            (the same votes in the same order, with only what the vote
+ *                                                            tables of the MEP and group pages show)
  *   votes/<id>.json                 EpVoteDetail
  *   council/index.json              CouncilVote[]
  *   people/meps.json                MepSummary[]
@@ -455,6 +457,15 @@ export interface EpVoteSummary {
   has_ballots: boolean;
   source: SourceRef;
 }
+
+/** votes/titles.json: the votes of votes/index.json, in its order, with only what the vote tables of the MEP and group
+ * pages show: date, title, the line of kind of vote, procedure reference and distinction, and the result. `title` is
+ * there only for a vote with no `display_title` (none today), which VoteTitle then falls back to. */
+export type EpVoteTitle = Pick<
+  EpVoteSummary,
+  'id' | 'date' | 'display_title' | 'display_title_parts' | 'distinction' | 'kind_label' | 'procedure_ref' | 'outcome'
+> &
+  Partial<Pick<EpVoteSummary, 'title'>>;
 
 export type BallotPosition = 'for' | 'against' | 'abstain';
 

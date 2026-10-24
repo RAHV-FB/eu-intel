@@ -244,8 +244,8 @@ test.describe('phone menu on short screens', () => {
 
 test.describe('secondary data that fails to load', () => {
   test('an MEP page says the vote details could not be loaded, rather than showing them as not recorded', async ({ page, guard }) => {
-    guard.ignore(/votes\/index\.json/);
-    await page.route('**/data/votes/index.json', (r) => r.fulfill({ status: 500, body: 'error' }));
+    guard.ignore(/votes\/titles\.json/);
+    await page.route('**/data/votes/titles.json', (r) => r.fulfill({ status: 500, body: 'error' }));
     await open(page, 'people/meps/197619/');
     await expect(page.getByRole('alert')).toContainText('The titles, dates and results of these votes could not be loaded');
     const row = page.locator('section[aria-labelledby="v-h"] tbody tr').first();
@@ -255,8 +255,8 @@ test.describe('secondary data that fails to load', () => {
   });
 
   test('a group page says when vote details or member names could not be loaded', async ({ page, guard }) => {
-    guard.ignore(/votes\/index\.json|people\/meps\.json/);
-    await page.route('**/data/votes/index.json', (r) => r.fulfill({ status: 500, body: 'error' }));
+    guard.ignore(/votes\/titles\.json|people\/meps\.json/);
+    await page.route('**/data/votes/titles.json', (r) => r.fulfill({ status: 500, body: 'error' }));
     await page.route('**/data/people/meps.json', (r) => r.fulfill({ status: 500, body: 'error' }));
     await open(page, 'people/groups/epp/');
     await expect(page.getByRole('alert').filter({ hasText: 'The titles and dates of these votes could not be loaded' })).toHaveCount(1);
