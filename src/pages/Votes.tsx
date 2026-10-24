@@ -5,9 +5,12 @@ import { useData } from '../lib/data';
 import { formatNumber, plural } from '../lib/format';
 import { loadSearch, type SearchEngine } from '../lib/search';
 import { clearAllParams, shownParam, useParamState, useParamText } from '../lib/urlState';
-import { Disclosure, EmptyState, ErrorState, Loading, PageHeader, Term } from '../components/ui';
+import { EmptyState, ErrorState, Loading, PageHeader, Term } from '../components/ui';
 import { CollapsibleFilters } from '../components/CollapsibleFilters';
 import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
+// the filter panel and labelled controls of /legislation, so that both lists look and work alike
+import '../features/legislation/common.css';
+import '../features/legislation/legislation.css';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, VoteKindGuide, VoteListItem } from '../features/votes/components';
 import { KIND_LABEL, OUTCOME_LABEL, isClose } from '../features/votes/labels';
@@ -142,6 +145,8 @@ export default function Votes() {
   const active = [q, year, kind, outcome, topic, dossier, close ? '1' : ''].some(Boolean);
   // what the phone toggle reports: everything behind it that differs from the default, including the order
   const activeFilters = [year, kind, outcome, topic, dossier, close ? '1' : '', sort !== 'newest' ? sort : ''].filter(Boolean).length;
+  // "More filters" opens by itself when one of its choices is set (from a link, or Back from a vote)
+  const moreActive = [topic, dossier, close ? '1' : '', sort !== 'newest' ? sort : ''].filter(Boolean).length;
 
   return (
     <div className="container page">
@@ -150,22 +155,12 @@ export default function Votes() {
         title="Votes in Parliament"
         lead={
           <>
-            How the European Parliament voted in plenary: roll-call votes on whole texts (laws and Parliament’s other
-            decisions), resolutions, motions and committees’ decisions to open negotiations, and every final or
-            negotiating-mandate vote on a legislative file we track. Votes on amendments and on parts of a text are not
-            listed. Each vote links to the official record.
+            How the European Parliament voted in plenary on whole texts, resolutions, motions and negotiating mandates, each linked
+            to the official record; votes on amendments are not listed. How each government voted in the Council of the EU is
+            shown on each law’s page and <Link to="/countries">each country’s page</Link>.
           </>
         }
       />
-
-      <div className="explainers">
-        <Disclosure summary="What kinds of votes are listed here?">
-          <VoteKindGuide />
-        </Disclosure>
-        <Disclosure summary="How we identify close votes">
-          <CloseVoteMethod />
-        </Disclosure>
-      </div>
 
       {loading && <Loading label="Loading votes…" />}
       {error && <ErrorState error={error} title="The vote list could not be loaded" />}
@@ -179,13 +174,13 @@ export default function Votes() {
 
       {data && data.length > 0 && (
         <>
-          <form className="filters filters--wide-first" role="search" aria-label="Filter votes" onSubmit={(e) => e.preventDefault()}>
-            <div className="field">
+          <form className="lx-filters votes-filters" role="search" aria-label="Filter votes" onSubmit={(e) => e.preventDefault()}>
+            <div className="lx-field lx-filters__q">
               <label htmlFor="vf-q">Search vote titles or procedure references</label>
               <input
                 id="vf-q"
                 ref={qRef}
-                className="input"
+                className="input lx-input"
                 type="search"
                 value={q}
                 placeholder={qPlaceholder}
@@ -194,9 +189,9 @@ export default function Votes() {
               />
             </div>
             <CollapsibleFilters label="Filters and sorting" active={activeFilters}>
-              <div className="field">
+              <div className="lx-field">
                 <label htmlFor="vf-year">Year</label>
-                <select id="vf-year" className="select" value={year} onChange={(e) => set('year', e.target.value)}>
+                <select id="vf-year" className="select lx-select" value={year} onChange={(e) => set('year', e.target.value)}>
                   <option value="">All years</option>
                   {opts.years.map((y) => (
                     <option key={y} value={y}>
@@ -205,9 +200,9 @@ export default function Votes() {
                   ))}
                 </select>
               </div>
-              <div className="field">
+              <div className="lx-field">
                 <label htmlFor="vf-kind">Kind of vote</label>
-                <select id="vf-kind" className="select" value={kind} onChange={(e) => set('kind', e.target.value)}>
+                <select id="vf-kind" className="select lx-select" value={kind} onChange={(e) => set('kind', e.target.value)}>
                   <option value="">All kinds</option>
                   {KIND_ORDER.filter((k) => opts.kinds.has(k)).map((k) => (
                     <option key={k} value={k}>
@@ -216,15 +211,9 @@ export default function Votes() {
                   ))}
                 </select>
               </div>
-              <div className="field">
+              <div className="lx-field">
                 <label htmlFor="vf-outcome">Outcome</label>
-                <select
-                  id="vf-outcome"
-                  className="select"
-                  value={outcome}
-                  onChange={(e) => set('outcome', e.target.value)}
-                  aria-describedby="vf-outcome-d"
-                >
+                <select id="vf-outcome" className="select lx-select" value={outcome} onChange={(e) => set('outcome', e.target.value)}>
                   <option value="">Any outcome</option>
                   {OUTCOME_ORDER.filter((o) => opts.outcomes.has(o)).map((o) => (
                     <option key={o} value={o}>
@@ -232,67 +221,67 @@ export default function Votes() {
                     </option>
                   ))}
                 </select>
-                <span className="meta" id="vf-outcome-d">
-                  Outcomes come from Parliament’s open data or the official minutes of the sitting
-                  {opts.derived > 0 && <>; {formatNumber(opts.derived)} are calculated from the recorded counts</>}.
-                </span>
               </div>
-              {opts.topics.size > 0 && (
-                <div className="field">
-                  <label htmlFor="vf-topic">Topic</label>
-                  <select
-                    id="vf-topic"
-                    className="select"
-                    value={topic}
-                    onChange={(e) => set('topic', e.target.value)}
-                    aria-describedby={opts.noTopic > 0 ? 'vf-topic-d' : undefined}
-                  >
-                    <option value="">All topics</option>
-                    {[...opts.topics.keys()]
-                      .sort((a, b) => topicLabel(a).localeCompare(topicLabel(b)))
-                      .map((t) => (
-                        <option key={t} value={t}>
-                          {topicLabel(t)} ({formatNumber(facets.topics.get(t) ?? 0)})
-                        </option>
-                      ))}
-                  </select>
-                  {opts.noTopic > 0 && (
-                    <span className="meta" id="vf-topic-d">
-                      Topics come from a vote’s linked legislative file, so {formatNumber(opts.noTopic)} votes are in no topic.
-                    </span>
+              <details className="lx-more" open={moreActive > 0 || undefined}>
+                <summary>
+                  More filters
+                  {moreActive > 0 && <span className="lx-more__count"> ({moreActive} active)</span>}
+                </summary>
+                <div className="lx-more__body">
+                  {opts.topics.size > 0 && (
+                    <div className="lx-field">
+                      <label htmlFor="vf-topic">Topic</label>
+                      <select id="vf-topic" className="select lx-select" value={topic} onChange={(e) => set('topic', e.target.value)}>
+                        <option value="">All topics</option>
+                        {[...opts.topics.keys()]
+                          .sort((a, b) => topicLabel(a).localeCompare(topicLabel(b)))
+                          .map((t) => (
+                            <option key={t} value={t}>
+                              {topicLabel(t)} ({formatNumber(facets.topics.get(t) ?? 0)})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
+                  {opts.linked > 0 && opts.linked < votes.length && (
+                    <div className="lx-field">
+                      <label htmlFor="vf-dossier">Legislative file</label>
+                      <select id="vf-dossier" className="select lx-select" value={dossier} onChange={(e) => set('dossier', e.target.value)}>
+                        <option value="">Linked or not</option>
+                        <option value="linked">Linked to a file ({formatNumber(facets.linked)})</option>
+                        <option value="unlinked">Not linked ({formatNumber(facets.unlinked)})</option>
+                      </select>
+                    </div>
+                  )}
+                  <div className="lx-field">
+                    <label htmlFor="vf-sort">Sort by</label>
+                    <select
+                      id="vf-sort"
+                      className="select lx-select"
+                      value={sort}
+                      onChange={(e) => set('sort', e.target.value === 'newest' ? '' : e.target.value)}
+                    >
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                      {opts.withMargin > 0 && <option value="margin">Closest margin first</option>}
+                    </select>
+                  </div>
+                  {opts.withMargin > 0 && (
+                    <div className="lx-field lx-field--check">
+                      <label className="lx-check">
+                        <input id="vf-close" type="checkbox" checked={close} onChange={(e) => set('close', e.target.checked ? '1' : '')} />
+                        Close votes only ({formatNumber(facets.closeCount)})
+                      </label>
+                    </div>
                   )}
                 </div>
-              )}
-              {opts.linked > 0 && opts.linked < votes.length && (
-                <div className="field">
-                  <label htmlFor="vf-dossier">Legislative file</label>
-                  <select id="vf-dossier" className="select" value={dossier} onChange={(e) => set('dossier', e.target.value)}>
-                    <option value="">Linked or not</option>
-                    <option value="linked">Linked to a file ({formatNumber(facets.linked)})</option>
-                    <option value="unlinked">Not linked ({formatNumber(facets.unlinked)})</option>
-                  </select>
-                </div>
-              )}
-              <div className="field">
-                <label htmlFor="vf-sort">Sort by</label>
-                <select id="vf-sort" className="select" value={sort} onChange={(e) => set('sort', e.target.value === 'newest' ? '' : e.target.value)}>
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                  {opts.withMargin > 0 && <option value="margin">Closest margin first</option>}
-                </select>
-              </div>
-              {opts.withMargin > 0 && (
-                <div className="field field--check">
-                  <input id="vf-close" type="checkbox" checked={close} onChange={(e) => set('close', e.target.checked ? '1' : '')} />
-                  <label htmlFor="vf-close">Close votes only ({formatNumber(facets.closeCount)})</label>
-                </div>
-              )}
+              </details>
             </CollapsibleFilters>
           </form>
 
           {/* the votes' titles are h3: this heading puts them under the page's h1 in the outline */}
           <h2 className="visually-hidden">Results</h2>
-          <div className="results-bar">
+          <div className="results-bar votes-results">
             <p className="results-bar__count" aria-live="polite">
               {filtered.length === votes.length ? plural(votes.length, 'vote') : `${formatNumber(filtered.length)} of ${plural(votes.length, 'vote')}`}
               {keywordMatch?.partial && filtered.length > 0 && (
@@ -314,6 +303,28 @@ export default function Votes() {
                 Clear all filters
               </button>
             )}
+            <details className="votes-about">
+              <summary>About this list</summary>
+              <div className="votes-about__body">
+                <p>
+                  The list holds Parliament’s roll-call votes in plenary on whole texts (laws and Parliament’s other decisions),
+                  resolutions, motions and committees’ decisions to open negotiations, and every final or negotiating-mandate vote on a
+                  legislative file we track.
+                </p>
+                <h3 className="votes-about__h">What kinds of votes are listed here?</h3>
+                <VoteKindGuide />
+                <h3 className="votes-about__h">Outcomes and topics</h3>
+                <p>
+                  Outcomes come from Parliament’s open data or the official minutes of the sitting
+                  {opts.derived > 0 && <>; {formatNumber(opts.derived)} are calculated from the recorded counts</>}.
+                  {opts.noTopic > 0 && (
+                    <> Topics come from a vote’s linked legislative file, so {formatNumber(opts.noTopic)} votes are in no topic.</>
+                  )}
+                </p>
+                <h3 className="votes-about__h">How we identify close votes</h3>
+                <CloseVoteMethod />
+              </div>
+            </details>
           </div>
 
           {filtered.length === 0 ? (

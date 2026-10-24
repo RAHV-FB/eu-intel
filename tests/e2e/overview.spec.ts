@@ -58,3 +58,32 @@ test.describe('homepage', () => {
     expect(minutes).toBeLessThanOrEqual(Math.ceil(words / 200));
   });
 });
+
+test.describe('votes list', () => {
+  for (const [width, height] of [
+    [1440, 900],
+    [375, 812],
+  ]) {
+    test(`the first vote starts on the first screen (${width}px)`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await open(page, 'votes');
+      const first = page.locator('.vote-list > li').first();
+      await expect(first).toBeVisible();
+      expect(await pageTop(first)).toBeLessThan(height - 80);
+    });
+  }
+
+  test('says where the Council votes are, and keeps "More filters" open while one of them is set', async ({ page }) => {
+    await open(page, 'votes');
+    await expect(page.locator('.page-header').getByRole('link', { name: 'each country’s page' })).toHaveAttribute('href', `${BASE_PATH}countries`);
+    const more = page.locator('form[aria-label="Filter votes"] details.lx-more');
+    await expect(more).not.toHaveAttribute('open');
+    await more.locator('summary').click();
+    await page.locator('#vf-close').check();
+    await expect(page).toHaveURL(/close=1/);
+    await open(page, 'votes?close=1');
+    await expect(more).toHaveAttribute('open');
+    await expect(more.locator('summary')).toContainText('(1 active)');
+    await expectNoSeriousA11yViolations(page);
+  });
+});
