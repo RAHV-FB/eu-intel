@@ -1213,6 +1213,9 @@ def test_adopted_motion_to_reject_the_proposal_is_a_rejection():
         ("2025-10-21", "Parliament rejected the proposal in a plenary vote")]  # fmt: skip
     s = classify(p, [], [], date.fromisoformat(TODAY))
     assert (s.stage, s.label, s.since) == ("rejected", "Rejected by Parliament", "2025-10-21")
+    # Parliament's first-reading position (Art. 294(3) TFEU): the file awaits the Council's (294(5)), as OEIL records
+    assert "does not by itself end the procedure" in s.explanation
+    assert (s.next_step.institution, s.next_step.basis) == ("Council", "source")
     # OEIL past Parliament's first reading: a recorded vote does not override it
     later = _rec("2023-0413").model_copy(update={"stage_raw": "Awaiting Parliament 2nd reading"})
     assert not [e for e in Builder.with_recorded_events(me, later).events if e.kind.value == "rejection"]  # type: ignore[arg-type]

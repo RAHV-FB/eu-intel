@@ -170,6 +170,23 @@ describe.skipIf(!built)('dossiers on the built data', () => {
       ['2023/0115(COD)', 'A10-0065/2026'],
     ]);
   });
+
+  it('never calls a withdrawal or a rejection at first reading final (2023-0133, Case C-727/25; 2022-0348, 2023-0413)', () => {
+    const ended = all.filter((d) => ['withdrawn', 'rejected', 'lapsed'].includes(d.status.stage));
+    expect(ended.length).toBeGreaterThan(60);
+    for (const d of ended) {
+      const text = `${d.status.explanation} ${d.next_step.text}`;
+      expect(text, d.id).not.toMatch(/will not become law|could only return|normally ends the procedure/);
+      if (d.status.stage === 'withdrawn') expect(d.next_step.text, d.id).toContain('if the Court of Justice annulled the withdrawal (Article 264 TFEU)');
+    }
+    // OEIL "Awaiting Council's 1st reading position": the Council's first-reading position comes next (Art. 294(5) TFEU)
+    for (const id of ['2022-0348', '2023-0413']) {
+      const d = all.find((x) => x.id === id)!;
+      expect([d.status.stage, d.status.label], id).toEqual(['rejected', 'Rejected by Parliament']);
+      expect(d.status.explanation, id).toContain('which does not by itself end the procedure');
+      expect([d.next_step.institution, d.next_step.basis], id).toEqual(['Council', 'source']);
+    }
+  });
 });
 
 describe('steps dated in the act', () => {

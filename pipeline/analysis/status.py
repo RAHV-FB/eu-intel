@@ -96,6 +96,7 @@ OEIL_STAGE: dict[str, tuple[str, ...]] = {
     "Procedure completed": ("adopted", "published", "in_force", "no_longer_in_force"),
 }
 LAPSED_OR_WITHDRAWN = "Procedure lapsed or withdrawn"
+AWAITING_COUNCIL_POSITION = "Awaiting Council's 1st reading position"  # also after a rejection at first reading
 # Legislative Train statuses that are an official "stalled" assessment. The Train glossary
 # defines "Blocked" as no progress over at least the previous nine months.
 TRAIN_STALL_STATUSES = ("blocked",)
@@ -709,6 +710,14 @@ MANDATE_REFUSED = {
 # Parliament's referral of a file back to the committee responsible for reconsideration (OEIL "Matter referred back
 # to the committee responsible for reconsideration")
 REFERRED_BACK = {"PLENARY_REFER_COMMITTEE_RECONSIDERATION"}
+# The rejections that end the ordinary legislative procedure: of the Council's position at second reading and of the
+# joint text of the Conciliation Committee. A rejection of the proposal at first reading does not (Art. 294(3)-(5))
+REJECTION_ENDS = {
+    "PLENARY_REJECT_COUNCIL_POSITION": "the proposed act is deemed not to have been adopted (Article 294(7)(b) "
+    "TFEU), so the procedure has ended.",
+    "PLENARY_REJECT_JOINT_TEXT": "the proposed act is deemed not to have been adopted (Article 294(13) TFEU), so the "
+    "procedure has ended.",
+}
 
 
 def _cod_stage(events: list[Event]) -> _S:
@@ -1225,21 +1234,39 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
         return s.next_step
     if stage == "unknown" and s.label == "Procedure completed":
         return NextStep(text="Not determined: the procedure's final act is not linked in our data.", basis="unknown")
+    # A withdrawal ends the procedure (Court of Justice, C-409/13, paragraph 77) while it stands: an action for its
+    # annulment does not suspend it (Art. 278 TFEU), and an annulled act is void (Art. 264 TFEU). 2023/0133(COD):
+    # Parliament brought such an action on 14 November 2025 (Case C-727/25, OJ C/2026/89); OEIL keeps the file open.
     if stage == "withdrawn" and s.label == "Replaced by a new Commission proposal":
         return NextStep(
-            text="None: the procedure has ended. The Commission's new proposal is a separate legislative file.",
+            text="None recorded: a withdrawn proposal does not proceed. The Commission's new proposal is a separate "
+            "legislative file; this one would be pending again only if the Court of Justice annulled the withdrawal "
+            "(Article 264 TFEU).",
             basis="source",
         )
     if stage == "withdrawn":
         return NextStep(
-            text="None: the procedure has ended. The proposal could only return as a new Commission proposal.",
+            text="None recorded: a withdrawn proposal does not proceed. It could return as a new Commission "
+            "proposal, or be pending again if the Court of Justice annulled the withdrawal (Article 264 TFEU).",
             basis="derived",
         )
     if stage == "rejected":
+        code = _code(r) if (r := _last(events, EventKind.rejection)) else ""
+        if s.label == "Rejected by Parliament" and code not in REJECTION_ENDS:
+            # a rejection at first reading is Parliament's first-reading position (Art. 294(3) TFEU): the Council's
+            # follows (Art. 294(5)) unless the Commission withdraws the proposal (OEIL "Awaiting Council's 1st
+            # reading position" for 2022/0348 and 2023/0413(COD); 2025/0429(COD) went on to adoption)
+            return NextStep(
+                text="The Council adopts its own first-reading position, which returns to Parliament for a second "
+                "reading (Article 294(5) and (7) TFEU), unless the Commission withdraws its proposal. Neither is "
+                "recorded.",
+                institution="Council",
+                basis="source" if proc.stage_raw == AWAITING_COUNCIL_POSITION else "derived",
+            )
+        if s.label == "Rejected by Parliament":
+            return NextStep(text=f"None: {REJECTION_ENDS[code]}", basis="derived")
         return NextStep(
-            text="No further step is recorded. A rejection normally ends the procedure; the Commission "
-            "may withdraw the proposal or present a new one.",
-            basis="derived",
+            text="None recorded: without Parliament's consent the Council cannot adopt the act.", basis="derived"
         )
     if stage == "lapsed":
         return NextStep(text="None: the procedure is closed.", basis="derived")
@@ -1531,9 +1558,9 @@ def classify(
         text = (
             "The Commission withdrew its proposal and replaced it with a new one"
             + (f" ({new})" if new else "")
-            + ", so it will not become law in this form."
+            + ", which ends the legislative procedure on this proposal."
             if replaced
-            else "The Commission withdrew its proposal, so it will not become law."
+            else "The Commission withdrew its proposal, which ends the legislative procedure on it."
         )
         if rejection and rejection.date <= withdrawal.date:
             text += f" Parliament had rejected the proposal on {_fmt(rejection.date)}."
@@ -1555,7 +1582,7 @@ def classify(
             "lapsed",
             "Lapsed or withdrawn",
             "Parliament's Legislative Observatory records this procedure as lapsed or withdrawn; "
-            "the specific closing step is not recorded in our data. It will not become law.",
+            "the specific closing step is not recorded in our data.",
             None,
             "source",
         )
@@ -1564,17 +1591,24 @@ def classify(
             e
             for e in events
             if e.date > rejection.date
-            and e.kind in (EventKind.ep_position, EventKind.council_adoption, EventKind.signature)
+            and e.kind in (EventKind.ep_position, EventKind.council_position, EventKind.council_adoption,
+                           EventKind.signature)  # fmt: skip
         ]
         if not later_ok:
             what = {
                 "PLENARY_REJECT_COUNCIL_POSITION": "Parliament rejected the Council's position at second reading, "
                 "so the act is not adopted (Article 294(7)(b) TFEU).",
                 "PLENARY_REJECT_JOINT_TEXT": "Parliament rejected the text agreed in conciliation, so the act "
-                "is not adopted.",
+                "is not adopted (Article 294(13) TFEU).",
             }.get(
                 _code(rejection),
-                "Parliament voted to reject the proposal. This is different from a withdrawal by the Commission.",
+                # Art. 294(3) and (5) TFEU: Parliament's first-reading position, then the Council's
+                "Parliament voted to reject the proposal. Under the ordinary legislative procedure this is its "
+                "position at first reading (Article 294(3) TFEU), which does not by itself end the procedure: unless "
+                "the Commission withdraws the proposal, the Council adopts its own first-reading position next "
+                "(Article 294(5) TFEU)."
+                + (f" (Legislative Observatory status: “{proc.stage_raw}”.)"
+                   if proc.stage_raw == AWAITING_COUNCIL_POSITION else ""),  # fmt: skip
             )
             s = _S("rejected", "Rejected by Parliament", what, rejection.date, "source")
 

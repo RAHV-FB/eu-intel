@@ -109,6 +109,21 @@ test.describe('law page: status and key facts', () => {
     await expect(hint).toHaveText('Saved only in this browser: no account, no alerts, nothing sent anywhere. Check the Following page for changes.');
     await expect(hint.getByRole('link', { name: 'Following page' })).toHaveAttribute('href', `${BASE_PATH}following`);
   });
+
+  test('states what a rejection at first reading and a withdrawal mean in law, not that the procedure is over', async ({ page }) => {
+    // 2023/0413(COD): rejected at first reading on 21 October 2025; OEIL "Awaiting Council's 1st reading position"
+    await open(page, 'legislation/2023-0413/');
+    const facts = page.locator('.dz-facts');
+    await expect(facts.locator('.dz-fact', { hasText: 'Current status' })).toContainText('which does not by itself end the procedure');
+    const next = facts.locator('.dz-fact', { hasText: 'What happens next' });
+    await expect(next).toContainText('The Council adopts its own first-reading position');
+    await expect(next).toContainText('unless the Commission withdraws its proposal');
+    await expect(facts).not.toContainText('normally ends the procedure');
+    // 2023/0133(COD): withdrawn (OJ C/2025/5423); Parliament asks the Court of Justice to annul the withdrawal (C-727/25)
+    await open(page, 'legislation/2023-0133/');
+    await expect(page.locator('.dz-facts')).toContainText('or be pending again if the Court of Justice annulled the withdrawal (Article 264 TFEU)');
+    await expect(page.locator('.dz-facts')).not.toContainText(/will not become law|the procedure has ended/);
+  });
 });
 
 test.describe('law page: on this page', () => {

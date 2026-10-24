@@ -294,7 +294,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
     ) : d.related.some((r) => r.relation === 'Report on') ? (
       <p className="dz-none">This is a resolution of Parliament, not a legislative act, so nothing applies in the Member States.</p>
     ) : (
-      <p className="dz-none">This file did not become law, so nothing applies in the Member States.</p>
+      <p className="dz-none">This file has not become law, so nothing applies in the Member States.</p>
     );
   } else if (instrument === 'directive') {
     body = (

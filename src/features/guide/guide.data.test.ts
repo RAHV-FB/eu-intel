@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { GLOSSARY } from '../../content/glossary';
 import type { DossierSummary, LifecycleStage } from '../../types/data';
+import { STAGE_GROUPS } from '../legislation/labels';
 import { STEPS } from './PathwayDiagram';
 import { LISTED_STATUS_LABELS, STATUS_LABEL_GROUPS } from './statusLabels';
 
@@ -65,5 +66,18 @@ describe.skipIf(!built)('status labels on the built data', () => {
     for (const g of STATUS_LABEL_GROUPS.filter((x) => x.id !== 'not-adopted')) {
       for (const r of g.rows) for (const x of [...r.labels, ...(r.also ?? [])]) expect(early.has(x.label), `${g.id}: ${x.label}`).toBe(false);
     }
+  });
+});
+
+describe('rejected and withdrawn files in the status labels', () => {
+  const group = STATUS_LABEL_GROUPS.find((g) => g.rows.some((r) => r.labels.some((x) => x.label === 'Rejected by Parliament')))!;
+  const row = group.rows.find((r) => r.labels.some((x) => x.label === 'Rejected by Parliament'))!;
+
+  it('does not file a rejection at first reading under an ended procedure (2023/0413(COD), awaiting the Council’s position)', () => {
+    expect(group.heading).toBe('Withdrawn, rejected or lapsed');
+    expect(STAGE_GROUPS.ended.label).toBe('Withdrawn, rejected or lapsed');
+    expect(row.text).toContain('A rejection at first reading is Parliament’s first-reading position');
+    expect(row.text).toContain('(Article 294(5) TFEU) unless the Commission withdraws the proposal');
+    expect(row.text).toContain('(Article 294(7)(b) and (13) TFEU)');
   });
 });
