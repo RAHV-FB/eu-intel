@@ -102,6 +102,13 @@ test.describe('law page: status and key facts', () => {
     await open(page, 'legislation/2020-0359/');
     await expect(page.locator('.dz-what').getByRole('link', { name: /the adopted act on EUR-Lex/ })).toHaveAttribute('href', /CELEX:32022L2555/);
   });
+
+  test('the Follow button says there are no alerts', async ({ page }) => {
+    await open(page, `legislation/${AI_ACT_ID}/`);
+    const hint = page.locator('.follow__hint');
+    await expect(hint).toHaveText('Saved only in this browser: no account, no alerts, nothing sent anywhere. Check the Following page for changes.');
+    await expect(hint.getByRole('link', { name: 'Following page' })).toHaveAttribute('href', `${BASE_PATH}following`);
+  });
 });
 
 test.describe('law page: on this page', () => {

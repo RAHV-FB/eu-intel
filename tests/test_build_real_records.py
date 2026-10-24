@@ -481,8 +481,8 @@ def test_featured_card_names_amending_acts_the_timeline_cannot_date():
     me = SimpleNamespace(dossier_acts={"2021-0366": [a["32023R1115"]]}, act=a)
     note = Builder.undated_amendments_note(me, "2021-0366")  # type: ignore[arg-type]
     assert note == (
-        "EUR-Lex also lists Regulation 2026/2102 as amending this act; its dates are not in our data, so the step "
-        "above may not be the latest."
+        "EUR-Lex also lists Regulation 2026/2102 as amending this act. That act is not in our data, so its publication "
+        "is not shown and the step above may not be the latest."
     )
     me.act = {**a, "32026R2102": a["32025R2650"]}
     assert Builder.undated_amendments_note(me, "2021-0366") is None  # type: ignore[arg-type]
