@@ -1675,6 +1675,11 @@ OUTAGE_STOP = 8
 # Runs in a row in which OEIL answered 404 for a file whose record has OEIL data, after which the id is no longer
 # kept pending: the stored record (as last read) stays, and the manifest note says so.
 OEIL_GONE_RUNS = 3
+# Share of the stored records a run may remove because their new EP record no longer passes validation. Beyond it
+# (e.g. a change of format at the EP API that every re-read record trips over) the stored records are kept and the
+# run is "partial": a consistent drop would otherwise pass validation, which compares the file with this run's
+# manifest count (pipeline/validate.py MAX_SHRINK).
+MAX_SHRINK = 0.05
 
 
 class _Run:
@@ -1881,6 +1886,8 @@ def fetch(http: Http) -> SourceStatus:
       Ids that already failed in an earlier run do not count towards it.
     - _state.json `unsettled` lists the ids whose record this run did not refresh completely (pending, kept, or
       recorded without OEIL data because OEIL failed), for change detection (pipeline/analysis/activity.py).
+    - A stored record whose new EP record no longer passes validation is removed, up to MAX_SHRINK of the stored
+      records in a run; beyond that the stored records are kept and the run is "partial".
     """
     attempted = now_iso()
     deadline = fetch_deadline()
@@ -1975,6 +1982,10 @@ def fetch(http: Http) -> SourceStatus:
     done: list[str] = []
     built: set[str] = set()
     stopped_early = False
+    stored_at_start = len(existing)
+    max_removed = int(MAX_SHRINK * stored_at_start)  # stored records this run may remove (see MAX_SHRINK)
+    removed: set[str] = set()
+    held: set[str] = set()  # stored records kept although their new EP record no longer passes validation
 
     def note_unavailable() -> None:
         known = set(existing) | set(wanted) | built
@@ -2043,10 +2054,13 @@ def fetch(http: Http) -> SourceStatus:
         built |= {r.id for r in records}
         for r in records:
             oeil_gone.pop(r.id, None)
-        dropped = set(run.invalid) & set(existing)
-        if dropped:  # a stored record that no longer passes validation is removed, not kept stale
+        dropped = (set(run.invalid) & set(existing)) - held
+        if dropped and (held or len(removed) + len(dropped) > max_removed):
+            held |= dropped  # more than MAX_SHRINK of the stored records: kept, the run is partial
+        elif dropped:  # a stored record that no longer passes validation is removed, not kept stale
             keep = [r for r in read_records(SOURCE_ID, "procedures", Procedure) if r.id not in dropped]
             write_records(SOURCE_ID, "procedures", keep, key=lambda r: r.id)
+            removed |= dropped
             for pid in dropped:
                 existing.pop(pid, None)
         done += [
@@ -2088,6 +2102,14 @@ def fetch(http: Http) -> SourceStatus:
     outage_note = (
         f" Stopped after {OUTAGE_STOP} ids in a row failed (EP API or OEIL outage); the rest resumes next run."
         if run.outage
+        else ""
+    )
+    held_note = (
+        f" {len(held)} stored files were kept although their EP record no longer passes validation: removing them "
+        f"would remove more than {MAX_SHRINK:.0%} of the {stored_at_start} stored files in one run: "
+        + "; ".join(f"{k} ({run.invalid[k]})" for k in sorted(held))[:600]
+        + "."
+        if held
         else ""
     )
     again = {k: v for k, v in failing_now(pending).items() if v["runs"] > 1}
@@ -2147,13 +2169,14 @@ def fetch(http: Http) -> SourceStatus:
             f" Failures: {len(run.errors)} EP API, {len(run.build_errors)} build, {len(run.oeil_errors)} OEIL. "
             + "; ".join((problems + run.oeil_errors)[:5])
         )
-    note += outage_note + failing_note + kept_note + gone_note + listing_note
+    note += outage_note + failing_note + kept_note + gone_note + listing_note + held_note
     # "partial" whenever a previously enriched record could not be re-enriched (run.oeil_kept, pending)
     partial = bool(
         pending
         or problems
         or run.oeil_kept
         or listing_error
+        or held
         or len(run.oeil_errors) > 0.02 * max(len(done), 1)
     )
     return SourceStatus(

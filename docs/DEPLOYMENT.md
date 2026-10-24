@@ -78,7 +78,9 @@ open http://127.0.0.1:4174/eu-intel/).
   entries than the MEPs marked as sitting (every Member missing from it would be shown as former); opt-outs keep
   the Commission's opt-in decisions recorded earlier when an answer lacks them (marked `partial`). Smaller drops
   are written (a record can be removed at source). EP procedures and opt-outs otherwise add or replace records
-  (EP procedures also removes one that no longer passes validation). The manifest records `partial` or `failed`
+  (EP procedures also removes one that no longer passes validation, at most 5% of its stored files in a run: beyond
+  that it keeps them, marked `partial` with their ids in the note, since the 5% check under "Validation fails" compares
+  the file with the count the same run writes to the manifest). The manifest records `partial` or `failed`
   (with the previous successful `fetched_at`), and the run continues with the other sources. The site shows each
   source's last successful retrieval.
 - **A source stops early**: no source starts after the run deadline, and every source starts no new work after
