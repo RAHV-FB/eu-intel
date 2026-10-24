@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import type { EpVoteDetail, GroupSummary } from '../types/data';
+import type { DossierDetail, EpVoteDetail, GroupSummary } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
+import { useHashScroll } from '../features/guide/useHashScroll';
 import { countryName, formatDate, formatNumber } from '../lib/format';
 import { Disclosure, ErrorState, ExtLink, Loading, NotFound, PageHeader, SourceLink, Term, VoteBar } from '../components/ui';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
@@ -27,8 +28,12 @@ export default function Vote() {
   const validId = /^\d+$/.test(id);
   const { data: v, error, loading } = useData<EpVoteDetail>(validId ? `votes/${encodeURIComponent(id)}.json` : null);
   const groupsState = useData<GroupSummary[]>('people/groups.json');
+  // the file's Council votes, if any: the page links on to how the Member States voted on the same file
+  const { data: dossier } = useData<DossierDetail>(v?.dossier_id ? `dossiers/${v.dossier_id}.json` : null);
   const notFound = !validId || (!!v && !Array.isArray(v.ballots)) || isMissing(error);
   useDocumentTitle(notFound ? 'Vote not found' : v ? v.display_title || v.title : 'Parliament vote');
+  // a link to a section (/votes/166051#meps) lands on it once the vote has loaded
+  useHashScroll(!loading && !!v);
 
   // "All votes" returns to the list as it was filtered, when the vote was opened from it (VoteListItem)
   const fromList = (useLocation().state as { votesList?: unknown } | null)?.votesList;
@@ -64,9 +69,12 @@ export default function Vote() {
     ) : null;
   const amendmentRejected = (v.kind === 'amendment' || v.kind === 'split_or_separate') && v.outcome === 'rejected';
   const ballotTotal = v.ballots.length;
+  const councilVotes = dossier && dossier.id === v.dossier_id ? dossier.council_votes : [];
+  const latestCouncil = councilVotes.reduce<string | null>((m, c) => (!m || c.date > m ? c.date : m), null);
+  const councilPath = v.dossier_id ? `${dossierPath(v.dossier_id)}#council-votes` : null;
 
   return (
-    <div className="container page">
+    <div className="container page vote-page">
       <p className="meta" style={{ marginBottom: 'var(--sp-3)' }}>
         <Link to={listUrl}>← All votes</Link>
       </p>
@@ -96,6 +104,22 @@ export default function Vote() {
           </>
         }
       />
+
+      {v.has_ballots && (
+        <nav className="vote-jump" aria-label="On this page">
+          <ul>
+            <li>
+              <a href="#groups">By political group</a>
+            </li>
+            <li>
+              <a href="#countries">By MEPs’ country</a>
+            </li>
+            <li>
+              <a href="#meps">Individual MEPs</a>
+            </li>
+          </ul>
+        </nav>
+      )}
 
       <section className="vote-summary" aria-labelledby="result-h">
         <div className="vote-summary__top">
@@ -205,6 +229,19 @@ export default function Vote() {
               <dd className="mono">{v.doc_ids.join(', ')}</dd>
             </div>
           )}
+          {latestCouncil && councilPath && (
+            <div>
+              <dt>Council of the EU</dt>
+              <dd>
+                <Link to={councilPath}>How Member States voted on this file</Link>
+                <span className="meta">
+                  {' '}
+                  ({councilVotes.length > 1 ? `${councilVotes.length} Council votes, the latest on ` : ''}
+                  {formatDate(latestCouncil, true)})
+                </span>
+              </dd>
+            </div>
+          )}
         </dl>
         <p className="note" style={{ marginTop: 'var(--sp-4)' }}>{explainer}</p>
         {v.title && v.title !== v.display_title && (
@@ -227,7 +264,7 @@ export default function Vote() {
         </section>
       ) : (
         <>
-          <section className="section" aria-labelledby="groups-h">
+          <section className="section" id="groups" aria-labelledby="groups-h">
             <div className="section-head">
               <h2 id="groups-h">By political group</h2>
             </div>
@@ -243,11 +280,17 @@ export default function Vote() {
             )}
           </section>
 
-          <section className="section" aria-labelledby="countries-h">
+          <section className="section" id="countries" aria-labelledby="countries-h">
             <h2 id="countries-h">By MEPs’ country</h2>
             <p className="section-intro">
               This groups MEPs by the country they were elected in. It is <strong>not</strong> the position of that country’s government:
               Member States vote separately, in the <Term id="council">Council of the EU</Term>.
+              {latestCouncil && councilPath && (
+                <>
+                  {' '}
+                  <Link to={councilPath}>See how Member States voted on this file in the Council</Link>.
+                </>
+              )}
             </p>
             {v.countries.length > 0 ? (
               <CountryBreakdownTable rows={v.countries} />
@@ -256,7 +299,7 @@ export default function Vote() {
             )}
           </section>
 
-          <section className="section" aria-labelledby="meps-h">
+          <section className="section" id="meps" aria-labelledby="meps-h">
             <h2 id="meps-h">Individual MEPs</h2>
             <p className="section-intro">
               Each MEP’s recorded vote, with their group and country on the day of the vote. MEPs who are not listed have no vote

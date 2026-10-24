@@ -1,11 +1,12 @@
 /**
- * The law (dossier) page on the built site: the status on the first screen of every law page, the key facts as
- * labelled rows, "When it applies" in time order, "What is it?" without a summary and the jump navigation on phones.
- * Real records; see playwright.config.ts to run.
+ * The law (dossier) and vote pages on the built site: the status on the first screen of every law page, the key
+ * facts as labelled rows, "When it applies" in time order, "What is it?" without a summary, the jump navigation on
+ * phones and on the vote page, and the route from a vote on to the Council's vote on the same file. Real records;
+ * see playwright.config.ts to run.
  */
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
-import { AI_ACT_ID } from './env';
+import { AI_ACT_ID, BASE_PATH } from './env';
 import { expect, open, test } from './fixtures';
 
 const PHONE = { width: 375, height: 812 };
@@ -134,5 +135,44 @@ test.describe('law page: on this page', () => {
     await expect(nav).toHaveCount(1);
     await expect(nav).toHaveClass(/dz-toc/);
     await expect(page.locator('.dz-jump')).toBeHidden();
+  });
+});
+
+test.describe('vote page', () => {
+  for (const viewport of [PHONE, { width: 1280, height: 800 }])
+    test(`jumps to each breakdown (${viewport.width}px)`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await open(page, 'votes/166051/'); // AI Act, final vote, 13 March 2024
+      const nav = page.getByRole('navigation', { name: 'On this page' });
+      await expect(nav.getByRole('link')).toHaveText(['By political group', 'By MEPs’ country', 'Individual MEPs']);
+      await nav.getByRole('link', { name: 'Individual MEPs' }).click();
+      await expectLandedOn(page, 'meps');
+      await nav.getByRole('link', { name: 'By political group' }).click();
+      await expectLandedOn(page, 'groups');
+    });
+
+  test('a shared link to a breakdown opens on it', async ({ page }) => {
+    await open(page, 'votes/166051/#countries');
+    await expectLandedOn(page, 'countries');
+  });
+
+  test('links on to how the Member States voted on the same file in the Council', async ({ page }) => {
+    await open(page, 'votes/166051/');
+    const link = page.getByRole('link', { name: 'How Member States voted on this file', exact: true });
+    await expect(link).toHaveAttribute('href', `${BASE_PATH}legislation/${AI_ACT_ID}#council-votes`);
+    await expect(page.locator('.facts div', { has: link })).toContainText('(21 May 2024)');
+    await expect(page.locator('#countries').getByRole('link', { name: 'See how Member States voted on this file in the Council' })).toHaveCount(1);
+    await link.click();
+    await expectLandedOn(page, 'council-votes');
+    await expect(page.locator('#council-votes article.cvote').first()).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('never links to a Council vote its file does not have, and has no jump links without individual votes', async ({ page }) => {
+    await open(page, 'votes/199592/'); // 2026/0325(COD): no Council vote
+    await expect(page.locator('main a[href$="#council-votes"]')).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'On this page' })).toHaveCount(1);
+    await open(page, 'votes/195653/'); // no roll-call: no breakdowns to jump to
+    await expect(page.getByRole('navigation', { name: 'On this page' })).toHaveCount(0);
   });
 });
