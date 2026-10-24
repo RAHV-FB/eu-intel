@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EpVoteSummary, SearchDoc } from '../../types/data';
 import { createSearchEngine } from '../../lib/search';
-import { matchVoteDetails, voteHaystacks } from './keyword';
+import { matchVoteDetails, voteHaystacks, voteHaystacksOnce } from './keyword';
 
 // TEST-ONLY votes and files shaped like votes/index.json and search.json rows (labels as Parliament writes them)
 const vote = (id: string, title: string, display_title: string, dossier_id: string | null = null): EpVoteSummary =>
@@ -65,5 +65,12 @@ describe('vote keyword matching', () => {
     expect(m?.approximate).toBe(true);
     expect(m?.similar).toEqual(['macro']);
     expect(m?.partial).toBe(false);
+  });
+
+  it('builds the word lists of a loaded vote list once, the same as voteHaystacks', () => {
+    const once = voteHaystacksOnce(VOTES);
+    expect(voteHaystacksOnce(VOTES)).toBe(once); // a page opened again, or a search typed again, reuses them
+    expect([...once].map(([id, w]) => [id, [...w].sort()])).toEqual([...hay].map(([id, w]) => [id, [...w].sort()]));
+    expect(voteHaystacksOnce([...VOTES])).not.toBe(once); // another list has its own
   });
 });

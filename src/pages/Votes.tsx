@@ -11,7 +11,7 @@ import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { CloseVoteMethod, VoteKindGuide, VoteListItem } from '../features/votes/components';
 import { KIND_LABEL, OUTCOME_LABEL, isClose } from '../features/votes/labels';
-import { matchVoteDetails, voteHaystacks } from '../features/votes/keyword';
+import { matchVoteDetails, voteHaystacksOnce } from '../features/votes/keyword';
 
 const PAGE = 50;
 // longest first: the longest that fits the field is shown, so that phones keep the reference-format example
@@ -87,7 +87,7 @@ export default function Votes() {
   useEffect(() => {
     if (hasQuery && !engine) loadSearch().then(setEngine, () => undefined);
   }, [hasQuery, engine]);
-  const haystacks = useMemo(() => voteHaystacks(votes), [votes]);
+  const haystacks = useMemo(() => (hasQuery ? voteHaystacksOnce(votes) : new Map<string, Set<string>>()), [votes, hasQuery]);
   const keywordMatch = useMemo(() => matchVoteDetails(votes, haystacks, q, engine), [votes, haystacks, q, engine]);
   const keywordHits = keywordMatch?.ids ?? null;
 

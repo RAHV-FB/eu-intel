@@ -73,6 +73,24 @@ export function voteHaystacks(votes: EpVoteSummary[]): Map<string, Set<string>> 
   return m;
 }
 
+const HAYSTACKS = new WeakMap<EpVoteSummary[], Map<string, Set<string>>>();
+
+/** `voteHaystacks` of a loaded vote list, built when first needed and kept for that list (a page opened again, or a
+ * search typed again, does not build them again). */
+export function voteHaystacksOnce(votes: EpVoteSummary[]): Map<string, Set<string>> {
+  let m = HAYSTACKS.get(votes);
+  if (!m) HAYSTACKS.set(votes, (m = voteHaystacks(votes)));
+  return m;
+}
+
+// the words of each vote's title and subject, for the word starts: built once for a vote, when first needed
+const TITLED = new WeakMap<EpVoteSummary, Set<string>>();
+function titledWords(v: EpVoteSummary): Set<string> {
+  let s = TITLED.get(v);
+  if (!s) TITLED.set(v, (s = wordSet(v.display_title, v.subject)));
+  return s;
+}
+
 export interface VoteMatches {
   ids: Set<string>;
   /** Nothing matched whole words, so these votes have words in their titles that start with those typed. */
@@ -123,7 +141,7 @@ export function matchVoteDetails(
         out.add(v.id);
         continue;
       }
-      const titled = prefix ? wordSet(v.display_title, v.subject) : null;
+      const titled = prefix ? titledWords(v) : null;
       const startsWord = (t: string) => titled !== null && t.length >= 4 && !abbreviations.has(t) && hasWord(titled, t, true);
       const has = (t: string) => (words && (hasWord(words, t) || words.has(NAME + t))) || startsWord(t);
       if (tokens.every(has) || (v.dossier_id && viaFiles.has(v.dossier_id))) out.add(v.id);

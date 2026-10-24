@@ -14,6 +14,9 @@ export interface SortState<K extends string> {
 
 type Accessor<T> = (row: T) => string | number | null | undefined;
 
+// one collator for every comparison: localeCompare with a locale and options builds a new one on each call
+const COLLATOR = new Intl.Collator('en', { sensitivity: 'base' });
+
 /** Nulls always sort last, whatever the direction. */
 export function compareValues(a: string | number | null | undefined, b: string | number | null | undefined, dir: SortDir): number {
   const an = a == null || (typeof a === 'number' && Number.isNaN(a));
@@ -21,7 +24,7 @@ export function compareValues(a: string | number | null | undefined, b: string |
   if (an && bn) return 0;
   if (an) return 1;
   if (bn) return -1;
-  const r = typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), 'en', { sensitivity: 'base' });
+  const r = typeof a === 'number' && typeof b === 'number' ? a - b : COLLATOR.compare(String(a), String(b));
   return dir === 'asc' ? r : -r;
 }
 
