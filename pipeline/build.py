@@ -3988,9 +3988,11 @@ class Builder:
         result on the act, else OEIL's Council step. A Council act (consultation, consent) is dated by that
         voting result, else by the act itself, which bears its adoption date (OEIL's Council date can
         contradict it). An act that Parliament adopts with the Council's consent is dated by Parliament's
-        decision. Without such a step, the act's own date (EUR-Lex date of the document: its adoption or,
-        for acts of Parliament and Council, signature date), then a recorded signature. Never the
-        publication date, and never a date after publication."""
+        decision. Without such a step, the act's own date (EUR-Lex date of the document: its adoption), then, for
+        other procedures, a recorded signature; never the date of an act of Parliament and Council, which bears the
+        date of its signature, not of its adoption (2011/0901(COD), known from EUR-Lex only: Regulation (EU,
+        Euratom) 2015/2422 "of the European Parliament and of the Council of 16 December 2015", the day it was
+        signed): no date then. Never the publication date, and never a date after publication."""
         t = self.today
         p = self.council_dated(p)
         approved = sorted(e.date for e in p.events if e.date <= t and (e.raw_type or "").endswith(
@@ -4009,7 +4011,10 @@ class Builder:
                   and any(c <= e.date for c in votes + council)]  # fmt: skip
             cands = [ep[-1:], docs[:1]]
         elif p.type in ("COD", "SYN"):
-            cands = [approved[-1:], votes[-1:], council[-1:], docs[:1], sigs[:1]]
+            # an act of Parliament and Council is dated by its signature, not its adoption
+            own = sorted(a.date_document for a in acts if a.date_document and a.date_document <= t
+                         and not re.search(r"\bof the European Parliament and of the Council\b", a.title, re.I))  # fmt: skip
+            cands = [approved[-1:], votes[-1:], council[-1:], own[:1]]
         else:
             cands = [votes[-1:], docs[:1], council[-1:], sigs[:1]]
         adopted = next((c[0] for c in cands if c and (not published or c[0] <= published)), None)

@@ -684,7 +684,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   second-reading approval of the Council's position (Art. 294(7)(a) TFEU), else the date of the Council's
   adopted voting result on the act, else OEIL's Council step; a Council act (consultation, consent) is dated
   by its voting result, else by the act itself, which bears its adoption date (OEIL's Council date is then
-  shown on the act's date, with OEIL's date in the detail); never after publication.
+  shown on the act's date, with OEIL's date in the detail); never after publication. Never the date of an act of
+  Parliament and Council either, which is the day it was signed, nor a signature: 2011/0901(COD), known from
+  EUR-Lex only (Regulation (EU, Euratom) 2015/2422 "of the European Parliament and of the Council of 16 December
+  2015"), was "Adopted 16 Dec 2015" and has no adoption date now; its timeline shows the signature.
 - The Council's adoption checked against the act's text: every act of the ordinary legislative procedure gives
   the date of the Council's decision in the footnote to "Acting in accordance with the ordinary legislative
   procedure" ("… and decision of the Council of 24 May 2024", Directive (EU) 2024/1760). That is the date as the

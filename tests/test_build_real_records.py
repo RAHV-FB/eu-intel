@@ -1077,6 +1077,22 @@ def council_rec(cv: CouncilVote, vote_on: str | None = None) -> dict:
             "written_procedure": cv.written_procedure, "positions": cv.positions, "source": None}  # fmt: skip
 
 
+def test_an_act_of_parliament_and_council_is_not_adopted_on_its_signature_date():
+    # 2011/0901(COD), known from EUR-Lex only: Regulation (EU, Euratom) 2015/2422 "of the European Parliament and of
+    # the Council of 16 December 2015" was shown "Adopted 16 Dec 2015", its signature (OEIL 2011/0901B(COD): "Decision
+    # by Parliament, 2nd reading" 28/10/2015, "Act approved by Council, 2nd reading" 03/12/2015, "Final act signed"
+    # 16/12/2015; none of them is in our data). 2020/3521(COD): Council Decision (EU) 2020/2059 "of
+    # 7 December 2020" bears the date of its adoption by the Council, which stays
+    from pipeline.models.entities import SourceRef
+
+    a = acts("32015R2422", "32020D2059")
+    src = SourceRef(institution="EUR-Lex", url="https://eur-lex.europa.eu", retrieved_at="2026-10-23T00:00:00Z")
+    for ref, celex, want in (("2011/0901(COD)", "32015R2422", None), ("2020/3521(COD)", "32020D2059", "2020-12-07")):
+        p = Procedure(id=ref[:9].replace("/", "-"), reference=ref, type="COD", title=a[celex].title,
+                      celex_refs=[celex], oeil_url="https://oeil.europarl.europa.eu", source=src)  # fmt: skip
+        assert Builder.adoption_dates(stand_in(), p, [a[celex]]) == (want, a[celex].date_publication)  # type: ignore[arg-type]
+
+
 def test_council_adoption_is_dated_by_the_acts_own_text():
     # Directive (EU) 2017/1132, footnote 2: "Position of the European Parliament of 5 April 2017 ... and decision of
     # the Council of 29 May 2017"; OEIL "Act adopted by Council after Parliament's 1st reading" 18/04/2017.
