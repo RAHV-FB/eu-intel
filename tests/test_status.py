@@ -539,7 +539,14 @@ def test_replaced_proposal():
     assert "COM(2025)0101" in s.explanation
     assert s.next_step.text.startswith("None")
     assert "will not become law" not in s.explanation and "has ended" not in s.next_step.text
-    assert "only if the Court of Justice annulled the withdrawal (Article 264 TFEU)" in s.next_step.text
+    assert s.next_step.text.endswith(
+        "only if the Court of Justice annulled the withdrawal on an action brought within the two-month time limit of "
+        "Article 263 TFEU (Article 264 TFEU)."
+    )
+    assert s.explanation == (
+        "The Commission withdrew its proposal and replaced it with a new one (COM(2025)0101), which ends the procedure "
+        "on this proposal. A withdrawal is a decision of the Commission, not a vote of Parliament."
+    )
 
 
 def test_withdrawal_ends_the_procedure_but_an_annulment_would_make_it_void():
@@ -547,20 +554,34 @@ def test_withdrawal_ends_the_procedure_but_an_annulment_would_make_it_void():
     # with the standard-essential-patents proposal 2023/0133(COD), whose withdrawal Parliament asks the Court of
     # Justice to annul (Case C-727/25, action of 14 November 2025, OJ C/2026/89; OEIL still "Awaiting Council's 1st
     # reading position"). A withdrawal brings the procedure to an end (C-409/13, paragraph 77); an action does not
-    # suspend it (Art. 278 TFEU), and an annulled act is void (Art. 264 TFEU): never "it will not become law"
+    # suspend it (Art. 278 TFEU), and an annulled act is void (Art. 264 TFEU): never "it will not become law". The
+    # action must be brought within two months (Art. 263 TFEU, sixth paragraph), past for most withdrawals
     s = status("2017-0003")
     assert s.explanation == (
-        "The Commission withdrew its proposal, which ends the legislative procedure on it. A withdrawal is a decision of "
-        "the Commission, not a vote of Parliament."
+        "The Commission withdrew its proposal, which ends the procedure on it. A withdrawal is a decision of the "
+        "Commission, not a vote of Parliament."
     )
     assert s.next_step.text == (
         "None recorded: a withdrawn proposal does not proceed. It could return as a new Commission proposal, or be "
-        "pending again if the Court of Justice annulled the withdrawal (Article 264 TFEU)."
+        "pending again if the Court of Justice annulled the withdrawal on an action brought within the two-month time "
+        "limit of Article 263 TFEU (Article 264 TFEU)."
     )
     # OEIL's "Procedure lapsed or withdrawn" (2017/0810(COD)) names no closing step: no consequence is asserted
     s = classify(rec("2023-0413").model_copy(update={"stage_raw": "Procedure lapsed or withdrawn"}), [], [], TODAY)
     assert (s.stage, s.label) == ("lapsed", "Lapsed or withdrawn")
     assert "will not become law" not in s.explanation
+
+
+def test_withdrawal_of_a_non_legislative_proposal_is_not_called_a_legislative_procedure():
+    # 2021/0401(CNS): COM(2021)752, provisional emergency measures under Art. 78(3) TFEU, which are "non-legislative
+    # acts" because "they are not adopted at the end of a legislative procedure" (C-643/15, paragraph 66); OEIL
+    # "Proposal withdrawn by Commission" on 6 October 2025. Art. 293(2) TFEU covers all "procedures leading to the
+    # adoption of a Union act"
+    s = classify(rec("2021-0401"), [], [], TODAY)
+    assert (s.stage, s.label, s.since) == ("withdrawn", "Withdrawn by the Commission", "2025-10-06")
+    assert s.explanation.startswith("The Commission withdrew its proposal, which ends the procedure on it.")
+    assert "legislative" not in s.explanation
+    assert "two-month time limit of Article 263 TFEU" in s.next_step.text
 
 
 def test_rejection_at_first_reading_is_parliaments_position_and_does_not_end_the_procedure():

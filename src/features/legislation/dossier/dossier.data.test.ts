@@ -177,7 +177,10 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     for (const d of ended) {
       const text = `${d.status.explanation} ${d.next_step.text}`;
       expect(text, d.id).not.toMatch(/will not become law|could only return|normally ends the procedure/);
-      if (d.status.stage === 'withdrawn') expect(d.next_step.text, d.id).toContain('if the Court of Justice annulled the withdrawal (Article 264 TFEU)');
+      if (d.status.stage === 'withdrawn') {
+        expect(d.next_step.text, d.id).toContain('annulled the withdrawal on an action brought within the two-month time limit of Article 263 TFEU (Article 264 TFEU)');
+        expect(d.status.explanation, d.id).not.toContain('legislative procedure');
+      }
     }
     // OEIL "Awaiting Council's 1st reading position": the Council's first-reading position comes next (Art. 294(5) TFEU)
     for (const id of ['2022-0348', '2023-0413']) {

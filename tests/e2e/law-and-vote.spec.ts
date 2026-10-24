@@ -121,7 +121,10 @@ test.describe('law page: status and key facts', () => {
     await expect(facts).not.toContainText('normally ends the procedure');
     // 2023/0133(COD): withdrawn (OJ C/2025/5423); Parliament asks the Court of Justice to annul the withdrawal (C-727/25)
     await open(page, 'legislation/2023-0133/');
-    await expect(page.locator('.dz-facts')).toContainText('or be pending again if the Court of Justice annulled the withdrawal (Article 264 TFEU)');
+    await expect(page.locator('.dz-facts')).toContainText(
+      'or be pending again if the Court of Justice annulled the withdrawal on an action brought within the two-month time limit of Article 263 TFEU (Article 264 TFEU)',
+    );
+    await expect(page.locator('.dz-facts')).toContainText('The Commission withdrew its proposal, which ends the procedure on it.');
     await expect(page.locator('.dz-facts')).not.toContainText(/will not become law|the procedure has ended/);
   });
 });

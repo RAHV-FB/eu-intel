@@ -1253,19 +1253,22 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
     if stage == "unknown" and s.label == "Procedure completed":
         return NextStep(text="Not determined: the procedure's final act is not linked in our data.", basis="unknown")
     # A withdrawal ends the procedure (Court of Justice, C-409/13, paragraph 77) while it stands: an action for its
-    # annulment does not suspend it (Art. 278 TFEU), and an annulled act is void (Art. 264 TFEU). 2023/0133(COD):
-    # Parliament brought such an action on 14 November 2025 (Case C-727/25, OJ C/2026/89); OEIL keeps the file open.
+    # annulment does not suspend it (Art. 278 TFEU), and an annulled act is void (Art. 264 TFEU). The action must be
+    # brought within two months (Art. 263 TFEU, sixth paragraph), which has run out for most withdrawals; actions are
+    # not in our data. 2023/0133(COD): Parliament brought one on 14 November 2025 (Case C-727/25, OJ C/2026/89); OEIL
+    # keeps the file open.
     if stage == "withdrawn" and s.label == "Replaced by a new Commission proposal":
         return NextStep(
             text="None recorded: a withdrawn proposal does not proceed. The Commission's new proposal is a separate "
             "legislative file; this one would be pending again only if the Court of Justice annulled the withdrawal "
-            "(Article 264 TFEU).",
+            "on an action brought within the two-month time limit of Article 263 TFEU (Article 264 TFEU).",
             basis="source",
         )
     if stage == "withdrawn":
         return NextStep(
             text="None recorded: a withdrawn proposal does not proceed. It could return as a new Commission "
-            "proposal, or be pending again if the Court of Justice annulled the withdrawal (Article 264 TFEU).",
+            "proposal, or be pending again if the Court of Justice annulled the withdrawal on an action brought "
+            "within the two-month time limit of Article 263 TFEU (Article 264 TFEU).",
             basis="derived",
         )
     if stage == "rejected":
@@ -1576,9 +1579,9 @@ def classify(
         text = (
             "The Commission withdrew its proposal and replaced it with a new one"
             + (f" ({new})" if new else "")
-            + ", which ends the legislative procedure on this proposal."
+            + ", which ends the procedure on this proposal."
             if replaced
-            else "The Commission withdrew its proposal, which ends the legislative procedure on it."
+            else "The Commission withdrew its proposal, which ends the procedure on it."
         )
         if rejection and rejection.date <= withdrawal.date:
             text += f" Parliament had rejected the proposal on {_fmt(rejection.date)}."

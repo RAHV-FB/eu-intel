@@ -506,14 +506,19 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   withdrawn before its proposal. The date shown is that of the Cellar event, for a list of withdrawn proposals the
   date of its publication in the Official Journal (C series); the Commission's decision can be earlier (2023/0133(COD):
   list C/2025/5423 of 6 October 2025, decision of 16 July 2025 according to Parliament's action in Case C-727/25). A
-  withdrawal "ends the legislative procedure" on the proposal (Court of Justice, C-409/13, paragraph 77: it brings
-  the procedure "to an end"), and the next step says that it could return as a new proposal or be pending again if
-  the Court of Justice annulled the withdrawal (Art. 264 TFEU: an annulled act is void; Art. 278: an action does not
-  suspend it). Actions against a withdrawal are not in our data: 2023/0133(COD) is one (Case C-727/25, OJ C/2026/89;
-  OEIL still gives "Awaiting Council's 1st reading position"). Before, the 69 withdrawn files of 24 October 2026
-  said that the proposal "will not become law" (7 replaced ones: "in this form") and that "the procedure has ended",
-  62 of them adding "The proposal could only return as a new Commission proposal". A file OEIL gives as "Procedure
-  lapsed or withdrawn" (2017/0810(COD)) no longer adds "It will not become law".
+  withdrawal "ends the procedure" on the proposal (Court of Justice, C-409/13, paragraph 77: it brings the legislative
+  procedure "to an end"; Art. 293(2) TFEU: the Commission may alter its proposal "during the procedures leading to the
+  adoption of a Union act", legislative or not, such as 2021/0401(CNS) under Art. 78(3) TFEU, whose measures are
+  "non-legislative acts", C-643/15, paragraph 66), and the next step says that it could return as a new proposal or be
+  pending again if the Court of Justice annulled the withdrawal on an action brought within the two-month time limit of
+  Art. 263 TFEU (Art. 263, sixth paragraph: "within two months of the publication of the measure, or of its
+  notification to the plaintiff"; Art. 264: an annulled act is void; Art. 278: an action does not suspend it). That
+  time limit has run out for most withdrawals in our data, which date from 2015 to 2025. Actions against a withdrawal
+  are not in our data: 2023/0133(COD) is one (Case C-727/25, OJ C/2026/89; OEIL still gives "Awaiting Council's 1st
+  reading position"). Before, the 69 withdrawn files of 24 October 2026 said that the proposal "will not become law" (7
+  replaced ones: "in this form") and that "the procedure has ended", 62 of them adding "The proposal could only return
+  as a new Commission proposal". A file OEIL gives as "Procedure lapsed or withdrawn" (2017/0810(COD)) no longer adds
+  "It will not become law".
 - Corrections: where Cellar's date metadata is wrong or was not updated after an amendment, the build applies
   `data/curated/act_dates.yaml`, each date citing the article that sets it (DSA Art. 93, AI Act Art. 113 as
   amended by Regulation 2026/1744, Return Regulation Art. 50, and three acts whose entry into force is tied to
