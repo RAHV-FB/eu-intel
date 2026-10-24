@@ -127,6 +127,34 @@ test.describe('privacy notice and links', () => {
     await expect(who.getByRole('link', { name: /issue tracker on GitHub/ })).toHaveAttribute('href', 'https://github.com/RAHV-FB/eu-intel/issues');
   });
 
+  test('no page breaks the Content-Security-Policy, which allows no inline styles; style props still apply', async ({ page }) => {
+    // the securitypolicyviolation event is fired in every engine, whether or not it logs the violation to the console
+    await page.addInitScript(() => {
+      const w = window as unknown as { cspViolations: string[] };
+      w.cspViolations = [];
+      window.addEventListener('securitypolicyviolation', (e) => w.cspViolations.push(`${e.violatedDirective} ${e.blockedURI}`), true);
+    });
+    const routes = [
+      '', 'legislation/', `legislation/${AI_ACT_ID}/`, 'votes/', 'votes/199380/', 'people/', 'people/groups/renew/',
+      'people/meps/197619/', 'people/parties/5719/', 'countries/IE/', 'how-the-eu-works/', 'about/', 'privacy/',
+      'following/', 'search/?q=climate',
+    ];
+    for (const route of routes) {
+      await page.goto(pagesUrl(route)); // the prerendered shell, as GitHub Pages serves it
+      await settle(page);
+      expect(await page.evaluate(() => (window as unknown as { cspViolations: string[] }).cspViolations), route).toEqual([]);
+    }
+    // a React style prop (set through the CSSOM, which the policy does not restrict): the largest country's share bar
+    await page.goto(pagesUrl('people/groups/renew/'));
+    await settle(page);
+    const bar = page.locator('.share-bar').first();
+    await expect(bar).toHaveAttribute('style', /width: 100%/);
+    expect((await bar.boundingBox())?.width).toBeGreaterThan(0);
+    // an interaction that re-renders with style props: sorting the countries
+    await page.getByRole('button', { name: /^Members/ }).first().click();
+    expect(await page.evaluate(() => (window as unknown as { cspViolations: string[] }).cspViolations)).toEqual([]);
+  });
+
   test('only links to official EU websites are announced as official', async ({ page }) => {
     // the project's own GitHub pages (editorial policy, data/curated, issues) and GitHub's privacy statement are not
     let others = 0;
