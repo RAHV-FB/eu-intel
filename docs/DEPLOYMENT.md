@@ -23,7 +23,9 @@ they reach `main`. To regenerate the file (Python 3.12, as the workflows use): `
 
 1. **Enable Pages with Actions as the source**: *Settings → Pages → Build and deployment → Source:*
    **GitHub Actions**. (Do not choose "Deploy from a branch".) Until this is done, `pages.yml` fails at
-   *Configure Pages* and nothing is deployed.
+   *Configure Pages* and nothing is deployed. The runs before it have failed, and nothing starts another until the
+   next push or refresh: run the first deploy by hand, *Actions → Deploy to GitHub Pages → Run workflow* on `main`
+   (`gh workflow run pages.yml --ref main`), and check that `https://rahv-fb.github.io/eu-intel/` loads once it is green.
 2. **Allow the refresh job to push**: *Settings → Actions → General → Workflow permissions*. The workflows
    request permissions explicitly, so the default "Read repository contents" is fine, but the
    organisation/repository must not forbid `contents: write` for `GITHUB_TOKEN`.
@@ -57,6 +59,10 @@ the site build the same `SITE_URL`, from which `scripts/prerender-routes.mjs` wr
 Pages has no server-side rewrites, so `scripts/prerender-routes.mjs` writes an `index.html` for every known route
 (`/legislation/2021-0106/`, `/votes/<id>/`, …) so that deep links return HTTP 200 with a route-specific
 `<title>`, plus `404.html` as the SPA fallback for anything else (served with status 404).
+The app's own links are written without the trailing slash (`/eu-intel/legislation/2021-0106`), as the router makes
+them. Inside the site the router follows such a link without loading a page, but loading the address itself (a reload, a
+new tab, a shared or bookmarked link) gets a 301 from Pages to the address with the slash, keeping the query and the
+fragment: one extra round trip, nothing breaks. The canonical links and the Atom entries use the address with the slash.
 Locally, `tests/e2e/pages-server.mjs` reproduces these semantics (`node tests/e2e/pages-server.mjs dist`, then
 open http://127.0.0.1:4174/eu-intel/).
 

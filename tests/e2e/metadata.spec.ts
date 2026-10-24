@@ -80,6 +80,15 @@ test.describe('metadata of the shells', () => {
     expect(await missing.text()).toContain('<meta name="robots" content="noindex" />');
     expect(home).not.toContain('name="robots"');
   });
+
+  test('the text for browsers without JavaScript links to the data on the site', async ({ request }) => {
+    const html = await (await request.get(pagesUrl('legislation/2021-0106/'))).text();
+    const noscript = /<noscript>([\s\S]*?)<\/noscript>/.exec(html)?.[1] ?? '';
+    expect(noscript).not.toContain('directory of the repository'); // the built JSON is not in the repository
+    const href = /<a href="([^"]+)">data\/meta\.json<\/a>/.exec(noscript)?.[1];
+    expect(href).toBe(`${BASE_PATH}data/meta.json`);
+    expect((await request.get(`${PAGES_ORIGIN}${href}`)).status()).toBe(200);
+  });
 });
 
 test.describe('privacy notice and links', () => {
