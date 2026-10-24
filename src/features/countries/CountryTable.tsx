@@ -35,10 +35,12 @@ export function CountryTable({
   rows,
   councilAvailable,
   infringementsAvailable,
+  councilPeriod,
 }: {
   rows: CountrySummary[];
   councilAvailable: boolean;
   infringementsAvailable: boolean;
+  councilPeriod?: string | null; // "2019–2026": the years of the Council votes counted
 }) {
   const inds = useMemo(() => indicatorColumns(rows), [rows]);
   const accessors = useMemo(() => {
@@ -71,8 +73,7 @@ export function CountryTable({
   return (
     <>
     <p className="note" style={{ marginBottom: 'var(--sp-2)' }}>
-      Three separate kinds of information — representation in Parliament, participation in Council votes, and implementation of EU law.
-      They are not combined into a score. Select a column heading to sort.<span className="scroll-hint"> Scroll sideways to see all columns.</span>
+      Select a column heading to sort.<span className="scroll-hint"> Scroll sideways to see all columns.</span>
     </p>
     <div className="table-wrap table-card">
       <table className="table ctable">
@@ -100,7 +101,7 @@ export function CountryTable({
               Representation in Parliament
             </th>
             <th scope="colgroup" colSpan={councilCols} className="grp-start grp-council">
-              Council of the EU votes
+              Council of the EU votes{councilAvailable && councilPeriod ? `, ${councilPeriod}` : ''}
             </th>
             <th scope="colgroup" colSpan={implCols} className="grp-start grp-impl">
               Implementation of EU law
@@ -126,7 +127,7 @@ export function CountryTable({
                 </SortTh>
                 {hasNp && (
                   <SortTh k="cnp" sort={sort} onSort={toggle} num className="grp-council">
-                    Not part.
+                    Did not take part
                   </SortTh>
                 )}
               </>

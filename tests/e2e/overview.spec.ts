@@ -87,3 +87,18 @@ test.describe('votes list', () => {
     await expectNoSeriousA11yViolations(page);
   });
 });
+
+test.describe('countries list', () => {
+  test('gives the period and the number of the Council votes it counts', async ({ page }) => {
+    await open(page, 'countries/');
+    await expect(page.locator('th[scope="colgroup"]', { hasText: 'Council of the EU votes' })).toHaveText(/^Council of the EU votes, 20\d\d–20\d\d$/);
+    const note = page.locator('.note', { hasText: 'How each government voted' });
+    const n = Number(/: ([\d,]+) votes with each country’s position recorded, between \d+ \w+ 20\d\d and \d+ \w+ 20\d\d\./.exec(await note.innerText())?.[1].replace(/,/g, ''));
+    // each country's four counts add up to the votes counted
+    const austria = page.getByRole('row', { name: /^Austria/ });
+    const np = await page.locator('thead th', { hasText: 'Did not take part' }).count();
+    const cells = (await austria.locator('td').allInnerTexts()).slice(2, np ? 6 : 5).map((t) => Number(t.replace(/,/g, '')));
+    expect(cells.reduce((a, b) => a + b, 0)).toBe(n);
+    await expectNoSeriousA11yViolations(page);
+  });
+});
