@@ -72,10 +72,14 @@
 .lx-chip--filter {
   gap: var(--sp-2);
   min-height: 2rem;
+  max-width: 100%;
   background: var(--blue-pale);
   border-color: #c9d8f2;
   color: var(--navy);
   cursor: pointer;
+  /* a long unbroken keyword (a pasted address) wraps instead of widening the page */
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 .lx-chip--filter:hover {

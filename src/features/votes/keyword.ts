@@ -11,9 +11,11 @@
  */
 import type { EpVoteSummary } from '../../types/data';
 import {
+  citationHead,
   dossierScores,
   hasWord,
   keywordTokens,
+  mepWords,
   normalize,
   similarWords,
   typedAbbreviations,
@@ -68,15 +70,38 @@ export function voteHaystacks(votes: EpVoteSummary[]): Map<string, Set<string>> 
     const words = wordSet(v.display_title, label.replace(LABEL_REF_RE, ' '), v.subject, v.id);
     for (const w of names ? wordsOf(names) : []) words.add(NAME + w);
     for (const k of refKeys(v)) words.add(k);
+    // "Members of the European Parliament" are MEPs ("members" alone is not: "Member States")
+    if ([v.display_title, label, v.subject].some((t) => t && /parliament/i.test(t) && mepWords(t).includes('meps'))) words.add('meps');
     m.set(v.id, words);
   }
   return m;
 }
 
+const HAYSTACKS = new WeakMap<EpVoteSummary[], Map<string, Set<string>>>();
+
+/** `voteHaystacks` of a loaded vote list, built when first needed and kept for that list (a page opened again, or a
+ * search typed again, does not build them again). */
+export function voteHaystacksOnce(votes: EpVoteSummary[]): Map<string, Set<string>> {
+  let m = HAYSTACKS.get(votes);
+  if (!m) HAYSTACKS.set(votes, (m = voteHaystacks(votes)));
+  return m;
+}
+
+// the words of each vote's title and subject, for the word starts: built once for a vote, when first needed
+const TITLED = new WeakMap<EpVoteSummary, Set<string>>();
+function titledWords(v: EpVoteSummary): Set<string> {
+  let s = TITLED.get(v);
+  if (!s) TITLED.set(v, (s = wordSet(v.display_title, v.subject)));
+  return s;
+}
+
 export interface VoteMatches {
   ids: Set<string>;
-  /** Nothing matched whole words, so these votes have words in their titles that start with those typed. */
+  /** Nothing matched whole words, so these votes have words in their titles that start with those typed, or are on
+   * files that match only another form of a word or a word starting with it. */
   partial: boolean;
+  /** With `partial`: every vote has a word starting with those typed, in its title or its file's name. */
+  wordStart?: boolean;
   /** Nothing matched otherwise, so these are votes on files that the search matches only approximately: with
    * the `similar` words in place of a typed word (typo tolerance: "macro" for "Macron"), or on all but one word. */
   approximate?: boolean;
@@ -97,7 +122,8 @@ export function matchVoteDetails(
   engine: SearchEngine | null,
 ): VoteMatches | null {
   let fileIds: Set<string | null | undefined> | null = null;
-  const n = normalize(q)
+  // an act's official title cites it by its number: "Regulation (EU) 2016/679 of the European Parliament and of …"
+  const n = citationHead(normalize(q))
     .replace(/(\d)\/(?:eu|ec|eec|euratom)\b/g, '$1 ') // "No 376/2014/EU" cites 376/2014
     // a file's id as in the site's addresses ("2021-0106", "2016-0282A", "2021 0106") is its procedure number; other
     // pairs of numbers are not ("2021-2027", "2019-2024")
@@ -106,7 +132,7 @@ export function matchVoteDetails(
     );
   const refs = [...n.matchAll(REF_RE)].map((m) => m[0].replace(/\s+/g, ''));
   const rest = refs.length ? n.replace(REF_RE, ' ') : q;
-  const tokens = keywordTokens(rest).filter((t) => !refs.length || !CITATION_WORDS.has(t));
+  const tokens = keywordTokens(mepWords(rest).join(' ')).filter((t) => !refs.length || !CITATION_WORDS.has(t));
   if (!tokens.length && !refs.length) return null;
   const none = new Map<string, number>();
   // a reference matches the vote's own references, or a file that the number identifies (an act number)
@@ -114,7 +140,8 @@ export function matchVoteDetails(
   const refsMatch = (v: EpVoteSummary, words: Set<string> | undefined) =>
     refs.every((r, k) => words?.has(r) || (v.dossier_id != null && refFiles[k].has(v.dossier_id)));
   const abbreviations = typedAbbreviations(q);
-  const pass = (prefix: boolean, viaFiles: Map<string, number>) => {
+  // with `forms`: the votes found only through a file that matches another form of a word, not a word start
+  const pass = (prefix: boolean, viaFiles: Map<string, number>, forms?: Set<string>) => {
     const out = new Set<string>();
     for (const v of votes) {
       const words = haystacks.get(v.id);
@@ -123,10 +150,14 @@ export function matchVoteDetails(
         out.add(v.id);
         continue;
       }
-      const titled = prefix ? wordSet(v.display_title, v.subject) : null;
+      const titled = prefix ? titledWords(v) : null;
       const startsWord = (t: string) => titled !== null && t.length >= 4 && !abbreviations.has(t) && hasWord(titled, t, true);
       const has = (t: string) => (words && (hasWord(words, t) || words.has(NAME + t))) || startsWord(t);
-      if (tokens.every(has) || (v.dossier_id && viaFiles.has(v.dossier_id))) out.add(v.id);
+      if (tokens.every(has)) out.add(v.id);
+      else if (v.dossier_id && viaFiles.has(v.dossier_id)) {
+        out.add(v.id);
+        if (!wordStart.has(v.dossier_id)) forms?.add(v.id);
+      }
     }
     return out;
   };
@@ -134,15 +165,17 @@ export function matchVoteDetails(
   const fileTokens = tokens.some((t) => !VOTE_WORDS.has(t)) ? tokens.filter((t) => !VOTE_WORDS.has(t)) : tokens;
   const words = !tokens.length ? '' : refs.length || fileTokens.length < tokens.length ? fileTokens.join(' ') : q;
   const partial = new Set<string>();
+  const wordStart = new Set<string>();
   const similar = new Map<string, string[]>();
-  const files = engine && words ? dossierScores(engine, words, { partial, approximate: similar }) : none;
+  const files = engine && words ? dossierScores(engine, words, { partial, wordStart, approximate: similar }) : none;
   const only = (keep: (id: string) => boolean) => new Map([...files].filter(([id]) => keep(id)));
   const exact = pass(false, only((id) => !partial.has(id) && !similar.has(id)));
   if (exact.size || !tokens.length) return { ids: exact, partial: false };
   // through the linked file only when every word may match the start of a longer word ("PiS" may not)
   const loosely = tokens.every((t) => t.length >= 4 && !abbreviations.has(t));
-  const loose = pass(true, loosely ? only((id) => !similar.has(id)) : none);
-  if (loose.size) return { ids: loose, partial: true };
+  const forms = new Set<string>();
+  const loose = pass(true, loosely ? only((id) => !similar.has(id)) : none, forms);
+  if (loose.size) return { ids: loose, partial: true, wordStart: forms.size === 0 };
   // last, the votes on files the search matches only approximately ("Macron": "macro-financial"; "AI Act vote":
   // the AI Act, on all but one word)
   const close = pass(false, only((id) => similar.has(id)));

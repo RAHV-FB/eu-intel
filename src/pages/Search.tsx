@@ -52,6 +52,8 @@ const GROUPS: Group[] = [
 
 const SUGGESTIONS = ['AI Act', 'GDPR', 'Migration', 'Spain', 'EPP', 'Agriculture', 'Digital markets', 'Climate'];
 const PER_GROUP = 8;
+// the most results a group lists when opened (its count is every match; the legislation explorer filters them all)
+const MAX_LISTED = 1000;
 
 /** What the date on a result means (search.json `d`: the latest recorded procedural step of a file). */
 const DATE_LABEL: Partial<Record<SearchKind, string>> = { dossier: 'Latest recorded step', act: 'Latest recorded step' };
@@ -104,9 +106,11 @@ function mepLink(q: string, hits: SearchHit[]): { to: string; label: string } | 
   if (h?.doc.k === 'country') return { to: `/people?country=${h.doc.id}`, label: `See the current MEPs from ${h.doc.t}` };
   if (h?.doc.k === 'group') {
     const former = (h.doc.s ?? '').startsWith('Former');
+    // "the Renew Europe Group", but "The Left group in the European Parliament - GUE/NGL", as the group writes it
+    const group = /^the\s/i.test(h.doc.t) ? h.doc.t : `the ${h.doc.t}`;
     return former
-      ? { to: `/people?group=${h.doc.id}&status=all`, label: `See the MEPs of the ${h.doc.t} (a group of an earlier term)` }
-      : { to: `/people?group=${h.doc.id}`, label: `See the current MEPs of the ${h.doc.t}` };
+      ? { to: `/people?group=${h.doc.id}&status=all`, label: `See the MEPs of ${group} (a group of an earlier term)` }
+      : { to: `/people?group=${h.doc.id}`, label: `See the current MEPs of ${group}` };
   }
   if (h?.doc.k === 'party') return { to: h.doc.u, label: `See the MEPs of ${h.doc.t}` };
   if (words(q).includes('former')) return { to: '/people?status=former', label: 'See former MEPs in the MEP directory' };
@@ -152,7 +156,7 @@ function PartSection({ part }: { part: QueryPart }) {
 
 function GroupSection({ g, hits, q, all, onToggle }: { g: Group; hits: SearchHit[]; q: string; all: boolean; onToggle: () => void }) {
   const listId = useId();
-  const shown = all ? hits : hits.slice(0, PER_GROUP);
+  const shown = hits.slice(0, all ? MAX_LISTED : PER_GROUP);
   const mixed = new Set(hits.map((h) => h.doc.k)).size > 1;
   const more = g.more?.(q);
   return (
@@ -168,7 +172,11 @@ function GroupSection({ g, hits, q, all, onToggle }: { g: Group; hits: SearchHit
       <div className="sr-group__foot">
         {hits.length > PER_GROUP && (
           <button type="button" className="lx-linkbtn" aria-expanded={all} aria-controls={listId} onClick={onToggle}>
-            {all ? 'Show fewer' : `Show all ${formatNumber(hits.length)} ${g.label.toLowerCase()} results`}
+            {all
+              ? 'Show fewer'
+              : hits.length > MAX_LISTED
+                ? `Show the best ${formatNumber(MAX_LISTED)} of ${formatNumber(hits.length)} ${g.label.toLowerCase()} results`
+                : `Show all ${formatNumber(hits.length)} ${g.label.toLowerCase()} results`}
           </button>
         )}
         {more && (
@@ -219,7 +227,8 @@ export default function Search() {
     if (!engine || !q.trim()) return { grouped: [], partialCount: 0, startCount: 0, approx: [], mep: null };
     let hits: SearchHit[] = [];
     try {
-      hits = engine.search(q, { limit: 1000 });
+      // every match, so that the counts are the true totals and agree with the legislation explorer's
+      hits = engine.search(q, { limit: Infinity });
     } catch {
       hits = [];
     }
@@ -241,6 +250,8 @@ export default function Search() {
   );
   const found = parts?.filter((p) => p.hits.length) ?? [];
   const unknown = parts?.filter((p) => !p.hits.length) ?? [];
+  const noneForAll = `No results for “${q}”: nothing matches all of its words.`;
+  const eachPart = `${found.length === parts?.length ? 'Each part' : 'Part of it'} finds results on its own`;
   // a file next to a country ("NIS2 Ireland"): the directive in that country's implementation table
   const pair = useMemo(() => (parts && parts.every((p) => p.hits.length) ? countryAndFile(parts) : null), [parts]);
   const country = useData<CountryDetail>(pair ? `countries/${pair.country.doc.id}.json` : null);
@@ -262,9 +273,11 @@ export default function Search() {
     .join(', ');
   const ofThem = (n: number) => `${formatNumber(n)} of them ${n === 1 ? 'matches' : 'match'}`;
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const v = input.trim();
+    // nothing to search: back to the field, where the reader types (the examples are below it)
+    if (!v && !q) e.currentTarget.querySelector('input')?.focus();
     setParams(v ? { q: v } : {});
   };
   const inputId = useId();
@@ -307,7 +320,9 @@ export default function Search() {
             (total > 0
               ? `${formatNumber(total)} result${total === 1 ? '' : 's'} for “${q}”` +
                 (approx.length === total ? ', none exact' : wholeCount === 0 && partialCount > 0 ? ', none on whole words' : '')
-              : `No results for “${q}”`)}
+              : found.length > 0
+                ? `${noneForAll} ${eachPart}`
+                : `No results for “${q}”`)}
         </p>
       )}
 
@@ -315,7 +330,6 @@ export default function Search() {
         <>
           <p className="sr-summary">
             {formatNumber(total)} result{total === 1 ? '' : 's'}
-            {total >= 1000 ? ' (showing the best 1,000)' : ''}
             {partialCount > 0 && wholeCount === 0 && startCount === partialCount && (
               <>
                 {' '}
@@ -356,17 +370,20 @@ export default function Search() {
               </>
             )}
           </p>
-          <nav className="sr-jump" aria-label="Result groups">
-            <ul className="lx-chips">
-              {grouped.map(({ g, hits }) => (
-                <li key={g.id}>
-                  <a href={`#r-${g.id}`} className="lx-chip">
-                    {g.label} <span className="sr-jump__n">{formatNumber(hits.length)}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          {/* links to the groups of results, when there is more than one (the heading of a single group follows) */}
+          {grouped.length > 1 && (
+            <nav className="sr-jump" aria-label="Result groups">
+              <ul className="lx-chips">
+                {grouped.map(({ g, hits }) => (
+                  <li key={g.id}>
+                    <a href={`#r-${g.id}`} className="lx-chip">
+                      {g.label} <span className="sr-jump__n">{formatNumber(hits.length)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
           {mep && <MepLink link={mep} />}
           {grouped.map(({ g, hits }) => (
             <GroupSection key={`${g.id}:${q}`} g={g} hits={hits} q={q} all={opened.has(g.id)} onToggle={() => toggleAll(g.id)} />
@@ -377,9 +394,9 @@ export default function Search() {
 
       {engine && q.trim() && total === 0 && found.length > 0 && (
         <>
-          <p className="sr-summary" role="status">
-            No results for “{q}”: nothing matches all of its words. {found.length === parts?.length ? 'Each part' : 'Part of it'}{' '}
-            finds results on its own:
+          {/* announced by the status region above */}
+          <p className="sr-summary">
+            {noneForAll} {eachPart}:
           </p>
           {transposed && (
             <p className="sr-summary">

@@ -5,6 +5,7 @@ import {
   createSearchEngine,
   dossierScores,
   familyStems,
+  filterKey,
   hasWord,
   isIdentifier,
   isMepQuery,
@@ -494,6 +495,32 @@ describe('act citations', () => {
     // the GDPR is a regulation; the Digital Omnibus has "GDPR reform" and "Directive 2002/58/EC" in its names
     expect(ids('GDPR directive', 2)).toEqual(['dossier:2012-0011', 'dossier:2025-0360']);
   });
+
+  it('reads a citation copied from an official title, and an EUR-Lex or ELI address, as the act number', () => {
+    for (const q of [
+      'Regulation (EU) 2016/679 of the European Parliament and of the Council',
+      'Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016',
+      'Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC (General Data Protection Regulation)',
+      'Regulation (EU) 2016/679 on the protection of natural persons',
+      'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679',
+      'https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=celex%3A32016R0679&from=EN',
+      'eur-lex.europa.eu/eli/reg/2016/679/oj',
+      'http://data.europa.eu/eli/reg/2016/679/oj',
+    ]) { // prettier-ignore
+      expect(isIdentifier(q), q).toBe(true);
+      expect(top(q), q).toBe('dossier:2012-0011');
+      expect(engine.search(q)[0].approximate, q).toBeUndefined();
+      expect(engine.search(q, { typing: true })[0].doc.id, q).toBe('2012-0011');
+    }
+    // the act type of the official title still decides between acts sharing a number
+    expect(ids('Council Decision No 376/2014/EU of 24 April 2014', 2)).toEqual(['dossier:2014-0064', 'dossier:2012-0361']);
+    expect(ids('Regulation (EU) No 376/2014 of the European Parliament and of the Council', 2)).toEqual([
+      'dossier:2012-0361',
+      'dossier:2014-0064',
+    ]);
+    // a file's name with a number in it is not cut ("... amending Regulation (EU) 2016/679 of the ...")
+    expect(isIdentifier('Amending Regulation (EU) 2016/679 of the European Parliament')).toBe(false);
+  });
 });
 
 describe('MEPs', () => {
@@ -527,6 +554,62 @@ describe('MEPs', () => {
     expect(isMepQuery('former MEPs')).toBe(true);
     expect(isMepQuery('members of the European Parliament')).toBe(true);
     expect(isMepQuery('Member States')).toBe(false);
+  });
+});
+
+describe('MEP queries that name no country, group or party', () => {
+  // TEST-ONLY documents with the names of real groups, parties and files (search.json entries, shortened)
+  const docs: SearchDoc[] = [
+    { id: 'the-left', k: 'group', t: 'The Left group in the European Parliament - GUE/NGL', s: 'Political group · 45 MEPs', a: 'The Left | Left | GUE/NGL', u: '/people/groups/the-left', w: 4 },
+    { id: 's-d', k: 'group', t: 'Group of the Progressive Alliance of Socialists and Democrats in the European Parliament', s: 'Political group · 135 MEPs', a: 'S&D | S and D | Socialists and Democrats | Socialists', u: '/people/groups/s-d', w: 4 },
+    { id: 'pfe', k: 'group', t: 'Patriots for Europe Group', s: 'Political group · 85 MEPs', a: 'PfE | Patriots | Patriots for Europe', u: '/people/groups/pfe', w: 4 },
+    { id: 'renew', k: 'group', t: 'Renew Europe Group', s: 'Political group · 78 MEPs', a: 'Renew | Renew Europe | liberals', u: '/people/groups/renew', w: 4 },
+    { id: '6737', k: 'party', t: 'Fidesz-Magyar Polgári Szövetség-Kereszténydemokrata Néppárt', s: 'National party · Hungary · 2024–2029 term', a: 'Fidesz-KDNP', u: '/people/parties/6737', w: 1.3 },
+    { id: '5253', k: 'party', t: 'Fidesz-Magyar Polgári Szövetség-Kereszténydemokrata Néppárt', s: 'National party · Hungary · 2019–2024 term', a: 'Fidesz-KDNP', u: '/people/parties/5253', w: 0.5 },
+    { id: '6766', k: 'party', t: 'Democratic Party', s: 'National party · Cyprus · 2024–2029 term', a: 'DI.KO. | DIKO', u: '/people/parties/6766', w: 1.3 },
+    { id: '7022', k: 'party', t: 'Labour Party', s: 'National party · Ireland', a: 'LABOUR', u: '/people/parties/7022', w: 1.3 },
+    { id: 'IE', k: 'country', t: 'Ireland', s: 'EU Member State', a: 'Irish | IE', u: '/countries/IE', w: 5 },
+    { id: '2026-0900', k: 'dossier', t: 'Amendments to the Decision of the European Parliament of 28 September 2005 adopting the Statute for Members of the European Parliament', s: '2026/0900(APP) · Under examination in Parliament', x: '2026/0900(APP) 2026/0900', u: '/legislation/2026-0900', w: 1.2, d: '2026-09-01' },
+    { id: '2025-0900', k: 'dossier', t: 'Amending the Act concerning the election of the members of the European Parliament by direct universal suffrage', s: '2025/0900(APP) · Published, not yet in force', x: '2025/0900(APP) 2025/0900', u: '/legislation/2025-0900', w: 1.2, d: '2026-05-01' },
+    { id: '2023-0135', k: 'dossier', t: 'Combating corruption, replacing Council Framework Decision 2003/568/JHA and the Convention on the fight against corruption involving officials of the European Communities or officials of Member States of the European Union and amending Directive (EU) 2017/1371 of the European Parliament and of the Council', s: '2023/0135(COD) · In force', x: '2023/0135(COD) 2023/0135 directive', u: '/legislation/2023-0135', w: 1.2, d: '2026-05-31' },
+    { id: '2016-0231', k: 'dossier', t: 'Binding annual greenhouse gas emission reductions by Member States from 2021 to 2030 for a resilient Energy Union and to meet commitments under the Paris Agreement and amending Regulation No 525/2013 of the European Parliament and the Council on a mechanism for monitoring and reporting greenhouse gas emissions and other information relevant to climate change', s: '2016/0231(COD) · In force', x: '2016/0231(COD) 2016/0231 regulation', u: '/legislation/2016-0231', w: 1.2, d: '2023-04-26' },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.k}:${h.doc.id}${h.meps ? '!' : ''}${h.approximate ? '~' : ''}`);
+
+  it('flags no group for the Parliament itself, whose name two groups contain', () => {
+    for (const q of [
+      'European Parliament MEPs', 'MEPs european parliament', 'MEPs in parliament', 'members of parliament',
+      'member of parliament', 'Parliament members', 'european parliament members', 'MEPs of the European Parliament',
+    ]) { // prettier-ignore
+      expect(all(q).sort(), q).toEqual(['dossier:2025-0900', 'dossier:2026-0900']); // the files on MEPs, not The Left and S&D
+      expect(isMepQuery(q), q).toBe(true); // so the search page links the MEP directory
+    }
+  });
+
+  it('flags no country, group or party for a word several of their names have', () => {
+    for (const q of ['party MEPs', 'group MEPs', 'Europe MEPs']) expect(all(q).filter((k) => k.includes('!')), q).toEqual([]);
+    expect(all('Fidesz MEPs')).toEqual(['party:6737!', 'party:5253!']); // one name, recorded for each term
+    expect(all('Labour MEPs')).toEqual(['party:7022!']);
+  });
+
+  it('keeps the stop words inside a name, not those around it', () => {
+    for (const q of [
+      'Patriots for Europe MEPs', 'MEPs of Patriots for Europe', 'members of the European Parliament from Patriots for Europe',
+    ]) // prettier-ignore
+      expect(all(q), q).toEqual(['group:pfe!']);
+    expect(all('Socialists and Democrats MEPs')).toEqual(['group:s-d!']);
+    expect(all('MEPs from Ireland')).toEqual(['country:IE!']);
+    expect(all('MEPs in the European Parliament from Ireland')).toEqual(['country:IE!']);
+    expect(all('The Left group in the European Parliament - GUE/NGL MEPs')).toEqual(['group:the-left!']);
+    expect(all('Left MEPs')).toEqual(['group:the-left!']);
+  });
+
+  it('reads "members of the European Parliament" as MEPs, not as "Member States" and "European Parliament"', () => {
+    for (const q of ['Members of the European Parliament', 'Member of the European Parliament', 'members European Parliament'])
+      expect(all(q).sort(), q).toEqual(['dossier:2025-0900', 'dossier:2026-0900']);
+    expect(all('Member States European Parliament')).toEqual(['dossier:2023-0135', 'dossier:2016-0231']);
+    expect(all('election of members of the European Parliament')).toEqual(['dossier:2025-0900']);
   });
 });
 
@@ -814,6 +897,73 @@ describe('plurals in -ves and -oes, US spellings and a dropped "e"', () => {
     expect(all('rate')).toEqual(['2016-0374']); // not "rats"
     expect(all('national')).toEqual(['2013-0443']); // not "nationally"
     expect(all('packageing')).toEqual(['2022-0396~']); // still a typo of "packaging", not "package"
+  });
+});
+
+describe('plurals in -ses of words in -s', () => {
+  // TEST-ONLY documents with the titles of real files
+  const docs: SearchDoc[] = [
+    { id: '2012-0305', k: 'dossier', t: 'Fluorinated greenhouse gases', s: '2012/0305(COD) · No longer in force', x: '2012/0305(COD) 2012/0305 regulation', u: '/legislation/2012-0305', w: 1.2, d: '2015-01-01' },
+    { id: '2023-0266', k: 'dossier', t: 'Accounting of greenhouse gas emissions of transport services', s: '2023/0266(COD) · In force', x: '2023/0266(COD) 2023/0266 regulation', u: '/legislation/2023-0266', w: 1.2, d: '2025-12-01' },
+    { id: '2017-0288', k: 'dossier', t: 'Common rules for access to the international market for coach and bus services', s: '2017/0288(COD) · Withdrawn by the Commission', x: '2017/0288(COD) 2017/0288', u: '/legislation/2017-0288', w: 1.2, d: '2025-10-06' },
+    { id: '2009-0003', k: 'dossier', t: 'Use of cases', s: '2009/0003(COD) · In force', x: '2009/0003(COD) 2009/0003', u: '/legislation/2009-0003', w: 1.2, d: '2010-01-01' },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`);
+
+  it('singularises a curated list ("gases", "buses"), not "cases" or "uses"', () => {
+    expect(singular('gases')).toBe('gas');
+    expect(singular('buses')).toBe('bus');
+    expect(singular('statuses')).toBe('status');
+    expect(singular('cases')).toBe('case');
+    expect(singular('uses')).toBe('use');
+    expect(all('greenhouse gas')).toEqual(['2012-0305', '2023-0266']);
+    expect(all('greenhouse gases')).toEqual(['2012-0305', '2023-0266']);
+    expect(all('buses')).toEqual(['2017-0288']);
+    expect(all('uses')).toEqual(['2009-0003']);
+    expect(hasWord(wordSet('coach and bus services'), 'buses')).toBe(true); // the list filters too
+  });
+});
+
+describe('words written apart', () => {
+  // TEST-ONLY documents with the titles of real files
+  const docs: SearchDoc[] = [
+    { id: '2017-0225', k: 'dossier', t: 'ENISA, the "EU Cybersecurity Agency", and repealing Regulation (EU) 526/2013, and on Information and Communication Technology cybersecurity certification (\'\'Cybersecurity Act\'\')', s: '2017/0225(COD) · In force', a: 'Cybersecurity Act', x: '2017/0225(COD) 2017/0225 regulation', u: '/legislation/2017-0225', w: 1.2, d: '2025-01-15' },
+    { id: '2020-0359', k: 'dossier', t: 'Measures for a high common level of cybersecurity across the Union', s: '2020/0359(COD) · In force', a: 'NIS2 | NIS 2 Directive', x: '2020/0359(COD) 2020/0359 directive', u: '/legislation/2020-0359', w: 1.2, d: '2024-10-18' },
+    { id: '2016-0030', k: 'dossier', t: 'Measures to safeguard the security of gas supply', s: '2016/0030(COD) · In force', x: '2016/0030(COD) 2016/0030 regulation', u: '/legislation/2016-0030', w: 1.2, d: '2017-11-01' },
+    { id: '2023-0373', k: 'dossier', t: 'Preventing plastic pellet losses to reduce microplastic pollution', s: '2023/0373(COD) · In force', x: '2023/0373(COD) 2023/0373 regulation', u: '/legislation/2023-0373', w: 1.2, d: '2025-12-16' },
+    { id: '256966', k: 'mep', t: 'Michael von der Schulenburg', s: 'MEP · Germany · NI', u: '/people/meps/256966', w: 1.5 },
+  ]; // prettier-ignore
+  const e = createSearchEngine(docs);
+  const all = (q: string) => e.search(q, { limit: 50 }).map((h) => `${h.doc.id}${h.partial ? '*' : ''}${h.approximate ? '~' : ''}`);
+
+  it('matches two words that the index has as one word, as that word', () => {
+    for (const q of ['cyber security', 'Cyber Security', 'cyber-security']) expect(all(q).sort(), q).toEqual(['2017-0225', '2020-0359']);
+    expect(all('cyber security act')[0]).toBe('2017-0225'); // its alias "Cybersecurity Act"
+    expect(all('cyber security directive')).toEqual(['2020-0359']);
+    expect(all('micro plastic')).toEqual(['2023-0373']);
+    expect(all('security')).toEqual(['2016-0030']); // the words typed alone are unchanged
+    expect(all('von der')).toEqual(['256966']); // name particles are not joined
+  });
+});
+
+describe('list filters', () => {
+  it('compare names and labels accent- and case-insensitively, with hyphens as spaces', () => {
+    const has = (name: string, typed: string) => filterKey(name).includes(filterKey(typed));
+    expect(has('Iratxe García Pérez', 'Garcia')).toBe(true);
+    expect(has('Iratxe García Pérez', 'García')).toBe(true);
+    expect(has('Iratxe García Pérez', 'garcia perez')).toBe(true);
+    expect(has('José Manuel García-Margallo y Marfil', 'Garcia Margallo')).toBe(true);
+    expect(has('Łukasz Kohut', 'Lukasz')).toBe(true);
+    expect(has('Dragoş Pîslaru', 'Dragoș')).toBe(true); // comma below, as a Romanian keyboard types it, and the cedilla
+    expect(has('Dragoş Pîslaru', 'Dragos')).toBe(true);
+    expect(has('Sinn Féin', 'Sinn Fein')).toBe(true);
+    expect(has('Bündnis 90/Die Grünen', 'Bundnis')).toBe(true);
+    expect(has('Se Acabó La Fiesta', 'se acabo la fiesta')).toBe(true);
+    expect(has('Fratelli d’Italia', "Fratelli d'Italia")).toBe(true);
+    expect(has('Fratelli d’Italia', 'Fratelli d')).toBe(true); // while the name is typed
+    expect(has('Iratxe García Pérez', 'Garcia Lopez')).toBe(false);
+    expect(filterKey('  ')).toBe('');
   });
 });
 

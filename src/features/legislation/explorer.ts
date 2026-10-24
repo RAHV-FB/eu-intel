@@ -78,6 +78,16 @@ export function buildHaystacks(rows: DossierSummary[]): Map<string, Haystack> {
   return m;
 }
 
+const HAYSTACKS = new WeakMap<DossierSummary[], Map<string, Haystack>>();
+
+/** `buildHaystacks` of a loaded file list, built when first needed and kept for that list (a page opened again, or a
+ * search typed again, does not build them again). */
+export function buildHaystacksOnce(rows: DossierSummary[]): Map<string, Haystack> {
+  let m = HAYSTACKS.get(rows);
+  if (!m) HAYSTACKS.set(rows, (m = buildHaystacks(rows)));
+  return m;
+}
+
 /** Fallback scoring while the search index loads: every query word must be a whole word of the file (or its
  * singular/plural); title matches weigh more. "ai" does not match "Spain", "act" does not match "contracts". */
 export function simpleScore(h: Haystack | undefined, tokens: string[]): number {

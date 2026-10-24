@@ -87,10 +87,12 @@ export function SearchBox({
     navigate(url);
   };
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (active >= 0 && hits[active]) return go(hits[active].doc.u);
     if (q.trim()) go(`/search?q=${encodeURIComponent(q.trim())}`);
+    // nothing to search (the Search button pressed on an empty field): back to the field
+    else e.currentTarget.querySelector('input')?.focus();
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {

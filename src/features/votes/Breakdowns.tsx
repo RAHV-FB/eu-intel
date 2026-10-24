@@ -2,6 +2,7 @@ import { Fragment, useId, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { Ballot, BallotPosition, CountryBreakdown, GroupBreakdown, PositionCounts } from '../../types/data';
 import { countryName, formatNumber, pct } from '../../lib/format';
+import { filterKey } from '../../lib/search';
 import { shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { SortTh, useSortable } from './sortable';
 import { POSITION_LABEL, cohesionText } from './labels';
@@ -258,16 +259,19 @@ export function BallotList({
   const groups = useMemo(() => [...new Set(ballots.map((b) => b.group).filter(Boolean) as string[])].sort((a, b) => (groupCodes.get(a) ?? a).localeCompare(groupCodes.get(b) ?? b)), [ballots, groupCodes]);
   const countries = useMemo(() => [...new Set(ballots.map((b) => b.country).filter(Boolean) as string[])].sort((a, b) => countryName(a).localeCompare(countryName(b))), [ballots]);
 
+  // the MEPs' names as the filter compares them, accent-insensitively ("Garcia" finds García), once one is typed
+  const typed = !!q.trim();
+  const nameKeys = useMemo(() => (typed ? new Map(ballots.map((b) => [b, filterKey(names[b.mep] ?? b.mep)])) : null), [ballots, names, typed]);
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    const needle = filterKey(q);
     return ballots.filter(
       (b) =>
         (!group || b.group === group) &&
         (!country || b.country === country) &&
         (!pos || b.pos === pos) &&
-        (!needle || (names[b.mep] ?? b.mep).toLowerCase().includes(needle)),
+        (!needle || !!nameKeys?.get(b)?.includes(needle)),
     );
-  }, [ballots, names, q, group, country, pos]);
+  }, [ballots, nameKeys, q, group, country, pos]);
 
   const { sorted, sort, toggle } = useSortable<Ballot, BallotKey>(
     filtered,

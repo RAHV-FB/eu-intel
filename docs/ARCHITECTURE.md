@@ -68,7 +68,9 @@ the UI; every institutional fact on a page has a reachable origin.
   matching, prefix, word-family ("fish" -> "fisheries", ranked below whole words) and bounded fuzzy matching
   (flagged `approximate` and ranked last; /search, the header suggestions, /legislation and /votes say so), static
   boosts. A query that is an identifier matches only through identifiers (a split part also typed without its
-  procedure type, "2016/0224A") and names citing it.
+  procedure type, "2016/0224A") and names citing it; the start of an act's official title ("Regulation (EU) 2016/679
+  of the European Parliament and of the Council of …") and its EUR-Lex or ELI address are its identifier. The list
+  filters for names and parties (vote ballots, People) fold accents as the search does.
 - Design tokens in `src/styles/tokens.css`; shared primitives in `src/components/ui.tsx`.
 - Strict CSP meta (`default-src 'self'`), no third-party fonts/scripts, no cookies. The optional watchlist writes
   nothing to `localStorage` before the visitor's first "Follow" click (pages check for storage by reading only).

@@ -24,7 +24,7 @@ import {
   PAGE_SIZE,
   SORT_LABEL,
   applyFilters,
-  buildHaystacks,
+  buildHaystacksOnce,
   countBy,
   keywordScores,
   makePredicates,
@@ -33,6 +33,7 @@ import {
   sortRows,
   todayISO,
   type ExplorerState,
+  type Haystack,
   type SortKey,
 } from '../features/legislation/explorer';
 import { DossierRow } from '../features/legislation/DossierRow';
@@ -92,7 +93,8 @@ export default function Legislation() {
   }, [hasQuery, engine]);
 
   const rows = index.data ?? [];
-  const haystacks = useMemo(() => buildHaystacks(rows), [rows]);
+  // the words of each file, for the keyword box until the search index is loaded: only once there is a query
+  const haystacks = useMemo(() => (hasQuery ? buildHaystacksOnce(rows) : new Map<string, Haystack>()), [rows, hasQuery]);
 
   const { matched, scores, related, starts, approximate } = useMemo(() => {
     const related = new Set<string>(); // files matching only another form of a query word, or a word starting with it

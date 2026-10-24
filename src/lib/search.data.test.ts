@@ -569,4 +569,135 @@ describe.skipIf(!built)('search on the built index', () => {
     expect(artific?.partial).toBe(true);
     expect(artific?.ids.has('166051')).toBe(true); // Artificial Intelligence Act — final vote
   });
+
+  it('flags no political group for MEP queries that name none, and finds groups by names with stop words', () => {
+    const flagged = (q: string) => engine.search(q, { limit: 50 }).filter((h) => h.meps).map(key);
+    for (const q of [
+      'European Parliament MEPs', 'MEPs european parliament', 'MEPs in parliament', 'members of parliament',
+      'member of parliament', 'Parliament members', 'european parliament members', 'MEPs of the European Parliament',
+      'party MEPs', 'group MEPs', 'Europe MEPs', 'European MEPs', 'union MEPs',
+    ]) { // prettier-ignore
+      expect(flagged(q), q).toEqual([]); // were The Left and S&D, EPP, Renew, ECR or the CDU
+      expect(ids(q, 50), q).not.toContain('group:the-left');
+    }
+    expect(flagged('Left MEPs')).toEqual(['group:the-left']);
+    for (const [q, want] of [
+      ['Patriots for Europe MEPs', 'group:pfe'], ['MEPs of Patriots for Europe', 'group:pfe'],
+      ['members of the European Parliament from Patriots for Europe', 'group:pfe'], ['Socialists and Democrats MEPs', 'group:s-d'],
+      ['Identity and Democracy MEPs', 'group:id'], ['European Conservatives and Reformists MEPs', 'group:ecr'],
+      ['Europe of Sovereign Nations MEPs', 'group:esn'], ['Fidesz MEPs', 'party:6737'],
+    ]) { // prettier-ignore
+      const first = engine.search(q, { limit: 5 })[0];
+      expect(key(first), q).toBe(want);
+      expect(first.meps, q).toBe(true);
+      expect(first.approximate, q).toBeUndefined();
+    }
+  });
+
+  it('reads "Members of the European Parliament" as MEPs, not as "Member States" of laws "of the European Parliament"', () => {
+    for (const q of ['Members of the European Parliament', 'Member of the European Parliament', 'members European Parliament']) {
+      const files = engine.search(q, { limit: 50, kinds: ['dossier', 'act'] }).map(key);
+      expect(files.sort(), q).toEqual(['dossier:2025-0900', 'dossier:2026-0900']); // the election act and the MEP statute
+      expect(keywordScores(rows, buildHaystacks(rows), engine, q).size, q).toBe(2);
+    }
+    // on the vote list too: the votes whose titles name the Members, or on those two files, not "Member States" votes
+    const found = matchVotes(votes, voteHaystacks(votes), 'Members of the European Parliament', engine)!;
+    expect(found.has('142356')).toBe(true); // "Election of the Members of the European Parliament ..."
+    expect(found.has('195653')).toBe(false); // digital euro: "... Member States ... of the European Parliament ..."
+  });
+
+  it('finds an act by a citation copied from its official title, or by its EUR-Lex or ELI address', () => {
+    for (const [q, want] of [
+      ['Regulation (EU) 2016/679 of the European Parliament and of the Council', '2012-0011'],
+      ['Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC (General Data Protection Regulation)', '2012-0011'],
+      ['Regulation (EU) 2024/1689 of the European Parliament and of the Council', '2021-0106'],
+      ['Directive 2014/24/EU of the European Parliament and of the Council', '2011-0438'], // not bank resolution 2012/0150
+      ['https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679', '2012-0011'],
+      ['eur-lex.europa.eu/eli/reg/2016/679/oj', '2012-0011'],
+      ['http://data.europa.eu/eli/dir/2014/24/oj', '2011-0438'],
+    ]) { // prettier-ignore
+      expect(top(q), q).toBe(`dossier:${want}`);
+      expect(engine.search(q)[0].approximate, q).toBeUndefined();
+      expect(typed(q)[0], q).toBe(`dossier:${want}`);
+    }
+  });
+
+  it('finds every act first by the start of its official title, with the institutions and the date', { timeout: 60_000 }, () => {
+    const cite = (y: string, t: string, n: string) => {
+      const ec = Number(y) < 2010 ? 'EC' : 'EU';
+      if (t === 'R') return Number(y) >= 2015 ? `Regulation (EU) ${y}/${n}` : `Regulation (${ec}) No ${n}/${y}`;
+      if (t === 'L') return Number(y) >= 2015 ? `Directive (EU) ${y}/${n}` : `Directive ${y}/${n}/${ec}`;
+      return Number(y) >= 2015 ? `Decision (EU) ${y}/${n}` : `Decision No ${n}/${y}/${ec}`;
+    };
+    const owners = new Map<string, Set<string>>();
+    for (const d of read<SearchDoc[]>('search.json')) {
+      if (d.k !== 'dossier') continue;
+      for (const t of (d.x ?? '').split(/\s+/)) {
+        const m = /^3(\d{4})([RLD])0*(\d+)$/.exec(t);
+        if (m) owners.set(cite(m[1], m[2], m[3]), (owners.get(cite(m[1], m[2], m[3])) ?? new Set()).add(d.id));
+      }
+    }
+    const first = (q: string, files: Set<string>) => {
+      const hits = engine.search(q, { limit: 50 });
+      const at = hits.findIndex((h) => files.has(h.doc.id));
+      return at >= 0 && hits[at].score === hits[0].score && !hits[at].approximate;
+    };
+    const missed: string[] = [];
+    let n = 0;
+    for (const [c, files] of owners) {
+      // a few Council decisions of 2014 are cited "Council Decision 2014/335/EU", not "Decision No 335/2014/EU"
+      if (!first(c, files)) continue;
+      // one form per act, in turn
+      const tails = [' of the European Parliament and of the Council', ' of the European Parliament and of the Council of 14 June 2017'];
+      const q = c + tails[n++ % tails.length];
+      if (!first(q, files)) missed.push(q);
+    }
+    expect(n).toBeGreaterThan(1000);
+    expect(missed).toEqual([]);
+  });
+
+  it('matches plurals in -ses of words in -s: "gases" and "gas", "buses" and "bus"', () => {
+    const files = (q: string) => engine.search(q, { limit: 5000, kinds: ['dossier'] }).map(key);
+    expect(files('greenhouse gas')).toEqual(expect.arrayContaining(['dossier:2012-0305', 'dossier:2022-0099'])); // F-gas
+    expect(files('greenhouse gas').sort()).toEqual(files('greenhouse gases').sort());
+    expect(files('buses')).toContain('dossier:2017-0288'); // "... coach and bus services"
+    expect(engine.search('buses').every((h) => !h.partial && !h.approximate)).toBe(true);
+    expect(files('cases').length).toBe(files('case').length); // "cases" is not "cas"
+  });
+
+  it('matches a word written apart as the word: "cyber security" is "cybersecurity"', () => {
+    const files = (q: string) => engine.search(q, { limit: 5000, kinds: ['dossier'] }).map(key).sort();
+    expect(files('cybersecurity').length).toBeGreaterThanOrEqual(9);
+    for (const q of ['cyber security', 'Cyber Security', 'cyber-security']) {
+      expect(files(q), q).toEqual(files('cybersecurity'));
+      expect(engine.search(q).filter((h) => h.doc.k === 'dossier').every((h) => !h.partial && !h.approximate), q).toBe(true);
+    }
+    expect(top('cyber security act')).toBe('dossier:2017-0225'); // the Cybersecurity Act
+    expect(top('cyber security directive')).toBe('dossier:2020-0359'); // NIS2
+    const hay = buildHaystacks(rows);
+    expect(keywordScores(rows, hay, engine, 'cyber security').size).toBe(files('cyber security').length);
+  });
+
+  it('tells word starts from other forms of a word in the vote list', () => {
+    const hay = voteHaystacks(votes);
+    for (const q of ['labeled', 'canceled', 'emissions trade']) {
+      const m = matchVoteDetails(votes, hay, q, engine);
+      expect(m?.partial, q).toBe(true);
+      expect(m?.wordStart, q).toBe(false); // "labelling", "cancellation", "trading" do not start with the word typed
+    }
+    for (const q of ['artific', 'cancel']) {
+      const m = matchVoteDetails(votes, hay, q, engine);
+      expect(m?.partial, q).toBe(true);
+      expect(m?.wordStart, q).toBe(true);
+    }
+  });
+
+  it('counts every match on the search page, as the legislation explorer does', () => {
+    const hay = buildHaystacks(rows);
+    for (const q of ['COD', 'com']) {
+      const files = engine.search(q, { limit: Infinity, kinds: ['dossier', 'act'] }).length;
+      expect(files, q).toBeGreaterThan(1000);
+      expect(keywordScores(rows, hay, engine, q).size, q).toBe(files);
+    }
+  });
 });

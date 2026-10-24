@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { GroupSummary, PartySummary } from '../../types/data';
 import { countryName, formatNumber } from '../../lib/format';
+import { filterKey } from '../../lib/search';
 import { shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { Disclosure, EmptyState } from '../../components/ui';
 import { CollapsibleFilters, PHONE_WIDTH } from '../../components/CollapsibleFilters';
@@ -120,15 +121,18 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
     for (const p of parties) n.set(`${p.country}|${partyNameKey(p.label)}`, (n.get(`${p.country}|${partyNameKey(p.label)}`) ?? 0) + 1);
     return n;
   }, [parties]);
+  // names and codes as the filter compares them, accent-insensitively ("Sinn Fein" finds Sinn Féin), once one is typed
+  const typed = !!q.trim();
+  const keys = useMemo(() => (typed ? new Map(parties.map((p) => [p, [filterKey(p.label), filterKey(p.code ?? '')]])) : null), [parties, typed]);
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    const needle = filterKey(q);
     return parties.filter(
       (p) =>
         (scope === 'all' || p.members_active > 0) &&
         (!country || p.country === country) &&
-        (!needle || p.label.toLowerCase().includes(needle) || (p.code ?? '').toLowerCase().includes(needle)),
+        (!needle || !!keys?.get(p)?.some((k) => k.includes(needle))),
     );
-  }, [parties, q, country, scope]);
+  }, [parties, keys, q, country, scope]);
   const { sorted, sort, toggle } = useSortable<PartySummary, PKey>(
     filtered,
     {

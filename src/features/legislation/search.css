@@ -16,6 +16,11 @@
   color: var(--text-2);
 }
 
+/* a long unbroken query (a pasted address) wraps in the no-results box instead of widening the page */
+.sr .state {
+  overflow-wrap: anywhere;
+}
+
 .sr-jump {
   margin-bottom: var(--sp-6);
 }
