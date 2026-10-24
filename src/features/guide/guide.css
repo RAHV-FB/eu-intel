@@ -95,6 +95,9 @@
 .prose h3 {
   margin-top: var(--sp-5);
 }
+.prose div[id] {
+  scroll-margin-top: calc(var(--header-h) + 3.5rem);
+}
 .prose p,
 .prose li {
   line-height: 1.65;
@@ -211,6 +214,47 @@
   font-size: var(--fs-sm);
   color: var(--text-2);
   margin-top: var(--sp-1);
+}
+
+/* ---------- status labels ---------- */
+.statuslabels dl {
+  margin: 0 0 var(--sp-4);
+  border-top: 1px solid var(--border);
+}
+.statuslabels__row {
+  display: grid;
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 40rem) {
+  .statuslabels__row {
+    grid-template-columns: 17rem minmax(0, 1fr);
+  }
+}
+.statuslabels dt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+/* a long label wraps inside its column instead of running into the text beside it */
+.statuslabels .badge {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.statuslabels dd {
+  margin: 0;
+  line-height: 1.55;
+}
+.statuslabels__also {
+  display: block;
+  margin-top: var(--sp-1);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
 }
 
 /* ---------- pathway diagram ---------- */

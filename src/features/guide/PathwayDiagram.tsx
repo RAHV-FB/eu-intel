@@ -4,7 +4,7 @@
  */
 import './guide.css';
 
-const STEPS: { title: string; who: string; text: string }[] = [
+export const STEPS: { title: string; who: string; text: string }[] = [
   {
     title: 'Commission proposes',
     who: 'European Commission',
@@ -21,14 +21,14 @@ const STEPS: { title: string; who: string; text: string }[] = [
     text: 'Both institutions adopt the same text. If either does not, the proposal does not become law.',
   },
   {
-    title: 'Publication in the Official Journal',
-    who: 'Official Journal of the EU',
-    text: 'The act is signed and published; from then on it is EU law.',
+    title: 'Signature & publication',
+    who: 'Presidents of Parliament and Council · Official Journal',
+    text: 'The act is signed and published in the Official Journal. Entry into force is a separate step.',
   },
   {
     title: 'Entry into force & application',
     who: 'Dates set in the act',
-    text: 'It enters into force on a set date. Its rules may apply later, sometimes in phases.',
+    text: 'It enters into force on the date it specifies or, if it specifies none, on the twentieth day after publication. Its rules may apply later, sometimes in phases.',
   },
   {
     title: 'Implementation & enforcement',
