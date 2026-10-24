@@ -179,7 +179,7 @@ test.describe('where an act applies', () => {
     // Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026, in force on 18 September 2026 (Cellar)
     await open(page, 'legislation/2021-0366/');
     await expect(page.locator('.dz-fact', { hasText: 'Latest recorded step' })).toContainText(
-      'EUR-Lex also lists Delegated Regulation 2026/2102 as amending this act. That act is not in our data',
+      'EUR-Lex also lists Commission Delegated Regulation (EU) 2026/2102 as amending this act. Its text was checked for the dates it sets',
     );
   });
 });

@@ -365,12 +365,14 @@ export interface DossierDetail extends DossierSummary {
     role: string; // rapporteur | shadow | opinion_rapporteur | shadow_opinion
     committee?: string | null;
     former?: boolean; // OEIL lists it only under a "Former …" heading (current or earlier term), or, if OEIL does not list it, the EP API dates it to an earlier term; set only when true
+    has_page?: boolean; // people/meps/<mep_id>.json exists (MEPs of the terms covered); set only when true
   }[];
   documents: DocRef[];
   related: { id: string; title: string; relation: string; ref?: string; status_label?: string }[]; // only officially established relations; "Split into" parts also carry their reference and status
   dates_set_for?: { id: string; title: string; dates: ISODate[] }[]; // dates this file's act set for another act (checked)
   oeil_url: string | null; // null where OEIL has no file under this reference (e.g. a split procedure's parent)
   eurlex_only?: boolean; // built from the EUR-Lex act alone: the procedure's own steps are not in our data
+  started_from_parts?: boolean; // a split parent's `started` and proposal document are the ones all its parts record; set only when true
   sources: SourceRef[];
   changes: ActivityItem[]; // verified changes detected between snapshots for this dossier
 }

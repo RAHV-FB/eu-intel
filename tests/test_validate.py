@@ -222,6 +222,27 @@ def test_public_dossier_contradicting_its_own_dates(tmp_path: Path):
     assert "before the proposal of 2018-05-31" in errors[1] and "after its publication" in errors[2]
 
 
+def test_public_rapporteur_linked_to_an_unwritten_mep_page_or_listed_twice(tmp_path: Path):
+    # as published before the fix: 2026-0172 listed Marie-Sophie Christ as a shadow under EP Open Data's 277057 and
+    # OEIL's 10006693, the second linked to a page that is not written
+    pub = tmp_path / "public"
+    (pub / "dossiers").mkdir(parents=True)
+    (pub / "people" / "meps").mkdir(parents=True)
+    (pub / "people" / "meps" / "277057.json").write_text("{}", encoding="utf-8")
+    christ = {"mep_id": "277057", "name": "Marie-Sophie Christ", "role": "shadow", "committee": None, "has_page": True}
+    d = {"id": "2026-0172", "timeline": [], "rapporteurs": [
+        christ, {**christ, "mep_id": "10006693", "name": "CHRIST Marie-Sophie"}, {**christ, "role": "shadow_opinion"},
+        {"mep_id": "4542", "name": "Timothy Kirkhope", "role": "rapporteur", "committee": "LIBE"}]}  # fmt: skip
+    (pub / "dossiers" / "2026-0172.json").write_text(json.dumps(d), encoding="utf-8")
+    assert check(FIX, public=pub, today=TODAY).errors == [
+        "public dossiers/2026-0172.json: rapporteur CHRIST Marie-Sophie links people/meps/10006693.json, "
+        "which is not written"]  # fmt: skip
+    d["rapporteurs"][1] = christ
+    (pub / "dossiers" / "2026-0172.json").write_text(json.dumps(d), encoding="utf-8")
+    assert check(FIX, public=pub, today=TODAY).errors == [
+        "public dossiers/2026-0172.json: MEP 277057 listed 2 times as shadow"]
+
+
 def test_public_timeline_with_two_council_adoptions_or_a_signature_before_one(tmp_path: Path):
     # as published before the fix: 2020-0067 (ST 8159/20 and the derogation vote ST 8160/20 both "Council adopted
     # the act" on 20 May 2020), 2017-0329 (the EP's "Final act signed" of 11 Apr 2018 before the Council's 12 Apr)
@@ -357,6 +378,25 @@ def test_a_shrink_of_up_to_five_percent_of_the_manifest_count_is_not_an_error(tm
     assert check(snap, today=TODAY).errors == []
     _edit(votes, lambda r: r.pop())  # 94 of 100
     assert any("94 records, but _manifest.json records 100" in e for e in check(snap, today=TODAY).errors)
+
+
+def test_a_file_whose_count_differs_from_the_manifest_in_either_direction_is_a_warning(tmp_path: Path):
+    # data/snapshot/ep_votes/ballots.json held 2,996 records after an offline re-derivation that left the manifest at
+    # 2,995, so the About page's technical details gave 2,995 next to a summary of 2,996
+    snap = _copy(tmp_path)
+    votes = snap / "ep_votes" / "votes.json"
+    _edit(votes, lambda r: r.extend(dict(r[0], id=f"X{i}") for i in range(100 - len(r))))
+    n = 100
+    m = json.loads((snap / "_manifest.json").read_text())
+    m["ep_votes"]["records"] = {"votes": n}
+    (snap / "_manifest.json").write_text(json.dumps(m), encoding="utf-8")
+    assert not check(snap, today=TODAY).warnings.get("manifest-count")
+    for recorded in (n - 1, n + 1):  # more records than recorded, or (within the 5% allowed) fewer
+        m["ep_votes"]["records"] = {"votes": recorded}
+        (snap / "_manifest.json").write_text(json.dumps(m), encoding="utf-8")
+        rep = check(snap, today=TODAY)
+        assert rep.errors == []
+        assert rep.warnings["manifest-count"] == [f"ep_votes/votes.json: {n} records, but _manifest.json records {recorded}"]
 
 
 def test_a_missing_file_is_an_error_only_where_the_manifest_or_the_floor_expects_it(tmp_path: Path):

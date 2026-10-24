@@ -308,8 +308,11 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   step"), names the amending acts EUR-Lex lists for the file's acts that are not in our EUR-Lex data (so the
   timeline cannot date them), when the year in their CELEX id is not earlier than the latest step's: that step may
   be older than they are (2021/0366(COD): Commission Delegated Regulation (EU) 2026/2102 "of 13 July 2026", in
-  force on 18 September 2026 as Cellar records, after the step of 23 December 2025). More than three are counted,
-  not named (71 files on 24 October 2026, 13 of them counted). The homepage card is an overview (status, what the
+  force on 18 September 2026 as Cellar records, after the step of 23 December 2025). Where the one act named is a
+  text checked for the file's act dates (`data/curated/act_dates.yaml`), as 2026/2102 is for the EUDR's 30 December
+  2027, the note says so instead of "That act is not in our data": its text was checked for the dates it sets, its
+  publication is not in our data. More than three are counted, not named (71 files on 24 October 2026, 13 of them
+  counted). The homepage card is an overview (status, what the
   file does, the next date fixed in law or the next step) and shows neither the latest step nor this note.
 - Feeds and activity: a final vote not already a file's milestone is titled by Parliament's step when the file is
   a consultation or consent procedure (CNS, APP, or the "*" / "***" symbol ending the vote's published subject):
@@ -530,10 +533,13 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   States in accordance with their respective constitutional requirements", after the date from which they apply).
   A date set by an amending act cites that act in
   the timeline, and the amending act's page lists the dates it set (`dates_set_for`; the Deforestation Regulation's
-  dates set by Regulation (EU) 2025/2650 and Delegated Regulation (EU) 2026/2102); the status sentence says
+  dates set by Regulation (EU) 2025/2650 and Commission Delegated Regulation (EU) 2026/2102); the status sentence says
   that the act's text, not EUR-Lex, sets the later dates. A checked date on the entry-into-force day is named in
   the entry-into-force event. A curated date's timeline step cites the text it was checked against as its source
-  ("Regulation (EU) 2022/2065, Articles 92 and 93 (checked 24 October 2026)"), not EUR-Lex's record of the act, and no
+  ("Regulation (EU) 2022/2065, Articles 92 and 93 (checked 24 October 2026)"), not EUR-Lex's record of the act. Where
+  that text is another one than the act's own, the step's document is identified by its CELEX id where the entry
+  gives one (32026R1744 for the AI Act's dates set by Regulation (EU) 2026/1744), else by its label alone (the
+  corrigenda, Commission Decision (EU) 2021/1240), never by the act's CELEX id and date. No
   step dated in the act (entry into force, application, transposition dates) is credited to an institution in
   "Latest recorded step". Dates EUR-Lex gives as not recorded and a later decision set cite that decision
   (Clinical Trials Regulation: Commission Decision (EU) 2021/1240, published 31 July 2021, the notice of its Art.
@@ -585,8 +591,9 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - Related files: an amending, amended, repealing or repealed act is named by its number (from its official
   title, e.g. "Directive (EU) 2025/794"; for an act outside the snapshot from its CELEX id, 2015 onwards and
   directives from 1999, e.g. "Regulation 2026/1770", with its type as a text checked for
-  `data/curated/act_dates.yaml` names it where one does: "Delegated Regulation 2026/2102", from "Delegated
-  Regulation (EU) 2026/2102, Annex"), followed by its file's short title when it has one; an
+  `data/curated/act_dates.yaml` names it where one does, with the author and the "(EU)" of its number that the
+  label gives and the CELEX id does not: "Commission Delegated Regulation (EU) 2026/2102", from "Commission
+  Delegated Regulation (EU) 2026/2102, Annex"), followed by its file's short title when it has one; an
   act this file amends or repeals, or that repeals it, by its file's title too, unless that is an "Amending …"
   title. Cellar records two titles without the space after the act type ("Directive2014/63/EU of the European
   Parliament …", "Regulation(EU) 2022/870 …"); their numbers are read as if it were there ("Directive 2014/63/EU").
@@ -703,7 +710,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   second-reading approval of the Council's position (Art. 294(7)(a) TFEU), else the date of the Council's
   adopted voting result on the act, else OEIL's Council step; a Council act (consultation, consent) is dated
   by its voting result, else by the act itself, which bears its adoption date (OEIL's Council date is then
-  shown on the act's date, with OEIL's date in the detail); never after publication.
+  shown on the act's date, with OEIL's date in the detail); never after publication. Never the date of an act of
+  Parliament and Council either, which is the day it was signed, nor a signature: 2011/0901(COD), known from
+  EUR-Lex only (Regulation (EU, Euratom) 2015/2422 "of the European Parliament and of the Council of 16 December
+  2015"), was "Adopted 16 Dec 2015" and has no adoption date now; its timeline shows the signature.
 - The Council's adoption checked against the act's text: every act of the ordinary legislative procedure gives
   the date of the Council's decision in the footnote to "Acting in accordance with the ordinary legislative
   procedure" ("… and decision of the Council of 24 May 2024", Directive (EU) 2024/1760). That is the date as the
@@ -864,6 +874,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   are the parts' OEIL procedure files ("... 2016/0400A(COD) (separate file)"), not the EUR-Lex record of one part's
   act that the parent's record was built from; a Legislative Train page on one part, which records the proposal's
   reference ("... – 2016/0400B(COD)", procedure 2016/0400(COD)), is cited on that part's page.
+- No split parent records a proposal of its own (all 12; the page read "Proposed: Not recorded"). Where every part
+  records the same single Commission proposal, as all 12 do, the parent takes its date (`started`, with
+  `started_from_parts`: "Proposed (as recorded for its parts)") and lists that document: 2016/0224(COD),
+  COM(2016)0467 of 13 July 2016, the proposal of 2016/0224A and B(COD).
 - File counts on the About page: `counts.dossiers` (1,577) is the number of file pages, which is the number of
   procedures recorded by Parliament (1,564, the `ep_procedures` snapshot) plus 13 files that have no usable
   Parliament record: 3 adopted laws shown from their EUR-Lex record only (2011-0901, 2018-0900, 2020-3521) and 10
@@ -959,6 +973,18 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   2021/0379(COD), dated 9 December 2021, ECR member from 11 October 2022), so for them `date` is not the
   appointment in a group. Checked against the EP API's own `politicalGroup` on each participation (the cached
   API records of that snapshot): the membership on `date` agrees on all 5,494 entries it covers.
+- OEIL person ids (`build.py` `rapporteur_entries`): the OEIL key players link a few MEPs of the 10th term by a
+  person id that EP Open Data does not use, and under which the EP website has no page: 17 entries of the
+  snapshot, for 6 MEPs (e.g. 2026/0172(COD) "CHRIST Marie-Sophie (EPP)", /meps/en/10006693, who is 277057 in EP
+  Open Data; the EP API record of 277057 gives no other id). The build gives such an entry the id and name of the
+  one MEP whose "FAMILY Given" name is the one OEIL prints and who belonged to the group it prints, and leaves it
+  out where the file lists that MEP in that role already (16 entries on 15 files had listed the MEP twice; OEIL's
+  `former` flag then applies to the entry listed, as in `oeil_rapporteurs`). The pages list 12,582 entries.
+  2026/0115(COD): the only entry for Volker Schnurrbusch (OEIL 10001806, EP 267485), now also on his page.
+- `has_page` (set only when true): the MEP has a page here (people/meps: the MEPs of the terms covered), and the
+  name links to it; 9,534 of the 12,582 entries. The others, MEPs who sat only before 2019 (e.g. Timothy Kirkhope,
+  4542, on 2011/0023(COD)), are named without a link, as groups before 2019 are. `validate` reports an error when
+  a linked page is not written, or when one MEP is listed twice in the same role and committee.
   2021/0106(COD): Konečná The Left, Madison ID, Solís Pérez Renew, as in OEIL.
 
 ### National implementation (`implementation`) — partial
@@ -1079,8 +1105,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 - `procedure_refs`: the interinstitutional files on page 1, a split part also when written with a space or slash
   before its letter ("2016/0360 A (COD)" in ST 9252/19, the adoption of Regulation (EU) 2019/876; "2016/0224/A(COD)").
 - 746 voting results 2019-01 → 2026-10 (748 Council votes listed and counted on the About page, with the curated
-  records CM-5860-2022 and CM-5860-2022-2, 746 of them with positions, as the country pages count them; the About page's source card
-  and coverage note give these figures and how they divide); 744 with positions; rules: 702 QMV, 44 unanimity (as
+  records CM-5860-2022 and CM-5860-2022-2, 746 of them with positions, as the country pages count them, of 748; the About page's source card
+  and coverage note give these figures and how the 748 divide); 744 with positions; rules: 702 QMV, 44 unanimity (as
   the sheets print them); 2 notes without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
   unreadable). `meta.json` (`sources[council].note`) gives the counts of each release. Verified against the
   rendered sheets: AI Act (ST 10199/24, 27 in favour), Copyright Directive 2019 (6 against, 3 abstentions),
@@ -1130,7 +1156,10 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   record (rule 1 of `council_dates.yaml`), its act keeps its title date, and Hungary's country page counts the
   abstention (27, was 26). The records are the adoptions read so far from such communications; others may be
   missing.
-- `display_title` (lists: country pages, activity): the title without legal-form boilerplate, and for a vote on
+- `display_title` (lists: country pages, activity): the title without legal-form boilerplate (a kind of act glued
+  to the next word is read with the space, there and in the published `title`: ST 14021/20's subject "Council
+  Decisionon the system of own resources" is shown as "Council Decision on …"; the snapshot keeps it as printed),
+  and for a vote on
   another item than the act or the Council's first-reading position, the item voted on, as the subject lists it:
   "Amendments of the European Parliament to the Council's position on the draft budget for 2027 – Non-approval of
   the European Parliament's amendment(s)" (ST 14700/26), so that a country's "For" reads as support for the

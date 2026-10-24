@@ -60,6 +60,17 @@ test.describe('country page directive search', () => {
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('a directive row says when the country is in an open non-communication case for it, as the law page does', async ({ page }) => {
+    // NIS2, France: 15 measures, "Measures notified", and INFR(2024)0274 (non-communication) referred to the Court
+    await open(page, 'countries/FR/?tr-q=2022%2F2555');
+    const row = page.locator('tr', { has: page.locator('td.impl-dir', { hasText: 'Directive (EU) 2022/2555' }) });
+    await expect(row).toContainText('Measures notified');
+    await expect(row.locator('td.hide-narrow').last()).toContainText('Commission case open for non-communication of transposition measures');
+    await open(page, 'legislation/2020-0359/');
+    const fr = page.locator('#national tr', { has: page.getByRole('link', { name: 'France', exact: true }) });
+    await expect(fr).toContainText('Commission case open for non-communication of transposition measures');
+  });
+
   test('says when nothing matches and offers the site search', async ({ page }) => {
     await open(page, 'countries/IE/?tr-q=zzqx');
     await expect(page.getByRole('link', { name: 'Search the whole site' })).toHaveAttribute('href', `${BASE_PATH}search?q=zzqx`);
@@ -133,6 +144,15 @@ test.describe('split parents and Parliament reports', () => {
       await expect(note.getByRole('link', { name: 'See the separate files' })).toHaveAttribute('href', '#split-parts');
     }
     await expect(page.locator('.dz-fact', { hasText: 'What happens next' })).toContainText('None on this file: each separate file listed above has its own next step.');
+  });
+
+  test('a split parent gives the proposal date and document that all its parts record', async ({ page }) => {
+    await open(page, 'legislation/2016-0224/'); // 2016/0224A and B(COD): COM(2016)0467 of 13 July 2016
+    await page.locator('#details summary').click();
+    const proposed = page.locator('#details .dz-kv > div', { has: page.locator('dt', { hasText: /^Proposed/ }) });
+    await expect(proposed.locator('dt')).toHaveText('Proposed (as recorded for its parts)');
+    await expect(proposed.locator('dd')).toHaveText('13 July 2016');
+    await expect(page.locator('#details')).toContainText('COM(2016)0467');
   });
 
   test('a report links its main file in the status and the next step', async ({ page }) => {
@@ -442,6 +462,20 @@ test('"Show all … Council votes" moves focus to the first vote it adds; the so
   );
 });
 
+test('a country page counts the Council votes that record its position out of all those listed', async ({ page, request }) => {
+  // 748 votes listed (About, council/index.json), 746 with positions: the two voting-result documents that could not
+  // be read record none, so Ireland's counts add up to 746, and the page said "746 in total"
+  const meta = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/meta.json`)).json();
+  const ie = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/countries/IE.json`)).json();
+  const n = (x: number) => x.toLocaleString('en-GB');
+  const counted = Object.values(ie.council_positions as Record<string, number>).reduce((a, b) => a + b, 0);
+  expect(counted).toBeLessThan(meta.counts.council_votes);
+  await open(page, 'countries/IE/');
+  await expect(page.locator('#participation .note', { hasText: /^Counts of / })).toHaveText(
+    `Counts of the ${n(counted)} Council votes in our dataset that record Ireland’s position (of ${n(meta.counts.council_votes)} votes in total), by that position.`,
+  );
+});
+
 test.describe('legislative files', () => {
   test('a rapporteur’s committee is the one OEIL names, never "null"', async ({ page }) => {
     await open(page, 'legislation/2021-0240/');
@@ -450,6 +484,38 @@ test.describe('legislative files', () => {
     await open(page, 'legislation/2025-0045/');
     await page.locator('#details summary').click();
     await expect(page.locator('#details li', { hasText: 'Barry Andrews' })).toContainText('Rapporteur for an opinion (AFET)');
+  });
+
+  test('a rapporteur with no MEP page here is named without a link; one OEIL links under another id is listed once', async ({ page }) => {
+    await open(page, 'legislation/2011-0023/'); // Timothy Kirkhope (4542) sat before 2019: people/meps/4542 is not written
+    await page.locator('#details summary').click();
+    const kirkhope = page.locator('#details li', { hasText: 'Timothy Kirkhope' });
+    await expect(kirkhope).toContainText('Rapporteur (LIBE)');
+    await expect(kirkhope.getByRole('link')).toHaveCount(0);
+    await expect(page.locator('#details')).toContainText('A name without a link has no MEP page on this site');
+    await open(page, 'legislation/2026-0172/'); // OEIL: "CHRIST Marie-Sophie (EPP)" under 10006693; EP Open Data: 277057
+    await page.locator('#details summary').click();
+    const christ = page.locator('#details li', { hasText: /CHRIST Marie-Sophie|Marie-Sophie Christ/ });
+    await expect(christ).toHaveCount(1);
+    await expect(christ.getByRole('link', { name: 'Marie-Sophie Christ' })).toHaveAttribute('href', `${BASE_PATH}people/meps/277057`);
+  });
+
+  test('a Council title printed without a space is shown with it (ST 14021/20)', async ({ page }) => {
+    await open(page, 'legislation/2018-0135/');
+    await expect(page.locator('#council-votes')).toContainText('Council Decision on the system of own resources');
+    await expect(page.locator('main')).not.toContainText('Decisionon');
+  });
+
+  test('the transposition summary counts Member States, beside a column that counts measures (NIS2)', async ({ page, request }) => {
+    // the chip read "25 Measures notified" next to the "Measures notified" column, which adds up to 301 measures
+    const d = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/dossiers/2020-0359.json`)).json();
+    const notified = (d.implementation.countries as { status: string }[]).filter((c) => c.status === 'measures_notified').length;
+    await open(page, 'legislation/2020-0359/');
+    const summary = page.getByRole('list', { name: 'Member States by status' });
+    await expect(summary.getByRole('button', { name: `${notified} Member States: Measures notified` })).toHaveCount(1);
+    const chips = await summary.getByRole('button').allTextContents();
+    expect(chips.length).toBeGreaterThan(1);
+    for (const t of chips) expect(t).toMatch(/^\d+ Member States?: /);
   });
 
   test('a committee of an earlier term is former, not joint; a joint debate names the other files', async ({ page }) => {

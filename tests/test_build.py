@@ -112,6 +112,10 @@ def test_council_display_title_drops_legal_form_boilerplate():
     assert council_display_title(
         "Regulation of the European Parliament and of the Council Council establishing a screening framework"
     ) == "Regulation establishing a screening framework"
+    # the kind of act glued to the next word, as the subject of ST 14021/20 prints it (shown on 29 pages)
+    own_resources = "the system of own resources of the European Union and repealing Decision 2014/335/EU, Euratom"
+    assert council_display_title(f"Council Decisionon {own_resources}", "act") == f"Council Decision on {own_resources}"
+    assert council_display_title("DECISIONS on the budget") == "DECISIONS on the budget"  # not a glued word
 
 
 def test_council_display_title_first_reading_position_prefix_only_for_that_vote():

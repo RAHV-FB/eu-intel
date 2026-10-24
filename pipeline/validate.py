@@ -227,6 +227,8 @@ def check_size(
         )
     elif n < floor:
         rep.error(f"{source}/{name}.json: {n} records, fewer than the {floor} a complete snapshot has", source)
+    if n is not None and count and n != count:  # e.g. records re-derived offline without rewriting the manifest
+        rep.warn("manifest-count", f"{source}/{name}.json: {n} records, but _manifest.json records {count}")
 
 
 def _dates(obj: Any, path: str = "") -> list[tuple[str, str]]:
@@ -566,7 +568,7 @@ def check(
                 d = _public_json(public, f"dossiers/{f.name}", rep)
                 if d is None:
                     continue
-                for msg in dossier_contradictions(d):
+                for msg in dossier_contradictions(d) + rapporteur_problems(d, public):
                     rep.error(f"public dossiers/{f.name}: {msg}", "public")
                 # a key report that no step carries has no tabling or vote of its own on the timeline
                 steps = {x["id"] for e in d.get("timeline", []) for x in e.get("docs", [])}
@@ -709,6 +711,19 @@ def dossier_contradictions(d: dict) -> list[str]:
             out.append(f"trilogue listed before Parliament's decision of {e['date']}")
         if "council_position" in later and re.search(r"(?<!early )\bsecond[ -]reading\b", e.get("title") or ""):
             out.append(f"second-reading step listed before the Council's position of {e['date']}")
+    return out
+
+
+def rapporteur_problems(d: dict, public: Path) -> list[str]:
+    """A rapporteur linked to an MEP page that is not written, and an MEP listed twice in one role (2026/0172(COD):
+    Marie-Sophie Christ under OEIL's person id and under EP Open Data's, as two shadow rapporteurs)."""
+    out, seen = [], Counter()
+    for r in d.get("rapporteurs") or []:
+        if r.get("has_page") and not (public / "people" / "meps" / f"{r.get('mep_id')}.json").exists():
+            out.append(f"rapporteur {r.get('name')} links people/meps/{r.get('mep_id')}.json, which is not written")
+        if r.get("mep_id"):
+            seen[(r["mep_id"], r.get("role"), r.get("committee"))] += 1
+    out += [f"MEP {i} listed {n} times as {role}" + (f" ({c})" if c else "") for (i, role, c), n in seen.items() if n > 1]
     return out
 
 

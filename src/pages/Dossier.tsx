@@ -180,7 +180,7 @@ function DossierPage({ id }: { id: string }) {
               </div>
               {d.started && (
                 <div>
-                  <dt>Proposed</dt>
+                  <dt>Proposed{d.started_from_parts && ' (as recorded for its parts)'}</dt>
                   <dd>{formatDate(d.started)}</dd>
                 </div>
               )}

@@ -62,6 +62,22 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     expect(latestDone(d.timeline, today)!.title).toBe('Parliament sent the file back to committee to negotiate with the Council');
   });
 
+  it('dates a split parent by the proposal all its parts record, and lists that proposal (2016-0224)', () => {
+    // 2016/0224(COD) read "Proposed: Not recorded"; 2016/0224A and B(COD) record COM(2016)0467 of 13 July 2016
+    const parents = all.filter((d) => d.related.some((r) => r.relation === 'Split into'));
+    for (const d of parents) {
+      const parts = d.related.filter((r) => r.relation === 'Split into').map((r) => all.find((x) => x.id === r.id)!);
+      if (!d.started_from_parts) continue;
+      for (const x of parts) expect(x.started, `${d.id} ${x.id}`).toBe(d.started);
+      const coms = parts.map((x) => x.documents.filter((doc) => doc.id.startsWith('COM(')).map((doc) => doc.id).join());
+      expect(new Set(coms).size, d.id).toBe(1);
+      expect(d.documents.map((doc) => doc.id), d.id).toContain(coms[0]);
+    }
+    const p224 = all.find((d) => d.id === '2016-0224')!;
+    expect([p224.started, p224.started_from_parts, p224.documents.some((doc) => doc.id === 'COM(2016)0467')]).toEqual(['2016-07-13', true, true]);
+    for (const d of all) if (d.started_from_parts) expect(parents, d.id).toContain(d);
+  });
+
   it('never shows a generated name as a split parent’s official title, and tells its parts apart', () => {
     const parents = all.filter((d) => d.related.some((r) => r.relation === 'Split into'));
     expect(parents.length).toBe(12);
@@ -136,6 +152,28 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     expect(committee('2025-0045', '204332')).toBe('AFET'); // EP API DROI; OEIL: AFET, ANDREWS Barry
     expect(all.find((d) => d.id === '2023-0187')!.rapporteurs.filter((r) => r.role === 'rapporteur').map((r) => r.committee)).toEqual(['ECON']);
     for (const d of all) for (const r of d.rapporteurs) expect(r.committee, `${d.id} ${r.mep_id}`).not.toBe('null');
+  });
+
+  it('links a rapporteur only to an MEP page that is written, and lists an MEP once per role (2026-0172)', () => {
+    const pages = new Set(readdirSync(new URL('people/meps/', DATA)).map((f) => f.replace(/\.json$/, '')));
+    let linked = 0;
+    let unlinked = 0;
+    for (const d of all) {
+      const seen = new Set<string>();
+      for (const r of d.rapporteurs) {
+        expect(!!r.has_page, `${d.id} ${r.mep_id}`).toBe(!!r.mep_id && pages.has(r.mep_id));
+        if (r.has_page) linked += 1;
+        else unlinked += 1;
+        const key = `${r.mep_id} ${r.role} ${r.committee ?? ''}`;
+        expect(seen.has(key), `${d.id} ${key}`).toBe(false);
+        seen.add(key);
+      }
+    }
+    expect(linked).toBeGreaterThan(0);
+    expect(unlinked).toBeGreaterThan(0); // e.g. Timothy Kirkhope (4542) on 2011-0023, who sat before 2019
+    // OEIL links her as 10006693, which neither the EP website nor this site has a page for
+    const christ = all.find((d) => d.id === '2026-0172')!.rapporteurs.filter((r) => /christ/i.test(r.name));
+    expect(christ.map((r) => [r.mep_id, r.name, r.role, r.has_page])).toEqual([['277057', 'Marie-Sophie Christ', 'shadow', true]]);
   });
 
   it('calls a file joint only when two committees lead it now, and labels earlier-term roles former', () => {
@@ -256,6 +294,23 @@ describe.skipIf(!built)('application dates, act names and sources on the built d
     for (const d of all) for (const a of d.acts) if (a.opted_in) expect(a.act_type, `${d.id} ${a.celex}`).toBe('regulation');
   });
 
+  it('gives a checked date’s text its own identifier, not the CELEX of the act it dates (AI Act, EUDR, AMMR)', () => {
+    // the AI Act's 27 July 2026 read "Regulation (EU) 2026/1744, Article 1, point (40) ↗ 32024R1689", the AI Act's CELEX
+    const doc = (id: string, date: string) => byId(id).timeline.find((e) => e.kind === 'application' && e.date === date)!.docs[0];
+    expect([doc('2021-0106', '2026-07-27').id, doc('2021-0106', '2026-07-27').date]).toEqual(['32026R1744', null]);
+    expect(doc('2021-0366', '2027-12-30').id).toBe('32026R2102');
+    const ammr = doc('2020-0279', '2026-06-12');
+    expect(ammr.label).toMatch(/^Corrigendum to Regulation \(EU\) 2024\/1351/);
+    expect(ammr.id).toBe(ammr.label); // the entry gives no CELEX for the corrigendum: none is shown
+    for (const d of all)
+      for (const e of d.timeline)
+        if (e.source?.label?.includes('(checked '))
+          for (const x of e.docs) {
+            const m = /^3(\d{4})[A-Z](\d{4})$/.exec(x.id);
+            if (m) expect([`${m[1]}/${Number(m[2])}`, `${Number(m[2])}/${m[1]}`].some((num) => x.label?.includes(num)), `${d.id} ${e.id}`).toBe(true);
+          }
+  });
+
   it('names an act by its number in its steps, never by a type word and its CELEX id', () => {
     for (const d of all) for (const e of d.timeline) expect(e.detail ?? '', `${d.id} ${e.id}`).not.toMatch(/^(?:Regulation|Directive|Decision|Act) 3\d{4}[A-Z]\d{4}/);
     expect(byId('2016-0002').timeline.find((e) => e.kind === 'entry_into_force')?.detail).toBe('Directive (EU) 2019/884');
@@ -310,13 +365,14 @@ describe.skipIf(!built)('application dates, act names and sources on the built d
     expect(byId('2012-0288').official_title).toMatch(/^Amendment to the fuel quality directive/);
   });
 
-  it('says under the latest step that an amending act outside our data is not dated, and names its type (EUDR)', () => {
-    // Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU) 2023/1115 (Cellar)
+  it('says under the latest step that an amending act outside our data is not dated, and names it as its text does (EUDR)', () => {
+    // Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU) 2023/1115 (Cellar); its
+    // Annex dates a step of the page, so the note no longer says that the act is not in our data
     const eudr = byId('2021-0366');
     expect(eudr.latest_note).toBe(
-      'EUR-Lex also lists Delegated Regulation 2026/2102 as amending this act. That act is not in our data, so its publication is not shown and the step above may not be the latest.',
+      'EUR-Lex also lists Commission Delegated Regulation (EU) 2026/2102 as amending this act. Its text was checked for the dates it sets for this act, but its publication is not in our data, so it is not shown and the step above may not be the latest.',
     );
-    expect(eudr.related.filter((r) => r.relation === 'Amended by').map((r) => r.title)).toContain('Delegated Regulation 2026/2102');
+    expect(eudr.related.filter((r) => r.relation === 'Amended by').map((r) => r.title)).toContain('Commission Delegated Regulation (EU) 2026/2102');
   });
 
   it('names as debated together only files whose own record shows that debate (CAP, 20 October 2020; customs, 8 June 2021)', () => {

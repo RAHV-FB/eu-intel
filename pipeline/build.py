@@ -981,14 +981,19 @@ def act_label(a: LegalAct) -> str:
 
 
 CELEX_ACT_RE = re.compile(r"^3(\d{4})([RLD])(\d{4})$")
-# the type of act a checked text's label gives ("Delegated Regulation (EU) 2026/2102, Annex" -> "Delegated Regulation")
-CHECKED_ACT_TYPE_RE = re.compile(r"^((?:Implementing |Delegated )?(?:Regulation|Directive|Decision))\b")
+# the type of act a checked text's label gives, with its author and the "(EU)" of its number where the label gives
+# them ("Commission Delegated Regulation (EU) 2026/2102, Annex" -> "Commission Delegated Regulation (EU)")
+CHECKED_ACT_TYPE_RE = re.compile(
+    r"^((?:Commission |Council )?(?:Implementing |Delegated )?(?:Regulation|Directive|Decision)"
+    r"(?: \((?:EU|Euratom|EU, Euratom)\))?)(?= )"
+)
 
 
 def checked_act_types(act_dates: dict[str, dict]) -> dict[str, str]:
     """CELEX -> type of act, as the label of a text checked for data/curated/act_dates.yaml gives it, for the texts
-    that name an act by its CELEX id and number: an act outside our EUR-Lex data is then "Delegated Regulation
-    2026/2102" ("Delegated Regulation (EU) 2026/2102, Annex", celex 32026R2102), not only the type its CELEX id gives."""
+    that name an act by its CELEX id and number: an act outside our EUR-Lex data is then "Commission Delegated
+    Regulation (EU) 2026/2102" ("Commission Delegated Regulation (EU) 2026/2102, Annex", celex 32026R2102), not only
+    the type its CELEX id gives ("Regulation 2026/2102", without the "(EU)" that the CELEX id does not carry)."""
     return {
         x["celex"]: m.group(1) for e in act_dates.values() for x in e.get("sources") or []
         if x.get("celex") and (m := CHECKED_ACT_TYPE_RE.match(_squash(x.get("label"))))
@@ -1562,6 +1567,11 @@ _CV_FORM = re.compile(
     r"(?:\s+council\b(?!\s+(?:implementing\s+|delegated\s+)?(?:regulation|directive|decision)\b))?)?",
     re.IGNORECASE,
 )
+# a kind of act at the start of a title glued to the word after it ("Council Decisionon the system of ...")
+_CV_GLUED = re.compile(
+    r"^((?:council\s+)?(?:implementing\s+|delegated\s+)?(?:regulation|directive|decision))(?=(?:on|of|amending)\s)",
+    re.IGNORECASE,
+)
 
 
 def council_display_title(title: str, vote_on: str | None = None) -> str:
@@ -1575,11 +1585,13 @@ def council_display_title(title: str, vote_on: str | None = None) -> str:
       - a leading "Proposal for a" before the kind of act is dropped;
       - "Position of the Council at first reading with a view to the adoption of a" is dropped only when the
         vote is recorded as being on that position (vote_on), which lists show separately;
-      - a legal form printed twice in a row, or a doubled "Council", counts as one.
+      - a legal form printed twice in a row, or a doubled "Council", counts as one;
+      - a kind of act printed without the space before its subject is read with it: "Council Decisionon the system
+        of own resources" (ST 14021/20, as the note's subject prints it) -> "Council Decision on the system ...".
     Anything else, or a title that would keep fewer than two words after the kind of act, is returned as
     published (with runs of whitespace collapsed)."""
     official = re.sub(r"\s+", " ", (title or "").strip())
-    t = official
+    t = _CV_GLUED.sub(r"\1 ", official, count=1)
     if vote_on == "first_reading_position":
         t = _CV_POSITION.sub("", t, count=1)
     t = _CV_PROPOSAL.sub("", t, count=1)
@@ -2038,6 +2050,10 @@ class Builder:
             p = [(x.start, x.end, x.org_id) for x in m.memberships if x.kind == "party"]
             self.mep_groups[m.id] = sorted(g, key=lambda t: (t[0] or "", t[1] or "9999"))
             self.mep_parties[m.id] = sorted(p, key=lambda t: (t[0] or "", t[1] or "9999"))
+        # "FAMILY Given", as the OEIL key players print an MEP (rapporteur_entries)
+        self.mep_by_name: dict[str, list[Mep]] = defaultdict(list)
+        for m in s.meps:
+            self.mep_by_name[" ".join(f"{m.family_name} {m.given_name}".casefold().split())].append(m)
         self.ballots = {b.vote_id: b for b in s.ballots}
         self.optouts = {o.celex: o for o in s.optouts if o.status == "ok"}
         self.train_by_ref: dict[str, list[TrainFile]] = defaultdict(list)
@@ -2195,10 +2211,39 @@ class Builder:
     def rapporteur_entries(self, p: Procedure) -> list[dict]:
         """A file's rapporteurs with the political group they held in that role, never their current group:
         their group membership on the date the EP API gives for the appointment, else the group the OEIL file
-        prints next to the name (older files). Left out when neither establishes it (memberships start July 2019)."""
+        prints next to the name (older files). Left out when neither establishes it (memberships start July 2019).
+        `has_page`: the MEP has a page (people/meps: the terms covered), set only when true.
+
+        The OEIL key players link a few MEPs of the current term by a person id that EP Open Data does not use
+        (2026/0172(COD): "CHRIST Marie-Sophie (EPP)", /meps/en/10006693, an address with no page; EP Open Data's
+        277057, listed by the EP API as a shadow rapporteur of the same file). Such an entry takes the id and name of
+        the one MEP of the printed name who sat in the printed group, and is left out where the file lists that MEP in
+        the same role already (the former flag OEIL gives then applies to that entry, as in
+        ep_procedures.oeil_rapporteurs)."""
         familiar = _lazy("pipeline.sources.ep_people", "GROUP_CODES") or {}
+        rapps, rekeyed = list(p.rapporteurs), set()
+        for i, r in enumerate(rapps):
+            if r.mep_id not in self.mep and r.group:
+                slug = group_slug(familiar.get(r.group, r.group))
+                found = [m for m in self.mep_by_name.get(" ".join(r.name.casefold().split()), [])
+                         if slug in {self.org_slug.get(g) for _, _, g in self.mep_groups.get(m.id, [])}]  # fmt: skip
+                if len(found) == 1:
+                    rapps[i] = r.model_copy(update={"mep_id": found[0].id, "name": found[0].name})
+                    rekeyed.add(i)
+        flags: dict[int, list[bool]] = defaultdict(list)  # entry -> the former flags of the OEIL entries it stands for
+        listed: set[int] = set()
+        for i in sorted(rekeyed):
+            r = rapps[i]
+            for j, x in enumerate(rapps):
+                if j not in rekeyed and (x.mep_id, x.role) == (r.mep_id, r.role) and x.committee in (None, r.committee):
+                    flags[j].append(r.former)
+                    listed.add(i)
         out = []
-        for r in p.rapporteurs:
+        for i, r in enumerate(rapps):
+            if i in listed:
+                continue
+            if i in flags:
+                r = r.model_copy(update={"former": all(flags[i])})
             m = self.mep.get(r.mep_id or "")
             slug = code = None
             gid = self.group_at(m.id, r.date) if m and r.date else None
@@ -2211,7 +2256,7 @@ class Builder:
             out.append({
                 "mep_id": r.mep_id, "name": r.name, "group": slug, "group_code": code,
                 "country": m.country if m else None, "role": r.role, "committee": r.committee,
-                **({"former": True} if r.former else {}),
+                **({"former": True} if r.former else {}), **({"has_page": True} if m else {}),
             })  # fmt: skip
         return out
 
@@ -2357,7 +2402,7 @@ class Builder:
 
     def celex_label(self, celex: str) -> str | None:
         """An act known only by its CELEX id: "Regulation 2026/2102" (celex_act_label), its type as a checked text
-        gives it (checked_act_types): "Delegated Regulation 2026/2102"."""
+        gives it (checked_act_types): "Commission Delegated Regulation (EU) 2026/2102"."""
         label = celex_act_label(celex)
         kind = self.checked_act_types.get(celex)
         return f"{kind} {label.split(' ', 1)[1]}" if label and kind else label
@@ -2771,7 +2816,8 @@ class Builder:
                 assessment["single_state_veto_possible"] = False
             when, date_note = self.council_vote_date(cv, p, vote_on)
             rec = {
-                "id": cv.id, "date": when, "title": cv.title,
+                # a kind of act glued to the next word with the space (ST 14021/20: "Council Decisionon the system …")
+                "id": cv.id, "date": when, "title": _CV_GLUED.sub(r"\1 ", cv.title, count=1),
                 "display_title": council_vote_label(cv.title, vote_on, cv.stage, cv.procedure_refs), "dossier_id": did,
                 "dossier_ref": p.reference if p else None, "configuration": cv.configuration,
                 "stage": cv.stage, "vote_on": vote_on,
@@ -3479,12 +3525,17 @@ class Builder:
                 if kind in ("entry_into_force", "application", "transposition_deadline", "transposition_application"):
                     if cite := act_date_source(cur, d):  # corrected date: cite the text it was checked against
                         doc |= {"label": _squash(cite.get("label")), "url": cite.get("url")}
+                        own = cite is (cur.get("sources") or [None])[0]  # the act's own text
+                        if not own:  # an amending act or a corrigendum: its CELEX where the entry gives one, else
+                            # its label; never the act's CELEX and date (Regulation (EU) 2026/1744 for the AI Act)
+                            doc |= {"id": cite.get("celex") or doc["label"], "date": None}
                         # the date is that text's, not EUR-Lex's record of the act (Regulation (EU) 2022/2065, Art.
                         # 93(2): 17 February 2024, where EUR-Lex records 17 February 2022)
                         checked = f" (checked {_long_date(cur['reviewed'])})" if cur.get("reviewed") else ""
                         source = {"institution": "EUR-Lex", "url": cite.get("url"),
                                   "label": f"{_squash(cite.get('label'))}{checked}",
-                                  "identifier": cite.get("celex") or a.celex, "retrieved_at": None, "published": None}  # fmt: skip
+                                  "identifier": cite.get("celex") or (a.celex if own else None), "retrieved_at": None,
+                                  "published": None}  # fmt: skip
                     elif a.amended_by:  # Cellar's current record, which may reflect later amendments
                         doc["label"] = f"EUR-Lex record, CELEX {a.celex}"
                 detail, chk = label, a.transposition_checked
@@ -3974,9 +4025,11 @@ class Builder:
         result on the act, else OEIL's Council step. A Council act (consultation, consent) is dated by that
         voting result, else by the act itself, which bears its adoption date (OEIL's Council date can
         contradict it). An act that Parliament adopts with the Council's consent is dated by Parliament's
-        decision. Without such a step, the act's own date (EUR-Lex date of the document: its adoption or,
-        for acts of Parliament and Council, signature date), then a recorded signature. Never the
-        publication date, and never a date after publication."""
+        decision. Without such a step, the act's own date (EUR-Lex date of the document: its adoption), then, for
+        other procedures, a recorded signature; never the date of an act of Parliament and Council, which bears the
+        date of its signature, not of its adoption (2011/0901(COD), known from EUR-Lex only: Regulation (EU,
+        Euratom) 2015/2422 "of the European Parliament and of the Council of 16 December 2015", the day it was
+        signed): no date then. Never the publication date, and never a date after publication."""
         t = self.today
         p = self.council_dated(p)
         approved = sorted(e.date for e in p.events if e.date <= t and (e.raw_type or "").endswith(
@@ -3995,7 +4048,10 @@ class Builder:
                   and any(c <= e.date for c in votes + council)]  # fmt: skip
             cands = [ep[-1:], docs[:1]]
         elif p.type in ("COD", "SYN"):
-            cands = [approved[-1:], votes[-1:], council[-1:], docs[:1], sigs[:1]]
+            # an act of Parliament and Council is dated by its signature, not its adoption
+            own = sorted(a.date_document for a in acts if a.date_document and a.date_document <= t
+                         and not re.search(r"\bof the European Parliament and of the Council\b", a.title, re.I))  # fmt: skip
+            cands = [approved[-1:], votes[-1:], council[-1:], own[:1]]
         else:
             cands = [votes[-1:], docs[:1], council[-1:], sigs[:1]]
         adopted = next((c[0] for c in cands if c and (not published or c[0] <= published)), None)
@@ -4056,6 +4112,16 @@ class Builder:
             events.append(e.model_copy(update={"date": earlier[-1]}) if earlier and e.institution == "Council" else e)
         return p if events == p.events else p.model_copy(update={"events": events})
 
+    def parts_proposal(self, pid: str) -> DocRef | None:
+        """The Commission proposal that every part of a split procedure records as its own, for the parent, which
+        records none (2016/0224(COD): COM(2016)0467 of 13 July 2016, the proposal of 2016/0224A and B(COD)). None
+        when the parts record different proposals, or more than one."""
+        parts = [self.proc[c] for c in self.split_children.get(pid, []) if c in self.proc]
+        coms = [[d for d in x.documents if d.id.startswith("COM(") and d.date] for x in parts]
+        if not coms or any(len(c) != 1 for c in coms) or len({(c[0].id, c[0].date) for c in coms}) != 1:
+            return None
+        return coms[0][0] if all(self.proposal_date(x) == coms[0][0].date for x in parts) else None
+
     def build_dossiers(self) -> None:
         self.dossier_summary: dict[str, dict] = {}
         self.dossier_detail: dict[str, dict] = {}
@@ -4105,6 +4171,7 @@ class Builder:
                 blocked = bool(st.get("stall") and st["stall"].get("official_label"))
             else:
                 blocked = any("block" in t.status.lower() for t in self.train_of.get(pid, []))
+            from_parts = None if self.proposal_date(p) else self.parts_proposal(pid)
             summ = {
                 "id": pid,
                 "ref": p.reference,
@@ -4119,7 +4186,7 @@ class Builder:
                 "topics": self.topics_for(p),
                 "stage": st["status"].get("stage", "unknown"),
                 "status_label": st["status"].get("label") or STAGE_LABELS.get(st["status"].get("stage"), ""),
-                "started": self.proposal_date(p),
+                "started": self.proposal_date(p) or (from_parts.date if from_parts else None),
                 "last_event": done[-1]["date"] if done else None,
                 "adopted": adopted,
                 "published": published,
@@ -4189,7 +4256,9 @@ class Builder:
                 "committees": [{"code": c.code, "name": c.name, "role": c.role, **({"former": True} if c.former else {})}
                                for c in p.committees],  # fmt: skip
                 "rapporteurs": rapps,
-                "documents": [d.model_dump(mode="json") for d in p.documents],
+                "documents": [d.model_dump(mode="json") for d in [*p.documents, *([from_parts] if from_parts else [])]],
+                # a split parent's proposal date and document are those all its parts record (parts_proposal)
+                **({"started_from_parts": True} if from_parts else {}),
                 "related": [],
                 "oeil_url": oeil,
                 # built from the EUR-Lex act alone: the procedure's own steps are not in our data
@@ -4370,11 +4439,11 @@ class Builder:
         s = self.s
         rapp_for: dict[str, list[dict]] = defaultdict(list)
         for pid in self.dossier_ids:
-            for r in self.proc[pid].rapporteurs:
-                if r.mep_id:
-                    rapp_for[r.mep_id].append({"dossier_id": pid, "title": self.dossier_summary[pid]["title"],
-                                               "role": r.role, "committee": r.committee,
-                                               **({"former": True} if r.former else {})})  # fmt: skip
+            for r in self.rapporteur_entries(self.proc[pid]):  # under their EP Open Data ids, as the file lists them
+                if r["mep_id"]:
+                    rapp_for[r["mep_id"]].append({"dossier_id": pid, "title": self.dossier_summary[pid]["title"],
+                                                  "role": r["role"], "committee": r["committee"],
+                                                  **({"former": True} if r.get("former") else {})})  # fmt: skip
         self.mep_summary: dict[str, dict] = {}
         for m in sorted(s.meps, key=lambda m: m.id):
             gid = self.current_or_last(self.mep_groups.get(m.id, []))
@@ -4667,7 +4736,7 @@ class Builder:
 
     def undated_amendments_note(self, pid: str) -> str | None:
         """The acts that EUR-Lex lists as amending the file's acts but that are not in our EUR-Lex data, so the
-        timeline has no dated step for them (2021/0366(COD): Delegated Regulation (EU) 2026/2102). Said next to
+        timeline has no dated step for them (2021/0366(COD): Commission Delegated Regulation (EU) 2026/2102). Said next to
         the latest step, which may be older than they are."""
         latest = self.latest_event(pid)
         since = latest["date"][:4] if latest else ""  # an act of an earlier year (its CELEX id) predates that step
@@ -4681,6 +4750,14 @@ class Builder:
         names = [self.celex_label(c) or c for c in cs]
         listed = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
         one = len(cs) == 1
+        # a text checked for the dates it sets for the file's act (data/curated/act_dates.yaml) is in our data as
+        # that text only, not as an act with its publication (EUDR: Commission Delegated Regulation (EU) 2026/2102)
+        checked = {s.get("celex") for a in self.dossier_acts.get(pid, [])
+                   for s in (self.act_dates.get(a.celex) or {}).get("sources") or [] if isinstance(s, dict)}  # fmt: skip
+        if one and cs[0] in checked:
+            return (f"EUR-Lex also lists {listed} as amending this act. Its text was checked for the dates it sets for "
+                    "this act, but its publication is not in our data, so it is not shown and the step above may not "
+                    "be the latest.")
         return (f"EUR-Lex also lists {listed} as amending this act. {'That act is' if one else 'Those acts are'} not in "
                 f"our data, so {'its' if one else 'their'} publication is not shown and the step above may not be the "
                 "latest.")
@@ -4996,8 +5073,9 @@ class Builder:
                          f"{'adoption' if n == 1 else 'adoptions'} by written procedure from the Council's "
                          f"{'communication' if len(docs) == 1 else 'communications'} on its outcome "
                          f"({', '.join(docs)})") if n else ""  # fmt: skip
-                out.append(f"{len(listed):,} votes of the Council of the EU ({dates[0][:4]}–{dates[-1][:4]}), "
-                           f"{with_pos:,} of them with each Member State's position{extra}.")  # fmt: skip
+                # the breakdown divides the votes listed; the votes with positions are counted on their own
+                out.append(f"{len(listed):,} votes of the Council of the EU ({dates[0][:4]}–{dates[-1][:4]}){extra}. "
+                           f"{with_pos:,} of them record each Member State's position.")  # fmt: skip
                 if unread:
                     out.append(f"{unread:,} voting-result {'document' if unread == 1 else 'documents'} could not be "
                                f"read and {'is' if unread == 1 else 'are'} shown without positions.")  # fmt: skip

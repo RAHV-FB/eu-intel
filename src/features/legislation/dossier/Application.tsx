@@ -47,7 +47,8 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
 
   return (
     <>
-      <ul className="tp-summary" aria-label="Summary by status">
+      {/* each count is of Member States, not of measures (the table's "Measures notified" column counts those) */}
+      <ul className="tp-summary" aria-label="Member States by status">
         {STATUS_ORDER.filter((s) => counts.get(s)).map((s) => (
           <li key={s}>
             <button
@@ -56,7 +57,10 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
               aria-pressed={filter === s}
               onClick={() => setFilter((f) => (f === s ? 'all' : s))}
             >
-              <b className="num">{counts.get(s)}</b> <StatusMark s={s} />
+              <span>
+                <b className="num">{counts.get(s)}</b> {counts.get(s) === 1 ? 'Member State' : 'Member States'}:
+              </span>{' '}
+              <StatusMark s={s} />
             </button>
           </li>
         ))}
