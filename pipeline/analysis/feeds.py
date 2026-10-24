@@ -29,13 +29,14 @@ def _ts(item: dict) -> str:
 
 def _route(item: dict) -> str:
     # a Parliament vote opens its own page, which links its file: two motions voted on one file that day are two
-    # entries with two links (195775 and 195807, 2025/0429(COD), 9 July 2026)
+    # entries with two links (195775 and 195807, 2025/0429(COD), 9 July 2026). The trailing slash is the address of
+    # the page that is served (scripts/prerender-routes.mjs); without it GitHub Pages answers with a redirect.
     if item.get("kind") == "ep_vote" and item.get("vote_id"):
-        return f"votes/{quote(item['vote_id'])}"
+        return f"votes/{quote(item['vote_id'])}/"
     if item.get("dossier_id"):
-        return f"legislation/{quote(item['dossier_id'])}"
+        return f"legislation/{quote(item['dossier_id'])}/"
     if item.get("vote_id"):
-        return f"votes/{quote(item['vote_id'])}"
+        return f"votes/{quote(item['vote_id'])}/"
     return ""
 
 
