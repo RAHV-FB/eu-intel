@@ -74,7 +74,12 @@ the UI; every institutional fact on a page has a reachable origin.
   procedure type, "2016/0224A") and names citing it; the start of an act's official title ("Regulation (EU) 2016/679
   of the European Parliament and of the Council of …") and its EUR-Lex or ELI address are its identifier. The list
   filters for names and parties (vote ballots, People) fold accents as the search does.
-- Design tokens in `src/styles/tokens.css`; shared primitives in `src/components/ui.tsx`.
+- Design tokens in `src/styles/tokens.css`; shared primitives in `src/components/ui.tsx`. Shared visual patterns
+  are defined once in `src/styles/base.css` and `components.css`, and feature styles reuse them rather than restyle
+  them: one section-title style, line length (`--measure`), two note boxes (`.callout`, `.callout--distinction`),
+  status tags with icons drawn in CSS (`StatusIcon`), `.row-link` for a row's title or name, `.ref` for procedure
+  references (monospace only for identifiers), metadata separated by dots that never open a line (`.dot-list`),
+  and the loading, empty, error and not-found states.
 - Strict CSP meta (`default-src 'self'`), no third-party fonts/scripts, no cookies. The optional watchlist writes
   nothing to `localStorage` before the visitor's first "Follow" click (pages check for storage by reading only).
   After that the list changes on clicks only, except that opening the page of a followed file records what the

@@ -6,16 +6,8 @@ import { formatDateTime } from '../lib/format';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SearchBox } from './SearchBox';
 import { Loading } from './ui';
+import { NAV } from './nav';
 import { useScrollableTables } from './scrollableTables';
-
-export const NAV = [
-  { to: '/', label: 'Discover', end: true },
-  { to: '/legislation', label: 'Legislation' },
-  { to: '/votes', label: 'Votes' },
-  { to: '/people', label: 'People & Parties' },
-  { to: '/countries', label: 'Countries' },
-  { to: '/how-the-eu-works', label: 'How the EU Works' },
-];
 
 export const SITE_NAME = 'EU Legislative Intelligence';
 
@@ -83,6 +75,7 @@ export function Layout() {
   const headerRef = useRef<HTMLElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const searchToggleRef = useRef<HTMLButtonElement>(null);
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     setMenuOpen(false);
     setSearchOpen(false);
@@ -100,7 +93,18 @@ export function Layout() {
       <p className="visually-hidden" aria-live="polite" aria-atomic="true" data-route-announcer="">
         {announcement}
       </p>
-      <header className="site-header" ref={headerRef}>
+      <header
+        className="site-header"
+        ref={headerRef}
+        onKeyDown={(e) => {
+          // Escape closes the phone menu from its button or from any of its links, and returns to the button (a link
+          // that focus was on is hidden with the menu). The search panel handles its own Escape; the two are never
+          // open together.
+          if (e.key !== 'Escape' || !menuOpen) return;
+          setMenuOpen(false);
+          menuToggleRef.current?.focus();
+        }}
+      >
         <div className="container site-header__inner">
           <Link to="/" className="brand" aria-label={`${SITE_NAME} — home`}>
             <span className="brand__mark" aria-hidden="true">
@@ -145,6 +149,7 @@ export function Layout() {
             </>
           )}
           <button
+            ref={menuToggleRef}
             type="button"
             className="menu-toggle"
             aria-expanded={menuOpen}
@@ -154,7 +159,14 @@ export function Layout() {
               setSearchOpen(false);
             }}
           >
-            <span aria-hidden="true">{menuOpen ? '✕' : '☰'}</span>
+            {/* drawn like the search icon (2px strokes), not with text characters that vary between fonts */}
+            <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
+              {menuOpen ? (
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              ) : (
+                <path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              )}
+            </svg>
             <span className="visually-hidden">Menu</span>
           </button>
         </div>

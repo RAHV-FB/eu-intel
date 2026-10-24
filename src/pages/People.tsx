@@ -60,10 +60,13 @@ export default function People() {
           <EmptyState title="No national party data available in this build" />
         ))}
 
-      <p className="note" style={{ marginTop: 'var(--sp-6)' }}>
-        We show only official records of membership, roles and recorded votes — no biographies or photos. Each MEP page links to their
-        official profile on the European Parliament website.
-      </p>
+      {/* shown once the list is there: under the loading box it would be pushed away when the list arrives (layout shift) */}
+      {!state.loading && (
+        <p className="note section">
+          We show only official records of membership, roles and recorded votes — no biographies or photos. Each MEP page links to their
+          official profile on the European Parliament website.
+        </p>
+      )}
     </div>
   );
 }

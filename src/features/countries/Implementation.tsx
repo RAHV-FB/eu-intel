@@ -142,8 +142,14 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
               {sorted.slice(0, shown).map((r) => (
                 <tr key={r.celex}>
                   <td className="impl-dir">
-                    {r.dossier_id ? <Link to={dossierPath(r.dossier_id)}>{r.title}</Link> : r.title}
-                    <span className="meta" style={{ display: 'block' }}>
+                    {r.dossier_id ? (
+                      <Link className="row-link" to={dossierPath(r.dossier_id)}>
+                        {r.title}
+                      </Link>
+                    ) : (
+                      r.title
+                    )}
+                    <span className="meta as-block">
                       {/* the link first, where it was: a link centred under the title's would be too close a target */}
                       <ExtLink href={EURLEX_CELEX(r.celex)}>
                         <span className="mono">{r.celex}</span>
@@ -166,7 +172,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
                     <span className="only-narrow impl-dir__more">
                       <TranspositionStatusLabel status={r.status} />
                       {r.status_note && <StatusNote r={r} />}
-                      <span className="meta" style={{ display: 'block' }}>
+                      <span className="meta as-block">
                         Deadline: {r.deadline ? formatDate(r.deadline) : 'not recorded'}
                       </span>
                     </span>
@@ -213,7 +219,7 @@ export function TranspositionTable({ rows, countryName }: { rows: TRow[]; countr
 /** A row's status note, with the document it rests on when there is one (Denmark's notification to the Council). */
 function StatusNote({ r }: { r: { status_note?: string | null; status_note_url?: string | null } }) {
   return (
-    <span className="meta" style={{ display: 'block' }}>
+    <span className="meta as-block">
       {r.status_note}
       {r.status_note_url && (
         <>
@@ -327,7 +333,7 @@ export function InfringementTable({ rows, directives = NO_DIRECTIVES }: { rows: 
                   </td>
                   <td className="wrap-cell">
                     {r.title}
-                    {r.non_communication && <span className="meta" style={{ display: 'block' }}>Non-communication of transposition measures</span>}
+                    {r.non_communication && <span className="meta as-block">Non-communication of transposition measures</span>}
                     {/* phones: the stage, date and status columns are hidden and shown here */}
                     <span className="only-narrow meta">
                       <span className={r.status === 'open' ? 'status-open' : undefined}>{STATUS_LABEL[r.status]}</span>

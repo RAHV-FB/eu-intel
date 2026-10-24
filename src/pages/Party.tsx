@@ -4,7 +4,7 @@ import type { PartyDetail, PartyRef } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
-import { ErrorState, Loading, LookupNotice, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
+import { LoadFailed, Loading, LookupNotice, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { partyRecordTitle, periodText, recordPeriod, termYears, useGroups } from '../features/people/labels';
 import { SortTh, useSortable } from '../features/votes/sortable';
@@ -45,7 +45,7 @@ export default function Party() {
   const { id = '' } = useParams();
   const { data: p, error, loading } = useData<PartyDetail>(`people/parties/${encodeURIComponent(id)}.json`);
   const groups = useGroups();
-  useDocumentTitle(p ? partyRecordTitle(p) : isMissing(error) ? 'National party not found' : 'National party');
+  useDocumentTitle(p ? partyRecordTitle(p) : isMissing(error) ? 'National party not found' : error ? 'National party could not be loaded' : 'National party');
 
   const m = useSortable<MepRow, 'name' | 'from' | 'to' | 'status'>(
     p?.meps ?? [],
@@ -64,7 +64,7 @@ export default function Party() {
 
   if (loading) return <div className="container page"><Loading label="Loading party…" /></div>;
   if (isMissing(error)) return <NotFound what="national party" />;
-  if (error || !p) return <div className="container page"><ErrorState error={error} title="This party could not be loaded" /></div>;
+  if (error || !p) return <LoadFailed title="This party could not be loaded" />;
 
   const term = termYears(p.terms);
   const sameName = p.same_name ?? [];
@@ -80,7 +80,7 @@ export default function Party() {
 
   return (
     <div className="container page">
-      <p className="meta" style={{ marginBottom: 'var(--sp-3)' }}>
+      <p className="meta mb-3">
         <Link to="/people?view=parties">← National parties</Link>
       </p>
       <PageHeader
@@ -133,7 +133,7 @@ export default function Party() {
 
       <LookupNotice failed={groups.failed} what="Political group names" />
 
-      <dl className="facts card">
+      <dl className="facts facts--inline">
         {closed ? (
           <>
             <div>
@@ -149,14 +149,9 @@ export default function Party() {
           <>
             <div>
               {/* MEPs sitting today who are still in this record; those listed here who sit under another record are
-                  counted next to it, so that the figure agrees with the "Current MEP" rows below */}
+                  counted in the note below the figures, so that the figure agrees with the "Current MEP" rows below */}
               <dt>Current MEPs in this record</dt>
               <dd className="big">{formatNumber(p.members_active)}</dd>
-              {sittingElsewhere > 0 && (
-                <dd className="meta">
-                  {formatNumber(sittingElsewhere)} of its MEPs now {sittingElsewhere === 1 ? 'sits' : 'sit'} under another record
-                </dd>
-              )}
             </div>
             <div>
               <dt>MEPs in our dataset</dt>
@@ -185,7 +180,7 @@ export default function Party() {
       </dl>
 
       {nowParties.length > 0 && (
-        <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
+        <p className="note mt-3">
           {formatNumber(sittingElsewhere)} of the MEPs listed here {sittingElsewhere === 1 ? 'sits' : 'sit'} in Parliament today under
           another party record:{' '}
           {nowParties.map((r, i) => (
@@ -263,9 +258,9 @@ export default function Party() {
                   );
                   return (
                     <tr key={`${r.id}-${r.from ?? ''}`}>
-                      <th scope="row" style={{ fontWeight: 500 }}>
+                      <th scope="row">
                         <Link to={`/people/meps/${encodeURIComponent(r.id)}`}>{r.name}</Link>
-                        <span className="only-narrow meta" style={{ fontWeight: 400 }}>
+                        <span className="only-narrow meta">
                           {statusText(r)}
                           {nowLine}
                         </span>
@@ -286,7 +281,7 @@ export default function Party() {
             </table>
           </div>
         )}
-        <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
+        <p className="note mt-3">
           Dates are the party membership periods recorded by Parliament, within the parliamentary terms covered by our dataset (see{' '}
           <Link to="/about#coverage">coverage</Link>). “Current MEP” means the person sits in Parliament today; “Now” names the party
           record a sitting MEP is listed under when it is another one.

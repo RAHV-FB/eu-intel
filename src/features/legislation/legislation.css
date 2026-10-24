@@ -197,29 +197,19 @@
 .drow__short {
   margin: var(--sp-1) 0 0;
   color: var(--text-2);
-  max-width: 44rem;
+  max-width: var(--measure);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+/* separators between the items: .dot-list (base.css), which sets the left margin */
 .drow__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--sp-2);
-  margin: var(--sp-2) 0 0;
+  margin-top: var(--sp-2);
+  margin-bottom: 0;
   font-size: var(--fs-sm);
   color: var(--text-3);
-}
-
-.drow__meta > span + span::before {
-  content: '·';
-  margin-right: var(--sp-2);
-}
-
-.drow__ref {
-  font-size: var(--fs-xs);
 }
 
 .drow__topics {

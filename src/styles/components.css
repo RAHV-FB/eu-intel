@@ -2,8 +2,8 @@
 
 /* ---------- states ---------- */
 .state {
-  padding: var(--sp-6) var(--sp-5);
-  border: 1px dashed var(--border-strong);
+  padding: var(--sp-5);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--text-2);
@@ -13,21 +13,37 @@
   align-items: flex-start;
 }
 
+.state p {
+  margin: 0;
+}
+
 .state--loading {
   flex-direction: row;
   align-items: center;
-  border-style: solid;
-  border-color: var(--border);
+}
+
+/* "Nothing here": a quiet sunk panel, the same as the law page's "nothing applies" notes */
+.state--empty {
+  background: var(--surface-sunk);
+  border-color: transparent;
+}
+/* the muted colour is below 4.5:1 on the sunk background: the secondary one */
+.state--empty .meta {
+  color: var(--text-2);
 }
 
 .state--error {
-  border-color: var(--st-critical);
+  border-color: #f3caca;
+  border-left: 4px solid var(--st-critical);
   background: var(--st-critical-bg);
   color: var(--text);
 }
 /* the muted colour is 4.1:1 on the tinted background: the secondary one */
 .state--error .meta {
   color: var(--text-2);
+}
+.state--error .btn {
+  margin-top: var(--sp-1);
 }
 /* one line above a list or filter whose labels could not be loaded */
 .state--note {
@@ -50,22 +66,98 @@
   }
 }
 
-/* ---------- badges & tags ---------- */
-.badge {
+/* ---------- page not found ---------- */
+.not-found__search {
+  max-width: 40rem;
+}
+
+.not-found__title {
+  margin-top: var(--sp-6);
+  font-size: var(--fs-base);
+}
+
+.not-found__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.not-found__links a {
   display: inline-flex;
   align-items: center;
-  gap: 0.35em;
-  padding: 0.15em 0.6em;
-  border-radius: 999px;
+  min-height: var(--tap);
+  font-weight: var(--fw-medium);
+}
+
+/* ---------- badges & tags ---------- */
+/* A status tag: square corners, so that a long label wraps onto a second line cleanly. */
+.badge {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.4em;
+  padding: 0.2em 0.55em;
+  border-radius: var(--radius-sm);
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
-  line-height: 1.5;
-  white-space: nowrap;
+  line-height: 1.35;
   border: 1px solid transparent;
 }
 
-.badge__icon {
-  font-size: 0.8em;
+/*
+ * Status icons, drawn with CSS so that they look the same with every font: a filled disc (done), a ring (inactive),
+ * a half disc (agreement), a quarter (in progress), a cross (rejected) and a square (blocked). The text label beside
+ * an icon always says the same thing in words.
+ */
+.status-icon {
+  display: inline-block;
+  flex: none;
+  position: relative;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-top: 0.3em; /* centred on the first line of a 1.35 line height */
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+.status-icon--done {
+  background: currentColor;
+}
+.status-icon--agreement {
+  background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+}
+.status-icon--progress {
+  background: conic-gradient(currentColor 0 25%, transparent 0);
+}
+.status-icon--critical {
+  border: 0;
+  border-radius: 0;
+}
+.status-icon--critical::before,
+.status-icon--critical::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.75rem;
+  height: 2px;
+  background: currentColor;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.status-icon--critical::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+.status-icon--alert {
+  border-radius: 2px;
+  background: currentColor;
+}
+/* High-contrast modes drop backgrounds and gradients: keep the shapes, in the system text colour. */
+@media (forced-colors: active) {
+  .status-icon {
+    forced-color-adjust: none;
+    color: CanvasText;
+  }
 }
 
 .badge--progress {
@@ -392,10 +484,7 @@
   .table--stack .stack-label {
     display: block;
     color: var(--text-2);
-    font-size: var(--fs-xs);
-    font-weight: var(--fw-semibold);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    font-size: var(--fs-sm);
   }
 
   .table--stack .row-title {

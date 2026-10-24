@@ -187,13 +187,19 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
               <tbody>
                 {sorted.slice(0, shown).map((m) => (
                   <tr key={m.id}>
-                    <th scope="row" style={{ fontWeight: 500 }}>
+                    <th scope="row">
                       <Link to={`/people/meps/${encodeURIComponent(m.id)}`}>{m.name}</Link>
-                      <span className="only-narrow meta" style={{ fontWeight: 400 }}>
+                      <span className="only-narrow meta">
                         {countryName(m.country)} · {m.active ? 'Current' : 'Former'}
                         {m.party_label && (
-                          <span style={{ display: 'block' }}>
-                            {m.party ? <Link to={`/people/parties/${encodeURIComponent(m.party)}`}>{m.party_label}</Link> : m.party_label}
+                          <span className="as-block">
+                            {m.party ? (
+                              <Link className="sub-link" to={`/people/parties/${encodeURIComponent(m.party)}`}>
+                                {m.party_label}
+                              </Link>
+                            ) : (
+                              m.party_label
+                            )}
                           </span>
                         )}
                       </span>
@@ -231,7 +237,7 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
               </span>
             </div>
           )}
-          <p className="note" style={{ marginTop: 'var(--sp-3)' }}>
+          <p className="note mt-3">
             For former MEPs, the group and party shown are the last ones recorded.
           </p>
         </>

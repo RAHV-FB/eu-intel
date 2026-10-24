@@ -77,8 +77,6 @@
 
 .csection {
   margin-top: var(--sp-7);
-  padding-top: var(--sp-5);
-  border-top: 3px solid var(--eu-blue);
   /* a section link lands with the heading below the sticky header (and its navigation row on wide screens) */
   scroll-margin-top: calc(var(--header-h) + var(--sp-4));
 }
@@ -87,22 +85,21 @@
     scroll-margin-top: calc(var(--header-h) + 2.75rem + var(--sp-4));
   }
 }
-.csection--council {
-  border-top-color: var(--navy);
-}
-.csection--impl {
-  border-top-color: var(--eu-gold);
-}
 .csection__kicker {
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   color: var(--blue-muted);
   margin: 0 0 var(--sp-1);
 }
-.csection > h2 {
-  font-family: var(--font-serif);
-  font-size: var(--fs-xl);
+/* country page: national parties with current MEPs */
+.party-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
 }
+
 .csection h3 {
   margin-top: var(--sp-6);
 }

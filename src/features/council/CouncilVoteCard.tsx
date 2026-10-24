@@ -4,7 +4,7 @@
  */
 import { Link } from 'react-router-dom';
 import type { CountryDetail, CouncilAssessment, CouncilPosition, CouncilVote, CouncilVoteOn } from '../../types/data';
-import { ExtLink, SourceLink, Term, VoteBar } from '../../components/ui';
+import { ExtLink, SourceLink, StatusIcon, Term, VoteBar } from '../../components/ui';
 import { COUNTRY_NAMES, countryName, formatDate, formatNumber } from '../../lib/format';
 import './council.css';
 
@@ -161,7 +161,7 @@ export function CouncilVoteCard({
             <dt>Outcome</dt>
             <dd>
               <span className={`cvote__outcome cvote__outcome--${vote.outcome}`}>
-                <span aria-hidden="true">{vote.outcome === 'adopted' ? '●' : vote.outcome === 'not_adopted' ? '✕' : '○'}</span>{' '}
+                <StatusIcon tone={vote.outcome === 'adopted' ? 'done' : vote.outcome === 'not_adopted' ? 'critical' : 'inactive'} />
                 {councilOutcomeLabel(vote)}
               </span>
             </dd>

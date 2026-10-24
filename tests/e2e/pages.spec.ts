@@ -377,7 +377,8 @@ test.describe('party records: figures, titles and links', () => {
     await expect(page).toHaveTitle(`Platforma Obywatelska (Poland, 2024–2029 term) – ${SITE_NAME}`);
     const facts = page.locator('.facts');
     await expect(facts).toContainText('Current MEPs in this record');
-    await expect(facts).toContainText('18 of its MEPs now sit under another record');
+    // said once, in the note under the figures
+    await expect(page.locator('.facts + .note')).toContainText('18 of the MEPs listed here sit in Parliament today under another party record');
     await expect(page.locator('section[aria-labelledby="pm-h"] tbody tr', { hasText: 'Current MEP' })).toHaveCount(18);
     await expectNoSeriousA11yViolations(page);
   });

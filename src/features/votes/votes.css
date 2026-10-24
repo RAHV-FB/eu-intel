@@ -23,13 +23,12 @@
     padding: var(--sp-4) var(--sp-5);
   }
 }
+/* separators between the items: .dot-list (base.css), which sets the left margin */
 .vote-item__meta {
-  margin: 0 0 var(--sp-1);
+  margin-top: 0;
+  margin-bottom: var(--sp-1);
   font-size: var(--fs-sm);
   color: var(--text-3);
-}
-.vote-item__ref {
-  font-size: var(--fs-xs);
 }
 .vote-item__title {
   margin: 0 0 var(--sp-2);
@@ -38,7 +37,7 @@
   line-height: var(--lh-snug);
 }
 .vote-item__title a {
-  color: var(--text);
+  color: var(--navy);
   text-decoration: none;
 }
 .vote-item__title a:hover {

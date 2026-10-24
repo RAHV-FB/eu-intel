@@ -242,12 +242,66 @@ test.describe('phone menu on short screens', () => {
   }
 });
 
+test.describe('phone menu and the keyboard', () => {
+  test('Escape closes the menu from its button or from one of its links, and focus returns to the button', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await open(page, `legislation/${AI_ACT_ID}/`);
+    const toggle = page.locator('.menu-toggle');
+    const nav = page.locator('#primary-nav');
+    await toggle.focus();
+    await page.keyboard.press('Enter');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    // the current section is marked with more than colour: a gold bar on its left, as the underline on wide screens
+    await expect(nav.locator('a.active')).toHaveCSS('box-shadow', /rgb\(255, 204, 0\)/);
+    await page.keyboard.press('Escape');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toBeFocused();
+    await expect(nav).toBeHidden();
+
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await expect(nav.locator('a').first()).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toBeFocused();
+  });
+});
+
+test.describe('a page whose own data could not be loaded', () => {
+  for (const [path, file] of [
+    [`legislation/${AI_ACT_ID}/`, `dossiers/${AI_ACT_ID}.json`],
+    ['votes/166051/', 'votes/166051.json'],
+    ['people/meps/197400/', 'people/meps/197400.json'],
+    ['countries/ES/', 'countries/ES.json'],
+  ]) {
+    test(`${path}: a heading, plain words, a reload button and links onward`, async ({ page, guard }) => {
+      guard.ignore(new RegExp(file.replace(/[./]/g, '\\$&')));
+      await page.setViewportSize({ width: 375, height: 812 });
+      await page.route(`**/data/${file}`, (r) => r.abort());
+      await open(page, path);
+      await expect(page.locator('main h1')).toHaveText(/could not be loaded/);
+      await expect(page.locator('main .lead')).toHaveText('Check your connection, then reload the page. The rest of the site is not affected.');
+      await expect(page.locator('main')).not.toContainText('Failed to fetch');
+      await expect(page.getByRole('link', { name: 'Browse legislation' })).toBeVisible();
+      await expectNoSeriousA11yViolations(page);
+      // once the connection is back, the button brings the page
+      await page.unroute(`**/data/${file}`);
+      await page.getByRole('button', { name: 'Reload the page' }).click();
+      await settle(page);
+      await expect(page.locator('main h1')).not.toHaveText(/could not be loaded/);
+    });
+  }
+});
+
 test.describe('secondary data that fails to load', () => {
   test('an MEP page says the vote details could not be loaded, rather than showing them as not recorded', async ({ page, guard }) => {
     guard.ignore(/votes\/titles\.json/);
     await page.route('**/data/votes/titles.json', (r) => r.fulfill({ status: 500, body: 'error' }));
     await open(page, 'people/meps/197619/');
     await expect(page.getByRole('alert')).toContainText('The titles, dates and results of these votes could not be loaded');
+    // what to do, and the technical reason only as a detail
+    await expect(page.getByRole('alert').getByRole('button', { name: 'Reload the page' })).toBeVisible();
+    await expect(page.getByRole('alert').locator('.meta')).toHaveText('Details: Could not load votes/titles.json (HTTP 500)');
     const row = page.locator('section[aria-labelledby="v-h"] tbody tr').first();
     await expect(row).toContainText('Not loaded');
     await expect(row).not.toContainText('—');

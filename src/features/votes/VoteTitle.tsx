@@ -24,7 +24,7 @@ export function LangText({ text, parts }: { text: string; parts?: LangRun[] | nu
 export function VoteRowMeta({ v }: { v: Pick<EpVoteTitle, 'kind_label' | 'procedure_ref' | 'distinction'> }) {
   const parts = [v.kind_label, v.procedure_ref, v.distinction].filter(Boolean);
   return parts.length ? (
-    <span className="meta vote-row-meta" style={{ display: 'block' }}>
+    <span className="meta vote-row-meta as-block">
       {parts.join(' · ')}
     </span>
   ) : null;

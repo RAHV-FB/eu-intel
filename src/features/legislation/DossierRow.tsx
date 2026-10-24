@@ -41,7 +41,7 @@ export function DossierRow({
           </Link>
         </H>
         {d.short && <p className="drow__short">{d.short}</p>}
-        <p className="drow__meta">
+        <p className="drow__meta dot-list">
           <span>{d.type_label || d.type}</span>
           {d.instrument && d.instrument !== 'other' && (
             <span>
@@ -49,7 +49,7 @@ export function DossierRow({
               {d.celex.length === 0 && ' (as proposed)'}
             </span>
           )}
-          <span className="mono drow__ref">{d.ref}</span>
+          <span className="ref">{d.ref}</span>
         </p>
         {topicLabel && d.topics.length > 0 && (
           <ul className="drow__topics" aria-label="Topics">

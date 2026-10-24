@@ -18,11 +18,8 @@
   font-size: var(--fs-sm);
 }
 .toc__title {
-  font-size: var(--fs-xs);
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-3);
+  color: var(--text-2);
   margin: 0 0 var(--sp-2);
 }
 .toc ol {
@@ -75,23 +72,22 @@
 
 /* ---------- prose ---------- */
 .prose {
-  max-width: 46rem;
+  max-width: var(--measure-wide);
+}
+/* running text keeps a readable line length; diagrams and cards use the column's width */
+.prose p,
+.prose > section > ul,
+.prose > section > ol {
+  max-width: var(--measure);
 }
 .prose > section {
   scroll-margin-top: calc(var(--header-h) + 3.5rem);
-  padding-top: var(--sp-6);
-  margin-top: var(--sp-6);
-  border-top: 1px solid var(--border);
+  margin-top: var(--sp-7);
 }
 .prose > section:first-child {
   margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
 }
-.prose h2 {
-  font-family: var(--font-serif);
-  font-size: var(--fs-xl);
-}
+/* section titles (.prose > section > h2): base.css */
 .prose h3 {
   margin-top: var(--sp-5);
 }
@@ -121,11 +117,8 @@
   color: var(--blue-muted);
   margin: 0 0 var(--sp-1);
 }
+/* a note box of the "not the same as" kind (.callout--distinction, base.css) */
 .not-same {
-  border-left: 3px solid var(--eu-gold);
-  background: #fffbea;
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: 0 var(--radius) var(--radius) 0;
   margin: var(--sp-4) 0;
 }
 

@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { EpVoteSummary, VoteKind, VoteMargin, VoteOutcome } from '../../types/data';
-import { Term, VoteBar } from '../../components/ui';
+import { StatusIcon, Term, VoteBar } from '../../components/ui';
 import { formatDate, formatNumber } from '../../lib/format';
-import { CLOSE_RELATIVE, DERIVED_OUTCOME, KIND_EXPLAINER, KIND_LABEL, OUTCOME_ICON, OUTCOME_LABEL, isClose, outcomeTone } from './labels';
+import { CLOSE_RELATIVE, DERIVED_OUTCOME, KIND_EXPLAINER, KIND_LABEL, OUTCOME_LABEL, isClose, outcomeTone } from './labels';
 import { VoteTitle } from './VoteTitle';
 import './common.css';
 import './votes.css';
@@ -11,9 +11,7 @@ import './votes.css';
 export function OutcomeBadge({ outcome, basis }: { outcome: VoteOutcome; basis?: EpVoteSummary['outcome_basis'] }) {
   const badge = (
     <span className={`badge badge--${outcomeTone(outcome)}`}>
-      <span aria-hidden="true" className="badge__icon">
-        {OUTCOME_ICON[outcome]}
-      </span>
+      <StatusIcon tone={outcomeTone(outcome)} />
       {OUTCOME_LABEL[outcome]}
     </span>
   );
@@ -69,25 +67,17 @@ export function VoteListItem({ v, showDossier = true, listUrl }: { v: EpVoteSumm
   return (
     <li className="vote-item">
       <div className="vote-item__main">
-        <p className="vote-item__meta">
+        <p className="vote-item__meta dot-list">
           <time dateTime={v.date}>{formatDate(v.date)}</time>
-          <span aria-hidden="true"> · </span>
           <span>{v.kind_label || KIND_LABEL[v.kind]}</span>
           {showDossier && v.dossier_ref && v.dossier_id ? (
-            <>
-              <span aria-hidden="true"> · </span>
-              <Link to={`/legislation/${v.dossier_id}`} className="mono vote-item__ref">
+            <span>
+              <Link to={`/legislation/${v.dossier_id}`} className="ref">
                 {v.dossier_ref}
               </Link>
-            </>
+            </span>
           ) : (
-            showDossier &&
-            v.procedure_ref && (
-              <>
-                <span aria-hidden="true"> · </span>
-                <span className="mono vote-item__ref">{v.procedure_ref}</span>
-              </>
-            )
+            showDossier && v.procedure_ref && <span className="ref">{v.procedure_ref}</span>
           )}
         </p>
         <h3 className="vote-item__title">
@@ -132,7 +122,7 @@ export function VoteKindGuide() {
           </div>
         ))}
       </dl>
-      <p className="callout">
+      <p className="callout callout--distinction">
         <strong>A rejected amendment does not mean the law was rejected.</strong> Parliament usually votes on many amendments before
         voting on the text as a whole. Only the final vote tells you Parliament’s position on the law — and Parliament’s vote alone
         does not make a law: under the <Term id="olp">ordinary legislative procedure</Term> the <Term id="council">Council</Term> must

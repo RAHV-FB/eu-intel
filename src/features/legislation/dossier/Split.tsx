@@ -21,7 +21,7 @@ export function SplitParts({ parts }: { parts: DossierDetail['related'] }) {
       {parts.map((r) => (
         <li key={r.id}>
           <Link to={dossierPath(r.id)}>
-            {r.ref && <span className="dz-parts__ref">{r.ref}</span>} <span className="dz-parts__title">{r.title}</span>
+            {r.ref && <span className="dz-parts__ref ref">{r.ref}</span>} <span className="dz-parts__title">{r.title}</span>
           </Link>
           {r.status_label && <span className="dz-parts__status">{r.status_label}</span>}
         </li>

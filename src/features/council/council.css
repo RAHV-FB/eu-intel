@@ -35,10 +35,7 @@
 }
 
 .cvote__voteon-label {
-  color: var(--text-3);
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: var(--text-2);
   font-weight: var(--fw-semibold);
 }
 
@@ -56,16 +53,20 @@
 }
 
 .cvote__facts dt {
-  color: var(--text-3);
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: var(--text-2);
   font-weight: var(--fw-semibold);
 }
 
 .cvote__facts dd {
   margin: 0;
   font-weight: var(--fw-medium);
+}
+
+.cvote__outcome {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.4em;
+  line-height: 1.35;
 }
 
 .cvote__outcome--adopted {

@@ -40,13 +40,8 @@
 }
 
 /* ---------- /following ---------- */
+/* a neutral note box (.callout, base.css) in small type */
 .following__privacy {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--eu-gold);
-  border-radius: var(--radius);
-  padding: var(--sp-4) var(--sp-5);
-  max-width: 46rem;
   font-size: var(--fs-sm);
   color: var(--text-2);
 }
@@ -63,17 +58,20 @@
   color: var(--text);
 }
 
+/* the list's title row: a section title (base.css) with the actions beside it, and the rule under both */
 .following__bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
-  margin: var(--sp-6) 0 var(--sp-3);
+  margin: var(--sp-7) 0 0;
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border-strong);
 }
 
-.following__bar h2 {
-  margin: 0;
+.following__bar h2 .meta {
+  font-family: var(--font-sans);
 }
 
 .following__actions {
@@ -106,7 +104,6 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--border);
 }
 
 .following__item {
@@ -132,10 +129,12 @@
 }
 
 .following__title a {
+  color: var(--navy);
   text-decoration: none;
 }
 
 .following__title a:hover {
+  color: var(--eu-blue);
   text-decoration: underline;
 }
 

@@ -94,6 +94,9 @@
   /* Layout */
   --container: 72rem; /* 1152px */
   --container-narrow: 46rem;
+  /* Line length of running text: about 65–75 characters at 18px (--measure), 80–90 at 16px (--measure-wide). */
+  --measure: 38rem;
+  --measure-wide: 46rem;
   --gutter: 1rem;
   --header-h: 3.75rem;
 

@@ -7,8 +7,10 @@
   gap: 0.35em;
   background: none;
   border: 0;
-  padding: var(--sp-1) 0;
-  min-height: 2rem;
+  padding: 0;
+  min-height: 1.5rem; /* 24px: the minimum target size (WCAG 2.5.8) */
+  /* ...that takes no more room than a line of text, so its label sits on the same line as a plain heading's */
+  margin-block: calc((1lh - 1.5rem) / 2);
   font: inherit;
   color: inherit;
   text-transform: inherit;
@@ -27,7 +29,11 @@
 }
 .sort-btn__icon {
   font-size: 0.75em;
-  opacity: 0.7;
+  opacity: 0.45;
+}
+.sort-btn.is-active .sort-btn__icon,
+.sort-btn:hover .sort-btn__icon {
+  opacity: 1;
 }
 
 /* ---------- filter bar ---------- */
@@ -115,27 +121,7 @@
   min-height: 1.5rem;
 }
 
-/* ---------- callouts & notes ---------- */
-.callout {
-  padding: var(--sp-3) var(--sp-4);
-  border-left: 3px solid var(--eu-blue);
-  background: var(--blue-paler);
-  border-radius: 0 var(--radius) var(--radius) 0;
-  color: var(--text);
-  max-width: 48rem;
-}
-.callout--gold {
-  border-left-color: var(--eu-gold);
-  background: #fffbea;
-}
-.callout > :last-child {
-  margin-bottom: 0;
-}
-.note {
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-  max-width: 48rem;
-}
+/* Note boxes (.callout) and notes (.note): src/styles/base.css. */
 
 /* ---------- segmented navigation (links acting as tabs) ---------- */
 .segnav {
@@ -168,6 +154,23 @@
   box-shadow: var(--shadow-sm);
   font-weight: var(--fw-semibold);
 }
+/* Phones: the tabs share one row in equal columns, a long label wrapping inside its tab rather than onto a row of
+   its own. */
+@media (max-width: 39.99rem) {
+  .segnav {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    width: 100%;
+  }
+  .segnav a {
+    justify-content: center;
+    padding: var(--sp-1) var(--sp-2);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-snug);
+    text-align: center;
+  }
+}
 
 /* ---------- key facts ---------- */
 .facts {
@@ -177,11 +180,9 @@
   margin: 0;
 }
 .facts dt {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: var(--text-2);
 }
 .facts dd {
   margin: var(--sp-1) 0 0;
@@ -191,6 +192,31 @@
   font-size: var(--fs-lg);
   font-variant-numeric: tabular-nums;
   font-weight: var(--fw-semibold);
+}
+/* A few counts in a line between two rules ("Current members 185   Countries represented 27 …"), not a row of big numbers. */
+.facts--inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2) var(--sp-6);
+  padding-block: var(--sp-3);
+  border-block: 1px solid var(--border);
+}
+.facts--inline > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--sp-2);
+}
+.facts--inline dt {
+  font-weight: var(--fw-regular);
+}
+.facts--inline dd,
+.facts--inline dd.big {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- tables ---------- */
@@ -268,16 +294,16 @@
   gap: var(--sp-1) var(--sp-3);
 }
 
+/* A section title with something beside it; the title's style and rule: .section-title in base.css */
 .section-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--sp-2) var(--sp-4);
-  margin-bottom: var(--sp-3);
-}
-.section-head h2 {
-  margin: 0;
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border-strong);
+  margin-bottom: var(--sp-4);
 }
 
 /* Row headers (<th scope="row">) read like body cells, not like column headings. */
@@ -296,8 +322,6 @@
 }
 
 .facts dt .term__btn {
-  text-transform: inherit;
-  letter-spacing: inherit;
   font-weight: inherit;
 }
 

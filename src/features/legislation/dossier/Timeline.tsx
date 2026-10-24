@@ -58,7 +58,7 @@ function EventItem({ e: recorded, today }: { e: TimelineEvent; today: ISODate })
                     {safeUrl(j.report.url) ? (
                       <ExtLink href={j.report.url}>{j.report.label || j.report.id}</ExtLink>
                     ) : (
-                      <span className="mono">{j.report.label || j.report.id}</span>
+                      <span className={j.report.label ? undefined : 'mono'}>{j.report.label || j.report.id}</span>
                     )}
                     )
                   </>
@@ -87,7 +87,7 @@ function EventItem({ e: recorded, today }: { e: TimelineEvent; today: ISODate })
                     {safeUrl(doc.url) ? (
                       <ExtLink href={doc.url}>{doc.label || doc.id}</ExtLink>
                     ) : (
-                      <span className="mono">{doc.label || doc.id}</span>
+                      <span className={doc.label ? undefined : 'mono'}>{doc.label || doc.id}</span>
                     )}
                     {doc.label && doc.label !== doc.id && <span className="meta mono"> {doc.id}</span>}
                   </li>
