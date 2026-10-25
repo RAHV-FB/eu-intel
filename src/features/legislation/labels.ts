@@ -86,7 +86,8 @@ export const STAGE_GROUPS: Record<string, { label: string; stages: LifecycleStag
     label: 'Adopted (any stage)',
     stages: ['adopted', 'published', 'in_force', 'takes_effect_on_notification', 'no_longer_in_force'],
   },
-  ended: { label: 'Ended without becoming law', stages: ['withdrawn', 'rejected', 'lapsed'] },
+  // not "ended": a rejection at first reading leaves the file awaiting the Council's first-reading position
+  ended: { label: 'Withdrawn, rejected or lapsed', stages: ['withdrawn', 'rejected', 'lapsed'] },
 };
 
 export const ACTIVE_STAGES = new Set<LifecycleStage>(STAGE_GROUPS.active.stages);

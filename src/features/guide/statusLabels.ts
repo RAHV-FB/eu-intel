@@ -108,7 +108,7 @@ export const STATUS_LABEL_GROUPS: StatusLabelGroup[] = [
   },
   {
     id: 'ended',
-    heading: 'Ended without an act',
+    heading: 'Withdrawn, rejected or lapsed',
     rows: [
       {
         labels: [l('withdrawn', 'Withdrawn by the Commission'), l('withdrawn', 'Replaced by a new Commission proposal')],
@@ -116,7 +116,7 @@ export const STATUS_LABEL_GROUPS: StatusLabelGroup[] = [
       },
       {
         labels: [l('rejected', 'Rejected by Parliament'), l('rejected', 'Consent refused by Parliament')],
-        text: 'Parliament voted to reject the proposal, or refused its consent, which the Council needs to adopt the act.',
+        text: 'Parliament voted to reject the proposal, or refused its consent. A rejection at first reading is Parliament’s first-reading position: the procedure formally continues with the Council’s first-reading position (Article 294(5) TFEU) unless the Commission withdraws the proposal. A rejection of the Council’s position at second reading or of a conciliation text ends it (Article 294(7)(b) and (13) TFEU), and without Parliament’s consent the Council cannot adopt the act. The file’s page says which applies.',
       },
       {
         labels: [l('lapsed', 'Lapsed')],

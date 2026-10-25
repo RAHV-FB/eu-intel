@@ -520,7 +520,22 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   of 7 March 2015 and produced Directive (EU) 2015/1535). A replacement notice, or a notice where OEIL dates
   its own withdrawal before the proposal (2018/0213(COD)), takes the place of OEIL's withdrawal event.
   `validate` fails a build in which a withdrawn file has an act or adoption steps after the withdrawal, or is
-  withdrawn before its proposal.
+  withdrawn before its proposal. The date shown is that of the Cellar event, for a list of withdrawn proposals the
+  date of its publication in the Official Journal (C series); the Commission's decision can be earlier (2023/0133(COD):
+  list C/2025/5423 of 6 October 2025, decision of 16 July 2025 according to Parliament's action in Case C-727/25). A
+  withdrawal "ends the procedure" on the proposal (Court of Justice, C-409/13, paragraph 77: it brings the legislative
+  procedure "to an end"; Art. 293(2) TFEU: the Commission may alter its proposal "during the procedures leading to the
+  adoption of a Union act", legislative or not, such as 2021/0401(CNS) under Art. 78(3) TFEU, whose measures are
+  "non-legislative acts", C-643/15, paragraph 66), and the next step says that it could return as a new proposal or be
+  pending again if the Court of Justice annulled the withdrawal on an action brought within the two-month time limit of
+  Art. 263 TFEU (Art. 263, sixth paragraph: "within two months of the publication of the measure, or of its
+  notification to the plaintiff"; Art. 264: an annulled act is void; Art. 278: an action does not suspend it). That
+  time limit has run out for most withdrawals in our data, which date from 2015 to 2025. Actions against a withdrawal
+  are not in our data: 2023/0133(COD) is one (Case C-727/25, OJ C/2026/89; OEIL still gives "Awaiting Council's 1st
+  reading position"). Before, the 69 withdrawn files of 24 October 2026 said that the proposal "will not become law" (7
+  replaced ones: "in this form") and that "the procedure has ended", 62 of them adding "The proposal could only return
+  as a new Commission proposal". A file OEIL gives as "Procedure lapsed or withdrawn" (2017/0810(COD)) no longer adds
+  "It will not become law".
 - Corrections: where Cellar's date metadata is wrong or was not updated after an amendment, the build applies
   `data/curated/act_dates.yaml`, each date citing the article that sets it (DSA Art. 93, with its Art. 92: the
   Regulation applies earlier to designated very large online platforms and search engines, from four months after
@@ -855,7 +870,20 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   undated (3). `validate` warns about a key report on no timeline step (52 before, 1 now: the split parent
   2016/0224(COD)).
 - Rejection by Parliament: a final vote officially recorded as rejected, or an adopted motion to reject the
-  proposal (2023/0413(COD), vote 179804), unless OEIL shows the file past Parliament's first reading.
+  proposal (2023/0413(COD), vote 179804), unless OEIL shows the file past Parliament's first reading. Under the
+  ordinary procedure a rejection at first reading is Parliament's first-reading position (Art. 294(3) TFEU): it does
+  not by itself end the procedure, whose next step is the Council's first-reading position (Art. 294(5)) unless the
+  Commission withdraws the proposal. The status says so, with OEIL's "Awaiting Council's 1st reading position" where
+  OEIL gives it (2022/0348 and 2023/0413(COD), neither withdrawn on 24 October 2026); a later Council position takes
+  the file to the second reading (2025/0429(COD)). Only a rejection of the Council's position at second reading
+  (Art. 294(7)(b)) or of the conciliation text (Art. 294(13)) ends it: the proposed act is "deemed not to have been
+  adopted". The stage stays `rejected`, so the explorer's group is "Withdrawn, rejected or lapsed", not "Ended without
+  becoming law", and the guide's group heading likewise. Before, the next step said "A rejection normally ends the
+  procedure".
+- A proposal under the ordinary procedure with no committee of Parliament and no referral recorded (2016/0141(COD):
+  only the proposal of 4 May 2016 and two Council debates in OEIL, "Preparatory phase in Parliament") is not said to
+  be examined by Parliament: its status says that no referral to a Parliament committee is recorded and its next step
+  is the referral (6 files on 24 October 2026, five of them proposals of the last weeks).
 - Type of act (`instrument`): the type of the file's adopted act; for a file without a linked act of a known type,
   the type of act proposed as the OEIL procedure file records it ("Legislative instrument"), else as the procedure
   title names it. On 23 October 2026 OEIL's entry named the same type as the English title of the Commission

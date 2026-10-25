@@ -538,6 +538,113 @@ def test_replaced_proposal():
     assert (s.stage, s.label, s.since) == ("withdrawn", "Replaced by a new Commission proposal", "2025-03-11")
     assert "COM(2025)0101" in s.explanation
     assert s.next_step.text.startswith("None")
+    assert "will not become law" not in s.explanation and "has ended" not in s.next_step.text
+    assert s.next_step.text.endswith(
+        "only if the Court of Justice annulled the withdrawal on an action brought within the two-month time limit of "
+        "Article 263 TFEU (Article 264 TFEU)."
+    )
+    assert s.explanation == (
+        "The Commission withdrew its proposal and replaced it with a new one (COM(2025)0101), which ends the procedure "
+        "on this proposal. A withdrawal is a decision of the Commission, not a vote of Parliament."
+    )
+
+
+def test_withdrawal_ends_the_procedure_but_an_annulment_would_make_it_void():
+    # ePrivacy (2017/0003(COD)) is in the Commission's list of withdrawn proposals of 6 October 2025 (OJ C/2025/5423),
+    # with the standard-essential-patents proposal 2023/0133(COD), whose withdrawal Parliament asks the Court of
+    # Justice to annul (Case C-727/25, action of 14 November 2025, OJ C/2026/89; OEIL still "Awaiting Council's 1st
+    # reading position"). A withdrawal brings the procedure to an end (C-409/13, paragraph 77); an action does not
+    # suspend it (Art. 278 TFEU), and an annulled act is void (Art. 264 TFEU): never "it will not become law". The
+    # action must be brought within two months (Art. 263 TFEU, sixth paragraph), past for most withdrawals
+    s = status("2017-0003")
+    assert s.explanation == (
+        "The Commission withdrew its proposal, which ends the procedure on it. A withdrawal is a decision of the "
+        "Commission, not a vote of Parliament."
+    )
+    assert s.next_step.text == (
+        "None recorded: a withdrawn proposal does not proceed. It could return as a new Commission proposal, or be "
+        "pending again if the Court of Justice annulled the withdrawal on an action brought within the two-month time "
+        "limit of Article 263 TFEU (Article 264 TFEU)."
+    )
+    # OEIL's "Procedure lapsed or withdrawn" (2017/0810(COD)) names no closing step: no consequence is asserted
+    s = classify(rec("2023-0413").model_copy(update={"stage_raw": "Procedure lapsed or withdrawn"}), [], [], TODAY)
+    assert (s.stage, s.label) == ("lapsed", "Lapsed or withdrawn")
+    assert "will not become law" not in s.explanation
+
+
+def test_withdrawal_of_a_non_legislative_proposal_is_not_called_a_legislative_procedure():
+    # 2021/0401(CNS): COM(2021)752, provisional emergency measures under Art. 78(3) TFEU, which are "non-legislative
+    # acts" because "they are not adopted at the end of a legislative procedure" (C-643/15, paragraph 66); OEIL
+    # "Proposal withdrawn by Commission" on 6 October 2025. Art. 293(2) TFEU covers all "procedures leading to the
+    # adoption of a Union act"
+    s = classify(rec("2021-0401"), [], [], TODAY)
+    assert (s.stage, s.label, s.since) == ("withdrawn", "Withdrawn by the Commission", "2025-10-06")
+    assert s.explanation.startswith("The Commission withdrew its proposal, which ends the procedure on it.")
+    assert "legislative" not in s.explanation
+    assert "two-month time limit of Article 263 TFEU" in s.next_step.text
+
+
+def test_rejection_at_first_reading_is_parliaments_position_and_does_not_end_the_procedure():
+    # 2023/0413(COD) (forest monitoring): motion to reject adopted on 21 October 2025 (vote 179804, 370-264-9;
+    # T10-0240/2025 "Rejects the Commission proposal"), OEIL "Decision by Parliament, 1st reading" and "Awaiting
+    # Council's 1st reading position", no withdrawal. Art. 294(3) and (5) TFEU: Parliament's position at first
+    # reading, then the Council's; only a rejection at second reading (294(7)(b)) or of the joint text (294(13)) ends it
+    rejected = _event("rejection", "2025-10-21", "ep_vote:reject_proposal:adopted",
+                      "Parliament rejected the proposal in a plenary vote")  # fmt: skip
+    p = _with_events(rec("2023-0413"), rejected)
+    s = classify(p, [], [], TODAY)
+    assert (s.stage, s.label, s.since, s.basis) == ("rejected", "Rejected by Parliament", "2025-10-21", "source")
+    assert s.explanation == (
+        "Parliament voted to reject the proposal. Under the ordinary legislative procedure this is its position at "
+        "first reading (Article 294(3) TFEU), which does not by itself end the procedure: unless the Commission "
+        "withdraws the proposal, the Council adopts its own first-reading position next (Article 294(5) TFEU). "
+        "(Legislative Observatory status: “Awaiting Council's 1st reading position”.)"
+    )
+    assert s.next_step.text == (
+        "The Council adopts its own first-reading position, which returns to Parliament for a second reading "
+        "(Article 294(5) and (7) TFEU), unless the Commission withdraws its proposal. Neither is recorded."
+    )
+    assert (s.next_step.institution, s.next_step.basis) == ("Council", "source")
+    assert "normally ends" not in all_text(s)
+    # without OEIL's stage the next step rests on the Treaty alone
+    s = classify(p.model_copy(update={"stage_raw": None}), [], [], TODAY)
+    assert s.next_step.basis == "derived" and "Legislative Observatory" not in s.explanation
+    # the Council's first-reading position after it: the procedure went on (2025/0429(COD): rejected on 26 March
+    # 2026, Council position 2 July 2026, Regulation (EU) 2026/1881)
+    position = _event("council_position", "2026-07-02", "oeil:Council position published",
+                      "Council adopted its first-reading position", "Council")  # fmt: skip
+    second = _with_events(p, position).model_copy(update={"stage_raw": "Awaiting Parliament 2nd reading"})
+    s = classify(second, [], [], TODAY)
+    assert (s.stage, s.label) == ("negotiations", "Second reading in Parliament")
+    # a rejection of the Council's position, or of the conciliation text, ends it: deemed not adopted
+    for code, para in (("PLENARY_REJECT_COUNCIL_POSITION", "294(7)(b)"), ("PLENARY_REJECT_JOINT_TEXT", "294(13)")):
+        ended = _with_events(second, _event("rejection", "2026-09-15", f"def/ep-activities/{code}",
+                                            "Parliament rejected the text"))  # fmt: skip
+        s = classify(ended, [], [], TODAY)
+        assert (s.stage, s.label, s.since) == ("rejected", "Rejected by Parliament", "2026-09-15")
+        assert s.explanation.endswith(f"so the act is not adopted (Article {para} TFEU).")
+        assert s.next_step.text == (
+            f"None: the proposed act is deemed not to have been adopted (Article {para} TFEU), so the procedure has "
+            "ended."
+        )
+
+
+def test_proposal_without_a_committee_referral_is_not_said_to_be_examined_by_parliament():
+    # 2016/0141(COD) (visa exemption for Turkey): OEIL lists the proposal of 4 May 2016 and two Council debates (20 May
+    # and 10 June 2016), no committee of Parliament and no referral to one; "Preparatory phase in Parliament"
+    s = classify(rec("2016-0141"), [], [], TODAY)
+    assert (s.stage, s.label, s.since) == ("proposed", "Proposal under examination", "2016-05-04")
+    assert s.explanation.startswith("No referral of the proposal to a Parliament committee is recorded.")
+    assert s.next_step.text == (
+        "Parliament refers the proposal to one of its committees, which prepares and votes on a report."
+    )
+    assert (s.next_step.institution, s.stall.last_event_date if s.stall else None) == ("EP", "2016-06-10")
+    # once referred (OEIL "Committee referral announced in Parliament, 1st reading"), its committee reports
+    referral = _event("referral", "2016-06-20", "def/ep-activities/REFERRAL",
+                      "Announced in Parliament and referred to committee")  # fmt: skip
+    s = classify(_with_events(rec("2016-0141"), referral), [], [], TODAY)
+    assert s.explanation.startswith("Parliament is examining the proposal.")
+    assert s.next_step.text == "Parliament's responsible committee prepares and votes on its report."
 
 
 def test_mandate_decision_alone_is_not_negotiations():
