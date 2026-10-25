@@ -17,6 +17,11 @@
   margin: 0;
 }
 
+/* an action under the hint ("Clear all filters") */
+.state p + .btn {
+  margin-top: var(--sp-3);
+}
+
 .state--loading {
   flex-direction: row;
   align-items: center;
@@ -236,6 +241,7 @@
   font: inherit;
   text-decoration: underline dotted var(--blue-muted);
   text-underline-offset: 0.2em;
+  text-align: start; /* a term that wraps reads like text (a button centres its lines) */
   cursor: help;
 }
 

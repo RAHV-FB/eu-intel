@@ -249,16 +249,17 @@ hr {
 }
 
 /*
- * The link that is the whole primary content of a list row or table cell (a title, a name): navy, not underlined,
- * underlined on hover and focus. Rows hold little other text, so the link does not rely on colour alone. Links inside
- * sentences keep the default style; a secondary link in the same cell is quieter (.sub-link).
+ * The link that is the whole primary content of a list row or table cell (a title, a name): navy, with a quiet
+ * underline at rest (navy text is barely darker than body text, and phones have no hover), a full one on hover and
+ * focus. Links inside sentences keep the default style; a secondary link in the same cell is quieter (.sub-link): grey
+ * and regular weight, with the same quiet underline.
  */
 .row-link,
 a.row-title,
 .table tbody th[scope='row'] > a:first-child {
   color: var(--navy);
   font-weight: var(--fw-medium);
-  text-decoration: none;
+  text-decoration-color: var(--underline-quiet);
 }
 
 .row-link:hover,
@@ -274,12 +275,15 @@ a.row-title:focus-visible,
 
 .sub-link {
   color: var(--text-2);
+  text-decoration-color: var(--underline-quiet);
 }
 
 /*
  * Metadata separated by middle dots ("Ordinary legislative procedure · Regulation · 2026/0325(COD)"). Each item opens
- * with its dot, and the dot that would open a line is cut off at the left edge, so a wrapped line never starts with
- * a separator. (The search results' metadata uses it too.)
+ * with its dot, in a strip of its own (a hanging indent, so the item's wrapped lines start after the strip too), and
+ * the dot that would open a line is cut off at the left edge, so a wrapped line never starts with a separator. The cut
+ * stops 6px short of the text, room for the focus outline (3px, offset 2px) of a link that opens a line. (The search
+ * results' metadata uses it too.)
  */
 .dot-list,
 .sr-item__meta {
@@ -287,21 +291,31 @@ a.row-title:focus-visible,
   display: flex;
   flex-wrap: wrap;
   margin-left: calc(-1 * var(--dot-w));
-  clip-path: inset(-0.5em -0.5em -0.5em var(--dot-w)); /* room for focus outlines above, below and to the right */
+  clip-path: inset(-0.5em -0.5em -0.5em calc(var(--dot-w) - 6px)); /* room for focus outlines on every side */
+}
+
+.dot-list > *,
+.sr-item__meta > * {
+  position: relative;
+  padding-left: var(--dot-w);
 }
 
 .dot-list > *::before,
 .sr-item__meta > *::before {
   content: '·';
   content: '·' / '';
-  display: inline-block;
+  position: absolute;
+  left: 0;
+  top: 0;
   width: var(--dot-w);
   text-align: center;
   text-decoration: none;
 }
 
-.sub-link:hover {
+.sub-link:hover,
+.sub-link:focus-visible {
   color: var(--eu-blue);
+  text-decoration-color: currentColor;
 }
 
 /* ---------- notes ---------- */

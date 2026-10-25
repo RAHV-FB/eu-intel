@@ -906,7 +906,8 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
 ### Split procedures and Parliament reports (`build.py` `classify`, related files)
 - A split procedure's parent known only from EUR-Lex (10 of the 12, e.g. 2016/0400(COD)) has no title of its own
   in the sources: its page title says what it was split into and `official_title` is null ("Not recorded" on the
-  page). Its "Split into" relations carry each part's `ref` and `status_label`, and its status text links the
+  page). Its "Split into" relations carry each part's title in full (the parts' titles can differ only in their
+  last words, "... - part I", "... - part II"), `ref` and `status_label`, and its status text links the
   parts (`status.named_acts` entries with an empty `celex`: a procedure reference linked to its file). Its sources
   are the parts' OEIL procedure files ("... 2016/0400A(COD) (separate file)"), not the EUR-Lex record of one part's
   act that the parent's record was built from; a Legislative Train page on one part, which records the proposal's

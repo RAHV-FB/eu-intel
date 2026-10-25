@@ -108,7 +108,7 @@ function DossierPage({ id }: { id: string }) {
       <LookupNotice failed={topicsFailed && d.topics.length > 0} what="Topic names" />
 
       <header className="dz-head" id="summary">
-        <h1 className={`dz-title${d.title.length > 110 ? ' dz-title--long' : ''}`}>{d.title}</h1>
+        <h1 className={`dz-title${d.title.length > 110 ? ' dz-title--long' : ''}${d.title.length > 220 ? ' dz-title--very-long' : ''}`}>{d.title}</h1>
         {d.known_as && <KnownAs k={d.known_as} />}
         {/* "Is it law yet?" on the first screen of every file: the status, explained under "Current status" below */}
         <p className="dz-statusline">
@@ -171,12 +171,12 @@ function DossierPage({ id }: { id: string }) {
                 <dt>Type</dt>
                 <dd>
                   {d.type === 'COD' ? <Term id="olp">{d.type_label}</Term> : d.type_label}
+                  {/* the kind of act on a line of its own: no separator to open a wrapped line */}
                   {d.instrument && d.instrument !== 'other' && (
-                    <>
-                      {' · '}
+                    <span className="as-block">
                       {INSTRUMENT_LABEL[d.instrument]}
                       {!d.acts.some((a) => a.act_type === d.instrument) && ' (as proposed)'}
-                    </>
+                    </span>
                   )}
                 </dd>
               </div>

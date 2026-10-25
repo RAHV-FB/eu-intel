@@ -186,6 +186,11 @@ test.describe('split parents and Parliament reports', () => {
     const parts = page.locator('.dz-what a');
     await expect(parts).toHaveText([/^2016\/0400A\(COD\) Adapting/, /^2016\/0400B\(COD\) Adapting/]);
     await expect(page.locator('.dz-parts li').nth(1)).toContainText('Withdrawn by the Commission');
+    // each part's title in full, which is where they differ
+    await page.setViewportSize({ width: 320, height: 800 });
+    const titles = page.locator('.dz-parts__title');
+    await expect(titles).toHaveText([/Functioning of the EU - part I$/, /Functioning of the European Union - part II$/]);
+    for (const t of await titles.all()) expect(await t.evaluate((el) => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
     await expectNoSeriousA11yViolations(page);
   });
 
@@ -228,6 +233,18 @@ test.describe('split parents and Parliament reports', () => {
 });
 
 test.describe('Following', () => {
+  test('a long title is clamped to three lines, as in the legislation list, with the full title on hover', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await open(page, 'following/?ids=2021-0106,2023-0212,2023-0378');
+    const link = page.locator('.following__title a[data-follow-title="2023-0378"]');
+    const full = await link.textContent();
+    expect(full!.length).toBeGreaterThan(600);
+    await expect(link).toHaveAttribute('title', full!);
+    const lines = await link.evaluate((a) => a.getBoundingClientRect().height / parseFloat(getComputedStyle(a).lineHeight));
+    expect(lines).toBeLessThanOrEqual(3.1);
+    await expect(page.locator('.following__title a[data-follow-title="2021-0106"]')).not.toHaveAttribute('title');
+  });
+
   test('the Follow toggle keeps its name; Unfollow and Clear all keep keyboard focus on the page', async ({ page }) => {
     for (const id of ['2021-0106', '2022-0047', '2020-0374']) {
       await open(page, `legislation/${id}/`);

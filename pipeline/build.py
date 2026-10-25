@@ -4368,9 +4368,9 @@ class Builder:
                                 related.setdefault(f"{attr}:{other}", {
                                     "id": other, "title": self.related_act_title(c, other, topic=True), "relation": label,
                                 })  # fmt: skip
-            for child in self.split_children.get(pid, []):
+            for child in self.split_children.get(pid, []):  # in full: the parts' titles can differ only at the end
                 related.setdefault(f"split:{child}", {
-                    "id": child, "title": _truncate(self.dossier_summary[child]["title"], 160), "relation": "Split into",
+                    "id": child, "title": self.dossier_summary[child]["title"], "relation": "Split into",
                     "ref": self.dossier_summary[child]["ref"], "status_label": self.dossier_summary[child]["status_label"],
                 })  # fmt: skip
             # a report and its main file have the same title: their links also give the procedure reference
