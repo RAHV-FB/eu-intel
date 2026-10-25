@@ -13,6 +13,7 @@ import { GroupMajority, MiniBar } from '../features/votes/Breakdowns';
 import { SortTh, useSortable } from '../features/votes/sortable';
 import { VoteRowMeta, VoteTitle } from '../features/votes/VoteTitle';
 import { RowTitle } from '../components/StackedTable';
+import { useFocusRevealed } from '../components/useFocusRevealed';
 import { cohesionPercent, cohesionText } from '../features/votes/labels';
 import '../features/people/people.css';
 
@@ -83,6 +84,8 @@ export default function Group() {
 
   // a vote's date while the vote list loads, or when it failed to: not "—", which means not recorded
   const unknown = votesIndex.error ? <span className="muted">Not loaded</span> : <span className="muted">…</span>;
+  // "Show more votes" moves keyboard focus to the first vote it shows
+  const more = useFocusRevealed<HTMLTableSectionElement>(Math.min(shown, vs.sorted.length));
 
   if (loading) return <div className="container page"><Loading label="Loading group…" /></div>;
   if (isMissing(error)) return <NotFound what="political group" />;
@@ -310,7 +313,7 @@ export default function Group() {
                     )}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody ref={more.ref}>
                   {vs.sorted.slice(0, shown).map((r) => (
                     <tr key={r.vote_id}>
                       <td className="nowrap hide-narrow">{r.v ? formatDate(r.v.date) : votesIndex.data ? '—' : unknown}</td>
@@ -344,7 +347,14 @@ export default function Group() {
             </div>
             {vs.sorted.length > shown && (
               <div className="more">
-                <button type="button" className="btn" onClick={() => patch({ show: String(shown + VOTES_PAGE) })}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    more.reveal();
+                    patch({ show: String(shown + VOTES_PAGE) });
+                  }}
+                >
                   Show more votes
                 </button>
                 <span className="meta">

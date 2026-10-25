@@ -7,6 +7,8 @@ import { loadSearch, type SearchEngine } from '../lib/search';
 import { clearAllParams, shownParam, useParamState, useParamText } from '../lib/urlState';
 import { EmptyState, ErrorState, Loading, LookupNotice, PageHeader, Term } from '../components/ui';
 import { CollapsibleFilters } from '../components/CollapsibleFilters';
+import { ResultCount } from '../components/ResultCount';
+import { useFocusRevealed } from '../components/useFocusRevealed';
 import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 // the filter panel and labelled controls of /legislation, so that both lists look and work alike
 import '../features/legislation/common.css';
@@ -86,9 +88,10 @@ export default function Votes() {
   // keyword search: whole words in the vote titles and references, or the search index's matches on the
   // linked legislative file (its common names); the index is loaded only once there is a query
   const [engine, setEngine] = useState<SearchEngine | null>(null);
+  const [engineFailed, setEngineFailed] = useState(false);
   const hasQuery = !!q.trim();
   useEffect(() => {
-    if (hasQuery && !engine) loadSearch().then(setEngine, () => undefined);
+    if (hasQuery && !engine) loadSearch().then(setEngine, () => setEngineFailed(true));
   }, [hasQuery, engine]);
   const haystacks = useMemo(() => (hasQuery ? voteHaystacksOnce(votes) : new Map<string, Set<string>>()), [votes, hasQuery]);
   const keywordMatch = useMemo(() => matchVoteDetails(votes, haystacks, q, engine), [votes, haystacks, q, engine]);
@@ -141,6 +144,10 @@ export default function Votes() {
     else rows.sort(byDate);
     return rows;
   }, [votes, tests, sort]);
+
+  const visible = filtered.slice(0, shown);
+  // "Show more" moves keyboard focus to the first vote it shows
+  const more = useFocusRevealed<HTMLUListElement>(visible.length, '.vote-item__title a');
 
   const active = [q, year, kind, outcome, topic, dossier, close ? '1' : ''].some(Boolean);
   // what the phone toggle reports: everything behind it that differs from the default, including the order
@@ -283,7 +290,7 @@ export default function Votes() {
           {/* the votes' titles are h3: this heading puts them under the page's h1 in the outline */}
           <h2 className="visually-hidden">Results</h2>
           <div className="results-bar votes-results">
-            <p className="results-bar__count" aria-live="polite">
+            <ResultCount className="results-bar__count" pending={hasQuery && !engine && !engineFailed}>
               {filtered.length === votes.length ? plural(votes.length, 'vote') : `${formatNumber(filtered.length)} of ${plural(votes.length, 'vote')}`}
               {keywordMatch?.partial && filtered.length > 0 && (
                 <>
@@ -301,7 +308,7 @@ export default function Votes() {
                   {keywordMatch.similar ? <>a similar word: {keywordMatch.similar.map((w) => `“${w}”`).join(', ')}</> : 'all but one of the words'})
                 </>
               )}
-            </p>
+            </ResultCount>
             {active && (
               <button type="button" className="linkish" onClick={() => patch(clearAllParams())}>
                 Clear all filters
@@ -335,14 +342,21 @@ export default function Votes() {
             <EmptyState title="No votes match these filters">Try removing a filter or searching for a different word.</EmptyState>
           ) : (
             <>
-              <ul className="vote-list">
-                {filtered.slice(0, shown).map((v) => (
+              <ul className="vote-list" ref={more.ref}>
+                {visible.map((v) => (
                   <VoteListItem key={v.id} v={v} listUrl={listUrl} />
                 ))}
               </ul>
               {filtered.length > shown && (
                 <div className="more">
-                  <button type="button" className="btn" onClick={() => setShown(shown + PAGE)}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      more.reveal();
+                      setShown(shown + PAGE);
+                    }}
+                  >
                     Show {formatNumber(Math.min(PAGE, filtered.length - shown))} more
                   </button>
                   <span className="meta">

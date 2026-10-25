@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { DossierSummary, LegalInstrument, Meta } from '../types/data';
 import { useData, DATA_BASE } from '../lib/data';
@@ -10,6 +10,8 @@ import { clearAllParams, useParamState, useParamText, type ParamPatch } from '..
 import { EmptyState, ErrorState, Loading, LookupNotice, PageHeader } from '../components/ui';
 import { useMediaQuery } from '../components/useMediaQuery';
 import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
+import { ResultCount } from '../components/ResultCount';
+import { useFocusRevealed } from '../components/useFocusRevealed';
 import {
   INSTRUMENT_LABEL,
   STAGE_GROUPS,
@@ -87,9 +89,10 @@ export default function Legislation() {
 
   // ---- search engine for ranking (loaded only when there is a query)
   const [engine, setEngine] = useState<SearchEngine | null>(null);
+  const [engineFailed, setEngineFailed] = useState(false);
   const hasQuery = !!state.q.trim();
   useEffect(() => {
-    if (hasQuery && !engine) loadSearch().then(setEngine, () => undefined);
+    if (hasQuery && !engine) loadSearch().then(setEngine, () => setEngineFailed(true));
   }, [hasQuery, engine]);
 
   const rows = index.data ?? [];
@@ -153,25 +156,20 @@ export default function Legislation() {
   const visible = sorted.slice(0, state.show);
 
   // "Show more": move keyboard focus to the first newly revealed result.
-  const listRef = useRef<HTMLOListElement>(null);
-  const focusFrom = useRef<number | null>(null);
-  useEffect(() => {
-    const i = focusFrom.current;
-    if (i == null) return;
-    focusFrom.current = null;
-    listRef.current?.querySelectorAll<HTMLAnchorElement>('.drow__title a')[i]?.focus();
-  }, [visible.length]);
+  const more = useFocusRevealed<HTMLOListElement>(visible.length, '.drow__title a');
 
   const ids = useId();
-  const [copied, setCopied] = useState(false);
+  // "Copy link to this view": the button says how it went, and so does a status message for screen readers
+  const [copied, setCopied] = useState<'' | 'yes' | 'no'>('');
   const copyLink = async () => {
+    let ok = true;
     try {
       await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
     } catch {
-      setCopied(false);
+      ok = false;
     }
+    setCopied(ok ? 'yes' : 'no');
+    setTimeout(() => setCopied(''), ok ? 2500 : 6000);
   };
 
   const chips: { key: string; label: string; clear: () => void }[] = [];
@@ -388,8 +386,10 @@ export default function Legislation() {
 
       {index.data && (
         <>
+          {/* the files' titles are h3: this heading puts them under the page's h1 in the outline */}
+          <h2 className="visually-hidden">Results</h2>
           <div className="lx-results-head">
-            <p className="lx-count" role="status" aria-live="polite" aria-atomic="true">
+            <ResultCount className="lx-count" pending={hasQuery && !engine && !engineFailed}>
               <strong>{formatNumber(sorted.length)}</strong> {sorted.length === 1 ? 'file' : 'files'}
               {anyFilter ? <> match{sorted.length === 1 ? 'es' : ''}</> : <> in our dataset</>}
               {relatedShown > 0 && relatedShown < sorted.length && (
@@ -426,7 +426,7 @@ export default function Legislation() {
                 </span>
               )}
               {sorted.length > 0 && <span className="meta"> · sorted by {SORT_LABEL[state.sort].toLowerCase()}</span>}
-            </p>
+            </ResultCount>
             <div className="lx-results-tools">
               {state.topic && !noTopic && (
                 <a className="lx-linkbtn" href={`${DATA_BASE}feeds/${encodeURIComponent(state.topic)}.xml`}>
@@ -435,9 +435,16 @@ export default function Legislation() {
               )}
               {anyFilter && (
                 <button type="button" className="lx-linkbtn" onClick={copyLink}>
-                  {copied ? 'Link copied' : 'Copy link to this view'}
+                  {copied === 'yes' ? 'Link copied' : copied === 'no' ? 'Could not copy the link' : 'Copy link to this view'}
                 </button>
               )}
+              <p className="visually-hidden" role="status">
+                {copied === 'yes'
+                  ? 'Link copied to your clipboard.'
+                  : copied === 'no'
+                    ? 'The link could not be copied. Copy it from the browser’s address bar.'
+                    : ''}
+              </p>
             </div>
           </div>
 
@@ -490,7 +497,7 @@ export default function Legislation() {
             </EmptyState>
           ) : (
             <>
-              <ol className="drows" aria-label="Legislative files" ref={listRef}>
+              <ol className="drows" aria-label="Legislative files" ref={more.ref}>
                 {visible.map((d) => (
                   <DossierRow key={d.id} d={d} sort={state.sort} today={today} topicLabel={topicLabel} following={followed.has(d.id)} />
                 ))}
@@ -504,7 +511,7 @@ export default function Legislation() {
                     type="button"
                     className="btn"
                     onClick={() => {
-                      focusFrom.current = visible.length;
+                      more.reveal();
                       update({ show: String(state.show + PAGE_SIZE * 2) }, { keepShow: true });
                     }}
                   >

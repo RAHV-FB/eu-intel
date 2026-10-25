@@ -5,6 +5,8 @@ import { formatDate, formatNumber } from '../../lib/format';
 import { shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { dossierScores, loadSearch, type SearchEngine } from '../../lib/search';
 import { EmptyState, ExtLink, Term } from '../../components/ui';
+import { ResultCount } from '../../components/ResultCount';
+import { useFocusRevealed } from '../../components/useFocusRevealed';
 import { EURLEX_CELEX, TRANSPOSITION_LABEL, dossierPath } from '../legislation/labels';
 import { SortTh, useSortable } from '../votes/sortable';
 import { matchCases, matchDirectives, queryNumber } from './directiveSearch';
@@ -65,9 +67,10 @@ export function TranspositionTable({
   }, [rows]);
   // files the site search finds for the query (common names, aliases); the index is loaded once there is a query
   const [engine, setEngine] = useState<SearchEngine | null>(null);
+  const [engineFailed, setEngineFailed] = useState(false);
   const hasQuery = !!q.trim();
   useEffect(() => {
-    if (hasQuery && !engine) loadSearch().then(setEngine, () => undefined);
+    if (hasQuery && !engine) loadSearch().then(setEngine, () => setEngineFailed(true));
   }, [hasQuery, engine]);
   const files = useMemo(
     () => (engine && hasQuery ? new Set(dossierScores(engine, q, queryNumber(q) ? { identifiers: true } : { wholeWords: true }).keys()) : null),
@@ -89,6 +92,8 @@ export function TranspositionTable({
   );
   // the directive whose own number was searched for comes first, before acts whose titles only cite it
   const sorted = match.own.size ? [...bySort.filter((r) => match.own.has(r.celex)), ...bySort.filter((r) => !match.own.has(r.celex))] : bySort;
+  // "Show more directives" moves keyboard focus to the first directive it shows
+  const more = useFocusRevealed<HTMLTableSectionElement>(Math.min(shown, sorted.length));
 
   if (rows.length === 0)
     return <EmptyState title="No directives with transposition data for this country in this release" />;
@@ -120,10 +125,10 @@ export function TranspositionTable({
           </select>
         </div>
       </form>
-      <p className="results-bar__count" aria-live="polite" style={{ marginBottom: 'var(--sp-2)' }}>
+      <ResultCount className="results-bar__count" style={{ marginBottom: 'var(--sp-2)' }} pending={hasQuery && !engine && !engineFailed}>
         {formatNumber(filtered.length)} {filtered.length === 1 ? 'directive' : 'directives'}
         {match.partial && filtered.length > 0 && <> · no whole-word matches for “{q.trim()}”, so these have words that start with it</>}
-      </p>
+      </ResultCount>
       {filtered.length === 0 && hasQuery && (
         <p className="meta">
           No directive in this list matches “{q.trim()}”. The list covers the directives adopted in the legislative files on this site.{' '}
@@ -152,7 +157,7 @@ export function TranspositionTable({
                 </SortTh>
               </tr>
             </thead>
-            <tbody>
+            <tbody ref={more.ref}>
               {sorted.slice(0, shown).map((r) => (
                 <tr key={r.celex}>
                   <td className="impl-dir">
@@ -220,7 +225,14 @@ export function TranspositionTable({
       )}
       {sorted.length > shown && (
         <div className="more">
-          <button type="button" className="btn" onClick={() => patch({ 'tr-show': String(shown + PAGE * 2) })}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              more.reveal();
+              patch({ 'tr-show': String(shown + PAGE * 2) });
+            }}
+          >
             Show more directives
           </button>
           <span className="meta">
@@ -284,6 +296,8 @@ export function InfringementTable({ rows, directives = NO_DIRECTIVES }: { rows: 
     { date: 'desc' },
     'inf-sort',
   );
+  // "Show more cases" moves keyboard focus to the first case it shows
+  const more = useFocusRevealed<HTMLTableSectionElement>(Math.min(shown, sorted.length));
 
   if (rows.length === 0) return <EmptyState title="No infringement cases for this country in the available dataset" />;
 
@@ -315,10 +329,10 @@ export function InfringementTable({ rows, directives = NO_DIRECTIVES }: { rows: 
           </div>
         )}
       </form>
-      <p className="results-bar__count" aria-live="polite" style={{ marginBottom: 'var(--sp-2)' }}>
+      <ResultCount className="results-bar__count" style={{ marginBottom: 'var(--sp-2)' }}>
         {formatNumber(filtered.length)} {filtered.length === 1 ? 'case' : 'cases'}
         {match.partial && filtered.length > 0 && <> · no whole-word matches for “{q.trim()}”, so these have words that start with it</>}
-      </p>
+      </ResultCount>
       {filtered.length === 0 && q.trim() && (
         <p className="meta">
           No case {status ? 'with this status' : 'in this list'} matches “{q.trim()}”. Cases are found by their subject and number, and by
@@ -346,7 +360,7 @@ export function InfringementTable({ rows, directives = NO_DIRECTIVES }: { rows: 
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody ref={more.ref}>
               {sorted.slice(0, shown).map((r) => (
                 <tr key={r.id}>
                   <td className="nowrap mono">
@@ -373,7 +387,14 @@ export function InfringementTable({ rows, directives = NO_DIRECTIVES }: { rows: 
       )}
       {sorted.length > shown && (
         <div className="more">
-          <button type="button" className="btn" onClick={() => patch({ 'inf-show': String(shown + PAGE * 2) })}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              more.reveal();
+              patch({ 'inf-show': String(shown + PAGE * 2) });
+            }}
+          >
             Show more cases
           </button>
           <span className="meta">
