@@ -144,3 +144,30 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+      # Unlike preview-only tests, these requests check the publicly published URL.
+      # They fail the release if a deep link or static JSON is missing after deployment.
+      - name: Verify published site and deep links
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          test -n "$PAGE_URL"
+          base="${PAGE_URL%/}/"
+          tmp="$(mktemp)"
+          trap 'rm -f "$tmp"' EXIT
+          for route in "" "insights/" "legislation/" "votes/" "people/" "countries/" "data/meta.json"; do
+            echo "Checking ${base}${route}"
+            curl --fail --silent --show-error --location \
+              --retry 12 --retry-delay 5 --retry-all-errors \
+              --output "$tmp" "${base}${route}"
+            if [[ "$route" == "data/meta.json" ]]; then
+              python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["counts"]["dossiers"] > 0; assert d["counts"]["ep_votes"] > 0' "$tmp"
+            else
+              grep -q '<title>' "$tmp"
+              if [[ "$route" == "insights/" ]]; then
+                grep -q 'Data insights' "$tmp"
+              fi
+            fi
+          done
+          echo "Public site smoke checks passed."

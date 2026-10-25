@@ -305,6 +305,9 @@ test.describe('pages while they load', () => {
     await page.goto('./');
     const loading = page.locator('.state--loading');
     await expect(loading).toBeVisible();
+    // Keep the editorial Insights teaser out of the loading state:
+    // the loading message must remain in the first viewport, including Safari/WebKit.
+    await expect(page.locator('.home-insights-feature')).toHaveCount(0);
     await expect(loading).toBeInViewport();
     const text = await loading.evaluate((el) => {
       const r = document.createRange();
@@ -316,6 +319,7 @@ test.describe('pages while they load', () => {
     expect(before).toBeGreaterThanOrEqual(800);
     release();
     await settle(page);
+    await expect(page.locator('.home-insights-feature')).toBeVisible();
   });
 });
 
