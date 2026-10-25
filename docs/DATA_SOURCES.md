@@ -1141,10 +1141,11 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   15 April 2020", CELEX 52020AG0008(01)).
 - `procedure_refs`: the interinstitutional files on page 1, a split part also when written with a space or slash
   before its letter ("2016/0360 A (COD)" in ST 9252/19, the adoption of Regulation (EU) 2019/876; "2016/0224/A(COD)").
-- 746 voting results 2019-01 → 2026-10 (748 Council votes listed and counted on the About page, with the curated
-  records CM-5860-2022 and CM-5860-2022-2, 746 of them with positions, as the country pages count them, of 748; the About page's source card
-  and coverage note give these figures and how the 748 divide); 744 with positions; rules: 702 QMV, 44 unanimity (as
-  the sheets print them); 2 notes without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
+- 746 voting results 2019-01 → 2026-10, 744 of them with each Member State's position; rules as the sheets print
+  them: 702 QMV, 44 unanimity. With the curated records CM-5860-2022 and CM-5860-2022-2 (adoptions by written
+  procedure, with positions), 748 Council votes are listed and counted on the About page, 746 of them with positions,
+  as the country pages count them; with the 4 corrections of a printed "qualified majority" to unanimity
+  (`council_votes.yaml`), the votes listed are 698 QMV and 50 unanimity. 2 notes without positions (ST 7085/20: two voting sheets that cannot be told apart; ST 7080/24: one country's vote
   unreadable). `meta.json` (`sources[council].note`) gives the counts of each release. Verified against the
   rendered sheets: AI Act (ST 10199/24, 27 in favour), Copyright Directive 2019 (6 against, 3 abstentions),
   Eurodac 2024 (DK/IE not participating), the wolf Directive 2025 (ST 9887/25: 24 in favour, Belgium, Spain and
@@ -1253,7 +1254,7 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   `states_required_alt` 72%); the note says that the sheet's footnote on the threshold is part of the image we
   do not read, and that the vote is not linked to a procedure file in our data (12 votes, 10 of them budget votes)
   or that our record of the procedure names no proposal (2018/0900(COD), ST 8363/19): 13 votes carry the note in
-  all (counted in the build of 24 October 2026). 14 of the 747 Council votes have no procedure link: those 12 and
+  all (counted in the build of 24 October 2026). 14 of the 748 Council votes have no procedure link: those 12 and
   the two under unanimity (ST 6475/24, ST 14429/19), which need no threshold and carry no such note. An ordinary
   procedure whose recorded proposal is the Court of Justice's request (OEIL "CJEC | Legislative proposal",
   `court_request`) is not on a Commission proposal: 72% of Member States, TFEU Art. 238(2) (2022/0906(COD),
