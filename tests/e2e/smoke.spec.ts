@@ -12,6 +12,7 @@ const PRIMARY = [
   { path: './', label: 'Discover' },
   { path: 'legislation', label: 'Legislation' },
   { path: 'votes', label: 'Votes' },
+  { path: 'insights', label: 'Insights' },
   { path: 'people', label: 'People & Parties' },
   { path: 'countries', label: 'Countries' },
   { path: 'how-the-eu-works', label: 'How the EU Works' },
