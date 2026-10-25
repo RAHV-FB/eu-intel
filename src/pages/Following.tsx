@@ -109,7 +109,7 @@ function Item({
     <li className="following__item">
       <div>
         <h3 className="following__title">
-          <Link to={dossierPath(d.id)} data-follow-title={d.id}>
+          <Link to={dossierPath(d.id)} data-follow-title={d.id} title={d.title.length > 160 ? d.title : undefined}>
             {d.title}
           </Link>
         </h3>

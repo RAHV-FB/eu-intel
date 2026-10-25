@@ -29,6 +29,7 @@
   --text-2: #4f5e73; /* secondary: 6.6:1 on white */
   --text-3: #66758a; /* muted metadata: 4.7:1 on white — minimum for body-size text */
   --link: #003399;
+  --underline-quiet: rgba(16, 36, 73, 0.5); /* a row link's underline at rest: 3.1:1 on white and on --surface-sunk */
   --focus: #1a56db;
 
   /* Status (lifecycle) — used as dot/stripe beside a text label */

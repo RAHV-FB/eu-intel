@@ -56,6 +56,15 @@
   line-height: 1.2;
 }
 
+/* a title over 220 characters, on a phone: one size smaller again, so that the status under it stays on the first
+   screen */
+@media (max-width: 39.99rem) {
+  .dz-title--very-long {
+    font-size: var(--fs-md);
+    line-height: 1.25;
+  }
+}
+
 .dz-known {
   margin: calc(-1 * var(--sp-2)) 0 var(--sp-3);
   color: var(--text-2);
@@ -242,11 +251,8 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* in full, not clamped: the parts' titles can differ only in their last words ("… - part I", "… - part II") */
 .dz-parts__title {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }

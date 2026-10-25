@@ -78,6 +78,12 @@ describe.skipIf(!built)('dossiers on the built data', () => {
       ['2016/0400A(COD)', 'In force'],
       ['2016/0400B(COD)', 'Withdrawn by the Commission'],
     ]);
+    // each part by its full title: 2016/0400's parts differ only in their last words
+    for (const d of parents)
+      for (const r of d.related.filter((x) => x.relation === 'Split into')) {
+        expect(r.title, `${d.id} ${r.id}`).toBe(read<DossierDetail>(`dossiers/${r.id}.json`).title);
+      }
+    expect(p400.related.filter((r) => r.relation === 'Split into').map((r) => r.title.match(/ - part \w+$/)?.[0])).toEqual([' - part I', ' - part II']);
     expect(parents.find((d) => d.id === '2016-0224')!.official_title?.trim()).toBe('Common procedure for international protection in the Union');
   });
 

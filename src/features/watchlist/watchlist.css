@@ -128,9 +128,14 @@
   margin: 0;
 }
 
+/* clamped to three lines, as in the legislation list (the full title is the link's tooltip and on the file's page) */
 .following__title a {
   color: var(--navy);
   text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .following__title a:hover {

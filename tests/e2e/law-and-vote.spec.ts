@@ -53,6 +53,46 @@ test.describe('law page: status and key facts', () => {
       await expect(page.locator('.dz-facts .badge')).toHaveCount(0);
     });
 
+  test('a title over 220 characters is one size smaller on a phone, so the status stays on the first screen', async ({ page }) => {
+    // 2023/0378(COD): a 685-character title
+    const fontSize = () => page.locator('.dz-title').evaluate((h) => parseFloat(getComputedStyle(h).fontSize));
+    await page.setViewportSize({ width: 375, height: 667 });
+    await open(page, 'legislation/2023-0378/');
+    expect(await fontSize()).toBe(18);
+    await expect(page.locator('.dz-head .dz-statusline .badge')).toBeInViewport();
+    await open(page, `legislation/${AI_ACT_ID}/`); // under 220 characters
+    expect(await fontSize()).toBeGreaterThan(18);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await open(page, 'legislation/2023-0378/');
+    expect(await fontSize()).toBeGreaterThan(18);
+  });
+
+  test('the type of procedure and the kind of act are two lines that start at the same edge, without a separator', async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await open(page, `legislation/${AI_ACT_ID}/`);
+    const type = page.locator('.dz-keyfacts dt', { hasText: /^Type$/ }).locator('xpath=following-sibling::dd');
+    await expect(type).toHaveText('Ordinary legislative procedureRegulation');
+    // the first character of each rendered line: the glossary term's wrapped line is not centred
+    const starts = await type.evaluate((dd) => {
+      const left = dd.getBoundingClientRect().left;
+      const lines = new Map<number, number>();
+      const walker = document.createTreeWalker(dd, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const t = n as Text;
+        for (let i = 0; i < t.data.length; i++) {
+          const range = document.createRange();
+          range.setStart(t, i);
+          range.setEnd(t, i + 1);
+          const r = range.getClientRects()[0];
+          if (r && r.width > 0 && !/\s/.test(t.data[i])) lines.set(Math.round(r.top), Math.min(lines.get(Math.round(r.top)) ?? Infinity, r.left - left));
+        }
+      }
+      return [...lines.values()];
+    });
+    expect(starts.length).toBeGreaterThanOrEqual(2);
+    for (const x of starts) expect(x).toBeLessThan(1);
+  });
+
   test('says since when the status holds', async ({ page }) => {
     await open(page, `legislation/${AI_ACT_ID}/`);
     await expect(page.locator('.dz-statusline')).toHaveText(/In force\s*since 1 August 2024$/);

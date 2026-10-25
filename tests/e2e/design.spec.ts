@@ -135,39 +135,115 @@ test.describe('tables', () => {
 });
 
 test.describe('metadata separators', () => {
-  for (const [path, sel] of [
-    ['legislation', '.drow__meta'],
-    ['votes', '.vote-item__meta'],
-    ['search?q=climate', '.sr-item__meta'],
-  ]) {
-    test(`a wrapped line never starts with a separator: ${path} at 768px and 320px`, async ({ page }) => {
-      for (const width of [768, 320]) {
+  // votes?kind=motion: every row's kind of vote wraps on a phone; search?q=fisheries: wrapped statuses
+  for (const [path, sel, widths] of [
+    ['legislation', '.drow__meta', [768, 320]],
+    ['votes', '.vote-item__meta', [768, 375, 320]],
+    ['votes?kind=motion', '.vote-item__meta', [375, 320]],
+    ['search?q=climate', '.sr-item__meta', [768, 320]],
+    ['search?q=fisheries', '.sr-item__meta', [375, 320]],
+  ] as const) {
+    test(`a wrapped line never starts with a separator, and no text or focus ring is cut off: ${path} at ${widths.join(', ')}px`, async ({ page }) => {
+      for (const width of widths) {
         await page.setViewportSize({ width, height: 900 });
         await open(page, path);
-        const starts = await page.locator(`main ${sel}`).evaluateAll((lists) =>
-          lists.flatMap((list) => {
-            // the clipped band on the left: the dot of an item that opens a line falls inside it
+        const lists = await page.locator(`main ${sel}`).evaluateAll((els) =>
+          els.map((list) => {
+            // the clipped band on the left: the dot of an item that opens a line falls inside it, and nothing else may
             const clip = /inset\(\S+ \S+ \S+ ([\d.]+)px\)/.exec(getComputedStyle(list).clipPath);
-            const band = list.getBoundingClientRect().left + (clip ? parseFloat(clip[1]) : 0);
+            const edge = list.getBoundingClientRect().left + (clip ? parseFloat(clip[1]) : 0);
             let top = -1;
-            const out: { visibleDot: boolean }[] = [];
+            const starts: { visibleDot: boolean }[] = [];
+            const cut: string[] = [];
+            const rings: { text: string; reach: number; left: number }[] = [];
             for (const item of list.children) {
               const r = item.getBoundingClientRect();
-              if (Math.round(r.top) !== top) {
+              const opens = Math.round(r.top) !== top;
+              if (opens) {
                 top = Math.round(r.top);
+                // the dot's glyph (about 0.3em wide) is centred in its strip at the item's left
                 const dot = getComputedStyle(item, '::before');
-                const dotWidth = parseFloat(dot.width) || 0;
-                out.push({ visibleDot: dot.content !== 'none' && r.left + dotWidth > band + 0.5 });
+                const centre = r.left + (parseFloat(dot.left) || 0) + (parseFloat(dot.width) || 0) / 2;
+                starts.push({ visibleDot: dot.content !== 'none' && centre + 0.15 * parseFloat(getComputedStyle(item).fontSize) > edge });
+              }
+              // every character of the item, on each of its lines, is right of the band
+              const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT);
+              let hidden = false;
+              for (let n = walker.nextNode(); n && !hidden; n = walker.nextNode()) {
+                const t = n as Text;
+                for (let i = 0; i < t.data.length && !hidden; i++) {
+                  if (/\s/.test(t.data[i])) continue;
+                  const range = document.createRange();
+                  range.setStart(t, i);
+                  range.setEnd(t, i + 1);
+                  hidden = [...range.getClientRects()].some((c) => c.width > 0 && c.left < edge - 0.5);
+                }
+              }
+              if (hidden) cut.push(item.textContent ?? '');
+              // a link that opens a line keeps the left side of its focus ring
+              for (const a of opens ? item.querySelectorAll('a') : []) {
+                a.focus({ preventScroll: true });
+                const cs = getComputedStyle(a);
+                const reach = cs.outlineStyle === 'none' ? 0 : parseFloat(cs.outlineWidth) + parseFloat(cs.outlineOffset);
+                rings.push({ text: a.textContent ?? '', reach, left: a.getBoundingClientRect().left - reach - edge });
+                a.blur();
               }
             }
-            return out;
+            return { clipped: !!clip, starts, cut, rings };
           }),
         );
-        expect(starts.length, `${path} ${width}`).toBeGreaterThan(0);
-        expect(starts.filter((s) => s.visibleDot), `${path} ${width}`).toEqual([]);
+        const at = `${path} ${width}`;
+        expect(lists.length, at).toBeGreaterThan(0);
+        expect(lists.filter((l) => !l.clipped).length, at).toBe(0);
+        expect(lists.flatMap((l) => l.starts).length, at).toBeGreaterThan(0);
+        expect(lists.flatMap((l) => l.starts).filter((s) => s.visibleDot), at).toEqual([]);
+        expect(lists.flatMap((l) => l.cut), at).toEqual([]);
+        expect(lists.flatMap((l) => l.rings).filter((r) => r.left < -0.5), at).toEqual([]);
+        if (path.startsWith('votes') && width < 768) {
+          const rings = lists.flatMap((l) => l.rings);
+          expect(rings.length, at).toBeGreaterThan(0);
+          expect(rings.filter((r) => r.reach < 3), `${at}: focus ring drawn`).toEqual([]);
+        }
       }
     });
   }
+});
+
+test.describe('row links', () => {
+  test('on a phone, a row’s title or name reads as a link before it is touched; a secondary link in it is quieter', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    const styles = (sel: string) =>
+      page.locator(sel).evaluateAll((els) =>
+        els
+          .filter((a) => a.getClientRects().length > 0)
+          .map((a) => {
+            const s = getComputedStyle(a);
+            return { text: a.textContent, underline: s.textDecorationLine.includes('underline'), color: s.color, weight: Number(s.fontWeight) };
+          }),
+      );
+    // rapporteur files and vote titles on an MEP page, members and countries of a group, Council votes of a country
+    for (const path of ['people/meps/124867/', 'people/groups/epp/', 'countries/ES/']) {
+      await open(page, path);
+      const links = await styles("main .row-link, main a.row-title, main .table tbody th[scope='row'] > a:first-child");
+      expect(links.length, path).toBeGreaterThan(10);
+      expect(links.filter((l) => !l.underline), path).toEqual([]);
+    }
+    // the MEP list: the name is the primary link; the national party under it is grey and of regular weight
+    await open(page, 'people/');
+    const [name] = await styles("main .table tbody th[scope='row'] > a:first-child");
+    const [party] = await styles('main .sub-link');
+    expect(name.underline && party.underline).toBe(true);
+    expect(party.weight).toBeLessThan(name.weight);
+    expect(party.color).not.toBe(name.color);
+  });
+});
+
+test('an empty list’s action stands apart from its hint', async ({ page }) => {
+  await open(page, 'legislation/?q=zzzxqwv');
+  const state = page.locator('main .state--empty');
+  const hint = (await state.locator('.meta p').boundingBox())!;
+  const button = (await state.getByRole('button', { name: 'Clear all filters' }).boundingBox())!;
+  expect(button.y - (hint.y + hint.height)).toBeGreaterThanOrEqual(8);
 });
 
 test.describe('typography', () => {
