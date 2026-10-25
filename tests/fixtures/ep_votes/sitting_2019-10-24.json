@@ -1,0 +1,1115 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2019-10-24/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: 109583; others keep their first 3 ids (published counts unchanged).",
+ "decisions": {
+  "data": [
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-DEC-109643",
+    "activity_label": {
+     "en": "B9-0154/2019 - Am 52 24/10/2019 12:34:01.000",
+     "fr": "B9-0154/2019 - Am 52"
+    },
+    "activity_start_date": "2019-10-24T13:34:01+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/840",
+     "person/197935",
+     "person/197535"
+    ],
+    "had_voter_against": [
+     "person/197576",
+     "person/96739",
+     "person/124809"
+    ],
+    "had_voter_favor": [
+     "person/197777",
+     "person/197586",
+     "person/189065"
+    ],
+    "id": "eli/dl/event/MTG-PL-2019-10-24-DEC-109643",
+    "notation_votingId": "109643",
+    "number_of_votes_abstention": 10,
+    "number_of_votes_against": 455,
+    "number_of_votes_favor": 164,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-RCV-ITM-060"
+    ],
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-DEC-109687",
+    "activity_label": {
+     "en": "RC-B9-0118/2019 - Am 8 24/10/2019 12:18:51.000",
+     "fr": "RC-B9-0118/2019 - Am 8"
+    },
+    "activity_start_date": "2019-10-24T13:18:51+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197620",
+     "person/124802",
+     "person/28353"
+    ],
+    "had_voter_against": [
+     "person/130100",
+     "person/197784",
+     "person/197437"
+    ],
+    "had_voter_favor": [
+     "person/197535",
+     "person/197788",
+     "person/197720"
+    ],
+    "had_voter_intended_abstention": [
+     "person/197553"
+    ],
+    "had_voter_intended_favor": [
+     "person/197504"
+    ],
+    "id": "eli/dl/event/MTG-PL-2019-10-24-DEC-109687",
+    "notation_votingId": "109687",
+    "number_of_votes_abstention": 49,
+    "number_of_votes_against": 104,
+    "number_of_votes_favor": 474,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-RCV-ITM-012"
+    ],
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-DEC-109583",
+    "activity_label": {
+     "en": "B9-0151/2019 - Resolution 24/10/2019 12:18:23.000",
+     "fr": "B9-0151/2019 - Résolution"
+    },
+    "activity_start_date": "2019-10-24T13:18:23+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/197447",
+     "person/197760",
+     "person/197712",
+     "person/197757",
+     "person/197420",
+     "person/99461",
+     "person/125045",
+     "person/197751",
+     "person/197752",
+     "person/197809",
+     "person/197717",
+     "person/197736",
+     "person/197704",
+     "person/197705",
+     "person/58766",
+     "person/22858",
+     "person/197759",
+     "person/125042",
+     "person/197728",
+     "person/197642",
+     "person/197842",
+     "person/197845",
+     "person/197835",
+     "person/197746",
+     "person/197846",
+     "person/197807",
+     "person/197715",
+     "person/197455",
+     "person/197719",
+     "person/197702",
+     "person/197703",
+     "person/197935",
+     "person/96911",
+     "person/197612",
+     "person/122978",
+     "person/197620",
+     "person/119431",
+     "person/4560",
+     "person/197603",
+     "person/124965",
+     "person/197733",
+     "person/197740",
+     "person/198490",
+     "person/197737",
+     "person/197721"
+    ],
+    "had_voter_against": [
+     "person/197430",
+     "person/197820",
+     "person/197536",
+     "person/96780",
+     "person/1917",
+     "person/197532",
+     "person/197637",
+     "person/197718",
+     "person/125046",
+     "person/97198",
+     "person/197528",
+     "person/96761",
+     "person/124770",
+     "person/124884",
+     "person/124877",
+     "person/197475",
+     "person/101039",
+     "person/197765",
+     "person/96808",
+     "person/197656",
+     "person/4344",
+     "person/198096",
+     "person/197408",
+     "person/197652",
+     "person/28226",
+     "person/95074",
+     "person/96787",
+     "person/124809",
+     "person/197841",
+     "person/197552",
+     "person/197738",
+     "person/124709",
+     "person/27714",
+     "person/197680",
+     "person/28399",
+     "person/99283",
+     "person/197544",
+     "person/197488",
+     "person/23816",
+     "person/96713",
+     "person/197672",
+     "person/125104",
+     "person/1992",
+     "person/197657",
+     "person/197653",
+     "person/197399",
+     "person/28150",
+     "person/193419",
+     "person/197518",
+     "person/96922",
+     "person/197572",
+     "person/96903",
+     "person/197649",
+     "person/23712",
+     "person/4465",
+     "person/124891",
+     "person/197777",
+     "person/197773",
+     "person/96747",
+     "person/2187",
+     "person/125030",
+     "person/197606",
+     "person/190774",
+     "person/197443",
+     "person/96899",
+     "person/111011",
+     "person/197822",
+     "person/197538",
+     "person/23788",
+     "person/118949",
+     "person/197665",
+     "person/197417",
+     "person/125043",
+     "person/97968",
+     "person/197525",
+     "person/35016",
+     "person/124771",
+     "person/96830",
+     "person/197778",
+     "person/197686",
+     "person/197558",
+     "person/197554",
+     "person/197517",
+     "person/197520",
+     "person/131580",
+     "person/99945",
+     "person/197390",
+     "person/182995",
+     "person/125004",
+     "person/197437",
+     "person/197404",
+     "person/197621",
+     "person/124784",
+     "person/96779",
+     "person/125012",
+     "person/197429",
+     "person/4289",
+     "person/197815",
+     "person/197504",
+     "person/840",
+     "person/197545",
+     "person/28372",
+     "person/125106",
+     "person/197798",
+     "person/197541",
+     "person/197489",
+     "person/197597",
+     "person/124765",
+     "person/197786",
+     "person/197578",
+     "person/197537",
+     "person/197566",
+     "person/24922",
+     "person/28115",
+     "person/96796",
+     "person/96809",
+     "person/28229",
+     "person/197412",
+     "person/197483",
+     "person/28223",
+     "person/124785",
+     "person/197514",
+     "person/197510",
+     "person/197615",
+     "person/197608",
+     "person/197557",
+     "person/96811",
+     "person/197445",
+     "person/124806",
+     "person/197553",
+     "person/197742",
+     "person/197679",
+     "person/125670",
+     "person/1927",
+     "person/197607",
+     "person/190713",
+     "person/98582",
+     "person/96867",
+     "person/124713",
+     "person/197436",
+     "person/112611",
+     "person/197432",
+     "person/197586",
+     "person/96829",
+     "person/189391",
+     "person/197767",
+     "person/197662",
+     "person/197658",
+     "person/197848",
+     "person/197534",
+     "person/128483",
+     "person/197628",
+     "person/197709",
+     "person/197530",
+     "person/197526",
+     "person/197519",
+     "person/197522",
+     "person/197580",
+     "person/197766",
+     "person/197661",
+     "person/197473",
+     "person/197687",
+     "person/96756",
+     "person/197413",
+     "person/197627",
+     "person/197406",
+     "person/124760",
+     "person/197469",
+     "person/124738",
+     "person/24594",
+     "person/197452",
+     "person/124734",
+     "person/123562",
+     "person/197405",
+     "person/38398",
+     "person/197513",
+     "person/107212",
+     "person/28269",
+     "person/197614",
+     "person/197610",
+     "person/197863",
+     "person/23821",
+     "person/96772",
+     "person/197426",
+     "person/197796",
+     "person/197501",
+     "person/197422",
+     "person/124780",
+     "person/96991",
+     "person/125038",
+     "person/197493",
+     "person/96771",
+     "person/197425",
+     "person/126644",
+     "person/197787",
+     "person/197478",
+     "person/2341",
+     "person/197648",
+     "person/197563",
+     "person/197790",
+     "person/197779",
+     "person/124862",
+     "person/96668",
+     "person/197570",
+     "person/28400",
+     "person/124808",
+     "person/197643",
+     "person/197555",
+     "person/97133",
+     "person/4246",
+     "person/197829",
+     "person/197480",
+     "person/37324",
+     "person/192635",
+     "person/72779",
+     "person/197831",
+     "person/197824",
+     "person/38595",
+     "person/188945",
+     "person/197611",
+     "person/124714",
+     "person/124710",
+     "person/124802",
+     "person/124828",
+     "person/197735",
+     "person/185341",
+     "person/197769",
+     "person/197671",
+     "person/197664",
+     "person/132191",
+     "person/197799",
+     "person/94649",
+     "person/197667",
+     "person/197582",
+     "person/197663",
+     "person/197764",
+     "person/197849",
+     "person/119434",
+     "person/33982",
+     "person/197492",
+     "person/23781",
+     "person/190518",
+     "person/2323",
+     "person/28288",
+     "person/96885",
+     "person/124929",
+     "person/28224",
+     "person/197624",
+     "person/197836",
+     "person/197515",
+     "person/197806",
+     "person/197616",
+     "person/124726",
+     "person/197683",
+     "person/197843",
+     "person/124807",
+     "person/127096",
+     "person/197623",
+     "person/197402",
+     "person/130100",
+     "person/23699",
+     "person/96933",
+     "person/197789",
+     "person/96826",
+     "person/39725",
+     "person/124895",
+     "person/124996",
+     "person/28389",
+     "person/96697",
+     "person/124887",
+     "person/197788",
+     "person/125027",
+     "person/197784",
+     "person/197535",
+     "person/197636",
+     "person/197482",
+     "person/197516",
+     "person/197720",
+     "person/197617",
+     "person/197393",
+     "person/28617",
+     "person/28353",
+     "person/125128",
+     "person/197481",
+     "person/197826",
+     "person/197690",
+     "person/197771",
+     "person/124712",
+     "person/197711",
+     "person/124708",
+     "person/28390",
+     "person/197825",
+     "person/189065",
+     "person/5565",
+     "person/197797"
+    ],
+    "had_voter_favor": [
+     "person/197651",
+     "person/197756",
+     "person/197574",
+     "person/197655",
+     "person/124861",
+     "person/197794",
+     "person/124953",
+     "person/125110",
+     "person/103381",
+     "person/197396",
+     "person/58789",
+     "person/129073",
+     "person/193292",
+     "person/96868",
+     "person/124722",
+     "person/96932",
+     "person/24505",
+     "person/197698",
+     "person/124970",
+     "person/4533",
+     "person/1854",
+     "person/183916",
+     "person/124985",
+     "person/197441",
+     "person/124691",
+     "person/199941",
+     "person/197785",
+     "person/4550",
+     "person/96739",
+     "person/112744",
+     "person/112748",
+     "person/197800",
+     "person/125001",
+     "person/125065",
+     "person/96752",
+     "person/197592",
+     "person/197838",
+     "person/124856",
+     "person/1913",
+     "person/197571",
+     "person/124766",
+     "person/124991",
+     "person/197791",
+     "person/197470",
+     "person/197421",
+     "person/197827",
+     "person/125706",
+     "person/197701",
+     "person/125214",
+     "person/96698",
+     "person/197695",
+     "person/197716",
+     "person/197699",
+     "person/197523",
+     "person/38511",
+     "person/124821",
+     "person/96833",
+     "person/197613",
+     "person/197818",
+     "person/197512",
+     "person/197491",
+     "person/124814",
+     "person/124692",
+     "person/120478",
+     "person/124934",
+     "person/96725",
+     "person/197722",
+     "person/28586",
+     "person/197465",
+     "person/197506",
+     "person/197761",
+     "person/197401",
+     "person/197675",
+     "person/192634",
+     "person/197619",
+     "person/113959",
+     "person/124846",
+     "person/197433",
+     "person/197839",
+     "person/197497",
+     "person/197754",
+     "person/197692",
+     "person/26837",
+     "person/197531",
+     "person/96952",
+     "person/197471",
+     "person/34578",
+     "person/96646",
+     "person/197394",
+     "person/124833",
+     "person/197681",
+     "person/124837",
+     "person/134605",
+     "person/124747",
+     "person/197644",
+     "person/97058",
+     "person/197567",
+     "person/28615",
+     "person/124822",
+     "person/28266",
+     "person/197462",
+     "person/124942",
+     "person/197503",
+     "person/197730",
+     "person/197819",
+     "person/197734",
+     "person/96776",
+     "person/193273",
+     "person/197556",
+     "person/197511",
+     "person/125063",
+     "person/28508",
+     "person/96750",
+     "person/118859",
+     "person/28298",
+     "person/101585",
+     "person/197584",
+     "person/197449",
+     "person/197391",
+     "person/124963",
+     "person/197547",
+     "person/197868",
+     "person/124781",
+     "person/96681",
+     "person/197804",
+     "person/188636",
+     "person/125005",
+     "person/197693",
+     "person/197714",
+     "person/131507",
+     "person/5392",
+     "person/197579",
+     "person/96891",
+     "person/197451",
+     "person/197795",
+     "person/28161",
+     "person/124834",
+     "person/96730",
+     "person/96842",
+     "person/96734",
+     "person/197414",
+     "person/197641",
+     "person/197564",
+     "person/197645",
+     "person/197684",
+     "person/197500",
+     "person/197463",
+     "person/197527",
+     "person/197403",
+     "person/124986",
+     "person/197581",
+     "person/197602",
+     "person/96837",
+     "person/197677",
+     "person/124739",
+     "person/125023",
+     "person/197431",
+     "person/33997",
+     "person/197495",
+     "person/5729",
+     "person/197435",
+     "person/124818",
+     "person/197593",
+     "person/130256",
+     "person/197634",
+     "person/28340",
+     "person/124992",
+     "person/197587",
+     "person/197792",
+     "person/124831",
+     "person/124835",
+     "person/197743",
+     "person/197758",
+     "person/197576",
+     "person/124799",
+     "person/197696",
+     "person/197460",
+     "person/40599",
+     "person/197539",
+     "person/197398",
+     "person/197415",
+     "person/197670",
+     "person/197458",
+     "person/125020",
+     "person/124972",
+     "person/1909",
+     "person/197772",
+     "person/124693",
+     "person/197590",
+     "person/28619",
+     "person/197466",
+     "person/197507",
+     "person/124700",
+     "person/124704",
+     "person/124779",
+     "person/197650",
+     "person/197434",
+     "person/197498",
+     "person/197755",
+     "person/197573",
+     "person/197438",
+     "person/197588",
+     "person/4519",
+     "person/197472",
+     "person/124952",
+     "person/197395",
+     "person/28122",
+     "person/28347",
+     "person/197423",
+     "person/197682",
+     "person/197808",
+     "person/197697",
+     "person/197521",
+     "person/197870",
+     "person/96880",
+     "person/197440",
+     "person/197889",
+     "person/185771",
+     "person/197731",
+     "person/197459",
+     "person/30490",
+     "person/2309",
+     "person/130833",
+     "person/187917",
+     "person/125064",
+     "person/124936",
+     "person/197508",
+     "person/197763",
+     "person/96706",
+     "person/124701",
+     "person/124705",
+     "person/197589",
+     "person/197392",
+     "person/4253",
+     "person/124867",
+     "person/197869",
+     "person/197499",
+     "person/197700",
+     "person/197439",
+     "person/197694",
+     "person/198063",
+     "person/197638",
+     "person/197533",
+     "person/96648",
+     "person/197781",
+     "person/197817",
+     "person/197732",
+     "person/197550",
+     "person/197770",
+     "person/197646",
+     "person/197811",
+     "person/38542",
+     "person/96934",
+     "person/96998",
+     "person/197505",
+     "person/197468",
+     "person/197400",
+     "person/124777",
+     "person/197419",
+     "person/197618",
+     "person/124961",
+     "person/37312",
+     "person/199996",
+     "person/197496",
+     "person/96812",
+     "person/29579",
+     "person/198176",
+     "person/197691",
+     "person/197635",
+     "person/125093",
+     "person/30482",
+     "person/197549",
+     "person/190519",
+     "person/124836",
+     "person/106936",
+     "person/96844",
+     "person/96743",
+     "person/197654",
+     "person/190099",
+     "person/197577",
+     "person/197782",
+     "person/197461",
+     "person/197502",
+     "person/96852",
+     "person/96711",
+     "person/197416",
+     "person/197600",
+     "person/197529",
+     "person/96978",
+     "person/103746",
+     "person/124812",
+     "person/96820",
+     "person/197591",
+     "person/197448",
+     "person/125237",
+     "person/197739",
+     "person/197546",
+     "person/96740",
+     "person/125068",
+     "person/124844",
+     "person/23768"
+    ],
+    "had_voter_intended_abstention": [
+     "person/96812"
+    ],
+    "had_voter_intended_against": [
+     "person/197651",
+     "person/197421",
+     "person/197655"
+    ],
+    "id": "eli/dl/event/MTG-PL-2019-10-24-DEC-109583",
+    "notation_votingId": "109583",
+    "number_of_votes_abstention": 45,
+    "number_of_votes_against": 295,
+    "number_of_votes_favor": 301,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-RCV-ITM-011"
+    ],
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-DEC-109706",
+    "activity_label": {
+     "en": "RC-B9-0134/2019 - § 4 24/10/2019 12:12:25.000",
+     "fr": "RC-B9-0134/2019 - § 4"
+    },
+    "activity_start_date": "2019-10-24T13:12:25+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/124770",
+     "person/132191",
+     "person/185771"
+    ],
+    "had_voter_against": [
+     "person/197763",
+     "person/124929",
+     "person/197737"
+    ],
+    "had_voter_favor": [
+     "person/23699",
+     "person/124942",
+     "person/197645"
+    ],
+    "had_voter_intended_favor": [
+     "person/124929"
+    ],
+    "id": "eli/dl/event/MTG-PL-2019-10-24-DEC-109706",
+    "notation_votingId": "109706",
+    "number_of_votes_abstention": 35,
+    "number_of_votes_against": 3,
+    "number_of_votes_favor": 573,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-RCV-ITM-001"
+    ],
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-DEC-109744",
+    "activity_label": {
+     "en": "RC-B9-0156/2019 - Resolution 24/10/2019 12:50:59.000",
+     "fr": "RC-B9-0156/2019 - Résolution"
+    },
+    "activity_start_date": "2019-10-24T13:50:59+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/125106",
+     "person/113959",
+     "person/125063"
+    ],
+    "had_voter_against": [
+     "person/197527",
+     "person/197691",
+     "person/197615"
+    ],
+    "had_voter_favor": [
+     "person/197600",
+     "person/124856",
+     "person/96844"
+    ],
+    "had_voter_intended_against": [
+     "person/124831",
+     "person/197535"
+    ],
+    "id": "eli/dl/event/MTG-PL-2019-10-24-DEC-109744",
+    "notation_votingId": "109744",
+    "number_of_votes_abstention": 30,
+    "number_of_votes_against": 136,
+    "number_of_votes_favor": 412,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-RCV-ITM-110"
+    ],
+    "type": "Vote"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-DEC-109582",
+    "activity_label": {
+     "en": "B9-0117/2019 - Resolution 24/10/2019 12:22:47.000",
+     "fr": "B9-0117/2019 - Résolution"
+    },
+    "activity_start_date": "2019-10-24T13:22:47+02:00",
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_ROLLCALL",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "had_voter_abstention": [
+     "person/124712",
+     "person/124714",
+     "person/124691"
+    ],
+    "had_voter_against": [
+     "person/197712",
+     "person/197704",
+     "person/197481"
+    ],
+    "had_voter_favor": [
+     "person/197491",
+     "person/198096",
+     "person/197582"
+    ],
+    "id": "eli/dl/event/MTG-PL-2019-10-24-DEC-109582",
+    "notation_votingId": "109582",
+    "number_of_votes_abstention": 21,
+    "number_of_votes_against": 42,
+    "number_of_votes_favor": 572,
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-RCV-ITM-027"
+    ],
+    "type": "Vote"
+   }
+  ]
+ },
+ "sitting": "MTG-PL-2019-10-24",
+ "vote_results": {
+  "data": [
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-VOT-ITM-834859",
+    "activity_label": {
+     "fr": "Situation des personnes LGBTI en Ouganda"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/B-9-2019-0142",
+     "eli/dl/doc/B-9-2019-0135",
+     "eli/dl/doc/B-9-2019-0140",
+     "eli/dl/doc/B-9-2019-0134",
+     "eli/dl/doc/B-9-2019-0137"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2019-10-24-OJ-ITM-V-37"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834859",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834859"
+      ],
+      "id": "eli/dl/event/MTG-PL-2019-10-24"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834859"
+      ],
+      "id": "eli/dl/proc/2019-2879"
+     }
+    ],
+    "notation_dlvId": "834859",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-VOT-ITM-001"
+    ],
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Situation des personnes LGBTI en Ouganda</title><label>B9-0134/2019, B9-0135/2019, B9-0137/2019, B9-0140/2019, B9-0142/2019</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-VOT-ITM-834627",
+    "activity_label": {
+     "fr": "Conséquences de la faillite du groupe Thomas Cook"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/B-9-2019-0120",
+     "eli/dl/doc/B-9-2019-0119",
+     "eli/dl/doc/B-9-2019-0121",
+     "eli/dl/doc/B-9-2019-0122",
+     "eli/dl/doc/B-9-2019-0124",
+     "eli/dl/doc/B-9-2019-0118"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2019-10-24-OJ-ITM-V-33"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834627",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834627"
+      ],
+      "id": "eli/dl/event/MTG-PL-2019-10-24"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834627"
+      ],
+      "id": "eli/dl/proc/2019-2854"
+     }
+    ],
+    "notation_dlvId": "834627",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-VOT-ITM-006"
+    ],
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Conséquences de la faillite du groupe Thomas Cook</title><label>Propositions de résolution: B9-0118/2019, B9-0119/2019, B9-0120/2019, B9-0121/2019, B9-0122/2019, B9-0124/2019</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-VOT-ITM-836231",
+    "activity_label": {
+     "fr": "Ouverture des négociations d'adhésion avec la Macédoine du Nord et l'Albanie"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/B-9-2019-0160",
+     "eli/dl/doc/B-9-2019-0159",
+     "eli/dl/doc/B-9-2019-0155",
+     "eli/dl/doc/B-9-2019-0157",
+     "eli/dl/doc/B-9-2019-0158",
+     "eli/dl/doc/B-9-2019-0161",
+     "eli/dl/doc/B-9-2019-0156"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2019-10-24-OJ-ITM-V-43"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-836231",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-836231"
+      ],
+      "id": "eli/dl/event/MTG-PL-2019-10-24"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-836231"
+      ],
+      "id": "eli/dl/proc/2019-2883"
+     }
+    ],
+    "notation_dlvId": "836231",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-VOT-ITM-010"
+    ],
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Ouverture des négociations d'adhésion avec la Macédoine du Nord et l'Albanie</title><label>Proposition de résolution: B9-0155/2019, B9-0156/2019, B9-0157/2019, B9-0158/2019, B9-0159/2019, B9-0160/2019, B9-0161/2019</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-VOT-ITM-834630",
+    "activity_label": {
+     "fr": "Opérations de recherche et de sauvetage en Méditerranée"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/B-9-2019-0130",
+     "eli/dl/doc/B-9-2019-0154",
+     "eli/dl/doc/B-9-2019-0131",
+     "eli/dl/doc/B-9-2019-0132"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2019-10-24-OJ-ITM-V-32"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834630",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834630"
+      ],
+      "id": "eli/dl/event/MTG-PL-2019-10-24"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834630"
+      ],
+      "id": "eli/dl/proc/2019-2755"
+     }
+    ],
+    "notation_dlvId": "834630",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-VOT-ITM-009"
+    ],
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Opérations de recherche et de sauvetage en Méditerranée</title><label>Propositions de résolution: B9-0130/2019, B9-0131/2019, B9-0132/2019, B9-0154/2019</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-VOT-ITM-834628",
+    "activity_label": {
+     "fr": "État des lieux de la communication, par certaines entreprises et succursales, d'informations relatives à l'impôt sur les bénéfices - déclarations publiques par pays"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/B-9-2019-0117"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2019-10-24-OJ-ITM-V-36"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834628",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834628"
+      ],
+      "id": "eli/dl/event/MTG-PL-2019-10-24"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834628"
+      ],
+      "id": "eli/dl/proc/2019-2882"
+     }
+    ],
+    "notation_dlvId": "834628",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-VOT-ITM-007"
+    ],
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>État des lieux de la communication, par certaines entreprises et succursales, d'informations relatives à l'impôt sur les bénéfices - déclarations publiques par pays</title><label>Proposition de résolution: B9-0117/2019</label></structuredLabel>"
+    },
+    "type": "Activity"
+   },
+   {
+    "activity_date": "2019-10-24",
+    "activity_id": "MTG-PL-2019-10-24-VOT-ITM-834864",
+    "activity_label": {
+     "fr": "Objection formulée au titre de l’article 112: octroi partiel d'une autorisation pour une utilisation du trioxyde de chrome (Cromomed S.A. et autres)"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/B-9-2019-0151"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2019-10-24-OJ-ITM-V-34"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834864",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834864"
+      ],
+      "id": "eli/dl/event/MTG-PL-2019-10-24"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2019-10-24-VOT-ITM-834864"
+      ],
+      "id": "eli/dl/proc/2019-2844"
+     }
+    ],
+    "notation_dlvId": "834864",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-9-2019-10-24-VOT-ITM-005"
+    ],
+    "structuredLabel": {
+     "fr": "<structuredLabel><title>Objection formulée au titre de l’article 112: octroi partiel d'une autorisation pour une utilisation du trioxyde de chrome (Cromomed S.A. et autres)</title><label>Proposition de résolution: B9-0151/2019</label></structuredLabel>"
+    },
+    "type": "Activity"
+   }
+  ]
+ }
+}

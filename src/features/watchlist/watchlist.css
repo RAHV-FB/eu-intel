@@ -1,0 +1,227 @@
+/* Follow button + /following page. */
+.follow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
+}
+
+.follow__btn {
+  border-color: var(--eu-blue);
+  color: var(--eu-blue);
+  font-weight: var(--fw-semibold);
+}
+
+.follow__btn:hover {
+  color: var(--eu-blue-hover);
+}
+
+.follow__btn.is-following {
+  background: var(--blue-pale);
+}
+
+.follow__icon {
+  font-size: 1.05em;
+  line-height: 1;
+}
+
+.follow__btn.is-following .follow__icon {
+  color: #a37b00; /* gold accent, darkened for contrast on pale blue */
+}
+
+.follow__hint {
+  margin: 0;
+}
+
+.follow__error {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--st-alert);
+}
+
+/* ---------- /following ---------- */
+/* a neutral note box (.callout, base.css) in small type */
+.following__privacy {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.following__privacy p {
+  margin: 0;
+}
+
+.following__privacy p + p {
+  margin-top: var(--sp-2);
+}
+
+.following__privacy strong {
+  color: var(--text);
+}
+
+/* the list's title row: a section title (base.css) with the actions beside it, and the rule under both */
+.following__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin: var(--sp-7) 0 0;
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.following__bar h2 .meta {
+  font-family: var(--font-sans);
+}
+
+.following__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.lx-btn-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--eu-blue);
+}
+
+.lx-btn-quiet:hover {
+  border-color: var(--border);
+}
+
+.lx-btn-danger {
+  color: var(--st-critical);
+}
+
+.lx-btn-danger:hover {
+  color: var(--st-critical);
+  border-color: var(--st-critical);
+  background: var(--st-critical-bg);
+}
+
+.following__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.following__item {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (min-width: 48rem) {
+  .following__item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--sp-5);
+    align-items: start;
+  }
+}
+
+.following__title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  margin: 0;
+}
+
+/* clamped to three lines, as in the legislation list (the full title is the link's tooltip and on the file's page) */
+.following__title a {
+  color: var(--navy);
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.following__title a:hover {
+  color: var(--eu-blue);
+  text-decoration: underline;
+}
+
+.following__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+.following__latest {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.following__latest time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-weight: var(--fw-medium);
+}
+
+.following__item-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.lx-changed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.1em 0.55em;
+  border-radius: var(--radius-sm);
+  background: #fff6cc;
+  color: #6b5200;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+}
+
+.lx-changed::before {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #c79a00;
+}
+
+.following__share {
+  margin-top: var(--sp-6);
+  display: grid;
+  gap: var(--sp-2);
+  max-width: 46rem;
+}
+
+.following__share-row {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.following__share-row .lx-input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+.following__shared-note {
+  background: var(--blue-paler);
+  border: 1px solid #d6e2f5;
+  border-radius: var(--radius);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  font-size: var(--fs-sm);
+}
+
+.following__shared-note p {
+  margin: 0;
+}

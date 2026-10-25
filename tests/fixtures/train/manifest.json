@@ -1,0 +1,132 @@
+{
+ "retrieved": "2026-10-22",
+ "files": {
+  "file_adopted.html.gz": {
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness/file-digital-omnibus-on-ai",
+   "status": "Adopted / Completed",
+   "title": "Digital Omnibus on AI",
+   "procedure_refs": [
+    "2025/0359(COD)"
+   ],
+   "theme": "A new plan for Europe's sustainable prosperity and competitiveness",
+   "last_updated": "2026-09-20",
+   "blocking_institution": null
+  },
+  "file_adopted_inl.html.gz": {
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-a-europe-fit-for-the-digital-age/file-ai-ethical-framework",
+   "status": "Adopted / Completed",
+   "title": "Framework of ethical aspects of artificial intelligence, robotics and related technologies",
+   "procedure_refs": [
+    "2020/2012(INL)"
+   ],
+   "theme": "A Europe Fit for the Digital Age",
+   "last_updated": "2024-12-15",
+   "blocking_institution": null
+  },
+  "file_tabled.html.gz": {
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-a-new-era-for-european-defence-and-security/file-combating-child-sexual-abuse-online",
+   "status": "Tabled",
+   "title": "New legislation to fight child sexual abuse online",
+   "procedure_refs": [
+    "2022/0155(COD)"
+   ],
+   "theme": "A new era for European Defence and Security",
+   "last_updated": "2026-09-20",
+   "blocking_institution": null
+  },
+  "file_close_to_adoption.html.gz": {
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-a-new-era-for-european-defence-and-security/file-new-common-approach-on-returns",
+   "status": "Close to adoption",
+   "title": "Proposal for a Regulation of the European Parliament and of the Council establishing a common system for the return of third-country nationals staying illegally in the Union",
+   "procedure_refs": [
+    "2025/0059(COD)"
+   ],
+   "theme": "A new era for European Defence and Security",
+   "last_updated": "2026-09-20",
+   "blocking_institution": null
+  },
+  "file_blocked.html.gz": {
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness/file-discontinuing-seasonal-changes-of-time",
+   "status": "Blocked",
+   "title": "Directive discontinuing seasonal changes of time",
+   "procedure_refs": [
+    "2018/0332(COD)"
+   ],
+   "theme": "A new plan for Europe's sustainable prosperity and competitiveness",
+   "last_updated": "2026-09-20",
+   "blocking_institution": "COUNCIL"
+  },
+  "file_announced.html.gz": {
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-a-europe-fit-for-the-digital-age/file-5g-action-plan",
+   "status": "Announced",
+   "title": "5G action plan",
+   "procedure_refs": [],
+   "theme": "A Europe Fit for the Digital Age",
+   "last_updated": "2024-12-15",
+   "blocking_institution": null
+  },
+  "file_withdrawn.html.gz": {
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness/file-ai-liability-directive",
+   "status": "Withdrawn",
+   "title": "AI liability directive",
+   "procedure_refs": [
+    "2022/0303(COD)"
+   ],
+   "theme": "A new plan for Europe's sustainable prosperity and competitiveness",
+   "last_updated": "2026-09-20",
+   "blocking_institution": null
+  },
+  "file_legislative_initiatives.html.gz": {
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-area-of-justice-and-fundamental-rights/file-adoption-of-a-european-code-on-private-international-law",
+   "status": "Legislative initiatives",
+   "title": "Adoption of a European code on private international law",
+   "procedure_refs": [],
+   "theme": "Area of Justice and Fundamental Rights",
+   "last_updated": "2019-11-20",
+   "blocking_institution": null
+  },
+  "file_blocked_two_institutions.html.gz": {
+   "url": "https://www.europarl.europa.eu/legislative-train/theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness/file-jd-european-deposit-insurance-scheme-(edis)",
+   "status": "Blocked",
+   "title": "European Deposit Insurance Scheme (EDIS)",
+   "procedure_refs": [
+    "2015/0270(COD)"
+   ],
+   "theme": "A new plan for Europe's sustainable prosperity and competitiveness",
+   "last_updated": "2026-09-20",
+   "blocking_institution": "COUNCIL, PARLIAMENT"
+  }
+ },
+ "schedule": {
+  "url": "https://www.europarl.europa.eu/legislative-train/schedule?pov=EC_PRIORITIES&commission=2024-29&reload=false",
+  "fixture": "schedule_2024-29.html.gz",
+  "themes": [
+   "theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness",
+   "theme-a-new-era-for-european-defence-and-security",
+   "theme-supporting-people-strengthening-our-societies-and-our-social-model",
+   "theme-sustaining-our-quality-of-life-food-security-water-and-nature",
+   "theme-protecting-our-democracy-upholding-our-values",
+   "theme-a-global-europe-leveraging-our-power-and-partnerships",
+   "theme-delivering-together-and-preparing-our-union-for-the-future"
+  ],
+  "file_counts": {
+   "theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness": 214,
+   "theme-a-new-era-for-european-defence-and-security": 59,
+   "theme-supporting-people-strengthening-our-societies-and-our-social-model": 51,
+   "theme-sustaining-our-quality-of-life-food-security-water-and-nature": 36,
+   "theme-protecting-our-democracy-upholding-our-values": 28,
+   "theme-a-global-europe-leveraging-our-power-and-partnerships": 33,
+   "theme-delivering-together-and-preparing-our-union-for-the-future": 12
+  }
+ },
+ "theme": {
+  "url": "https://www.europarl.europa.eu/legislative-train/theme-delivering-together-and-preparing-our-union-for-the-future",
+  "fixture": "theme_small.html.gz",
+  "slug": "theme-delivering-together-and-preparing-our-union-for-the-future",
+  "n_files": 12,
+  "first": [
+   "https://www.europarl.europa.eu/legislative-train/theme-delivering-together-and-preparing-our-union-for-the-future/file-an-eu-fit-for-enlargement-policy-reviews-and-reforms",
+   "An EU fit for enlargement: policy reviews and reforms"
+  ]
+ }
+}

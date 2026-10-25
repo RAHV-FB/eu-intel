@@ -1,0 +1,245 @@
+# General search synonyms: standard abbreviations and official short names used by the EU
+# institutions themselves (EUR-Lex titles, Commission/EP/Council pages). No informal nicknames here;
+# dossier-specific common names live in featured.yaml `aliases`, each with its own justification.
+#
+# Semantics: when a query token/phrase matches one of `terms` (case-insensitive, whole word/phrase),
+# search also matches the phrases in `expands_to`. Expansion is one-directional and not recursive.
+# An identifier in `expands_to` (a CELEX number such as "32019l1937") matches only the file that holds that act;
+# an act number ("2024/1689") also matches the files whose titles cite it. A rule that would match more than
+# pipeline/build.py ALIAS_RULE_MAX_DOCS documents is not applied (the build logs a warning).
+
+# ------------------------------------------------------------------ institutions & procedure
+# (no rules for "eu" and "ep": "european union" and "european parliament" are in too many titles; the search engine
+# matches "eu" as "european"/"union" itself (src/lib/search.ts SYNONYMS), and "EP" is a name of the guide page on
+# the European Parliament (pipeline/build.py GUIDE_PAGES))
+- {terms: ["mep", "meps"], expands_to: ["member of the european parliament"]}
+- {terms: ["cjeu"], expands_to: ["court of justice of the european union"]}
+- {terms: ["ecb"], expands_to: ["european central bank"]}
+- {terms: ["oj", "ojeu"], expands_to: ["official journal of the european union"]}
+- {terms: ["olp", "codecision", "cod"], expands_to: ["ordinary legislative procedure"]}
+- {terms: ["trilogue", "trilogues"], expands_to: ["interinstitutional negotiations", "provisional agreement"]}
+- {terms: ["qmv"], expands_to: ["qualified majority"]}
+- {terms: ["mff"], expands_to: ["multiannual financial framework"]}
+- {terms: ["cwp"], expands_to: ["commission work programme"]}
+
+# ------------------------------------------------------------------------ digital & data
+- {terms: ["ai"], expands_to: ["artificial intelligence"]}
+# "Artificial Intelligence Act" is the short title Regulation (EU) 2024/1689 gives itself in its OJ title;
+# files whose official title cites that Regulation (e.g. the Digital Omnibus on AI, 2025/0359(COD)) amend it
+- {terms: ["ai act"], expands_to: ["artificial intelligence act", "2024/1689"]}
+- {terms: ["gdpr"], expands_to: ["general data protection regulation", "protection of natural persons with regard to the processing of personal data"]}
+- {terms: ["dsa"], expands_to: ["digital services act", "single market for digital services"]}
+- {terms: ["dma"], expands_to: ["digital markets act", "contestable and fair markets in the digital sector"]}
+- {terms: ["cra"], expands_to: ["cyber resilience act", "horizontal cybersecurity requirements for products with digital elements"]}
+- {terms: ["nis2", "nis 2"], expands_to: ["high common level of cybersecurity across the union"]}
+- {terms: ["emfa"], expands_to: ["european media freedom act"]}
+- {terms: ["ehds"], expands_to: ["european health data space"]}
+- {terms: ["dora"], expands_to: ["digital operational resilience"]}
+- {terms: ["mica"], expands_to: ["markets in crypto-assets"]}
+- {terms: ["eprivacy", "e-privacy"], expands_to: ["privacy and electronic communications"]}
+- {terms: ["csam"], expands_to: ["child sexual abuse material", "child sexual abuse"]}
+
+# ------------------------------------------------------------------- climate, energy, nature
+- {terms: ["ets", "eu ets"], expands_to: ["emissions trading system", "greenhouse gas emission allowance trading"]}
+- {terms: ["ets2"], expands_to: ["emissions trading system for buildings, road transport and additional sectors"]}
+- {terms: ["cbam"], expands_to: ["carbon border adjustment mechanism"]}
+- {terms: ["ghg"], expands_to: ["greenhouse gas"]}
+- {terms: ["co2"], expands_to: ["carbon dioxide", "co2 emission"]}
+- {terms: ["lulucf"], expands_to: ["land use, land use change and forestry"]}
+- {terms: ["esr"], expands_to: ["effort sharing"]}
+# ("RED II" and "RED III" are the names of two directives, not of every renewable-energy file: entries below)
+- {terms: ["epbd"], expands_to: ["energy performance of buildings"]}
+- {terms: ["afir"], expands_to: ["alternative fuels infrastructure"]}
+- {terms: ["eudr"], expands_to: ["deforestation regulation", "deforestation and forest degradation"]}
+- {terms: ["nrl"], expands_to: ["nature restoration"]}
+- {terms: ["ppwr"], expands_to: ["packaging and packaging waste"]}
+- {terms: ["nzia"], expands_to: ["net-zero industry act", "net zero industry act"]}
+- {terms: ["crma"], expands_to: ["critical raw materials act", "critical raw materials"]}
+# Petrol and diesel cars are combustion-engine cars: the European Parliament's page on Regulation (EU) 2023/851
+# is "EU ban on the sale of new petrol and diesel cars from 2035 explained" (a name of 2021/0197(COD) below), and
+# the Commission (https://climate.ec.europa.eu/areas-action/transport-decarbonisation/road-transport/cars-and-vans_en)
+# writes that Regulation (EU) 2023/851 "introduced a 100% emission reduction target for new passenger cars and vans
+# from 2035 onwards", and that its proposed revision "will allow for plug-in hybrids (PHEVs), range extenders, mild
+# hybrids, and internal combustion engine vehicles to still play a role beyond 2035"
+- {terms: ["combustion engine", "combustion engines"], expands_to: ["new petrol and diesel cars"]}
+
+# ------------------------------------------------------------- companies, finance, economy
+- {terms: ["csrd"], expands_to: ["corporate sustainability reporting directive", "corporate sustainability reporting"]}
+- {terms: ["csddd", "cs3d"], expands_to: ["corporate sustainability due diligence directive", "corporate sustainability due diligence"]}
+- {terms: ["esrs"], expands_to: ["european sustainability reporting standards"]}
+- {terms: ["esg"], expands_to: ["environmental, social and governance", "sustainability"]}
+- {terms: ["sfdr"], expands_to: ["sustainability-related disclosures in the financial services sector"]}
+- {terms: ["sme", "smes"], expands_to: ["small and medium-sized enterprises"]}
+- {terms: ["vat"], expands_to: ["value added tax"]}
+# "AMLA" is the name of the Authority itself: a per-file name of 2021/0240(COD) below, not an AML synonym
+- {terms: ["aml"], expands_to: ["anti-money laundering", "money laundering"]}
+- {terms: ["cbdc"], expands_to: ["central bank digital currency", "digital euro"]}
+- {terms: ["psd", "psd3", "psr"], expands_to: ["payment services"]}
+# Regulation (EU) 2024/1263 replaces Council Regulation (EC) No 1466/97 and Regulation (EU) 2024/1264 amends Council
+# Regulation (EC) No 1467/97: recital 2 of 2024/1263 (recital 3 of 2024/1264) reads "The Stability and Growth Pact,
+# which initially consisted of Council Regulations (EC) No 1466/97 and (EC) No 1467/97 and the Resolution of the
+# European Council of 17 June 1997". The EP Legislative Train (https://www.europarl.europa.eu/legislative-train/theme-an-economy-that-works-for-people/file-economic-governance-review-(cwp-2023))
+# describes "regulations to replace and amend the current preventive arm as well as to amend the corrective arm of
+# the Stability and Growth Pact (SGP)" and says "The Council adopted the reform of fiscal rules on 29 April 2024"
+- {terms: ["stability and growth pact", "sgp", "fiscal rules"], expands_to: ["32024r1263", "32024r1264"]}
+
+# ------------------------------------------------------------ rights, consumers, single market
+# Directive (EU) 2019/1937 on the protection of persons who report breaches of Union law, recital 1: "By reporting
+# breaches of Union law that are harmful to the public interest, such persons act as ‘whistleblowers’"
+- {terms: ["whistleblower", "whistleblowers", "whistleblowing", "whistle-blower", "whistle-blowers"], expands_to: ["32019l1937"]}
+# Directive (EU) 2022/2380 (common charger), recital 11: "It is technically feasible to define USB Type-C as the common
+# charging receptacle"; the Commission (https://commission.europa.eu/news-and-media/news/eu-common-charger-rules-power-all-your-devices-single-charger-2024-12-28_en):
+# "all new devices sold in the EU must now support USB-C charging"
+- {terms: ["usb-c", "usb type-c"], expands_to: ["32022l2380"]}
+
+# ---------------------------------------------------------------- migration, security, defence
+- {terms: ["ceas"], expands_to: ["common european asylum system"]}
+- {terms: ["ammr"], expands_to: ["asylum and migration management"]}
+- {terms: ["apr"], expands_to: ["asylum procedure", "common procedure for international protection"]}
+- {terms: ["ees"], expands_to: ["entry/exit system", "entry exit system"]}
+- {terms: ["etias"], expands_to: ["european travel information and authorisation system"]}
+- {terms: ["pnr"], expands_to: ["passenger name record"]}
+- {terms: ["edip"], expands_to: ["european defence industry programme"]}
+- {terms: ["safe instrument", "safe regulation"], expands_to: ["security action for europe"]}
+- {terms: ["csdp"], expands_to: ["common security and defence policy"]}
+- {terms: ["cfsp"], expands_to: ["common foreign and security policy"]}
+# EU texts in English spell it "defence" ("Regulation (EU) 2021/697 ... establishing the European Defence Fund"): the
+# US spelling finds them too ("defense fund")
+- {terms: ["defense"], expands_to: ["defence"]}
+
+# --------------------------------------------------------------- agriculture, food, health
+- {terms: ["cap"], expands_to: ["common agricultural policy"]}
+- {terms: ["cfp"], expands_to: ["common fisheries policy"]}
+- {terms: ["gmo", "gmos"], expands_to: ["genetically modified organisms", "genetically modified"]}
+- {terms: ["ngt", "ngts"], expands_to: ["new genomic techniques"]}
+- {terms: ["sur"], expands_to: ["sustainable use of plant protection products"]}
+- {terms: ["pesticides"], expands_to: ["plant protection products"]}
+- {terms: ["ema"], expands_to: ["european medicines agency"]}
+# EU law says "medicinal products" for medicines: the Commission's page "Legal framework governing medicinal products
+# for human use in the EU" (https://health.ec.europa.eu/medicinal-products/legal-framework-governing-medicinal-products-human-use-eu_en)
+# opens "The EU legal framework for human medicines sets standards ..." and lists "Medicinal products for rare
+# diseases ('Orphan medicines')"
+- {terms: ["medicine", "medicines"], expands_to: ["medicinal product", "medicinal products"]}
+
+# ===================================================================== names of individual files
+# Entries {procedure, names} attach common names to ONE legislative file (by procedure reference).
+# A name is added only when an official source uses it for that file: the act's own title, the
+# Commission's or the European Parliament's own pages, or the EP Legislative Train. Each entry is
+# preceded by "# source:" lines citing those pages. No informal, partisan or evaluative nicknames.
+# (Short titles in an act's own Official Journal title and Legislative Train file names are added
+# automatically by pipeline/build.py; files with curated entries in featured.yaml keep those aliases.)
+
+# ------------------------------------------------------------------ repair of goods
+# source: https://commission.europa.eu/news-and-media/news/right-repair-new-consumer-rights-easy-and-attractive-repairs-2026-07-31_en ("Right to repair: New consumer rights for easy and attractive repairs")
+# source: https://www.europarl.europa.eu/legislative-train/theme-a-european-green-deal/file-right-to-repair ("a proposal to introduce a new 'right to repair' for consumers")
+- {procedure: "2023/0083(COD)", names: ["Right to repair"]}
+
+# ------------------------------------------------------------- pharmaceutical package
+# source: https://www.europarl.europa.eu/news/en/press-room/20240408IPR20308/parliament-adopts-its-position-on-eu-pharmaceutical-reform ("the Commission put forward a 'pharmaceutical package'")
+# source: https://www.europarl.europa.eu/legislative-train/theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness/file-revision-of-the-pharmaceutical-legislation ("The package includes a proposal for a new directive (2023/0132(COD)) and a proposal for a new regulation (2023/0131(COD))")
+# source: https://health.ec.europa.eu/medicinal-products/legal-framework-governing-medicinal-products-human-use-eu/reform-eu-pharmaceutical-legislation_en ("Reform of EU pharmaceutical legislation"; "Commission proposal for the Pharmaceutical Regulation" / "... for the Pharmaceutical Directive")
+- {procedure: "2023/0131(COD)", names: ["pharmaceutical package", "Pharmaceutical Regulation", "Reform of EU pharmaceutical legislation"]}
+- {procedure: "2023/0132(COD)", names: ["pharmaceutical package", "Pharmaceutical Directive", "Reform of EU pharmaceutical legislation"]}
+
+# ------------------------------------------------------ Pact on Migration and Asylum (ten acts of 2024)
+# source: https://www.europarl.europa.eu/news/en/press-room/20240408IPR20290 ("MEPs approve the new Migration and Asylum Pact": the ten legislative texts adopted on 10 April 2024)
+# source: https://home-affairs.ec.europa.eu/policies/migration-and-asylum/pact-migration-and-asylum/questions-and-answers-pact-migration-and-asylum_en (Commission: "Pact on Migration and Asylum" and the names of its legal acts)
+- {procedure: "2020/0278(COD)", names: ["Pact on Migration and Asylum", "Screening Regulation"]}
+- {procedure: "2021/0046(COD)", names: ["Pact on Migration and Asylum"]}
+- {procedure: "2020/0279(COD)", names: ["Pact on Migration and Asylum"]}
+- {procedure: "2016/0224A(COD)", names: ["Pact on Migration and Asylum"]}
+- {procedure: "2016/0224B(COD)", names: ["Pact on Migration and Asylum", "Return Border Procedure Regulation"]}
+- {procedure: "2020/0277(COD)", names: ["Pact on Migration and Asylum", "Crisis and Force Majeure Regulation"]}
+- {procedure: "2016/0132(COD)", names: ["Pact on Migration and Asylum", "Eurodac Regulation"]}
+- {procedure: "2016/0222(COD)", names: ["Pact on Migration and Asylum", "Reception Conditions Directive"]}
+- {procedure: "2016/0223(COD)", names: ["Pact on Migration and Asylum", "Qualification Regulation"]}
+- {procedure: "2016/0225(COD)", names: ["Pact on Migration and Asylum", "Resettlement Framework Regulation"]}
+
+# ------------------------------------- extension of the interim ePrivacy derogation (Regulation (EU) 2021/1232)
+# source: https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0429(COD) (the Legislative Observatory's title of the procedure: "Temporary derogation from certain provisions of the ePrivacy Directive to combat online child sexual abuse")
+- {procedure: "2025/0429(COD)", names: ["Temporary derogation from certain provisions of the ePrivacy Directive to combat online child sexual abuse"]}
+
+# ------------------------------------------------- CO2 standards for cars and vans (Regulation (EU) 2023/851)
+# source: https://www.europarl.europa.eu/topics/en/article/20221019STO44572/eu-ban-on-sale-of-new-petrol-and-diesel-cars-from-2035-explained ("EU ban on the sale of new petrol and diesel cars from 2035 explained")
+# source: https://www.europarl.europa.eu/thinktank/en/document/EPRS_BRI(2022)698920 ("CO2 emission standards for new cars and vans: 'Fit for 55' package")
+# source: https://www.europarl.europa.eu/news/en/press-room/20221024IPR45734/deal-confirms-zero-emissions-target-for-new-cars-and-vans-in-2035 ("Deal confirms zero-emissions target for new cars and vans in 2035")
+# source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-co2-emission-standards-for-cars-and-vans-post-euro6vi-emission-standards (Legislative Train, "Package: Fit for 55 package under the European Green Deal"; its metadata line reads "Procedure: 2019/0197(COD)", its references cite "Procedure file on CO2 emission standards for cars and vans. 'Fit for 55 package', 2021/0197(COD)")
+- {procedure: "2021/0197(COD)", names: ["EU ban on the sale of new petrol and diesel cars from 2035", "CO2 emission standards for new cars and vans", "zero-emissions target for new cars and vans in 2035", "Fit for 55 package"]}
+
+# ------------------------------------------- Ecodesign for Sustainable Products Regulation (Regulation (EU) 2024/1781)
+# source: https://oeil.europarl.europa.eu/oeil/en/document-summary?id=1785880 (Legislative Observatory: "Ecodesign for Sustainable Products Regulation 2022/0095(COD)", "LEGISLATIVE ACT: Regulation (EU) 2024/1781")
+# source: https://environment.ec.europa.eu/news/video-ecodesign-sustainable-products-regulation-explained-2024-07-19_en ("the EU has introduced the Ecodesign for Sustainable Products Regulation (ESPR)")
+- {procedure: "2022/0095(COD)", names: ["Ecodesign for Sustainable Products Regulation", "ESPR"]}
+
+# ------------------------------------------------------------- anti-SLAPP Directive (Directive (EU) 2024/1069)
+# source: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52025DC0900 (Commission, 2025 Rule of Law Report, COM(2025) 900: "the transposition and implementation of the new anti-SLAPP Directive, which includes legislative safeguards to counter abusive lawsuits against journalists and human rights defenders in cross-border situations")
+# source: https://commission.europa.eu/news-and-media/news/new-eu-rules-protect-against-strategic-lawsuits-against-public-participation-enter-force-2024-05-03_en ("This Directive forms a package together with the Commission's Recommendation on anti-SLAPP")
+# source: https://www.europarl.europa.eu/legislative-train/theme-a-new-push-for-european-democracy/file-initiative-against-abusive-litigation-targeting-journalists-and-rights-defenders (Legislative Train file of 2022/0117(COD))
+- {procedure: "2022/0117(COD)", names: ["Anti-SLAPP Directive", "Initiative against abusive litigation targeting journalists and rights defenders"]}
+
+# ------------------------------------------------ European Digital Identity Framework (Regulation (EU) 2024/1183)
+# source: https://www.europarl.europa.eu/legislative-train/theme-a-europe-fit-for-the-digital-age/file-eid (Legislative Train file of 2021/0136(COD): "Revision of the eIDAS Regulation – European Digital Identity (EUid)")
+# source: https://interoperable-europe.ec.europa.eu/collection/rolling-plan-ict-standardisation/electronic-identification-and-trust-services-including-e-signatures-rp2025 (Commission, Rolling Plan for ICT Standardisation 2025, on Regulation (EU) 2024/1183: "the successful implementation of the EUDI Wallet as outlined in the eIDAS 2 regulations")
+- {procedure: "2021/0136(COD)", names: ["eIDAS 2", "Revision of the eIDAS Regulation – European Digital Identity (EUid)"]}
+
+# ------------------------------------------------------------------ FuelEU Maritime (Regulation (EU) 2023/1805)
+# source: https://transport.ec.europa.eu/transport-modes/maritime/decarbonising-maritime-transport-fueleu-maritime_en ("Decarbonising maritime transport – FuelEU Maritime": "the FuelEU maritime regulation (regulation (EU) 2023/1805)")
+# source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55 (Legislative Train, "Fit for 55 package under the European Green Deal": the carriage "Fuel EU Maritime - Sustainable maritime fuels", 2021/0210(COD))
+- {procedure: "2021/0210(COD)", names: ["FuelEU Maritime", "FuelEU Maritime Regulation", "Fit for 55 package"]}
+
+# ------------------------------------------------------------ Single-Use Plastics Directive (Directive (EU) 2019/904)
+# source: https://environment.ec.europa.eu/topics/plastics/single-use-plastics_en ("The Single-Use Plastics Directive (Directive (EU) 2019/904) (SUPD)")
+# source: https://www.europarl.europa.eu/legislative-train/theme-new-boost-for-jobs-growth-and-investment/file-single-use-plastics-and-fishing-gear-reducing-marine-litter-from-plastics (Legislative Train: "Single-use plastics and fishing gear: reducing marine litter from plastics")
+- {procedure: "2018/0172(COD)", names: ["Single-Use Plastics Directive", "SUPD", "Single-use plastics and fishing gear: reducing marine litter from plastics"]}
+
+# ------------------------------------------------ Copyright in the Digital Single Market (Directive (EU) 2019/790)
+# source: https://intellectual-property-helpdesk.ec.europa.eu/ip-management-and-resources/publications/copyright-directive_en (Commission IP Helpdesk, "Copyright Directive": "On 15 April 2019, the European Council approved the Directive on Copyright and Related Rights in the Digital Single Market")
+# source: https://www.europarl.europa.eu/legislative-train/theme-connected-digital-single-market/file-jd-directive-on-copyright-in-the-digital-single-market (Legislative Train: "Modernisation of European copyright rules: directive on copyright in the digital single market")
+- {procedure: "2016/0280(COD)", names: ["Copyright Directive", "Directive on Copyright and Related Rights in the Digital Single Market", "Modernisation of European copyright rules: directive on copyright in the digital single market"]}
+
+# --------------------------------------------------------------- Pay Transparency Directive (Directive (EU) 2023/970)
+# source: https://commission.europa.eu/strategy-and-policy/policies/justice-and-fundamental-rights/gender-equality/equal-pay/eu-action-equal-pay_en ("Main elements of the Pay transparency directive"; "FAQ on the Pay Transparency Directive (EU) 2023/970")
+- {procedure: "2021/0050(COD)", names: ["Pay Transparency Directive"]}
+
+# ------------------------------------------ Authority for Anti-Money Laundering, AMLA (Regulation (EU) 2024/1620)
+# source: https://www.amla.europa.eu/index_en ("The Authority for Anti-Money Laundering and Countering the Financing of Terrorism (AMLA) is a decentralised EU agency")
+- {procedure: "2021/0240(COD)", names: ["AMLA", "Authority for Anti-Money Laundering and Countering the Financing of Terrorism"]}
+
+# ------------------------------------------------- Renewable Energy Directive RED II (Directive (EU) 2018/2001)
+# (RED III, Directive (EU) 2023/2413, is a name of 2021/0218(COD) in the Fit for 55 package below)
+# source: https://publications.europa.eu/resource/celex/32018L2001 (Cellar, the act's English metadata: short title, cdm:expression_title_short, "RED II, red ii, RED 2")
+- {procedure: "2016/0382(COD)", names: ["RED II"]}
+
+# --------------------------------------------------------------------- NIS Directive (Directive (EU) 2016/1148)
+# source: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52017DC0476 (Commission, COM(2017) 476 final, Introduction: "The Directive (EU) 2016/1148 on the security of network and information systems across the Union (hereinafter referred to as “NIS Directive” or the “Directive”)")
+- {procedure: "2013/0027(COD)", names: ["NIS Directive"]}
+
+# ------------------------------------------------------------------------------ Fit for 55 package
+# The package's other carriages (2021/0197(COD) and 2021/0210(COD) have entries above). The carriage "Revised regulatory
+# framework for competitive decarbonised gas markets" is only announced and names no procedure; the carriage "Revision
+# of the EU emission trading system (ETS)" names 2021/0211(COD), which was split into 2021/0211A(COD) and
+# 2021/0211B(COD): the procedure the carriage names and both of its parts carry the name.
+# source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-revision-of-the-eu-emission-trading-system-(ets) (the carriage, listed on the package page; its record in data/snapshot/train/files.json has "procedure_refs": ["2021/0211(COD)"])
+# source: https://publications.europa.eu/resource/celex/32023L2413 (Cellar, the English metadata of Directive (EU) 2023/2413, the act of 2021/0218(COD): short title, cdm:expression_title_short, "RED III, red iii, RED 3")
+# source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55 (EP Legislative Train, "Fit for 55 package under the European Green Deal (20 carriage(s) in this package)": each carriage names its procedure)
+# source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-revision-of-the-eu-emission-trading-system-for-aviation (the carriage of 2021/0207(COD))
+# source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-notification-on-international-aviation-carbon-offsetting-and-reduction-scheme (the carriage of 2021/0204(COD))
+- {procedure: "2021/0200(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0201(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0202(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0203(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0204(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0205(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0206(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0207(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0211(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0211A(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0211B(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0213(CNS)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0214(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0218(COD)", names: ["Fit for 55 package", "RED III"]}
+- {procedure: "2021/0223(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0423(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0424(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0425(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0426(COD)", names: ["Fit for 55 package"]}

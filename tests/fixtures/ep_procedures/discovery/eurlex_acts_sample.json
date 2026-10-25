@@ -1,0 +1,247 @@
+[
+ {
+  "act_type": "regulation",
+  "amended_by": [],
+  "amends": [
+   "32000R1150"
+  ],
+  "celex": "32014R1377",
+  "court_rulings": [],
+  "date_document": "2014-12-18",
+  "date_publication": "2014-12-23",
+  "date_signature": null,
+  "eli": "http://data.europa.eu/eli/reg/2014/1377/oj",
+  "end_of_validity": "2013-12-31",
+  "entry_into_force": "2014-12-24",
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32014R1377",
+  "in_force": false,
+  "oj_ref": "OJ L 367, 23.12.2014",
+  "other_application_dates": [
+   "2014-11-30"
+  ],
+  "procedure_refs": [
+   "2014/0332(CNS)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32014R1377",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32014R1377",
+   "published": "2023-02-22",
+   "retrieved_at": "2026-10-23T00:08:42Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32014R1377"
+  },
+  "subjects": [
+   {
+    "code": "RPRO",
+    "label": "Own resources",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "3259",
+    "label": "Member States' contribution",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3558",
+    "label": "budgetary resources",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5158",
+    "label": "general budget (EU)",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5539",
+    "label": "GNP contribution",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5868",
+    "label": "VAT resource",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "01.60.30",
+    "label": "Own resources",
+    "scheme": "directory"
+   }
+  ],
+  "title": "Council Regulation (EU, Euratom) No 1377/2014 of 18 December 2014 amending Regulation (EC, Euratom) No 1150/2000 implementing Decision 2007/436/EC, Euratom on the system of the European Communities' own resources",
+  "transposition_deadlines": []
+ },
+ {
+  "act_type": "regulation",
+  "amended_by": [],
+  "amends": [],
+  "celex": "32019R0629",
+  "court_rulings": [],
+  "date_document": "2019-04-17",
+  "date_publication": "2019-04-25",
+  "date_signature": "2019-04-17",
+  "eli": "http://data.europa.eu/eli/reg/2019/629/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2019-05-01",
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019R0629",
+  "in_force": true,
+  "oj_ref": "OJ L 111, 25.4.2019",
+  "other_application_dates": [],
+  "procedure_refs": [
+   "2018/0900(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32019R0629",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32019R0629",
+   "published": "2023-04-05",
+   "retrieved_at": "2026-10-23T00:08:42Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019R0629"
+  },
+  "subjects": [
+   {
+    "code": "INST",
+    "label": "Provisions governing the Institutions",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "255",
+    "label": "Court of Justice of the European Union",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "2850",
+    "label": "protocol to an agreement",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "2982",
+    "label": "judicial reform",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "4304",
+    "label": "institutional structure",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5836",
+    "label": "appeal to the Court (EU)",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "01.40.50",
+    "label": "Court of Justice",
+    "scheme": "directory"
+   }
+  ],
+  "title": "Regulation (EU, Euratom) 2019/629 of the European Parliament and of the Council of 17 April 2019 amending Protocol No 3 on the Statute of the Court of Justice of the European Union",
+  "transposition_deadlines": []
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [],
+  "amends": [
+   "32003L0087",
+   "32015D1814"
+  ],
+  "celex": "32023L0959",
+  "court_rulings": [],
+  "date_document": "2023-05-10",
+  "date_publication": "2023-05-16",
+  "date_signature": "2023-05-10",
+  "eli": "http://data.europa.eu/eli/dir/2023/959/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2023-06-05",
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L0959",
+  "in_force": true,
+  "oj_ref": "OJ L 130, 16.5.2023",
+  "other_application_dates": [
+   "2024-01-01"
+  ],
+  "procedure_refs": [
+   "2021/0211(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32023L0959",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32023L0959",
+   "published": "2024-03-15",
+   "retrieved_at": "2026-10-23T00:08:42Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32023L0959"
+  },
+  "subjects": [
+   {
+    "code": "ENV",
+    "label": "Environment",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "1707",
+    "label": "pollution control measures",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3443",
+    "label": "reserves",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "434786",
+    "label": "adaptation to climate change",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "434880",
+    "label": "EU Emissions Trading Scheme",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "435007",
+    "label": "EU emission allowance",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "4668",
+    "label": "auction sale",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5650",
+    "label": "greenhouse gas",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5782",
+    "label": "tradeable emission permit",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5794",
+    "label": "EU environmental policy",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "6400",
+    "label": "reduction of gas emissions",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "15.10.20.30",
+    "label": "Monitoring of atmospheric pollution",
+    "scheme": "directory"
+   }
+  ],
+  "title": "Directive (EU) 2023/959 of the European Parliament and of the Council of 10 May 2023 amending Directive 2003/87/EC establishing a system for greenhouse gas emission allowance trading within the Union and Decision (EU) 2015/1814 concerning the establishment and operation of a market stability reserve for the Union greenhouse gas emission trading system (Text with EEA relevance)",
+  "transposition_deadlines": [
+   "2023-12-31",
+   "2024-01-01",
+   "2024-06-30"
+  ]
+ }
+]

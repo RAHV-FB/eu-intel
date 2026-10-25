@@ -1,0 +1,110 @@
+{
+ "_note": "Real responses of GET /plenary-documents/{doc}?format=application/ld+json&language=en (via pipeline.http), trimmed to the listed keys of each record.",
+ "responses": {
+  "B-9-2024-0163": {
+   "data": [
+    {
+     "document_date": "2024-03-08",
+     "id": "eli/dl/doc/B-9-2024-0163",
+     "identifier": "B-9-2024-0163",
+     "inverse_created_a_realization_of": [
+      "eli/dl/proc/2024-2580"
+     ],
+     "label": "B9-0163/2024",
+     "parliamentary_term": "org/ep-9",
+     "type": "Work",
+     "work_type": "def/ep-document-types/RESOLUTION_MOTION"
+    }
+   ]
+  },
+  "RC-9-2019-0118": {
+   "data": [
+    {
+     "document_date": "2019-10-22",
+     "id": "eli/dl/doc/RC-9-2019-0118",
+     "identifier": "RC-9-2019-0118",
+     "inverse_created_a_realization_of": [
+      "eli/dl/proc/2019-2854"
+     ],
+     "is_derivative_of": [
+      "eli/dl/doc/B-9-2019-0120",
+      "eli/dl/doc/B-9-2019-0119",
+      "eli/dl/doc/B-9-2019-0124",
+      "eli/dl/doc/B-9-2019-0118",
+      "eli/dl/doc/B-9-2019-0122"
+     ],
+     "parliamentary_term": "org/ep-9",
+     "type": "Work",
+     "work_type": "def/ep-document-types/RESOLUTION_MOTION_JOINT"
+    }
+   ]
+  },
+  "RC-9-2019-0134": {
+   "data": [
+    {
+     "document_date": "2019-10-23",
+     "id": "eli/dl/doc/RC-9-2019-0134",
+     "identifier": "RC-9-2019-0134",
+     "inverse_created_a_realization_of": [
+      "eli/dl/proc/2019-2879"
+     ],
+     "is_derivative_of": [
+      "eli/dl/doc/B-9-2019-0134",
+      "eli/dl/doc/B-9-2019-0142",
+      "eli/dl/doc/B-9-2019-0140",
+      "eli/dl/doc/B-9-2019-0135",
+      "eli/dl/doc/B-9-2019-0137"
+     ],
+     "parliamentary_term": "org/ep-9",
+     "type": "Work",
+     "work_type": "def/ep-document-types/RESOLUTION_MOTION_JOINT"
+    }
+   ]
+  },
+  "RC-9-2019-0156": {
+   "data": [
+    {
+     "document_date": "2019-10-23",
+     "id": "eli/dl/doc/RC-9-2019-0156",
+     "identifier": "RC-9-2019-0156",
+     "inverse_created_a_realization_of": [
+      "eli/dl/proc/2019-2883"
+     ],
+     "is_derivative_of": [
+      "eli/dl/doc/B-9-2019-0156",
+      "eli/dl/doc/B-9-2019-0159",
+      "eli/dl/doc/B-9-2019-0160",
+      "eli/dl/doc/B-9-2019-0161",
+      "eli/dl/doc/B-9-2019-0158",
+      "eli/dl/doc/B-9-2019-0157"
+     ],
+     "parliamentary_term": "org/ep-9",
+     "type": "Work",
+     "work_type": "def/ep-document-types/RESOLUTION_MOTION_JOINT"
+    }
+   ]
+  },
+  "RC-9-2024-0163": {
+   "data": [
+    {
+     "document_date": "2024-03-12",
+     "id": "eli/dl/doc/RC-9-2024-0163",
+     "identifier": "RC-9-2024-0163",
+     "inverse_created_a_realization_of": [
+      "eli/dl/proc/2024-2580"
+     ],
+     "is_derivative_of": [
+      "eli/dl/doc/B-9-2024-0165",
+      "eli/dl/doc/B-9-2024-0168",
+      "eli/dl/doc/B-9-2024-0163",
+      "eli/dl/doc/B-9-2024-0167",
+      "eli/dl/doc/B-9-2024-0166"
+     ],
+     "parliamentary_term": "org/ep-9",
+     "type": "Work",
+     "work_type": "def/ep-document-types/RESOLUTION_MOTION_JOINT"
+    }
+   ]
+  }
+ }
+}

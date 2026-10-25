@@ -1,0 +1,218 @@
+/* People & Parties feature. */
+.party-vs-group {
+  display: grid;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+@media (min-width: 48rem) {
+  .party-vs-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.party-vs-group > div {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4) var(--sp-5);
+}
+.party-vs-group h2 {
+  font-size: var(--fs-base);
+  margin-bottom: var(--sp-2);
+}
+.party-vs-group p {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+/* Phones: the two explanations sit inside a disclosure (PartyVsGroup), without their own cards. */
+.party-vs-group-disclosure {
+  margin-bottom: var(--sp-5);
+}
+.party-vs-group--plain {
+  margin-bottom: 0;
+}
+.party-vs-group--plain > div {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  white-space: nowrap;
+}
+.status-dot::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--st-done);
+}
+.status-dot--former::before {
+  background: transparent;
+  border: 1.5px solid var(--text-3);
+}
+
+.group-chip {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  padding: 0.05em 0.5em;
+  border-radius: var(--radius-sm);
+  background: var(--blue-pale);
+  color: var(--eu-blue);
+  text-decoration: none;
+  white-space: nowrap;
+}
+a.group-chip:hover {
+  background: var(--eu-blue);
+  color: #fff;
+}
+
+/* MEP page: rapporteur roles, the file's title and the role side by side */
+.roles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: var(--measure-wide);
+}
+.roles li {
+  display: grid;
+  gap: var(--sp-1) var(--sp-5);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border);
+  line-height: var(--lh-snug);
+}
+@media (min-width: 40rem) {
+  .roles li {
+    grid-template-columns: minmax(0, 1fr) 12rem;
+    align-items: baseline;
+  }
+}
+
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid var(--border);
+}
+.history li {
+  position: relative;
+  padding: 0 0 var(--sp-3) var(--sp-4);
+}
+.history li::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 0.45em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--blue-muted);
+}
+.history li.is-current::before {
+  background: var(--eu-blue);
+  border-color: var(--eu-blue);
+}
+.history__label {
+  font-weight: var(--fw-semibold);
+}
+.history__meta {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.country-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-1);
+}
+.country-bars li {
+  display: grid;
+  grid-template-columns: 8.5rem 2.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+.country-bars .bar {
+  height: 8px;
+  background: var(--blue-muted);
+  border-radius: 2px;
+  min-width: 2px;
+}
+.country-bars .num {
+  text-align: right;
+}
+
+.member-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 16rem auto;
+  column-gap: var(--sp-5);
+  font-size: var(--fs-sm);
+}
+.member-grid li {
+  break-inside: avoid;
+  padding: 0.2rem 0;
+}
+.member-grid .meta {
+  margin-left: 0.35em;
+}
+
+/* group page, members by country: each country's share as a bar */
+.share-cell {
+  width: 35%;
+}
+.share-bar {
+  display: block;
+  height: 8px;
+  min-width: 2px;
+  margin-top: 0.45em;
+  border-radius: 2px;
+  background: var(--blue-muted);
+}
+
+/* group page, members' recorded votes: the vote column (on phones it also holds the date and the counts) */
+.gv-vote {
+  min-width: 14rem;
+}
+
+@media (max-width: 39.99rem) {
+  .gv-vote {
+    min-width: 0;
+  }
+
+  .gv-vote .minibar {
+    margin: var(--sp-1) 0;
+  }
+}
+
+/* party pages: which record of the party this is, and where a sitting MEP who left it is listed now */
+.party-record {
+  margin-bottom: var(--sp-4);
+}
+
+.party-record p {
+  margin: 0;
+}
+
+.party-record p + p {
+  margin-top: var(--sp-2);
+}
+
+.party-now {
+  display: block;
+}
+
+/* a second link under an MEP's name: quieter than the name */
+.party-now a {
+  color: var(--text-2);
+}

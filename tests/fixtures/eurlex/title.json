@@ -1,0 +1,166 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "w",
+   "title"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2017/1001 of the European Parliament and of the Council of 14 June 2017 on the European Union trade mark (codification) (Text with EEA relevance)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "value": "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC (General Data Protection Regulation) (Text with EEA relevance)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Regulation (EU) 2016/2031 of the European Parliament of the Council of 26 October 2016 on protective measures against pests of plants, amending Regulations (EU) No 228/2013, (EU) No 652/2014 and (EU) No 1143/2014 of the European Parliament and of the Council and repealing Council Directives 69/464/EEC, 74/647/EEC, 93/85/EEC, 98/57/EC, 2000/29/EC, 2006/91/EC and 2007/33/EC"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "Regulation (EU) 2017/745 of the European Parliament and of the Council of 5 April 2017 on medical devices, amending Directive 2001/83/EC, Regulation (EC) No 178/2002 and Regulation (EC) No 1223/2009 and repealing Council Directives 90/385/EEC and 93/42/EEC (Text with EEA relevance. )"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Council Decision (EU) 2019/1096 of 25 June 2019 on the signing, on behalf of the Union, of the Investment Protection Agreement between the European Union and its Member States, of the one part, and the Socialist Republic of Viet Nam, of the other part"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2019/1157 of the European Parliament and of the Council of 20 June 2019 on strengthening the security of identity cards of Union citizens and of residence documents issued to Union citizens and their family members exercising their right of free movement (Text with EEA relevance.)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2020/1055 of the European Parliament and of the Council of 15 July 2020 amending Regulations (EC) No 1071/2009, (EC) No 1072/2009 and (EU) No 1024/2012 with a view to adapting them to developments in the road transport sector"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2020/127 of the European Parliament and of the Council of 29 January 2020 amending Regulation (EU) No 1306/2013 as regards financial discipline as from financial year 2021 and Regulation (EU) No 1307/2013 as regards flexibility between pillars in respect of calendar year 2020"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Directive (EU) 2022/2464 of the European Parliament and of the Council of 14 December 2022 amending Regulation (EU) No 537/2014, Directive 2004/109/EC, Directive 2006/43/EC and Directive 2013/34/EU, as regards corporate sustainability reporting (Text with EEA relevance)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Directive (EU) 2022/2041 of the European Parliament and of the Council of 19 October 2022 on adequate minimum wages in the European Union"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Directive (EU) 2022/2555 of the European Parliament and of the Council of 14 December 2022 on measures for a high common level of cybersecurity across the Union, amending Regulation (EU) No 910/2014 and Directive (EU) 2018/1972, and repealing Directive (EU) 2016/1148 (NIS 2 Directive) (Text with EEA relevance)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Council Decision (EU) 2024/592 of 23 January 2024 empowering France to negotiate a bilateral agreement with Algeria concerning judicial cooperation in civil matters related to family law"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2023/1781 of the European Parliament and of the Council of 13 September 2023 establishing a framework of measures for strengthening Europe’s semiconductor ecosystem and amending Regulation (EU) 2021/694 (Chips Act) (Text with EEA relevance)"
+    }
+   },
+   {
+    "w": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Regulation (EU) 2024/1689 of the European Parliament and of the Council of 13 June 2024 laying down harmonised rules on artificial intelligence and amending Regulations (EC) No 300/2008, (EU) No 167/2013, (EU) No 168/2013, (EU) 2018/858, (EU) 2018/1139 and (EU) 2019/2144 and Directives 2014/90/EU, (EU) 2016/797 and (EU) 2020/1828 (Artificial Intelligence Act) (Text with EEA relevance)"
+    }
+   }
+  ]
+ }
+}

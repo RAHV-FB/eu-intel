@@ -1,0 +1,14 @@
+# TEST ONLY curated fixture (invented)
+- id: "2099-0001"
+  reference: "2099/0001(COD)"
+  celex: ["32099R0001"]
+  short_title: "Test Widgets Act"
+  what: "TEST ONLY: sets invented rules on widgets."
+  why: "TEST ONLY: used by tests/test_build.py."
+  aliases: ["TWA", "widget law"]
+  topics: ["tech"]
+  featured: true
+  feature_order: 1
+  sources:
+    - {label: "TEST source", url: "https://example.invalid/source"}
+  reviewed: "2099-01-01"

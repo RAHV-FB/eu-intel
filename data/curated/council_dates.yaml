@@ -1,0 +1,352 @@
+# The day the Council adopted an act of the ordinary legislative procedure, as the act's own text gives it, where
+# the date our sources record differs.
+#
+# Every act adopted under the ordinary legislative procedure gives the dates of the institutions' decisions in
+# the footnote to its citation "Acting in accordance with the ordinary legislative procedure", e.g. Directive
+# (EU) 2024/1760: "Position of the European Parliament of 24 April 2024 (not yet published in the Official
+# Journal) and decision of the Council of 24 May 2024." The footnote is the date of the Council's decision as the
+# act records it. It is not the Council's own record of its vote, and the two can differ: Regulation (EU)
+# 2018/1807 (2017/0228(COD)) gives "decision of the Council of 6 November 2018", while the Council's voting result
+# ST 14173/18 is for its meeting of "9 November 2018".
+#
+# Which date the build uses for the Council's adoption, first to last:
+# 1. The Council's voting result on the act: the Council's own record of the vote, dated by its note (the build
+#    cannot read the voting sheet's "Sitting date", which is part of an image). A note for a meeting held over
+#    several days gives the range, and the vote is dated by its first day unless Cellar's record of the note names
+#    the day. An entry here names such a vote (`vote`) only when the sheet's "Sitting date" is another day and the
+#    footnote gives that day too: ST 10263/24 and ST 10264/24, 23-24 May 2024. Of the 152 voting results in the
+#    snapshot whose note gives several days (all sheets read on 2026-10-23), these are the only two whose sheet
+#    differs from the date shown; the Legislative Observatory names another day of the meeting for eight of the
+#    152, and only for these two is it the sheet's day, so its date does not decide.
+# 2. Without a voting result in our data (the Council source starts in 2019), the footnote, given here where it
+#    differs from the date we have. It replaces the Legislative Observatory's key event "Act adopted by Council
+#    after Parliament's 1st reading", which is sometimes days or weeks off (the signature day, or a later meeting)
+#    or recorded twice for one decision (2014/0174(COD): 13 July and 6 October 2015, "decision of the Council of
+#    18 September 2015"; both are merged into one step). No entry is made where the Council's own voting result is
+#    known to give another day than the footnote (2017/0228(COD): the Legislative Observatory's 9 November 2018,
+#    the date of ST 14173/18, is kept). The entries for acts adopted before 2019 rest on the footnote alone.
+# 3. Otherwise the Legislative Observatory's step.
+#
+# Each entry dates, in the build only, the Council's adoption of one file: the Legislative Observatory's step
+# (timeline, status, "Adopted") and, when `vote` names it, the Council's voting result on the act; the snapshot
+# keeps the source values. An entry whose act is not the file's, or whose quote does not give the date, is not
+# applied (a warning is logged).
+#
+# Fields:
+#   procedure   the procedure reference, e.g. "2022/0051(COD)"
+#   celex       the act whose text gives the date
+#   date        the date of the Council's decision in that text
+#   quote       the footnote, verbatim
+#   vote        optional; the Council voting result (snapshot id) on the act that this date replaces, only when its
+#               voting sheet's "Sitting date" is this date (see 1. above)
+#   reason      optional; why, when `vote` is given: the sheet's "Sitting date", quoted
+#   reviewed    date of the check
+#
+# Last full review: 2026-10-23. Checked: every file of the ordinary legislative procedure whose adoption date came
+# from the Legislative Observatory and differed from Cellar's Council approval event (APR_R1_byCONSIL) or had none
+# (58 acts; the 35 that differ from the text are listed), and every Council voting result in the snapshot whose
+# note gives a meeting of several days (152; the two of 23-24 May 2024 are listed).
+
+- procedure: "2022/0051(COD)"  # Directive (EU) 2024/1760 (CSDDD)
+  celex: "32024L1760"
+  date: "2024-05-24"
+  quote: >-
+    Position of the European Parliament of 24 April 2024 (not yet published in the Official Journal) and
+    decision of the Council of 24 May 2024.
+  vote: "ST-10263-2024"
+  reason: >-
+    The voting result ST 10263/24 is for the 4026th meeting of the Council of 23-24 May 2024; its voting sheet
+    gives "Sitting date: 24/05/2024".
+  reviewed: "2026-10-23"
+
+- procedure: "2021/0428(COD)"  # Regulation (EU) 2024/1717 (Schengen Borders Code)
+  celex: "32024R1717"
+  date: "2024-05-24"
+  quote: >-
+    Position of the European Parliament of 24 April 2024 (not yet published in the Official Journal) and
+    decision of the Council of 24 May 2024.
+  vote: "ST-10264-2024"
+  reason: >-
+    The voting result ST 10264/24 is for the 4026th meeting of the Council of 23-24 May 2024; its voting sheet
+    gives "Sitting date: 24/05/2024".
+  reviewed: "2026-10-23"
+
+- procedure: "2011/0023(COD)"  # Directive (EU) 2016/681; the Legislative Observatory gives 2016-04-18
+  celex: "32016L0681"
+  date: "2016-04-21"
+  quote: >-
+    Position of the European Parliament of 14 April 2016 (not yet published in the Official Journal) and
+    decision of the Council of 21 April 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2012/0175(COD)"  # Directive (EU) 2016/97; the Legislative Observatory gives 2015-12-15
+  celex: "32016L0097"
+  date: "2015-12-14"
+  quote: >-
+    Position of the European Parliament of 24 November 2015 (not yet published in the Official Journal) and
+    decision of the Council of 14 December 2015.
+  reviewed: "2026-10-23"
+
+- procedure: "2012/0336(COD)"  # Regulation (EU, Euratom) No 1142/2014; the Legislative Observatory gives 2014-09-22
+  celex: "32014R1142"
+  date: "2014-09-29"
+  quote: >-
+    Position of the European Parliament of 16 April 2014 (not yet published in the Official Journal) and
+    decision of the Council of 29 September 2014.
+  reviewed: "2026-10-23"
+
+- procedure: "2013/0198(COD)"  # Regulation (EU) No 257/2014; the Legislative Observatory gives 2014-02-10
+  celex: "32014R0257"
+  date: "2014-02-20"
+  quote: >-
+    Position of the European Parliament of 4 February 2014 (not yet published in the Official Journal) and
+    decision of the Council of 20 February 2014.
+  reviewed: "2026-10-23"
+
+- procedure: "2013/0402(COD)"  # Directive (EU) 2016/943; the Legislative Observatory gives 2016-05-26
+  celex: "32016L0943"
+  date: "2016-05-27"
+  quote: >-
+    Position of the European Parliament of 14 April 2016 (not yet published in the Official Journal) and
+    decision of the Council of 27 May 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2013/0409(COD)"  # Directive (EU) 2016/1919; the Legislative Observatory gives 2016-10-14
+  celex: "32016L1919"
+  date: "2016-10-13"
+  quote: >-
+    Position of the European Parliament of 4 October 2016 (not yet published in the Official Journal) and
+    Council decision of 13 October 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2014/0124(COD)"  # Decision (EU) 2016/344; the Legislative Observatory gives 2016-02-15
+  celex: "32016D0344"
+  date: "2016-02-24"
+  quote: >-
+    Position of the European Parliament of 2 February 2016 (not yet published in the Official Journal) and
+    decision of the Council of 24 February 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2014/0174(COD)"  # Regulation (EU) 2015/1843; the Legislative Observatory gives 2015-10-06
+  celex: "32015R1843"
+  date: "2015-09-18"
+  quote: >-
+    Position of the European Parliament of 7 July 2015 (not yet published in the Official Journal) and
+    decision of the Council of 18 September 2015.
+  reviewed: "2026-10-23"
+
+- procedure: "2014/0197(COD)"  # Regulation (EU) 2015/2423; the Legislative Observatory gives 2015-12-15
+  celex: "32015R2423"
+  date: "2015-12-16"
+  quote: >-
+    Position of the European Parliament of 15 December 2015 (not yet published in the Official Journal) and
+    decision of the Council of 16 December 2015.
+  reviewed: "2026-10-23"
+
+- procedure: "2014/0285(COD)"  # Regulation (EU) 2016/1139; the Legislative Observatory gives 2016-06-27
+  celex: "32016R1139"
+  date: "2016-07-01"
+  quote: >-
+    Position of the European Parliament of 23 June 2016 (not yet published in the Official Journal) and
+    decision of the Council of 1 July 2016 (not yet published in the Official Journal).
+  reviewed: "2026-10-23"
+
+- procedure: "2015/0239(COD)"  # Regulation (EU) 2016/1952; the Legislative Observatory gives 2016-10-14
+  celex: "32016R1952"
+  date: "2016-10-13"
+  quote: >-
+    Position of the European Parliament of 13 September 2016 (not yet published in the Official Journal) and
+    decision of the Council of 13 October 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2015/0283(COD)"  # Directive (EU) 2017/1132; the Legislative Observatory gives 2017-04-18
+  celex: "32017L1132"
+  date: "2017-05-29"
+  quote: >-
+    Position of the European Parliament of 5 April 2017 (not yet published in the Official Journal) and
+    decision of the Council of 29 May 2017.
+  reviewed: "2026-10-23"
+
+- procedure: "2015/0306(COD)"  # Regulation (EU) 2016/1953; the Legislative Observatory gives 2016-10-14
+  celex: "32016R1953"
+  date: "2016-10-13"
+  quote: >-
+    Position of the European Parliament of 15 September 2016 (not yet published in the Official Journal) and
+    decision of the Council of 13 October 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2015/0308(COD)"  # Regulation (EU) 2016/1626; the Legislative Observatory gives 2016-09-13
+  celex: "32016R1626"
+  date: "2016-09-14"
+  quote: >-
+    Position of the European Parliament of 6 July 2016 (not yet published in the Official Journal) and
+    decision of the Council of 14 September 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2015/0310(COD)"  # Regulation (EU) 2016/1624; the Legislative Observatory gives 2016-09-13
+  celex: "32016R1624"
+  date: "2016-09-14"
+  quote: >-
+    Position of the European Parliament of 6 July 2016 (not yet published in the Official Journal) and
+    decision of the Council of 14 September 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2015/0313(COD)"  # Regulation (EU) 2016/1625; the Legislative Observatory gives 2016-09-13
+  celex: "32016R1625"
+  date: "2016-09-14"
+  quote: >-
+    Position of the European Parliament of 6 July 2016 (not yet published in the Official Journal) and
+    decision of the Council of 14 September 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2016/0033(COD)"  # Directive (EU) 2016/1034; the Legislative Observatory gives 2016-06-21
+  celex: "32016L1034"
+  date: "2016-06-17"
+  quote: >-
+    Position of the European Parliament of 7 June 2016 (not yet published in the Official Journal) and Council
+    decision of 17 June 2016 (not yet published in the Official Journal).
+  reviewed: "2026-10-23"
+
+- procedure: "2016/0039(COD)"  # Decision (EU) 2016/1112; the Legislative Observatory gives 2016-07-01
+  celex: "32016D1112"
+  date: "2016-06-24"
+  quote: >-
+    Position of the European Parliament of 8 June 2016 (not yet published in the Official Journal) and
+    decision of the Council of 24 June 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2016/0064(COD)"  # Regulation (EU, Euratom) 2016/2030; the Legislative Observatory gives 2016-10-19
+  celex: "32016R2030"
+  date: "2016-09-20"
+  quote: >-
+    Position of the European Parliament of 6 July 2016 (not yet published in the Official Journal) and Council
+    decision of 20 September 2016.
+  reviewed: "2026-10-23"
+
+- procedure: "2016/0130(COD)"  # Directive (EU) 2017/2398; the Legislative Observatory gives 2017-12-08
+  celex: "32017L2398"
+  date: "2017-12-07"
+  quote: >-
+    Position of the European Parliament of 25 October 2017 (not yet published in the Official Journal) and
+    decision of the Council of 7 December 2017.
+  reviewed: "2026-10-23"
+
+- procedure: "2016/0207(COD)"  # Regulation (EU) 2017/2306; the Legislative Observatory gives 2017-12-04
+  celex: "32017R2306"
+  date: "2017-12-07"
+  quote: >-
+    Position of the European Parliament of 30 November 2017 (not yet published in the Official Journal) and
+    decision of the Council of 7 December 2017.
+  reviewed: "2026-10-23"
+
+- procedure: "2016/0345(COD)"  # Regulation (EU) 2017/1001; the Legislative Observatory gives 2017-05-23
+  celex: "32017R1001"
+  date: "2017-05-22"
+  quote: >-
+    Position of the European Parliament of 27 April 2017 (not yet published in the Official Journal) and
+    decision of the Council of 22 May 2017.
+  reviewed: "2026-10-23"
+
+- procedure: "2016/0357B(COD)"  # Regulation (EU) 2018/1241; the Legislative Observatory gives 2018-09-12
+  celex: "32018R1241"
+  date: "2018-09-05"
+  quote: >-
+    Position of the European Parliament of 5 July 2018 (not yet published in the Official Journal) and
+    decision of the Council of 5 September 2018.
+  reviewed: "2026-10-23"
+
+- procedure: "2016/0360B(COD)"  # Regulation (EU) 2017/2395; the Legislative Observatory gives 2017-12-08
+  celex: "32017R2395"
+  date: "2017-12-07"
+  quote: >-
+    Position of the European Parliament of 30 November 2017 (not yet published in the Official Journal) and
+    decision of the Council of 7 December 2017.
+  reviewed: "2026-10-23"
+
+- procedure: "2016/0363(COD)"  # Directive (EU) 2017/2399; the Legislative Observatory gives 2017-12-08
+  celex: "32017L2399"
+  date: "2017-12-07"
+  quote: >-
+    Position of the European Parliament of 30 November 2017 (not yet published in the Official Journal) and
+    decision of the Council of 7 December 2017.
+  reviewed: "2026-10-23"
+
+- procedure: "2017/0002(COD)"  # Regulation (EU) 2018/1725; the Legislative Observatory gives 2018-10-12
+  celex: "32018R1725"
+  date: "2018-10-11"
+  quote: >-
+    Position of the European Parliament of 13 September 2018 (not yet published in the Official Journal) and
+    decision of the Council of 11 October 2018.
+  reviewed: "2026-10-23"
+
+- procedure: "2017/0125(COD)"  # Regulation (EU) 2018/1092; the Legislative Observatory gives 2018-07-18
+  celex: "32018R1092"
+  date: "2018-07-16"
+  quote: >-
+    Position of the European Parliament of 3 July 2018 (not yet published in the Official Journal) and
+    Decision of the Council of 16 July 2018.
+  reviewed: "2026-10-23"
+
+- procedure: "2017/0247(COD)"  # Regulation (EU) 2017/2305; the Legislative Observatory gives 2017-12-08
+  celex: "32017R2305"
+  date: "2017-12-07"
+  quote: >-
+    Position of the European Parliament of 30 November 2017 (not yet published in the Official Journal) and
+    decision of the Council of 7 December 2017.
+  reviewed: "2026-10-23"
+
+- procedure: "2017/0347(COD)"  # Regulation (EU) 2018/1504; the Legislative Observatory gives 2018-09-28
+  celex: "32018R1504"
+  date: "2018-09-27"
+  quote: >-
+    Position of the European Parliament of 3 July 2018 (not yet published in the Official Journal) and Council
+    decision of 27 September 2018.
+  reviewed: "2026-10-23"
+
+- procedure: "2018/0160(COD)"  # Regulation (EU) 2019/125; the Legislative Observatory gives 2018-12-05
+  celex: "32019R0125"
+  date: "2018-12-17"
+  quote: >-
+    Position of the European Parliament of 29 November 2018 (not yet published in the Official Journal) and
+    Decision of the Council of 17 December 2018.
+  reviewed: "2026-10-23"
+
+- procedure: "2020/0101(COD)"  # Regulation (EU) 2020/2221; the Legislative Observatory gives 2020-12-23
+  celex: "32020R2221"
+  date: "2020-12-22"
+  quote: >-
+    Position of the European Parliament of 16 December 2020 (not yet published in the Official Journal) and
+    decision of the Council of 22 December 2020.
+  reviewed: "2026-10-23"
+
+- procedure: "2020/0102(COD)"  # Regulation (EU) 2021/522; the Legislative Observatory gives 2021-03-18
+  celex: "32021R0522"
+  date: "2021-03-17"
+  quote: >-
+    Position of the European Parliament of 9 March 2021 (not yet published in the Official Journal) and
+    decision of the Council of 17 March 2021.
+  reviewed: "2026-10-23"
+
+- procedure: "2020/0151(COD)"  # Regulation (EU) 2021/557; the Legislative Observatory gives 2021-03-31
+  celex: "32021R0557"
+  date: "2021-03-30"
+  quote: >-
+    Position of the European Parliament of 25 March 2021 (not yet published in the Official Journal) and
+    decision of the Council of 30 March 2021.
+  reviewed: "2026-10-23"
+
+- procedure: "2020/0179(COD)"  # Decision (EU) 2020/2229; the Legislative Observatory gives 2020-12-23
+  celex: "32020D2229"
+  date: "2020-12-22"
+  quote: >-
+    Position of the European Parliament of 17 December 2020 (not yet published in the Official Journal) and
+    decision of the Council of 22 December 2020.
+  reviewed: "2026-10-23"
+
+- procedure: "2020/0364(COD)"  # Regulation (EU) 2020/2226; the Legislative Observatory gives 2020-12-23
+  celex: "32020R2226"
+  date: "2020-12-22"
+  quote: >-
+    Position of the European Parliament of 18 December 2020 (not yet published in the Official Journal) and
+    decision of the Council of 22 December 2020.
+  reviewed: "2026-10-23"

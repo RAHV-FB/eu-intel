@@ -1,0 +1,177 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2018-0900",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/2018-0900-PUB-2019-04-25",
+     "type": "Activity",
+     "activity_date": "2019-04-25",
+     "activity_id": "2018-0900-PUB-2019-04-25",
+     "had_activity_type": "def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL"
+    },
+    {
+     "id": "eli/dl/event/2018-0900-DEC-DCPL-2019-03-13",
+     "type": "Decision",
+     "activity_date": "2019-03-13",
+     "activity_id": "2018-0900-DEC-DCPL-2019-03-13",
+     "had_activity_type": "def/ep-activities/PLENARY_ADOPT_POSITION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2019-03-13-VOT-ITM-777775-15",
+     "type": "Activity",
+     "activity_date": "2019-03-13",
+     "activity_id": "MTG-PL-2019-03-13-VOT-ITM-777775-15",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-8-2018-0439"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-8-2019-03-13-VOT-ITM-015"
+     ]
+    },
+    {
+     "id": "eli/dl/event/2018-0900-SIGN-2019-04-17",
+     "type": "Activity",
+     "activity_date": "2019-04-17",
+     "activity_id": "2018-0900-SIGN-2019-04-17",
+     "had_activity_type": "def/ep-activities/SIGNATURE"
+    },
+    {
+     "id": "eli/dl/event/2018-0900-DEC-PLEIN1-2018-12-12",
+     "type": "Decision",
+     "activity_date": "2018-12-12",
+     "activity_id": "2018-0900-DEC-PLEIN1-2018-12-12",
+     "had_activity_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    },
+    {
+     "id": "eli/dl/event/2018-0900-ANPRO-2018-04-16",
+     "type": "Activity",
+     "activity_date": "2018-04-16",
+     "activity_id": "2018-0900-ANPRO-2018-04-16",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/A-8-2018-0439",
+    "eli/dl/doc/C-8-2019-0173",
+    "eli/dl/doc/TA-8-2019-0179"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "process_id": "2018-0900",
+   "process_title": {
+    "da": [
+     "Udkast til ændring af protokol nr. 3 vedrørende statutten for Den Europæiske Unions Domstol",
+     "Det Europæiske Råds forslag til afgørelse om Europa-Parlamentets sammensætning"
+    ],
+    "pt": [
+     "Projeto de decisão do Conselho Europeu que estabelece a composição do Parlamento Europeu",
+     "Projeto de alterações ao Protocolo n.º 3 relativo ao Estatuto do Tribunal de Justiça da União Europeia"
+    ],
+    "cs": [
+     "Návrh rozhodnutí Evropské rady, kterým se stanoví složení Evropského parlamentu",
+     "Návrh změn Protokolu č. 3 o statutu Soudního dvora Evropské unie"
+    ],
+    "sv": [
+     "Utkast till Europeiska rådets beslut om Europaparlamentets sammansättning",
+     "Utkast till ändringar av protokoll nr 3 om stadgan för Europeiska unionens domstol"
+    ],
+    "hr": [
+     "Nacrt odluke Europskog vijeća kojom se utvrđuje sastav Europskog parlamenta",
+     "Nacrt izmjena Protokola br. 3 o Statutu Suda Europske unije"
+    ],
+    "sl": [
+     "Osnutek sklepa Evropskega sveta  o sestavi Evropskega parlamenta",
+     "Predlogi sprememb k Protokolu št. 3 o Statutu Sodišča Evropske unije"
+    ],
+    "pl": [
+     "Projekt decyzji Rady Europejskiej określającej skład Parlamentu Europejskiego",
+     "Projekt zmian Protokołu nr 3 w sprawie statutu Trybunału Sprawiedliwości Unii Europejskiej"
+    ],
+    "lv": [
+     "Projekts Eiropadomes lēmumam, ar ko nosaka Eiropas Parlamenta sastāvu",
+     "Ierosinātie grozījumi 3. protokolā par Eiropas Savienības Tiesas statūtiem"
+    ],
+    "it": [
+     "Progetto di modifica del Protocollo n. 3 sullo Statuto della Corte di giustizia dell'Unione europea",
+     "Progetto di decisione del Consiglio europeo che stabilisce la composizione del Parlamento europeo"
+    ],
+    "hu": [
+     "Az Európai Unió Bíróságának alapokmányáról szóló 3. jegyzőkönyv javasolt módosításai",
+     "Az Európai Parlament összetételének megállapításáról szóló európai tanácsi határozat tervezete"
+    ],
+    "et": [
+     "Euroopa Ülemkogu otsuse eelnõu Euroopa Parlamendi koosseisu kindlaksmääramise kohta",
+     "Protokolli nr 3 (Euroopa Liidu Kohtu põhikirja kohta) kavandatud muudatused"
+    ],
+    "nl": [
+     "Voorgestelde wijzigingen van Protocol nr. 3 betreffende het statuut van het Hof van Justitie van de Europese Unie",
+     "Ontwerpbesluit van de Europese Raad tot vaststelling van de samenstelling van het Europees Parlement"
+    ],
+    "lt": [
+     "Europos Vadovų Tarybos sprendimo, nustatančio Europos Parlamento sudėtį, projektas",
+     "Siūlomi Protokolo Nr. 3 dėl Europos Sąjungos Teisingumo Teismo statuto pakeitimai"
+    ],
+    "bg": [
+     "Проект на решение на Европейския съвет за определяне на състава на Европейския парламент",
+     "Проект на изменение на Протокол № 3 относно статута на Съда на Европейския съюз"
+    ],
+    "fi": [
+     "Ehdotus Eurooppa-neuvoston päätökseksi Euroopan parlamentin kokoonpanosta",
+     "Ehdotus Euroopan unionin tuomioistuimen perussäännöstä tehdyn pöytäkirjan N:o 3 muuttamiseksi"
+    ],
+    "en": [
+     "Proposed amendments to Protocol No 3 on the Statute of the Court of Justice of the European Union",
+     "Draft European Council decision establishing the composition of the European Parliament"
+    ],
+    "ro": [
+     "Proiect de decizie a Consiliului European de stabilire a componenței Parlamentului European",
+     "Proiect de modificare a Protocolului nr. 3 privind Statutul Curții de Justiție a Uniunii Europene"
+    ],
+    "de": [
+     "Entwurf von Änderungen des Protokolls Nr. 3 über die Satzung des Gerichtshofs der Europäischen Union",
+     "Entwurf eines Beschlusses des Europäischen Rates über die Zusammensetzung des Europäischen Parlaments"
+    ],
+    "el": [
+     "Σχέδιο απόφασης του Ευρωπαϊκού Συμβουλίου για τον καθορισμό της σύνθεσης του Ευρωπαϊκού Κοινοβουλίου",
+     "Σχέδιο τροποποιήσεων του πρωτοκόλλου αριθ. 3 περί του Οργανισμού του Δικαστηρίου της Ευρωπαϊκής Ένωσης"
+    ],
+    "sk": [
+     "Návrh rozhodnutia Európskej rady o zložení Európskeho parlamentu",
+     "Návrh zmien Protokolu č. 3 o štatúte Súdneho dvora Európskej únie"
+    ],
+    "fr": [
+     "Projet de décision du Conseil européen fixant la composition du Parlement européen",
+     "Projet de modifications du Protocole n° 3 sur le Statut de la Cour de justice de l’Union européenne"
+    ],
+    "mt": [
+     "Emendi proposti għall-Protokoll Nru 3 dwar l-Istatut tal-Qorti tal-Ġustizzja tal-Unjoni Ewropea",
+     "Abbozz ta' deċiżjoni tal-Kunsill Ewropew li tistabbilixxi l-kompożizzjoni tal-Parlament Ewropew"
+    ],
+    "es": [
+     "Proyecto de Decisión del Consejo Europeo por la que se fija la composición del Parlamento Europeo",
+     "Modificaciones propuestas al Protocolo n.° 3 sobre el Estatuto del Tribunal de Justicia de la Unión Europea"
+    ]
+   },
+   "process_type": [
+    "def/ep-procedure-types/COD",
+    "def/ep-procedure-types/NLE"
+   ],
+   "label": [
+    "2018/0900(COD)",
+    "2018/0900(NLE)"
+   ],
+   "identifierYear": "2018"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

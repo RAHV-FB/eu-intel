@@ -1,0 +1,47 @@
+{
+ "data": [
+  {
+   "id": "person/1294",
+   "type": "Person",
+   "identifier": "1294",
+   "label": "Elio DI RUPO",
+   "familyName": "Di Rupo",
+   "givenName": "Elio",
+   "sortLabel": "DIRUPO"
+  },
+  {
+   "id": "person/28150",
+   "type": "Person",
+   "identifier": "28150",
+   "label": "Kinga GÁL",
+   "familyName": "Gál",
+   "givenName": "Kinga",
+   "sortLabel": "GAL"
+  },
+  {
+   "id": "person/124870",
+   "type": "Person",
+   "identifier": "124870",
+   "label": "Jeppe KOFOD",
+   "familyName": "Kofod",
+   "givenName": "Jeppe",
+   "sortLabel": "KOFOD"
+  },
+  {
+   "id": "person/197526",
+   "type": "Person",
+   "identifier": "197526",
+   "label": "Martin HLAVÁČEK",
+   "familyName": "Hlaváček",
+   "givenName": "Martin",
+   "sortLabel": "HLAVACEK"
+  }
+ ],
+ "@context": [
+  {
+   "@base": "https://data.europarl.europa.eu/",
+   "data": "@graph"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

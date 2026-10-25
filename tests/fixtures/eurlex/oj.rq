@@ -1,0 +1,12 @@
+PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+PREFIX ann: <http://publications.europa.eu/ontology/annotation#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX cmr: <http://publications.europa.eu/ontology/cdm/cmr#>
+SELECT ?w ?oj ?date ?number ?collection WHERE { VALUES ?w { <http://publications.europa.eu/resource/cellar/05b5a9f7-55bf-11ee-9220-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/2d2217a2-525b-11e7-a5ca-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/3e485e15-11bd-11e6-ba9a-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/4211046f-9977-11e9-9d01-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/59e70288-7ce5-11ed-9887-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/83bdc18f-315d-11e7-9412-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/97ee19ca-543f-11ed-92ed-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/9eacb0fa-a474-11e9-9d01-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/a2a66e5b-d2f8-11ea-adf7-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/e8692b5e-43fb-11ea-b81b-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/eac8a98a-cc6b-11ee-b9d9-01aa75ed71a1> <http://publications.europa.eu/resource/cellar/f16b8c3a-b10c-11e6-871e-01aa75ed71a1> }
+  ?w cdm:resource_legal_published_in_official-journal ?oj .
+  OPTIONAL { ?oj cdm:publication_general_date_publication ?date }
+  OPTIONAL { ?oj cdm:official-journal_number ?number }
+  OPTIONAL { ?oj cdm:official-journal_part_of_collection_document ?collection }
+}

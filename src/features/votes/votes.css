@@ -1,0 +1,340 @@
+/* ---------- vote list ---------- */
+.vote-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.vote-item {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+}
+.vote-item + .vote-item {
+  border-top: 1px solid var(--border);
+}
+@media (min-width: 48rem) {
+  .vote-item {
+    grid-template-columns: minmax(0, 1fr) 15rem;
+    gap: var(--sp-5);
+    align-items: center;
+    padding: var(--sp-4) var(--sp-5);
+  }
+}
+/* separators between the items: .dot-list (base.css), which sets the left margin */
+.vote-item__meta {
+  margin-top: 0;
+  margin-bottom: var(--sp-1);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.vote-item__title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+}
+.vote-item__title a {
+  color: var(--navy);
+  text-decoration: none;
+}
+.vote-item__title a:hover {
+  color: var(--eu-blue);
+  text-decoration: underline;
+}
+.vote-item__outcome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+}
+.vote-item__note {
+  margin: var(--sp-1) 0 0;
+}
+
+.margin {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+.margin__close {
+  display: inline-block;
+  font-weight: var(--fw-semibold);
+  color: #7a5a00;
+  background: #fff6cc;
+  border: 1px solid #f2dc80;
+  border-radius: var(--radius-sm);
+  padding: 0 0.4em;
+  margin-right: 0.25em;
+}
+
+/* ---------- vote guide ---------- */
+.vote-guide__list {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0 0 var(--sp-4);
+}
+@media (min-width: 48rem) {
+  .vote-guide__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-4) var(--sp-6);
+  }
+}
+.vote-guide__list dt {
+  font-weight: var(--fw-semibold);
+}
+.vote-guide__list dd {
+  margin: var(--sp-1) 0 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+/* ---------- vote list page (/votes): the filter panel is /legislation's (.lx-filters) ---------- */
+.votes-filters {
+  margin-bottom: var(--sp-5);
+}
+/* "About this list" sits on the count's line; opened, its text takes the full width below it */
+.votes-results > .linkish {
+  margin-left: auto;
+}
+.votes-about[open] {
+  flex-basis: 100%;
+}
+.votes-about > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--eu-blue);
+  list-style: none;
+}
+.votes-about > summary::-webkit-details-marker {
+  display: none;
+}
+.votes-about > summary::before {
+  content: '▸';
+  margin-right: var(--sp-2);
+  transition: transform var(--t-fast);
+}
+.votes-about[open] > summary::before {
+  transform: rotate(90deg);
+}
+.votes-about__body {
+  margin-top: var(--sp-2);
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.votes-about__body > :first-child {
+  margin-top: 0;
+}
+.votes-about__body > p,
+.votes-about__body > .stack {
+  max-width: 48rem;
+}
+.votes-about__h {
+  font-size: var(--fs-base);
+  margin: var(--sp-5) 0 var(--sp-2);
+}
+
+/* ---------- vote detail ---------- */
+.vote-summary {
+  display: grid;
+  gap: var(--sp-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+}
+.vote-summary__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+}
+.vote-summary__note {
+  margin: 0;
+  font-weight: var(--fw-semibold);
+}
+.vote-summary .votebar__track {
+  height: 20px;
+}
+.vote-summary .votebar__legend {
+  font-size: var(--fs-base);
+}
+.margin-box {
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-4);
+  display: grid;
+  gap: var(--sp-1);
+}
+.margin-box__label {
+  font-weight: var(--fw-semibold);
+}
+
+.minibar {
+  display: flex;
+  height: 8px;
+  min-width: 5rem;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--vote-none);
+  gap: 1px;
+}
+.minibar span {
+  display: block;
+  height: 100%;
+}
+.minibar .f {
+  background: var(--vote-for);
+}
+.minibar .x {
+  background: var(--vote-abstain);
+}
+.minibar .a {
+  background: var(--vote-against);
+}
+
+.ballot-correction {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  display: block;
+}
+
+/*
+ * Group and country breakdown tables (Breakdowns.tsx). Below 40rem only the name and the For / Against /
+ * Abstained columns stay (.hide-narrow hides the rest); each row is followed by a second line (tr.row-more) with
+ * what the hidden columns hold, so the counts and their headings are never cut off. Cells are narrower there.
+ */
+.table--breakdown tr.row-more {
+  display: none;
+}
+
+@media (max-width: 39.99rem) {
+  .table--breakdown th,
+  .table--breakdown td {
+    padding-left: 0.375rem;
+    padding-right: 0.375rem;
+  }
+
+  /* the sort mark may wrap under its heading, so a column is only as wide as its heading's word */
+  .table--breakdown .sort-btn {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .table--breakdown tr.row-more {
+    display: table-row;
+  }
+
+  .table--breakdown tr.has-more > * {
+    border-bottom: 0;
+    padding-bottom: var(--sp-1);
+  }
+
+  .table--breakdown tr.row-more > td {
+    padding-top: 0;
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+
+  .row-more__items {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--sp-3);
+  }
+
+  .table--breakdown tr.row-more .minibar {
+    width: 4rem;
+    min-width: 4rem;
+  }
+
+  /* hovering either line highlights both */
+  .table--breakdown tbody tr.has-more:hover + tr.row-more,
+  .table--breakdown tbody tr.has-more:has(+ tr.row-more:hover) {
+    background: var(--blue-paler);
+  }
+
+  .table--breakdown tbody tr.has-more:hover + tr.row-more .muted {
+    color: var(--text-2); /* as on the hovered row (WCAG 1.4.3) */
+  }
+}
+
+/* ShortOnNarrow (Breakdowns.tsx): "Abst." on the narrowest screens; the full heading stays for screen readers */
+.label-short {
+  display: none;
+}
+
+@media (max-width: 22.5rem) {
+  .label-short {
+    display: inline;
+  }
+
+  .table--breakdown th,
+  .table--breakdown td {
+    padding-left: var(--sp-1);
+    padding-right: var(--sp-1);
+  }
+
+  .label-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* if a breakdown table still scrolls sideways (very narrow or zoomed screens), its second line stays in view */
+@media (max-width: 39.99rem) {
+  .row-more__items {
+    position: sticky;
+    left: 0;
+    max-width: calc(100vw - 4rem);
+  }
+}
+
+/* ---------- vote page: "On this page" ---------- */
+/* sections reached from it (or a shared link such as /votes/166051#meps) stop below the sticky header */
+.vote-page [id] {
+  scroll-margin-top: calc(var(--header-h) + var(--sp-4));
+}
+@media (min-width: 64rem) {
+  .vote-page [id] {
+    scroll-margin-top: calc(var(--header-h) + 2.75rem + var(--sp-4));
+  }
+}
+.vote-jump {
+  margin: calc(-1 * var(--sp-3)) 0 var(--sp-5);
+}
+.vote-jump ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.vote-jump a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--eu-blue);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+.vote-jump a:hover {
+  background: var(--blue-pale);
+}

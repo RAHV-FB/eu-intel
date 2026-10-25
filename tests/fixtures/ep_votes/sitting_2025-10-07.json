@@ -1,0 +1,84 @@
+{
+ "_note": "Real EP Open Data API responses (GET /meetings/MTG-PL-2025-10-07/decisions and /vote-results), captured via pipeline.http, trimmed: only the listed records, labels kept in en/fr/mul, vote items without was_motivated_by/created_a_realization_of. Voter lists are complete only for: ; others keep their first 3 ids (published counts unchanged).",
+ "decisions": {
+  "data": [
+   {
+    "activity_date": "2025-10-07",
+    "activity_id": "MTG-PL-2025-10-07-DEC-179413",
+    "activity_order": "1.0",
+    "comment": {
+     "en": "SEC",
+     "fr": "SEC"
+    },
+    "decision_method": "def/ep-decision-methods/VOTE_ELECTRONIC_SECRET",
+    "decision_outcome": "def/ep-statuses/ADOPTED",
+    "had_activity_type": "def/ep-activities/PLENARY_OUTCOME",
+    "id": "eli/dl/event/MTG-PL-2025-10-07-DEC-179413",
+    "inverse_consists_of": [
+     "eli/dl/event/MTG-PL-2025-10-07-VOT-ITM-973512"
+    ],
+    "notation_votingId": "179413",
+    "number_of_attendees": 628,
+    "number_of_votes_abstention": 17,
+    "number_of_votes_against": 305,
+    "number_of_votes_favor": 306,
+    "referenceText": {
+     "en": "Proposal for a decision",
+     "fr": "Proposition de décision"
+    },
+    "type": "Vote"
+   }
+  ]
+ },
+ "sitting": "MTG-PL-2025-10-07",
+ "vote_results": {
+  "data": [
+   {
+    "activity_date": "2025-10-07",
+    "activity_id": "MTG-PL-2025-10-07-VOT-ITM-973512",
+    "activity_label": {
+     "en": "Request for the waiver of the immunity of Ilaria Salis",
+     "fr": "Demande de levée de l’immunité d’Ilaria Salis"
+    },
+    "based_on_a_realization_of": [
+     "eli/dl/doc/A-10-2025-0183"
+    ],
+    "comment": {
+     "en": "<remarkFreeTexts order=\"0\"><title>Requests for secret ballot</title><remarkFreeText><translation>The Left, S&amp;D, Verts/ALE, Renew</translation></remarkFreeText></remarkFreeTexts>",
+     "fr": "<remarkFreeTexts order=\"0\"><title>Demandes de vote au scrutin secret</title><remarkFreeText><translation>The Left, S&amp;D, Verts/ALE, Renew</translation></remarkFreeText></remarkFreeTexts>"
+    },
+    "consists_of": [
+     "eli/dl/event/MTG-PL-2025-10-07-DEC-179413"
+    ],
+    "executed": [
+     "eli/dl/event/MTG-PL-2025-10-07-OJ-ITM-V-58"
+    ],
+    "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+    "id": "eli/dl/event/MTG-PL-2025-10-07-VOT-ITM-973512",
+    "inverse_consists_of": [
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2025-10-07-VOT-ITM-973512"
+      ],
+      "id": "eli/dl/event/MTG-PL-2025-10-07"
+     },
+     {
+      "consists_of": [
+       "eli/dl/event/MTG-PL-2025-10-07-VOT-ITM-973512"
+      ],
+      "id": "eli/dl/proc/2024-2086"
+     }
+    ],
+    "notation_dlvId": "973512",
+    "recorded_in_a_realization_of": [
+     "eli/dl/doc/PV-10-2025-10-07-VOT-ITM-006"
+    ],
+    "structuredLabel": {
+     "en": "<structuredLabel><title>Request for the waiver of the immunity of Ilaria Salis</title><label>Report: Ilhan Kyuchyuk (A10-0183/2025) (Secret ballot (Rule 198(2)))</label></structuredLabel>",
+     "fr": "<structuredLabel><title>Demande de levée de l’immunité d’Ilaria Salis</title><label>Rapport: Ilhan Kyuchyuk (A10-0183/2025) (Vote au scrutin secret (article 198, paragraphe 2, du règlement))</label></structuredLabel>"
+    },
+    "type": "Activity"
+   }
+  ]
+ }
+}

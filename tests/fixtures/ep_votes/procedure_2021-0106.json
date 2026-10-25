@@ -1,0 +1,68 @@
+{
+ "_note": "Real GET /procedures/2021-0106 response (via pipeline.http), trimmed to the listed keys and to the events of June 2023 and March 2024.",
+ "data": [
+  {
+   "consists_of": [
+    {
+     "activity_date": "2024-03-13",
+     "had_activity_type": "def/ep-activities/PLENARY_AMEND_PROPOSAL",
+     "id": "eli/dl/event/2021-0106-DEC-DCPL-2024-03-13",
+     "type": "Decision"
+    },
+    {
+     "activity_date": "2023-06-14",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "id": "eli/dl/event/MTG-PL-2023-06-14-PVCRE-ITM-10-6",
+     "type": "Activity"
+    },
+    {
+     "activity_date": "2023-06-14",
+     "had_activity_type": "def/ep-activities/PLENARY_REFER_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS",
+     "id": "eli/dl/event/2021-0106-DEC-REFBAK-2023-06-14",
+     "type": "Decision"
+    },
+    {
+     "activity_date": "2023-06-14",
+     "had_activity_type": "def/ep-activities/PLENARY_AMEND",
+     "id": "eli/dl/event/2021-0106-DEC-DCPL-2023-06-14",
+     "type": "Decision"
+    },
+    {
+     "activity_date": "2024-03-13",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "id": "eli/dl/event/MTG-PL-2024-03-13-VOT-ITM-941757",
+     "type": "Activity"
+    },
+    {
+     "activity_date": "2024-03-13",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "id": "eli/dl/event/MTG-PL-2024-03-13-PVCRE-ITM-8-2",
+     "type": "Activity"
+    },
+    {
+     "activity_date": "2024-03-12",
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "id": "eli/dl/event/MTG-PL-2024-03-12-PVCRE-ITM-12",
+     "type": "Activity"
+    },
+    {
+     "activity_date": "2023-06-13",
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "id": "eli/dl/event/MTG-PL-2023-06-13-PVCRE-ITM-8",
+     "type": "Activity"
+    },
+    {
+     "activity_date": "2023-06-14",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "id": "eli/dl/event/MTG-PL-2023-06-14-VOT-ITM-939243",
+     "type": "Activity"
+    }
+   ],
+   "id": "eli/dl/proc/2021-0106",
+   "label": "2021/0106(COD)",
+   "process_id": "2021-0106",
+   "process_type": "def/ep-procedure-types/COD",
+   "type": "Process"
+  }
+ ]
+}

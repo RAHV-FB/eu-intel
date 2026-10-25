@@ -1,0 +1,208 @@
+{
+ "_note": "Rows of the real GET /procedures?process-type=T&offset=O&limit=1000 responses (via pipeline.http) for the procedures referenced by the other fixtures; ids the paginated list never returned (2019-2844, 2019-2879) and the procedures of the 2022-2025 fixtures (2020-0361, 2020-0374, 2022-0195, 2022-0348, 2023-0212, 2024-0019, 2025-0329) come from GET /procedures/{id,id}, trimmed to the list's keys.",
+ "data": [
+  {
+   "id": "eli/dl/proc/2017-0123",
+   "label": "2017/0123(COD)",
+   "process_id": "2017-0123",
+   "process_type": "COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2019-2755",
+   "label": "2019/2755(RSP)",
+   "process_id": "2019-2755",
+   "process_type": "RSP",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2019-2844",
+   "label": "2019/2844(RSP)",
+   "process_id": "2019-2844",
+   "process_type": "def/ep-procedure-types/RSP",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2019-2854",
+   "label": "2019/2854(RSP)",
+   "process_id": "2019-2854",
+   "process_type": "RSP",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2019-2879",
+   "label": "2019/2879(RSP)",
+   "process_id": "2019-2879",
+   "process_type": "def/ep-procedure-types/RSP",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2019-2882",
+   "label": "2019/2882(RSP)",
+   "process_id": "2019-2882",
+   "process_type": "RSP",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2019-2883",
+   "label": "2019/2883(RSP)",
+   "process_id": "2019-2883",
+   "process_type": "RSP",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2020-0361",
+   "label": "2020/0361(COD)",
+   "process_id": "2020-0361",
+   "process_type": "def/ep-procedure-types/COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2020-0374",
+   "label": "2020/0374(COD)",
+   "process_id": "2020-0374",
+   "process_type": "def/ep-procedure-types/COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2021-0106",
+   "label": "2021/0106(COD)",
+   "process_id": "2021-0106",
+   "process_type": "COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2022-0131",
+   "label": "2022/0131(COD)",
+   "process_id": "2022-0131",
+   "process_type": "COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2022-0195",
+   "label": "2022/0195(COD)",
+   "process_id": "2022-0195",
+   "process_type": "def/ep-procedure-types/COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2022-0277",
+   "label": "2022/0277(COD)",
+   "process_id": "2022-0277",
+   "process_type": "COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2022-0348",
+   "label": "2022/0348(COD)",
+   "process_id": "2022-0348",
+   "process_type": "def/ep-procedure-types/COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2023-0027",
+   "label": "2023/0027(CNS)",
+   "process_id": "2023-0027",
+   "process_type": "CNS",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2023-0129",
+   "label": "2023/0129(COD)",
+   "process_id": "2023-0129",
+   "process_type": "COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2023-0156",
+   "label": "2023/0156(COD)",
+   "process_id": "2023-0156",
+   "process_type": "COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2023-0212",
+   "label": "2023/0212(COD)",
+   "process_id": "2023-0212",
+   "process_type": "def/ep-procedure-types/COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2023-0290",
+   "label": "2023/0290(COD)",
+   "process_id": "2023-0290",
+   "process_type": "COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2023-2116",
+   "label": "2023/2116(INI)",
+   "process_id": "2023-2116",
+   "process_type": "INI",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2023-2220",
+   "label": "2023/2220(BUI)",
+   "process_id": "2023-2220",
+   "process_type": "BUI",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2024-0019",
+   "label": "2024/0019(COD)",
+   "process_id": "2024-0019",
+   "process_type": "def/ep-procedure-types/COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2024-0028",
+   "label": "2024/0028(COD)",
+   "process_id": "2024-0028",
+   "process_type": "COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2024-2086",
+   "label": "2024/2086(IMM)",
+   "process_id": "2024-2086",
+   "process_type": "IMM",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2024-2580",
+   "label": "2024/2580(RSP)",
+   "process_id": "2024-2580",
+   "process_type": "RSP",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2024-2810",
+   "label": "2024/2810(RSP)",
+   "process_id": "2024-2810",
+   "process_type": "RSP",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2025-0329",
+   "label": "2025/0329(COD)",
+   "process_id": "2025-0329",
+   "process_type": "def/ep-procedure-types/COD",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2025-2140",
+   "label": "2025/2140(INS)",
+   "process_id": "2025-2140",
+   "process_type": "INS",
+   "type": "Process"
+  },
+  {
+   "id": "eli/dl/proc/2026-2680",
+   "label": "2026/2680(DEA)",
+   "process_id": "2026-2680",
+   "process_type": "DEA",
+   "type": "Process"
+  }
+ ]
+}

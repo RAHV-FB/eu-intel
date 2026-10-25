@@ -1,0 +1,34 @@
+# Denmark's decisions on directives that build upon the Schengen acquis, under Article 4 of Protocol No 22 on the
+# position of Denmark, checked against its notification to the Council.
+#
+# Denmark does not take part in adopting measures under Title V of Part Three TFEU and is not bound by them
+# (Protocol No 22, Articles 1 and 2): the directive's recitals say so, and the site marks Denmark "Not bound". For a
+# measure building upon the Schengen acquis the recital adds that Denmark decides whether to implement it in its
+# national law (pipeline/sources/optouts.py records that sentence, `schengen_art4`). Protocol No 22, Article 4(1):
+# "Denmark shall decide within a period of six months after the Council has decided on a proposal or initiative to
+# build upon the Schengen acquis covered by this Part, whether it will implement this measure in its national law. If
+# it decides to do so, this measure will create an obligation under international law between Denmark and the other
+# Member States bound by the measure." Denmark notifies its decision to the Council (a Council document); Cellar's
+# metadata does not record it. Each entry adds that decision to Denmark's row for the directive (its status stays
+# "Not bound": the obligation is not one under EU law).
+#
+# Fields:
+#   celex     the directive (sector-3 CELEX); its recitals must record Denmark under schengen_art4
+#   decision  "implement" or "not_implement"
+#   notified  date Denmark's notification was received (the Council document's "date of receipt")
+#   document  the Council document, e.g. "ST 15298/23"
+#   url       the document (Council register, English)
+#   quote     Denmark's decision, verbatim
+#   reviewed  date of the check
+#
+# Last full review: 2026-10-23 (every directive whose recitals record Denmark under schengen_art4).
+
+- celex: "32023L0977"  # Exchange of information between law enforcement authorities (2021/0411(COD))
+  decision: implement
+  notified: "2023-11-09"
+  document: "ST 15298/23"
+  url: "https://data.consilium.europa.eu/doc/document/ST-15298-2023-INIT/en/pdf"
+  quote: >-
+    On that basis, Denmark hereby gives notice that it has decided to implement the above measure in accordance
+    with Article 4 of the Protocol.
+  reviewed: "2026-10-23"

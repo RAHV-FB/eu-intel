@@ -1,0 +1,11 @@
+# TEST ONLY topics fixture
+- slug: tech
+  label: "Technology & AI"
+  description: "TEST tech topic"
+  ep_subjects: ["3.30"]
+  search_aliases: ["digital"]
+- slug: migration
+  label: "Migration"
+  description: "TEST migration topic"
+  ep_subjects: ["7.10"]
+  search_aliases: ["asylum"]

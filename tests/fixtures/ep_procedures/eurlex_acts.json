@@ -1,0 +1,542 @@
+[
+ {
+  "act_type": "regulation",
+  "amended_by": [],
+  "amends": [],
+  "celex": "32016R0679",
+  "date_document": "2016-04-27",
+  "date_publication": "2016-05-04",
+  "date_signature": "2016-04-27",
+  "eli": "http://data.europa.eu/eli/reg/2016/679/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2016-05-24",
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679",
+  "in_force": true,
+  "oj_ref": "OJ L 119, 4.5.2016",
+  "other_application_dates": [
+   "2018-05-25"
+  ],
+  "procedure_refs": [
+   "2012/0011(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [
+   "31995L0046"
+  ],
+  "source": {
+   "identifier": "32016R0679",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32016R0679",
+   "published": "2024-12-31",
+   "retrieved_at": "2026-10-22T17:35:28Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679"
+  },
+  "subjects": [
+   {
+    "code": "ELSJ",
+    "label": "Area of freedom, security and justice",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "INFO",
+    "label": "Information and verification",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "PROT",
+    "label": "Consumer protection",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "2338",
+    "label": "natural person",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "2828",
+    "label": "protection of privacy",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3011",
+    "label": "cross-frontier data flow",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3028",
+    "label": "data-processing law",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "453",
+    "label": "access to information",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5181",
+    "label": "data protection",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5334",
+    "label": "disclosure of information",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5595",
+    "label": "personal data",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "6222",
+    "label": "area of freedom, security and justice",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "15.20.20",
+    "label": "Consumer information, education and representation",
+    "scheme": "directory"
+   },
+   {
+    "code": "19.40",
+    "label": "Programmes",
+    "scheme": "directory"
+   }
+  ],
+  "title": "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC (General Data Protection Regulation) (Text with EEA relevance)",
+  "transposition_deadlines": []
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32025L0794",
+   "32026L0470"
+  ],
+  "amends": [
+   "32004L0109",
+   "32006L0043",
+   "32013L0034",
+   "32014R0537"
+  ],
+  "celex": "32022L2464",
+  "date_document": "2022-12-14",
+  "date_publication": "2022-12-16",
+  "date_signature": "2022-12-14",
+  "eli": "http://data.europa.eu/eli/dir/2022/2464/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2023-01-05",
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022L2464",
+  "in_force": true,
+  "oj_ref": "OJ L 322, 16.12.2022",
+  "other_application_dates": [
+   "2024-01-01"
+  ],
+  "procedure_refs": [
+   "2021/0104(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32022L2464",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32022L2464",
+   "published": "2023-03-21",
+   "retrieved_at": "2026-10-22T17:35:28Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022L2464"
+  },
+  "subjects": [
+   {
+    "code": "INFO",
+    "label": "Information and verification",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "LES",
+    "label": "Freedom of establishment",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "MARI",
+    "label": "Internal market - Principles",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "1178",
+    "label": "large business",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "1423",
+    "label": "trade information",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "2077",
+    "label": "standard",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "2359",
+    "label": "small and medium-sized enterprises",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "2894",
+    "label": "activity report",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3139",
+    "label": "environmental impact",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5334",
+    "label": "disclosure of information",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "7942",
+    "label": "corporate social responsibility",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "c_fc586505",
+    "label": "environmental auditing",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "17.10",
+    "label": "Company law",
+    "scheme": "directory"
+   }
+  ],
+  "title": "Directive (EU) 2022/2464 of the European Parliament and of the Council of 14 December 2022 amending Regulation (EU) No 537/2014, Directive 2004/109/EC, Directive 2006/43/EC and Directive 2013/34/EU, as regards corporate sustainability reporting (Text with EEA relevance)",
+  "transposition_deadlines": [
+   "2024-07-06"
+  ]
+ },
+ {
+  "act_type": "directive",
+  "amended_by": [
+   "32025L0794",
+   "32026L0470"
+  ],
+  "amends": [
+   "32019L1937",
+   "32023R2859"
+  ],
+  "celex": "32024L1760",
+  "date_document": "2024-06-13",
+  "date_publication": "2024-07-05",
+  "date_signature": "2024-06-13",
+  "eli": "http://data.europa.eu/eli/dir/2024/1760/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2024-07-25",
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1760",
+  "in_force": true,
+  "oj_ref": "OJ L, 2024/1760, 5.7.2024",
+  "other_application_dates": [],
+  "procedure_refs": [
+   "2022/0051(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32024L1760",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32024L1760",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-22T17:35:28Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1760"
+  },
+  "subjects": [
+   {
+    "code": "DDLH",
+    "label": "Human rights",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "ENV",
+    "label": "Environment",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "LES",
+    "label": "Freedom of establishment",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "2825",
+    "label": "environmental protection",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3139",
+    "label": "environmental impact",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "434743",
+    "label": "climate change policy",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "554",
+    "label": "company law",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "557",
+    "label": "labour law",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5682",
+    "label": "economic instrument for the environment",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "584",
+    "label": "human rights",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "6401",
+    "label": "environmental liability",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "6751",
+    "label": "corporate governance",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "7942",
+    "label": "corporate social responsibility",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "15.10.10",
+    "label": "General provisions and programmes",
+    "scheme": "directory"
+   },
+   {
+    "code": "15.20.10",
+    "label": "General",
+    "scheme": "directory"
+   },
+   {
+    "code": "17.10",
+    "label": "Company law",
+    "scheme": "directory"
+   }
+  ],
+  "title": "Directive (EU) 2024/1760 of the European Parliament and of the Council of 13 June 2024 on corporate sustainability due diligence and amending Directive (EU) 2019/1937 and Regulation (EU) 2023/2859 (Text with EEA relevance)",
+  "transposition_deadlines": [
+   "2028-07-26",
+   "2029-07-26"
+  ]
+ },
+ {
+  "act_type": "regulation",
+  "amended_by": [
+   "32026R1744"
+  ],
+  "amends": [
+   "32008R0300",
+   "32013R0167",
+   "32013R0168",
+   "32014R0090",
+   "32016L0797",
+   "32018R0858",
+   "32018R1139",
+   "32019R2144",
+   "32020L1828"
+  ],
+  "celex": "32024R1689",
+  "date_document": "2024-06-13",
+  "date_publication": "2024-07-12",
+  "date_signature": "2024-06-13",
+  "eli": "http://data.europa.eu/eli/reg/2024/1689/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2024-08-01",
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R1689",
+  "in_force": true,
+  "oj_ref": "OJ L, 2024/1689, 12.7.2024",
+  "other_application_dates": [
+   "2025-02-02",
+   "2025-08-02",
+   "2026-08-02",
+   "2027-08-02"
+  ],
+  "procedure_refs": [
+   "2021/0106(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [],
+  "source": {
+   "identifier": "32024R1689",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32024R1689",
+   "published": "2026-09-04",
+   "retrieved_at": "2026-10-22T17:35:28Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R1689"
+  },
+  "subjects": [
+   {
+    "code": "RDT",
+    "label": "Research and technological development",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "TECN",
+    "label": "Technology",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "1439",
+    "label": "innovation",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3030",
+    "label": "artificial intelligence",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3299",
+    "label": "single market",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3636",
+    "label": "new technology",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3648",
+    "label": "harmonisation of standards",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5451",
+    "label": "market approval",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "c_5a195ffd",
+    "label": "smart technology",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "13.10.30",
+    "label": "Research and technological development",
+    "scheme": "directory"
+   }
+  ],
+  "title": "Regulation (EU) 2024/1689 of the European Parliament and of the Council of 13 June 2024 laying down harmonised rules on artificial intelligence and amending Regulations (EC) No 300/2008, (EU) No 167/2013, (EU) No 168/2013, (EU) 2018/858, (EU) 2018/1139 and (EU) 2019/2144 and Directives 2014/90/EU, (EU) 2016/797 and (EU) 2020/1828 (Artificial Intelligence Act) (Text with EEA relevance)",
+  "transposition_deadlines": []
+ },
+ {
+  "act_type": "regulation",
+  "amended_by": [],
+  "amends": [],
+  "celex": "32026R2280",
+  "date_document": "2026-10-07",
+  "date_publication": "2026-10-15",
+  "date_signature": "2026-10-07",
+  "eli": "http://data.europa.eu/eli/reg/2026/2280/oj",
+  "end_of_validity": null,
+  "entry_into_force": "2026-10-15",
+  "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2280",
+  "in_force": true,
+  "oj_ref": "OJ L, 2026/2280, 15.10.2026",
+  "other_application_dates": [
+   "2026-10-16",
+   "2027-10-17"
+  ],
+  "procedure_refs": [
+   "2018/0329(COD)",
+   "2025/0059(COD)"
+  ],
+  "repealed_by": [],
+  "repeals": [
+   "32001L0040",
+   "32004D0191",
+   "32008L0115"
+  ],
+  "source": {
+   "identifier": "32026R2280",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2280",
+   "published": "2026-10-20",
+   "retrieved_at": "2026-10-22T17:35:28Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2280"
+  },
+  "subjects": [
+   {
+    "code": "IMMI",
+    "label": "Immigration and asylum policy",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "J-AI",
+    "label": "Justice and home affairs",
+    "scheme": "subject-matter"
+   },
+   {
+    "code": "1911",
+    "label": "return migration",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "1915",
+    "label": "illegal migration",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "2300",
+    "label": "third country",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "3323",
+    "label": "repatriation grant",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "4003",
+    "label": "foreign national",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "4004",
+    "label": "residence permit",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "5597",
+    "label": "right of asylum",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "6541",
+    "label": "EU migration policy",
+    "scheme": "eurovoc"
+   },
+   {
+    "code": "19.10.20",
+    "label": "Crossing external borders",
+    "scheme": "directory"
+   },
+   {
+    "code": "19.10.40",
+    "label": "Immigration and the right of nationals of third countries",
+    "scheme": "directory"
+   }
+  ],
+  "title": "Regulation (EU) 2026/2280 of the European Parliament and of the Council of 7 October 2026 establishing a common system for the return of third-country nationals staying illegally in the Union, and repealing Directive 2008/115/EC of the European Parliament and of the Council, Council Directive 2001/40/EC and Council Decision 2004/191/EC",
+  "transposition_deadlines": []
+ }
+]

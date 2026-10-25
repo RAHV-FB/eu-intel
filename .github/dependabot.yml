@@ -1,0 +1,45 @@
+# Weekly, grouped dependency updates. Actions are pinned to commit SHAs (with version comments), which
+# Dependabot keeps up to date.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+    open-pull-requests-limit: 5
+    groups:
+      # Browser binaries are tied to the Playwright version: bump these together.
+      playwright:
+        patterns: ["@playwright/test", "playwright", "playwright-core", "@axe-core/playwright"]
+      dev-dependencies:
+        dependency-type: development
+        update-types: ["minor", "patch"]
+      production-dependencies:
+        dependency-type: production
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+    open-pull-requests-limit: 5
+    groups:
+      python:
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps"

@@ -1,0 +1,390 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2024-0068",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/CULT-PA-767866-DEPOT-2025-01-07",
+     "type": "Activity",
+     "activity_date": "2025-01-07",
+     "activity_id": "CULT-PA-767866-DEPOT-2025-01-07",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/CULT-PA-767866"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0068-DEPOT-2025-10-01",
+     "type": "Activity",
+     "activity_date": "2025-10-01",
+     "activity_id": "2024-0068-DEPOT-2025-10-01",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-10-2025-0174"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0068-ANPRO-2024-11-13",
+     "type": "Activity",
+     "activity_date": "2024-11-13",
+     "activity_id": "2024-0068-ANPRO-2024-11-13",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0068-MEET-TRI1-2026-05-05",
+     "type": "Activity",
+     "activity_date": "2026-05-05",
+     "activity_id": "2024-0068-MEET-TRI1-2026-05-05",
+     "had_activity_type": "def/ep-activities/INTERINSTITUTIONAL_NEGOTIATION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0068-MEET-TRI1-2025-11-18",
+     "type": "Activity",
+     "activity_date": "2025-11-18",
+     "activity_id": "2024-0068-MEET-TRI1-2025-11-18",
+     "had_activity_type": "def/ep-activities/INTERINSTITUTIONAL_NEGOTIATION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0068-DEC-ADCP-CULT-2025-04-08",
+     "type": "Decision",
+     "activity_date": "2025-04-08",
+     "activity_id": "2024-0068-DEC-ADCP-CULT-2025-04-08",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/CULT-AD-767866"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/EMPL-AM-772007-DEPOT-2025-03-27",
+     "type": "Activity",
+     "activity_date": "2025-03-27",
+     "activity_id": "EMPL-AM-772007-DEPOT-2025-03-27",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/EMPL-AM-772007"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0068-MEET-TRI1-2026-02-24",
+     "type": "Activity",
+     "activity_date": "2026-02-24",
+     "activity_id": "2024-0068-MEET-TRI1-2026-02-24",
+     "had_activity_type": "def/ep-activities/INTERINSTITUTIONAL_NEGOTIATION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0068-DEC-ADCP-2025-09-23",
+     "type": "Decision",
+     "activity_date": "2025-09-23",
+     "activity_id": "2024-0068-DEC-ADCP-2025-09-23",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2024-0068-DEC-PLEIN1-2025-10-08",
+     "type": "Decision",
+     "activity_date": "2025-10-08",
+     "activity_id": "2024-0068-DEC-PLEIN1-2025-10-08",
+     "had_activity_type": "def/ep-activities/PLENARY_ENDORSE_COMMITTEE_INTERINSTITUTIONAL_NEGOTIATIONS"
+    },
+    {
+     "id": "eli/dl/event/EMPL-AM-771927-DEPOT-2025-03-27",
+     "type": "Activity",
+     "activity_date": "2025-03-27",
+     "activity_id": "EMPL-AM-771927-DEPOT-2025-03-27",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/EMPL-AM-771927"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/EMPL-PR-769927-DEPOT-2025-02-24",
+     "type": "Activity",
+     "activity_date": "2025-02-24",
+     "activity_id": "EMPL-PR-769927-DEPOT-2025-02-24",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/EMPL-PR-769927"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/CULT-PA-767866",
+    "eli/dl/doc/CULT-AD-767866",
+    "eli/dl/doc/EMPL-PR-769927",
+    "eli/dl/doc/A-10-2025-0174"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-257063-2024-12-18",
+     "type": "Participation",
+     "activity_date": "2024-12-18",
+     "had_participant_person": [
+      "person/257063"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 1007
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-257457-2025-01-07",
+     "type": "Participation",
+     "activity_date": "2025-01-07",
+     "had_participant_person": [
+      "person/257457"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/ESN",
+     "precedenceOrder": 1908
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-256871-2025-01-07",
+     "type": "Participation",
+     "activity_date": "2025-01-07",
+     "had_participant_person": [
+      "person/256871"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/PFE",
+     "precedenceOrder": 1903
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-AVI-JURI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/JURI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-256814-2024-12-12",
+     "type": "Participation",
+     "activity_date": "2024-12-12",
+     "had_participant_person": [
+      "person/256814"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1901
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-257139-2025-01-21",
+     "type": "Participation",
+     "activity_date": "2025-01-21",
+     "had_participant_person": [
+      "person/257139"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1906
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-257082-2024-10-02",
+     "type": "Participation",
+     "activity_date": "2024-10-02",
+     "had_participant_person": [
+      "person/257082"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1001
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-256952-2025-01-11",
+     "type": "Participation",
+     "activity_date": "2025-01-11",
+     "had_participant_person": [
+      "person/256952"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 1907
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-197794-2024-09-24",
+     "type": "Participation",
+     "activity_date": "2024-09-24",
+     "had_participant_person": [
+      "person/197794"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 1004
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-257139-2024-10-15",
+     "type": "Participation",
+     "activity_date": "2024-10-15",
+     "had_participant_person": [
+      "person/257139"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 1006
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-MAIN-EMPL",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/EMPL"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMCP-122978-EMPL-2024-10-03",
+     "type": "Participation",
+     "activity_date": "2024-10-03",
+     "had_participant_person": [
+      "person/122978"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/EMPL",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1002
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-256976-2025-01-15",
+     "type": "Participation",
+     "activity_date": "2025-01-15",
+     "had_participant_person": [
+      "person/256976"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1905
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-256874-2024-10-02",
+     "type": "Participation",
+     "activity_date": "2024-10-02",
+     "had_participant_person": [
+      "person/256874"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PFE",
+     "precedenceOrder": 1003
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-197447-2024-10-29",
+     "type": "Participation",
+     "activity_date": "2024-10-29",
+     "had_participant_person": [
+      "person/197447"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 1005
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMSR-257258-2025-01-08",
+     "type": "Participation",
+     "activity_date": "2025-01-08",
+     "had_participant_person": [
+      "person/257258"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW_OPINION",
+     "politicalGroup": "org/ECR",
+     "precedenceOrder": 1904
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-AVI-CULT",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/CULT"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2024-0068-NMCP-28419-CULT-2024-12-18",
+     "type": "Participation",
+     "activity_date": "2024-12-18",
+     "had_participant_person": [
+      "person/28419"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-10",
+     "participation_in_name_of": "org/CULT",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 1902
+    }
+   ],
+   "process_id": "2024-0068",
+   "process_title": {
+    "lv": "Stažieru darba nosacījumu uzlabošana un nodrošināšanas panākšana un tādu pastāvīgu darba tiesisko attiecību apkarošana, kas krāpnieciski noformētas kā stažēšanās (“Stažēšanās direktīva”)",
+    "cs": "Lepší pracovní podmínky stážistů a jejich prosazování a opatření proti praxi skrývání běžných zaměstnaneckých poměrů pod pojem stáže (směrnice o stážích)",
+    "da": "Forbedring og håndhævelse af arbejdsvilkårene for praktikanter og bekæmpelse af almindelige ansættelsesforhold, der er camoufleret som praktikophold (\"Praktikdirektivet\")",
+    "et": "Praktikantide töötingimuste parandamine ja täitmise tagamine ning võitlus olukorraga, kus tavapäraseid töösuhteid esitatakse praktikana (praktikadirektiiv)",
+    "nl": "Verbetering en handhaving van de arbeidsomstandigheden voor stagiairs en bestrijding van reguliere arbeidsverhoudingen die als stages worden verhuld (“richtlijn inzake stages”)",
+    "hr": "Poboljšanje i izvršavanje radnih uvjeta pripravnika i suzbijanje prikazivanja redovnih radnih odnosa kao pripravništva („Direktiva o pripravništvu”)",
+    "sl": "Izboljšanje in izvrševanje zagotavljanja delovnih pogojev pripravnikov ter boj proti kot pripravništvo prikritim rednim delovnim razmerjem (direktiva o pripravništvih)",
+    "mt": "It-titjib u l-infurzar tal-kundizzjonijiet tax-xogħol tat-trainees u l-ġlieda kontra relazzjonijiet ta’ impjieg regolari li taparsi jkunu traineeships (id-“Direttiva dwar it-Traineeships”)",
+    "sk": "Lepšie pracovné podmienky pre stážistov, ich presadzovanie a boj proti vydávaniu riadnych pracovnoprávnych vzťahov za stáže („smernica o stáži“)",
+    "ro": "Îmbunătățirea și asigurarea respectării condițiilor de muncă ale stagiarilor și combaterea raporturilor de muncă obișnuite disimulate sub formă de stagii („Directiva privind stagiile”)",
+    "lt": "Stažuotojų darbo sąlygų gerinimas ir užtikrinimas ir kova su stažuotėmis dangstomais nuolatiniais darbo santykiais (Stažuočių direktyva)",
+    "pl": "Poprawa i egzekwowanie warunków pracy stażystów oraz zwalczanie zwykłych stosunków pracy ukrytych pod postacią staży („dyrektywa w sprawie stażystów”)",
+    "it": "Miglioramento e garanzia del rispetto delle condizioni di lavoro dei tirocinanti e lotta ai rapporti di lavoro regolari camuffati da tirocini (\"direttiva sui tirocini\")",
+    "sv": "Förbättra och tillämpa arbetsvillkor för praktikanter och motverka att reguljära anställningsförhållanden kamoufleras till praktik (Praktikantdirektivet)",
+    "fi": "Harjoittelijoiden työehtojen parantaminen ja täytäntöönpaneminen sekä harjoitteluiksi naamioitujen varsinaisten työsuhteiden torjuminen (harjoitteludirektiivi)",
+    "de": "Verbesserung und Durchsetzung der Arbeitsbedingungen von Praktikanten und Bekämpfung von Scheinpraktika („Praktikumsrichtlinie“)",
+    "hu": "A gyakornokok munkakörülményeinek javítása és szabályozása, valamint a szakmai gyakorlatnak álcázott rendes munkaviszony elleni küzdelem (a gyakornokokról szóló irányelv)",
+    "fr": "Amélioration et application effective des conditions de travail des stagiaires et lutte contre les stages qui dissimulent des relations de travail régulières («directive sur les stages»)",
+    "el": "Βελτίωση και επιβολή των συνθηκών εργασίας των ασκούμενων και καταπολέμηση της πρακτικής άσκησης ως προκάλυμμα για τακτικές εργασιακές σχέσεις («οδηγία για την πρακτική άσκηση»)",
+    "es": "Mejora y control del cumplimiento de las condiciones de trabajo de los trabajadores en prácticas y lucha contra las relaciones laborales regulares encubiertas como períodos de prácticas («Directiva sobre los períodos de prácticas»)",
+    "bg": "Подобряване и прилагане на условията на труд на стажантите и борба с редовните трудови правоотношения, прикрити като стажове („Директива относно стажовете“)",
+    "en": "Improving and enforcing working conditions of trainees and combating regular employment relationships disguised as traineeships (‘Traineeships Directive’)",
+    "ga": "Dálaí oibre oiliúnaithe a fheabhsú agus a fhorfheidhmiú agus caidrimh fostaíochta rialta atá faoi cheilt mar thréimhsí oiliúna a chomhrac (‘an Treoir maidir le Tréimhsí Oiliúna’)",
+    "pt": "Melhoria e imposição do cumprimento das condições de trabalho dos estagiários e inviabilização de relações de trabalho regulares disfarçadas de estágios («Diretiva Estágios»)"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "label": "2024/0068(COD)",
+   "identifierYear": "2024"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

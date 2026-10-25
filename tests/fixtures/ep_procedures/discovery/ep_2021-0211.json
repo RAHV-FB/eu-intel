@@ -1,0 +1,73 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2021-0211",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/MTG-PL-2022-06-22-PVCRE-ITM-13-1",
+     "type": "Activity",
+     "activity_date": "2022-06-22",
+     "activity_id": "MTG-PL-2022-06-22-PVCRE-ITM-13-1",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/C-9-2021-0318",
+      "eli/dl/doc/A-9-2022-0162"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2022-06-22-ITM-013-01",
+      "eli/dl/doc/PV-9-2022-06-22-ITM-013-01"
+     ]
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2022-06-07-PVCRE-ITM-2",
+     "type": "Activity",
+     "activity_date": "2022-06-07",
+     "activity_id": "MTG-PL-2022-06-07-PVCRE-ITM-2",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/C-9-2021-0328",
+      "eli/dl/doc/C-9-2021-0318",
+      "eli/dl/doc/A-9-2022-0145",
+      "eli/dl/doc/C-9-2021-0324",
+      "eli/dl/doc/C-9-2021-0323",
+      "eli/dl/doc/A-9-2022-0162",
+      "eli/dl/doc/A-9-2022-0160",
+      "eli/dl/doc/A-9-2022-0157",
+      "eli/dl/doc/A-9-2022-0155",
+      "eli/dl/doc/C-9-2021-0319"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-9-2022-06-07-ITM-002",
+      "eli/dl/doc/CRE-9-2022-06-07-ITM-002"
+     ]
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2022-06-08-PVCRE-ITM-10-4",
+     "type": "Activity",
+     "activity_date": "2022-06-08",
+     "activity_id": "MTG-PL-2022-06-08-PVCRE-ITM-10-4",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/C-9-2021-0318",
+      "eli/dl/doc/A-9-2022-0162"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2022-06-08-ITM-010-04",
+      "eli/dl/doc/PV-9-2022-06-08-ITM-010-04"
+     ]
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/TA-9-2022-0246"
+   ]
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

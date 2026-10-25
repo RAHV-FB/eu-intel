@@ -1,0 +1,166 @@
+# Continuous integration: lint, offline tests, snapshot validation, data build and its validation, typecheck,
+# site build and privacy gate. Runs fully offline against the committed snapshot (no EU API calls).
+#
+# The Playwright e2e/accessibility job runs on every push to main and every pull request against the site
+# built by the check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
+# A successful run for a push to main starts the deploy (pages.yml, workflow_run).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      e2e:
+        description: Run Playwright e2e + accessibility tests
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+  BASE_PATH: /eu-intel/
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  FORCE_COLOR: "1"
+
+jobs:
+  check:
+    name: Lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install Python dependencies
+        # poppler-utils lets the Council voting-sheet parser tests run instead of being skipped. The runtime
+        # dependencies are those the refresh and the deploy install (requirements.txt, hash-checked); then the dev tools.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          python -m pip install --require-hashes -r requirements.txt
+          python -m pip install -e '.[dev]'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Ruff
+        run: ruff check --output-format=github .
+
+      - name: Pytest (offline; network tests deselected)
+        # Any non-zero exit fails the job, including 5 (no tests collected).
+        run: python -m pytest -q
+
+      - name: Validate snapshot
+        run: python -m pipeline validate
+
+      - name: Build site data (public/data)
+        run: python -m pipeline build
+
+      - name: Validate built data
+        # The checks of the built output (pipeline/validate.py, e.g. a vote margin that contradicts its outcome, a
+        # withdrawn file with an act, a veto outside unanimity) need a build; --built fails instead of skipping them
+        # when public/data is missing.
+        run: python -m pipeline validate --built
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Typecheck e2e tests
+        run: npx tsc -p tests/e2e/tsconfig.json
+
+      - name: Unit tests (vitest)
+        # Fails when no test file matches the include pattern in vite.config.ts.
+        run: npx vitest run
+
+      - name: Build site (BASE_PATH=${{ env.BASE_PATH }})
+        run: npm run build
+
+      - name: Privacy check
+        run: node scripts/check_privacy.mjs
+
+      - name: Site size
+        run: |
+          du -sh dist dist/data 2>/dev/null || true
+          echo "files: $(find dist -type f | wc -l)"
+
+      - name: Upload built site for e2e
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.e2e }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-dist
+          path: dist/
+          retention-days: 3
+          if-no-files-found: error
+
+  e2e:
+    name: E2E + accessibility (Playwright, ${{ matrix.browser }})
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.e2e }}
+    # Playwright 1.56 installs browser dependencies only for the Ubuntu releases it supports;
+    # ubuntu-latest is 26.04, which it does not support yet.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Download built site
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site-dist
+          path: dist
+
+      - name: Install ${{ matrix.browser }} for Playwright
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run Playwright
+        env:
+          E2E_BROWSERS: ${{ matrix.browser }}
+        run: npx playwright test --project=${{ matrix.browser }}
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore

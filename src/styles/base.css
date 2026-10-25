@@ -1,0 +1,571 @@
+/* Base element styles + a few layout primitives shared by every page. Feature styles live next to features. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Long identifiers, URLs and compound words wrap instead of widening the page. */
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 var(--sp-3);
+  line-height: var(--lh-tight);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  letter-spacing: -0.01em;
+  /* Very long words (e.g. German compounds in official vote titles) may break rather than overflow. */
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-xl);
+  letter-spacing: -0.015em;
+}
+
+h2 {
+  font-size: var(--fs-lg);
+}
+
+h3 {
+  font-size: var(--fs-md);
+}
+
+@media (min-width: 48rem) {
+  h1 {
+    font-size: var(--fs-2xl);
+  }
+}
+
+p {
+  margin: 0 0 var(--sp-4);
+}
+
+a {
+  color: var(--link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  color: var(--eu-blue-hover);
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+  text-align: left;
+  font-weight: var(--fw-semibold);
+}
+
+/* Monospace only for machine identifiers (CELEX numbers, document ids, a link to copy). */
+code,
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* A procedure reference such as 2021/0106(COD) in a sentence, a list row or a breadcrumb: the body font, with figures
+   of equal width, kept on one line. */
+.ref {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: var(--sp-6) 0;
+}
+
+::selection {
+  background: #cfe0fb;
+}
+
+/* ---------- primitives ---------- */
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.container--narrow {
+  max-width: calc(var(--container-narrow) + 2 * var(--gutter));
+}
+
+.page {
+  padding-block: var(--sp-6) var(--sp-8);
+  min-height: 60vh;
+}
+
+.page-header {
+  margin-bottom: var(--sp-6);
+}
+
+.page-header .eyebrow {
+  margin-bottom: var(--sp-2);
+}
+
+.lead {
+  font-size: var(--fs-md);
+  color: var(--text-2);
+  max-width: var(--measure);
+}
+
+.eyebrow {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--blue-muted);
+  letter-spacing: 0.02em;
+}
+
+.meta {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.section {
+  margin-top: var(--sp-7);
+}
+
+/*
+ * Section titles: one style on every page. An h2 that opens a section (.section, the law page's .dz-section, the
+ * country page's .csection, the guide's sections, search result groups) or any heading given .section-title.
+ * Headings inside cards (a card's own title) keep the plain h2/h3 style.
+ */
+.section-title,
+.section > h2,
+.section-head > h2,
+.dz-section > h2,
+.csection > h2,
+.prose > section > h2,
+.sr-group__title,
+.lx-head h2,
+.following__bar > h2 {
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--navy);
+  letter-spacing: -0.01em;
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border-strong);
+  margin-bottom: var(--sp-4);
+}
+
+/* A title with something beside it (a note, buttons): the rule runs under the whole row. */
+.section-head > h2,
+.lx-head h2,
+.following__bar > h2 {
+  padding-bottom: 0;
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+@media (min-width: 48rem) {
+  .section-title,
+  .section > h2,
+  .section-head > h2,
+  .dz-section > h2,
+  .csection > h2,
+  .prose > section > h2,
+  .sr-group__title,
+  .lx-head h2,
+  .following__bar > h2 {
+    font-size: var(--fs-xl);
+  }
+}
+
+.section-intro {
+  color: var(--text-2);
+  margin-top: calc(-1 * var(--sp-1));
+  max-width: var(--measure);
+}
+
+/* Spacing between blocks, where a component has no spacing of its own. */
+.mt-3 {
+  margin-top: var(--sp-3);
+}
+
+.mt-5 {
+  margin-top: var(--sp-5);
+}
+
+.mb-3 {
+  margin-bottom: var(--sp-3);
+}
+
+/* a second line under a name or value (e.g. a group's full name under its code) */
+.as-block {
+  display: block;
+}
+
+/*
+ * The link that is the whole primary content of a list row or table cell (a title, a name): navy, with a quiet
+ * underline at rest (navy text is barely darker than body text, and phones have no hover), a full one on hover and
+ * focus. Links inside sentences keep the default style; a secondary link in the same cell is quieter (.sub-link): grey
+ * and regular weight, with the same quiet underline.
+ */
+.row-link,
+a.row-title,
+.table tbody th[scope='row'] > a:first-child {
+  color: var(--navy);
+  font-weight: var(--fw-medium);
+  text-decoration-color: var(--underline-quiet);
+}
+
+.row-link:hover,
+.row-link:focus-visible,
+a.row-title:hover,
+a.row-title:focus-visible,
+.table tbody th[scope='row'] > a:first-child:hover,
+.table tbody th[scope='row'] > a:first-child:focus-visible {
+  color: var(--eu-blue);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+.sub-link {
+  color: var(--text-2);
+  text-decoration-color: var(--underline-quiet);
+}
+
+/*
+ * Metadata separated by middle dots ("Ordinary legislative procedure · Regulation · 2026/0325(COD)"). Each item opens
+ * with its dot, in a strip of its own (a hanging indent, so the item's wrapped lines start after the strip too), and
+ * the dot that would open a line is cut off at the left edge, so a wrapped line never starts with a separator. The cut
+ * stops 6px short of the text, room for the focus outline (3px, offset 2px) of a link that opens a line. (The search
+ * results' metadata uses it too.)
+ */
+.dot-list,
+.sr-item__meta {
+  --dot-w: 1.25em;
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: calc(-1 * var(--dot-w));
+  clip-path: inset(-0.5em -0.5em -0.5em calc(var(--dot-w) - 6px)); /* room for focus outlines on every side */
+}
+
+.dot-list > *,
+.sr-item__meta > * {
+  position: relative;
+  padding-left: var(--dot-w);
+}
+
+.dot-list > *::before,
+.sr-item__meta > *::before {
+  content: '·';
+  content: '·' / '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--dot-w);
+  text-align: center;
+  text-decoration: none;
+}
+
+.sub-link:hover,
+.sub-link:focus-visible {
+  color: var(--eu-blue);
+  text-decoration-color: currentColor;
+}
+
+/* ---------- notes ---------- */
+/* Two kinds of note box: a neutral note (.callout), and a distinction the reader must not miss, such as "not the same
+   as …" (.callout--distinction). */
+.callout,
+.not-same,
+.dz-callout {
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 3px solid var(--border-strong);
+  background: var(--surface-sunk);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--text);
+  max-width: var(--measure);
+}
+
+.callout--distinction,
+.callout--gold,
+.not-same,
+.dz-callout {
+  border-left-color: var(--eu-gold);
+  background: var(--surface);
+}
+
+.callout > :last-child,
+.not-same > :last-child {
+  margin-bottom: 0;
+}
+
+/* the muted colour is below 4.5:1 on the neutral note's sunk background: the secondary one */
+.callout .meta,
+.callout .source {
+  color: var(--text-2);
+}
+
+.note {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  max-width: var(--measure);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+}
+
+.stack > * + * {
+  margin-top: var(--sp-4);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.grid {
+  display: grid;
+  gap: var(--sp-5);
+}
+
+/* Grid children may shrink so wide tables scroll inside .table-wrap instead of widening the page. */
+.grid > * {
+  min-width: 0;
+}
+
+@media (min-width: 48rem) {
+  .grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+
+.btn:hover {
+  background: var(--blue-paler);
+  border-color: var(--blue-muted);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.btn--primary {
+  background: var(--eu-blue);
+  border-color: var(--eu-blue);
+  color: #fff;
+}
+
+.btn--primary:hover {
+  background: var(--eu-blue-hover);
+  border-color: var(--eu-blue-hover);
+  color: #fff;
+}
+
+.btn[aria-pressed='true'] {
+  background: var(--blue-pale);
+  border-color: var(--eu-blue);
+  color: var(--eu-blue);
+}
+
+.input,
+.select {
+  min-height: var(--tap);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: var(--fs-base);
+}
+
+.input:focus-visible,
+.select:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
+  border-color: var(--focus);
+}
+
+.table {
+  font-size: var(--fs-sm);
+}
+
+.table th,
+.table td {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom-color: var(--border-strong);
+}
+
+/* Column headings share one baseline, with or without a sort button. */
+.table thead th {
+  vertical-align: bottom;
+}
+
+/* A row's heading cell reads like body text: its name (a .row-link) stands out from any detail beside it by weight as
+   well as colour (WCAG 1.4.1). */
+.table tbody th {
+  font-weight: var(--fw-regular);
+}
+
+.table td.num,
+.table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-wrap {
+  position: relative; /* contain .visually-hidden text in cells so it scrolls with the table */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/*
+ * Tables wider than their container (attributes set by src/components/scrollableTables.ts):
+ * edge shadows show that more columns are off-screen (the solid "local" layers cover them at either end),
+ * a short hint says so, and a row-header first column stays in view.
+ */
+.table-wrap[data-overflow] {
+  background:
+    linear-gradient(to right, var(--surface) 40%, rgba(255, 255, 255, 0)) left center / 2.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 40%, rgba(255, 255, 255, 0)) right center / 2.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(16, 36, 73, 0.22), rgba(16, 36, 73, 0)) left center / 0.875rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(16, 36, 73, 0.22), rgba(16, 36, 73, 0)) right center / 0.875rem 100% no-repeat scroll,
+    var(--surface);
+}
+
+.table-wrap[data-hint]::before {
+  content: 'Scroll sideways to see all columns →';
+  content: 'Scroll sideways to see all columns →' / '';
+  display: block;
+  position: sticky;
+  left: 0;
+  width: max-content;
+  max-width: 100%;
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.table-wrap[data-sticky] tbody tr > th[scope='row']:first-child,
+.table-wrap[data-sticky] thead tr:first-child > :first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: inset -1px 0 0 var(--border);
+}
+
+/* In a padded card the sticky cells stick at the card's inner edge, not one padding width inside it (where the
+   scrolled cells would show through a strip on their left). */
+.table-wrap.table-card[data-sticky] tbody tr > th[scope='row']:first-child,
+.table-wrap.table-card[data-sticky] thead tr:first-child > :first-child {
+  left: calc(-1 * var(--sp-3));
+}
+
+/* Scrolling a focused cell or sort button into view keeps it clear of the sticky column (WCAG 2.4.11);
+   --sticky-w is the column's width, set by scrollableTables.ts. */
+.table-wrap[data-overflow] {
+  scroll-padding-inline-start: var(--sticky-w, 0px);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

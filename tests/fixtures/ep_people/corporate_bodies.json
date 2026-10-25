@@ -1,0 +1,1030 @@
+{
+ "data": [
+  {
+   "id": "org/5081",
+   "type": "Organization",
+   "identifier": "5081",
+   "isVersionOf": "org/AFET",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20220119",
+    "type": "PeriodOfTime",
+    "endDate": "2022-01-19",
+    "startDate": "2019-07-02"
+   },
+   "label": "AFET",
+   "altLabel": {
+    "en": "Foreign Affairs",
+    "fr": "Affaires étrangères"
+   },
+   "notation_codictBodyId": "5081",
+   "notation_providerTemporalBodyId": "5081",
+   "prefLabel": {
+    "fr": "Commission des affaires étrangères",
+    "en": "Committee on Foreign Affairs"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/5086",
+   "type": "Organization",
+   "identifier": "5086",
+   "isVersionOf": "org/ECON",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20220119",
+    "type": "PeriodOfTime",
+    "endDate": "2022-01-19",
+    "startDate": "2019-07-02"
+   },
+   "label": "ECON",
+   "altLabel": {
+    "fr": "Affaires économiques et monétaires",
+    "en": "Economic and Monetary Affairs"
+   },
+   "notation_providerTemporalBodyId": "5086",
+   "notation_codictBodyId": "5086",
+   "prefLabel": {
+    "fr": "Commission des affaires économiques et monétaires",
+    "en": "Committee on Economic and Monetary Affairs"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/5093",
+   "type": "Organization",
+   "identifier": "5093",
+   "isVersionOf": "org/AGRI",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20220119",
+    "type": "PeriodOfTime",
+    "endDate": "2022-01-19",
+    "startDate": "2019-07-02"
+   },
+   "label": "AGRI",
+   "altLabel": {
+    "fr": "Agriculture et développement rural",
+    "en": "Agriculture and Rural Development"
+   },
+   "notation_codictBodyId": "5093",
+   "notation_providerTemporalBodyId": "5093",
+   "prefLabel": {
+    "en": "Committee on Agriculture and Rural Development",
+    "fr": "Commission de l'agriculture et du développement rural"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/5094",
+   "type": "Organization",
+   "identifier": "5094",
+   "isVersionOf": "org/PECH",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20220119",
+    "type": "PeriodOfTime",
+    "endDate": "2022-01-19",
+    "startDate": "2019-07-02"
+   },
+   "label": "PECH",
+   "altLabel": {
+    "fr": "Pêche",
+    "en": "Fisheries"
+   },
+   "notation_providerTemporalBodyId": "5094",
+   "notation_codictBodyId": "5094",
+   "prefLabel": {
+    "fr": "Commission de la pêche",
+    "en": "Committee on Fisheries"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/5098",
+   "type": "Organization",
+   "identifier": "5098",
+   "isVersionOf": "org/AFCO",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20220119",
+    "type": "PeriodOfTime",
+    "endDate": "2022-01-19",
+    "startDate": "2019-07-02"
+   },
+   "label": "AFCO",
+   "altLabel": {
+    "en": "Constitutional Affairs",
+    "fr": "Affaires constitutionnelles"
+   },
+   "notation_codictBodyId": "5098",
+   "notation_providerTemporalBodyId": "5098",
+   "prefLabel": {
+    "en": "Committee on Constitutional Affairs",
+    "fr": "Commission des affaires constitutionnelles"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/5101",
+   "type": "Organization",
+   "identifier": "5101",
+   "isVersionOf": "org/DROI",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20220119",
+    "type": "PeriodOfTime",
+    "endDate": "2022-01-19",
+    "startDate": "2019-07-02"
+   },
+   "label": "DROI",
+   "altLabel": {
+    "en": "Human Rights",
+    "fr": "Droits de l'homme"
+   },
+   "notation_providerTemporalBodyId": "5101",
+   "notation_codictBodyId": "5101",
+   "prefLabel": {
+    "en": "Subcommittee on Human Rights",
+    "fr": "Sous-commission \"Droits de l'homme\""
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB",
+   "hasSubOrganization": [
+    {
+     "id": "org/5081",
+     "type": "Organization",
+     "identifier": "5081",
+     "isVersionOf": "org/AFET",
+     "source": "EU_PARLIAMENT",
+     "temporal": "time-period/20190702-20220119",
+     "label": "AFET",
+     "altLabel": {
+      "de": "Auswärtige Angelegenheiten",
+      "hr": "Vanjski poslovi",
+      "hu": "Külügy",
+      "el": "Εξωτερικές Υποθέσεις",
+      "ro": "Afaceri externe",
+      "lv": "Ārlietas",
+      "en": "Foreign Affairs",
+      "cs": "Zahraniční věci",
+      "es": "Asuntos Exteriores",
+      "fr": "Affaires étrangères",
+      "sk": "Zahraničné veci",
+      "ga": "Gnóthaí Eachtracha",
+      "nl": "Buitenlandse zaken",
+      "sl": "Zunanje zadeve",
+      "pl": "Sprawy Zagraniczne",
+      "mt": "Affarijiet Barranin",
+      "it": "Affari esteri",
+      "et": "Välisasjad",
+      "fi": "Ulkoasiat",
+      "da": "Udenrigsudvalget",
+      "bg": "Външни работи",
+      "sv": "Utrikesfrågor",
+      "lt": "Užsienio reikalai",
+      "pt": "Assuntos Externos"
+     },
+     "notation_codictBodyId": "5081",
+     "notation_providerTemporalBodyId": "5081",
+     "prefLabel": {
+      "es": "Comisión de Asuntos Exteriores",
+      "fr": "Commission des affaires étrangères",
+      "bg": "Комисия по външни работи",
+      "sv": "Utskottet för utrikesfrågor",
+      "pl": "Komisja Spraw Zagranicznych",
+      "nl": "Commissie buitenlandse zaken",
+      "hr": "Odbor za vanjske poslove",
+      "cs": "Výbor pro zahraniční věci",
+      "fi": "Ulkoasiainvaliokunta",
+      "da": "Udenrigsudvalget",
+      "it": "Commissione per gli affari esteri",
+      "de": "Ausschuss für auswärtige Angelegenheiten",
+      "hu": "Külügyi Bizottság",
+      "lv": "Ārlietu komiteja",
+      "pt": "Comissão dos Assuntos Externos",
+      "et": "Väliskomisjon",
+      "lt": "Užsienio reikalų komitetas",
+      "en": "Committee on Foreign Affairs",
+      "el": "Επιτροπή Εξωτερικών Υποθέσεων",
+      "sl": "Odbor za zunanje zadeve",
+      "mt": "Kumitat għall-Affarijiet Barranin",
+      "sk": "Výbor pre zahraničné veci",
+      "ga": "An Coiste um Ghnóthaí Eachtracha",
+      "ro": "Comisia pentru afaceri externe"
+     },
+     "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+    }
+   ]
+  },
+  {
+   "id": "org/5102",
+   "type": "Organization",
+   "identifier": "5102",
+   "isVersionOf": "org/SEDE",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20220119",
+    "type": "PeriodOfTime",
+    "endDate": "2022-01-19",
+    "startDate": "2019-07-02"
+   },
+   "label": "SEDE",
+   "altLabel": {
+    "en": "Security and Defence",
+    "fr": "Sécurité et défense"
+   },
+   "notation_providerTemporalBodyId": "5102",
+   "notation_codictBodyId": "5102",
+   "prefLabel": {
+    "fr": "Sous-commission \"sécurité et défense\"",
+    "en": "Subcommittee on Security and Defence"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB",
+   "hasSubOrganization": [
+    {
+     "id": "org/5081",
+     "type": "Organization",
+     "identifier": "5081",
+     "isVersionOf": "org/AFET",
+     "source": "EU_PARLIAMENT",
+     "temporal": "time-period/20190702-20220119",
+     "label": "AFET",
+     "altLabel": {
+      "de": "Auswärtige Angelegenheiten",
+      "hr": "Vanjski poslovi",
+      "hu": "Külügy",
+      "el": "Εξωτερικές Υποθέσεις",
+      "ro": "Afaceri externe",
+      "lv": "Ārlietas",
+      "en": "Foreign Affairs",
+      "cs": "Zahraniční věci",
+      "es": "Asuntos Exteriores",
+      "fr": "Affaires étrangères",
+      "sk": "Zahraničné veci",
+      "ga": "Gnóthaí Eachtracha",
+      "nl": "Buitenlandse zaken",
+      "sl": "Zunanje zadeve",
+      "pl": "Sprawy Zagraniczne",
+      "mt": "Affarijiet Barranin",
+      "it": "Affari esteri",
+      "et": "Välisasjad",
+      "fi": "Ulkoasiat",
+      "da": "Udenrigsudvalget",
+      "bg": "Външни работи",
+      "sv": "Utrikesfrågor",
+      "lt": "Užsienio reikalai",
+      "pt": "Assuntos Externos"
+     },
+     "notation_codictBodyId": "5081",
+     "notation_providerTemporalBodyId": "5081",
+     "prefLabel": {
+      "es": "Comisión de Asuntos Exteriores",
+      "fr": "Commission des affaires étrangères",
+      "bg": "Комисия по външни работи",
+      "sv": "Utskottet för utrikesfrågor",
+      "pl": "Komisja Spraw Zagranicznych",
+      "nl": "Commissie buitenlandse zaken",
+      "hr": "Odbor za vanjske poslove",
+      "cs": "Výbor pro zahraniční věci",
+      "fi": "Ulkoasiainvaliokunta",
+      "da": "Udenrigsudvalget",
+      "it": "Commissione per gli affari esteri",
+      "de": "Ausschuss für auswärtige Angelegenheiten",
+      "hu": "Külügyi Bizottság",
+      "lv": "Ārlietu komiteja",
+      "pt": "Comissão dos Assuntos Externos",
+      "et": "Väliskomisjon",
+      "lt": "Užsienio reikalų komitetas",
+      "en": "Committee on Foreign Affairs",
+      "el": "Επιτροπή Εξωτερικών Υποθέσεων",
+      "sl": "Odbor za zunanje zadeve",
+      "mt": "Kumitat għall-Affarijiet Barranin",
+      "sk": "Výbor pre zahraničné veci",
+      "ga": "An Coiste um Ghnóthaí Eachtracha",
+      "ro": "Comisia pentru afaceri externe"
+     },
+     "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+    }
+   ]
+  },
+  {
+   "id": "org/5151",
+   "type": "Organization",
+   "identifier": "5151",
+   "isVersionOf": "org/GUE-NGL",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20201217",
+    "type": "PeriodOfTime",
+    "endDate": "2020-12-17",
+    "startDate": "2019-07-02"
+   },
+   "label": "GUE/NGL",
+   "altLabel": {
+    "en": "European United Left - Nordic Green Left",
+    "fr": "Gauche unitaire européenne/Gauche verte"
+   },
+   "notation_codictBodyId": "5151",
+   "notation_providerTemporalBodyId": "5151",
+   "prefLabel": {
+    "fr": "Groupe de la Gauche unitaire européenne/Gauche verte nordique",
+    "en": "Group of the European United Left - Nordic Green Left"
+   },
+   "classification": "def/ep-entities/EU_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/5152",
+   "type": "Organization",
+   "identifier": "5152",
+   "isVersionOf": "org/NI",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2019-07-02"
+   },
+   "label": "NI",
+   "altLabel": {
+    "en": "Non-attached Members",
+    "fr": "Non-inscrits"
+   },
+   "notation_providerTemporalBodyId": "5152",
+   "notation_codictBodyId": "5152",
+   "prefLabel": {
+    "fr": "Non-inscrits",
+    "en": "Non-attached Members"
+   },
+   "classification": "def/ep-entities/EU_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/5153",
+   "type": "Organization",
+   "identifier": "5153",
+   "isVersionOf": "org/PPE",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2019-07-02"
+   },
+   "label": "PPE",
+   "altLabel": {
+    "fr": "Groupe du Parti populaire européen (Démocrates-Chrétiens)",
+    "en": "Group of the European People's Party (Christian Democrats)"
+   },
+   "notation_providerTemporalBodyId": "5153",
+   "notation_codictBodyId": "5153",
+   "prefLabel": {
+    "fr": "Groupe du Parti populaire européen (Démocrates-Chrétiens)",
+    "en": "Group of the European People's Party (Christian Democrats)"
+   },
+   "classification": "def/ep-entities/EU_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/5154",
+   "type": "Organization",
+   "identifier": "5154",
+   "isVersionOf": "org/S-D",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2019-07-02"
+   },
+   "label": "S&D",
+   "altLabel": {
+    "fr": "Groupe de l'Alliance Progressiste des Socialistes et Démocrates au Parlement européen",
+    "en": "Group of the Progressive Alliance of Socialists and Democrats in the European Parliament"
+   },
+   "notation_codictBodyId": "5154",
+   "notation_providerTemporalBodyId": "5154",
+   "prefLabel": {
+    "en": "Group of the Progressive Alliance of Socialists and Democrats in the European Parliament",
+    "fr": "Groupe de l'Alliance Progressiste des Socialistes et Démocrates au Parlement européen"
+   },
+   "classification": "def/ep-entities/EU_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/5201",
+   "type": "Organization",
+   "represents": [
+    "http://publications.europa.eu/resource/authority/country/DNK"
+   ],
+   "identifier": "5201",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2019-07-02"
+   },
+   "label": "A",
+   "altLabel": {
+    "en": "A",
+    "fr": "A"
+   },
+   "notation_codictBodyId": "5201",
+   "notation_providerTemporalBodyId": "5201",
+   "prefLabel": {
+    "en": "Socialdemokratiet",
+    "fr": "Socialdemokratiet"
+   },
+   "classification": "def/ep-entities/NATIONAL_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/5253",
+   "type": "Organization",
+   "represents": [
+    "http://publications.europa.eu/resource/authority/country/HUN"
+   ],
+   "identifier": "5253",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2019-07-02"
+   },
+   "label": "Fidesz-KDNP",
+   "altLabel": {
+    "en": "Fidesz-KDNP",
+    "fr": "Fidesz-KDNP"
+   },
+   "notation_codictBodyId": "5253",
+   "notation_providerTemporalBodyId": "5253",
+   "prefLabel": {
+    "fr": "Fidesz-Magyar Polgári Szövetség-Kereszténydemokrata Néppárt",
+    "en": "Fidesz-Magyar Polgári Szövetség-Kereszténydemokrata Néppárt"
+   },
+   "classification": "def/ep-entities/NATIONAL_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/5355",
+   "type": "Organization",
+   "represents": [
+    "http://publications.europa.eu/resource/authority/country/CZE"
+   ],
+   "identifier": "5355",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2019-07-02"
+   },
+   "label": "ANO 2011",
+   "altLabel": {
+    "en": "ANO 2011",
+    "fr": "ANO 2011"
+   },
+   "notation_codictBodyId": "5355",
+   "notation_providerTemporalBodyId": "5355",
+   "prefLabel": {
+    "en": "ANO 2011",
+    "fr": "ANO 2011"
+   },
+   "classification": "def/ep-entities/NATIONAL_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/5704",
+   "type": "Organization",
+   "identifier": "5704",
+   "isVersionOf": "org/RENEW",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20190702-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2019-07-02"
+   },
+   "label": "Renew",
+   "altLabel": {
+    "en": "Renew Europe",
+    "fr": "Renew Europe"
+   },
+   "notation_codictBodyId": "5704",
+   "notation_providerTemporalBodyId": "5704",
+   "prefLabel": {
+    "fr": "Groupe Renew Europe",
+    "en": "Renew Europe Group"
+   },
+   "classification": "def/ep-entities/EU_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/6180",
+   "type": "Organization",
+   "identifier": "6180",
+   "isVersionOf": "org/FISC",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20200914-20220119",
+    "type": "PeriodOfTime",
+    "endDate": "2022-01-19",
+    "startDate": "2020-09-14"
+   },
+   "label": "FISC",
+   "altLabel": {
+    "en": "Tax Matters",
+    "fr": "Affaires fiscales"
+   },
+   "notation_providerTemporalBodyId": "6180",
+   "notation_codictBodyId": "6180",
+   "prefLabel": {
+    "en": "Subcommittee on Tax Matters",
+    "fr": "Sous-commission des affaires fiscales"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB",
+   "hasSubOrganization": [
+    "org/5086"
+   ]
+  },
+  {
+   "id": "org/6182",
+   "type": "Organization",
+   "identifier": "6182",
+   "isVersionOf": "org/INGE",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20200914-20220323",
+    "type": "PeriodOfTime",
+    "endDate": "2022-03-23",
+    "startDate": "2020-09-14"
+   },
+   "label": "INGE",
+   "altLabel": {
+    "fr": "Ingérence étrangère dans l’ensemble des processus démocratiques de l’Union européenne, y compris la désinformation",
+    "en": "Foreign Interference in all Democratic Processes in the European Union, including Disinformation"
+   },
+   "notation_codictBodyId": "6182",
+   "notation_providerTemporalBodyId": "6182",
+   "prefLabel": {
+    "fr": "Commission spéciale sur l’ingérence étrangère dans l’ensemble des processus démocratiques de l’Union européenne, y compris la désinformation",
+    "en": "Special Committee on Foreign Interference in all Democratic Processes in the European Union, including Disinformation"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_TEMPORARY"
+  },
+  {
+   "id": "org/6259",
+   "type": "Organization",
+   "identifier": "6259",
+   "isVersionOf": "org/THE-LEFT",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20201218-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2020-12-18"
+   },
+   "label": "The Left",
+   "altLabel": {
+    "fr": "La Gauche - GUE/NGL",
+    "en": "The Left - GUE/NGL"
+   },
+   "notation_codictBodyId": "6259",
+   "notation_providerTemporalBodyId": "6259",
+   "prefLabel": {
+    "en": "The Left group in the European Parliament - GUE/NGL",
+    "fr": "Le groupe de la gauche au Parlement européen - GUE/NGL"
+   },
+   "classification": "def/ep-entities/EU_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/6351",
+   "type": "Organization",
+   "identifier": "6351",
+   "isVersionOf": "org/AGRI",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20220120-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2022-01-20"
+   },
+   "label": "AGRI",
+   "altLabel": {
+    "en": "Agriculture and Rural Development",
+    "fr": "Agriculture et développement rural"
+   },
+   "notation_providerTemporalBodyId": "6351",
+   "notation_codictBodyId": "6351",
+   "prefLabel": {
+    "en": "Committee on Agriculture and Rural Development",
+    "fr": "Commission de l'agriculture et du développement rural"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/6355",
+   "type": "Organization",
+   "identifier": "6355",
+   "isVersionOf": "org/PECH",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20220120-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2022-01-20"
+   },
+   "label": "PECH",
+   "altLabel": {
+    "en": "Fisheries",
+    "fr": "Pêche"
+   },
+   "notation_providerTemporalBodyId": "6355",
+   "notation_codictBodyId": "6355",
+   "prefLabel": {
+    "fr": "Commission de la pêche",
+    "en": "Committee on Fisheries"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/6356",
+   "type": "Organization",
+   "identifier": "6356",
+   "isVersionOf": "org/EMPL",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20220120-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2022-01-20"
+   },
+   "label": "EMPL",
+   "altLabel": {
+    "en": "Employment and Social Affairs",
+    "fr": "Emploi et affaires sociales"
+   },
+   "notation_codictBodyId": "6356",
+   "notation_providerTemporalBodyId": "6356",
+   "prefLabel": {
+    "fr": "Commission de l'emploi et des affaires sociales",
+    "en": "Committee on Employment and Social Affairs"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/6365",
+   "type": "Organization",
+   "identifier": "6365",
+   "isVersionOf": "org/AFET",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20220120-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2022-01-20"
+   },
+   "label": "AFET",
+   "altLabel": {
+    "fr": "Affaires étrangères",
+    "en": "Foreign Affairs"
+   },
+   "notation_codictBodyId": "6365",
+   "notation_providerTemporalBodyId": "6365",
+   "prefLabel": {
+    "en": "Committee on Foreign Affairs",
+    "fr": "Commission des affaires étrangères"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/6366",
+   "type": "Organization",
+   "identifier": "6366",
+   "isVersionOf": "org/ECON",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20220120-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2022-01-20"
+   },
+   "label": "ECON",
+   "altLabel": {
+    "en": "Economic and Monetary Affairs",
+    "fr": "Affaires économiques et monétaires"
+   },
+   "notation_codictBodyId": "6366",
+   "notation_providerTemporalBodyId": "6366",
+   "prefLabel": {
+    "en": "Committee on Economic and Monetary Affairs",
+    "fr": "Commission des affaires économiques et monétaires"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/6370",
+   "type": "Organization",
+   "identifier": "6370",
+   "isVersionOf": "org/FISC",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20220120-20240715",
+    "type": "PeriodOfTime",
+    "endDate": "2024-07-15",
+    "startDate": "2022-01-20"
+   },
+   "label": "FISC",
+   "altLabel": {
+    "fr": "Affaires fiscales",
+    "en": "Tax Matters"
+   },
+   "notation_codictBodyId": "6370",
+   "notation_providerTemporalBodyId": "6370",
+   "prefLabel": {
+    "fr": "Sous-commission des affaires fiscales",
+    "en": "Subcommittee on Tax Matters"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB",
+   "hasSubOrganization": [
+    "org/6366"
+   ]
+  },
+  {
+   "id": "org/6562",
+   "type": "Organization",
+   "identifier": "6562",
+   "isVersionOf": "org/AFET",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716",
+    "type": "PeriodOfTime",
+    "startDate": "2024-07-16"
+   },
+   "label": "AFET",
+   "altLabel": {
+    "en": "Foreign Affairs",
+    "fr": "Affaires étrangères"
+   },
+   "notation_providerTemporalBodyId": "6562",
+   "notation_codictBodyId": "6562",
+   "prefLabel": {
+    "fr": "Commission des affaires étrangères",
+    "en": "Committee on Foreign Affairs"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/6570",
+   "type": "Organization",
+   "identifier": "6570",
+   "isVersionOf": "org/ECON",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716",
+    "type": "PeriodOfTime",
+    "startDate": "2024-07-16"
+   },
+   "label": "ECON",
+   "altLabel": {
+    "fr": "Affaires économiques et monétaires",
+    "en": "Economic and Monetary Affairs"
+   },
+   "notation_providerTemporalBodyId": "6570",
+   "notation_codictBodyId": "6570",
+   "prefLabel": {
+    "en": "Committee on Economic and Monetary Affairs",
+    "fr": "Commission des affaires économiques et monétaires"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/6582",
+   "type": "Organization",
+   "identifier": "6582",
+   "isVersionOf": "org/AGRI",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716",
+    "type": "PeriodOfTime",
+    "startDate": "2024-07-16"
+   },
+   "label": "AGRI",
+   "altLabel": {
+    "fr": "Agriculture et développement rural",
+    "en": "Agriculture and Rural Development"
+   },
+   "notation_codictBodyId": "6582",
+   "notation_providerTemporalBodyId": "6582",
+   "prefLabel": {
+    "en": "Committee on Agriculture and Rural Development",
+    "fr": "Commission de l'agriculture et du développement rural"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/6586",
+   "type": "Organization",
+   "identifier": "6586",
+   "isVersionOf": "org/LIBE",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716",
+    "type": "PeriodOfTime",
+    "startDate": "2024-07-16"
+   },
+   "label": "LIBE",
+   "altLabel": {
+    "fr": "Libertés civiles, justice et affaires intérieures",
+    "en": "Civil Liberties, Justice and Home Affairs"
+   },
+   "notation_providerTemporalBodyId": "6586",
+   "notation_codictBodyId": "6586",
+   "prefLabel": {
+    "fr": "Commission des libertés civiles, de la justice et des affaires intérieures",
+    "en": "Committee on Civil Liberties, Justice and Home Affairs"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  },
+  {
+   "id": "org/6737",
+   "type": "Organization",
+   "represents": [
+    "http://publications.europa.eu/resource/authority/country/HUN"
+   ],
+   "identifier": "6737",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716",
+    "type": "PeriodOfTime",
+    "startDate": "2024-07-16"
+   },
+   "label": "Fidesz-KDNP",
+   "altLabel": {
+    "fr": "Fidesz-KDNP",
+    "en": "Fidesz-KDNP"
+   },
+   "notation_codictBodyId": "6737",
+   "notation_providerTemporalBodyId": "6737",
+   "prefLabel": {
+    "en": "Fidesz-Magyar Polgári Szövetség-Kereszténydemokrata Néppárt",
+    "fr": "Fidesz-Magyar Polgári Szövetség-Kereszténydemokrata Néppárt"
+   },
+   "classification": "def/ep-entities/NATIONAL_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/6758",
+   "type": "Organization",
+   "represents": [
+    "http://publications.europa.eu/resource/authority/country/BEL"
+   ],
+   "identifier": "6758",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716",
+    "type": "PeriodOfTime",
+    "startDate": "2024-07-16"
+   },
+   "label": "PS",
+   "altLabel": {
+    "en": "PS",
+    "fr": "PS"
+   },
+   "notation_codictBodyId": "6758",
+   "notation_providerTemporalBodyId": "6758",
+   "prefLabel": {
+    "en": "Parti Socialiste",
+    "fr": "Parti Socialiste"
+   },
+   "classification": "def/ep-entities/NATIONAL_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/7006",
+   "type": "Organization",
+   "identifier": "7006",
+   "isVersionOf": "org/SEDE",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716-20250119",
+    "type": "PeriodOfTime",
+    "endDate": "2025-01-19",
+    "startDate": "2024-07-16"
+   },
+   "label": "SEDE",
+   "altLabel": {
+    "en": "Security and Defence",
+    "fr": "Sécurité et défense"
+   },
+   "notation_providerTemporalBodyId": "7006",
+   "notation_codictBodyId": "7006",
+   "prefLabel": {
+    "fr": "Sous-commission \"sécurité et défense\"",
+    "en": "Subcommittee on Security and Defence"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB",
+   "hasSubOrganization": [
+    "org/6562"
+   ]
+  },
+  {
+   "id": "org/7007",
+   "type": "Organization",
+   "identifier": "7007",
+   "isVersionOf": "org/FISC",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716",
+    "type": "PeriodOfTime",
+    "startDate": "2024-07-16"
+   },
+   "label": "FISC",
+   "altLabel": {
+    "en": "Tax Matters",
+    "fr": "Affaires fiscales"
+   },
+   "notation_codictBodyId": "7007",
+   "notation_providerTemporalBodyId": "7007",
+   "prefLabel": {
+    "en": "Subcommittee on Tax Matters",
+    "fr": "Sous-commission des affaires fiscales"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_SUB",
+   "hasSubOrganization": [
+    "org/6570"
+   ]
+  },
+  {
+   "id": "org/7038",
+   "type": "Organization",
+   "identifier": "7038",
+   "isVersionOf": "org/S-D",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716",
+    "type": "PeriodOfTime",
+    "startDate": "2024-07-16"
+   },
+   "label": "S&D",
+   "altLabel": {
+    "fr": "Groupe de l'Alliance Progressiste des Socialistes et Démocrates au Parlement européen",
+    "en": "Group of the Progressive Alliance of Socialists and Democrats in the European Parliament"
+   },
+   "notation_codictBodyId": "7038",
+   "notation_providerTemporalBodyId": "7038",
+   "prefLabel": {
+    "fr": "Groupe de l'Alliance Progressiste des Socialistes et Démocrates au Parlement européen",
+    "en": "Group of the Progressive Alliance of Socialists and Democrats in the European Parliament"
+   },
+   "classification": "def/ep-entities/EU_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/7150",
+   "type": "Organization",
+   "identifier": "7150",
+   "isVersionOf": "org/PFE",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20240716",
+    "type": "PeriodOfTime",
+    "startDate": "2024-07-16"
+   },
+   "label": "PfE",
+   "altLabel": {
+    "fr": "Patriotes",
+    "en": "Patriots"
+   },
+   "notation_codictBodyId": "7150",
+   "notation_providerTemporalBodyId": "7150",
+   "prefLabel": {
+    "en": "Patriots for Europe Group",
+    "fr": "Groupe Patriotes pour l’Europe"
+   },
+   "classification": "def/ep-entities/EU_POLITICAL_GROUP"
+  },
+  {
+   "id": "org/7911",
+   "type": "Organization",
+   "identifier": "7911",
+   "isVersionOf": "org/SEDE",
+   "source": "EU_PARLIAMENT",
+   "temporal": {
+    "id": "time-period/20250120",
+    "type": "PeriodOfTime",
+    "startDate": "2025-01-20"
+   },
+   "label": "SEDE",
+   "altLabel": {
+    "en": "Security and Defence",
+    "fr": "Sécurité et défense"
+   },
+   "notation_providerTemporalBodyId": "7911",
+   "notation_codictBodyId": "7911",
+   "prefLabel": {
+    "fr": "Commission de la sécurité et de la défense",
+    "en": "Committee on Security and Defence"
+   },
+   "classification": "def/ep-entities/COMMITTEE_PARLIAMENTARY_STANDING"
+  }
+ ],
+ "@context": [
+  {
+   "@base": "https://data.europarl.europa.eu/",
+   "data": "@graph"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

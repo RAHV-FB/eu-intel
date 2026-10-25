@@ -1,0 +1,217 @@
+/* Countries feature. */
+.ctable th,
+.ctable td {
+  white-space: nowrap;
+}
+.ctable thead tr:first-child th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  padding-top: var(--sp-3);
+}
+.ctable .grp-start {
+  border-left: 2px solid var(--border-strong);
+}
+.ctable .grp-rep {
+  background: var(--blue-paler);
+}
+.ctable .grp-council {
+  background: #f7f7f4;
+}
+.ctable .grp-impl {
+  background: #fbfaf3;
+}
+/* the Country column stays in view; only the first header row has a Country cell (rowspan 2): the second row's
+   first cell is "Current MEPs". The table sits in a padded card (.table-card): stick at the card's inner edge. */
+.ctable tbody th,
+.ctable thead tr:first-child > th:first-child {
+  position: sticky;
+  left: calc(-1 * var(--sp-3));
+  background: var(--surface);
+  z-index: 1;
+}
+.ctable tbody tr:hover th {
+  background: var(--blue-paler);
+}
+.ctable .unavail {
+  color: var(--text-3);
+  font-style: italic;
+}
+
+.country-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-6);
+  padding: 0;
+  list-style: none;
+}
+.country-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  text-decoration: none;
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-sm);
+}
+.country-nav a:hover {
+  border-color: var(--eu-blue);
+}
+.country-nav .n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--eu-blue);
+  color: #fff;
+  font-size: var(--fs-xs);
+}
+
+.csection {
+  margin-top: var(--sp-7);
+  /* a section link lands with the heading below the sticky header (and its navigation row on wide screens) */
+  scroll-margin-top: calc(var(--header-h) + var(--sp-4));
+}
+@media (min-width: 64rem) {
+  .csection {
+    scroll-margin-top: calc(var(--header-h) + 2.75rem + var(--sp-4));
+  }
+}
+.csection__kicker {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--blue-muted);
+  margin: 0 0 var(--sp-1);
+}
+/* country page: national parties with current MEPs */
+.party-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.csection h3 {
+  margin-top: var(--sp-6);
+}
+
+.tstatus {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45em;
+  font-size: var(--fs-sm);
+  white-space: normal;
+  min-width: 10rem;
+}
+.tstatus__icon {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  border: 2px solid var(--text-3);
+  position: relative;
+  top: 0.05em;
+}
+.tstatus--measures_notified .tstatus__icon {
+  background: var(--text-3);
+  border-color: var(--text-3);
+}
+.tstatus--deadline_not_reached .tstatus__icon {
+  border-color: var(--st-progress);
+  background: linear-gradient(90deg, var(--st-progress) 50%, transparent 50%);
+}
+.tstatus--none_found .tstatus__icon {
+  background: transparent;
+}
+.tstatus--not_participating .tstatus__icon {
+  background: var(--surface-sunk);
+  border: 2px solid var(--border-strong);
+  border-radius: 2px;
+}
+
+.tstatus--no_deadline .tstatus__icon {
+  border-style: dotted;
+}
+
+.tstatus--unavailable .tstatus__icon {
+  border-style: dashed;
+}
+
+.indicators {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+}
+.indicator {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4);
+}
+.indicator__value {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  margin: var(--sp-1) 0;
+}
+.indicator__label {
+  font-weight: var(--fw-semibold);
+  margin: 0;
+}
+.indicator p {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  margin: 0 0 var(--sp-2);
+}
+
+.status-open {
+  font-weight: var(--fw-semibold);
+}
+.wrap-cell {
+  white-space: normal !important;
+  min-width: 14rem;
+}
+
+/* the directive column of the transposition table */
+.impl-dir {
+  min-width: 15rem;
+}
+
+.impl-dir__more {
+  margin-top: var(--sp-1);
+}
+
+/* a row found only because its title cites the number searched for (e.g. an amending directive), or only because
+   the site search finds its file */
+.impl-dir__cites {
+  display: block;
+  font-style: italic;
+}
+
+@media (max-width: 39.99rem) {
+  /* on phones the status is shown under the directive: the Status column's width would push "Measures notified" off
+     a 320px screen */
+  .impl-dir,
+  .wrap-cell,
+  .impl-dir .tstatus {
+    min-width: 0;
+  }
+}
+@media (max-width: 23.49rem) {
+  /* 320-375px: a long unbroken word (a case subject's "2014/23/EU,2014/24/EU,", a group's "Greens/European") may break
+     anywhere, so that the tables fit the screen with their last column */
+  .wrap-cell,
+  .csection .table tbody th {
+    overflow-wrap: anywhere;
+  }
+}

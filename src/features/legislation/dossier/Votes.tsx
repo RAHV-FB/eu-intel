@@ -1,0 +1,249 @@
+import { useId, useState } from 'react';
+import { Link } from 'react-router-dom';
+import type { CouncilVote, CoverageScope, DossierDetail, EpVoteSummary, ISODate, Meta, TimelineEvent, VoteKind } from '../../../types/data';
+import { ExtLink, SourceLink, Term, VoteBar } from '../../../components/ui';
+import { formatDate } from '../../../lib/format';
+import { CouncilVoteCard } from '../../council/CouncilVoteCard';
+import { MarginText, OutcomeBadge } from '../../votes/components';
+import { VoteTitle } from '../../votes/VoteTitle';
+import { SplitNote } from './Split';
+
+const PRIMARY: VoteKind[] = ['final', 'mandate', 'resolution', 'motion', 'other'];
+
+function EpVoteCard({ v }: { v: EpVoteSummary }) {
+  return (
+    <li className="dz-vote">
+      <p className="dz-vote__meta">
+        <time dateTime={v.date}>{formatDate(v.date, true)}</time>
+        <span aria-hidden="true"> · </span>
+        <span className="tag">{v.kind_label}</span>
+      </p>
+      <h3 className="dz-vote__title">
+        <Link to={`/votes/${encodeURIComponent(v.id)}`}>
+          <VoteTitle v={v} />
+        </Link>
+      </h3>
+      <div className="dz-vote__outcome">
+        <OutcomeBadge outcome={v.outcome} basis={v.outcome_basis} />
+        {v.margin && <MarginText margin={v.margin} outcome={v.outcome} />}
+      </div>
+      {v.outcome_note && <p className="meta dz-vote__note">{v.outcome_note}</p>}
+      <VoteBar forCount={v.for} against={v.against} abstain={v.abstain} label={v.display_title || v.title} />
+      {v.margin && <p className="meta dz-vote__rule">Rule applied: {v.margin.rule_label}</p>}
+      <p className="dz-vote__links">
+        <Link to={`/votes/${encodeURIComponent(v.id)}`}>
+          {v.has_ballots ? 'See how each political group, country’s MEPs and MEP voted' : 'Vote details'}
+          <span aria-hidden="true"> →</span>
+        </Link>
+        <SourceLink source={v.source} />
+      </p>
+    </li>
+  );
+}
+
+function CompactVote({ v }: { v: EpVoteSummary }) {
+  return (
+    <li className="dz-cvote">
+      <span className="dz-cvote__date">
+        <time dateTime={v.date}>{formatDate(v.date)}</time>
+      </span>
+      <span className="dz-cvote__main">
+        <Link to={`/votes/${encodeURIComponent(v.id)}`}>
+          <VoteTitle v={v} />
+        </Link>
+        <span className="meta"> · {v.kind_label}</span>
+      </span>
+      <span className="dz-cvote__res">
+        <OutcomeBadge outcome={v.outcome} basis={v.outcome_basis} />
+        {v.for != null && (
+          <span className="meta num">
+            {v.for}–{v.against ?? 0}–{v.abstain ?? 0}
+            <span className="visually-hidden"> (for, against, abstained)</span>
+          </span>
+        )}
+      </span>
+    </li>
+  );
+}
+
+/** Parliament's approval of the Council's position at second reading, which no vote on the text decides. */
+function ApprovalWithoutVote({ a }: { a: NonNullable<DossierDetail['ep_approval_without_vote']> }) {
+  const voted =
+    a.amendments_voted && a.rejection_voted
+      ? 'Proposals to amend and to reject the Council’s position were put to the vote and not adopted'
+      : a.amendments_voted
+        ? 'Proposals to amend the Council’s position were put to the vote and not adopted'
+        : a.rejection_voted
+          ? 'A proposal to reject the Council’s position was put to the vote and not adopted'
+          : null;
+  return (
+    <p className="dz-none">
+      On {formatDate(a.date)} Parliament approved the Council’s position at second reading without a vote on the text as a whole:
+      when Parliament approves the Council’s position, or takes no decision on it, the act is deemed adopted in the wording of that
+      position (Article 294(7)(a) TFEU); a vote is needed only to reject or amend it.
+      {a.record && (
+        <>
+          {' '}
+          Parliament’s record of that decision reads “Approval without vote” (
+          <ExtLink href={a.record.url}>{a.record.label || 'European Parliament'}</ExtLink>).
+        </>
+      )}
+      {voted && <> {voted}; these votes are not listed here.</>}
+      {a.parts_voted && <> Split or separate votes on parts of the text were also held; these votes are not listed here.</>}
+      {a.first_reading && (
+        <>
+          {' '}
+          Its first-reading decision of {formatDate(a.first_reading)} precedes the votes covered on this site (see{' '}
+          <Link to="/about#coverage">coverage</Link>).
+        </>
+      )}
+    </p>
+  );
+}
+
+export function ParliamentVotes({
+  votes,
+  oeilUrl,
+  split = [],
+  approval,
+}: {
+  votes: EpVoteSummary[];
+  oeilUrl?: string | null;
+  split?: DossierDetail['related'];
+  approval?: DossierDetail['ep_approval_without_vote'];
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const listId = useId();
+  const primary = votes.filter((v) => PRIMARY.includes(v.kind));
+  const secondary = votes.filter((v) => !PRIMARY.includes(v.kind));
+  // If there is no final/resolution vote, promote the most recent few so the section is never empty-looking.
+  const main = primary.length ? primary : secondary.slice(0, 3);
+  const rest = primary.length ? secondary : secondary.slice(3);
+
+  return (
+    <section className="dz-section" id="ep-votes" aria-labelledby="ep-votes-title">
+      <h2 id="ep-votes-title">How the European Parliament voted</h2>
+      <p className="dz-intro">
+        Parliament’s plenary votes linked to this file by official identifiers: its final and negotiating-mandate votes, votes on
+        the committee’s decision to negotiate, and <Term id="roll-call">roll-call votes</Term> on motions and resolutions. Votes on
+        amendments and on parts of the text are not listed. Each vote’s page breaks a roll-call result down by{' '}
+        <Term id="political-group">political group</Term>, by MEPs’ country and by MEP.
+      </p>
+      <p className="dz-callout">
+        <strong>“Spanish MEPs voted…” is not the same as “Spain voted…”.</strong> MEPs are elected in each country but vote
+        individually, usually with their political group. Member State governments vote separately, in the Council of the EU
+        (see the next section).
+      </p>
+      {votes.length === 0 && split.length > 0 ? (
+        <SplitNote>Parliament’s votes are shown on each separate file</SplitNote>
+      ) : votes.length === 0 && approval ? (
+        <ApprovalWithoutVote a={approval} />
+      ) : votes.length === 0 ? (
+        <p className="dz-none">
+          No roll-call vote is matched to this file in our data (see <Link to="/about#coverage">coverage</Link>).
+          {oeilUrl && (
+            <>
+              {' '}
+              Parliament’s decisions on it are listed in its <ExtLink href={oeilUrl}>Legislative Observatory file</ExtLink>.
+            </>
+          )}
+        </p>
+      ) : (
+        <>
+          <ol className="dz-votes">
+            {main.map((v) => (
+              <EpVoteCard key={v.id} v={v} />
+            ))}
+          </ol>
+          {rest.length > 0 && (
+            <div className="dz-votes-more">
+              <button type="button" className="btn" aria-expanded={showAll} aria-controls={listId} onClick={() => setShowAll((s) => !s)}>
+                {showAll ? 'Hide' : 'Show'} {rest.length} {rest.every((v) => v.kind === 'procedural') ? 'procedural' : 'other'}{' '}
+                vote{rest.length === 1 ? '' : 's'}
+              </button>
+              {showAll && (
+                <ol className="dz-cvotes" id={listId}>
+                  {rest.map((v) => (
+                    <CompactVote key={v.id} v={v} />
+                  ))}
+                </ol>
+              )}
+            </div>
+          )}
+          {approval && <ApprovalWithoutVote a={approval} />}
+        </>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Why a file shows no Council vote: its latest recorded Council step (the act's adoption or the Council's first-reading
+ * position), else its adoption date, set against the first and last Council vote in our data (meta.json `scope`). A
+ * file adopted within that period is not "under discussion or outside the period covered" (2021/0433(CNS), adopted
+ * 14 December 2022): none of the voting-result documents we read is linked to it.
+ */
+export function noCouncilVoteNote(timeline: TimelineEvent[], adopted: ISODate | null | undefined, scope: CoverageScope | undefined): string {
+  const head = 'No Council vote is linked to this file in the data we have.';
+  const from = scope?.council_votes_from;
+  const to = scope?.council_votes_to;
+  const step = [...timeline].reverse().find((e) => e.state === 'done' && (e.kind === 'council_adoption' || e.kind === 'council_position'));
+  const when = step?.date ?? adopted;
+  if (!from || !to || !when) {
+    const period = from && to ? ` (${formatDate(from, true)} to ${formatDate(to, true)})` : '';
+    return (
+      `${head} The Council publishes how each Member State voted when it formally adopts a legislative act; files still under ` +
+      `discussion, or adopted outside the period covered${period}, have no record here.`
+    );
+  }
+  const what = step ? `Its timeline records “${step.title}” on ${formatDate(step.date, true)}` : `The file was adopted on ${formatDate(when, true)}`;
+  if (when < from) return `${head} ${what}, before the first Council vote in our data (${formatDate(from, true)}).`;
+  if (when > to) return `${head} ${what}, after the latest Council vote in our data (${formatDate(to, true)}).`;
+  return (
+    `${head} ${what}, within the period of the Council votes in our data (${formatDate(from, true)} to ${formatDate(to, true)}), ` +
+    'but none of the Council’s voting-result documents we read is linked to it. We read them from those the Publications Office ' +
+    'lists, which do not include every Council vote.'
+  );
+}
+
+export function CouncilVotes({
+  votes,
+  meta,
+  split = [],
+  timeline = [],
+  adopted,
+}: {
+  votes: CouncilVote[];
+  meta: Meta | undefined;
+  split?: DossierDetail['related'];
+  timeline?: TimelineEvent[];
+  adopted?: ISODate | null;
+}) {
+  const src = meta?.sources.find((s) => s.id === 'council');
+  const unavailable = src && (src.status === 'failed' || src.status === 'unavailable');
+  return (
+    <section className="dz-section" id="council-votes" aria-labelledby="council-title">
+      <h2 id="council-title">How Member States voted in the Council</h2>
+      <p className="dz-intro">
+        In the <Term id="council">Council of the EU</Term>, government ministers vote on behalf of their country. Most laws
+        need a <Term id="qmv">qualified majority</Term>; some areas require <Term id="unanimity">unanimity</Term>.
+      </p>
+      {votes.length > 0 ? (
+        <div className="dz-council">
+          {votes.map((v) => (
+            <CouncilVoteCard key={v.id} vote={v} headingLevel={3} />
+          ))}
+        </div>
+      ) : split.length > 0 ? (
+        <SplitNote>the Council’s votes are shown on each separate file</SplitNote>
+      ) : unavailable ? (
+        <p className="dz-none">
+          Council voting results are not available in this release, so we cannot show how Member States voted on this file.
+          See <Link to="/about#sources">data sources</Link>.
+        </p>
+      ) : (
+        <p className="dz-none">{noCouncilVoteNote(timeline, adopted, meta?.scope)}</p>
+      )}
+    </section>
+  );
+}

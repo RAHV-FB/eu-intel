@@ -1,0 +1,32 @@
+# Corrections to the amendment links EUR-Lex (Cellar) records between acts, checked against the amending act's text.
+#
+# Cellar links an amending act to the work of each act it amends (cdm:resource_legal_amends_resource_legal). Rarely
+# the link goes to another act with the same year and number but a different type: the AI Act (32024R1689) is linked
+# to Commission Implementing Regulation (EU) No 90/2014 on decanoic acid (32014R0090), with the modified location
+# "Article 8, paragraph 5", which is the paragraph its Article 105 adds to Directive 2014/90/EU (32014L0090). Each
+# entry replaces, in the build only, one such link in both directions: the act amends `with` instead of `replace`,
+# `with` is amended by the act and `replace` no longer is. The snapshot keeps the source values.
+#
+# Fields:
+#   act       the amending act (sector-3 CELEX)
+#   replace   the act Cellar links it to by mistake
+#   with      the act its text amends
+#   evidence  the provision of the amending act that amends `with`, quoted
+#   sources   [{label, url}] the texts checked
+#   reviewed  date of the check
+#
+# `python -m pipeline validate` warns when an act's amendment link names an act whose number its title cites only
+# under another type (amends-link-type), and when an entry here no longer matches Cellar's links (act-relation-stale).
+#
+# Last full review: 2026-10-23 (every amendment link in the snapshot).
+
+- act: "32024R1689"  # AI Act
+  replace: "32014R0090"  # Commission Implementing Regulation (EU) No 90/2014 (decanoic acid in biocidal products)
+  with: "32014L0090"  # Directive 2014/90/EU on marine equipment
+  evidence: >-
+    Article 105 ("Amendment to Directive 2014/90/EU"): "In Article 8 of Directive 2014/90/EU, the following
+    paragraph is added: '5. For Artificial Intelligence systems which are safety components within the meaning of
+    Regulation (EU) 2024/1689 [...]'". No provision amends Implementing Regulation (EU) No 90/2014.
+  sources:
+    - {label: "Regulation (EU) 2024/1689, Article 105", url: "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"}
+  reviewed: "2026-10-23"

@@ -1,0 +1,306 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/proc/2023-0126",
+   "type": "Process",
+   "consists_of": [
+    {
+     "id": "eli/dl/event/MTG-PL-2024-02-28-PVCRE-ITM-8-2",
+     "type": "Activity",
+     "activity_date": "2024-02-28",
+     "activity_id": "MTG-PL-2024-02-28-PVCRE-ITM-8-2",
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2024-02-28-ITM-008-02",
+      "eli/dl/doc/PV-9-2024-02-28-ITM-008-02"
+     ]
+    },
+    {
+     "id": "eli/dl/event/JURI-PR-753702-DEPOT-2023-10-13",
+     "type": "Activity",
+     "activity_date": "2023-10-13",
+     "activity_id": "JURI-PR-753702-DEPOT-2023-10-13",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/JURI-PR-753702"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2023-0126-DEC-ADCP-AGRI-2023-07-06",
+     "type": "Decision",
+     "activity_date": "2023-07-06",
+     "activity_id": "2023-0126-DEC-ADCP-AGRI-2023-07-06",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/AGRI-AL-750122"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_OPINION",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2023-0126-DEC-ADCP-2024-01-24",
+     "type": "Decision",
+     "activity_date": "2024-01-24",
+     "activity_id": "2023-0126-DEC-ADCP-2024-01-24",
+     "had_activity_type": "def/ep-activities/COMMITTEE_ADOPTING_REPORT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2023-0126-DEC-DCPL-2024-02-28",
+     "type": "Decision",
+     "activity_date": "2024-02-28",
+     "activity_id": "2023-0126-DEC-DCPL-2024-02-28",
+     "decided_on_a_realization_of": [
+      "eli/dl/doc/TA-9-2024-0096"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_AMEND_PROPOSAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2023-0126-DEPOT-2024-02-01",
+     "type": "Activity",
+     "activity_date": "2024-02-01",
+     "activity_id": "2023-0126-DEPOT-2024-02-01",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2024-0020"
+     ],
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/2023-0126-ANPRO-2023-09-11",
+     "type": "Activity",
+     "activity_date": "2023-09-11",
+     "activity_id": "2023-0126-ANPRO-2023-09-11",
+     "had_activity_type": "def/ep-activities/REFERRAL",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-02-27-PVCRE-ITM-9",
+     "type": "Activity",
+     "activity_date": "2024-02-27",
+     "activity_id": "MTG-PL-2024-02-27-PVCRE-ITM-9",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2024-0016",
+      "eli/dl/doc/C-9-2023-0147",
+      "eli/dl/doc/A-9-2024-0023",
+      "eli/dl/doc/C-9-2023-0148",
+      "eli/dl/doc/A-9-2024-0020",
+      "eli/dl/doc/C-9-2023-0152",
+      "eli/dl/doc/C-9-2023-0146",
+      "eli/dl/doc/A-9-2024-0019",
+      "eli/dl/doc/A-9-2024-0022",
+      "eli/dl/doc/C-9-2023-0149"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/CRE-9-2024-02-27-ITM-009",
+      "eli/dl/doc/PV-9-2024-02-27-ITM-009"
+     ]
+    },
+    {
+     "id": "eli/dl/event/JURI-AM-756100-DEPOT-2023-11-13",
+     "type": "Activity",
+     "activity_date": "2023-11-13",
+     "activity_id": "JURI-AM-756100-DEPOT-2023-11-13",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/JURI-AM-756100"
+     ],
+     "had_activity_type": "def/ep-activities/COMMITTEE_TABLING_AMENDMENT",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-02-28-VOT-ITM-940083",
+     "type": "Activity",
+     "activity_date": "2024-02-28",
+     "activity_id": "MTG-PL-2024-02-28-VOT-ITM-940083",
+     "based_on_a_realization_of": [
+      "eli/dl/doc/A-9-2024-0020"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE_RESULTS",
+     "recorded_in_a_realization_of": [
+      "eli/dl/doc/PV-9-2024-02-28-VOT-ITM-002"
+     ]
+    }
+   ],
+   "created_a_realization_of": [
+    "eli/dl/doc/TA-9-2024-0096",
+    "eli/dl/doc/JURI-PR-753702",
+    "eli/dl/doc/AGRI-AL-750122",
+    "eli/dl/doc/A-9-2024-0020",
+    "eli/dl/doc/SP-2024-270-TA-9-2024-0096"
+   ],
+   "current_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "had_participation": [
+    {
+     "id": "eli/dl/participation/2023-0126-NMSR-197606-2023-09-07",
+     "type": "Participation",
+     "activity_date": "2023-09-07",
+     "had_participant_person": [
+      "person/197606"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 2001
+    },
+    {
+     "id": "eli/dl/participation/2023-0126-AVI-ENVI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/ENVI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2023-0126-AVI-AGRI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/AGRI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_OPINION"
+    },
+    {
+     "id": "eli/dl/participation/2023-0126-NMCP-124808-AGRI-2023-05-23",
+     "type": "Participation",
+     "activity_date": "2023-05-23",
+     "had_participant_person": [
+      "person/124808"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/AGRI",
+     "participation_role": "def/ep-roles/RAPPORTEUR_OPINION",
+     "politicalGroup": "org/PPE",
+     "precedenceOrder": 1701
+    },
+    {
+     "id": "eli/dl/participation/2023-0126-NMSR-97236-2023-09-28",
+     "type": "Participation",
+     "activity_date": "2023-09-28",
+     "had_participant_person": [
+      "person/97236"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/VERTS-ALE",
+     "precedenceOrder": 2004
+    },
+    {
+     "id": "eli/dl/participation/2023-0126-NMSR-204400-2023-09-13",
+     "type": "Participation",
+     "activity_date": "2023-09-13",
+     "had_participant_person": [
+      "person/204400"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/RENEW",
+     "precedenceOrder": 2003
+    },
+    {
+     "id": "eli/dl/participation/2023-0126-MAIN-JURI",
+     "type": "Participation",
+     "had_participant_organization": [
+      "org/JURI"
+     ],
+     "participation_role": "def/ep-roles/COMMITTEE_LEAD"
+    },
+    {
+     "id": "eli/dl/participation/2023-0126-NMSR-24505-2023-09-18",
+     "type": "Participation",
+     "activity_date": "2023-09-18",
+     "had_participant_person": [
+      "person/24505"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_role": "def/ep-roles/RAPPORTEUR_SHADOW",
+     "politicalGroup": "org/THE-LEFT",
+     "precedenceOrder": 2008
+    },
+    {
+     "id": "eli/dl/participation/2023-0126-NMCP-185619-JURI-2023-07-19",
+     "type": "Participation",
+     "activity_date": "2023-07-19",
+     "had_participant_person": [
+      "person/185619"
+     ],
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "parliamentary_term": "org/ep-9",
+     "participation_in_name_of": "org/JURI",
+     "participation_role": "def/ep-roles/RAPPORTEUR",
+     "politicalGroup": "org/S-D",
+     "precedenceOrder": 2002
+    }
+   ],
+   "process_id": "2023-0126",
+   "process_title": {
+    "hu": "Egységes kiegészítő oltalmi tanúsítvány a növényvédő szerek számára",
+    "it": "Certificato complementare di protezione unitario per i prodotti fitosanitari",
+    "et": "Taimekaitsevahendite ühtse täiendava kaitse tunnistus",
+    "lv": "Vienotais papildu aizsardzības sertifikāts augu aizsardzības līdzekļiem",
+    "sv": "Enhetligt tilläggsskydd för växtskyddsmedel",
+    "lt": "Bendrasis augalų apsaugos priemonių papildomos apsaugos liudijimas",
+    "pt": "Certificado complementar de proteção unitário para os produtos fitofarmacêuticos",
+    "de": "Einheitliches ergänzendes Schutzzertifikat für Pflanzenschutzmittel",
+    "fr": "Certificat complémentaire de protection unitaire pour les produits phytopharmaceutiques",
+    "el": "Ενιαίο συμπληρωματικό πιστοποιητικό προστασίας για τα φυτοπροστατευτικά προϊόντα",
+    "ro": "Certificatul suplimentar de protecție unitar pentru produsele fitosanitare",
+    "nl": "Aanvullend beschermingscertificaat met eenheidswerking voor gewasbeschermingsmiddelen",
+    "pl": "Jednolite dodatkowe świadectwo ochronne dla środków ochrony roślin",
+    "sl": "Enotni dodatni varstveni certifikat za fitofarmacevtska sredstva",
+    "sk": "Jednotné dodatkové ochranné osvedčenie pre prípravky na ochranu rastlín",
+    "en": "Unitary supplementary protection certificate for plant protection products",
+    "mt": "Iċ-ċertifikat ta' protezzjoni supplimentari unitarju għall-prodotti għall-protezzjoni tal-pjanti",
+    "fi": "Kasvinsuojeluaineiden yhtenäinen lisäsuojatodistus",
+    "bg": "Единен сертификат за допълнителна закрила на продуктите за растителна защита",
+    "cs": "Jednotné dodatkové ochranné osvědčení pro přípravky na ochranu rostlin",
+    "es": "Certificado complementario de protección unitario para los productos fitosanitarios",
+    "da": "Fælles supplerende beskyttelsescertifikat for plantebeskyttelsesmidler",
+    "ga": "Deimhniú forlíontach cosanta aonadach le haghaidh táirgí cosanta plandaí",
+    "hr": "Jedinstvena svjedodžba o dodatnoj zaštiti za sredstva za zaštitu bilja"
+   },
+   "process_type": "def/ep-procedure-types/COD",
+   "was_scheduled_in": [
+    {
+     "id": "eli/dl/event/MTG-PL-2024-02-28-OJ-ITM-V-18",
+     "type": "ForeseenActivity",
+     "activity_date": "2024-02-28",
+     "activity_id": "MTG-PL-2024-02-28-OJ-ITM-V-18",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-9-2024-02-28"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "V-18"
+    },
+    {
+     "id": "eli/dl/event/MTG-PL-2024-02-27-OJ-ITM-D-18",
+     "type": "ForeseenActivity",
+     "activity_date": "2024-02-27",
+     "activity_id": "MTG-PL-2024-02-27-OJ-ITM-D-18",
+     "documented_by_a_realization_of": [
+      "eli/dl/doc/OJQ-9-2024-02-27"
+     ],
+     "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+     "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+     "notation_agendaPoint": "D-18"
+    }
+   ],
+   "label": "2023/0126(COD)",
+   "identifierYear": "2023"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

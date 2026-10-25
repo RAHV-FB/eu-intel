@@ -1,0 +1,508 @@
+/* Styles for shared primitives in src/components/. */
+
+/* ---------- states ---------- */
+.state {
+  padding: var(--sp-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  align-items: flex-start;
+}
+
+.state p {
+  margin: 0;
+}
+
+/* an action under the hint ("Clear all filters") */
+.state p + .btn {
+  margin-top: var(--sp-3);
+}
+
+.state--loading {
+  flex-direction: row;
+  align-items: center;
+}
+
+/* "Nothing here": a quiet sunk panel, the same as the law page's "nothing applies" notes */
+.state--empty {
+  background: var(--surface-sunk);
+  border-color: transparent;
+}
+/* the muted colour is below 4.5:1 on the sunk background: the secondary one */
+.state--empty .meta {
+  color: var(--text-2);
+}
+
+.state--error {
+  border-color: #f3caca;
+  border-left: 4px solid var(--st-critical);
+  background: var(--st-critical-bg);
+  color: var(--text);
+}
+/* the muted colour is 4.1:1 on the tinted background: the secondary one */
+.state--error .meta {
+  color: var(--text-2);
+}
+.state--error .btn {
+  margin-top: var(--sp-1);
+}
+/* one line above a list or filter whose labels could not be loaded */
+.state--note {
+  padding: var(--sp-3) var(--sp-4);
+  margin-block: var(--sp-4);
+}
+
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--eu-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- page not found ---------- */
+.not-found__search {
+  max-width: 40rem;
+}
+
+.not-found__title {
+  margin-top: var(--sp-6);
+  font-size: var(--fs-base);
+}
+
+.not-found__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.not-found__links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: var(--fw-medium);
+}
+
+/* ---------- badges & tags ---------- */
+/* A status tag: square corners, so that a long label wraps onto a second line cleanly. */
+.badge {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.4em;
+  padding: 0.2em 0.55em;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: 1.35;
+  border: 1px solid transparent;
+}
+
+/*
+ * Status icons, drawn with CSS so that they look the same with every font: a filled disc (done), a ring (inactive),
+ * a half disc (agreement), a quarter (in progress), a cross (rejected) and a square (blocked). The text label beside
+ * an icon always says the same thing in words.
+ */
+.status-icon {
+  display: inline-block;
+  flex: none;
+  position: relative;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-top: 0.3em; /* centred on the first line of a 1.35 line height */
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+.status-icon--done {
+  background: currentColor;
+}
+.status-icon--agreement {
+  background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+}
+.status-icon--progress {
+  background: conic-gradient(currentColor 0 25%, transparent 0);
+}
+.status-icon--critical {
+  border: 0;
+  border-radius: 0;
+}
+.status-icon--critical::before,
+.status-icon--critical::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.75rem;
+  height: 2px;
+  background: currentColor;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.status-icon--critical::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+.status-icon--alert {
+  border-radius: 2px;
+  background: currentColor;
+}
+/* High-contrast modes drop backgrounds and gradients: keep the shapes, in the system text colour. */
+@media (forced-colors: active) {
+  .status-icon {
+    forced-color-adjust: none;
+    color: CanvasText;
+  }
+}
+
+.badge--progress {
+  background: var(--st-progress-bg);
+  color: #1d4fa8;
+  border-color: #cfdcf6;
+}
+.badge--agreement {
+  background: var(--st-agreement-bg);
+  color: #4a3aa7;
+  border-color: #dcd6f7;
+}
+.badge--done {
+  background: var(--st-done-bg);
+  color: #17643a;
+  border-color: #c9e6d3;
+}
+.badge--inactive {
+  background: var(--st-inactive-bg);
+  color: var(--text-2);
+  border-color: var(--border);
+}
+.badge--critical {
+  background: var(--st-critical-bg);
+  color: #9b2020;
+  border-color: #f3caca;
+}
+.badge--alert {
+  background: var(--st-alert-bg);
+  color: #963714;
+  border-color: #f4d1c2;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.1em 0.55em;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+}
+
+.basis {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  border-bottom: 1px dotted var(--text-3);
+  cursor: help;
+}
+
+/* ---------- sources & links ---------- */
+.source {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.ext {
+  display: inline-block;
+  margin-left: 0.15em;
+  font-size: 0.85em;
+  text-decoration: none;
+}
+
+/* ---------- glossary term ---------- */
+.term {
+  position: relative;
+  display: inline;
+}
+
+.term__btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted var(--blue-muted);
+  text-underline-offset: 0.2em;
+  text-align: start; /* a term that wraps reads like text (a button centres its lines) */
+  cursor: help;
+}
+
+.term__tip {
+  display: block;
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  top: calc(100% + 6px);
+  width: min(22rem, calc(100vw - 1rem)); /* Term() shifts it sideways to stay on screen */
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-snug);
+  text-align: left;
+}
+
+.term__tip a {
+  color: var(--eu-gold-warm);
+}
+
+/* ---------- disclosure ---------- */
+.disclosure {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.disclosure > summary {
+  cursor: pointer;
+  padding: var(--sp-3) var(--sp-4);
+  font-weight: var(--fw-semibold);
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  list-style: none;
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary::before {
+  content: '▸';
+  margin-right: var(--sp-2);
+  color: var(--blue-muted);
+  transition: transform var(--t-fast);
+}
+
+.disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.disclosure__body {
+  padding: 0 var(--sp-4) var(--sp-4);
+}
+
+/* ---------- vote bar ---------- */
+.votebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.votebar__track {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--vote-none);
+}
+
+.votebar--compact .votebar__track {
+  height: 8px;
+}
+
+.votebar__seg {
+  display: block;
+  height: 100%;
+}
+
+.votebar__seg--for {
+  background: var(--vote-for);
+}
+.votebar__seg--abstain {
+  background: var(--vote-abstain);
+}
+.votebar__seg--against {
+  background: var(--vote-against);
+}
+
+.votebar__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.votebar__legend b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.votebar--compact .votebar__legend {
+  font-size: var(--fs-xs);
+}
+
+.dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 2px;
+  margin-right: 0.35em;
+  vertical-align: baseline;
+}
+
+.dot--for {
+  background: var(--vote-for);
+}
+.dot--against {
+  background: var(--vote-against);
+}
+.dot--abstain {
+  background: var(--vote-abstain);
+}
+
+/* ---------- tables that stack into cards on phones ---------- */
+/*
+ * .table--stack (helpers in src/components/StackedTable.tsx): below 40rem each row becomes a card. The
+ * .stack-title cell (a td, or the row's th) comes first, its .row-title clamped to three lines; every other cell is a line labelled
+ * by its .stack-label, which is hidden from screen readers because the column headings stay in the markup
+ * (visually hidden). The markup carries explicit table roles, so screen readers keep rows, cells and headings
+ * even where a browser drops table semantics for cells that no longer use table display.
+ * Not for tables with sort buttons in their headings: those buttons would be hidden too.
+ */
+.stack-label {
+  display: none;
+}
+
+.row-title__toggle {
+  display: block;
+  min-height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.row-title__toggle:hover {
+  color: var(--eu-blue-hover);
+  text-decoration-thickness: 2px;
+}
+
+/* titles are clamped only in the stacked layout: no toggle in the table (e.g. after rotating a phone) */
+@media (min-width: 40rem) {
+  .row-title__toggle {
+    display: none;
+  }
+}
+
+/* columns folded into the first cell on phones (tables with sort buttons in their headings, which cannot stack) */
+.only-narrow {
+  display: none;
+}
+
+/* .table--clamp: a table that keeps its columns on phones but clamps long RowTitle titles to three lines there */
+
+@media (max-width: 39.99rem) {
+  /* a long single word (e.g. a party name) may break so it does not push the next column off-screen */
+  .table .wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+
+  .table .hide-narrow {
+    display: none;
+  }
+
+  .table .only-narrow {
+    display: block;
+  }
+
+  .table--stack,
+  .table--stack tbody,
+  .table--stack td,
+  .table--stack tbody th {
+    display: block;
+  }
+
+  .table--stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .table--stack tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    padding: var(--sp-3) 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table--stack tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .table--stack td,
+  .table--stack tbody th {
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .table--stack .stack-title {
+    order: -1; /* the title leads the card; in the table it follows the date */
+    margin-bottom: var(--sp-1);
+  }
+
+  .table--stack td.num {
+    text-align: left;
+  }
+
+  .table--stack td:not(.stack-title),
+  .table--stack tbody th:not(.stack-title) {
+    display: grid;
+    grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+    gap: var(--sp-3);
+    align-items: baseline;
+  }
+
+  .table--stack .stack-label {
+    display: block;
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+  }
+
+  .table--stack .row-title {
+    font-weight: var(--fw-medium);
+    overflow-wrap: anywhere;
+  }
+
+  .table--stack .row-title:not(.is-open),
+  .table--clamp .row-title:not(.is-open) {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

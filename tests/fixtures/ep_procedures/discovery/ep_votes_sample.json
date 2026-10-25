@@ -1,0 +1,95 @@
+[
+ {
+  "attendees": null,
+  "committee": null,
+  "date": "2020-07-09",
+  "doc_ids": [],
+  "event_id": "MTG-PL-2020-07-09-DEC-116208",
+  "has_ballots": true,
+  "id": "116208",
+  "kind": "final",
+  "majority_rule": "votes_cast",
+  "method": "VOTE_ELECTRONIC_ROLLCALL",
+  "n_abstain": 43,
+  "n_against": 162,
+  "n_for": 485,
+  "outcome": "adopted",
+  "outcome_basis": "minutes",
+  "procedure_refs": [
+   "2020/0082(CNS)"
+  ],
+  "reference_text": null,
+  "source": {
+   "identifier": "MTG-PL-2020-07-09-DEC-116208",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2020-07-09 – results of roll-call votes (EP Open Data API decision MTG-PL-2020-07-09-DEC-116208)",
+   "published": null,
+   "retrieved_at": "2026-10-22T23:15:05Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-9-2020-07-09-RCV_EN.html"
+  },
+  "term": 9,
+  "title": "A9-0122/2020 - Ondřej Kovařík - Commission proposal"
+ },
+ {
+  "attendees": 604,
+  "committee": null,
+  "date": "2024-04-10",
+  "doc_ids": [],
+  "event_id": "MTG-PL-2024-04-10-DEC-166939",
+  "has_ballots": true,
+  "id": "166939",
+  "kind": "final",
+  "majority_rule": "votes_cast",
+  "method": "VOTE_ELECTRONIC_ROLLCALL",
+  "n_abstain": 51,
+  "n_against": 110,
+  "n_for": 443,
+  "outcome": "adopted",
+  "outcome_basis": "published",
+  "procedure_refs": [
+   "2023/0320(CNS)"
+  ],
+  "reference_text": "Commission proposal",
+  "source": {
+   "identifier": "MTG-PL-2024-04-10-DEC-166939",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2024-04-10 – results of roll-call votes (EP Open Data API decision MTG-PL-2024-04-10-DEC-166939)",
+   "published": null,
+   "retrieved_at": "2026-10-22T23:34:27Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-9-2024-04-10-RCV_EN.html"
+  },
+  "term": 9,
+  "title": "A9-0064/2024 – Lídia Pereira – Commission proposal"
+ },
+ {
+  "attendees": 658,
+  "committee": null,
+  "date": "2026-10-06",
+  "doc_ids": [],
+  "event_id": "MTG-PL-2026-10-06-DEC-197472",
+  "has_ballots": true,
+  "id": "197472",
+  "kind": "final",
+  "majority_rule": "unknown",
+  "method": "VOTE_ELECTRONIC_ROLLCALL",
+  "n_abstain": 75,
+  "n_against": 121,
+  "n_for": 462,
+  "outcome": "adopted",
+  "outcome_basis": "published",
+  "procedure_refs": [
+   "2025/0313(APP)"
+  ],
+  "reference_text": "Draft Council regulation",
+  "source": {
+   "identifier": "MTG-PL-2026-10-06-DEC-197472",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2026-10-06 – results of roll-call votes (EP Open Data API decision MTG-PL-2026-10-06-DEC-197472)",
+   "published": null,
+   "retrieved_at": "2026-10-23T00:03:40Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-10-2026-10-06-RCV_EN.html"
+  },
+  "term": 10,
+  "title": "A10-0206/2026 – Markus Ferber, Carla Tavares – Draft Council regulation"
+ }
+]

@@ -1,0 +1,491 @@
+# Corrections to the dates EUR-Lex (Cellar) records for an act, checked against the act's own text; also dates
+# that a corrigendum set (EUR-Lex records the corrected date, which the text as first published does not give: the
+# date cites the corrigendum), and recorded dates whose meaning the text explains (an entry with a reason only).
+#
+# Cellar's date metadata is usually right, but a few values are wrong (e.g. a wrong year) and Cellar
+# does not always update a base act's dates after an amending act changes them. Each entry replaces,
+# in the build only, the dates of one act; the snapshot keeps the source values. Every date must cite
+# the provision that sets it, and the entry the text it was checked against.
+#
+# Fields:
+#   celex             the act (sector-3 base CELEX)
+#   entry_into_force  optional; replaces Cellar's entry-into-force date
+#   application       optional; replaces Cellar's further application dates. Each item:
+#                       date, provisions (plain description with the article), partial (true when
+#                       only some provisions apply from that date), source (optional index into
+#                       sources of the text that sets the date, e.g. an amending act; default 0)
+#   reason            one or two sentences, shown on the page
+#   sources           [{label, url, celex}] the official texts checked; the entry-into-force date cites
+#                       the first. celex (optional) names an amending act: its page then points to the
+#                       dates it set for this act.
+#   reviewed          date of the last check
+#
+# `python -m pipeline validate` warns when Cellar's entry into force is before the act's adoption (or a
+# regulation's publication), often because Cellar copies the date of another act it is tied to; when it differs
+# from Cellar's own rule for it ("DATPUB +20": the twentieth day following publication); and when Cellar gives the
+# date from which an act in force applies in general as not recorded (1001-01-01: the act leaves it to a later
+# decision, notice or event). An entry here, once the date is checked, also silences those warnings for the act.
+# A date that Cellar gives as not recorded and a later decision or notice has set is added under `application`,
+# citing both texts; the `application` list then replaces "not recorded".
+#
+# Last full review: 2026-10-23.
+
+- celex: "32022R2065"  # Digital Services Act
+  reason: >-
+    EUR-Lex records an application date of 17 February 2022, which is not in the Regulation. Article 93(2)
+    sets 17 February 2024 for the Regulation in general and 16 November 2022 (its entry into force) for
+    the provisions it lists; under Article 92 the Regulation applies to providers of very large online
+    platforms and of very large online search engines designated under Article 33(4) from four months after
+    the provider was notified of its designation (Article 33(6)), where that date is earlier than 17 February
+    2024.
+  application:
+    - date: "2022-11-16"
+      partial: true
+      provisions: >-
+        Art. 24(2), (3) and (6), Art. 33(3) to (6), Art. 37(7), Art. 40(13), Art. 43 and Sections 4, 5
+        and 6 of Chapter IV (Art. 93(2))
+    - date: "2024-02-17"
+      partial: false
+      provisions: >-
+        The Regulation in general (Art. 93(2)), unless it applied earlier to a designated very large online
+        platform or search engine (Art. 92)
+  sources:
+    - {label: "Regulation (EU) 2022/2065, Articles 92 and 93", url: "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"}
+  reviewed: "2026-10-24"
+
+- celex: "32024R1689"  # AI Act
+  reason: >-
+    Regulation (EU) 2026/1744 (Digital Omnibus on AI), in force since 27 July 2026, amended Article 113:
+    it moved the high-risk rules to 2 December 2027 and 2 August 2028 and added new dates. EUR-Lex still
+    records the dates as first adopted, including 2 August 2027, which no longer applies.
+  application:
+    - date: "2025-02-02"
+      partial: true
+      provisions: "Chapters I and II (Art. 113(3)(a))"
+    - date: "2025-08-02"
+      partial: true
+      provisions: "Chapter III Section 4, Chapters V, VII and XII and Art. 78, except Art. 101 (Art. 113(3)(b))"
+    - date: "2026-07-27"
+      partial: true
+      provisions: "Articles 102 to 110 (Art. 113(3)(d), added by Regulation (EU) 2026/1744)"
+      source: 1
+    - date: "2026-08-02"
+      partial: false
+      provisions: "The Regulation in general (Art. 113)"
+    - date: "2026-12-02"
+      partial: true
+      provisions: >-
+        The prohibitions added to Art. 5(1), first subparagraph, points (ba) and (bb), and Art. 5(1a) and
+        (1b) (Art. 113(3)(a) as amended by Regulation (EU) 2026/1744)
+      source: 1
+    - date: "2027-12-02"
+      partial: true
+      provisions: >-
+        Chapter III Sections 1 to 3, except Art. 6(5), for high-risk AI systems under Art. 6(2) and Annex III
+        (Art. 113(3)(c)(i) as amended)
+      source: 1
+    - date: "2028-08-02"
+      partial: true
+      provisions: >-
+        Chapter III Sections 1 to 3, except Art. 6(5), for high-risk AI systems under Art. 6(1) and Annex I
+        (Art. 113(3)(c)(ii) as amended)
+      source: 1
+  sources:
+    - {label: "Regulation (EU) 2024/1689, Article 113", url: "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"}
+    - {label: "Regulation (EU) 2026/1744, Article 1, point (40)", url: "https://eur-lex.europa.eu/eli/reg/2026/1744/oj",
+       celex: "32026R1744"}
+  reviewed: "2026-10-23"
+
+- celex: "32026R2280"  # Return Regulation
+  reason: >-
+    EUR-Lex records entry into force on 15 October 2026, the day of publication. Article 50(1) provides for
+    entry into force on the day following publication, i.e. 16 October 2026.
+  entry_into_force: "2026-10-16"
+  application:
+    - date: "2026-10-16"
+      partial: true
+      provisions: >-
+        Art. 1, Art. 2(1) to (3), Art. 3, point (3), Art. 4, Art. 5(13) and (15), and Arts 14, 15, 16, 34,
+        35, 41, 43, 47, 48 and 49 (Art. 50(2))
+    - date: "2027-10-17"
+      partial: false
+      provisions: "The remaining provisions (Art. 50(3))"
+  sources:
+    - {label: "Regulation (EU) 2026/2280, Article 50", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2280"}
+  reviewed: "2026-10-23"
+
+- celex: "32021R0768"  # Own resources implementing measures (2018/0132(APP))
+  reason: >-
+    EUR-Lex records entry into force on 1 January 2021, the date from which the Regulation applies. Article 9
+    ties its entry into force to that of Decision (EU, Euratom) 2020/2053, which EUR-Lex records as 1 June
+    2021; the Regulation applies retroactively from 1 January 2021.
+  entry_into_force: "2021-06-01"
+  application:
+    - date: "2021-01-01"
+      partial: false
+      provisions: "The Regulation in general, retroactively (Art. 9)"
+  sources:
+    - {label: "Regulation (EU, Euratom) 2021/768, Article 9", url: "https://eur-lex.europa.eu/eli/reg/2021/768/oj"}
+    - {label: "Decision (EU, Euratom) 2020/2053, Article 12", url: "https://eur-lex.europa.eu/eli/dec/2020/2053/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32015D0457"  # Repeal of the terrorism-prevention programme decision (2013/0281(APP))
+  reason: >-
+    EUR-Lex records entry into force on 21 May 2014, the day Regulation (EU) No 513/2014 entered into force.
+    As that Regulation entered into force before this Decision was published (20 March 2015), Article 3(2)
+    applies: entry into force on the day following publication, 21 March 2015.
+  entry_into_force: "2015-03-21"
+  sources:
+    - {label: "Decision (EU, Euratom) 2015/457, Article 3", url: "https://eur-lex.europa.eu/eli/dec/2015/457/oj"}
+    - {label: "Regulation (EU) No 513/2014, Article 16", url: "https://eur-lex.europa.eu/eli/reg/2014/513/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32014R0608"  # Own resources implementing measures 2014 (2011/0184(APP))
+  reason: >-
+    EUR-Lex records entry into force on 28 May 2014. Article 9 provides that the Regulation enters into force
+    on the day Decision 2014/335/EU, Euratom enters into force, which EUR-Lex records as 1 October 2016, and
+    that it applies from 1 January 2014.
+  entry_into_force: "2016-10-01"
+  application:
+    - date: "2014-01-01"
+      partial: false
+      provisions: "The Regulation in general, retroactively (Art. 9)"
+  sources:
+    - {label: "Regulation (EU, Euratom) No 608/2014, Article 9", url: "https://eur-lex.europa.eu/eli/reg/2014/608/oj"}
+    - {label: "Decision 2014/335/EU, Euratom, Article 11", url: "https://eur-lex.europa.eu/eli/dec/2014/335/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32014D0335"  # Own resources decision 2014 (2011/0183(CNS)), partly repealed
+  reason: >-
+    Under Article 11 the Decision enters into force on the first day of the month following receipt of the last
+    Member State's notification of its approval (1 October 2016, as EUR-Lex records) and applies from 1 January
+    2014. Council Decision (EU, Euratom) 2020/2053, which applies from 1 January 2021 (its Article 12), repeals it
+    "subject to paragraph 2" (its Article 11(1)): Articles 2, 4 and 5 continue to apply to the calculation and
+    adjustment of the revenue from the VAT-based own resource, to the calculation of the correction of budgetary
+    imbalances granted to the United Kingdom in the years 1995 to 2020 and to the calculation of the financing of
+    the corrections granted to the United Kingdom by other Member States (its Article 11(2)). EUR-Lex records the
+    Decision as partly repealed and still in force.
+  sources:
+    - {label: "Decision 2014/335/EU, Euratom, Article 11", url: "https://eur-lex.europa.eu/eli/dec/2014/335/oj"}
+    - {label: "Decision (EU, Euratom) 2020/2053, Articles 11 and 12", url: "https://eur-lex.europa.eu/eli/dec/2020/2053/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32020D2053"  # Own resources decision 2020 (2018/0135(CNS))
+  reason: >-
+    Under Article 12 the Decision applies from 1 January 2021 and enters into force on the first day of the first
+    month following receipt of the last Member State's notification that it has completed the procedures for its
+    adoption in accordance with its constitutional requirements (1 June 2021, as EUR-Lex records), as the third
+    paragraph of Article 311 TFEU requires: such a decision "shall not enter into force until it is approved by the
+    Member States in accordance with their respective constitutional requirements".
+  sources:
+    - {label: "Decision (EU, Euratom) 2020/2053, Article 12", url: "https://eur-lex.europa.eu/eli/dec/2020/2053/oj"}
+    - {label: "Treaty on the Functioning of the European Union, Article 311", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:12016E311"}
+  reviewed: "2026-10-24"
+
+# Dates set by a corrigendum: EUR-Lex records the corrected date, which the text as first published does not give.
+# The corrected dates cite the corrigendum (source 1).
+
+- celex: "32022R2560"  # Foreign Subsidies Regulation
+  reason: >-
+    Article 54 as published gives 11 January 2023, 12 July 2023, 12 October 2023 and 12 January 2024. The
+    corrigendum of 17 September 2024 (OJ L, 2024/90559) moved each date to the following day, the dates EUR-Lex
+    records.
+  application:
+    - {date: "2023-01-12", partial: true, provisions: "Articles 47 and 48 (Art. 54(3), as corrected)", source: 1}
+    - {date: "2023-07-13", partial: false, provisions: "The Regulation in general (Art. 54(2), as corrected)", source: 1}
+    - {date: "2023-10-13", partial: true, provisions: "Articles 21 and 29 (Art. 54(4), as corrected)", source: 1}
+    - {date: "2024-01-13", partial: true, provisions: "Article 14(5), (6) and (7) (Art. 54(3), as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2022/2560, Article 54", url: "https://eur-lex.europa.eu/eli/reg/2022/2560/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2022/2560, OJ L, 2024/90559, 17.9.2024", url: "http://data.europa.eu/eli/reg/2022/2560/corrigendum/2024-09-17/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32024R1252"  # Critical Raw Materials Act
+  reason: >-
+    Article 49(2) as published says that Articles 40 and 41 apply from 24 May 2028. The corrigendum of 3 June 2024
+    (OJ L, 2024/90330) changed the date to 24 May 2029, the date EUR-Lex records.
+  application:
+    - {date: "2029-05-24", partial: true, provisions: "Articles 40 and 41 (Art. 49(2), as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2024/1252, Article 49", url: "https://eur-lex.europa.eu/eli/reg/2024/1252/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2024/1252, OJ L, 2024/90330, 3.6.2024", url: "http://data.europa.eu/eli/reg/2024/1252/corrigendum/2024-06-03/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32024R1347"  # Qualification Regulation
+  reason: >-
+    Article 42 as published says "This Regulation shall apply from 1 July 2026." The corrigendum of 25 November
+    2025 (OJ L, 2025/90926, point 2) changed the date to 12 June 2026, the date EUR-Lex records.
+  application:
+    - {date: "2026-06-12", partial: false, provisions: "The Regulation (Art. 42, second paragraph, as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2024/1347, Article 42", url: "https://eur-lex.europa.eu/eli/reg/2024/1347/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2024/1347, OJ L, 2025/90926, 25.11.2025", url: "http://data.europa.eu/eli/reg/2024/1347/corrigendum/2025-11-25/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32024R1351"  # Asylum and Migration Management Regulation
+  reason: >-
+    Article 85 as published says "It shall apply from 1 July 2026." The corrigendum of 25 November 2025 (OJ L,
+    2025/90929, point 10) changed the date to 12 June 2026, the date EUR-Lex records. The provisions its third
+    paragraph lists apply from the Regulation's entry into force.
+  application:
+    - date: "2024-06-11"
+      partial: true
+      provisions: >-
+        Articles 7 to 15, Article 22(1), fourth subparagraph, Article 23(7), Article 25(6) and (7), Article 34(3)
+        and (4), Article 39(3), second subparagraph, Article 40(4), Article 40(8), second subparagraph, Article
+        41(5), Article 46(1), fifth subparagraph, Article 46(4), Article 48(4), Article 50(1), second subparagraph,
+        Article 50(5), Article 52(4), Articles 56 and 57, Article 64(3), Article 67(14) and Articles 78 and 84
+        (Art. 85, third paragraph)
+    - {date: "2026-06-12", partial: false, provisions: "The Regulation in general (Art. 85, second paragraph, as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2024/1351, Article 85", url: "https://eur-lex.europa.eu/eli/reg/2024/1351/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2024/1351, OJ L, 2025/90929, 25.11.2025", url: "http://data.europa.eu/eli/reg/2024/1351/corrigendum/2025-11-25/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32024R1359"  # Crisis and Force Majeure Regulation
+  reason: >-
+    Article 20 as published says "It shall apply from 1 July 2026." The corrigendum of 25 November 2025 (OJ L,
+    2025/90921, point 10) changed the date to 12 June 2026, the date EUR-Lex records.
+  application:
+    - {date: "2026-06-12", partial: false, provisions: "The Regulation (Art. 20, second paragraph, as corrected)", source: 1}
+  sources:
+    - {label: "Regulation (EU) 2024/1359, Article 20", url: "https://eur-lex.europa.eu/eli/reg/2024/1359/oj"}
+    - {label: "Corrigendum to Regulation (EU) 2024/1359, OJ L, 2025/90921, 25.11.2025", url: "http://data.europa.eu/eli/reg/2024/1359/corrigendum/2025-11-20/oj"}
+  reviewed: "2026-10-23"
+
+# Transposition dates explained, none changed: the reason is shown with the act's dates.
+
+- celex: "32016L0797"  # Railway Interoperability Directive
+  reason: >-
+    Article 57(1) sets 16 June 2019. Article 57(2) let Member States extend that period by one year, and seventeen
+    did so, to 16 June 2020. Directive (EU) 2020/700 added Article 57(2a): those Member States could extend it
+    again, until 31 October 2020, and apply their measures from that date. 31 October 2020 is that optional
+    extension, not a deadline for specific provisions.
+  sources:
+    - {label: "Directive (EU) 2016/797 (OJ L 138, 26.5.2016)", url: "https://eur-lex.europa.eu/eli/dir/2016/797/oj"}
+    - {label: "Directive (EU) 2020/700, Article 1 and recitals 2 and 6", url: "https://eur-lex.europa.eu/eli/dir/2020/700/oj"}
+  reviewed: "2026-10-23"
+
+- celex: "32016L0798"  # Railway Safety Directive
+  reason: >-
+    Article 33(1) sets 16 June 2019. Article 33(2) let Member States extend that period by one year, and seventeen
+    did so, to 16 June 2020. Directive (EU) 2020/700 added Article 33(2a): those Member States could extend it
+    again, until 31 October 2020, and apply their measures from that date. 31 October 2020 is that optional
+    extension, not a deadline for specific provisions.
+  sources:
+    - {label: "Directive (EU) 2016/798 (OJ L 138, 26.5.2016)", url: "https://eur-lex.europa.eu/eli/dir/2016/798/oj"}
+    - {label: "Directive (EU) 2020/700, Article 2 and recitals 2 and 6", url: "https://eur-lex.europa.eu/eli/dir/2020/700/oj"}
+  reviewed: "2026-10-23"
+
+# Entry into force differing from Cellar's own rule for it (validate: entry-into-force-rule).
+
+- celex: "32017D1324"  # PRIMA
+  reason: >-
+    EUR-Lex records entry into force on 8 August 2017. Article 15 provides for entry into force on the twentieth day
+    following publication in the Official Journal, which was on 18 July 2017 (OJ L 185): 7 August 2017.
+  entry_into_force: "2017-08-07"
+  sources:
+    - {label: "Decision (EU) 2017/1324, Article 15", url: "https://eur-lex.europa.eu/eli/dec/2017/1324/oj"}
+  reviewed: "2026-10-23"
+
+# Application dates that EUR-Lex gives as not recorded (1001-01-01), set since by the decision or notice the act
+# refers to; the date cites that text (source 1).
+
+- celex: "32014R0536"  # Clinical Trials Regulation
+  reason: >-
+    EUR-Lex records no date from which the Regulation applies. Article 99 provides that it applies "as from six
+    months after the publication of the notice referred to in Article 82(3), but in any event no earlier than 28 May
+    2016". Commission Decision (EU) 2021/1240, adopted under Article 82(3), was published in the Official Journal on
+    31 July 2021 (OJ L 275), so the Regulation applies from 31 January 2022, the date of EUR-Lex's consolidated
+    version 02014R0536-20220131.
+  application:
+    - {date: "2022-01-31", partial: false, provisions: "The Regulation (Art. 99, second paragraph)", source: 1}
+  sources:
+    - {label: "Regulation (EU) No 536/2014, Article 99", url: "https://eur-lex.europa.eu/eli/reg/2014/536/oj"}
+    - {label: "Commission Decision (EU) 2021/1240 (OJ L 275, 31.7.2021)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32021D1240"}
+  reviewed: "2026-10-23"
+
+- celex: "32017R1939"  # European Public Prosecutor's Office
+  reason: >-
+    EUR-Lex records no date from which some provisions apply. Under Article 120(2), second subparagraph, the EPPO
+    assumes its investigative and prosecutorial tasks "on a date to be determined by a decision of the Commission";
+    Commission Implementing Decision (EU) 2021/856, Article 1, set that date as 1 June 2021.
+  application:
+    - date: "2021-06-01"
+      partial: true
+      provisions: >-
+        The EPPO's investigative and prosecutorial tasks, which it assumes from that date (Art. 120(2), second
+        subparagraph)
+      source: 1
+  sources:
+    - {label: "Regulation (EU) 2017/1939, Article 120", url: "https://eur-lex.europa.eu/eli/reg/2017/1939/oj"}
+    - {label: "Commission Implementing Decision (EU) 2021/856, Article 1", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32021D0856"}
+  reviewed: "2026-10-23"
+
+# Regulations for a withdrawal of the United Kingdom without a withdrawal agreement: EUR-Lex records no date from
+# which they apply. Each was to apply from the day following that on which the Treaties (or Union law) cease to apply
+# to the United Kingdom, and not to apply if a withdrawal agreement had entered into force by then (its final
+# article, checked for each). Under Article 50(3) TEU the Treaties ceased to apply to the United Kingdom from the
+# entry into force of the Withdrawal Agreement, which EUR-Lex records as 1 February 2020 (CELEX 12020W/TXT). No date
+# is added: they did not apply. (Regulations 2019/492 and 2019/495, which apply from the day following that on which
+# another regulation ceases to apply to the United Kingdom, are not of this kind.)
+
+- celex: "32019R0491"  # PEACE IV and United Kingdom-Ireland programmes
+  reason: &no_deal >-
+    The Regulation was to apply from the day following that on which the Treaties cease to apply to the United
+    Kingdom, and not to apply if a withdrawal agreement concluded with the United Kingdom under Article 50(2) TEU had
+    entered into force by that date. The Withdrawal Agreement entered into force on 1 February 2020, as EUR-Lex
+    records, so the Regulation did not apply.
+  sources:
+    - {label: "Regulation (EU) 2019/491, Article 6", url: "https://eur-lex.europa.eu/eli/reg/2019/491/oj"}
+    - &wa {label: "Withdrawal Agreement (OJ L 29, 31.1.2020)", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:12020W/TXT"}
+  reviewed: "2026-10-23"
+
+- celex: "32019R0494"  # Aviation safety
+  reason: >-
+    Article 10(2) provides that the Regulation applies from the day following that on which the Treaties cease to
+    apply to the United Kingdom, and Article 5 from its entry into force. Under Article 10(3) it "shall not apply if a
+    withdrawal agreement concluded with the United Kingdom in accordance with Article 50(2) of the Treaty on European
+    Union has entered into force by" that date. The Withdrawal Agreement entered into force on 1 February 2020, as
+    EUR-Lex records, so the provisions that were to apply from that date did not apply.
+  sources:
+    - {label: "Regulation (EU) 2019/494, Article 10", url: "https://eur-lex.europa.eu/eli/reg/2019/494/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R0496"  # Dual-use export authorisation
+  reason: *no_deal
+  sources:
+    - {label: "Regulation (EU) 2019/496, Article 2", url: "https://eur-lex.europa.eu/eli/reg/2019/496/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R0497"  # European Maritime and Fisheries Fund
+  reason: *no_deal
+  sources:
+    - {label: "Regulation (EU) 2019/497, Article 2", url: "https://eur-lex.europa.eu/eli/reg/2019/497/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R0498"  # Fishing authorisations, 2019
+  reason: *no_deal
+  sources:
+    - {label: "Regulation (EU) 2019/498, Article 2", url: "https://eur-lex.europa.eu/eli/reg/2019/498/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R0499"  # Erasmus+ learning mobility
+  reason: *no_deal
+  sources:
+    - {label: "Regulation (EU) 2019/499, Article 4", url: "https://eur-lex.europa.eu/eli/reg/2019/499/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R0500"  # Social security coordination
+  reason: *no_deal
+  sources:
+    - {label: "Regulation (EU) 2019/500, Article 8", url: "https://eur-lex.europa.eu/eli/reg/2019/500/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R0501"  # Road freight and passenger connectivity
+  reason: *no_deal
+  sources:
+    - {label: "Regulation (EU) 2019/501, Article 12", url: "https://eur-lex.europa.eu/eli/reg/2019/501/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R0502"  # Air connectivity
+  reason: >-
+    Article 16(2) provides that the Regulation applies from the day following that on which Union law ceases to apply
+    to the United Kingdom, and Articles 7, 10(3) and 11(2) from its entry into force. Under Article 16(3) it "shall not
+    apply if a withdrawal agreement concluded with the United Kingdom in accordance with Article 50(2) of the Treaty
+    on European Union has entered into force by" that date. The Withdrawal Agreement entered into force on 1 February
+    2020, as EUR-Lex records, so the provisions that were to apply from that date did not apply.
+  sources:
+    - {label: "Regulation (EU) 2019/502, Article 16", url: "https://eur-lex.europa.eu/eli/reg/2019/502/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+# Also checked: Cellar's comment on its entry into force gives the twentieth day following publication, but Article
+# 8(1) provides for "the day following that of its publication" (27 March 2019): 28 March 2019, the date EUR-Lex records.
+- celex: "32019R0503"  # Railway safety and connectivity
+  reason: >-
+    Article 8(2) and (3) provide that the Regulation applies from the day following that on which the Treaties cease
+    to apply to the United Kingdom, but "shall not apply if a withdrawal agreement concluded with the United Kingdom
+    in accordance with Article 50(2) of the Treaty on European Union has entered into force by" that date. The
+    Withdrawal Agreement entered into force on 1 February 2020, as EUR-Lex records, so the Regulation did not apply.
+  sources:
+    - {label: "Regulation (EU) 2019/503, Article 8", url: "https://eur-lex.europa.eu/eli/reg/2019/503/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R1197"  # Budget 2019
+  reason: *no_deal
+  sources:
+    - {label: "Council Regulation (EU, Euratom) 2019/1197, Article 9", url: "https://eur-lex.europa.eu/eli/reg/2019/1197/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R1795"  # Periods of application of Regulations 2019/501 and 2019/502
+  reason: *no_deal
+  sources:
+    - {label: "Regulation (EU) 2019/1795, Article 3", url: "https://eur-lex.europa.eu/eli/reg/2019/1795/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R1796"  # European Globalisation Adjustment Fund
+  reason: *no_deal
+  sources:
+    - {label: "Regulation (EU) 2019/1796, Article 2", url: "https://eur-lex.europa.eu/eli/reg/2019/1796/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R1797"  # Fishing authorisations, 2020
+  reason: *no_deal
+  sources:
+    - {label: "Regulation (EU) 2019/1797, Article 2", url: "https://eur-lex.europa.eu/eli/reg/2019/1797/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+- celex: "32019R2234"  # Budget 2020
+  reason: *no_deal
+  sources:
+    - {label: "Council Regulation (EU, Euratom) 2019/2234, Article 10", url: "https://eur-lex.europa.eu/eli/reg/2019/2234/oj"}
+    - *wa
+  reviewed: "2026-10-23"
+
+# Dates set by amending acts, recorded so that the amending act's page points to them (its source's celex).
+
+- celex: "32023R1115"  # EU Deforestation Regulation
+  reason: >-
+    Regulation (EU) 2025/2650 replaced Article 38: Articles 3 to 13, 16 to 24, 26, 31 and 32 apply from 30 December
+    2026, and from 30 June 2027 for operators that were established as micro or small undertakings (or are natural
+    persons) by 31 December 2024, except as regards the products covered by the Annex to Regulation (EU) No 995/2010:
+    the dates EUR-Lex records. Commission Delegated Regulation (EU) 2026/2102 amended Annex I; the entries it adds apply
+    from 30 December 2027, a date EUR-Lex does not record for this Regulation.
+  application:
+    - date: "2026-12-30"
+      partial: true
+      provisions: "Articles 3 to 13, 16 to 24, 26, 31 and 32 (Art. 38(2), as replaced by Regulation (EU) 2025/2650)"
+      source: 1
+    - date: "2027-06-30"
+      partial: true
+      provisions: >-
+        The same Articles, for operators that were established as micro or small undertakings (or are natural persons)
+        by 31 December 2024, except as regards the products covered by the Annex to Regulation (EU) No 995/2010 (Art.
+        38(3), as replaced by Regulation (EU) 2025/2650)
+      source: 1
+    - date: "2027-12-30"
+      partial: true
+      provisions: >-
+        The entries Commission Delegated Regulation (EU) 2026/2102 adds to Annex I, among them frozen cattle tongues,
+        coffee extracts and some palm-oil products (its Annex: "This provision shall apply from 30 December 2027")
+      source: 2
+  sources:
+    - {label: "Regulation (EU) 2023/1115, Article 38", url: "https://eur-lex.europa.eu/eli/reg/2023/1115/oj"}
+    - {label: "Regulation (EU) 2025/2650, Article 1, point (25)", url: "https://eur-lex.europa.eu/eli/reg/2025/2650/oj",
+       celex: "32025R2650"}
+    - {label: "Commission Delegated Regulation (EU) 2026/2102, Annex", url: "https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj",
+       celex: "32026R2102"}
+  reviewed: "2026-10-23"
