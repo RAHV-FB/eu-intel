@@ -33,6 +33,10 @@ test.describe('act validity', () => {
     await expect(when.locator('.dz-sched li').last()).toContainText('No longer in force');
     await expect(when).not.toContainText('A regulation applies directly');
     await expect(page.locator('#timeline')).toContainText('Its validity ended on 31 October 2023.');
+    // "How it applies in the Member States" speaks of it in the past tense
+    const national = page.locator('#national');
+    await expect(national).toContainText('Applied directly; no national transposition was needed.');
+    await expect(national).not.toContainText('Applies directly');
   });
 
   test('the end of validity is not flagged as a date after it, a date it shares is', async ({ page }) => {

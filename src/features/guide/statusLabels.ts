@@ -70,7 +70,7 @@ export const STATUS_LABEL_GROUPS: StatusLabelGroup[] = [
           l('adopted', 'Adopted, awaiting publication'),
           l('adopted', 'Adopted'),
         ],
-        text: 'The act has been adopted (“Signed” adds that it has been signed). It is not recorded as published in the Official Journal yet. It enters into force on the date it sets, which can be the day of its adoption, or, if it sets none, on the twentieth day after publication; a non-legislative decision addressed to specific recipients takes effect when they are notified (Article 297 TFEU).',
+        text: 'The act has been adopted (“Signed” adds that it has been signed). It is not recorded as published in the Official Journal yet. It enters into force on the date it sets, which can be the day of its adoption, or, if it sets none, on the twentieth day after publication; a non-legislative directive not addressed to all Member States, or decision addressed to specific recipients, takes effect when they are notified (Article 297 TFEU).',
       },
     ],
   },

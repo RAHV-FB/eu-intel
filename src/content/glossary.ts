@@ -94,7 +94,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   'entry-into-force': {
     term: 'Entry into force',
     short:
-      'The date from which an act is part of the EU legal order: the date the act sets or, if it sets none, the twentieth day after publication (a non-legislative decision addressed to specific recipients takes effect when they are notified). Its rules may start to apply later, sometimes in phases.',
+      'The date from which an act is part of the EU legal order: the date the act sets or, if it sets none, the twentieth day after publication (a non-legislative directive not addressed to all Member States, or decision addressed to specific recipients, takes effect when they are notified). Its rules may start to apply later, sometimes in phases.',
     href: '/how-the-eu-works#instruments',
   },
   celex: {

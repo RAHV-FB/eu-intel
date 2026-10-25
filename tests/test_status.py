@@ -546,6 +546,8 @@ def test_replaced_proposal():
     assert s.explanation == (
         "The Commission withdrew its proposal and replaced it with a new one (COM(2025)0101), which ends the procedure "
         "on this proposal. A withdrawal is a decision of the Commission, not a vote of Parliament."
+        + (f" Parliament's Legislative Observatory still gives the file's stage as “{p.stage_raw}”."
+           if p.stage_raw and p.stage_raw != "Procedure lapsed or withdrawn" else "")  # fmt: skip
     )
 
 
@@ -565,6 +567,15 @@ def test_withdrawal_ends_the_procedure_but_an_annulment_would_make_it_void():
         "None recorded: a withdrawn proposal does not proceed. It could return as a new Commission proposal, or be "
         "pending again if the Court of Justice annulled the withdrawal on an action brought within the two-month time "
         "limit of Article 263 TFEU (Article 264 TFEU)."
+    )
+    # OEIL's own stage is given where it differs from "Procedure lapsed or withdrawn", as for the SEP proposal while
+    # Parliament's action is pending: the page then does not suggest that nothing more is recorded
+    p = proc("2017-0003")
+    p = p.model_copy(update={"stage_raw": "Awaiting Council's 1st reading position"})
+    s = classify(p, acts_for(p), [], TODAY)
+    assert s.label == "Withdrawn by the Commission"
+    assert s.explanation.endswith(
+        "Parliament's Legislative Observatory still gives the file's stage as “Awaiting Council's 1st reading position”."
     )
     # OEIL's "Procedure lapsed or withdrawn" (2017/0810(COD)) names no closing step: no consequence is asserted
     s = classify(rec("2023-0413").model_copy(update={"stage_raw": "Procedure lapsed or withdrawn"}), [], [], TODAY)

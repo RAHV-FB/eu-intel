@@ -1587,6 +1587,10 @@ def classify(
             text += f" Parliament had rejected the proposal on {_fmt(rejection.date)}."
         else:
             text += " A withdrawal is a decision of the Commission, not a vote of Parliament."
+        if proc.stage_raw and proc.stage_raw != LAPSED_OR_WITHDRAWN:
+            # OEIL may keep another stage after a withdrawal, e.g. while an action for its annulment is pending
+            # (2023/0133(COD): Case C-727/25, "Awaiting Council's 1st reading position"): say so, without reading why
+            text += f" Parliament's Legislative Observatory still gives the file's stage as “{proc.stage_raw}”."
         s = _S(
             "withdrawn",
             "Replaced by a new Commission proposal" if replaced else "Withdrawn by the Commission",

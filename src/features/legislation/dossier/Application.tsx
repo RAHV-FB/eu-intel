@@ -351,6 +351,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
     // vote with positions names who did not take part (Regulation (EU) 2026/2280: Denmark and Ireland)
     const act = d.acts.find((a) => a.act_type === 'regulation');
     const enhanced = !!act && /\bimplementing enhanced cooperation\b/i.test(act.title);
+    const ended = d.status.stage === 'no_longer_in_force';
     const cv = [...d.council_votes].sort((a, b) => b.date.localeCompare(a.date)).find((v) => Object.keys(v.positions).length > 0);
     const absent = cv ? Object.keys(cv.positions).filter((c) => cv.positions[c] === 'not_participating').sort() : [];
     // a Member State can take part after adoption: the recitals then no longer say whom it binds (AMMR, Regulation
@@ -369,8 +370,19 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
     body = (
       <>
         <p className="dz-lede">
-          <strong>Applies directly; no national transposition needed.</strong> A <Term id="regulation">regulation</Term> is
-          binding in its entirety and directly applicable in the Member States it binds, from the dates it sets
+          {ended ? (
+            // an act no longer in force is described in the past tense (2018/0069(COD): validity ended 31 October 2023)
+            <>
+              <strong>Applied directly; no national transposition was needed.</strong> A{' '}
+              <Term id="regulation">regulation</Term> is binding in its entirety and directly applicable in the Member
+              States it binds; this one is no longer in force
+            </>
+          ) : (
+            <>
+              <strong>Applies directly; no national transposition needed.</strong> A <Term id="regulation">regulation</Term> is
+              binding in its entirety and directly applicable in the Member States it binds, from the dates it sets
+            </>
+          )}
           {d.application ? (
             <>
               {' '}

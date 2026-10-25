@@ -47,8 +47,8 @@ describe('adoption, signature, publication, entry into force and application', (
     expect(adopted).toBe(rowOf('Signed, awaiting publication'));
     expect(adopted.text).not.toMatch(/once published/i);
     expect(adopted.text).toMatch(/which can be the day of its adoption, or, if it sets none, on the twentieth day after publication/);
-    expect(adopted.text).toMatch(/non-legislative decision addressed to specific recipients takes effect when they are notified \(Article 297 TFEU\)/);
-    expect(GLOSSARY['entry-into-force'].short).toMatch(/non-legislative decision addressed to specific recipients takes effect when they are notified/);
+    expect(adopted.text).toMatch(/non-legislative directive not addressed to all Member States, or decision addressed to specific recipients, takes effect when they are notified \(Article 297 TFEU\)/);
+    expect(GLOSSARY['entry-into-force'].short).toMatch(/non-legislative directive not addressed to all Member States, or decision addressed to specific recipients, takes effect when they are notified/);
     // the group of adopted acts makes no claim about entry into force: a Council act can be in force on adoption
     expect(groupOf('Adopted by the Council').heading).not.toMatch(/force/i);
   });
