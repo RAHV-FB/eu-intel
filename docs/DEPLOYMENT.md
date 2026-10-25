@@ -19,6 +19,10 @@ an unattended run installs only the files CI has tested. Dependabot proposes upd
 they reach `main`. To regenerate the file (Python 3.12, as the workflows use): `uv pip compile pyproject.toml
 --python-version 3.12 --generate-hashes -o requirements.txt` (or `pip-compile --generate-hashes`).
 
+The deploy job also makes an independent HTTP smoke check **against the public Pages URL**, including the
+homepage, Insights, legislation, votes, people, countries, and data/meta.json. A successful GitHub Pages
+publish that serves missing routes or empty data is treated as a failed release.
+
 ## One-time setup (repository owner)
 
 1. **Enable Pages with Actions as the source**: *Settings → Pages → Build and deployment → Source:*
