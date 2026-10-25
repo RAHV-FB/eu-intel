@@ -319,10 +319,10 @@ test.describe('pages while they load', () => {
   });
 });
 
-test('the not-found page offers a search and the six main sections', async ({ page, guard }) => {
+test('the not-found page offers a search and the seven main sections', async ({ page, guard }) => {
   guard.ignore(/404/);
   await open(page, 'this-page-does-not-exist/');
   await expect(page.locator('main h1')).toHaveText('We couldn’t find this page');
   await expect(page.locator('main .not-found__search input[type="search"]')).toBeVisible();
-  await expect(page.locator('main .not-found__links a')).toHaveText(['Discover', 'Legislation', 'Votes', 'People & Parties', 'Countries', 'How the EU Works']);
+  await expect(page.locator('main .not-found__links a')).toHaveText(['Discover', 'Legislation', 'Votes', 'Insights', 'People & Parties', 'Countries', 'How the EU Works']);
 });
