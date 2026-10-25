@@ -8,7 +8,7 @@ export const STEPS: { title: string; who: string; text: string }[] = [
   {
     title: 'Commission proposes',
     who: 'European Commission',
-    text: 'Drafts a proposal for a regulation or directive and sends it to Parliament and the Council.',
+    text: 'Drafts a proposal for a regulation, directive or decision and sends it to Parliament and the Council.',
   },
   {
     title: 'Parliament & Council examine and negotiate',

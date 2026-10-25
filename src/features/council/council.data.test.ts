@@ -3,14 +3,26 @@
  * built.
  */
 import { existsSync, readFileSync } from 'node:fs';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import type { CountryDetail, CountrySummary, CouncilVote, DossierDetail, Meta } from '../../types/data';
 import { formatNumber } from '../../lib/format';
-import { councilRowTag, councilRowTitle } from './CouncilVoteCard';
+import { CouncilVoteCard, councilRowTag, councilRowTitle } from './CouncilVoteCard';
 
 const DATA = new URL('../../../public/data/', import.meta.url);
 const built = existsSync(new URL('council/index.json', DATA));
 const read = <T>(name: string): T => JSON.parse(readFileSync(new URL(name, DATA), 'utf8')) as T;
+
+/** The text of a vote's card, as the dossier page renders it. */
+const cardText = (vote: CouncilVote): string =>
+  renderToStaticMarkup(createElement(MemoryRouter, null, createElement(CouncilVoteCard, { vote })))
+    .replace(/<\/li>/g, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&');
 
 describe.skipIf(!built)('Council votes on the built data', () => {
   const votes = new Map((built ? read<CouncilVote[]>('council/index.json') : []).map((v) => [v.id, v]));
@@ -131,6 +143,9 @@ describe.skipIf(!built)('Council votes on the built data', () => {
     const parts = /: ([\d,]+) from the Council's voting-result documents and ([\d,]+) adoptions? by written procedure/.exec(summary);
     if (parts) expect(Number(parts[1].replace(/,/g, '')) + Number(parts[2].replace(/,/g, ''))).toBe(listed.length);
     expect(coverage.startsWith(`Council votes: ${formatNumber(listed.length)} votes`)).toBe(true);
+    // the guide's exceptions (Art. 31(2) TEU) let one government stop a qualified-majority vote; a vote cast cannot
+    expect(coverage).toContain('Only under unanimity can a single country’s vote block a decision.');
+    expect(meta.coverage_notes.join('\n')).not.toContain('Only a vote under unanimity');
     for (const c of read<CountrySummary[]>('countries/index.json')) {
       const p = c.council_positions;
       expect(p.for + p.against + p.abstain + p.not_participating, c.code).toBe(withPositions);
@@ -145,5 +160,54 @@ describe.skipIf(!built)('Council votes on the built data', () => {
       'Draft Joint Statement by the Council, the European Parliament and the Commission',
       'Statement by the Commission (2)',
     ]);
+  });
+});
+
+describe.skipIf(!built)('what the voting rule meant, on the Council vote cards of the built data', () => {
+  const votes = built ? read<CouncilVote[]>('council/index.json') : [];
+  const byId = new Map(votes.map((v) => [v.id, v]));
+  const texts = new Map(votes.map((v) => [v.id, cardText(v)]));
+
+  it('says that no Member State voted against or abstained, not that they formed no blocking minority (AI Act, ST 10199/24)', () => {
+    const ai = texts.get('ST-10199-2024')!; // 27 in favour of 27
+    expect(ai).toContain('No Member State voted against or abstained.');
+    expect(ai).not.toContain('did not form a blocking minority');
+    // the wolf Directive: Belgium, Spain and Poland abstained (ST 9887/25)
+    expect(texts.get('ST-9887-2025')).toContain('The Member States not voting in favour did not form a blocking minority.');
+    for (const v of votes) {
+      const a = v.assessment;
+      if (a?.rule !== 'qmv' || a.blocking_minority_existed !== false) continue;
+      const none = (a.states_against ?? 0) + (a.states_abstain ?? 0) === 0;
+      expect(texts.get(v.id)!.includes('did not form a blocking minority'), v.id).toBe(!none);
+      expect(texts.get(v.id)!.includes('No Member State voted against or abstained.'), v.id).toBe(none);
+    }
+  });
+
+  it('answers whether one country’s vote could block, which the Treaties’ emergency brakes do not change (2016/0397(COD), Art. 48 TFEU)', () => {
+    // Arts 48, 82(3) and 83(3) TFEU and Art. 31(2) TEU let one government halt some decisions taken by qualified majority
+    expect(texts.get('ST-13678-2026')).toContain(
+      'Could one country’s vote block it? No. Under qualified majority, one Member State voting against cannot block the decision on its own; ' +
+        'here a blocking minority needed at least four Member States representing more than 35% of the EU population, or 13 Member States ' +
+        'whatever their population.',
+    );
+    for (const [id, t] of texts) {
+      expect(t, id).not.toContain('Only under unanimity');
+      expect(t, id).not.toContain('Could a single country block it?');
+    }
+    expect([...texts.values()].filter((t) => t.includes('Could one country’s vote block it? Yes — under unanimity')).length).toBe(
+      votes.filter((v) => v.assessment?.single_state_veto_possible).length,
+    );
+  });
+
+  it('gives both ways a qualified majority fails: by population, or by the number not in favour (Art. 16(4) TEU, Art. 238(3)(a) TFEU)', () => {
+    // Directive (EU) 2024/1385 (2022/0066(COD)): Denmark does not take part; 15 of the 26 are needed, so 12 block
+    expect(byId.get('ST-9783-2024')!.assessment!.states_required).toBe(15);
+    expect(texts.get('ST-9783-2024')).toContain(
+      'here a blocking minority needed at least 4 of the participating Member States, representing more than 35% of their combined ' +
+        'population, or 12 of them whatever their population (TFEU Art. 238(3)(a)).',
+    );
+    // before February 2020, 16 of 28 were needed: 13 blocked, as with 27
+    const eu28 = votes.find((v) => v.assessment?.legal_basis === 'TEU Art. 16(4)' && v.assessment.states_participating === 28)!;
+    expect(texts.get(eu28.id)).toContain('or 13 Member States whatever their population.');
   });
 });

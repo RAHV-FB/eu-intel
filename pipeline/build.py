@@ -5202,7 +5202,7 @@ class Builder:
             note = (f"Council votes: {len(listed):,} votes of the Council of the EU "
                     f"({dates[0][:4]}–{dates[-1][:4]}), with each Member State government's position read from the "
                     f"official Council voting-result documents{extra}. These are positions of national governments in "
-                    "the Council, not of MEPs. Only a vote under unanimity can be blocked by a single country.")  # fmt: skip
+                    "the Council, not of MEPs. Only under unanimity can a single country’s vote block a decision.")  # fmt: skip
             if unread:
                 note += (
                     f" {unread:,} voting-result {'document' if unread == 1 else 'documents'} could not be read and "

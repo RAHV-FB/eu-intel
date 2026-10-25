@@ -93,13 +93,18 @@ function VoteOn({ vote }: { vote: CouncilVote }) {
   return <>Not named in the voting-result document</>;
 }
 
-/** Size of a blocking minority under the established legal basis, or null when it is not established. */
-function blockingRule(a: CouncilAssessment, notParticipating: number): string | null {
+/**
+ * Size of a blocking minority under the established legal basis, or null when it is not established: enough Member
+ * States by population, or so many by number that fewer than the required 55% are left to vote in favour (13 of 27,
+ * or of 28, under TEU Art. 16(4)).
+ */
+function blockingRule(a: CouncilAssessment, notParticipating: number, participating: number): string | null {
+  const byNumber = formatNumber(participating - a.states_required + 1);
   if (notParticipating === 0 && a.legal_basis === 'TEU Art. 16(4)') {
-    return 'at least four Member States representing more than 35% of the EU population';
+    return `at least four Member States representing more than 35% of the EU population, or ${byNumber} Member States whatever their population`;
   }
   if (notParticipating > 0 && a.legal_basis === 'TFEU Art. 238(3)(a)' && a.blocking_minority_min_states != null) {
-    return `at least ${formatNumber(a.blocking_minority_min_states)} of the participating Member States, representing more than 35% of their combined population (TFEU Art. 238(3)(a))`;
+    return `at least ${formatNumber(a.blocking_minority_min_states)} of the participating Member States, representing more than 35% of their combined population, or ${byNumber} of them whatever their population (TFEU Art. 238(3)(a))`;
   }
   return null;
 }
@@ -136,7 +141,7 @@ export function CouncilVoteCard({
   const popReq = pctValue(a?.population_required_pct, scale);
   const notParticipating = a?.states_not_participating ?? groups.not_participating.length;
   const participating = a?.states_participating ?? recorded.length - groups.not_participating.length;
-  const bmRule = a ? blockingRule(a, notParticipating) : null;
+  const bmRule = a ? blockingRule(a, notParticipating, participating) : null;
   const checked = vote.correction_sources ?? []; // the texts a correction of the rule or outcome rests on
 
   return (
@@ -289,9 +294,12 @@ export function CouncilVoteCard({
                 {a.blocking_minority_existed === true && (
                   <li>The Member States not voting in favour formed a blocking minority{bmRule ? ` (${bmRule})` : ''}.</li>
                 )}
-                {a.blocking_minority_existed === false && (
-                  <li>The Member States not voting in favour did not form a blocking minority.</li>
-                )}
+                {a.blocking_minority_existed === false &&
+                  ((a.states_against ?? groups.against.length) + (a.states_abstain ?? groups.abstain.length) > 0 ? (
+                    <li>The Member States not voting in favour did not form a blocking minority.</li>
+                  ) : (
+                    <li>No Member State voted against or abstained.</li>
+                  ))}
               </>
             )}
             {a.rule === 'unanimity' && (
@@ -315,13 +323,14 @@ export function CouncilVoteCard({
             <li>
               {a.single_state_veto_possible ? (
                 <>
-                  <strong>Could a single country block it?</strong> Yes — under unanimity, one Member State voting against is enough to
-                  block a decision.
+                  <strong>Could one country’s vote block it?</strong> Yes — under unanimity, one Member State voting against is enough
+                  to block a decision.
                 </>
               ) : (
                 <>
-                  <strong>Could a single country block it?</strong> No. Only under unanimity can one Member State block a decision on
-                  its own
+                  <strong>Could one country’s vote block it?</strong> No. Under{' '}
+                  {a.rule === 'qmv' ? 'qualified majority' : 'simple majority'}, one Member State voting against cannot block the
+                  decision on its own
                   {a.rule === 'qmv' && bmRule ? `; here a blocking minority needed ${bmRule}` : ''}.
                 </>
               )}

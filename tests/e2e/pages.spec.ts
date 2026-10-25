@@ -685,6 +685,53 @@ test.describe('About and the guide', () => {
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('the guide follows the Treaties on entry into force, the second reading, the presidency and one country’s vote', async ({ page }) => {
+    await open(page, 'how-the-eu-works/');
+    const labels = page.locator('#status-labels');
+    const group = (heading: string) => labels.locator('.statuslabels', { has: page.getByRole('heading', { name: heading, exact: true }) });
+    // Art. 297 TFEU; Council Decision (EU) 2017/1908, Art. 2: "shall enter into force on the date of its adoption"
+    await expect(labels.locator('p').first()).toContainText('An act is usually adopted, signed and published before it enters into force');
+    await expect(group('Adopted: not recorded as published').locator('.badge', { hasText: 'Adopted by the Council' })).toBeVisible();
+    // 2020/0160(COD), a legislative decision: EUR-Lex records no notification and does not mark it in force
+    await expect(group('Published: not recorded as in force').locator('.badge', { hasText: 'Takes effect on notification' })).toBeVisible();
+    await expect(group('In force').locator('.badge')).toHaveCount(1);
+    await expect(labels).not.toContainText('297(2)');
+    await expect(group('Other labels').locator('.badge', { hasText: 'Procedure completed' })).toBeVisible();
+    // Art. 294(7) and (14) TFEU
+    await expect(page.locator('#olp li', { hasText: 'Second reading.' })).toContainText(
+      'Within three months, extendable by up to a month, Parliament can approve the Council’s position or take no decision (the act is adopted)',
+    );
+    // Art. 16(9) and Art. 18(3) TEU
+    await expect(page.locator('#council')).toContainText('except in the Foreign Affairs Council, which the EU’s High Representative');
+    // Art. 16(4) and Art. 31(2) TEU; Arts 48, 82(3) and 83(3) TFEU
+    const voting = page.locator('#council-voting');
+    await expect(voting.locator('.threshold', { hasText: '≥ 4 states' })).toContainText('or 13 states whatever their population');
+    await expect(voting).toContainText('a single country’s vote cannot block a qualified-majority decision');
+    await expect(voting).toContainText('(Article 31(2) TEU)');
+    await expect(voting).toContainText('(the “emergency brake”, Articles 48, 82(3) and 83(3) TFEU)');
+    await expect(voting).not.toContainText('Only under unanimity');
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('a decision that takes effect on notification shows its publication date, not a date of effect (2020/0160(COD))', async ({ page }) => {
+    await open(page, 'legislation/2020-0160/');
+    const line = page.locator('.dz-statusline');
+    await expect(line).toContainText('Takes effect on notification');
+    await expect(line.locator('.dz-statusline__since')).toHaveText('published 22 October 2020');
+  });
+
+  test('a Council vote card and a country page say what one country’s vote can do (AI Act, ST 10199/24)', async ({ page }) => {
+    await open(page, 'legislation/2021-0106/');
+    const card = page.locator('#council-votes article.cvote').first();
+    await expect(card).toContainText('No Member State voted against or abstained.');
+    await expect(card).not.toContainText('did not form a blocking minority');
+    await expect(card).toContainText('Could one country’s vote block it? No. Under qualified majority, one Member State voting against cannot block');
+    await open(page, 'countries/DE/');
+    const callout = page.locator('#participation .callout');
+    await expect(callout).toContainText('or 13 Member States whatever their population');
+    await expect(callout).toContainText('can a single country’s vote block a decision');
+  });
+
   test('"former" rapporteurs are explained as the Observatory lists them, also within the current term', async ({ page }) => {
     // 2025/0429(COD), proposed 19 December 2025: OEIL "Former rapporteur SIPPEL Birgit (S&D) 15/01/2026"; EP API term ep-10
     await open(page, 'legislation/2025-0429/');

@@ -160,7 +160,8 @@ export default function HowEuWorks() {
             <p>
               Government ministers from each Member State, meeting in different configurations depending on the subject — for example
               agriculture ministers, or finance ministers. Each minister can commit their government. The presidency of the Council
-              rotates between Member States every six months.
+              rotates between Member States every six months, except in the Foreign Affairs Council, which the EU’s High Representative
+              chairs.
             </p>
             <ul>
               <li>
@@ -240,8 +241,10 @@ export default function HowEuWorks() {
                 Parliament’s position, the act is adopted. Otherwise the Council adopts its own first-reading position.
               </li>
               <li>
-                <strong>Second reading.</strong> Parliament can approve the Council’s position (the act is adopted), reject it by a majority
-                of all its members (the procedure ends), or propose amendments; the Council then accepts them or not.
+                <strong>Second reading.</strong> Within three months, extendable by up to a month, Parliament can approve the Council’s
+                position or take no decision (the act is adopted), reject it by a majority of all its members (the procedure ends), or
+                amend it by that majority. If the Council approves all the amendments within the same time limits, the act is adopted; if
+                not, conciliation follows.
               </li>
               <li>
                 <strong>Conciliation and third reading.</strong> If they still disagree, a committee with equal numbers from both tries to
@@ -290,9 +293,9 @@ export default function HowEuWorks() {
           <Section id="status-labels" title="Status labels on this site">
             <p>
               A file’s label says how far its procedure has come, worked out from the steps recorded by Parliament and EUR-Lex (see{' '}
-              <Link to="/about#methodology">how status is worked out</Link>). An act is adopted, signed, published, enters into force
-              and, from the date it sets, applies; the labels are grouped by which of these steps it has reached. Labels of other steps
-              before adoption, such as “Committee report adopted”, mean that nothing has been adopted yet.
+              <Link to="/about#methodology">how status is worked out</Link>). An act is usually adopted, signed and published before it
+              enters into force and, from the date it sets, applies; the labels are grouped by which of these steps it has reached. Labels
+              of other steps before adoption, such as “Committee report adopted”, mean that the act has not been adopted yet.
             </p>
             {STATUS_LABEL_GROUPS.map((g) => (
               <div key={g.id} className="statuslabels">
@@ -315,9 +318,8 @@ export default function HowEuWorks() {
               </div>
             ))}
             <p>
-              “Split into separate procedures” and “Parliament report (not a legislative act)” name no stage; the file’s page explains
-              them. “Officially reported as blocked” beside a label is the classification of Parliament’s Legislative Train Schedule,
-              not a stage. See where every file stands in <Link to="/legislation">the legislation explorer</Link>.
+              “Officially reported as blocked” beside a label is the classification of Parliament’s Legislative Train Schedule, not a
+              stage. See where every file stands in <Link to="/legislation">the legislation explorer</Link>.
             </p>
           </Section>
 
@@ -398,20 +400,28 @@ export default function HowEuWorks() {
               </div>
               <div className="threshold">
                 <span className="threshold__n">≥ 4 states</span>
-                <span className="threshold__l">needed for a blocking minority, representing more than 35% of the population</span>
+                <span className="threshold__l">
+                  needed for a blocking minority: more than 35% of the population, or 13 states whatever their population
+                </span>
               </div>
             </div>
             <ul>
               <li>
                 <strong>Qualified majority:</strong> both thresholds must be met. Because a blocking minority needs at least four Member
-                States, <strong>a single country cannot block a qualified-majority decision on its own</strong>, however large. Under this
-                rule an abstention has the same effect as a vote against. When the Council acts without a proposal from the Commission or
-                the High Representative, a higher threshold applies (72% of Member States).
+                States, <strong>a single country’s vote cannot block a qualified-majority decision</strong>, however large the country.
+                Under this rule an abstention has the same effect as a vote against. When the Council acts without a proposal from the
+                Commission or the High Representative, a higher threshold applies (72% of Member States).
               </li>
               <li>
                 <strong>Unanimity:</strong> required in sensitive areas such as taxation, foreign and security policy, EU membership and the
                 long-term budget. Any one Member State voting against blocks the decision — this is what is often called a “veto”. An
-                abstention does not prevent adoption. <strong>Only under unanimity can one country block alone.</strong>
+                abstention does not prevent adoption.
+              </li>
+              <li>
+                <strong>Exceptions.</strong> Outside unanimity, one government can halt a decision in a few cases: in foreign and security
+                policy it can stop a qualified-majority vote for vital and stated reasons of national policy (Article 31(2) TEU), and on
+                some social-security and criminal-justice laws it can have the draft referred to the European Council, which suspends the
+                procedure (the “emergency brake”, Articles 48, 82(3) and 83(3) TFEU).
               </li>
               <li>
                 <strong>Simple majority</strong> (14 Member States) is used mainly for procedural decisions.
