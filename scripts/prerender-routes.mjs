@@ -79,6 +79,7 @@ function page(route, title, description, qualifier) {
 
 const routes = [
   ['legislation', 'Legislation', 'Search and filter EU legislative files: proposals, adopted laws and their status.'],
+  ['insights', 'Data insights', 'Evidence-led analysis of tracked EU legislative files, Parliament votes and Council positions, with careful limitations.'],
   ['votes', 'Parliament votes', 'How the European Parliament voted: final votes, close votes, political groups and countries.'],
   ['people', 'MEPs', 'Members of the European Parliament, political groups and national parties.'],
   ['countries', 'Countries', 'How each EU Member State takes part in EU decisions and applies EU law.'],
