@@ -85,6 +85,9 @@ export default function Home() {
       </section>
 
       <div className="container">
+        {home.loading && <Loading label="Loading the latest legislative data…" />}
+        {home.error && <ErrorState error={home.error} title="The legislative data could not be loaded" />}
+        {home.data && (
         <Link to="/insights" className="home-insights-feature">
           <span className="home-insights-feature__label">Explore the evidence <span aria-hidden="true">/</span> Data insights</span>
           <span className="home-insights-feature__main">
@@ -93,8 +96,7 @@ export default function Home() {
           </span>
           <span className="home-insights-feature__arrow" aria-hidden="true">↗</span>
         </Link>
-        {home.loading && <Loading label="Loading the latest legislative data…" />}
-        {home.error && <ErrorState error={home.error} title="The legislative data could not be loaded" />}
+        )}
 
         {featured.length > 0 && (
           <section className="section home__featured" aria-labelledby="featured-title">
