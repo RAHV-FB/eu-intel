@@ -1,9 +1,9 @@
 /**
- * The status labels a legislative file can carry, grouped by whether its act has been adopted and is in force
- * (shown on /how-the-eu-works#status-labels). The labels and their stages are those of pipeline/analysis/status.py;
- * statusLabels.data.test.ts checks them against the built data: every label of an adopted, published, in force,
- * repealed or ended file must be listed here. Labels of steps before adoption are listed only when they are
- * common; the page says that the others name a step of the procedure.
+ * The status labels a legislative file can carry, grouped by whether its act has been adopted, published and is in
+ * force (shown on /how-the-eu-works#status-labels). The labels and their stages are those of pipeline/analysis/status.py
+ * and pipeline/build.py; guide.data.test.ts checks them against the built data: every label of an adopted, published,
+ * in force, repealed or ended file, and every label that names no stage, must be listed here. Labels of steps before
+ * adoption are listed only when they are common; the page says that the others name a step of the procedure.
  */
 import type { LifecycleStage } from '../../types/data';
 
@@ -59,7 +59,7 @@ export const STATUS_LABEL_GROUPS: StatusLabelGroup[] = [
   },
   {
     id: 'adopted',
-    heading: 'Adopted: not in force yet',
+    heading: 'Adopted: not recorded as published',
     rows: [
       {
         labels: [l('adopted', 'Signed, awaiting publication'), l('adopted', 'Adopted by the Council')],
@@ -70,15 +70,25 @@ export const STATUS_LABEL_GROUPS: StatusLabelGroup[] = [
           l('adopted', 'Adopted, awaiting publication'),
           l('adopted', 'Adopted'),
         ],
-        text: 'The act has been adopted (“Signed” adds that it has been signed). It is not recorded as published in the Official Journal yet. Once published, it enters into force on the date it sets or, if it sets none, on the twentieth day after publication (Article 297 TFEU).',
+        text: 'The act has been adopted (“Signed” adds that it has been signed). It is not recorded as published in the Official Journal yet. It enters into force on the date it sets, which can be the day of its adoption, or, if it sets none, on the twentieth day after publication; a non-legislative decision addressed to specific recipients takes effect when they are notified (Article 297 TFEU).',
       },
+    ],
+  },
+  {
+    id: 'published',
+    heading: 'Published: not recorded as in force',
+    rows: [
       {
         labels: [l('published', 'Published, not yet in force')],
         text: 'Published in the Official Journal, but EUR-Lex records the act as not yet in force. The page gives the date of entry into force, or the condition the act sets for it, where recorded.',
       },
       {
         labels: [l('published', 'Published in the Official Journal')],
-        text: 'Published; our data does not record when the act enters into force. The act itself sets that date.',
+        text: 'Published; our data does not record when the act enters into force.',
+      },
+      {
+        labels: [l('takes_effect_on_notification', 'Takes effect on notification')],
+        text: 'A decision addressed to specific recipients: EUR-Lex gives its date of effect as the date of notification to them, which it does not record, and does not mark the decision as in force.',
       },
     ],
   },
@@ -88,11 +98,7 @@ export const STATUS_LABEL_GROUPS: StatusLabelGroup[] = [
     rows: [
       {
         labels: [l('in_force', 'In force')],
-        text: 'The act has entered into force. Its rules may apply only from later dates, and a directive must still be transposed by each Member State. The file’s page lists the dates.',
-      },
-      {
-        labels: [l('takes_effect_on_notification', 'Takes effect on notification')],
-        text: 'A decision addressed to specific recipients takes effect when it is notified to them (Article 297(2) TFEU). EUR-Lex records it as published but gives no date of notification.',
+        text: 'The act has entered into force. Its rules may apply only from later dates, and a directive must be transposed by the Member States it is addressed to, by the deadline it sets. The file’s page lists the dates.',
       },
     ],
   },
@@ -108,7 +114,7 @@ export const STATUS_LABEL_GROUPS: StatusLabelGroup[] = [
   },
   {
     id: 'ended',
-    heading: 'Ended without an act',
+    heading: 'Withdrawn, rejected or lapsed',
     rows: [
       {
         labels: [l('withdrawn', 'Withdrawn by the Commission'), l('withdrawn', 'Replaced by a new Commission proposal')],
@@ -116,12 +122,33 @@ export const STATUS_LABEL_GROUPS: StatusLabelGroup[] = [
       },
       {
         labels: [l('rejected', 'Rejected by Parliament'), l('rejected', 'Consent refused by Parliament')],
-        text: 'Parliament voted to reject the proposal, or refused its consent, which the Council needs to adopt the act.',
+        text: 'Parliament voted to reject the proposal, or refused its consent. A rejection at first reading is Parliament’s first-reading position: the procedure formally continues with the Council’s first-reading position (Article 294(5) TFEU) unless the Commission withdraws the proposal. A rejection of the Council’s position at second reading or of a conciliation text ends it (Article 294(7)(b) and (13) TFEU), and without Parliament’s consent the Council cannot adopt the act. The file’s page says which applies.',
       },
       {
-        labels: [l('lapsed', 'Lapsed')],
-        also: [l('lapsed', 'Lapsed or withdrawn')],
-        text: 'The procedure lapsed without the act being adopted.',
+        labels: [l('lapsed', 'Lapsed'), l('lapsed', 'Lapsed or withdrawn')],
+        text: 'The procedure lapsed without the act being adopted. “Lapsed or withdrawn”: the Legislative Observatory records that it lapsed or was withdrawn, without saying which.',
+      },
+    ],
+  },
+  {
+    id: 'other',
+    heading: 'Other labels',
+    rows: [
+      {
+        labels: [l('unknown', 'Split into separate procedures')],
+        text: 'The file was split into separate procedures, each with its own status; its page links them.',
+      },
+      {
+        labels: [l('unknown', 'Parliament report (not a legislative act)')],
+        text: 'A report Parliament adopted on another procedure: a resolution, not a legislative act. Its page links that procedure.',
+      },
+      {
+        labels: [l('unknown', 'Procedure completed')],
+        text: 'The Legislative Observatory records the procedure as completed, but our data records no final act, so we cannot say what it produced.',
+      },
+      {
+        labels: [l('unknown', 'Final act not linked in the official records')],
+        text: 'A published act cites a step of this procedure, such as Parliament’s opinion, but no official record links the two. The file’s page names the act.',
       },
     ],
   },

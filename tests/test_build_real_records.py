@@ -140,6 +140,25 @@ def test_search_entries_carry_the_types_of_the_files_acts():
     assert not {"directive", "regulation", "decision"} & set(x["2099-0001"])
 
 
+def test_search_entries_carry_the_types_of_the_acts_a_file_keeps_only():
+    # EUR-Lex links Regulation (EU) 2026/2280, the act of 2025/0059(COD), to 2018/0329(COD) too: the search listed
+    # that directive proposal, which keeps no act, as a "Regulation"
+    p = procs("2018-0329", "2025-0059")
+    a = acts("32026R2280")
+    assert {"2018/0329(COD)", "2025/0059(COD)"} <= set(a["32026R2280"].procedure_refs)
+    kept = {"2018-0329": [], "2025-0059": [a["32026R2280"]]}
+    summary = {pid: {"title": p[pid].title, "ref": p[pid].reference, "status_label": "", "featured": False,
+                     "type": "COD", "last_event": None, "celex": [x.celex for x in kept[pid]]} for pid in p}  # fmt: skip
+    b = SimpleNamespace(
+        dossier_summary=summary, proc=p, curated_of={}, acts_of={pid: [a["32026R2280"]] for pid in p}, dossier_acts=kept,
+        train_of={}, split_children={}, alias_rules=[], mep_summary={}, group_summaries=[], party_summary={},
+        s=SimpleNamespace(meps=[]), topic_list=[], topics_cur={}, resolve_ref=lambda ref: None, org={}, unnamed_parties=set(),
+    )  # fmt: skip
+    x = {d["id"]: d["x"].split() for d in build_search_docs(b) if d["k"] == "dossier"}
+    assert "regulation" in x["2025-0059"]
+    assert not {"directive", "regulation", "decision"} & set(x["2018-0329"])
+
+
 def test_act_number_of_a_title_written_without_a_space_after_the_act_type():
     # Cellar's title of 32014L0063 reads "Directive2014/63/EU of the European Parliament ...": the country pages
     # wrote "Directive 2014/63" (from the CELEX id); 32022R0870 reads "Regulation(EU) 2022/870 ..."
@@ -418,6 +437,19 @@ def test_council_vote_in_the_budget_procedure_is_not_the_adoption_of_an_act():
     assert council_vote_label(cv.title, on, cv.stage, cv.procedure_refs) == cv.title
 
 
+def test_a_council_title_printed_without_a_space_is_published_with_it():
+    # ST 14021/20, the Own Resources Decision: the note's subject reads "Council Decisionon the system of own
+    # resources", which the law page's vote card, the country pages and the Council index showed as it is
+    from pipeline.build import council_display_title
+
+    cv = council("ST-14021-2020")["ST-14021-2020"]
+    assert cv.title.startswith("Council Decisionon the system of own resources")  # the snapshot keeps it as printed
+    assert council_display_title(cv.title, cv.vote_on).startswith("Council Decision on the system of own resources")
+    rec = _built_council(["ST-14021-2020"], ["2018-0135"]).council_records["ST-14021-2020"]  # type: ignore[attr-defined]
+    assert rec["title"] == cv.title.replace("Decisionon", "Decision on", 1)
+    assert rec["display_title"].startswith("Council Decision on the system of own resources")
+
+
 def test_council_summary_counts_every_vote_listed():
     # the About page's source card said "746 voting results …, 744 of them with each Member State's position", its
     # records table 747 Council votes, and the country pages count 745 with positions: CM-5860-2022 (curated, from the
@@ -427,10 +459,12 @@ def test_council_summary_counts_every_vote_listed():
     assert len(me.council_public) == 4  # type: ignore[attr-defined]
     st = SimpleNamespace(fetched_at="2026-10-23T00:00:00Z", records={}, status="ok")
     summary = Builder.source_summary(me, "council", st)  # type: ignore[arg-type]
+    # the breakdown after the colon divides all 4 votes listed (2 + 2), not the 3 with positions: the About page said
+    # "748 votes …, 746 of them with each Member State's position: 746 from the … documents and 2 adoptions …"
     assert summary.startswith(
-        "4 votes of the Council of the EU (2020–2022), 3 of them with each Member State's position: 2 from the "
-        "Council's voting-result documents and 2 adoptions by written procedure from the Council's communication on "
-        "its outcome (CM 5860/22). 1 voting-result document could not be read and is shown without positions."
+        "4 votes of the Council of the EU (2020–2022): 2 from the Council's voting-result documents and 2 adoptions by "
+        "written procedure from the Council's communication on its outcome (CM 5860/22). 3 of them record each Member "
+        "State's position. 1 voting-result document could not be read and is shown without positions."
     )
 
 
@@ -480,8 +514,10 @@ def test_council_list_title_names_the_item_voted_on():
 def test_featured_card_names_amending_acts_the_timeline_cannot_date():
     # EUDR (2021/0366(COD)): EUR-Lex lists Delegated Regulation (EU) 2026/2102 as amending Regulation (EU) 2023/1115,
     # but it is not in our EUR-Lex data; the card's latest step (23 December 2025) is older than it
+    from pipeline.build import load_act_dates
+
     a = acts("32023R1115", "32024R3234", "32025R2650")
-    me = SimpleNamespace(dossier_acts={"2021-0366": [a["32023R1115"]]}, act=a, checked_act_types={},
+    me = SimpleNamespace(dossier_acts={"2021-0366": [a["32023R1115"]]}, act=a, checked_act_types={}, act_dates={},
                          latest_event=lambda pid: {"date": "2025-12-23"})  # fmt: skip
     me.celex_label = lambda c: Builder.celex_label(me, c)  # type: ignore[arg-type]
     note = Builder.undated_amendments_note(me, "2021-0366")  # type: ignore[arg-type]
@@ -489,11 +525,18 @@ def test_featured_card_names_amending_acts_the_timeline_cannot_date():
         "EUR-Lex also lists Regulation 2026/2102 as amending this act. That act is not in our data, so its publication "
         "is not shown and the step above may not be the latest."
     )
-    # its type as the text checked for data/curated/act_dates.yaml gives it ("Delegated Regulation (EU) 2026/2102,
-    # Annex"; Cellar: "Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU)
-    # 2023/1115"), as in the related files, where it read "Regulation 2026/2102" next to the legislative acts
-    me.checked_act_types = {"32026R2102": "Delegated Regulation"}
-    assert note.replace("Regulation 2026", "Delegated Regulation 2026") == Builder.undated_amendments_note(me, "2021-0366")  # type: ignore[arg-type]
+    # named as the text checked for data/curated/act_dates.yaml names it ("Commission Delegated Regulation (EU)
+    # 2026/2102, Annex"; Cellar: "COMMISSION DELEGATED REGULATION (EU) 2026/2102 of 13 July 2026 amending Regulation
+    # (EU) 2023/1115"), as in the related files, where it read "Regulation 2026/2102" next to the legislative acts;
+    # that text dates a step of the page (its Annex: "This provision shall apply from 30 December 2027"), so the note
+    # said "That act is not in our data" of an act the page cites
+    me.checked_act_types = {"32026R2102": "Commission Delegated Regulation (EU)"}
+    me.act_dates = {"32023R1115": load_act_dates()["32023R1115"]}
+    assert Builder.undated_amendments_note(me, "2021-0366") == (  # type: ignore[arg-type]
+        "EUR-Lex also lists Commission Delegated Regulation (EU) 2026/2102 as amending this act. Its text was checked "
+        "for the dates it sets for this act, but its publication is not in our data, so it is not shown and the step "
+        "above may not be the latest."
+    )
     # an amending act of a year before the latest step predates it: no note
     me.latest_event = lambda pid: {"date": "2027-01-04"}
     assert Builder.undated_amendments_note(me, "2021-0366") is None  # type: ignore[arg-type]
@@ -503,17 +546,21 @@ def test_featured_card_names_amending_acts_the_timeline_cannot_date():
 
 
 def test_an_act_known_only_by_its_celex_id_takes_its_type_from_the_checked_text():
-    # data/curated/act_dates.yaml (EUDR) cites "Delegated Regulation (EU) 2026/2102, Annex", celex 32026R2102; the
-    # Batteries Regulation's Commission Delegated Regulation (EU) 2026/1770 is named by no checked text
+    # data/curated/act_dates.yaml (EUDR) cites "Commission Delegated Regulation (EU) 2026/2102, Annex", celex
+    # 32026R2102; the Batteries Regulation's Commission Delegated Regulation (EU) 2026/1770 is named by no checked text.
+    # The "(EU)" of the number is the label's: the CELEX id does not say whether an act is (EU) or (EU, Euratom)
     from pipeline.build import checked_act_types, load_act_dates
 
     kinds = checked_act_types(load_act_dates())
-    assert kinds["32026R2102"] == "Delegated Regulation"
-    assert all(re.fullmatch(r"(?:(?:Implementing|Delegated) )?(?:Regulation|Directive|Decision)", k) for k in kinds.values())
+    assert kinds["32026R2102"] == "Commission Delegated Regulation (EU)"
+    assert all(re.fullmatch(r"(?:Commission )?(?:(?:Implementing|Delegated) )?(?:Regulation|Directive|Decision)(?: \(EU\))?", k)
+               for k in kinds.values())  # fmt: skip
     # a label whose number is not the CELEX id's is not used
     assert checked_act_types({"x": {"sources": [{"label": "Delegated Regulation (EU) 2026/2103", "celex": "32026R2102"}]}}) == {}
+    assert checked_act_types({"x": {"sources": [{"label": "Delegated Regulation 2026/2102", "celex": "32026R2102"}]}}) == {
+        "32026R2102": "Delegated Regulation"}  # fmt: skip
     me = SimpleNamespace(checked_act_types=kinds)
-    assert Builder.celex_label(me, "32026R2102") == "Delegated Regulation 2026/2102"  # type: ignore[arg-type]
+    assert Builder.celex_label(me, "32026R2102") == "Commission Delegated Regulation (EU) 2026/2102"  # type: ignore[arg-type]
     assert Builder.celex_label(me, "32026R1770") == "Regulation 2026/1770"  # type: ignore[arg-type]
     assert Builder.celex_label(me, "32013R1303") is None  # type: ignore[arg-type]
 
@@ -952,17 +999,13 @@ def test_no_component_member_count_before_parliament_took_note_of_three_mandates
     assert Builder.component_members(me, "2020-02-10") == 704  # type: ignore[arg-type]
 
 
-def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
-    # 2021/0106(COD), AI Act. OEIL's key players: "KONEČNÁ Kateřina (The Left)", "MADISON Jaak (ID)",
-    # ENVI "SOLÍS PÉREZ Susana (Renew)". Konečná is in PfE since 2026-10-21 and Madison left ID in 2024: their
-    # current groups must not be shown. 2016/0107(COD): Pascal Durand was a shadow rapporteur in the 8th term,
-    # listed by OEIL as "DURAND Pascal (Verts/ALE)" (that file's roles come from OEIL, with no date).
+def _rapporteur_builder(ids: set[str]) -> SimpleNamespace:
+    """What Builder.rapporteur_entries reads, with the MEPs `ids` (of data/snapshot/ep_people) and all the orgs."""
     from collections import defaultdict
 
     from pipeline.build import group_slug
     from pipeline.models.entities import Mep, Organization
 
-    ids = {"23699", "197493", "197784", "124693"}
     meps = {k: Mep.model_validate(v) for k, v in records("ep_people/meps.json", ids).items()}
     orgs = [Organization.model_validate(o) for o in json.loads((SNAP / "ep_people" / "orgs.json").read_text("utf-8"))]
     group_orgs: dict[str, list[Organization]] = defaultdict(list)
@@ -974,8 +1017,18 @@ def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
         org_slug={o.id: s for s, os_ in group_orgs.items() for o in os_},
         mep_groups={i: sorted((x.start, x.end, x.org_id) for x in m.memberships if x.kind == "group")
                     for i, m in meps.items()},
+        mep_by_name={f"{m.family_name} {m.given_name}".casefold(): [m] for m in meps.values()},
     )  # fmt: skip
     me.group_at = lambda mep_id, d: Builder.group_at(me, mep_id, d)  # type: ignore[arg-type]
+    return me
+
+
+def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
+    # 2021/0106(COD), AI Act. OEIL's key players: "KONEČNÁ Kateřina (The Left)", "MADISON Jaak (ID)",
+    # ENVI "SOLÍS PÉREZ Susana (Renew)". Konečná is in PfE since 2026-10-21 and Madison left ID in 2024: their
+    # current groups must not be shown. 2016/0107(COD): Pascal Durand was a shadow rapporteur in the 8th term,
+    # listed by OEIL as "DURAND Pascal (Verts/ALE)" (that file's roles come from OEIL, with no date).
+    me = _rapporteur_builder({"23699", "197493", "197784", "124693"})
     p = procs("2021-0106", "2016-0107")
     ai = {r["mep_id"]: r for r in Builder.rapporteur_entries(me, p["2021-0106"])}  # type: ignore[arg-type]
     assert (ai["23699"]["group"], ai["23699"]["group_code"], ai["23699"]["role"]) == ("the-left", "The Left", "shadow")
@@ -985,6 +1038,32 @@ def test_rapporteurs_show_the_group_held_in_the_role_not_the_current_one():
     )  # fmt: skip
     durand = [r for r in Builder.rapporteur_entries(me, p["2016-0107"]) if r["mep_id"] == "124693"]  # type: ignore[arg-type]
     assert [(r["group"], r["group_code"]) for r in durand] == [("greens-efa", "Greens/EFA")]
+
+
+def test_rapporteurs_link_only_mep_pages_and_take_the_ep_id_of_an_oeil_person_id():
+    # 2026/0172(COD): OEIL links "CHRIST Marie-Sophie (EPP)" to /meps/en/10006693, an address with no page on the
+    # EP site (404) nor here; she is 277057 in EP Open Data, and the EP API lists her as a shadow rapporteur of the
+    # file too: the page listed her twice, once linked to "We couldn't find this MEP". 2026/0115(COD): OEIL's
+    # "SCHNURRBUSCH Volker (ESN)" (10001806) is the file's only entry for Volker Schnurrbusch (267485). 2025/0221(COD):
+    # the EP API lists him as a shadow and a shadow for an opinion, and OEIL's 10001806 as a shadow again.
+    # 2011/0023(COD): Timothy Kirkhope (4542) sat before 2019 and has no MEP page here: his name is not a link.
+    me = _rapporteur_builder({"277057", "267485"})
+    p = procs("2026-0172", "2026-0115", "2025-0221", "2011-0023")
+    assert {r.mep_id for r in p["2026-0172"].rapporteurs} >= {"10006693", "277057"}  # as stored
+
+    def entries(pid: str, *ids: str) -> list[tuple]:
+        return [(r["mep_id"], r["name"], r["role"], r["group_code"], r["country"], r.get("has_page"))
+                for r in Builder.rapporteur_entries(me, p[pid]) if r["mep_id"] in ids]  # type: ignore[arg-type]  # fmt: skip
+
+    assert entries("2026-0172", "10006693", "277057") == [("277057", "Marie-Sophie Christ", "shadow", "EPP", "DE", True)]
+    assert entries("2026-0115", "10001806", "267485") == [("267485", "Volker Schnurrbusch", "shadow", "ESN", "DE", True)]
+    assert sorted(x[2] for x in entries("2025-0221", "10001806", "267485")) == ["shadow", "shadow_opinion"]
+    assert entries("2011-0023", "4542") == [("4542", "Timothy Kirkhope", "rapporteur", "ECR", None, None)]
+    for pid, x in p.items():
+        out = Builder.rapporteur_entries(me, x)  # type: ignore[arg-type]
+        assert all(bool(r.get("has_page")) == (r["mep_id"] in me.mep) for r in out), pid
+        keys = [(r["mep_id"], r["role"], r["committee"]) for r in out]
+        assert len(keys) == len(set(keys)), pid
 
 
 def test_snapshot_rapporteur_committees_are_among_the_files_committees():
@@ -1018,6 +1097,22 @@ def council_rec(cv: CouncilVote, vote_on: str | None = None) -> dict:
     """A Council vote as build_council publishes it (the fields the timeline reads)."""
     return {"id": cv.id, "date": cv.date, "vote_on": vote_on or cv.vote_on, "outcome": cv.outcome, "stage": cv.stage,
             "written_procedure": cv.written_procedure, "positions": cv.positions, "source": None}  # fmt: skip
+
+
+def test_an_act_of_parliament_and_council_is_not_adopted_on_its_signature_date():
+    # 2011/0901(COD), known from EUR-Lex only: Regulation (EU, Euratom) 2015/2422 "of the European Parliament and of
+    # the Council of 16 December 2015" was shown "Adopted 16 Dec 2015", its signature (OEIL 2011/0901B(COD): "Decision
+    # by Parliament, 2nd reading" 28/10/2015, "Act approved by Council, 2nd reading" 03/12/2015, "Final act signed"
+    # 16/12/2015; none of them is in our data). 2020/3521(COD): Council Decision (EU) 2020/2059 "of
+    # 7 December 2020" bears the date of its adoption by the Council, which stays
+    from pipeline.models.entities import SourceRef
+
+    a = acts("32015R2422", "32020D2059")
+    src = SourceRef(institution="EUR-Lex", url="https://eur-lex.europa.eu", retrieved_at="2026-10-23T00:00:00Z")
+    for ref, celex, want in (("2011/0901(COD)", "32015R2422", None), ("2020/3521(COD)", "32020D2059", "2020-12-07")):
+        p = Procedure(id=ref[:9].replace("/", "-"), reference=ref, type="COD", title=a[celex].title,
+                      celex_refs=[celex], oeil_url="https://oeil.europarl.europa.eu", source=src)  # fmt: skip
+        assert Builder.adoption_dates(stand_in(), p, [a[celex]]) == (want, a[celex].date_publication)  # type: ignore[arg-type]
 
 
 def test_council_adoption_is_dated_by_the_acts_own_text():
@@ -1670,6 +1765,22 @@ def test_split_parts_and_the_main_file_of_a_report_are_linked_from_the_status_te
     assert report["next_step"]["text"] == "None for this report. See the main procedure 2020/0112(APP) for the proposal."
 
 
+def test_a_split_parent_is_dated_by_the_proposal_all_its_parts_record():
+    # 2016/0224(COD) records no proposal (its page read "Proposed: Not recorded"); 2016/0224A and B(COD) both record
+    # the Commission proposal COM(2016)0467 of 13 July 2016, from which the file was split
+    p = procs("2016-0224", "2016-0224A", "2016-0224B")
+    me = SimpleNamespace(proc=p, split_children={"2016-0224": ["2016-0224A", "2016-0224B"]},
+                         proposal_date=Builder.proposal_date)  # fmt: skip
+    assert Builder.proposal_date(p["2016-0224"]) is None
+    doc = Builder.parts_proposal(me, "2016-0224")  # type: ignore[arg-type]
+    assert doc is not None and (doc.id, doc.date) == ("COM(2016)0467", "2016-07-13")
+    assert Builder.parts_proposal(me, "2016-0224A") is None  # not a split parent
+    # parts that record different proposals date nothing
+    me.proc = {**p, "2016-0224B": p["2016-0224B"].model_copy(update={"documents": [
+        d.model_copy(update={"id": "COM(2016)0468"}) if d.id == "COM(2016)0467" else d for d in p["2016-0224B"].documents]})}  # fmt: skip
+    assert Builder.parts_proposal(me, "2016-0224") is None
+
+
 def _classified(pid: str, today: str = "2026-10-23", **kw):
     """(status, procedure as the build gives it to classify) of a snapshot file, without acts or train files."""
     from datetime import date
@@ -1778,8 +1889,10 @@ def test_publication_is_dated_by_the_official_journal():
         assert [(x["date"], x["title"], x["institution"]) for x in pubs] == [
             (oj, "Published in the Official Journal of the EU", "EUR-Lex")], pid  # fmt: skip
         assert f"The European Parliament's procedure record gives {ep} for its publication." in pubs[0]["detail"]
-    # the latest step of 2018/0069 is the entry into force of 10 July 2019, not the EP's 25 July 2019
-    assert [x["date"] for x in tl if x["state"] == "done"][-1] == "2019-07-10"
+    # the latest step of 2018/0069 before its end of validity is the entry into force of 10 July 2019, not the EP's
+    # 25 July 2019
+    assert [(x["date"], x["kind"]) for x in tl if x["state"] == "done"][-2:] == [
+        ("2019-07-10", "entry_into_force"), ("2023-11-01", "end_of_validity")]  # fmt: skip
     # an EP record on the act's own publication day stays (2021/0106(COD), AI Act, 12 July 2024)
     p, a = procs("2021-0106")["2021-0106"], acts("32024R1689")["32024R1689"]
     tl = Builder.timeline(stand_in(), p, [a], [])  # type: ignore[arg-type]
@@ -2075,7 +2188,115 @@ def test_a_date_checked_against_the_text_cites_that_text_as_its_source():
     tl = Builder.timeline(me, procs("2020-0361")["2020-0361"], [a], [])  # type: ignore[arg-type]
     step = next(x for x in tl if x["kind"] == "application" and x["date"] == "2024-02-17")
     assert step["source"]["url"] == step["docs"][0]["url"] == "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"
-    assert step["source"]["label"] == "Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)"
+    assert step["source"]["label"] == "Regulation (EU) 2022/2065, Articles 92 and 93 (checked 24 October 2026)"
+
+
+def test_the_dsa_schedule_says_that_designated_very_large_platforms_were_covered_earlier():
+    """DSA, Art. 92: "This Regulation shall apply to providers of very large online platforms and of very large online
+    search engines designated pursuant to Article 33(4) from four months after the notification to the provider
+    concerned referred to in Article 33(6) where that date is earlier than 17 February 2024." "When it applies" cited
+    Article 93 only, so the Regulation seemed to apply to them only from 17 February 2024."""
+    from pipeline.build import apply_act_dates, load_act_dates
+
+    cur = load_act_dates()
+    me = stand_in(today="2026-10-24", act_dates=cur)
+    a = apply_act_dates(acts("32022R2065")["32022R2065"], cur["32022R2065"])
+    info = Builder.application_info(me, [a])  # type: ignore[arg-type]
+    assert "under Article 92 the Regulation applies to providers of very large online platforms" in info["dates_note"]["reason"]
+    assert "where that date is earlier than 17 February 2024" in info["dates_note"]["reason"]
+    general = next(x for x in info["application_detail"] if x["date"] == "2024-02-17")
+    assert general["provisions"] == ("The Regulation in general (Art. 93(2)), unless it applied earlier to a designated "
+                                     "very large online platform or search engine (Art. 92)")  # fmt: skip
+
+
+def test_the_own_resources_decision_says_why_it_entered_into_force_after_it_applied():
+    """Decision (EU, Euratom) 2020/2053, Art. 12: it "shall enter into force on the first day of the first month following
+    receipt of the last of the notifications" of the Member States' approval, and "shall apply from 1 January 2021";
+    Art. 311 TFEU, third paragraph: such a decision "shall not enter into force until it is approved by the Member
+    States". The 2018/0135(CNS) page gave 1 January 2021 and 1 June 2021 without the reason (that of the 2014 decision,
+    2011/0183(CNS), had one)."""
+    from pipeline.build import load_act_dates
+
+    cur = load_act_dates()
+    a = acts("32020D2053")["32020D2053"]
+    assert (a.entry_into_force, a.other_application_dates) == ("2021-06-01", ["2021-01-01"])  # EUR-Lex, kept
+    info = Builder.application_info(stand_in(act_dates=cur), [a])  # type: ignore[arg-type]
+    note = info["dates_note"]
+    assert note["reason"].startswith("Under Article 12 the Decision applies from 1 January 2021 and enters into force")
+    assert '"shall not enter into force until it is approved by the Member States' in note["reason"]
+    assert [s["label"] for s in note["sources"]] == [
+        "Decision (EU, Euratom) 2020/2053, Article 12", "Treaty on the Functioning of the European Union, Article 311"]
+    assert (info["entry_into_force"], info["application_dates"]) == ("2021-06-01", ["2021-01-01"])
+
+
+# ------------------------------------------------------------------- the end of an act's validity on the timeline
+def end_steps(pid: str, *celex: str, today: str = "2026-10-24") -> list[dict]:
+    a = acts(*celex)
+    me = stand_in(today=today, act=a)
+    from pipeline.build import mark_after_end_of_validity
+
+    tl = mark_after_end_of_validity(Builder.timeline(me, procs(pid)[pid], list(a.values()), []), list(a.values()))  # type: ignore[arg-type]
+    return [x for x in tl if x["kind"] == "end_of_validity"]
+
+
+def test_an_act_no_longer_in_force_has_its_end_as_the_latest_step():
+    """A "No longer in force" page gave an earlier event as its "Latest recorded step": Regulation (EU) 2019/982
+    (2018/0069(COD)), validity ended 31 October 2023 (Cellar: "AI/PAR 32023R2124", implicitly repealed), showed its
+    entry into force of 10 July 2019; the timeline listed no end of validity in any of the 150 such files."""
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+
+    p, a = procs("2018-0069")["2018-0069"], acts("32019R0982", "32023R2124")
+    st = classify(p, [a["32019R0982"]], [], date.fromisoformat("2026-10-24"), others=a)
+    me = stand_in(today="2026-10-24", act=a)
+    tl = Builder.timeline(me, p, [a["32019R0982"]], [])  # type: ignore[arg-type]
+    done = [x for x in tl if x["state"] == "done"]
+    assert (done[-1]["date"], done[-1]["kind"], done[-1]["title"]) == (st.since, "end_of_validity", "No longer in force")
+    assert st.stage == "no_longer_in_force"
+    assert done[-1]["date"] == "2023-11-01" and done[-1]["key"] and done[-1]["institution"] == "EUR-Lex"
+    assert done[-1]["detail"] == ("Regulation (EU) 2019/982. Its validity ended on 31 October 2023. EUR-Lex records it as "
+                                  "implicitly repealed by Regulation (EU) 2023/2124. Regulation (EU) 2023/2124 is a recast: "
+                                  "the rules continue in it, with the amendments it makes, and it is in force.")  # fmt: skip
+    assert [d["id"] for d in done[-1]["docs"]] == ["32023R2124"]
+    assert done[-1]["source"]["identifier"] == "32019R0982"
+
+
+def test_an_expired_act_a_repeal_in_stages_and_a_retroactive_end():
+    # 2020/0259(COD): Regulation (EU) 2021/1232 (CSAM interim derogation), validity ended 3 April 2026, no repealing act;
+    # it is not marked as dated after its own end of validity
+    s = end_steps("2020-0259", "32021R1232")
+    assert [(x["date"], x["title"], x["detail"], x["docs"]) for x in s] == [
+        ("2026-04-04", "No longer in force", "Regulation (EU) 2021/1232. Its validity ended on 3 April 2026.", [])]
+    assert "after_end_of_validity" not in s[0]
+    # Directive 2014/61/EU (2013/0080(COD)), repealed by Regulation (EU) 2024/1309 with effect from 12 November 2025
+    # except for some provisions (its Art. 18(2)): no single day, so the step is EUR-Lex's end of validity
+    s = end_steps("2013-0080", "32014L0061")
+    assert [(x["date"], x["title"]) for x in s] == [("2026-05-12", "Validity ended (date recorded by EUR-Lex)")]
+    assert "except for some provisions" in s[0]["detail"]
+    # Council Regulation 1377/2014 (2014/0332(NLE)): Cellar's end of validity, 31 December 2013, is before the act
+    assert end_steps("2014-0332", "32014R1377") == []
+    # an end of validity still ahead is no step (Regulation (EU) 2021/1232, built before 3 April 2026)
+    assert end_steps("2020-0259", "32021R1232", today="2026-04-03") == []
+
+
+# ------------------------------------------------------------------- later participation in a regulation
+def test_a_regulation_lists_the_member_states_that_opted_in_after_its_adoption():
+    """AMMR, Regulation (EU) 2024/1351, recital 91: Ireland "is not bound by it or subject to its application"; Commission
+    Decision (EU) 2024/2088 of 31 July 2024, Article 1: "The participation of Ireland in Regulation (EU) 2024/1351 is
+    confirmed." The page pointed to the recitals for whom the regulation binds; opt-ins were read for directives only.
+    The same for the Qualification Regulation (EU) 2024/1347 (Commission Decision (EU) 2024/2099)."""
+    from pipeline.models.entities import RegulationOptIn
+
+    ins = [RegulationOptIn.model_validate(r) for r in records("optouts/regulations.json", {"32024D2088", "32024D2099"},
+                                                                "decision").values()]  # fmt: skip
+    me = SimpleNamespace(s=SimpleNamespace(regulation_opt_ins=ins))
+    a = acts("32024R1351", "32024R1347", "32024L1346")
+    assert Builder.act_summary(me, a["32024R1351"])["opted_in"] == [  # type: ignore[arg-type]
+        {"country": "IE", "decision": "32024D2088", "label": "Commission Decision (EU) 2024/2088", "date": "2024-07-31",
+         "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024D2088"}]  # fmt: skip
+    assert Builder.act_summary(me, a["32024R1347"])["opted_in"][0]["label"] == "Commission Decision (EU) 2024/2099"  # type: ignore[arg-type]
+    assert "opted_in" not in Builder.act_summary(me, a["32024L1346"])  # type: ignore[arg-type]  # its table has it
 
 
 def test_older_act_titles_that_begin_with_the_number_give_the_number():

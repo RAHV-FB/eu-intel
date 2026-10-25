@@ -122,6 +122,13 @@ export default function About() {
             and it is not endorsed by them. It takes no position on legislation, parties or countries: labels are neutral, and we do not rank
             parties, MEPs or Member States. Where official records are missing or unclear, we say so rather than fill the gap.
           </div>
+          <p id="contact">
+            <strong>Maintainer and corrections.</strong> The site is maintained by RAHV-FB, the GitHub account that owns the project’s{' '}
+            <ExtLink href={REPOSITORY} official={false}>public repository</ExtLink>, where its code, data and editorial policy are kept. To
+            report an error or a missing record, or to ask a question, open an issue in the{' '}
+            <ExtLink href={`${REPOSITORY}/issues`} official={false}>repository’s issue tracker</ExtLink> (this needs a GitHub account, and
+            issues are public).
+          </p>
           <p>
             New to the EU? Start with <Link to="/how-the-eu-works">How the EU works</Link>.
           </p>
@@ -228,7 +235,7 @@ export default function About() {
             Together the featured files include at least one adopted act and at least one pending proposal, with no more than two on the
             same topic. The selection is reviewed at least every three months and when the data show a material change. Being featured is
             not a ranking and does not mean a file is more important than others. The rules are in the{' '}
-            <ExtLink href={`${REPOSITORY}/blob/main/docs/EDITORIAL.md`}>editorial policy</ExtLink>.
+            <ExtLink href={`${REPOSITORY}/blob/main/docs/EDITORIAL.md`} official={false}>editorial policy</ExtLink>.
           </p>
           <ul>
             <li>
@@ -299,7 +306,7 @@ export default function About() {
             </ul>
             <p>
               The corrections are listed in full in the{' '}
-              <ExtLink href={`${REPOSITORY}/tree/main/data/curated`}>
+              <ExtLink href={`${REPOSITORY}/tree/main/data/curated`} official={false}>
                 <span className="mono">data/curated</span> folder
               </ExtLink>{' '}
               of the project’s public repository, one file per kind, each entry with the provision it relies on.

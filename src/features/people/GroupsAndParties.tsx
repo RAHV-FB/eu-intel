@@ -7,6 +7,8 @@ import { shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { Disclosure, EmptyState } from '../../components/ui';
 import { CollapsibleFilters, PHONE_WIDTH } from '../../components/CollapsibleFilters';
 import { useMediaQuery } from '../../components/useMediaQuery';
+import { ResultCount } from '../../components/ResultCount';
+import { useFocusRevealed } from '../../components/useFocusRevealed';
 import { SortTh, useSortable } from '../votes/sortable';
 import { partyNameKey, termLabel, termYears, type GroupLabel } from './labels';
 import './people.css';
@@ -149,6 +151,8 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
     { active: 'desc', total: 'desc' },
     'psort',
   );
+  // "Show more" moves keyboard focus to the first party it shows
+  const more = useFocusRevealed<HTMLTableSectionElement>(Math.min(shown, sorted.length));
 
   return (
     <section aria-labelledby="parties-h">
@@ -185,9 +189,9 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
           </div>
         </CollapsibleFilters>
       </form>
-      <p className="results-bar__count mb-3" aria-live="polite">
+      <ResultCount className="results-bar__count mb-3">
         {formatNumber(filtered.length)} {filtered.length === 1 ? 'party' : 'parties'}
-      </p>
+      </ResultCount>
       {filtered.length === 0 ? (
         <EmptyState title="No parties match these filters" />
       ) : (
@@ -212,7 +216,7 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
                   <th scope="col">European political groups</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody ref={more.ref}>
                 {sorted.slice(0, shown).map((p) => (
                   <tr key={p.id}>
                     <th scope="row">
@@ -243,7 +247,14 @@ export function PartiesBrowse({ parties, groups }: { parties: PartySummary[]; gr
           </div>
           {sorted.length > shown && (
             <div className="more">
-              <button type="button" className="btn" onClick={() => setShown(shown + PAGE)}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  more.reveal();
+                  setShown(shown + PAGE);
+                }}
+              >
                 Show {formatNumber(Math.min(PAGE, sorted.length - shown))} more
               </button>
               <span className="meta">

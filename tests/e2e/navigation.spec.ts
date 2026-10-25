@@ -354,7 +354,7 @@ test('the United Kingdom page links to the MEPs elected there and its national p
   await page.getByRole('link', { name: 'MEPs elected in the United Kingdom' }).click();
   await settle(page);
   await expect(page).toHaveURL(new RegExp(`${BASE_PATH}people\\?country=GB&status=former$`));
-  await expect(page.getByText(`${uk} MEPs no longer in office`)).toBeVisible();
+  await expect(page.locator('.results-bar__count')).toHaveText(`${uk} MEPs no longer in office`);
   await page.goBack();
   await settle(page);
   await page.getByRole('link', { name: 'National parties of the United Kingdom' }).click();

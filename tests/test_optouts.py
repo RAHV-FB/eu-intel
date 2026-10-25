@@ -7,7 +7,7 @@ import json
 import pytest
 
 from pipeline.http import HttpError
-from pipeline.models.entities import DirectiveOptOut, SourceStatus
+from pipeline.models.entities import DirectiveOptOut, RegulationOptIn, SourceStatus
 from pipeline.snapshot import read_records
 from pipeline.sources.optouts import fetch, not_bound, plain_text
 
@@ -109,14 +109,34 @@ def test_opt_ins_after_adoption():
          "down standards for the reception of applicants for international protection"},
         {"celex": "32018D0753", "title": "Commission Decision (EU) 2018/753 of 22 May 2018 confirming the "
          "participation of Ireland in Directive 2013/33/EU of the European Parliament and of the Council"},
-        # a regulation, and enhanced cooperation: not a directive opt-in
+        # a regulation (AMMR), and one numbered as before 2015 (a made-up title in that form)
         {"celex": "32024D2088", "title": "Commission Decision (EU) 2024/2088 of 31 July 2024 confirming the "
          "participation of Ireland in Regulation (EU) 2024/1351 of the European Parliament and the Council"},
+        {"celex": "32014D0999", "title": "Commission Decision of 1 June 2014 confirming the participation of Ireland "
+         "in Regulation (EU) No 516/2014 of the European Parliament and of the Council"},
+        # enhanced cooperation, and the United Kingdom of Great Britain and Northern Ireland: not Ireland's opt-in
         {"celex": "32024D0807", "title": "Commission Decision (EU) 2024/807 of 29 February 2024 confirming the "
          "participation of Poland in the enhanced cooperation on the establishment of the European Public "
          "Prosecutor’s Office"},
+        {"celex": "32017D0388", "title": "Commission Decision (EU) 2017/388 of 6 March 2017 confirming the "
+         "participation of the United Kingdom of Great Britain and Northern Ireland in Regulation (EU) 2016/794"},
     ]  # fmt: skip
-    assert opt_ins(rows) == {"32024L1346": {"IE": "32024D2087"}, "32013L0033": {"IE": "32018D0753"}}
+    assert opt_ins(rows) == {"32024L1346": {"IE": "32024D2087"}, "32013L0033": {"IE": "32018D0753"},
+                             "32024R1351": {"IE": "32024D2088"}, "32014R0516": {"IE": "32014D0999"}}  # fmt: skip
+
+
+def test_opt_ins_to_regulations_are_recorded_with_the_decisions_title():
+    """The site sent readers to a regulation's recitals for whom it binds, and recital 91 of the AMMR, Regulation (EU)
+    2024/1351, says Ireland "is not bound by it"; Commission Decision (EU) 2024/2088, Article 1: "The participation of
+    Ireland in Regulation (EU) 2024/1351 is confirmed." Opt-ins were recorded for directives only."""
+    from pipeline.sources.optouts import regulation_opt_ins
+
+    rows = [D2087, AMMR, REG]
+    assert [(r.celex, r.country, r.decision) for r in regulation_opt_ins(rows)] == [
+        ("32017R0353", "IE", "32017D1518"), ("32024R1351", "IE", "32024D2088")]  # fmt: skip
+    ammr = regulation_opt_ins([AMMR])[0]
+    assert ammr.title.startswith("Commission Decision (EU) 2024/2088 of 31 July 2024 confirming the participation of "
+                                 "Ireland in Regulation (EU) 2024/1351 of")  # the no-break spaces as spaces
 
 
 # ---------------------------------------------------------------- fetch: an incomplete opt-in answer
@@ -133,6 +153,9 @@ D0788 = {"celex": "32024D0788", "title": "Commission Decision (EU) 2024/788 of 6
 D2087 = {"celex": "32024D2087", "title": "Commission Decision (EU) 2024/2087 of 31\xa0July 2024 confirming the "
          "participation of Ireland in Directive (EU)\xa02024/1346 of the European Parliament and of the Council "
          "laying down standards for the reception of applicants for international protection"}  # fmt: skip
+AMMR = {"celex": "32024D2088", "title": "Commission Decision (EU) 2024/2088 of 31\xa0July 2024 confirming the "
+        "participation of Ireland in Regulation (EU)\xa02024/1351 of the European Parliament and the Council on asylum "
+        "and migration management, amending Regulations (EU)\xa02021/1147 and (EU)\xa02021/1060"}  # fmt: skip
 
 
 class Cellar:
@@ -179,6 +202,21 @@ def test_a_complete_opt_in_answer(stored):
     status = fetch(Cellar([REG, D0788, D2087]))
     assert status.status == "ok", status.note
     assert opted_in() == OPTED_IN and status.records["not_bound_IE"] == 0
+    # Ireland's opt-in to Regulation (EU) 2017/353 (Commission Decision (EU) 2017/1518)
+    regs = read_records("optouts", "regulations", RegulationOptIn)
+    assert [(r.decision, r.celex, r.country) for r in regs] == [("32017D1518", "32017R0353", "IE")]
+    assert status.records["regulations"] == 1 and "1 later opt-ins to regulations" in status.note
+
+
+def test_a_regulation_opt_in_recorded_earlier_is_kept_when_an_answer_lacks_it(stored):
+    fetch(Cellar([REG, AMMR, D0788, D2087]))
+    status = fetch(Cellar([AMMR, D0788, D2087]))
+    regs = read_records("optouts", "regulations", RegulationOptIn)
+    assert [r.decision for r in regs] == ["32017D1518", "32024D2088"]
+    assert status.status == "partial" and "32017R0353 IE (32017D1518)" in status.note, status.note
+    # a failed query leaves the file as it was
+    fetch(Cellar(error=HttpError("sparql", 500, "gave up")))
+    assert [r.decision for r in read_records("optouts", "regulations", RegulationOptIn)] == ["32017D1518", "32024D2088"]
 
 
 @pytest.mark.parametrize(
@@ -263,4 +301,23 @@ def test_about_summary_counts_the_directives_that_contain_the_statement():
         "in a directive's adoption and is not bound by it (Protocols No 22 and 21). "
         f"{stating:,} of them contain it: they declare Denmark not bound by {dk:,} and Ireland by {ie:,} "
         "(not counting 2 in which the Commission later confirmed Ireland's participation)."
+    )
+
+
+def test_the_source_summary_counts_the_commission_decisions_on_later_participation_in_regulations():
+    # the About page described this source as directives' texts only, after regulations' opt-in decisions were read too
+    from types import SimpleNamespace
+
+    from pipeline.build import Builder
+
+    regs = [
+        RegulationOptIn(decision="32024D2088", celex="32024R1351", country="IE", title="Commission Decision (EU) 2024/2088"),
+        RegulationOptIn(decision="32024D2089", celex="32024R1348", country="IE", title="Commission Decision (EU) 2024/2089"),
+    ]
+    st = SourceStatus(source="optouts", status="ok", fetched_at=PREVIOUS, attempted_at=PREVIOUS)
+    me = SimpleNamespace(s=SimpleNamespace(regulation_opt_ins=regs), optouts={})
+    summary = Builder.source_summary(me, "optouts", st)  # type: ignore[arg-type]
+    assert summary.endswith(
+        "2 Commission decisions confirming a Member State's participation in a regulation after its adoption "
+        "(Protocol No 21, Article 4), for 2 regulations, found by their titles; regulations' own texts are not read."
     )

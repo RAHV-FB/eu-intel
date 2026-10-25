@@ -62,6 +62,22 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     expect(latestDone(d.timeline, today)!.title).toBe('Parliament sent the file back to committee to negotiate with the Council');
   });
 
+  it('dates a split parent by the proposal all its parts record, and lists that proposal (2016-0224)', () => {
+    // 2016/0224(COD) read "Proposed: Not recorded"; 2016/0224A and B(COD) record COM(2016)0467 of 13 July 2016
+    const parents = all.filter((d) => d.related.some((r) => r.relation === 'Split into'));
+    for (const d of parents) {
+      const parts = d.related.filter((r) => r.relation === 'Split into').map((r) => all.find((x) => x.id === r.id)!);
+      if (!d.started_from_parts) continue;
+      for (const x of parts) expect(x.started, `${d.id} ${x.id}`).toBe(d.started);
+      const coms = parts.map((x) => x.documents.filter((doc) => doc.id.startsWith('COM(')).map((doc) => doc.id).join());
+      expect(new Set(coms).size, d.id).toBe(1);
+      expect(d.documents.map((doc) => doc.id), d.id).toContain(coms[0]);
+    }
+    const p224 = all.find((d) => d.id === '2016-0224')!;
+    expect([p224.started, p224.started_from_parts, p224.documents.some((doc) => doc.id === 'COM(2016)0467')]).toEqual(['2016-07-13', true, true]);
+    for (const d of all) if (d.started_from_parts) expect(parents, d.id).toContain(d);
+  });
+
   it('never shows a generated name as a split parent’s official title, and tells its parts apart', () => {
     const parents = all.filter((d) => d.related.some((r) => r.relation === 'Split into'));
     expect(parents.length).toBe(12);
@@ -144,6 +160,28 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     for (const d of all) for (const r of d.rapporteurs) expect(r.committee, `${d.id} ${r.mep_id}`).not.toBe('null');
   });
 
+  it('links a rapporteur only to an MEP page that is written, and lists an MEP once per role (2026-0172)', () => {
+    const pages = new Set(readdirSync(new URL('people/meps/', DATA)).map((f) => f.replace(/\.json$/, '')));
+    let linked = 0;
+    let unlinked = 0;
+    for (const d of all) {
+      const seen = new Set<string>();
+      for (const r of d.rapporteurs) {
+        expect(!!r.has_page, `${d.id} ${r.mep_id}`).toBe(!!r.mep_id && pages.has(r.mep_id));
+        if (r.has_page) linked += 1;
+        else unlinked += 1;
+        const key = `${r.mep_id} ${r.role} ${r.committee ?? ''}`;
+        expect(seen.has(key), `${d.id} ${key}`).toBe(false);
+        seen.add(key);
+      }
+    }
+    expect(linked).toBeGreaterThan(0);
+    expect(unlinked).toBeGreaterThan(0); // e.g. Timothy Kirkhope (4542) on 2011-0023, who sat before 2019
+    // OEIL links her as 10006693, which neither the EP website nor this site has a page for
+    const christ = all.find((d) => d.id === '2026-0172')!.rapporteurs.filter((r) => /christ/i.test(r.name));
+    expect(christ.map((r) => [r.mep_id, r.name, r.role, r.has_page])).toEqual([['277057', 'Marie-Sophie Christ', 'shadow', true]]);
+  });
+
   it('calls a file joint only when two committees lead it now, and labels earlier-term roles former', () => {
     for (const d of all) {
       const joint = new Set(d.committees.filter((c) => c.role === 'joint' && !c.former).map((c) => c.code));
@@ -175,6 +213,34 @@ describe.skipIf(!built)('dossiers on the built data', () => {
       ['2023/0111(COD)', 'A10-0067/2026'],
       ['2023/0115(COD)', 'A10-0065/2026'],
     ]);
+  });
+
+  it('never calls a withdrawal or a rejection at first reading final (2023-0133, Case C-727/25; 2022-0348, 2023-0413)', () => {
+    const ended = all.filter((d) => ['withdrawn', 'rejected', 'lapsed'].includes(d.status.stage));
+    expect(ended.length).toBeGreaterThan(60);
+    for (const d of ended) {
+      const text = `${d.status.explanation} ${d.next_step.text}`;
+      expect(text, d.id).not.toMatch(/will not become law|could only return|normally ends the procedure/);
+      if (d.status.stage === 'withdrawn') {
+        expect(d.next_step.text, d.id).toContain('annulled the withdrawal on an action brought within the two-month time limit of Article 263 TFEU (Article 264 TFEU)');
+        expect(d.status.explanation, d.id).not.toContain('legislative procedure');
+      }
+    }
+    // OEIL "Awaiting Council's 1st reading position": the Council's first-reading position comes next (Art. 294(5) TFEU)
+    for (const id of ['2022-0348', '2023-0413']) {
+      const d = all.find((x) => x.id === id)!;
+      expect([d.status.stage, d.status.label], id).toEqual(['rejected', 'Rejected by Parliament']);
+      expect(d.status.explanation, id).toContain('which does not by itself end the procedure');
+      expect([d.next_step.institution, d.next_step.basis], id).toEqual(['Council', 'source']);
+    }
+  });
+
+  it('does not say Parliament is examining a proposal no committee was given (2016/0141(COD))', () => {
+    const d = all.find((x) => x.id === '2016-0141')!;
+    expect(d.status.explanation).toMatch(/^No referral of the proposal to a Parliament committee is recorded\./);
+    expect(d.next_step.text).toBe('Parliament refers the proposal to one of its committees, which prepares and votes on a report.');
+    for (const x of all.filter((y) => y.type === 'COD' && y.status.label === 'Proposal under examination' && !y.committees.length))
+      expect(x.status.explanation, x.id).not.toContain('Parliament is examining');
   });
 });
 
@@ -223,7 +289,60 @@ describe.skipIf(!built)('application dates, act names and sources on the built d
         }
     expect(n).toBeGreaterThan(20);
     const dsa = byId('2020-0361').timeline.find((e) => e.kind === 'application' && e.date === '2024-02-17')!;
-    expect(dsa.source?.label).toBe('Regulation (EU) 2022/2065, Article 93 (checked 23 October 2026)');
+    expect(dsa.source?.label).toBe('Regulation (EU) 2022/2065, Articles 92 and 93 (checked 24 October 2026)');
+  });
+
+  it('gives an act no longer in force its end as the latest step, on the day its status gives (2018-0069, 2020-0259)', () => {
+    // 146 of the 150 such files showed an earlier step (Regulation (EU) 2019/982: "10 July 2019 Entered into force",
+    // validity ended 31 October 2023); the other 4 are a repeal in stages (no single day: EUR-Lex's end of validity)
+    // and an end of validity earlier than the act itself (no step)
+    const ended = all.filter((d) => d.stage === 'no_longer_in_force');
+    expect(ended.length).toBeGreaterThan(100);
+    let n = 0;
+    for (const d of ended) {
+      const step = d.timeline.find((e) => e.kind === 'end_of_validity');
+      if (!step) continue;
+      n++;
+      expect(latestDone(d.timeline, '2026-10-24')?.id, d.id).toBe(step.id);
+      if (d.status.since) expect([step.date, step.title, d.last_event], d.id).toEqual([d.status.since, 'No longer in force', d.status.since]);
+      else expect(step.title, d.id).toBe('Validity ended (date recorded by EUR-Lex)');
+    }
+    expect(n).toBeGreaterThan(ended.length - 5);
+    expect(all.filter((d) => d.stage !== 'no_longer_in_force' && d.timeline.some((e) => e.kind === 'end_of_validity'))).toEqual([]);
+    expect(latestDone(byId('2018-0069').timeline, '2026-10-24')).toMatchObject({ date: '2023-11-01', title: 'No longer in force' });
+    expect(institutionSuffix('No longer in force', 'EUR-Lex', 'end_of_validity')).toBe('');
+  });
+
+  it('names the Commission decision by which Ireland took part in a regulation after its adoption (AMMR, Qualification)', () => {
+    // Commission Decisions (EU) 2024/2088 and 2024/2099 of 31 July 2024, Art. 1: "The participation of Ireland in
+    // Regulation (EU) 2024/1351 [2024/1347] is confirmed."
+    for (const [id, celex, decision] of [['2020-0279', '32024R1351', '2024/2088'], ['2016-0223', '32024R1347', '2024/2099']]) {
+      const act = byId(id).acts.find((a) => a.celex === celex)!;
+      expect(act.opted_in, id).toEqual([
+        { country: 'IE', decision: `3${decision.replace('/', 'D')}`, label: `Commission Decision (EU) ${decision}`, date: '2024-07-31',
+          url: `https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:3${decision.replace('/', 'D')}` },
+      ]);
+    }
+    const withOptIn = all.filter((d) => d.acts.some((a) => a.opted_in?.length)).map((d) => d.id);
+    expect(withOptIn.length).toBeGreaterThanOrEqual(13);
+    for (const d of all) for (const a of d.acts) if (a.opted_in) expect(a.act_type, `${d.id} ${a.celex}`).toBe('regulation');
+  });
+
+  it('gives a checked date’s text its own identifier, not the CELEX of the act it dates (AI Act, EUDR, AMMR)', () => {
+    // the AI Act's 27 July 2026 read "Regulation (EU) 2026/1744, Article 1, point (40) ↗ 32024R1689", the AI Act's CELEX
+    const doc = (id: string, date: string) => byId(id).timeline.find((e) => e.kind === 'application' && e.date === date)!.docs[0];
+    expect([doc('2021-0106', '2026-07-27').id, doc('2021-0106', '2026-07-27').date]).toEqual(['32026R1744', null]);
+    expect(doc('2021-0366', '2027-12-30').id).toBe('32026R2102');
+    const ammr = doc('2020-0279', '2026-06-12');
+    expect(ammr.label).toMatch(/^Corrigendum to Regulation \(EU\) 2024\/1351/);
+    expect(ammr.id).toBe(ammr.label); // the entry gives no CELEX for the corrigendum: none is shown
+    for (const d of all)
+      for (const e of d.timeline)
+        if (e.source?.label?.includes('(checked '))
+          for (const x of e.docs) {
+            const m = /^3(\d{4})[A-Z](\d{4})$/.exec(x.id);
+            if (m) expect([`${m[1]}/${Number(m[2])}`, `${Number(m[2])}/${m[1]}`].some((num) => x.label?.includes(num)), `${d.id} ${e.id}`).toBe(true);
+          }
   });
 
   it('names an act by its number in its steps, never by a type word and its CELEX id', () => {
@@ -280,13 +399,14 @@ describe.skipIf(!built)('application dates, act names and sources on the built d
     expect(byId('2012-0288').official_title).toMatch(/^Amendment to the fuel quality directive/);
   });
 
-  it('says under the latest step that an amending act outside our data is not dated, and names its type (EUDR)', () => {
-    // Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU) 2023/1115 (Cellar)
+  it('says under the latest step that an amending act outside our data is not dated, and names it as its text does (EUDR)', () => {
+    // Commission Delegated Regulation (EU) 2026/2102 of 13 July 2026 amending Regulation (EU) 2023/1115 (Cellar); its
+    // Annex dates a step of the page, so the note no longer says that the act is not in our data
     const eudr = byId('2021-0366');
     expect(eudr.latest_note).toBe(
-      'EUR-Lex also lists Delegated Regulation 2026/2102 as amending this act. That act is not in our data, so its publication is not shown and the step above may not be the latest.',
+      'EUR-Lex also lists Commission Delegated Regulation (EU) 2026/2102 as amending this act. Its text was checked for the dates it sets for this act, but its publication is not in our data, so it is not shown and the step above may not be the latest.',
     );
-    expect(eudr.related.filter((r) => r.relation === 'Amended by').map((r) => r.title)).toContain('Delegated Regulation 2026/2102');
+    expect(eudr.related.filter((r) => r.relation === 'Amended by').map((r) => r.title)).toContain('Commission Delegated Regulation (EU) 2026/2102');
   });
 
   it('names as debated together only files whose own record shows that debate (CAP, 20 October 2020; customs, 8 June 2021)', () => {

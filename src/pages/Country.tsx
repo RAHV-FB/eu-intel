@@ -10,7 +10,7 @@ import { ExtLink, LoadFailed, Loading, LookupNotice, NotFound, PageHeader, Sourc
 import { RowTitle, StackLabel } from '../components/StackedTable';
 import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { useGroups } from '../features/people/labels';
-import { formatIndicator } from '../features/countries/CountryTable';
+import { formatIndicator, politicalGroupCount } from '../features/countries/CountryTable';
 import { InfringementNote, InfringementTable, TranspositionTable } from '../features/countries/Implementation';
 import { COUNCIL_POSITION_LABEL, councilRowTag, councilRowTitle } from '../features/council/CouncilVoteCard';
 import { Pos } from '../features/votes/Breakdowns';
@@ -123,7 +123,8 @@ export default function Country() {
   const cp = c.council_positions;
   const councilTotal = cp.for + cp.against + cp.abstain + cp.not_participating;
   const councilSource = meta.data?.sources.find((s) => s.id === 'council');
-  const councilDataExists = (meta.data?.counts.council_votes ?? 0) > 0;
+  const councilListed = meta.data?.counts.council_votes ?? 0; // every Council vote listed, with or without positions
+  const councilDataExists = councilListed > 0;
   const implSource = meta.data?.sources.find((s) => s.id === 'implementation');
   const votesShown = allVotes ? c.council_votes : c.council_votes.slice(0, COUNCIL_ROWS);
 
@@ -162,8 +163,8 @@ export default function Country() {
         <p className="csection__kicker">1 · European Parliament</p>
         <h2 id="rep-h">Representation</h2>
         <p className="section-intro">
-          MEPs elected in {c.name}. In Parliament they sit in European <Term id="political-group">political groups</Term> and vote
-          individually — not as a national delegation, and not on behalf of the government.
+          MEPs elected in {c.name}. In Parliament they sit in European <Term id="political-group">political groups</Term>, or as
+          non-attached members, and vote individually — not as a national delegation, and not on behalf of the government.
         </p>
         <LookupNotice failed={groups.failed} what="Political group names" />
         <dl className="facts facts--inline">
@@ -173,8 +174,15 @@ export default function Country() {
           </div>
           <div>
             <dt>Political groups</dt>
-            <dd className="big">{formatNumber(groupRows.length)}</dd>
+            <dd className="big">{formatNumber(politicalGroupCount(c.groups))}</dd>
           </div>
+          {/* the non-attached members belong to no group: counted apart (the table below gives them a row of their own) */}
+          {(c.groups.ni ?? 0) > 0 && (
+            <div>
+              <dt>Non-attached MEPs</dt>
+              <dd className="big">{formatNumber(c.groups.ni)}</dd>
+            </div>
+          )}
           <div>
             <dt>National parties</dt>
             <dd className="big">{formatNumber(c.parties.filter((p) => p.members_active > 0).length)}</dd>
@@ -296,8 +304,8 @@ export default function Country() {
         <p className="callout">
           Most Council decisions use <Term id="qmv">qualified majority voting</Term>: a decision passes with at least 55% of Member States
           representing at least 65% of the EU population. <strong>One country voting against cannot normally block a decision on its own</strong>{' '}
-          — a blocking minority needs at least four Member States representing more than 35% of the EU population. Only where <Term id="unanimity">unanimity</Term> is required can a single country
-          block.
+          — a blocking minority needs at least four Member States representing more than 35% of the EU population, or 13 Member States whatever their population. Only where <Term id="unanimity">unanimity</Term> is required can a single country’s
+          vote block a decision.
         </p>
 
         {councilTotal === 0 ? (
@@ -321,7 +329,17 @@ export default function Country() {
               ))}
             </dl>
             <p className="note mt-3">
-              Counts of Council votes in our dataset ({formatNumber(councilTotal)} in total), by {c.name}’s recorded position.
+              {councilListed > councilTotal ? (
+                // the votes without positions (a voting-result document that could not be read) are not counted
+                <>
+                  Counts of the {formatNumber(councilTotal)} Council votes in our dataset that record {c.name}’s position (of{' '}
+                  {formatNumber(councilListed)} votes in total), by that position.
+                </>
+              ) : (
+                <>
+                  Counts of Council votes in our dataset ({formatNumber(councilTotal)} in total), by {c.name}’s recorded position.
+                </>
+              )}
             </p>
             {c.council_votes.length > 0 && (
               <div className="table-wrap table-card mt-5">
@@ -416,7 +434,7 @@ export default function Country() {
           transposition is complete or correct. <strong>“No measures found in the available dataset” is not proof of non-compliance</strong>{' '}
           — for example, some directives do not require national measures from every Member State, and the dataset may be incomplete.
         </p>
-        <TranspositionTable rows={c.transposition} countryName={c.name} />
+        <TranspositionTable rows={c.transposition} countryName={c.name} infringements={c.infringements} />
 
         <h3>Infringement cases</h3>
         <InfringementNote />

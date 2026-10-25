@@ -44,9 +44,9 @@
  "ep_votes": {
   "attempted_at": "2026-10-23T11:51:04Z",
   "fetched_at": "2026-10-23T11:51:55Z",
-  "note": "window from 2026-08-23: 12/12 sittings fetched (1884 votes, 0 document lookups, 0 procedures by id). Snapshot: 35465 votes (26267 roll-call, 2995 with ballots), 33843 linked to procedures; kinds {'amendment': 20770, 'final': 1305, 'mandate': 139, 'motion': 276, 'other': 76, 'procedural': 512, 'resolution': 2534, 'split_or_separate': 9853}; 0 fetched votes whose voter lists differ from the counts; 51s",
+  "note": "window from 2026-08-23: 12/12 sittings fetched (1884 votes, 0 document lookups, 0 procedures by id). Snapshot: 35465 votes (26267 roll-call, 2996 with ballots), 33843 linked to procedures; kinds {'amendment': 20771, 'final': 1360, 'mandate': 139, 'motion': 277, 'other': 76, 'procedural': 510, 'resolution': 2479, 'split_or_separate': 9853}; 0 fetched votes whose voter lists differ from the counts; 51s; snapshot counts recounted on 24 October 2026 after the offline re-derivation of vote kinds",
   "records": {
-   "ballots": 2995,
+   "ballots": 2996,
    "sittings": 359,
    "votes": 35465
   },
@@ -78,12 +78,13 @@
  "optouts": {
   "attempted_at": "2026-10-23T05:00:01Z",
   "fetched_at": "2026-10-23T05:00:21Z",
-  "note": "303 of 303 directives read (0 this run, 0 unavailable); recitals declare Denmark not bound by 36 and Ireland by 17 (net of 2 later opt-ins confirmed by the Commission); 303 records",
+  "note": "303 of 303 directives read (0 this run, 0 unavailable); recitals declare Denmark not bound by 36 and Ireland by 17 (net of 2 later opt-ins confirmed by the Commission); 16 later opt-ins to regulations confirmed by the Commission; 303 records",
   "records": {
    "directives_read": 303,
    "not_bound_DK": 36,
    "not_bound_IE": 17,
-   "pending": 0
+   "pending": 0,
+   "regulations": 16
   },
   "source": "optouts",
   "status": "ok"

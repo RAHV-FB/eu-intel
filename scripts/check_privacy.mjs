@@ -7,7 +7,8 @@
 // source introduces tracking or unsafe HTML injection:
 //   dist/**/*.html  third-party URLs in resource-loading markup (script/link rel=stylesheet|icon|preload…/
 //                   img/srcset/iframe/source/video/audio/embed/object/track/form/base/meta refresh), inline
-//                   <style>/style="" url()s, and a missing or non-'self' Content-Security-Policy meta.
+//                   <style>/style="" url()s, a missing or non-'self' Content-Security-Policy meta or one with
+//                   'unsafe-inline', and inline <style>/style="" (which that CSP blocks).
 //                   Plain <a href> links to official sources are fine and are NOT flagged.
 //   dist/**/*.css   third-party url(...) / @import (e.g. hosted web fonts).
 //   dist/**/*.js    network calls to literal third-party URLs (fetch/XHR/import()), sendBeacon, WebSocket,
@@ -145,9 +146,9 @@ function checkCsp(file, html) {
   const FETCH = ['default-src', 'script-src', 'script-src-elem', 'style-src', 'style-src-elem', 'img-src', 'connect-src', 'font-src', 'media-src', 'frame-src', 'child-src', 'worker-src', 'manifest-src', 'object-src', 'prefetch-src'];
   for (const d of FETCH) {
     for (const src of directives[d] ?? []) {
-      const ok = ["'self'", "'none'", 'data:', 'blob:'].includes(src) || (src === "'unsafe-inline'" && d.startsWith('style-src'));
+      const ok = ["'self'", "'none'", 'data:', 'blob:'].includes(src);
       if (!ok && !ALLOWED_ORIGINS.has(src.replace(/\/$/, ''))) {
-        add(file, m.index, html, `CSP ${d} allows a non-self source`, `${d} ${src}`);
+        add(file, m.index, html, src.startsWith("'unsafe-") ? `CSP ${d} allows ${src}` : `CSP ${d} allows a non-self source`, `${d} ${src}`);
       }
     }
   }
@@ -180,6 +181,8 @@ function scanHtml(file, html) {
   }
   for (const m of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) scanCssUrls(file, m[1], m.index, html);
   for (const m of html.matchAll(/\sstyle\s*=\s*("[^"]*"|'[^']*')/gi)) scanCssUrls(file, m[1], m.index, html);
+  // the CSP has no 'unsafe-inline': a <style> element or style="" attribute in a page would not be applied
+  for (const m of html.matchAll(/<style\b|<[a-z][^>]*?\sstyle\s*=/gi)) add(file, m.index, html, 'inline style (blocked by the CSP)', html.slice(m.index, m.index + 80));
 }
 
 function scanJs(file, js) {

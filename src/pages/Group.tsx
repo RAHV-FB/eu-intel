@@ -9,16 +9,24 @@ import { ballotScope } from '../lib/scope';
 import { EmptyState, ErrorState, LoadFailed, Loading, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { termLabel } from '../features/people/labels';
-import { MiniBar, Pos } from '../features/votes/Breakdowns';
+import { GroupMajority, MiniBar } from '../features/votes/Breakdowns';
 import { SortTh, useSortable } from '../features/votes/sortable';
 import { VoteRowMeta, VoteTitle } from '../features/votes/VoteTitle';
 import { RowTitle } from '../components/StackedTable';
-import { cohesionText } from '../features/votes/labels';
+import { useFocusRevealed } from '../components/useFocusRevealed';
+import { cohesionPercent, cohesionText } from '../features/votes/labels';
 import '../features/people/people.css';
 
 type CountryRow = { country: string; members: number };
 type PartyRow = GroupDetail['parties'][number];
-type VoteRow = { vote_id: string; majority?: BallotPosition | null; cohesion?: number | null; counts: PositionCounts; v?: EpVoteTitle };
+type VoteRow = {
+  vote_id: string;
+  majority?: BallotPosition | null;
+  cohesion?: number | null;
+  counts: PositionCounts;
+  v?: EpVoteTitle;
+  pctWith: number | null; // cohesion as a whole percentage, from the counts
+};
 
 const VOTES_PAGE = 40;
 
@@ -54,7 +62,7 @@ export default function Group() {
   );
   const voteRows = useMemo<VoteRow[]>(() => {
     const byId = new Map((votesIndex.data ?? []).map((v) => [v.id, v]));
-    return (g?.votes ?? []).map((r) => ({ ...r, v: byId.get(r.vote_id) }));
+    return (g?.votes ?? []).map((r) => ({ ...r, v: byId.get(r.vote_id), pctWith: cohesionPercent(r.counts, r.majority) }));
   }, [g, votesIndex.data]);
   const vs = useSortable<VoteRow, 'date' | 'cohesion' | 'recorded'>(
     voteRows,
@@ -76,6 +84,8 @@ export default function Group() {
 
   // a vote's date while the vote list loads, or when it failed to: not "—", which means not recorded
   const unknown = votesIndex.error ? <span className="muted">Not loaded</span> : <span className="muted">…</span>;
+  // "Show more votes" moves keyboard focus to the first vote it shows
+  const more = useFocusRevealed<HTMLTableSectionElement>(Math.min(shown, vs.sorted.length));
 
   if (loading) return <div className="container page"><Loading label="Loading group…" /></div>;
   if (isMissing(error)) return <NotFound what="political group" />;
@@ -250,8 +260,9 @@ export default function Group() {
         <h2 id="gv-h">How members voted</h2>
         <p className="section-intro">
           A group has no vote of its own. For each <Term id="roll-call">roll-call vote</Term> we list, these figures add up how the group’s
-          members voted individually, using membership on the day of the vote. “Group majority” is the most common position among them;
-          check the number of recorded votes before drawing conclusions. {ballotScope(meta.data?.scope, meta.data?.counts.ep_votes_with_ballots)}
+          members voted individually, using membership on the day of the vote. “Group majority” is the most common position among them
+          (there is none when the most common positions are tied), and “cohesion” is the share of them who voted that way; check the
+          number of recorded votes before drawing conclusions. {ballotScope(meta.data?.scope, meta.data?.counts.ep_votes_with_ballots)}
         </p>
         {g.votes.length === 0 ? (
           <EmptyState
@@ -302,7 +313,7 @@ export default function Group() {
                     )}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody ref={more.ref}>
                   {vs.sorted.slice(0, shown).map((r) => (
                     <tr key={r.vote_id}>
                       <td className="nowrap hide-narrow">{r.v ? formatDate(r.v.date) : votesIndex.data ? '—' : unknown}</td>
@@ -323,10 +334,10 @@ export default function Group() {
                       {!isNi && (
                         <>
                           <td>
-                            {r.majority ? <Pos pos={r.majority} /> : <span className="muted">—</span>}
-                            {r.cohesion != null && <span className="only-narrow meta">Cohesion {Math.round(r.cohesion * 100)}%</span>}
+                            <GroupMajority c={r.counts} majority={r.majority} />
+                            {r.pctWith != null && <span className="only-narrow meta">Cohesion {r.pctWith}%</span>}
                           </td>
-                          <td className="hide-narrow">{r.cohesion != null ? cohesionText(r.cohesion) : <span className="muted">—</span>}</td>
+                          <td className="hide-narrow">{r.pctWith != null ? cohesionText(r.pctWith) : <span className="muted">—</span>}</td>
                         </>
                       )}
                     </tr>
@@ -336,7 +347,14 @@ export default function Group() {
             </div>
             {vs.sorted.length > shown && (
               <div className="more">
-                <button type="button" className="btn" onClick={() => patch({ show: String(shown + VOTES_PAGE) })}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    more.reveal();
+                    patch({ show: String(shown + VOTES_PAGE) });
+                  }}
+                >
                   Show more votes
                 </button>
                 <span className="meta">

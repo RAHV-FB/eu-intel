@@ -31,6 +31,10 @@ so that nobody reads a gap as a fact about EU law.
   and the laws shown from their EUR-Lex record only). They are listed under "No topic assigned".
 - Some files have a Parliament position but no listed vote: mostly second-reading approvals without a
   roll-call vote, and a few votes the source does not link to a procedure.
+- A decision of Parliament that its open data records only as a vote, and that no listed vote dates, is shown as
+  "Vote in Parliament": 2018/0229(COD), InvestEU, on 18 April 2019, which the Legislative Observatory lists as
+  "Decision by Parliament, 1st reading" (T8-0433/2019, among the file's documents). That Observatory entry is not
+  read as a decision: it also names votes after which the file went back to committee for negotiations.
 - EUR-Lex does not always record an act's dates correctly: it may miss a change made by an amending act, or
   give the application date or another act's date as the act's entry into force. Corrections checked against
   the acts' texts are kept in `data/curated/act_dates.yaml` (listed in DATA_SOURCES.md, "Corrections"); other
@@ -61,11 +65,14 @@ so that nobody reads a gap as a fact about EU law.
   (`transposition.yaml`); for the others the general deadline sentence is shown.
 - Which Member States a regulation binds is not read from its text: Treaty opt-outs (Denmark, Ireland) are read
   from directives' texts only (`optouts`), so a regulation's page says that it binds the Member States it binds and
-  names only those the Council's voting record lists as not taking part; acts implementing enhanced cooperation are
-  recognised from their title. Reading regulations' recitals needs a fetch of their texts (about 800).
+  names only those the Council's voting record lists as not taking part, and a later participation that a Commission
+  decision confirms (Protocol No 21, Article 4); acts implementing enhanced cooperation are recognised from their
+  title. Reading regulations' recitals needs a fetch of their texts (about 800). A later participation that no
+  Commission decision titled "confirming the participation of ..." records is not read.
 - Amending acts known only by their CELEX id (outside our EUR-Lex data, such as delegated acts) are named by the
   number in that id ("Regulation 2026/2102"), not by their full type, unless a curated date correction cites
-  their text ("Delegated Regulation 2026/2102").
+  their text ("Commission Delegated Regulation (EU) 2026/2102"). Such an act's publication is not dated on the
+  timeline, so the EUDR's latest step (23 December 2025) is older than its amendment published on 17 September 2026.
 - Initiatives of Member States are named from the Legislative Observatory's file title, and requests of the
   Court of Justice from its record; other initiators, such as the ECB, are not named.
 - Links to committee documents on www.europarl.europa.eu could not be checked automatically (the site refuses

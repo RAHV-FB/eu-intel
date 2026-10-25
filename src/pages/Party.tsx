@@ -6,8 +6,8 @@ import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
 import { LoadFailed, Loading, LookupNotice, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
-import { partyRecordTitle, periodText, recordPeriod, termYears, useGroups } from '../features/people/labels';
-import { SortTh, useSortable } from '../features/votes/sortable';
+import { partyRecordTitle, partySeating, periodText, recordPeriod, termYears, useGroups } from '../features/people/labels';
+import { SortTh, compareValues, useSortable } from '../features/votes/sortable';
 import '../features/people/people.css';
 
 type MepRow = PartyDetail['meps'][number];
@@ -47,8 +47,10 @@ export default function Party() {
   const groups = useGroups();
   useDocumentTitle(p ? partyRecordTitle(p) : isMissing(error) ? 'National party not found' : error ? 'National party could not be loaded' : 'National party');
 
+  // by name within each status, as the Name column sorts ("Ľuboš" before "Monika", not after it as in the data's order)
+  const byName = useMemo(() => [...(p?.meps ?? [])].sort((a, b) => compareValues(a.name, b.name, 'asc')), [p]);
   const m = useSortable<MepRow, 'name' | 'from' | 'to' | 'status'>(
-    p?.meps ?? [],
+    byName,
     {
       name: (r) => r.name,
       from: (r) => r.from ?? null,
@@ -77,6 +79,9 @@ export default function Party() {
   const outside = p.outside_period ?? [];
   const afterEnd = !!p.end && outside.every((x) => !!x.from && x.from > p.end!);
   const sittingElsewhere = nowParties.reduce((n, r) => n + (r.meps ?? 0), 0);
+  // the non-attached members (NI) are not a political group; MEPs no longer in this record "sat"
+  const seating = partySeating(p.groups);
+  const sit = p.members_active > 0 ? 'sit' : 'sat';
 
   return (
     <div className="container page">
@@ -94,8 +99,26 @@ export default function Party() {
         lead={
           <>
             {p.code && p.code !== p.label ? <>{p.code} · </> : null}A national party (or electoral list) from{' '}
-            <Link to={`/countries/${p.country}`}>{countryName(p.country)}</Link>, as recorded in Parliament’s membership data. Its MEPs sit in
-            Parliament in a European <Term id="political-group">political group</Term>.
+            <Link to={`/countries/${p.country}`}>{countryName(p.country)}</Link>, as recorded in Parliament’s membership data.
+            {seating === 'groups' && (
+              <>
+                {' '}
+                Its MEPs {sit} in Parliament in a European <Term id="political-group">political group</Term>.
+              </>
+            )}
+            {seating === 'non-attached' && (
+              <>
+                {' '}
+                Its MEPs {sit} in Parliament as non-attached members, outside any <Term id="political-group">political group</Term>.
+              </>
+            )}
+            {seating === 'both' && (
+              <>
+                {' '}
+                Its MEPs {p.members_active > 0 ? 'have sat' : 'sat'} in Parliament in a European{' '}
+                <Term id="political-group">political group</Term> or as non-attached members.
+              </>
+            )}
           </>
         }
       />
@@ -160,7 +183,14 @@ export default function Party() {
           </>
         )}
         <div>
-          <dt>European political groups</dt>
+          <dt>
+            {/* the non-attached (NI) are not a political group */}
+            {!p.groups.includes('ni')
+              ? 'European political groups'
+              : p.groups.length > 1
+                ? 'European political groups and non-attached members'
+                : 'Non-attached members'}
+          </dt>
           <dd>
             {p.groups.length ? (
               <ul className="inline-list">

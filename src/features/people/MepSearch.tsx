@@ -6,6 +6,8 @@ import { filterKey } from '../../lib/search';
 import { clearAllParams, shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { EmptyState } from '../../components/ui';
 import { CollapsibleFilters } from '../../components/CollapsibleFilters';
+import { ResultCount } from '../../components/ResultCount';
+import { useFocusRevealed } from '../../components/useFocusRevealed';
 import { SortTh, useSortable } from '../votes/sortable';
 import { FULL_TERM_MIN_MEPS, termLabel, type GroupLabel } from './labels';
 import './people.css';
@@ -80,6 +82,9 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
     'sort',
   );
 
+  // "Show more" moves keyboard focus to the first MEP it shows
+  const more = useFocusRevealed<HTMLTableSectionElement>(Math.min(shown, sorted.length));
+
   const anyFilter = [q, country, group, party, term].some(Boolean) || status !== 'current';
   const activeFilters = [country, group, party.trim(), term].filter(Boolean).length + (status !== 'current' ? 1 : 0);
 
@@ -146,10 +151,10 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
       </form>
 
       <div className="results-bar">
-        <p className="results-bar__count" aria-live="polite">
+        <ResultCount className="results-bar__count">
           {formatNumber(filtered.length)} {filtered.length === 1 ? 'MEP' : 'MEPs'}
           {status === 'current' ? ' currently in office' : status === 'former' ? ' no longer in office' : ''}
-        </p>
+        </ResultCount>
         {anyFilter && (
           <button type="button" className="linkish" onClick={() => patch(clearAllParams({ view: 'meps' }))}>
             Clear all filters
@@ -184,7 +189,7 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody ref={more.ref}>
                 {sorted.slice(0, shown).map((m) => (
                   <tr key={m.id}>
                     <th scope="row">
@@ -229,7 +234,14 @@ export function MepSearch({ meps, groups }: { meps: MepSummary[]; groups: Map<st
           </div>
           {sorted.length > shown && (
             <div className="more">
-              <button type="button" className="btn" onClick={() => setShown(shown + PAGE)}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  more.reveal();
+                  setShown(shown + PAGE);
+                }}
+              >
                 Show {formatNumber(Math.min(PAGE, sorted.length - shown))} more
               </button>
               <span className="meta">

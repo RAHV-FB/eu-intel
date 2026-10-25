@@ -166,7 +166,8 @@ an official subject fits more than one theme. Curated entries set their topics e
    - at least every three months.
    The homepage selection is reconsidered on the same schedule.
 5. **Corrections.** Factual errors are corrected as soon as they are found, and git history keeps
-   the trail.
+   the trail. Errors are reported as issues in the repository's issue tracker, which the About page links
+   ("Maintainer and corrections").
 
 ## Current homepage selection (reviewed 2026-10-22)
 

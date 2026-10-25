@@ -115,7 +115,9 @@ function DossierPage({ id }: { id: string }) {
           <StatusBadge stage={d.status.stage} label={d.status.label} blocked={d.officially_blocked} />
           {d.status.since && (
             <span className="dz-statusline__since">
-              since <time dateTime={d.status.since}>{formatDate(d.status.since, true)}</time>
+              {/* the publication date: EUR-Lex records no date of notification */}
+              {d.status.stage === 'takes_effect_on_notification' ? 'published' : 'since'}{' '}
+              <time dateTime={d.status.since}>{formatDate(d.status.since, true)}</time>
             </span>
           )}
         </p>
@@ -180,7 +182,7 @@ function DossierPage({ id }: { id: string }) {
               </div>
               {d.started && (
                 <div>
-                  <dt>Proposed</dt>
+                  <dt>Proposed{d.started_from_parts && ' (as recorded for its parts)'}</dt>
                   <dd>{formatDate(d.started)}</dd>
                 </div>
               )}

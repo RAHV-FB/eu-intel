@@ -112,6 +112,10 @@ def test_council_display_title_drops_legal_form_boilerplate():
     assert council_display_title(
         "Regulation of the European Parliament and of the Council Council establishing a screening framework"
     ) == "Regulation establishing a screening framework"
+    # the kind of act glued to the next word, as the subject of ST 14021/20 prints it (shown on 29 pages)
+    own_resources = "the system of own resources of the European Union and repealing Decision 2014/335/EU, Euratom"
+    assert council_display_title(f"Council Decisionon {own_resources}", "act") == f"Council Decision on {own_resources}"
+    assert council_display_title("DECISIONS on the budget") == "DECISIONS on the budget"  # not a glued word
 
 
 def test_council_display_title_first_reading_position_prefix_only_for_that_vote():
@@ -1213,6 +1217,9 @@ def test_adopted_motion_to_reject_the_proposal_is_a_rejection():
         ("2025-10-21", "Parliament rejected the proposal in a plenary vote")]  # fmt: skip
     s = classify(p, [], [], date.fromisoformat(TODAY))
     assert (s.stage, s.label, s.since) == ("rejected", "Rejected by Parliament", "2025-10-21")
+    # Parliament's first-reading position (Art. 294(3) TFEU): the file awaits the Council's (294(5)), as OEIL records
+    assert "does not by itself end the procedure" in s.explanation
+    assert (s.next_step.institution, s.next_step.basis) == ("Council", "source")
     # OEIL past Parliament's first reading: a recorded vote does not override it
     later = _rec("2023-0413").model_copy(update={"stage_raw": "Awaiting Parliament 2nd reading"})
     assert not [e for e in Builder.with_recorded_events(me, later).events if e.kind.value == "rejection"]  # type: ignore[arg-type]
@@ -1910,5 +1917,8 @@ def test_coverage_notes_format_counts_and_pluralise_unread_documents():
     assert any(n.startswith("Adopted acts: 1,269 legal acts from EUR-Lex/Cellar") for n in notes([cv(1, {"DE": "for"})]))
     one = next(n for n in notes([cv(1, {}), cv(2, {"DE": "for"})]) if n.startswith("Council votes"))
     assert one.endswith("1 voting-result document could not be read and is shown without positions.")
+    # Art. 31(2) TEU lets one government stop a qualified-majority vote, so the note speaks of a country's vote
+    assert "Only under unanimity can a single country’s vote block a decision." in one
+    assert "Only a vote under unanimity" not in one
     two = next(n for n in notes([cv(1, {}), cv(2, {}), cv(3, {"DE": "for"})]) if n.startswith("Council votes"))
     assert two.endswith("2 voting-result documents could not be read and are shown without positions.")

@@ -309,11 +309,11 @@
     deforestation-free, were produced legally and are covered by a due diligence statement or, for
     micro and small primary operators in low-risk countries, a simplified declaration.
   why: >-
-    Companies placing these products on the EU market will have to know the geolocation of the land
-    where the commodities were produced and check that it was not deforested after 31 December 2020.
-    Regulation (EU) 2025/2650 removed printed products from Annex I; Delegated Regulation (EU)
-    2026/2102 removed cattle hides and leather and some rubber articles and adds soluble coffee,
-    frozen cattle tongues and some palm-oil derivatives from 30 December 2027.
+    Companies placing these products on the EU market will have to know the geolocation of the land of
+    production (micro and small primary operators in low-risk countries may give a postal address
+    instead) and check that it was not deforested after 31 December 2020. Later amendments removed
+    printed products, cattle hides, leather and some rubber articles from Annex I and add soluble
+    coffee, frozen cattle tongues and some palm-oil derivatives from 30 December 2027.
   aliases: ["EUDR", "Deforestation Regulation", "deforestation law", "deforestation-free products"]
   topics: ["environment", "agriculture", "economy"]
   featured: true
@@ -321,9 +321,9 @@
   sources:
     - {label: "Regulation (EU) 2023/1115 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2023/1115/oj"}
     - {label: "Regulation (EU) 2025/2650 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2025/2650/oj"}
-    - {label: "Delegated Regulation (EU) 2026/2102 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj"}
+    - {label: "Commission Delegated Regulation (EU) 2026/2102 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj"}
     - {label: "Legislative Observatory – 2021/0366(COD)", url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2021/0366(COD)"}
-  reviewed: "2026-10-23"
+  reviewed: "2026-10-24"
 
 - id: "2024-0249"
   reference: "2024/0249(COD)"
@@ -358,7 +358,7 @@
   why: >-
     Fewer companies in a supply chain have to file their own due diligence statements, and all operators
     have more time before the obligations apply. In its required simplification review (COM(2026) 191, 4 May
-    2026) the Commission proposed no changes to the legal text, but Delegated Regulation (EU) 2026/2102
+    2026) the Commission proposed no changes to the legal text, but Commission Delegated Regulation (EU) 2026/2102
     changed the product list: leather is removed and soluble coffee and certain palm-oil derivatives are
     covered from 30 December 2027.
   aliases: ["EUDR revision", "EUDR simplification", "EUDR delay"]

@@ -34,7 +34,10 @@
   reason: >-
     EUR-Lex records an application date of 17 February 2022, which is not in the Regulation. Article 93(2)
     sets 17 February 2024 for the Regulation in general and 16 November 2022 (its entry into force) for
-    the provisions it lists.
+    the provisions it lists; under Article 92 the Regulation applies to providers of very large online
+    platforms and of very large online search engines designated under Article 33(4) from four months after
+    the provider was notified of its designation (Article 33(6)), where that date is earlier than 17 February
+    2024.
   application:
     - date: "2022-11-16"
       partial: true
@@ -43,10 +46,12 @@
         and 6 of Chapter IV (Art. 93(2))
     - date: "2024-02-17"
       partial: false
-      provisions: "The Regulation in general (Art. 93(2))"
+      provisions: >-
+        The Regulation in general (Art. 93(2)), unless it applied earlier to a designated very large online
+        platform or search engine (Art. 92)
   sources:
-    - {label: "Regulation (EU) 2022/2065, Article 93", url: "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"}
-  reviewed: "2026-10-23"
+    - {label: "Regulation (EU) 2022/2065, Articles 92 and 93", url: "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"}
+  reviewed: "2026-10-24"
 
 - celex: "32024R1689"  # AI Act
   reason: >-
@@ -164,6 +169,18 @@
     - {label: "Decision 2014/335/EU, Euratom, Article 11", url: "https://eur-lex.europa.eu/eli/dec/2014/335/oj"}
     - {label: "Decision (EU, Euratom) 2020/2053, Articles 11 and 12", url: "https://eur-lex.europa.eu/eli/dec/2020/2053/oj"}
   reviewed: "2026-10-23"
+
+- celex: "32020D2053"  # Own resources decision 2020 (2018/0135(CNS))
+  reason: >-
+    Under Article 12 the Decision applies from 1 January 2021 and enters into force on the first day of the first
+    month following receipt of the last Member State's notification that it has completed the procedures for its
+    adoption in accordance with its constitutional requirements (1 June 2021, as EUR-Lex records), as the third
+    paragraph of Article 311 TFEU requires: such a decision "shall not enter into force until it is approved by the
+    Member States in accordance with their respective constitutional requirements".
+  sources:
+    - {label: "Decision (EU, Euratom) 2020/2053, Article 12", url: "https://eur-lex.europa.eu/eli/dec/2020/2053/oj"}
+    - {label: "Treaty on the Functioning of the European Union, Article 311", url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:12016E311"}
+  reviewed: "2026-10-24"
 
 # Dates set by a corrigendum: EUR-Lex records the corrected date, which the text as first published does not give.
 # The corrected dates cite the corrigendum (source 1).
@@ -445,8 +462,8 @@
     Regulation (EU) 2025/2650 replaced Article 38: Articles 3 to 13, 16 to 24, 26, 31 and 32 apply from 30 December
     2026, and from 30 June 2027 for operators that were established as micro or small undertakings (or are natural
     persons) by 31 December 2024, except as regards the products covered by the Annex to Regulation (EU) No 995/2010:
-    the dates EUR-Lex records. Delegated Regulation (EU) 2026/2102 amended Annex I; the entries it adds apply from 30
-    December 2027, a date EUR-Lex does not record for this Regulation.
+    the dates EUR-Lex records. Commission Delegated Regulation (EU) 2026/2102 amended Annex I; the entries it adds apply
+    from 30 December 2027, a date EUR-Lex does not record for this Regulation.
   application:
     - date: "2026-12-30"
       partial: true
@@ -462,13 +479,13 @@
     - date: "2027-12-30"
       partial: true
       provisions: >-
-        The entries Delegated Regulation (EU) 2026/2102 adds to Annex I, among them frozen cattle tongues, coffee
-        extracts and some palm-oil products (its Annex: "This provision shall apply from 30 December 2027")
+        The entries Commission Delegated Regulation (EU) 2026/2102 adds to Annex I, among them frozen cattle tongues,
+        coffee extracts and some palm-oil products (its Annex: "This provision shall apply from 30 December 2027")
       source: 2
   sources:
     - {label: "Regulation (EU) 2023/1115, Article 38", url: "https://eur-lex.europa.eu/eli/reg/2023/1115/oj"}
     - {label: "Regulation (EU) 2025/2650, Article 1, point (25)", url: "https://eur-lex.europa.eu/eli/reg/2025/2650/oj",
        celex: "32025R2650"}
-    - {label: "Delegated Regulation (EU) 2026/2102, Annex", url: "https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj",
+    - {label: "Commission Delegated Regulation (EU) 2026/2102, Annex", url: "https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj",
        celex: "32026R2102"}
   reviewed: "2026-10-23"

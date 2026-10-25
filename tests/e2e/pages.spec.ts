@@ -27,6 +27,27 @@ test.describe('party records', () => {
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('a party whose MEPs are all non-attached does not say they sit in a political group, and lists names in order', async ({ page }) => {
+    await open(page, 'people/parties/6723/'); // SMER-SD: 5 MEPs, all NI
+    const lead = page.locator('.page-header .lead');
+    await expect(lead).toContainText('Its MEPs sit in Parliament as non-attached members, outside any political group.');
+    await expect(lead).not.toContainText('in a European political group');
+    // nor are they listed under "European political groups": NI is not a group
+    await expect(page.locator('.facts dt', { hasText: 'Non-attached members' })).toHaveCount(1);
+    await expect(page.locator('.facts')).not.toContainText('European political groups');
+    // within a status, by name as the Name column sorts: "Ľuboš Blaha" came last, after "Monika Beňová"
+    await expect(page.locator('section[aria-labelledby="pm-h"] tbody th a')).toHaveText([
+      'Erik Kaliňák',
+      'Judita Laššáková',
+      'Katarína Roth Neveďalová',
+      'Ľuboš Blaha',
+      'Monika Beňová',
+    ]);
+    await open(page, 'people/parties/5253/'); // Fidesz 2019–2024: EPP, then NI from 5 Mar 2021
+    await expect(page.locator('.page-header .lead')).toContainText('Its MEPs sat in Parliament in a European political group or as non-attached members.');
+    await expect(page.locator('.facts dt', { hasText: 'European political groups and non-attached members' })).toHaveCount(1);
+  });
+
   for (const width of [320, 390]) {
     test(`the MEP table fits a ${width}px screen with the period on screen`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
@@ -37,6 +58,42 @@ test.describe('party records', () => {
       await expect(page.getByRole('row', { name: /Laura Huhtasaari/ })).toContainText('2 Jul 2019 – 11 Apr 2023');
     });
   }
+});
+
+test.describe('political groups, cohesion and roles', () => {
+  test('a country page and the Countries table count the non-attached members apart from the groups', async ({ page }) => {
+    await open(page, 'countries/FR/'); // showed "Political groups 9": 8 groups and 1 NI MEP
+    const facts = page.locator('#representation dl.facts');
+    await expect(facts.locator('div', { hasText: 'Political groups' }).locator('dd')).toHaveText('8');
+    await expect(facts.locator('div', { hasText: 'Non-attached MEPs' }).locator('dd')).toHaveText('1');
+    await open(page, 'countries/IT/'); // no NI MEP
+    await expect(page.locator('#representation dl.facts div', { hasText: 'Political groups' }).locator('dd')).toHaveText('8');
+    await expect(page.locator('#representation dl.facts')).not.toContainText('Non-attached');
+    await open(page, 'countries/');
+    const france = page.getByRole('row', { name: /^France/ });
+    await expect(france.locator('td').nth(1)).toHaveText('8');
+  });
+
+  test('cohesion is rounded once, and a tie says there is no majority', async ({ page }) => {
+    await open(page, 'votes/199470/'); // ECR 64 for, 1 against: 98.46%, shown as 99%
+    await expect(page.locator('#groups tr.has-more', { has: page.locator('th a', { hasText: /^ECR$/ }) })).toContainText(
+      '98% voted with the group majority',
+    );
+    await open(page, 'votes/125106/'); // ID 31 for, 31 against, 11 abstained
+    await expect(page.locator('#groups tr.has-more', { has: page.locator('th a', { hasText: /^ID$/ }) })).toContainText('None (tie)');
+    await open(page, 'people/groups/the-left/'); // vote 198216: 13 for, 13 abstained
+    const row = page.locator('tbody tr', { has: page.locator('a[href$="/votes/198216"]') });
+    await expect(row).toContainText('None (tie)');
+    await expect(page.locator('section[aria-labelledby="gv-h"] .section-intro')).toContainText('“cohesion” is the share of them who voted that way');
+  });
+
+  test('MEP pages name group roles as Parliament does and a former MEP’s group as it was then', async ({ page }) => {
+    await open(page, 'people/meps/197781/'); // Malik Azmani: "Chair vice first"
+    await expect(page.locator('main')).toContainText('First Vice-Chair');
+    await expect(page.locator('main')).not.toContainText('Chair vice first');
+    await open(page, 'people/meps/113959/'); // Martina Anderson left on 31 Jan 2020, before GUE/NGL became The Left
+    await expect(page.locator('.page-header .lead')).toContainText('last recorded group: GUE/NGL');
+  });
 });
 
 test.describe('country page directive search', () => {
@@ -58,6 +115,17 @@ test.describe('country page directive search', () => {
     await expect(page.locator('#tr-q')).toHaveValue('2022/2464');
     await expect(page.locator('td.impl-dir').first()).toContainText('Corporate Sustainability Reporting Directive');
     await expectNoSeriousA11yViolations(page);
+  });
+
+  test('a directive row says when the country is in an open non-communication case for it, as the law page does', async ({ page }) => {
+    // NIS2, France: 15 measures, "Measures notified", and INFR(2024)0274 (non-communication) referred to the Court
+    await open(page, 'countries/FR/?tr-q=2022%2F2555');
+    const row = page.locator('tr', { has: page.locator('td.impl-dir', { hasText: 'Directive (EU) 2022/2555' }) });
+    await expect(row).toContainText('Measures notified');
+    await expect(row.locator('td.hide-narrow').last()).toContainText('Commission case open for non-communication of transposition measures');
+    await open(page, 'legislation/2020-0359/');
+    const fr = page.locator('#national tr', { has: page.getByRole('link', { name: 'France', exact: true }) });
+    await expect(fr).toContainText('Commission case open for non-communication of transposition measures');
   });
 
   test('says when nothing matches and offers the site search', async ({ page }) => {
@@ -138,6 +206,15 @@ test.describe('split parents and Parliament reports', () => {
       await expect(note.getByRole('link', { name: 'See the separate files' })).toHaveAttribute('href', '#split-parts');
     }
     await expect(page.locator('.dz-fact', { hasText: 'What happens next' })).toContainText('None on this file: each separate file listed above has its own next step.');
+  });
+
+  test('a split parent gives the proposal date and document that all its parts record', async ({ page }) => {
+    await open(page, 'legislation/2016-0224/'); // 2016/0224A and B(COD): COM(2016)0467 of 13 July 2016
+    await page.locator('#details summary').click();
+    const proposed = page.locator('#details .dz-kv > div', { has: page.locator('dt', { hasText: /^Proposed/ }) });
+    await expect(proposed.locator('dt')).toHaveText('Proposed (as recorded for its parts)');
+    await expect(proposed.locator('dd')).toHaveText('13 July 2016');
+    await expect(page.locator('#details')).toContainText('COM(2016)0467');
   });
 
   test('a report links its main file in the status and the next step', async ({ page }) => {
@@ -315,7 +392,11 @@ test('an MEP’s membership data links the EP Open Data API record', async ({ pa
 test('home cards do not scroll sideways at 320px with increased text spacing (WCAG 1.4.12)', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await open(page, './');
-  await page.addStyleTag({ content: '*{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important} p{margin-bottom:2em!important}' });
+  // the reader's own style sheet, from the site's origin: the CSP (style-src 'self') refuses an inline <style>
+  const spacing = '*{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important} p{margin-bottom:2em!important}';
+  await page.route('**/e2e-text-spacing.css', (route) => route.fulfill({ contentType: 'text/css', body: spacing }));
+  await page.addStyleTag({ url: 'e2e-text-spacing.css' });
+  expect(await page.evaluate(() => getComputedStyle(document.body).wordSpacing)).not.toBe('0px'); // it applies
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
 
@@ -459,6 +540,20 @@ test('"Show all … Council votes" moves focus to the first vote it adds; the so
   );
 });
 
+test('a country page counts the Council votes that record its position out of all those listed', async ({ page, request }) => {
+  // 748 votes listed (About, council/index.json), 746 with positions: the two voting-result documents that could not
+  // be read record none, so Ireland's counts add up to 746, and the page said "746 in total"
+  const meta = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/meta.json`)).json();
+  const ie = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/countries/IE.json`)).json();
+  const n = (x: number) => x.toLocaleString('en-GB');
+  const counted = Object.values(ie.council_positions as Record<string, number>).reduce((a, b) => a + b, 0);
+  expect(counted).toBeLessThan(meta.counts.council_votes);
+  await open(page, 'countries/IE/');
+  await expect(page.locator('#participation .note', { hasText: /^Counts of / })).toHaveText(
+    `Counts of the ${n(counted)} Council votes in our dataset that record Ireland’s position (of ${n(meta.counts.council_votes)} votes in total), by that position.`,
+  );
+});
+
 test.describe('legislative files', () => {
   test('a rapporteur’s committee is the one OEIL names, never "null"', async ({ page }) => {
     await open(page, 'legislation/2021-0240/');
@@ -467,6 +562,38 @@ test.describe('legislative files', () => {
     await open(page, 'legislation/2025-0045/');
     await page.locator('#details summary').click();
     await expect(page.locator('#details li', { hasText: 'Barry Andrews' })).toContainText('Rapporteur for an opinion (AFET)');
+  });
+
+  test('a rapporteur with no MEP page here is named without a link; one OEIL links under another id is listed once', async ({ page }) => {
+    await open(page, 'legislation/2011-0023/'); // Timothy Kirkhope (4542) sat before 2019: people/meps/4542 is not written
+    await page.locator('#details summary').click();
+    const kirkhope = page.locator('#details li', { hasText: 'Timothy Kirkhope' });
+    await expect(kirkhope).toContainText('Rapporteur (LIBE)');
+    await expect(kirkhope.getByRole('link')).toHaveCount(0);
+    await expect(page.locator('#details')).toContainText('A name without a link has no MEP page on this site');
+    await open(page, 'legislation/2026-0172/'); // OEIL: "CHRIST Marie-Sophie (EPP)" under 10006693; EP Open Data: 277057
+    await page.locator('#details summary').click();
+    const christ = page.locator('#details li', { hasText: /CHRIST Marie-Sophie|Marie-Sophie Christ/ });
+    await expect(christ).toHaveCount(1);
+    await expect(christ.getByRole('link', { name: 'Marie-Sophie Christ' })).toHaveAttribute('href', `${BASE_PATH}people/meps/277057`);
+  });
+
+  test('a Council title printed without a space is shown with it (ST 14021/20)', async ({ page }) => {
+    await open(page, 'legislation/2018-0135/');
+    await expect(page.locator('#council-votes')).toContainText('Council Decision on the system of own resources');
+    await expect(page.locator('main')).not.toContainText('Decisionon');
+  });
+
+  test('the transposition summary counts Member States, beside a column that counts measures (NIS2)', async ({ page, request }) => {
+    // the chip read "25 Measures notified" next to the "Measures notified" column, which adds up to 301 measures
+    const d = await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/dossiers/2020-0359.json`)).json();
+    const notified = (d.implementation.countries as { status: string }[]).filter((c) => c.status === 'measures_notified').length;
+    await open(page, 'legislation/2020-0359/');
+    const summary = page.getByRole('list', { name: 'Member States by status' });
+    await expect(summary.getByRole('button', { name: `${notified} Member States: Measures notified` })).toHaveCount(1);
+    const chips = await summary.getByRole('button').allTextContents();
+    expect(chips.length).toBeGreaterThan(1);
+    for (const t of chips) expect(t).toMatch(/^\d+ Member States?: /);
   });
 
   test('a committee of an earlier term is former, not joint; a joint debate names the other files', async ({ page }) => {
@@ -573,6 +700,53 @@ test.describe('About and the guide', () => {
     await expect(section.getByRole('heading', { name: 'Not adopted: not law yet' })).toBeVisible();
     await expect(section.getByRole('link', { name: 'the legislation explorer' })).toHaveAttribute('href', `${BASE_PATH}legislation`);
     await expectNoSeriousA11yViolations(page);
+  });
+
+  test('the guide follows the Treaties on entry into force, the second reading, the presidency and one country’s vote', async ({ page }) => {
+    await open(page, 'how-the-eu-works/');
+    const labels = page.locator('#status-labels');
+    const group = (heading: string) => labels.locator('.statuslabels', { has: page.getByRole('heading', { name: heading, exact: true }) });
+    // Art. 297 TFEU; Council Decision (EU) 2017/1908, Art. 2: "shall enter into force on the date of its adoption"
+    await expect(labels.locator('p').first()).toContainText('An act is usually adopted, signed and published before it enters into force');
+    await expect(group('Adopted: not recorded as published').locator('.badge', { hasText: 'Adopted by the Council' })).toBeVisible();
+    // 2020/0160(COD), a legislative decision: EUR-Lex records no notification and does not mark it in force
+    await expect(group('Published: not recorded as in force').locator('.badge', { hasText: 'Takes effect on notification' })).toBeVisible();
+    await expect(group('In force').locator('.badge')).toHaveCount(1);
+    await expect(labels).not.toContainText('297(2)');
+    await expect(group('Other labels').locator('.badge', { hasText: 'Procedure completed' })).toBeVisible();
+    // Art. 294(7) and (14) TFEU
+    await expect(page.locator('#olp li', { hasText: 'Second reading.' })).toContainText(
+      'Within three months, extendable by up to a month, Parliament can approve the Council’s position or take no decision (the act is adopted)',
+    );
+    // Art. 16(9) and Art. 18(3) TEU
+    await expect(page.locator('#council')).toContainText('except in the Foreign Affairs Council, which the EU’s High Representative');
+    // Art. 16(4) and Art. 31(2) TEU; Arts 48, 82(3) and 83(3) TFEU
+    const voting = page.locator('#council-voting');
+    await expect(voting.locator('.threshold', { hasText: '≥ 4 states' })).toContainText('or 13 states whatever their population');
+    await expect(voting).toContainText('a single country’s vote cannot block a qualified-majority decision');
+    await expect(voting).toContainText('(Article 31(2) TEU)');
+    await expect(voting).toContainText('(the “emergency brake”, Articles 48, 82(3) and 83(3) TFEU)');
+    await expect(voting).not.toContainText('Only under unanimity');
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('a decision that takes effect on notification shows its publication date, not a date of effect (2020/0160(COD))', async ({ page }) => {
+    await open(page, 'legislation/2020-0160/');
+    const line = page.locator('.dz-statusline');
+    await expect(line).toContainText('Takes effect on notification');
+    await expect(line.locator('.dz-statusline__since')).toHaveText('published 22 October 2020');
+  });
+
+  test('a Council vote card and a country page say what one country’s vote can do (AI Act, ST 10199/24)', async ({ page }) => {
+    await open(page, 'legislation/2021-0106/');
+    const card = page.locator('#council-votes article.cvote').first();
+    await expect(card).toContainText('No Member State voted against or abstained.');
+    await expect(card).not.toContainText('did not form a blocking minority');
+    await expect(card).toContainText('Could one country’s vote block it? No. Under qualified majority, one Member State voting against cannot block');
+    await open(page, 'countries/DE/');
+    const callout = page.locator('#participation .callout');
+    await expect(callout).toContainText('or 13 Member States whatever their population');
+    await expect(callout).toContainText('can a single country’s vote block a decision');
   });
 
   test('"former" rapporteurs are explained as the Observatory lists them, also within the current term', async ({ page }) => {

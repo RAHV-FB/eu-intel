@@ -10,23 +10,30 @@
  *                            the Council of 27 April 2016 on …"); an act's EUR-Lex or ELI address ("…?uri=CELEX:
  *                            32016R0679", "…/eli/reg/2016/679/oj"); a file's id as in its address, "2023-0134"
  *   2. exact name            title or alias equals the query ("AI Act", "EPP", "Spain", "Spanish"), also after "EU"
- *                            ("EU GDPR"); a country, group or party next to the words for MEPs ("Spanish MEPs",
- *                            "EPP MEPs", "Patriots for Europe MEPs"), flagged `meps`; not one of several names
+ *                            ("EU GDPR"), or after "European" or "EU" in the name for a query of two or more words
+ *                            ("climate law": "European Climate Law"); a country, group or party next to the words
+ *                            for MEPs ("Spanish MEPs", "EPP MEPs", "Patriots for Europe MEPs"), flagged `meps`; not
+ *                            one of several names
  *                            holding a word ("party MEPs"), nor a group for the Parliament ("European Parliament MEPs")
  *   3. name starts with the query as whole words, or contains it as a phrase; a file's name next to another act
  *      type than its own ("GDPR directive"), unless a file of that act type has the other words
  *   4. every meaningful word matches a whole word, exactly or as its singular/plural ("battery" ~ "batteries");
  *      "EU" need not match, but counts ("EU Data Act"); "MEP(s)" is "Member(s) of the European Parliament", not
  *      "Member States", and so is that phrase; the act type of a file's acts ("directive") is matched as that whole
- *      word only; two words written apart that the index has as one match as that word ("cyber security").
+ *      word only; two words written apart that the index has as one match as that word ("cyber security"), in
+ *      people's names only when the words as typed match no one ("Chris Mac Manus": "MacManus"; "Anna Maria" is
+ *      not "Annamária").
  *      Only when no document matches that way, one word may match an everyday synonym ("ai law" -> "act"), or an
  *      act type another ("USB-C regulation" -> the "directive" a file's entry has for its act).
  *      A generic word ("rules", "law") also matches through its synonyms one step below ("asylum rules" ->
  *      "asylum ... regulation"), unless the query is itself a name ("rule of law", "climate law")
  *   5. the last word matched only as the start of a longer word ("artific" -> "artificial", "Spa" -> "Spain"):
  *      in as-you-type suggestions (`typing`, 3+ letters), or on the results page when nothing matched whole words.
+ *      While a last word of one or two letters matches nothing ("minimum wa"), the suggestions are those of the words
+ *      before it.
  *      On the results page, legislation, topics and guides also match related forms of query words of 4+
- *      letters that are not abbreviations ("fish" -> "fisheries", "farming" -> "farm", "banning" -> "ban",
+ *      letters that are not abbreviations (typed with a capital after the first letter, in a query that is not all
+ *      capitals: "AMLA regulation", "MiCA") ("fish" -> "fisheries", "farming" -> "farm", "banning" -> "ban",
  *      "trade" -> "trading", "labeled" -> "labelling"), below every whole-word match and flagged `partial` (and
  *      `wordStart` for the word starts of the fallback)
  *   6. at least one word matched only approximately (typo tolerance): a word that is not in the index matches
@@ -212,10 +219,12 @@ function celexActKey(k: string): string | null {
   return m ? `${m[2]}${m[1]}/${m[3]}` : null;
 }
 
-/** Words typed with a capital letter after the first ("AMLA", "SAFE", "MiCA", "eIDAS"): abbreviations, which
- * are matched as whole words only. */
+/** Words typed with a capital letter after the first ("AMLA regulation", "SAFE loans", "MiCA", "eIDAS"):
+ * abbreviations, which are matched as whole words only. None in a query typed all in capitals ("FISH", "CHILDREN"),
+ * whose letter case says nothing about its words (caps lock). */
 export function typedAbbreviations(query: string): Set<string> {
   const out = new Set<string>();
+  if (!/\p{Ll}/u.test(query)) return out;
   for (const raw of query.split(/[^\p{L}\p{N}&]+/u)) if (/\p{Lu}/u.test(raw.slice(1))) out.add(normalize(raw));
   return out;
 }
@@ -754,6 +763,9 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     exactNames(phrase, 0);
     const unqualified = qWords.filter((w) => !QUALIFIERS.has(w)).join(' ');
     if (unqualified && unqualified !== phrase) exactNames(unqualified, 20);
+    // a name that is the query after "European" or "EU", as such names are shortened ("climate law": the "European
+    // Climate Law"), just below; not for one word ("council" is not the European Council)
+    if (unqualified.includes(' ')) for (const q of ['european', 'eu']) exactNames(`${q} ${unqualified}`, 40);
     // the MEPs of a country, group or party ("Spanish MEPs", "MEPs from Spain", "EPP MEPs", "members of the
     // European Parliament from Greece", "Patriots for Europe MEPs"): that country, group or party, as for its name.
     // The Parliament names none of them ("European Parliament MEPs", "members of parliament" ask for all MEPs).
@@ -955,7 +967,8 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
   }
 
   /** The query with two words written apart that the index has as one ("cyber security" -> "cybersecurity", "eco
-   * design" -> "ecodesign"), each pair on its own; none for an identifier. */
+   * design" -> "ecodesign"), each pair on its own, and with a word and a number written together that the index
+   * has apart ("euro7" -> "euro 7", "covid19" -> "covid 19"); none for an identifier. */
   function joinedForms(query: string): string[] {
     if (isIdentifier(query)) return [];
     const ws = words(query);
@@ -967,16 +980,21 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
         out.push([...ws.slice(0, k), joined, ...ws.slice(k + 2)].join(' '));
       }
     }
+    const split = ws.map((w) => (bySingular.has(w) ? w : w.replace(/^(\p{L}{3,})(\d{1,4})$/u, '$1 $2')));
+    if (split.some((w, k) => w !== ws[k])) out.push(split.join(' '));
     return out;
   }
 
-  /** `run` on the query and on its joined forms, each document with its best score. */
+  /** `run` on the query and on its joined forms, each document with its best score; a person's name only as typed
+   * when the query as typed matches a person ("Anna Maria" is not "Annamária"), otherwise also joined ("Chris Mac
+   * Manus": "Chris MacManus"). */
   function runForms(query: string, forms: string[], prefix: Parameters<typeof run>[1], typos?: Set<string>): RunResult {
     const res = run(query, prefix, typos);
+    const people = [...res.scores.keys()].some((i) => prepared[i].doc.k === 'mep');
     for (const f of forms) {
       const r = run(f, prefix, typos);
       for (const [i, s] of r.scores) {
-        if ((res.scores.get(i) ?? -Infinity) >= s) continue;
+        if ((res.scores.get(i) ?? -Infinity) >= s || (people && prepared[i].doc.k === 'mep')) continue;
         res.scores.set(i, s);
         if (r.similar.has(i)) res.similar.set(i, r.similar.get(i)!);
         else res.similar.delete(i);
@@ -994,6 +1012,15 @@ export function createSearchEngine(docs: SearchDoc[]): SearchEngine {
     const kinds = opts.kinds?.length ? new Set(opts.kinds) : null;
     const forms = joinedForms(query);
     let res = runForms(query, forms, opts.typing ? 'last' : 'none');
+    if (opts.typing && res.scores.size === 0 && !isIdentifier(query)) {
+      // a last word too short to be the start of a longer word ("minimum wa", "Fratelli d'It"): the suggestions of
+      // the words before it, so that the list does not disappear while the word is typed; not "EU" alone ("EU-US")
+      const ws = words(query);
+      const before = ws.slice(0, -1);
+      if (/^\p{L}{1,2}$/u.test(ws[ws.length - 1]) && before.some((w) => !STOP.has(w) && !QUALIFIERS.has(w))) {
+        return search(before.join(' '), opts);
+      }
+    }
     let fallback = false;
     // an identifier matches only as such (tiers 1-3): no word starts, no word families
     if (!opts.typing && !isIdentifier(query)) {
