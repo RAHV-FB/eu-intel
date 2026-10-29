@@ -1521,12 +1521,6 @@ class MepNames:
         return self.names.get(mep_id)
 
 
-def mep_name_resolver(http: Http, people: Iterable[tuple[str, int | None]]) -> Callable[[str], str | None]:
-    names = MepNames(http)
-    names.ensure(people)
-    return names.get
-
-
 def _people_from(procs: Iterable[dict[str, Any]]) -> set[tuple[str, int | None]]:
     out: set[tuple[str, int | None]] = set()
     for p in procs:

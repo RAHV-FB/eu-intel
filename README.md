@@ -95,7 +95,8 @@ data/curated/        editorial YAML: featured files, topics, search aliases, che
                      adoption dates (council_dates.yaml), Council voting records (council_votes.yaml) and acts
                      named but not officially linked (unlinked_acts.yaml)
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
-src/                 React app: pages/, features/, components/, lib/, types/data.ts (public data contract)
+src/                 React app: pages/, features/ (one folder per area, insights/ included), components/, lib/,
+                     types/data.ts (public data contract)
 scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
 docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap

@@ -38,13 +38,15 @@ votes + Council positions + national implementation, joined by official identifi
    *recorded facts*, *calculated statistics*, *editorial selections* and *unavailable information*.
 3. **Accessible, not simplistic.** "Approved by Parliament" — not "Passed" — when the Council hasn't agreed.
 4. **Nonpartisan.** Neutral labels; no rankings of parties or countries; disagreement documented, never invented.
-5. **Simplicity.** Six primary destinations; complexity revealed on request.
+5. **Simplicity.** Seven primary destinations; complexity revealed on request.
 6. **Privacy by design.** No analytics, cookies or third-party requests.
 
 ## Information architecture
 
-Discover (home) · Legislation · Votes · People & Parties · Countries · How the EU Works — with search
-everywhere. Detail pages (a law, a vote, an MEP, a group, a national party, a country) live inside these.
+Discover (home) · Legislation · Insights · Votes · People & Parties · Countries · How the EU Works — with search
+everywhere. Insights charts patterns across the records (where tracked files stand, proposals and adoptions by year,
+Parliament's votes on complete texts, positions recorded by each government in the Council), each chart also given
+in text, with a note on what the figures cannot show. Detail pages (a law, a vote, an MEP, a group, a national party, a country) live inside these.
 
 ## What "done" means for the first release
 
