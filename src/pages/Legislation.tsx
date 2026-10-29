@@ -428,8 +428,8 @@ export default function Legislation() {
               {sorted.length > 0 && <span className="meta"> · sorted by {SORT_LABEL[state.sort].toLowerCase()}</span>}
             </ResultCount>
             <div className="lx-results-tools">
-              {state.topic && !noTopic && (
-                <a className="lx-linkbtn" href={`${DATA_BASE}feeds/${encodeURIComponent(state.topic)}.xml`}>
+              {currentTopic && (
+                <a className="lx-linkbtn" href={`${DATA_BASE}feeds/${encodeURIComponent(currentTopic.slug)}.xml`}>
                   Atom feed for this topic (for feed readers)
                 </a>
               )}
