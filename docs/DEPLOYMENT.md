@@ -4,7 +4,7 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Three
 
 | Workflow | Trigger | Does | Permissions |
 | --- | --- | --- | --- |
-| `ci.yml` (CI) | push to `main`, pull requests, after a successful *Data refresh*, manual | ruff, pytest (offline), `pipeline validate`, `pipeline build`, `pipeline validate --built`, typecheck, vitest, site build with `BASE_PATH=/eu-intel/`, privacy check; Playwright e2e and accessibility tests on the built site | `contents: read` |
+| `ci.yml` (CI) | push to `main`, pull requests, after a *Data refresh* that succeeded or failed, manual | ruff, pytest (offline), `pipeline validate`, `pipeline build`, `pipeline validate --built`, typecheck, vitest, site build with `BASE_PATH=/eu-intel/`, privacy check; Playwright e2e and accessibility tests on the built site | `contents: read` |
 | `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`, after a successful *Data refresh*, manual | validate → build data → validate the built data → check its dated wording (`src/lib/format.test.ts`) → build site with the Pages base path → privacy check → size check → upload → deploy | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
 | `refresh.yml` (Data refresh) | Mondays 05:17 UTC, manual (optionally a full refresh) | fetch all sources (incremental, see below) → validate → build with activity recording → validate the built data → commit `data/snapshot/` + `data/state/` to `main` | `contents: write` (this job only) |
 
@@ -146,12 +146,13 @@ open http://127.0.0.1:4174/eu-intel/).
   follows the refresh fails, and so does every push and pull request until the test is brought up to date; a push's
   deploy waits for that (the refreshed data itself is deployed by the refresh's own deploy).
 - Commits made by the refresh use `GITHUB_TOKEN`, which by design does not trigger `push` workflows; the deploy
-  and CI are chained with `workflow_run` instead. CI runs on the latest `main` after each successful refresh, in its
+  and CI are chained with `workflow_run` instead. CI runs on the latest `main` after each refresh that was not cancelled (one whose build failed has still pushed
+  its snapshot), in its
   own concurrency group (it never cancels the CI run of a push), and does not deploy. The refresh and the deploy each
   validate the snapshot and the built data, and the deploy runs the checks of `src/lib/format.test.ts` on it (every
   date a next step, status explanation or timeline step states as still ahead is restated correctly once it has
   passed, and no dated wording is unknown to `src/lib/format.ts`); pytest, the other vitest data tests (they pin values
-  of the committed snapshot) and the browser tests run on refreshed data only in that CI run, alongside the deploy:
+  of the committed snapshot) and the browser tests run on refreshed data first in that CI run, alongside the deploy:
   a failure there does not hold the refreshed data back, it turns `main` red until fixed. A deploy after a refresh
   builds the latest `main`: a code commit pushed while CI has not yet passed on it is published with it, so do not
   leave a commit that failed CI on `main` (fix or revert it).

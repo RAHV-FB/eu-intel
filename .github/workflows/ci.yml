@@ -5,11 +5,11 @@
 # built by the check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
 # A successful run for a push to main starts the deploy (pages.yml, workflow_run).
 #
-# The whole workflow also runs after each successful "Data refresh" (workflow_run), on the latest main: refresh commits
+# The whole workflow also runs after each completed "Data refresh" (workflow_run), on the latest main: refresh commits
 # are pushed with GITHUB_TOKEN, which triggers no push workflow, and pytest and the vitest data tests pin values of the
 # committed snapshot, so a refresh can turn them red. That run only reports (pages.yml deploys after CI for a push
 # alone; the refresh deploys its own data), and it has its own concurrency group, so it never cancels the CI run of a
-# push.
+# push. A cancelled refresh commits nothing, and its CI run is skipped.
 name: CI
 
 on:
@@ -32,8 +32,8 @@ permissions:
 
 concurrency:
   group: >-
-    ci-${{ github.workflow }}-${{ github.event_name == 'workflow_run' && 'data-refresh' ||
-    github.event.pull_request.number || github.ref }}
+    ci-${{ github.workflow }}-${{ github.event_name == 'workflow_run' &&
+    format('data-refresh-{0}', github.event.workflow_run.conclusion) || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -46,8 +46,10 @@ env:
 jobs:
   check:
     name: Lint, test, build
-    # after a refresh, only one that succeeded (a failed refresh is already red, and may have committed nothing)
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    # after a refresh that succeeded or failed: one whose build failed has still pushed its snapshot (refresh.yml)
+    if: >-
+      ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' ||
+      github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

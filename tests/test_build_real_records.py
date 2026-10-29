@@ -693,18 +693,19 @@ def test_mandate_vote_link_is_on_a_milestone_shown_by_default():
     # 2026/0325(COD), mandate vote 199592 of 22 Oct 2026 ("C10-0258/2026 – Commission proposal", 341-225-6). Before
     # the EP recorded the sitting's decision (snapshot of 23 Oct 2026) the step built from the vote links it; since
     # the refresh of 26 Oct 2026 "Parliament voted amendments to the proposal" (2026-0325-DEC-DCPL-2026-10-22) links
-    # it, as for the AI Act above, and the step built from the vote stays a key step without it
+    # it, as for the AI Act above. The lag is simulated by leaving out the sitting's events, so that a later record
+    # of the referral (a negotiation_mandate event, as for the AI Act) does not change it
     p, v = procs("2026-0325")["2026-0325"], votes("199592", "199567")
     me = SimpleNamespace(notices_by_ref={}, acts_of={}, votes_of={"2026-0325": list(v.values())}, today="2026-10-23",
                          procedure_event=Builder.procedure_event, checked_council_date=lambda p: None,
                          indexed_vote_ids=set(v), council_of={})  # fmt: skip
     dcpl_id = "2026-0325-DEC-DCPL-2026-10-22"
-    lag = p.model_copy(update={"events": [e for e in p.events if e.id != dcpl_id]})
+    lag = p.model_copy(update={"events": [e for e in p.events if e.date < "2026-10-22"]})
     for rec, linked_on in ((lag, "vote-199592-negotiation_mandate"), (p, dcpl_id)):
         rec = Builder.with_recorded_events(me, rec)  # type: ignore[arg-type]
         tl = {e["id"]: e for e in Builder.timeline(me, rec, [], list(v.values()))}  # type: ignore[arg-type]
         assert [i for i, e in tl.items() if e["vote_id"] == "199592"] == [linked_on]
-        assert tl["vote-199592-negotiation_mandate"]["key"] is True
+        assert tl[linked_on]["key"] is True
     # a record of the sitting ("Vote in Parliament") linking the mandate vote stays a detail
     tl = _steps("2021-0068", "130712", "130538", "132421")
     assert tl["MTG-PL-2021-04-28-PVCRE-ITM-13"]["key"] is False
