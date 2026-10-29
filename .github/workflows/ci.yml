@@ -4,12 +4,22 @@
 # The Playwright e2e/accessibility job runs on every push to main and every pull request against the site
 # built by the check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
 # A successful run for a push to main starts the deploy (pages.yml, workflow_run).
+#
+# The whole workflow also runs after each successful "Data refresh" (workflow_run), on the latest main: refresh commits
+# are pushed with GITHUB_TOKEN, which triggers no push workflow, and pytest and the vitest data tests pin values of the
+# committed snapshot, so a refresh can turn them red. That run only reports (pages.yml deploys after CI for a push
+# alone; the refresh deploys its own data), and it has its own concurrency group, so it never cancels the CI run of a
+# push.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_run:
+    workflows: ["Data refresh"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       e2e:
@@ -21,7 +31,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: >-
+    ci-${{ github.workflow }}-${{ github.event_name == 'workflow_run' && 'data-refresh' ||
+    github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -34,6 +46,8 @@ env:
 jobs:
   check:
     name: Lint, test, build
+    # after a refresh, only one that succeeded (a failed refresh is already red, and may have committed nothing)
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

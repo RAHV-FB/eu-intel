@@ -103,7 +103,7 @@ the UI; every institutional fact on a page has a reachable origin.
 
 - `ci.yml`: lint, Python tests, validate, build data, validate the built data, typecheck (app and e2e tests),
   vitest, build site, privacy check; then a Playwright e2e and accessibility job on the built site (runs by
-  default; a manual run can skip it).
+  default; a manual run can skip it). It also runs, without deploying, after each successful refresh.
 - `pages.yml`: deploy to GitHub Pages once CI has passed on a push to `main`, after a successful refresh, or on
   manual dispatch (validate, build data, validate the built data, check its dated wording, build site).
 - `refresh.yml`: scheduled weekly `fetch` (incremental; a manual run can do a full refresh) → `validate` → build

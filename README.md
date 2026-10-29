@@ -67,7 +67,8 @@ End-to-end tests need a build first: `python -m pipeline build && BASE_PATH=/eu-
 `npx playwright test` (it starts `vite preview` and a GitHub-Pages-like static server itself). On a fresh machine
 install the browser once with `npx playwright install chromium`.
 
-All of the above except the link checks run in CI on every push to `main`, every pull request and on manual runs
+All of the above except the link checks run in CI on every push to `main`, every pull request, after each successful
+data refresh and on manual runs
 ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
 ## Data refresh and deployment
