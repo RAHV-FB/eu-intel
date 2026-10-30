@@ -146,7 +146,7 @@ export default function Insights() {
               </div>
               <div className="insights-panel">
                 <h3>Recorded votes against and abstentions</h3>
-                <p className="insights-panel__sub">Countries ordered by number of recorded opposing or abstaining positions. Counts are not comparable compliance or influence scores.</p>
+                <p className="insights-panel__sub">Countries in alphabetical order, with their recorded opposing or abstaining positions. Counts are not comparable compliance or influence scores.</p>
                 <div className="insights-council-list">
                   {council.map((c) => (
                     <div className="insights-council-row" key={c.code}>

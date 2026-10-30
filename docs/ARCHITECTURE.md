@@ -61,7 +61,8 @@ the UI; every institutional fact on a page has a reachable origin.
 
 - React 19 + TypeScript + Vite; react-router `BrowserRouter` with the Pages base path.
 - `scripts/prerender-routes.mjs` writes an `index.html` per known route (correct `<title>`, HTTP 200 on direct
-  navigation) plus `404.html` as SPA fallback — no server rewrites needed.
+  navigation) plus `404.html` as SPA fallback — no server rewrites needed. The former topic addresses
+  (`/topics/<slug>/`) get a static page that redirects to `/legislation/?topic=<slug>` without a script (`noindex`).
 - `src/types/data.ts` is the **public data contract**. Pages lazy-load only the JSON they need:
   `home.json` for the homepage, `dossiers/index.json` for the explorer, `dossiers/<id>.json` per law, etc. The vote
   tables of the MEP and political group pages read `votes/titles.json` (the votes of `votes/index.json`, in its order,

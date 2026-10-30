@@ -40,4 +40,15 @@ describe('Insights: counts from source fields, no inferred outcomes', () => {
     expect(row.share).toBe(0.3);
     expect(row.notParticipating).toBe(4);
   });
+
+  it('lists countries alphabetically, not by their count, and leaves out those with no recorded position', () => {
+    const pos = (against: number) => ({ for: 5, against, abstain: 0, not_participating: 0 });
+    const rows = councilPatterns([
+      { code: 'SE', name: 'Sweden', council_positions: pos(9), open_infringements: null },
+      { code: 'AT', name: 'Austria', council_positions: pos(1), open_infringements: null },
+      { code: 'CZ', name: 'Czechia', council_positions: pos(4), open_infringements: null },
+      { code: 'MT', name: 'Malta', council_positions: { for: 0, against: 0, abstain: 0, not_participating: 3 }, open_infringements: null },
+    ]);
+    expect(rows.map((r) => r.code)).toEqual(['AT', 'CZ', 'SE']);
+  });
 });

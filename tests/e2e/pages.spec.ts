@@ -293,6 +293,17 @@ test.describe('prerendered metadata (GitHub Pages semantics)', () => {
     const res = await request.get(`${PAGES_ORIGIN}${BASE_PATH}${p}`);
     return { status: res.status(), html: await res.text() };
   };
+  test('a former topic address answers 200 and redirects to the topic filter, without a script', async ({ page, request }) => {
+    const { status, html } = await get(request, 'topics/tech/');
+    expect(status).toBe(200);
+    expect(html).toContain('<meta http-equiv="refresh" content="0; url=../../legislation/?topic=tech" />');
+    expect(html).toContain('<meta name="robots" content="noindex" />');
+    expect((await get(request, 'topics/nonsense/')).status).toBe(404);
+    await page.goto(`${PAGES_ORIGIN}${BASE_PATH}topics/tech/`);
+    await expect(page).toHaveURL(`${PAGES_ORIGIN}${BASE_PATH}legislation/?topic=tech`);
+    await expect(page).toHaveTitle(`Technology & AI – Legislation – ${SITE_NAME}`);
+  });
+
   test('former MEPs, votes without counts and unnamed parties', async ({ request }) => {
     expect((await get(request, 'people/meps/197619/')).html).toContain(
       '<meta name="description" content="Former Member of the European Parliament elected in Italy." />',
