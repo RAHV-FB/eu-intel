@@ -92,7 +92,6 @@ export const STAGE_GROUPS: Record<string, { label: string; stages: LifecycleStag
 
 export const ACTIVE_STAGES = new Set<LifecycleStage>(STAGE_GROUPS.active.stages);
 export const ADOPTED_STAGES = new Set<LifecycleStage>(STAGE_GROUPS.law.stages);
-export const ENDED_STAGES = new Set<LifecycleStage>(STAGE_GROUPS.ended.stages);
 
 /** Resolve a `stage` URL value (a single stage or a group key) to the set of matching stages. */
 export function stagesFor(value: string | null): Set<LifecycleStage> | null {

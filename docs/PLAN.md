@@ -13,7 +13,7 @@
 | National implementation | `pipeline/sources/implementation.py` |
 | Editorial layer and Legislative Train | `data/curated/*`, `pipeline/sources/legislative_train.py`, `docs/EDITORIAL.md` |
 | Build, search, activity | `pipeline/build.py`, `pipeline/validate.py`, `pipeline/analysis/{activity,feeds}.py`, `src/lib/search.ts` |
-| Discovery and legislation pages | Home, Legislation, Dossier, Search, Following |
+| Discovery and legislation pages | Home, Legislation, Dossier, Insights, Search, Following |
 | Votes, people, countries, guide pages | Votes, Vote, People, MEP, Group, Party, Countries, Country, How the EU Works, About, Privacy |
 | QA, CI, deployment | `.github/workflows/*`, `tests/e2e/*`, privacy/link checks, README |
 

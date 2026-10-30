@@ -85,7 +85,9 @@ so that nobody reads a gap as a fact about EU law.
 - The automated tests (layouts, keyboard use, axe-core accessibility rules) run in Chromium, Firefox and WebKit
   (Safari's engine) on Linux, not on real phones or tablets, and no screen reader has been used to test the site.
 - The EP Legislative Train's statuses are used only for its own "Blocked" classification and as a caveat when it
-  reports a file as adopted before the official records do; its other statuses lag or lead the records.
+  reports a file as adopted before the official records do; its other statuses lag or lead the records. Its site
+  answers scripted requests with a bot challenge at times (HTTP 202): the refresh of 26 October 2026 kept the copy
+  of 22 October, and About marks its retrieval as failed until a later refresh succeeds.
 - National parties appear once per parliamentary term (the source records them as separate bodies; a few have
   two records in one term).
 - The activity log starts with the first recorded scheduled refresh; earlier changes are shown from the
