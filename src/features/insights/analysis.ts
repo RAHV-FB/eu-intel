@@ -84,6 +84,6 @@ export function councilPatterns(countries: Country[]) {
       openInfringements: country.open_infringements,
     };
   });
-  return rows.filter((r) => r.recorded > 0).sort((a, b) =>
-    b.dissent - a.dissent || b.recorded - a.recorded || a.name.localeCompare(b.name));
+  // alphabetical, not by count: the site does not rank Member States (About, docs/PRODUCT.md)
+  return rows.filter((r) => r.recorded > 0).sort((a, b) => a.name.localeCompare(b.name, 'en'));
 }
