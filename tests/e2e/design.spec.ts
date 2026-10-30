@@ -305,6 +305,9 @@ test.describe('pages while they load', () => {
     await page.goto('./');
     const loading = page.locator('.state--loading');
     await expect(loading).toBeVisible();
+    // Keep the editorial Insights teaser out of the loading state:
+    // the loading message must remain in the first viewport, including Safari/WebKit.
+    await expect(page.locator('.home-insights-feature')).toHaveCount(0);
     await expect(loading).toBeInViewport();
     const text = await loading.evaluate((el) => {
       const r = document.createRange();
@@ -316,13 +319,14 @@ test.describe('pages while they load', () => {
     expect(before).toBeGreaterThanOrEqual(800);
     release();
     await settle(page);
+    await expect(page.locator('.home-insights-feature')).toBeVisible();
   });
 });
 
-test('the not-found page offers a search and the six main sections', async ({ page, guard }) => {
+test('the not-found page offers a search and the seven main sections', async ({ page, guard }) => {
   guard.ignore(/404/);
   await open(page, 'this-page-does-not-exist/');
   await expect(page.locator('main h1')).toHaveText('We couldn’t find this page');
   await expect(page.locator('main .not-found__search input[type="search"]')).toBeVisible();
-  await expect(page.locator('main .not-found__links a')).toHaveText(['Discover', 'Legislation', 'Votes', 'People & Parties', 'Countries', 'How the EU Works']);
+  await expect(page.locator('main .not-found__links a')).toHaveText(['Discover', 'Legislation', 'Votes', 'Insights', 'People & Parties', 'Countries', 'How the EU Works']);
 });

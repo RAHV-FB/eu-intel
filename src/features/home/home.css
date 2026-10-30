@@ -455,3 +455,43 @@ a.hl__title:hover {
 .home__guide p {
   color: var(--text-2);
 }
+
+/* One clear route from the homepage to the sourced analytical reading room. */
+.home-insights-feature {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: .6rem 1.3rem;
+  position: relative;
+  padding: clamp(1.1rem, 3vw, 1.7rem);
+  margin: clamp(1.25rem, 3vw, 2rem) 0 0;
+  border: 1px solid #d5dfef;
+  border-left: 4px solid var(--eu-gold);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(120deg, #f4f7fc 0%, #fff 85%);
+  color: var(--navy);
+  text-decoration: none;
+}
+.home-insights-feature:hover { border-color: var(--blue-muted); color: var(--navy); background: #edf3fc; text-decoration: none; }
+.home-insights-feature__label {
+  grid-column: 1 / -1;
+  font-weight: var(--fw-semibold);
+  font-size: .72rem;
+  color: var(--eu-blue);
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+.home-insights-feature__label span { color: #62748c; margin-inline: .3rem; }
+.home-insights-feature__main { display: grid; gap: .25rem; min-width: 0; }
+.home-insights-feature__main strong { font-family: var(--font-serif); font-size: clamp(1.15rem, 2.2vw, 1.6rem); }
+.home-insights-feature__main>span { font-size: .89rem; color: var(--text-2); max-width: 55rem; }
+.home-insights-feature__arrow {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  font-size: 1.3rem;
+  color: var(--eu-blue);
+  border-radius: 50%;
+  border: 1px solid #cbd7ea;
+}

@@ -52,10 +52,6 @@ export function noUpdateText(days: number, last: ISODate | null | undefined, tod
   return `No recorded procedural step for ${plural(n, 'day')}${span}`;
 }
 
-export function isFuture(d: ISODate, today = new Date()): boolean {
-  return daysSince(d, today) < 0;
-}
-
 // ------------------------------------------------------------------ dates stated when the data was built
 // The data is rebuilt weekly, so a date that was ahead then may have passed by the time a visitor reads it.
 // Dated statements are compared with the visitor's date here, by the rules the build applies to its own.

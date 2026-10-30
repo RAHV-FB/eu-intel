@@ -11,6 +11,7 @@ import { useDocumentTitle } from './features/legislation/labels';
  */
 const Home = lazy(() => import('./pages/Home'));
 const Legislation = lazy(() => import('./pages/Legislation'));
+const Insights = lazy(() => import('./pages/Insights'));
 const Dossier = lazy(() => import('./pages/Dossier'));
 const Search = lazy(() => import('./pages/Search'));
 const Following = lazy(() => import('./pages/Following'));
@@ -45,6 +46,7 @@ export function App() {
           <Route element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="legislation" element={<Legislation />} />
+            <Route path="insights" element={<Insights />} />
             <Route path="legislation/:id" element={<Dossier />} />
             <Route path="topics/:slug" element={<TopicRedirect />} />
             <Route path="search" element={<Search />} />

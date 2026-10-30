@@ -67,7 +67,8 @@ End-to-end tests need a build first: `python -m pipeline build && BASE_PATH=/eu-
 `npx playwright test` (it starts `vite preview` and a GitHub-Pages-like static server itself). On a fresh machine
 install the browser once with `npx playwright install chromium`.
 
-All of the above except the link checks run in CI on every push to `main`, every pull request and on manual runs
+All of the above except the link checks run in CI on every push to `main`, every pull request, after each data
+refresh and on manual runs
 ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
 ## Data refresh and deployment
@@ -94,7 +95,8 @@ data/curated/        editorial YAML: featured files, topics, search aliases, che
                      adoption dates (council_dates.yaml), Council voting records (council_votes.yaml) and acts
                      named but not officially linked (unlinked_acts.yaml)
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
-src/                 React app: pages/, features/, components/, lib/, types/data.ts (public data contract)
+src/                 React app: pages/, features/ (one folder per area, insights/ included), components/, lib/,
+                     types/data.ts (public data contract)
 scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
 docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap
