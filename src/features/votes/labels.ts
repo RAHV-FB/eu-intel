@@ -88,12 +88,6 @@ export const POSITION_LABEL: Record<BallotPosition, string> = {
   abstain: 'Abstained',
 };
 
-export const POSITION_ICON: Record<BallotPosition, string> = {
-  for: '+',
-  against: '−',
-  abstain: '○',
-};
-
 /**
  * Close-vote rule, shared by the explorer filter, its methodology note and the home page list (CLOSE_RELATIVE in
  * pipeline/build.py). A vote is "close" when its outcome is established (adopted or rejected), its margin is known

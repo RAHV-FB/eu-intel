@@ -185,12 +185,6 @@ export function countBy<K extends string | number>(rows: DossierSummary[], key: 
 
 const desc = (a?: string | null, b?: string | null) => (b ?? '').localeCompare(a ?? '');
 
-/** The date shown on each row and used by the adoption sort. */
-export function adoptionDate(d: DossierSummary): string | null {
-  if (!ADOPTED_STAGES.has(d.stage)) return null;
-  return d.adopted ?? null;
-}
-
 export function upcomingDate(d: DossierSummary, today: string): string | null {
   return d.next_date && d.next_date >= today ? d.next_date : null;
 }

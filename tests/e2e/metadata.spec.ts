@@ -199,6 +199,10 @@ test.describe('privacy notice and links', () => {
       'href',
       `${BASE_PATH}data/feeds/environment.xml`,
     );
+    // a topic the data does not have (an edited address) has no feed to link to
+    await open(page, 'legislation/?topic=nonsense');
+    await expect(page.getByText('Topic: nonsense')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Atom feed for this topic (for feed readers)' })).toHaveCount(0);
   });
 
   for (const width of [320, 375]) {
