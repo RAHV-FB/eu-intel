@@ -8312,6 +8312,21 @@
    "title": "Access for consultation of the Visa Information System (VIS) by designated authorities of Member States and by Europol for the purposes of the prevention, detection and investigation of terrorist offences and of other serious criminal offences",
    "votes": []
   },
+  "2015-0808": {
+   "acts": [],
+   "council": [],
+   "events": [
+    "2015-0808-ANPRO-2015-10-05",
+    "2015-0808-DEC-DCPL-2015-12-16",
+    "OEIL-2015-0808-2015-08-24-legislative-proposal-published",
+    "OEIL-2015-0808-2015-11-30-vote-in-committee",
+    "OEIL-2015-0808-2015-12-03-committee-report-tabled-for-plenary-1st-"
+   ],
+   "label": "Parliament gave its opinion",
+   "stage": "parliament_position",
+   "title": "Operational and strategic cooperation between Bosnia and Herzegovina and Europol",
+   "votes": []
+  },
   "2015-0809": {
    "acts": [],
    "council": [],
@@ -11551,7 +11566,9 @@
    "votes": []
   },
   "2016-0397": {
-   "acts": [],
+   "acts": [
+    "32026R2359"
+   ],
    "council": [
     "ST-13678-2026"
    ],
@@ -11564,6 +11581,7 @@
     "2016-0397-DEPOT-2018-11-23",
     "2016-0397-MEET-TRI1-2025-06-03",
     "2016-0397-MEET-TRI1-2026-04-22",
+    "2016-0397-PUB-2026-10-27",
     "2016-0397-SIGN-2026-10-07",
     "A-8-2018-0386-AM-209-209-DEPOT-2026-07-01+1",
     "EMPL-PR-612058-DEPOT-2017-11-20",
@@ -11581,8 +11599,8 @@
     "council-ST-13678-2026",
     "vote-194881-ep_position"
    ],
-   "label": "Signed, awaiting publication",
-   "stage": "adopted",
+   "label": "In force",
+   "stage": "in_force",
    "title": "Coordination of social security systems",
    "votes": [
     "194881"
@@ -18664,6 +18682,25 @@
    "label": "No longer in force",
    "stage": "no_longer_in_force",
    "title": "Common rules ensuring basic road freight connectivity with regard to the withdrawal of the United Kingdom of Great Britain and Northern Ireland from the Union",
+   "votes": []
+  },
+  "2018-0802": {
+   "acts": [
+    "32018D0934"
+   ],
+   "council": [],
+   "events": [
+    "2018-0802-ANPRO-2018-02-05",
+    "2018-0802-DEC-DCPL-2018-06-13",
+    "2018-0802-PUB-2018-07-02",
+    "OEIL-2018-0802-2018-01-12-legislative-proposal-published",
+    "OEIL-2018-0802-2018-05-24-vote-in-committee",
+    "OEIL-2018-0802-2018-05-29-committee-report-tabled-for-plenary-1st-",
+    "OEIL-2018-0802-2018-06-25-act-adopted-by-council-after-consultatio"
+   ],
+   "label": "In force",
+   "stage": "in_force",
+   "title": "Implementation of the remaining provisions of the Schengen acquis relating to the Schengen Information System in the Republic of Bulgaria and Romania",
    "votes": []
   },
   "2018-0805": {
@@ -31085,12 +31122,13 @@
     "OEIL-2023-0134-2025-10-02-legislative-proposal-published",
     "OEIL-2023-0134-2026-05-05-committee-decision-to-open-interinstitut",
     "OEIL-2023-0134-2026-05-18-committee-decision-to-enter-into-interin",
+    "OEIL-2023-0134-2026-10-26-act-adopted-by-council-after-parliament-",
     "TRAN-AM-786740-DEPOT-2026-03-26",
     "TRAN-PR-784241-DEPOT-2026-02-26",
     "vote-197486-ep_position"
    ],
-   "label": "Approved by Parliament",
-   "stage": "parliament_position",
+   "label": "Adopted by Parliament and Council",
+   "stage": "adopted",
    "title": "Amending Directive 1999/62/EC, Council Directive 1999/37/EC and Directive (EU) 2019/520 as regards the CO2 emission class of heavy-duty vehicles with trailers",
    "votes": [
     "197486"
@@ -33514,10 +33552,11 @@
    "council": [],
    "events": [
     "2023-0421-ANPRO-2023-12-14",
+    "2023-0421-PUB-2026-10-30",
     "OEIL-2023-0421-2023-11-27-legislative-proposal-published"
    ],
-   "label": "Proposal under examination",
-   "stage": "proposed",
+   "label": "Published in the Official Journal",
+   "stage": "published",
    "title": "Protection of workers from the risks related to exposure to carcinogens, mutagens or reprotoxic substances at work (Sixth individual Directive within the meaning of Article 16(1) of Council Directive 89/391/EEC)",
    "votes": []
   },
@@ -36210,7 +36249,9 @@
    ]
   },
   "2025-0177": {
-   "acts": [],
+   "acts": [
+    "32026D2402"
+   ],
    "council": [
     "ST-14295-2026"
    ],
@@ -36226,6 +36267,7 @@
     "2025-0177-MEET-TRI1-2026-03-24",
     "2025-0177-MEET-TRI1-2026-05-18",
     "2025-0177-MEET-TRI1-2026-06-10",
+    "2025-0177-PUB-2026-10-28",
     "2025-0177-SIGN-2026-10-21",
     "A-10-2025-0275-AM-001-068-DEPOT-2026-09-11",
     "A-10-2025-0275-AM-069-069-DEPOT-2026-09-09+2",
@@ -36237,8 +36279,8 @@
     "council-ST-14295-2026",
     "vote-196116-ep_position"
    ],
-   "label": "Signed, awaiting publication",
-   "stage": "adopted",
+   "label": "Published, not yet in force",
+   "stage": "published",
    "title": "Amending Directives 2009/43/EC and 2009/81/EC, as regards the simplification of intra-EU transfers of defence-related products and the simplification of security and defence procurement",
    "votes": [
     "196116"
@@ -36415,6 +36457,7 @@
     "2025-0223-DEC-ADCP-DEVE-2026-06-25",
     "2025-0223-DEC-ADCP-REGI-2026-05-06",
     "2025-0223-DEC-ADCP-SEDE-2026-06-03",
+    "2025-0223-DEPOT-2026-10-12",
     "CJ64-AM-786979-DEPOT-2026-04-14+3",
     "CJ64-PR-782236-DEPOT-2026-03-09",
     "OEIL-2025-0223-2025-07-16-legislative-proposal-published"
@@ -36445,7 +36488,9 @@
    "votes": []
   },
   "2025-0232": {
-   "acts": [],
+   "acts": [
+    "32026L2450"
+   ],
    "council": [
     "ST-14697-2026"
    ],
@@ -36468,8 +36513,8 @@
     "council-ST-14697-2026",
     "vote-197460-ep_position"
    ],
-   "label": "Signed, awaiting publication",
-   "stage": "adopted",
+   "label": "Published, not yet in force",
+   "stage": "published",
    "title": "Amending Directive 2004/37/EC as regards the addition of substances and setting limit values in its Annexes I, III and IIIa",
    "votes": [
     "197460"
@@ -36847,6 +36892,7 @@
     "2025-0264-DEC-ADCP-2026-10-05",
     "2025-0264-DEC-ADCP-AFET-2026-05-05",
     "2025-0264-DEC-ADCP-BUDG-2026-06-03",
+    "2025-0264-DEPOT-2026-10-19",
     "DEVE-AM-788989-DEPOT-2026-05-26",
     "DEVE-PR-782513-DEPOT-2026-05-04",
     "OEIL-2025-0264-2025-09-03-legislative-proposal-published"
@@ -36904,7 +36950,9 @@
   },
   "2025-0311": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-14960-2026"
+   ],
    "events": [
     "2025-0311-ANPRO-2025-10-23",
     "2025-0311-DEC-ADCP-2026-04-14",
@@ -36921,10 +36969,11 @@
     "OEIL-2025-0311-2025-10-02-legislative-proposal-published",
     "OEIL-2025-0311-2026-04-14-committee-decision-to-open-interinstitut",
     "OEIL-2025-0311-2026-04-27-committee-decision-to-enter-into-interin",
+    "council-ST-14960-2026",
     "vote-197356-ep_position"
    ],
-   "label": "Approved by Parliament",
-   "stage": "parliament_position",
+   "label": "Adopted by Parliament and Council",
+   "stage": "adopted",
    "title": "Amending Regulations (EU) No 1173/2011 and (EU) No 473/2013 as regards alignment with the EU economic governance framework and further simplification of that framework",
    "votes": [
     "197356"
@@ -36932,7 +36981,9 @@
   },
   "2025-0312": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-14961-2026"
+   ],
    "events": [
     "2025-0312-ANPRO-2025-10-23",
     "2025-0312-DEC-ADCP-2026-04-14",
@@ -36949,6 +37000,7 @@
     "OEIL-2025-0312-2025-10-02-legislative-proposal-published",
     "OEIL-2025-0312-2026-04-14-committee-decision-to-open-interinstitut",
     "OEIL-2025-0312-2026-04-27-committee-decision-to-enter-into-interin",
+    "council-ST-14961-2026",
     "vote-197352-ep_position"
    ],
    "label": "Approved by Parliament",
@@ -37091,7 +37143,9 @@
   },
   "2025-0349": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-14951-2026"
+   ],
    "events": [
     "2025-0349-ANPRO-2025-12-15",
     "2025-0349-DEC-ADCP-2026-04-15",
@@ -37106,10 +37160,11 @@
     "OEIL-2025-0349-2025-11-17-legislative-proposal-published",
     "OEIL-2025-0349-2026-04-15-committee-decision-to-open-interinstitut",
     "OEIL-2025-0349-2026-04-27-committee-decision-to-enter-into-interin",
+    "council-ST-14951-2026",
     "vote-197470-ep_position"
    ],
-   "label": "Approved by Parliament",
-   "stage": "parliament_position",
+   "label": "Adopted by Parliament and Council",
+   "stage": "adopted",
    "title": "Empowering France to accede to the Inter-American Convention for the Protection and Conservation of Sea Turtles",
    "votes": [
     "197470"
@@ -37243,7 +37298,9 @@
    "votes": []
   },
   "2025-0380": {
-   "acts": [],
+   "acts": [
+    "32026D2402"
+   ],
    "council": [
     "ST-14296-2026"
    ],
@@ -37266,8 +37323,8 @@
     "vote-190938-negotiation_mandate",
     "vote-196227-ep_position"
    ],
-   "label": "Signed, awaiting publication",
-   "stage": "adopted",
+   "label": "Published, not yet in force",
+   "stage": "published",
    "title": "Amending Decision (EU) 2015/1814 as regards the market stability reserve for the buildings, road transport and additional sector",
    "votes": [
     "190938",
@@ -37729,6 +37786,7 @@
     "2025-0419-DEC-DCPL-2026-09-15",
     "2025-0419-DEC-REFBAK-2026-09-15",
     "2025-0419-DEPOT-2026-07-09",
+    "2025-0419-MEET-TRI1-2026-10-20",
     "A-10-2026-0201-AM-001-084-DEPOT-2026-09-11",
     "A-10-2026-0201-AM-085-085-DEPOT-2026-09-09+18",
     "ENVI-AM-787879-DEPOT-2026-05-26+5",
@@ -37738,7 +37796,7 @@
     "OEIL-2025-0419-2025-12-17-legislative-proposal-published",
     "vote-196071-negotiation_mandate"
    ],
-   "label": "Mandate to negotiate with the Council",
+   "label": "Negotiations with the Council",
    "stage": "negotiations",
    "title": "Amending Regulation (EU) 2023/956 as regards the extension of its scope to downstream goods and anti-circumvention measures",
    "votes": [
@@ -39244,12 +39302,24 @@
    "title": "Use of the European Union Critical Communication System by civil protection services and organisations",
    "votes": []
   },
+  "2026-0324": {
+   "acts": [],
+   "council": [],
+   "events": [
+    "OEIL-2026-0324-2026-10-22-legislative-proposal-published"
+   ],
+   "label": "Proposal under examination",
+   "stage": "proposed",
+   "title": "Enhanced cooperation between Public Employment Services: amendments",
+   "votes": []
+  },
   "2026-0325": {
    "acts": [],
    "council": [],
    "events": [
     "2026-0325-ANPRO-2026-10-19",
     "2026-0325-DEC-DCPL-2026-10-22",
+    "2026-0325-DEC-REFBAK-2026-10-22",
     "MTG-PL-2026-10-20-PVCRE-ITM-6-1",
     "OEIL-2026-0325-2026-10-14-legislative-proposal-published",
     "vote-199592-negotiation_mandate"
@@ -39261,6 +39331,50 @@
     "199567",
     "199592"
    ]
+  },
+  "2026-0329": {
+   "acts": [],
+   "council": [],
+   "events": [
+    "OEIL-2026-0329-2026-10-23-legislative-proposal-published"
+   ],
+   "label": "Proposal under examination",
+   "stage": "proposed",
+   "title": "European Heritage Label",
+   "votes": []
+  },
+  "2026-0336": {
+   "acts": [],
+   "council": [],
+   "events": [
+    "OEIL-2026-0336-2026-10-27-legislative-proposal-published"
+   ],
+   "label": "Proposal under examination",
+   "stage": "proposed",
+   "title": "European Climate Resilience Law",
+   "votes": []
+  },
+  "2026-0340": {
+   "acts": [],
+   "council": [],
+   "events": [
+    "OEIL-2026-0340-2026-10-27-legislative-proposal-published"
+   ],
+   "label": "Proposal under examination",
+   "stage": "proposed",
+   "title": "Asylum and Migration: digitalisation of case management in the area of return, readmission and reintegration",
+   "votes": []
+  },
+  "2026-0342": {
+   "acts": [],
+   "council": [],
+   "events": [
+    "OEIL-2026-0342-2026-10-27-legislative-proposal-published"
+   ],
+   "label": "Proposal under examination",
+   "stage": "proposed",
+   "title": "European Border and Coast Guard",
+   "votes": []
   },
   "2026-0900": {
    "acts": [],

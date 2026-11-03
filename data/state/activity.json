@@ -1,1 +1,495 @@
-[]
+[
+ {
+  "date": "2015-08-24",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2015-0808",
+  "id": "chg:2015-0808:new",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2015-0808",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2015/0808(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:37:04Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2015/0808(CNS)"
+  },
+  "title": "New file: Operational and strategic cooperation between Bosnia and Herzegovina and Europol",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-01",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2016-0397",
+  "id": "chg:2016-0397:stage:in_force:2026-11-01",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2016-0397",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2016/0397(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:36:39Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2016/0397(COD)"
+  },
+  "title": "Coordination of social security systems: status now “In force” (previously “Signed, awaiting publication”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-07",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2016-0397",
+  "id": "chg:2016-0397:ev:act-32026R2359-signature-2026-10-07",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026R2359",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2359",
+   "published": "2026-11-02",
+   "retrieved_at": "2026-11-02T13:40:49Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2359"
+  },
+  "title": "Coordination of social security systems: Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-27",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2016-0397",
+  "id": "chg:2016-0397:ev:2016-0397-PUB-2026-10-27",
+  "kind": "publication",
+  "source": {
+   "identifier": "2016-0397-PUB-2026-10-27",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:36:39Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2016-0397-PUB-2026-10-27"
+  },
+  "title": "Coordination of social security systems: Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-01",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2016-0397",
+  "id": "chg:2016-0397:ev:act-32026R2359-entry_into_force-2026-11-01",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026R2359",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2359",
+   "published": "2026-11-02",
+   "retrieved_at": "2026-11-02T13:40:49Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2359"
+  },
+  "title": "Coordination of social security systems: Entered into force",
+  "vote_id": null
+ },
+ {
+  "date": "2018-01-12",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2018-0802",
+  "id": "chg:2018-0802:new",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2018-0802",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2018/0802(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:35:59Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2018/0802(CNS)"
+  },
+  "title": "New file: Implementation of the remaining provisions of the Schengen acquis relating to the Schengen Information…",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-26",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2023-0134",
+  "id": "chg:2023-0134:stage:adopted:2026-10-26",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2023-0134",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2023/0134(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:34:22Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2023/0134(COD)"
+  },
+  "title": "Amending Directive 1999/62/EC, Council Directive 1999/37/EC and Directive (EU) 2019/520 as regards the CO2…: status now “Adopted by Parliament and Council” (previously “Approved by Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-26",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2023-0134",
+  "id": "chg:2023-0134:ev:OEIL-2023-0134-2026-10-26-act-adopted-by-council-after-parliament-",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2023/0134(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:34:22Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2023/0134(COD)"
+  },
+  "title": "Amending Directive 1999/62/EC, Council Directive 1999/37/EC and Directive (EU) 2019/520 as regards the CO2…: Council adopted the act after Parliament's first reading",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-30",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2023-0421",
+  "id": "chg:2023-0421:stage:published:2026-10-30",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2023-0421",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2023/0421(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:33:44Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2023/0421(COD)"
+  },
+  "title": "Protection of workers from the risks related to exposure to carcinogens, mutagens or reprotoxic substances…: status now “Published in the Official Journal” (previously “Proposal under examination”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-30",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2023-0421",
+  "id": "chg:2023-0421:ev:2023-0421-PUB-2026-10-30",
+  "kind": "publication",
+  "source": {
+   "identifier": "2023-0421-PUB-2026-10-30",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:33:44Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0421-PUB-2026-10-30"
+  },
+  "title": "Protection of workers from the risks related to exposure to carcinogens, mutagens or reprotoxic substances…: Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-28",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0177",
+  "id": "chg:2025-0177:stage:published:2026-10-28",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2025-0177",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2025/0177(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:32:58Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0177(COD)"
+  },
+  "title": "Amending Directives 2009/43/EC and 2009/81/EC, as regards the simplification of intra-EU transfers of…: status now “Published, not yet in force” (previously “Signed, awaiting publication”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-21",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0177",
+  "id": "chg:2025-0177:ev:act-32026D2402-signature-2026-10-21",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026D2402",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026D2402",
+   "published": "2026-11-02",
+   "retrieved_at": "2026-11-02T13:40:49Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026D2402"
+  },
+  "title": "Amending Directives 2009/43/EC and 2009/81/EC, as regards the simplification of intra-EU transfers of…: Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-28",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0177",
+  "id": "chg:2025-0177:ev:2025-0177-PUB-2026-10-28",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0177-PUB-2026-10-28",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:32:58Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0177-PUB-2026-10-28"
+  },
+  "title": "Amending Directives 2009/43/EC and 2009/81/EC, as regards the simplification of intra-EU transfers of…: Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-30",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0232",
+  "id": "chg:2025-0232:stage:published:2026-10-30",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2025-0232",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2025/0232(COD)",
+   "published": null,
+   "retrieved_at": "2026-10-22T18:28:03Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0232(COD)"
+  },
+  "title": "Amending Directive 2004/37/EC as regards the addition of substances and setting limit values in its Annexes…: status now “Published, not yet in force” (previously “Signed, awaiting publication”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-21",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0232",
+  "id": "chg:2025-0232:ev:act-32026L2450-signature-2026-10-21",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026L2450",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L2450",
+   "published": "2026-11-02",
+   "retrieved_at": "2026-11-02T13:40:49Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L2450"
+  },
+  "title": "Amending Directive 2004/37/EC as regards the addition of substances and setting limit values in its Annexes…: Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-30",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0232",
+  "id": "chg:2025-0232:ev:act-32026L2450-publication-2026-10-30",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026L2450",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L2450",
+   "published": "2026-11-02",
+   "retrieved_at": "2026-11-02T13:40:49Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L2450"
+  },
+  "title": "Amending Directive 2004/37/EC as regards the addition of substances and setting limit values in its Annexes…: Published in the Official Journal of the EU",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-26",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0311",
+  "id": "chg:2025-0311:stage:adopted:2026-10-26",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2025-0311",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2025/0311(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:32:35Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0311(COD)"
+  },
+  "title": "Amending Regulations (EU) No 1173/2011 and (EU) No 473/2013 as regards alignment with the EU economic…: status now “Adopted by Parliament and Council” (previously “Approved by Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-26",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0311",
+  "id": "chg:2025-0311:ev:council-ST-14960-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 14960/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 14960/26",
+   "published": "2026-10-27",
+   "retrieved_at": "2026-11-02T13:42:55Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-14960-2026-INIT/EN/pdf"
+  },
+  "title": "Amending Regulations (EU) No 1173/2011 and (EU) No 473/2013 as regards alignment with the EU economic…: Council adopted the act",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-26",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0312",
+  "id": "chg:2025-0312:ev:council-ST-14961-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 14961/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 14961/26",
+   "published": "2026-10-27",
+   "retrieved_at": "2026-11-02T13:42:55Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-14961-2026-INIT/EN/pdf"
+  },
+  "title": "Amending Regulation (EU) No 472/2013 as regards the economic and budgetary surveillance of Member States in…: Council adopted the act",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-26",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0349",
+  "id": "chg:2025-0349:stage:adopted:2026-10-26",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2025-0349",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2025/0349(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:32:29Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0349(COD)"
+  },
+  "title": "Empowering France to accede to the Inter-American Convention for the Protection and Conservation of Sea…: status now “Adopted by Parliament and Council” (previously “Approved by Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-26",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0349",
+  "id": "chg:2025-0349:ev:council-ST-14951-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 14951/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 14951/26",
+   "published": "2026-10-26",
+   "retrieved_at": "2026-11-02T13:42:55Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-14951-2026-INIT/EN/pdf"
+  },
+  "title": "Empowering France to accede to the Inter-American Convention for the Protection and Conservation of Sea…: Council adopted the act",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-28",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0380",
+  "id": "chg:2025-0380:stage:published:2026-10-28",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2025-0380",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2025/0380(COD)",
+   "published": null,
+   "retrieved_at": "2026-10-22T18:28:03Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0380(COD)"
+  },
+  "title": "Amending Decision (EU) 2015/1814 as regards the market stability reserve for the buildings, road transport…: status now “Published, not yet in force” (previously “Signed, awaiting publication”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-21",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0380",
+  "id": "chg:2025-0380:ev:act-32026D2402-signature-2026-10-21",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026D2402",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026D2402",
+   "published": "2026-11-02",
+   "retrieved_at": "2026-11-02T13:40:49Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026D2402"
+  },
+  "title": "Amending Decision (EU) 2015/1814 as regards the market stability reserve for the buildings, road transport…: Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-28",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2025-0380",
+  "id": "chg:2025-0380:ev:act-32026D2402-publication-2026-10-28",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026D2402",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026D2402",
+   "published": "2026-11-02",
+   "retrieved_at": "2026-11-02T13:40:49Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026D2402"
+  },
+  "title": "Amending Decision (EU) 2015/1814 as regards the market stability reserve for the buildings, road transport…: Published in the Official Journal of the EU",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-22",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2026-0324",
+  "id": "chg:2026-0324:ev:OEIL-2026-0324-2026-10-22-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0324(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:29:15Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0324(COD)"
+  },
+  "title": "Enhanced cooperation between Public Employment Services: amendments: Commission published its legislative proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-23",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2026-0329",
+  "id": "chg:2026-0329:ev:OEIL-2026-0329-2026-10-23-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0329(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:29:10Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0329(COD)"
+  },
+  "title": "European Heritage Label: Commission published its legislative proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-27",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2026-0336",
+  "id": "chg:2026-0336:ev:OEIL-2026-0336-2026-10-27-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0336(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:29:11Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0336(COD)"
+  },
+  "title": "European Climate Resilience Law: Commission published its legislative proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-27",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2026-0340",
+  "id": "chg:2026-0340:ev:OEIL-2026-0340-2026-10-27-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0340(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:29:03Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0340(COD)"
+  },
+  "title": "Asylum and Migration: digitalisation of case management in the area of return, readmission and reintegration: Commission published its legislative proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-27",
+  "detected_at": "2026-11-02T13:51:44Z",
+  "dossier_id": "2026-0342",
+  "id": "chg:2026-0342:ev:OEIL-2026-0342-2026-10-27-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0342(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-02T13:29:03Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0342(COD)"
+  },
+  "title": "European Border and Coast Guard: Commission published its legislative proposal",
+  "vote_id": null
+ }
+]
