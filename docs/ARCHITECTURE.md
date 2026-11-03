@@ -50,7 +50,9 @@ data/curated/*.yaml ─────────────────┤ build
 Records are joined **only through official identifiers**: procedure reference `YYYY/NNNN(TYPE)` (EP process id
 `YYYY-NNNN`), CELEX, ELI, EP person/organization ids, EP voting ids, ISO country codes. A dossier can link to
 several acts, many events and many votes. No link is ever inferred from title similarity; an ambiguous
-relationship is left unlinked.
+relationship is left unlinked. Where the EP's final-act list and EUR-Lex give an act to different procedures, the EP's
+wins only when something supports it (the procedure EUR-Lex names lists other final acts, or the claimant is a part
+of a split procedure); otherwise the act stays on the procedure its own EUR-Lex record names.
 
 ### Provenance
 

@@ -82,7 +82,9 @@ describe.skipIf(!built)('party records on the built data', () => {
     const psd = parties.get('5320')!;
     expect([psd.start, psd.end, psd.terms]).toEqual(['2019-07-02', '2024-07-15', [9, 10]]);
     expect(psd.outside_period).toEqual([{ id: '124784', name: 'Dan Nica', from: '2024-07-16', to: null }]);
-    expect([...parties.values()].filter((p) => p.outside_period?.length).map((p) => p.id)).toEqual(['5320']);
+    // also the records the EP dates from 30 May 2024 only (refresh of 2 Nov 2026), while their members' memberships
+    // run from 2019 (DPS, 5182) and 2023 (Demokrati, 6458)
+    expect([...parties.values()].filter((p) => p.outside_period?.length).map((p) => p.id).sort()).toEqual(['5182', '5320', '6458']);
   });
 
   it('gives records of the same party different page titles: the term, and the period when they share it', () => {
