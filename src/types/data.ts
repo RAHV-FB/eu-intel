@@ -30,7 +30,8 @@
  *   topics.json                     Topic[]
  *   search.json                     SearchDoc[]
  *   activity.json                   ActivityItem[]
- *   feeds/updates.xml, feeds/<topic>.xml   Atom feeds
+ *   feeds/updates.xml, feeds/<topic>.xml   Atom feeds (all recent activity; the activity on one topic's files)
+ *   feeds/dossiers/<id>.xml         Atom feed of one legislative file (id as for dossiers/<id>.json)
  */
 
 export type ISODate = string;
@@ -166,6 +167,10 @@ export interface DossierSummary {
   status_label: string; // "Approved by Parliament", "In force", ...
   started?: ISODate | null; // proposal date: the earliest recorded proposal or COM document (a consent file's Commission proposal precedes the Council draft)
   last_event?: ISODate | null;
+  last_step?: LatestStep | null; // the step recorded on `last_event`, as the file's page names its latest recorded step
+  // steps dated in the law in the 60 days after the build, so that lists name the latest step on the reader's date as
+  // the file's page does (src/features/legislation/latestStep.ts); absent when there are none
+  steps_ahead?: StepAhead[];
   // adoption: Parliament's second-reading approval, else the Council's adoption dated by its voting result; a Council act's own date
   // when no vote is linked; Parliament's decision for acts it adopts with the Council's consent (never after publication)
   adopted?: ISODate | null;
@@ -177,6 +182,20 @@ export interface DossierSummary {
   officially_blocked: boolean; // only true when an official source (Legislative Train) says so
   has_ep_votes: boolean;
   has_council_votes: boolean;
+}
+
+/** A file's latest recorded step (of the steps of its latest day, the key one, else the last listed). */
+export interface LatestStep {
+  title: string; // "Council adopted the act", "Entered into force"
+  kind: EventKind;
+}
+
+/** A step the file's timeline schedules (dated in the law): done once its date has passed (src/lib/format.ts eventOn). */
+export interface StepAhead {
+  date: ISODate;
+  kind: EventKind;
+  title: string; // as scheduled: "Enters into force", "Deadline for Member States to transpose the directive"
+  key: boolean;
 }
 
 export interface DossierStatus {
@@ -879,10 +898,17 @@ export interface ActivityItem {
     | 'publication'
     | 'deadline'
     | 'implementation';
-  title: string;
+  title: string; // the headline: "<file title, shortened>: <what happened>", "New file: <file title>", a vote's headline
   dossier_id?: string | null;
   vote_id?: string | null;
   source?: SourceRef | null;
+  // activity.json only (pipeline/analysis/changes.py): what happened, without the file's title ("Council adopted the
+  // act", "Status now “In force” (previously “Signed, awaiting publication”)", "New file"); absent when the headline does
+  // not name the file that way (a vote on another text, a Council vote)
+  event?: string;
+  // activity.json only: a status change told as one change with the item of the step that gave the status (same file
+  // and day, the record it cites)
+  step_id?: string;
 }
 
 export interface HomeListItem {
@@ -891,6 +917,7 @@ export interface HomeListItem {
   title: string;
   subtitle?: string | null;
   date?: ISODate | null;
+  step?: string | null; // a row dated by the file's latest recorded step: that step's title
   badge?: string | null;
 }
 
@@ -932,5 +959,7 @@ export interface SearchDoc {
   x?: string; // extra keywords (identifiers, subjects)
   u: string; // app route, e.g. "/legislation/2021-0106"
   w?: number; // static boost (e.g. featured dossiers, active MEPs)
-  d?: ISODate; // relevant date for display/sorting
+  d?: ISODate; // relevant date for display/sorting (a file: its latest recorded step's)
+  e?: string; // a file: the title of its latest recorded step (DossierSummary.last_step), dated `d`
+  n?: StepAhead[]; // a file: the steps dated in the law just ahead (DossierSummary.steps_ahead)
 }

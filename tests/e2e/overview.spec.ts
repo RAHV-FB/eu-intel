@@ -43,9 +43,11 @@ test.describe('homepage', () => {
       await expect(card.getByRole('link', { name: /^Full details on / })).toBeVisible();
     }
     expect(await pageTop(page.locator('#topics-title'))).toBeLessThan(await pageTop(page.locator('#lists-title')));
-    // the whole page in phone screens: 18.8 before the featured cards became an overview (23 October 2026)
+    // the whole page in phone screens: 18.8 before the featured cards became an overview (23 October 2026); about 13.1
+    // then, and 14.3 once the page opened with "This week in EU law" and its lists named each file's latest step (5
+    // November 2026: the strip shows three changes on a phone, the What changed page the rest)
     const screens = await page.evaluate(() => document.documentElement.scrollHeight / window.innerHeight);
-    expect(screens).toBeLessThan(14);
+    expect(screens).toBeLessThan(15);
   });
 
   test('gives the guide a reading time that matches its length', async ({ page }) => {

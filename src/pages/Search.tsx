@@ -17,13 +17,16 @@ import {
 } from '../lib/search';
 import { useData } from '../lib/data';
 import { matchDirectives, queryNumber } from '../features/countries/directiveSearch';
-import { legislationScope } from '../lib/scope';
+import { eurlexSearchUrl } from '../lib/scope';
 import { formatDate, formatNumber } from '../lib/format';
 import { useParamState } from '../lib/urlState';
 import { PAGE_PLACEHOLDERS, approximateNote, kindLabel } from '../components/SearchBox';
-import { EmptyState, ErrorState, Loading } from '../components/ui';
+import { EmptyState, ErrorState, ExtLink, Loading } from '../components/ui';
+import { OutOfScope } from '../components/OutOfScope';
 import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 import { useDocumentTitle } from '../features/legislation/labels';
+import { todayISO } from '../features/legislation/explorer';
+import { latestStepOn } from '../features/legislation/latestStep';
 import '../features/legislation/common.css';
 import '../features/legislation/search.css';
 
@@ -64,11 +67,19 @@ function typeLabel(types: string[]): string | null {
   return s ? s[0].toUpperCase() + s.slice(1) : null;
 }
 
+/** A file's latest recorded step on the reader's date (search.json `e`, dated `d`; `n`: the steps dated in the law just
+ * after the build, src/features/legislation/latestStep.ts). */
+function latestStep(doc: SearchHit['doc'], today: string) {
+  if (doc.k !== 'dossier' || !doc.e) return null;
+  return latestStepOn({ last_event: doc.d, last_step: { title: doc.e, kind: 'other' }, steps_ahead: doc.n }, today);
+}
+
 function ResultItem({ hit, showKind }: { hit: SearchHit; showKind: boolean }) {
   const { doc } = hit;
   const dateLabel = DATE_LABEL[doc.k];
   const note = approximateNote(hit);
   const types = typeLabel(actTypes(doc));
+  const step = latestStep(doc, todayISO());
   return (
     <li className="sr-item">
       <Link to={doc.u} className="sr-item__title">
@@ -78,11 +89,17 @@ function ResultItem({ hit, showKind }: { hit: SearchHit; showKind: boolean }) {
         {showKind && <span className="sr-item__kind">{kindLabel(doc.k)}</span>}
         {doc.s && <span>{doc.s}</span>}
         {types && <span>{types}</span>}
-        {doc.d && (
+        {step ? (
           <span>
-            {dateLabel && <>{dateLabel} </>}
-            <time dateTime={doc.d}>{formatDate(doc.d)}</time>
+            Latest step: {step.title} · <time dateTime={step.date}>{formatDate(step.date)}</time>
           </span>
+        ) : (
+          doc.d && (
+            <span>
+              {dateLabel && <>{dateLabel} </>}
+              <time dateTime={doc.d}>{formatDate(doc.d)}</time>
+            </span>
+          )
         )}
         {note && <span className="sr-item__approx">{note}</span>}
       </span>
@@ -415,17 +432,18 @@ export default function Search() {
               check the spelling, or try a shorter or more general word.
             </p>
           )}
+          <p className="sr-votes">
+            Not what you are looking for? This site covers EU legislative procedures and the laws adopted under them, not
+            implementing or delegated acts (<Link to="/about#coverage">what’s covered</Link>).{' '}
+            <ExtLink href={eurlexSearchUrl(q)}>Search EUR-Lex for “{q.trim()}”</ExtLink>
+          </p>
           <VotesLink q={q.trim()} />
         </>
       )}
 
       {engine && q.trim() && total === 0 && found.length === 0 && (
         <EmptyState title={`No results for “${q}”`}>
-          {isIdentifier(q) && (
-            <p>
-              No file in our data has this reference or number. {legislationScope(meta.data?.scope, true)}
-            </p>
-          )}
+          {isIdentifier(q) && <p>No file in our data has this reference or number.</p>}
           {mep ? (
             <>
               <p>No legislative file, guide or name in our data matches it.</p>
@@ -434,10 +452,13 @@ export default function Search() {
               </p>
             </>
           ) : (
-            <p>
-              Check the spelling, try a shorter or more general word, or search an official reference such as{' '}
-              <span className="mono">2021/0106(COD)</span> or a CELEX number such as <span className="mono">32016R0679</span>.
-            </p>
+            <>
+              <p>
+                Check the spelling, try a shorter or more general word, or search an official reference such as{' '}
+                <span className="mono">2021/0106(COD)</span> or a CELEX number such as <span className="mono">32016R0679</span>.
+              </p>
+              <OutOfScope q={q} scope={meta.data?.scope} />
+            </>
           )}
           <Suggestions />
           <p>

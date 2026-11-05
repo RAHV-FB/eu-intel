@@ -52,6 +52,9 @@ Discover (home) · Legislation · Insights · Votes · People & Parties · Count
 everywhere. Insights charts patterns across the records (where tracked files stand, proposals and adoptions by year,
 Parliament's votes on complete texts, positions recorded by each government in the Council), each chart also given
 in text, with a note on what the figures cannot show. Detail pages (a law, a vote, an MEP, a group, a national party, a country) live inside these.
+What changed (the steps, votes and status changes recorded week by week, by topic) is a view of Legislation, not an
+eighth destination: the home page opens with its latest week ("This week in EU law"), and Legislation and the footer
+link it.
 
 ## What "done" means for the first release
 

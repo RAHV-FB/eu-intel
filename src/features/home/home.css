@@ -305,6 +305,14 @@ a.hl__title:hover {
   line-height: var(--lh-snug);
 }
 
+/* what the row's date is the date of: the file's latest recorded step */
+.hl__step {
+  margin: 2px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: var(--lh-snug);
+}
+
 .hl__badge {
   font-weight: var(--fw-semibold);
   color: var(--text-2);
@@ -336,6 +344,16 @@ a.hl__title:hover {
   }
   .hl__sub {
     grid-area: sub;
+  }
+  /* the step on the date's line, the rest under it */
+  .hl__row--step {
+    grid-template-areas:
+      'title title'
+      'date step'
+      '. sub';
+  }
+  .hl__step {
+    grid-area: step;
   }
 }
 

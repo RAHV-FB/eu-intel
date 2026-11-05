@@ -44,6 +44,34 @@ export function legislationScope(scope: CoverageScope | undefined, short = false
   );
 }
 
+/** EUR-Lex's quick search for a query, in English, across all of EUR-Lex (a plain link; the query is URL-encoded). */
+export function eurlexSearchUrl(q: string): string {
+  return `https://eur-lex.europa.eu/search.html?scope=EURLEX&text=${encodeURIComponent(q.trim())}&lang=en&type=quick`;
+}
+
+/** What the dataset covers, in one sentence, for a search that finds nothing. */
+export function coversSentence(scope: CoverageScope | undefined): string {
+  const types = scope?.procedure_types.length ? ` (${scope.procedure_types.join(', ')})` : '';
+  const from = scope?.procedures_from_year ? ` proposed from ${scope.procedures_from_year}` : '';
+  const actsYear = scope?.acts_from ? Number(scope.acts_from.slice(0, 4)) : null;
+  return (
+    `EU legislative procedures${types}${from}, and the laws adopted under them${actsYear ? ` since ${actsYear}` : ''}: ` +
+    'proposals, votes in Parliament and Council, adoption, publication and transposition by the Member States.'
+  );
+}
+
+/** What the dataset does not cover, for a search that finds nothing: one line each. */
+export function notCovered(scope: CoverageScope | undefined): string[] {
+  const actsYear = scope?.acts_from ? Number(scope.acts_from.slice(0, 4)) : null;
+  return [
+    'Implementing and delegated acts: the detailed rules the Commission adopts under a law, such as approvals of individual substances or products.',
+    'Non-legislative procedures' +
+      (scope?.other_type_dossiers ? ', apart from files EUR-Lex records under the consultation or consent procedure.' : '.'),
+    ...(actsYear ? [`Laws adopted before ${actsYear}.`] : []),
+    'National law, apart from the measures Member States notified to transpose the directives covered here.',
+  ];
+}
+
 /** "July 2019" — the first month with a Parliament vote in the dataset. */
 export function votesSince(scope: CoverageScope | undefined): string | null {
   return scope?.ep_votes_from ? formatDate(scope.ep_votes_from.slice(0, 7), true) : null;

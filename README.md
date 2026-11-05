@@ -82,6 +82,18 @@ CI runs both on every push to `main`, every pull request and on manual runs
 ([.github/workflows/ci.yml](.github/workflows/ci.yml)): every check above but the last two (the watchdog runs the health
 check, and the link check depends on third-party sites).
 
+## Following changes
+
+- **What changed** (`/legislation/changes/`): the steps, votes and status changes the weekly refresh recorded, by week
+  and by topic, each linked to its file and its official record. The home page opens with the latest week.
+- **Atom feeds** (no account, nothing stored on a server): all recent changes (`data/feeds/updates.xml`), one per topic
+  (`data/feeds/<topic>.xml`) and one per legislative file (`data/feeds/dossiers/<id>.xml`, linked as "Follow in a feed
+  reader" on the file's page). Entries give the file's full title, what happened, the status it gave the file and the
+  next step; a status change and the step that caused it are one entry. Entry ids are stable tag URIs: an entry keeps
+  its id when its wording or the site's address changes.
+- **OPML**: the Following page downloads the feeds of the files you follow as one OPML file, which feed readers import.
+  It is made in your browser from the list kept there.
+
 ## Data refresh and deployment
 
 - **Weekly refresh** ([refresh.yml](.github/workflows/refresh.yml)): Mondays 05:17 UTC, a second try at 22:37 UTC

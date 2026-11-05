@@ -18,8 +18,35 @@
 }
 
 /* an action under the hint ("Clear all filters") */
-.state p + .btn {
+.state p + .btn,
+.out-of-scope + .btn {
   margin-top: var(--sp-3);
+}
+
+/* A search that found nothing: what the site covers, what it does not, and the query on EUR-Lex (OutOfScope) */
+.out-of-scope {
+  display: grid;
+  gap: var(--sp-2);
+  max-width: var(--measure);
+  /* a long pasted address in the EUR-Lex link wraps instead of widening the page */
+  overflow-wrap: anywhere;
+  min-width: 0;
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+.out-of-scope p,
+.out-of-scope ul {
+  margin: 0;
+}
+
+.out-of-scope ul {
+  padding-left: 1.25rem;
+}
+
+.out-of-scope li + li {
+  margin-top: var(--sp-1);
 }
 
 .state--loading {

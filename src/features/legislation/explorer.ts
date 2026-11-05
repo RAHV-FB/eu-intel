@@ -3,9 +3,9 @@
  */
 import type { DossierSummary, LegalInstrument } from '../../types/data';
 import { dossierScores, hasWord, keywordTokens, wordSet, type SearchEngine } from '../../lib/search';
-import { ADOPTED_STAGES, dossierYear, stagesFor } from './labels';
+import { ACTIVE_STAGES, ADOPTED_STAGES, dossierYear, stagesFor } from './labels';
 
-export type SortKey = 'relevance' | 'updated' | 'newest' | 'adopted' | 'blocked' | 'deadline';
+export type SortKey = 'relevance' | 'updated' | 'newest' | 'adopted' | 'blocked' | 'deadline' | 'stuck';
 
 export const SORT_LABEL: Record<SortKey, string> = {
   relevance: 'Best match',
@@ -14,7 +14,12 @@ export const SORT_LABEL: Record<SortKey, string> = {
   adopted: 'Most recently adopted',
   blocked: 'Officially blocked first',
   deadline: 'Upcoming application dates & deadlines',
+  stuck: 'Longest without a recorded step',
 };
+
+/** The stuck view (the home page's "Stalled" list leads to it): files still being decided, longest without a recorded
+ * procedural step first. */
+export const STUCK_VIEW = '/legislation?stage=active&sort=stuck';
 
 export const PAGE_SIZE = 25;
 
@@ -208,6 +213,18 @@ export function sortRows(rows: DossierSummary[], sort: SortKey, scores: Map<stri
       break;
     case 'blocked':
       out.sort((a, b) => Number(b.officially_blocked) - Number(a.officially_blocked) || desc(a.last_event, b.last_event));
+      break;
+    case 'stuck':
+      // files still being decided first, the longest without a recorded step first (a file with no dated step after
+      // them: how long is not known); the others after, by their latest recorded step
+      out.sort((a, b) => {
+        const aa = ACTIVE_STAGES.has(a.stage) ? 1 : 0;
+        const bb = ACTIVE_STAGES.has(b.stage) ? 1 : 0;
+        if (aa !== bb) return bb - aa;
+        if (!aa) return desc(a.last_event, b.last_event);
+        if (!a.last_event || !b.last_event) return Number(!a.last_event) - Number(!b.last_event);
+        return a.last_event.localeCompare(b.last_event) || a.id.localeCompare(b.id);
+      });
       break;
     case 'deadline':
       out.sort((a, b) => {

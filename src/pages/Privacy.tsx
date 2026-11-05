@@ -84,6 +84,10 @@ export default function Privacy() {
             The share link on the Following page is the exception, and only when you copy and send it: the identifiers of the files you
             follow are then part of that link’s address, with the same consequences as for search terms (see “Hosting”).
           </p>
+          <p>
+            The Following page can also give you an OPML file listing the feeds of the files you follow, for a feed reader. Your browser
+            makes it from the list it keeps and saves it on your device; nothing is sent to us or anyone else.
+          </p>
         </section>
 
         <section aria-labelledby="data-h">

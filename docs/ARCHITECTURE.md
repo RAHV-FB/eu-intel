@@ -42,7 +42,8 @@ data/curated/*.yaml ─────────────────┤ build
 | `analysis/transposition.py` | Classifies each transposition date Cellar records as a deadline, an application date or another date; `data/curated/transposition.yaml` settles the cases its labels cannot |
 | `analysis/ep_margin.py` | Vote margin relative to the legally applicable majority |
 | `analysis/council_qmv.py` | Council QMV/unanimity arithmetic |
-| `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds |
+| `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds: all recent activity, one per topic, and one per file (`feeds/dossiers/<id>.xml`: its latest 10 entries of any date) |
+| `analysis/changes.py` | How activity items read, for the What changed page and the feeds: what happened apart from the file's title (`event` in `activity.json`), the file's full title in a headline, and a status change paired with the item of the step that gave the status (`step_id`: the same file and day, the record it cites, else a step of a kind that dates the status). It never adds, drops or re-dates an item |
 | `analysis/scheduled.py` | Planned steps joined to files by procedure reference, those dated after the build only: each file's `scheduled` and the home page's "Scheduled in the next 3 weeks" |
 | `build.py` | Joins everything by official identifiers → `public/data/**` per `src/types/data.ts`; `--strict` (`EU_INTEL_STRICT=1`) fails when it had to work around a problem |
 | `freshness.py` | How old each source's data may get before the site and the Data health issue call it stale; the core sources behind `core_data_at`; when the Legislative Train's "blocked" stops being shown |
@@ -66,8 +67,32 @@ the UI; every institutional fact on a page has a reachable origin.
 
 - React 19 + TypeScript + Vite; react-router `BrowserRouter` with the Pages base path.
 - `scripts/prerender-routes.mjs` writes an `index.html` per known route (correct `<title>`, HTTP 200 on direct
-  navigation) plus `404.html` as SPA fallback — no server rewrites needed. The former topic addresses
+  navigation; a file's page also links its Atom feed) plus `404.html` as SPA fallback — no server rewrites needed. The former topic addresses
   (`/topics/<slug>/`) get a static page that redirects to `/legislation/?topic=<slug>` without a script (`noindex`).
+- **What changed** (`/legislation/changes`, `src/pages/Changes.tsx`, `src/features/changes/`) reads `activity.json`: the
+  changes grouped by the week our data refresh first recorded them (`detected_at`; a step already in the records when
+  recording began has none, and is grouped by its own date), and within a week by the topics of each file
+  (`dossiers/index.json`), with filters by topic and kind of change (kept in the address) and each topic's Atom feed. A
+  status change is told with the step that gave the status (`step_id`), as in the feeds. Each change links its file's
+  page and the official records it cites. It is a view of Legislation, not one of the seven primary destinations
+  (docs/PRODUCT.md): the home page, the explorer and the footer lead to it. The home page's **This week in EU law** shows
+  the changes of the latest week of recording, with counts by kind; it is called "this week" only while the latest
+  refresh is at most a week old on the reader's date.
+- List rows name each file's **latest recorded step** ("Latest step: Council adopted the act · 26 Oct 2026"): the
+  explorer and search results from `last_step` (`dossiers/index.json`) and `e` (`search.json`), the home lists from
+  `step`. A step dated in the law that passes after the build (`steps_ahead`, the next 60 days) becomes the latest step
+  on the reader's date, as on the file's page (`src/features/legislation/latestStep.ts`, which uses its `latestDone`).
+- The **stuck view** is the explorer's sort "Longest without a recorded step" (`?stage=active&sort=stuck`, the home
+  "Stalled" list's link): files still being decided first, each saying for how long on the reader's date. A file's page
+  says under its status that it is officially reported as blocked (only while the Legislative Train's copy is current:
+  `blockedNow`) and how long it has had no recorded step.
+- A search or a keyword in the explorer that finds nothing says what the site covers and what it does not (implementing
+  and delegated acts, non-legislative procedures, laws before the dataset, national law), and links the same words on
+  EUR-Lex's own search (`src/components/OutOfScope.tsx`; a plain link, the words URL-encoded).
+- Each file's page links its Atom feed ("Follow in a feed reader") and announces it in `<head>` (`<link rel="alternate"
+  id="page-feed">`, written into the prerendered page and kept to the page shown by `useFeedLink`). The Following page
+  downloads the feeds of the files followed as one OPML file, made in the browser (a `data:` link with `download`, which
+  the Content-Security-Policy does not restrict; nothing is sent).
 - `src/types/data.ts` is the **public data contract**. Pages lazy-load only the JSON they need:
   `home.json` for the homepage, `dossiers/index.json` for the explorer, `dossiers/<id>.json` per law, etc. The vote
   tables of the MEP, political group and national party pages read `votes/titles.json` (the votes of

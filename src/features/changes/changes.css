@@ -1,0 +1,243 @@
+/* What changed (/legislation/changes) and the home page's "This week in EU law": lists of changes. */
+
+/* ---------- a change ---------- */
+.ch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 2px solid var(--navy);
+}
+
+.ch {
+  display: grid;
+  grid-template-columns: 6.25rem minmax(0, 1fr);
+  grid-template-areas:
+    'date body'
+    '. meta';
+  column-gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ch__date {
+  grid-area: date;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+
+.ch__body {
+  grid-area: body;
+  min-width: 0;
+}
+
+/* what happened: the row's lead */
+.ch__event {
+  margin: 0;
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.ch__status {
+  margin: 2px 0 0;
+  color: var(--text);
+  line-height: var(--lh-snug);
+}
+
+.ch__was {
+  color: var(--text-2);
+}
+
+/* the file it happened on */
+.ch__file {
+  margin: 2px 0 0;
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.ch__file a {
+  color: var(--navy);
+  text-decoration-color: var(--underline-quiet);
+}
+
+.ch__file a:hover,
+.ch__file a:focus-visible {
+  color: var(--eu-blue);
+  text-decoration-color: currentColor;
+}
+
+/* separators: .dot-list (base.css), which sets the left margin */
+.ch__meta {
+  grid-area: meta;
+  margin-top: var(--sp-1);
+  margin-bottom: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+/* on phones the date heads the row; in the home page's strip it shares the last line with the sources, after what
+   happened and the file (as the home lists' rows put it) */
+@media (max-width: 29.99rem) {
+  .ch {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'date'
+      'body'
+      'meta';
+    row-gap: 2px;
+  }
+  .ch--compact {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'body body'
+      'date meta';
+    column-gap: var(--sp-2);
+  }
+  .ch--compact .ch__date,
+  .ch--compact .ch__meta {
+    margin-top: 2px;
+    padding-top: 0;
+  }
+  .ch--compact .ch__was {
+    display: none;
+  }
+  .ch--compact .ch__file a {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ---------- the home page's strip ---------- */
+/* the counts by kind of change, each leading to the What changed page; separators: .dot-list (base.css) */
+.tw__counts {
+  margin-top: 0;
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  row-gap: 2px;
+}
+
+/* touch targets of at least 24px (WCAG 2.5.8), also when the line wraps on a phone; the dots level with their text */
+.tw__counts a {
+  display: inline-block;
+  padding-block: 4px;
+}
+
+.tw__counts > *::before {
+  top: 4px;
+}
+
+/* phones: the first three changes (the page lists them all) */
+@media (max-width: 39.99rem) {
+  .tw__list .ch:nth-child(n + 4) {
+    display: none;
+  }
+}
+
+/* ---------- the page ---------- */
+.chg-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  list-style: none;
+  margin: 0 0 var(--sp-4);
+  padding: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.chg-crumbs li + li::before {
+  content: '/';
+  margin-right: var(--sp-2);
+  color: var(--border-strong);
+}
+
+.chg-crumbs a {
+  color: var(--text-2);
+}
+
+.chg__scope {
+  max-width: 44rem;
+  margin: calc(-1 * var(--sp-2)) 0 var(--sp-2);
+}
+
+.chg__feeds {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+@media (min-width: 40rem) {
+  .chg__filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .chg__filters {
+    grid-template-columns: repeat(2, minmax(0, 20rem));
+  }
+}
+
+.chg__count {
+  margin: var(--sp-5) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.chg__count strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.chg-week {
+  margin-top: var(--sp-6);
+}
+
+.chg-week__range {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  color: var(--text-3);
+  letter-spacing: 0;
+}
+
+.chg-week__note {
+  margin: calc(-1 * var(--sp-2)) 0 var(--sp-4);
+  max-width: var(--measure);
+}
+
+.chg-topic + .chg-topic {
+  margin-top: var(--sp-5);
+}
+
+.chg-topic__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  color: var(--navy);
+}
+
+.chg-topic__n {
+  margin-left: var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.chg-topic__links {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.chg-topic__links:empty {
+  margin-bottom: var(--sp-2);
+}
