@@ -385,7 +385,7 @@ def test_parliaments_reuse_terms_are_stated_as_it_gives_them():
 
 
 def test_snapshot_time_comes_from_a_listed_source(tmp_path: Path):
-    # "Data refreshed" must be traceable to a source on the About page: a manifest entry with no SOURCES entry
+    # `snapshot_at` must be traceable to a source on the About page: a manifest entry with no SOURCES entry
     # (here a later retrieval) does not set it, and every source of the real snapshot is listed
     from pipeline.build import SOURCES
 
@@ -422,7 +422,7 @@ def test_meta_scope_and_plain_source_summaries(out: Path):
 
 
 def test_every_fetched_source_is_listed_and_dates_the_refresh(tmp_path: Path):
-    """The About page lists build.SOURCES, and "Data last refreshed" is the latest retrieval among them. The
+    """The About page lists build.SOURCES, and `snapshot_at` is the latest retrieval among them. The
     opt-outs source was fetched but not listed, so that time belonged to no source the site showed."""
     from pipeline.__main__ import SOURCES as FETCHED
     from pipeline.build import SOURCES
@@ -442,6 +442,44 @@ def test_every_fetched_source_is_listed_and_dates_the_refresh(tmp_path: Path):
     optouts = next(s for s in meta["sources"] if s["id"] == "optouts")
     assert optouts["fetched_at"] == meta["snapshot_at"] and "Denmark" in optouts["summary"]
 
+
+
+def test_meta_gives_each_sources_health_and_the_core_data_date(tmp_path: Path):
+    """Home and the footer said "Data refreshed 2 Nov" (the newest retrieval of any source) while the Legislative
+    Train's copy was from 22 Oct and its weekly retrievals failed. meta.json now gives each source's last successful
+    retrieval, last attempt and threshold (pipeline/freshness.py), for the site to judge on the reader's date, and
+    the date up to which statuses, votes and acts are all current: the oldest retrieval of the core sources."""
+    from pipeline.freshness import CORE_SOURCES, STALE_AFTER_DAYS
+
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    path = tmp_path / "snapshot" / "_manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest["train"].update(status="failed", fetched_at="2098-12-10T17:53:03Z", attempted_at="2099-01-01T13:51:20Z")
+    manifest["ep_votes"].update(fetched_at="2098-12-31T13:40:49Z", attempted_at="2098-12-31T13:39:55Z")
+    manifest["implementation"].update(fetched_at="2098-11-01T00:00:00Z")  # older, but not a core source
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    o = tmp_path / "public"
+    assert build(out=o, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state",
+                 today=TODAY) == 0  # fmt: skip
+    meta = load(o, "meta.json")
+    by = {s["id"]: s for s in meta["sources"]}
+    # the newest retrieval still identifies the snapshot (docs/DEPLOYMENT.md); the headline date is the oldest core one
+    assert meta["snapshot_at"] == "2099-01-01T00:00:00Z"
+    assert meta["core_data_at"] == "2098-12-31T13:40:49Z"
+    train = by["train"]
+    assert (train["status"], train["fetched_at"], train["attempted_at"]) == (
+        "failed", "2098-12-10T17:53:03Z", "2099-01-01T13:51:20Z")  # fmt: skip
+    assert train["stale_after_days"] == STALE_AFTER_DAYS["train"] and train["core"] is False
+    assert train["short_name"] == "Legislative Train" and train["labels_expire_after_days"] == 42
+    for sid, s in by.items():
+        assert s["stale_after_days"] == STALE_AFTER_DAYS[sid] and s["core"] is (sid in CORE_SOURCES), sid
+        assert s["short_name"] and len(s["short_name"]) < len(s["name"]), sid
+        assert ("labels_expire_after_days" in s) is (sid == "train"), sid
+        assert "stale" not in s and "age_days" not in s, sid  # judged on the reader's date, not on the build's
+    # a source not in the manifest: never retrieved, with its threshold all the same
+    assert "optouts" not in manifest
+    assert (by["optouts"]["status"], by["optouts"]["fetched_at"], by["optouts"]["attempted_at"]) == ("unavailable", None, None)
+    assert by["optouts"]["stale_after_days"] == STALE_AFTER_DAYS["optouts"]
 
 def test_search_docs(out: Path):
     docs = load(out, "search.json")

@@ -222,8 +222,9 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
      `restore` removes them. Afterwards `git diff <good-sha> HEAD -- data/snapshot data/state` prints nothing.
 4. **Check the deploy.** The push runs CI, and *Deploy to GitHub Pages* once CI has passed. CI's data tests pin values of the
    current snapshot, so they can fail on restored data; the restore is then deployed by hand, *Actions → Deploy to GitHub Pages →
-   Run workflow* on `main` (`gh workflow run pages.yml --ref main`), which does not wait for CI. When it has succeeded, the footer's "Data last
-   refreshed" (`snapshot_at` in `https://rahv-fb.github.io/eu-intel/data/meta.json`) shows the date of the restored data.
+   Run workflow* on `main` (`gh workflow run pages.yml --ref main`), which does not wait for CI. When it has succeeded, `snapshot_at` in
+   `https://rahv-fb.github.io/eu-intel/data/meta.json` (the latest retrieval of any source) is that of the restored data, and
+   the footer's "Procedures, votes and acts current to" date (`core_data_at`, the oldest retrieval of the core sources) is too.
    `built_at` moves with every deploy, so it does not show that the data is the good one.
 5. **While you prepare that, an earlier version can be deployed again.** *Actions → Deploy to GitHub Pages*, an earlier successful
    run, *Re-run all jobs* (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`,

@@ -72,8 +72,17 @@ export interface SourceStatusInfo {
   institution: Institution;
   url: string; // documentation / landing page of the source
   licence: string; // short reuse/attribution statement
-  status: 'ok' | 'partial' | 'failed' | 'unavailable';
+  short_name?: string; // "Legislative Train": the name in the site's freshness note
+  status: 'ok' | 'partial' | 'failed' | 'unavailable'; // of the latest attempt
   fetched_at?: ISODateTime | null; // last successful retrieval
+  attempted_at?: ISODateTime | null; // latest attempt, successful or not
+  // not up to date once the last successful retrieval is older than this on the reader's date (pipeline/freshness.py;
+  // judged by src/lib/freshness.ts), or when there is none
+  stale_after_days?: number;
+  core?: boolean; // statuses, votes and acts come from it: it dates `Meta.core_data_at`
+  // its official classifications (the Legislative Train's "Blocked") are not shown as current once the last successful
+  // retrieval is older than this on the reader's date
+  labels_expire_after_days?: number;
   records: Record<string, number>;
   note?: string | null; // retrieval log from the pipeline (technical detail)
   summary?: string | null; // plain-language note: what this release holds from the source, known gaps
@@ -95,7 +104,8 @@ export interface CoverageScope {
 
 export interface Meta {
   built_at: ISODateTime; // when public/data was generated
-  snapshot_at?: ISODateTime | null; // latest successful source retrieval across sources
+  snapshot_at?: ISODateTime | null; // latest successful source retrieval across sources (identifies the snapshot)
+  core_data_at?: ISODateTime | null; // oldest last successful retrieval of the core sources: statuses, votes and acts are current to it
   sources: SourceStatusInfo[];
   counts: {
     dossiers: number;
