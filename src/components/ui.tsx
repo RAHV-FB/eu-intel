@@ -223,6 +223,7 @@ export function Term({ id, children }: { id: keyof typeof GLOSSARY | string; chi
   const tipId = useId();
   const wrapRef = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLSpanElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   // Shift the popup sideways so it never runs past either edge of the screen.
   useLayoutEffect(() => {
@@ -270,6 +271,7 @@ export function Term({ id, children }: { id: keyof typeof GLOSSARY | string; chi
       }}
     >
       <button
+        ref={btnRef}
         type="button"
         className="term__btn"
         aria-expanded={open}
@@ -280,7 +282,19 @@ export function Term({ id, children }: { id: keyof typeof GLOSSARY | string; chi
         {children ?? entry.term}
       </button>
       {open && (
-        <span id={tipId} role="note" className="term__tip" ref={tipRef} onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
+        // Escape from its "Learn more" link closes it and returns focus to the term: the link goes away with it, and
+        // focus would otherwise fall back to the page
+        <span
+          id={tipId}
+          role="note"
+          className="term__tip"
+          ref={tipRef}
+          onKeyDown={(e) => {
+            if (e.key !== 'Escape') return;
+            setOpen(false);
+            btnRef.current?.focus();
+          }}
+        >
           <strong>{entry.term}.</strong> {entry.short}{' '}
           {entry.href && <Link to={entry.href}>Learn more</Link>}
         </span>

@@ -331,6 +331,7 @@ export function DossierDetails({ d }: { d: DossierDetail }) {
             <h3>Key documents</h3>
             <div className="table-wrap">
               <table className="table">
+                <caption className="visually-hidden">Key documents</caption>
                 <thead>
                   <tr>
                     <th scope="col">Date</th>

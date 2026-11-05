@@ -221,7 +221,8 @@ export default function Changes() {
                   </ol>
                 ) : (
                   w.topics.map((t) => (
-                    <section key={t.slug} className="chg-topic" aria-labelledby={`${ids}-w-${w.week}-${t.slug}`}>
+                    // named by its week as well as its topic: each topic recurs from week to week
+                    <section key={t.slug} className="chg-topic" aria-labelledby={`${ids}-w-${w.week}-${t.slug} ${ids}-w-${w.week}`}>
                       <h3 id={`${ids}-w-${w.week}-${t.slug}`} className="chg-topic__title">
                         {topicLabel(t.slug)} <span className="chg-topic__n">{formatNumber(t.changes.length)}</span>
                       </h3>
