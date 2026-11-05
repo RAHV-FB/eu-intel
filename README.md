@@ -93,6 +93,11 @@ check, and the link check depends on third-party sites).
   its id when its wording or the site's address changes.
 - **OPML**: the Following page downloads the feeds of the files you follow as one OPML file, which feed readers import.
   It is made in your browser from the list kept there.
+- **When new rules apply** (`/legislation/applies/`): the dates fixed in law from which rules start to apply (entry into
+  force, application, transposition deadlines, national measures), by month, topic and Member State, each saying where
+  it applies. For every date, each topic and each Member State there is an Atom feed of the next 90 days
+  (`data/feeds/applies/{all,topics/<topic>,countries/<code>}.xml`) and a calendar of every date ahead (`.ics`, the same
+  names), whose entries and events keep their ids from one refresh to the next.
 
 ## Data refresh and deployment
 

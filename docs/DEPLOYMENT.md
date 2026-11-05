@@ -71,12 +71,13 @@ The site will be at `https://rahv-fb.github.io/eu-intel/`.
 GitHub Pages serves a project site under `/<repo>/`. `pages.yml` takes the path from
 `actions/configure-pages` (`steps.pages.outputs.base_path`, e.g. `/eu-intel`, or empty for a custom domain) and
 builds with `BASE_PATH=<base_path>/`. `vite.config.ts` uses it as Vite's `base`, the router uses it as its
-`basename`, and data is loaded from `${BASE_URL}data/`. The Atom feeds (`data/feeds/*.xml`, and one per file in
-`data/feeds/dossiers/`) need absolute links:
+`basename`, and data is loaded from `${BASE_URL}data/`. The Atom feeds (`data/feeds/*.xml`, one per file in
+`data/feeds/dossiers/`, and those of When new rules apply in `data/feeds/applies/`, with its calendars) need absolute links:
 the data build takes them from `SITE_URL`, which `pages.yml` sets to the Pages URL
 (`steps.pages.outputs.base_url`, e.g. `https://rahv-fb.github.io/eu-intel` or the custom domain); without it
 (CI, local builds) they point at `https://rahv-fb.github.io/eu-intel/`. `SITE_URL` sets the links only: the ids
-(`feeds.TAG_BASE`) never change with it, as an Atom id must not when a feed moves (RFC 4287, section 4.2.6). `pages.yml` gives
+(`feeds.TAG_BASE`, and the calendars' UIDs built from it) never change with it, as an Atom id must not when a feed moves
+(RFC 4287, section 4.2.6). GitHub Pages serves the calendars (`.ics`) as `text/calendar`. `pages.yml` gives
 the site build the same `SITE_URL`, from which `scripts/prerender-routes.mjs` writes each page's `<link rel="canonical">`
 (`<SITE_URL><route>/`, the address of the prerendered page, which is also the address the Atom entries link to); without it
 (CI, local builds, forks) the pages have none, so that they do not point at another host. `404.html` carries `noindex`.
