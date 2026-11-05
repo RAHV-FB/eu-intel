@@ -940,3 +940,21 @@ def test_a_built_file_no_index_lists_is_checked_and_reported(built: Path, tmp_pa
     assert any(e.startswith("public people/parties/<id>.json: PartyDetail.") and "people/parties/9999.json" in e
                for e in rep.errors)  # and checked against its type  # fmt: skip
     assert party.name != "9999.json"
+
+
+def test_a_files_index_entry_that_its_own_file_contradicts_is_an_error(built: Path, tmp_path: Path):
+    """The explorer reads a file's stage, status and dates from dossiers/index.json, its page from dossiers/<id>.json:
+    the two must agree (titles only shortened in the index). Nothing checked it: on 5 Nov 2026 the files of 42
+    entries lacked the entries' `names`."""
+    from pipeline.validate import summary_mismatches
+
+    pub = _built_copy(built, tmp_path)
+    entry = json.loads((pub / "dossiers" / "index.json").read_text(encoding="utf-8"))[0]
+    path = pub / "dossiers" / f"{entry['id']}.json"
+    d = json.loads(path.read_text(encoding="utf-8"))
+    assert summary_mismatches(entry, d) == [] and summary_mismatches({**entry, "title": d["title"][:4] + "…"}, d) == []
+    assert summary_mismatches({**entry, "names": ["AI Act"]}, d) == ['names: the index gives ["AI Act"], the file null']
+    path.write_text(json.dumps({**d, "status_label": "Proposal under examination"}), encoding="utf-8")
+    errors = check(FIX, public=pub, today=TODAY, built=True).errors
+    assert errors == [f'public dossiers/{entry["id"]}.json: status_label: the index gives "{entry["status_label"]}", '
+                      'the file "Proposal under examination"']  # fmt: skip
