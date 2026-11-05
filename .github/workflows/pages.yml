@@ -4,13 +4,15 @@
 # - workflow_run: a successful "CI" run for a push to main deploys the commit CI tested (code reaches the site only once
 #   its tests have passed);
 # - workflow_call: a "Data refresh" run deploys the commit it pushed (`ref`), once that commit's data has passed the
-#   refresh's data gate and its code has passed CI (refresh.yml). The caller grants pages: write and id-token: write;
+#   refresh's data gate and its code has passed CI (refresh.yml); the "Daily rebuild" deploys main's commit, once its
+#   code has passed CI (rebuild.yml). The caller grants pages: write and id-token: write;
 # - workflow_dispatch: a manual run builds the branch it is started on, without waiting for CI.
 # After CI, if main (as of the run's event) had moved on since that commit only by data refresh commits (data/snapshot,
 # data/state), main is built instead: same code, newer data, so that a deploy never takes refreshed data off the site.
 # The build job runs the data gate again on what it deploys (snapshot validation, the strict data build, validation of
-# the built data, the dated-wording check, site build, privacy check, size check); any failure stops the run before
-# deploy, and the previous deployment stays live.
+# the built data, the dated-wording check, site build, privacy check, size check), then opens the built site in Chromium
+# on its own data (tests/e2e/live-smoke.spec.ts); any failure stops the run before deploy, and the previous deployment
+# stays live.
 #
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions" (docs/DEPLOYMENT.md).
 name: Deploy to GitHub Pages
@@ -24,7 +26,7 @@ on:
   workflow_call:
     inputs:
       ref:
-        description: The commit to deploy (a data refresh commit that passed the data gate)
+        description: The commit to deploy (the commit a data refresh pushed, or main for the daily rebuild)
         type: string
         required: true
 
@@ -49,8 +51,13 @@ jobs:
     if: >-
       ${{ inputs.ref != '' || github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Ubuntu 24.04: the release whose runner image is known to have the libraries Chromium needs for the smoke test
+    # below (CI's `playwright install --with-deps chromium` there added only fonts, 5 Nov 2026), so no apt step.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    outputs:
+      built_at: ${{ steps.record.outputs.built_at }}
+      commit: ${{ steps.record.outputs.commit }}
     steps:
       # The commit to deploy, with every commit and tree of the history but no file contents beyond this commit's
       # (filter: blob:none, about 0.1 MB for the whole history): the next step only compares commits and trees.
@@ -115,7 +122,12 @@ jobs:
           # Absolute links in the Atom feeds: the Pages URL, so a custom domain is used once it is set.
           # (The feed and entry ids do not depend on it: pipeline/analysis/feeds.py TAG_BASE.)
           SITE_URL: ${{ steps.pages.outputs.base_url }}/
-        run: python -m pipeline build
+        run: |
+          # the commit checked out (after the step above): meta.json says which commit the live site was built from,
+          # since GitHub records a refresh's deploy under the commit the refresh started from (github.sha)
+          EU_INTEL_COMMIT=$(git rev-parse HEAD)
+          export EU_INTEL_COMMIT
+          python -m pipeline build
 
       - name: Validate built data
         # The built-output checks of pipeline/validate.py; --built fails if public/data is missing.
@@ -148,6 +160,44 @@ jobs:
           if [ "$kb" -gt 900000 ]; then echo "::error::dist is ${kb} KB (Pages limit is 1 GB)"; exit 1; fi
           if [ "$kb" -gt 500000 ]; then echo "::warning::dist is ${kb} KB; Pages limit is 1 GB"; fi
 
+      # The browser tests in CI run on the frozen test data; this opens the site about to be published, on its own data,
+      # before anything is uploaded: tests/e2e/live-smoke.spec.ts picks the pages from dist/data (files of every stage,
+      # votes of every kind, MEPs, groups, parties, every country, search, the main pages), with the reader's clock, and
+      # fails on a console error, an uncaught exception, a failed request, the error page or an empty heading. Chromium
+      # only, without its apt packages (above); a few retries for the browser download.
+      - name: Install Chromium for the smoke test
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install chromium && exit 0
+            sleep $((attempt * 10))
+          done
+          exit 1
+
+      - name: Smoke-test the site on its own data (Chromium)
+        env:
+          E2E_LIVE: "1"
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+        run: npx playwright test --project=chromium
+
+      - name: Upload the smoke test's report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: live-smoke-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Record what is deployed
+        id: record
+        run: |
+          read -r built_at commit < <(python3 -c 'import json; m = json.load(open("dist/data/meta.json")); print(m["built_at"], m["commit"])')
+          test "$commit" = "$(git rev-parse HEAD)"
+          { echo "built_at=$built_at"; echo "commit=$commit"; } >> "$GITHUB_OUTPUT"
+          echo "Built commit \`$commit\` (\`built_at\` $built_at) for ${GITHUB_EVENT_NAME}." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
@@ -174,6 +224,8 @@ jobs:
       - name: Verify published site and deep links
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          BUILT_AT: ${{ needs.build.outputs.built_at }}
+          COMMIT: ${{ needs.build.outputs.commit }}
         run: |
           set -euo pipefail
           test -n "$PAGE_URL"
@@ -193,5 +245,25 @@ jobs:
                 grep -q 'Data insights' "$tmp"
               fi
             fi
+          done
+          # The deployment is live once data/meta.json says it was built when this run built it: Pages had served the
+          # previous one from its 10-minute cache (the query string gets past it), and new files take a while to reach
+          # every server. A deployment the public URL does not serve fails the release.
+          attempts=${VERIFY_ATTEMPTS:-30}
+          for attempt in $(seq 1 "$attempts"); do
+            live=$(curl --fail --silent --show-error --location \
+              "${base}data/meta.json?deploy=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${attempt}" |
+              python3 -c 'import json,sys; print(json.load(sys.stdin)["built_at"])' || true)
+            if [ "$live" = "$BUILT_AT" ]; then
+              echo "The public URL serves this deployment (data/meta.json built_at $live)."
+              echo "Deployed commit \`$COMMIT\` (\`built_at\` $BUILT_AT) to $base." >> "$GITHUB_STEP_SUMMARY"
+              break
+            fi
+            if [ "$attempt" -eq "$attempts" ]; then
+              echo "::error::The public URL does not serve this deployment: its data/meta.json says built_at ${live:-?}, not $BUILT_AT."
+              exit 1
+            fi
+            echo "data/meta.json says built_at ${live:-?}, not $BUILT_AT yet (attempt $attempt of $attempts)."
+            sleep "${VERIFY_SLEEP:-10}"
           done
           echo "Public site smoke checks passed."

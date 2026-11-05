@@ -42,8 +42,9 @@ data/curated/*.yaml ─────────────────┤ build
 | `analysis/ep_margin.py` | Vote margin relative to the legally applicable majority |
 | `analysis/council_qmv.py` | Council QMV/unanimity arithmetic |
 | `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds |
-| `build.py` | Joins everything by official identifiers → `public/data/**` per `src/types/data.ts` |
-| `validate.py` | Schema + invariants (ballot totals, referential integrity, legal-type rules); on a build, the claims in `public/data` against the rules and the files' own dates |
+| `build.py` | Joins everything by official identifiers → `public/data/**` per `src/types/data.ts`; `--strict` (`EU_INTEL_STRICT=1`) fails when it had to work around a problem |
+| `freshness.py` | How old each source's data may get before the site and the Data health issue call it stale; the core sources behind `core_data_at`; when the Legislative Train's "blocked" stops being shown |
+| `validate.py` | Schema + invariants (ballot totals, referential integrity, legal-type rules); on a build, the claims in `public/data` against the rules and the files' own records, and the contract (`contract.py`: the built JSON against `src/types/data.ts`). Errors fail; warnings are by design (not counted), integrity (fail unless `validate_baseline.json` accepts the finding) or backlog |
 
 ### Identifiers and linking
 
@@ -110,13 +111,19 @@ the UI; every institutional fact on a page has a reachable origin.
 
 ## Operations
 
-- `ci.yml`: lint, Python tests, validate, build data, validate the built data, typecheck (app and e2e tests),
-  vitest, build site, privacy check; then a Playwright e2e and accessibility job on the built site (runs by
-  default; a manual run can skip it). It also runs, without deploying, after each refresh that was not cancelled.
-- `pages.yml`: deploy to GitHub Pages once CI has passed on a push to `main`, after a successful refresh, or on
-  manual dispatch (validate, build data, validate the built data, check its dated wording, build site).
-- `refresh.yml`: scheduled weekly `fetch` (incremental; a manual run can do a full refresh) → `validate` → build
-  and record activity → `validate --built` → commit snapshot.
+- `ci.yml` (pushes to `main`, pull requests, manual runs): lint, typecheck (app and e2e tests); Python tests, data
+  build, vitest, site build and a Playwright e2e and accessibility job in three engines on the frozen test data
+  (`tests/frozen-data.txt`; a manual run can skip e2e); the data gate on the commit's own data (validate, strict build,
+  `validate --built`, the dated-wording check, site build, privacy check, size check). It does not run after a refresh.
+- `pages.yml`: deploy to GitHub Pages once CI has passed on a push to `main`, when a refresh calls it with the commit
+  it pushed, or on manual dispatch, after running the data gate again on the commit it deploys.
+- `refresh.yml`: twice on Mondays (a scheduled run is skipped if data was committed in the last 20 hours): `fetch`
+  (incremental, each record re-read at least every 8 weeks; a full refresh in the first week of each month or by hand) →
+  `validate` per source → the data gate, recording activity → commit snapshot and state → deploy that commit, if CI
+  has passed on its code.
+- `watchdog.yml`: after each refresh and each CI run on `main`, and daily, opens, updates or closes the "Data health"
+  issue (failed or stale sources, a failed refresh, red CI on `main`, live data more than 8 days old, the repository
+  past 750 MB).
 
 ## Future analytics (not implemented)
 

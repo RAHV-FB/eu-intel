@@ -109,3 +109,17 @@ test('stops showing the Legislative Train’s “blocked” as current once its 
   await expect(page.locator('.hl__badge', { hasText: 'Officially blocked' })).toHaveCount(0);
   await expect(page.locator('.fcard .badge--alert')).toHaveCount(0);
 });
+
+test('does not say that no file is blocked when it cannot read the Legislative Train’s classifications', async ({ page, guard }) => {
+  // without meta.json the page cannot tell whether its copy of the Train is current: it shows no file as blocked and
+  // says why, instead of "No file is officially reported as blocked" (15 were on 5 November 2026)
+  guard.ignore(/meta\.json|Failed to load resource|net::ERR_FAILED/);
+  await page.route('**/data/meta.json', (route) => route.abort());
+  await open(page, 'legislation/?blocked=1');
+  const note = 'The Legislative Train Schedule’s classifications could not be loaded, so no file is shown as officially blocked.';
+  await expect(page.locator('main .callout')).toContainText(note);
+  await expect(page.locator('main')).not.toContainText('No file is officially reported as blocked');
+  await open(page, 'legislation/');
+  await expect(page.locator('main')).not.toContainText('No file is officially reported as blocked');
+  await expect(page.locator('main')).toContainText(note);
+});

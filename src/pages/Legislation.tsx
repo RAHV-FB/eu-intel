@@ -102,6 +102,12 @@ export default function Legislation() {
   const trainCurrent = !!train?.current;
   const rows = useMemo(() => asShownNow(index.data ?? [], trainCurrent), [index.data, trainCurrent]);
   const trainExpired = !!train && !trainCurrent;
+  // until meta.json is read (or when it cannot be), whether the Train's copy is current is not known: no file is shown as
+  // blocked, and the page says why instead of saying that none is
+  const trainUnknown = !meta.data;
+  const trainUnknownText = meta.error
+    ? 'The Legislative Train Schedule’s classifications could not be loaded, so no file is shown as officially blocked.'
+    : 'Loading the Legislative Train Schedule’s classifications…';
   // the words of each file, for the keyword box until the search index is loaded: only once there is a query
   const haystacks = useMemo(() => (hasQuery ? buildHaystacksOnce(rows) : new Map<string, Haystack>()), [rows, hasQuery]);
 
@@ -375,6 +381,8 @@ export default function Legislation() {
                         <>As recorded by the European Parliament’s Legislative Train Schedule ({asRetrieved(train)}).</>
                       ) : train ? (
                         <>Not shown: {expiredReason(train)}.</>
+                      ) : trainUnknown ? (
+                        trainUnknownText
                       ) : null}
                     </span>
                   </>
@@ -383,6 +391,8 @@ export default function Legislation() {
                     The files the European Parliament’s Legislative Train Schedule reports as blocked are not shown:{' '}
                     {expiredReason(train)}.
                   </span>
+                ) : trainUnknown ? (
+                  <span className="meta">{trainUnknownText}</span>
                 ) : (
                   <span className="meta">
                     No file is officially reported as blocked in the current data (source: the European Parliament’s Legislative
@@ -484,6 +494,18 @@ export default function Legislation() {
                 </li>
               )}
             </ul>
+          )}
+
+          {trainUnknown && (state.blocked || state.sort === 'blocked') && (
+            <p className="callout lx-sortnote" role="status">
+              {trainUnknownText}{' '}
+              {meta.error && (
+                <>
+                  See the{' '}
+                  <ExtLink href="https://www.europarl.europa.eu/legislative-train/">Legislative Train Schedule</ExtLink>.
+                </>
+              )}
+            </p>
           )}
 
           {trainExpired && (state.blocked || state.sort === 'blocked') && (

@@ -10,7 +10,8 @@ so that nobody reads a gap as a fact about EU law.
   Non-legislative procedures and acts (NLE, delegated and implementing acts, budget procedures) are out of
   scope, except a few files that Parliament classes as non-legislative (NLE) but whose act EUR-Lex records
   under the consultation or consent procedure: these are shown, labelled "Non-legislative act" (the About page
-  gives their number).
+  gives their number). A non-legislative act that EUR-Lex links to a legislative procedure that cannot have adopted
+  it is not shown (Council Decision (EU) 2020/2059 and 2020/3521(COD): `data/curated/act_links.yaml`).
 - **Parliament votes**: plenary votes from 18 July 2019 (9th and 10th terms). Votes on whole texts,
   resolutions, motions, final and negotiating-mandate votes and votes on entering negotiations are listed;
   how each MEP voted is shown only for those votes, not for amendments or split votes.
@@ -18,8 +19,9 @@ so that nobody reads a gap as a fact about EU law.
   Council's open-data datasets were discontinued in 2025 and its web pages are bot-protected).
 - **National implementation**: measures notified to the Commission and listed by EUR-Lex, and the
   Commission's infringement decisions. A notified measure is not proof of complete or correct transposition,
-  and the absence of one is not proof of non-compliance. The Single Market Scoreboard indicators could not be
-  retrieved (the host refuses scripted access) and are not shown.
+  and the absence of one is not proof of non-compliance. The Single Market Scoreboard indicators are not shown:
+  they are published only in embedded Power BI reports, not in a machine-readable form (the Scoreboard's HTML table
+  of overdue directives per Member State is not read yet).
 
 ## Known gaps
 
@@ -81,20 +83,33 @@ so that nobody reads a gap as a fact about EU law.
 - Links to committee documents on www.europarl.europa.eu could not be checked automatically (the site refuses
   scripted requests); a few may lead to pages that no longer exist.
 - Status labels and explanations are written when the data is built (weekly); sentences about dates that have
-  since passed are reworded on the reader's date, and the page notes when a status may be out of date.
+  since passed are reworded on the reader's date, and the page notes when a status may be out of date. Home and the
+  footer give the date to which procedures, votes and acts are current (the oldest last retrieval of their sources)
+  and name any source that is not up to date on the reader's date.
+- A publication or signature of the act that only Parliament's procedure record lists does not change a file's
+  status until the act is in our EUR-Lex data (a signature also counts once the act's adoption is recorded); the
+  status explanation says what Parliament's record lists. Parliament's records of the latest publications are
+  sometimes wrong and corrected within days (2023/0421(COD), "published" on 30 October 2026, an event since deleted).
 - The automated tests (layouts, keyboard use, axe-core accessibility rules) run in Chromium, Firefox and WebKit
   (Safari's engine) on Linux, not on real phones or tablets, and no screen reader has been used to test the site.
 - The EP Legislative Train's statuses are used only for its own "Blocked" classification and as a caveat when it
   reports a file as adopted before the official records do; its other statuses lag or lead the records. Its site
-  answers scripted requests with a bot challenge at times (HTTP 202): the refresh of 26 October 2026 kept the copy
-  of 22 October, and About marks its retrieval as failed until a later refresh succeeds.
+  answers requests from GitHub's runners, where the refresh runs, with a bot challenge (AWS WAF, HTTP 202): every
+  refresh since 26 October 2026 has kept the copy of 22 October. Until a refresh succeeds, About marks its retrieval
+  as failed; once the copy is older than 35 days, home and the footer name the source as not up to date, and once it
+  is older than 42 days no file is shown as officially blocked.
 - National parties appear once per parliamentary term (the source records them as separate bodies; a few have
   two records in one term).
 - The activity log starts with the first recorded scheduled refresh; earlier changes are shown from the
-  snapshot's own dates, without a detection date.
+  snapshot's own dates, without a detection date. A status change cites the record that gave the status; those
+  recorded by the refreshes of 2 and 5 November 2026 cite the Legislative Observatory's procedure file once the
+  file's status has changed again. An item is withdrawn from the feeds and the file's page once the current records
+  no longer support it: its record deleted or re-dated at source, its act no longer linked to the file, or a reported
+  adoption or later stage that the file's status has fallen back from. Feed readers may keep their copy.
 
 ## Next steps
 
+- The ordered plan of November 2026 (trust, autonomy, value, reach) is in `docs/ASSESSMENT_2026-11.md`, section 5.
 - Editorial summaries for more files (each reviewed against the act and its sources, see `docs/EDITORIAL.md`).
 - More checked date corrections for amended acts, starting with featured files.
 - Smaller vote files: individual ballots as compact arrays keyed by MEP id (the published site is about

@@ -333,9 +333,9 @@ export default function About() {
                 procedure that no voting-result document records is entered from the Council’s own communication on the outcome.
               </li>
               <li>
-                A few further entries of the same kind, such as a link between two acts that EUR-Lex records wrongly, Denmark’s decision
-                (notified to the Council) on a directive that builds on the Schengen acquis, and the status of a file whose act the
-                official records do not link to it.
+                A few further entries of the same kind, such as a link between two acts, or between an act and a procedure, that EUR-Lex
+                records wrongly, Denmark’s decision (notified to the Council) on a directive that builds on the Schengen acquis, and the
+                status of a file whose act the official records do not link to it.
               </li>
             </ul>
             <p>
@@ -437,7 +437,7 @@ export default function About() {
             <li>
               {hasIndicators
                 ? 'Published indicators are shown with their period, definition and source.'
-                : 'Country indicators (Single Market Scoreboard) could not be retrieved for this release, so none are shown.'}{' '}
+                : 'Country indicators (Single Market Scoreboard) are not published in a machine-readable form, so none are shown.'}{' '}
               We never combine different measures into a single score or ranking.
             </li>
           </ul>
@@ -459,8 +459,8 @@ export default function About() {
               Our membership and voting data covers the parliamentary terms listed under coverage; earlier periods are not fully included.
             </li>
             <li>
-              The data is refreshed about once a week; a refresh can be late or skipped. The date of the last refresh is shown on the
-              homepage and in the footer. The site is not a live feed.
+              The data is refreshed about once a week; a refresh can be late or skipped. The homepage and the footer give the date to
+              which procedures, votes and acts are current, and name any source that is not up to date. The site is not a live feed.
             </li>
           </ul>
           <p>

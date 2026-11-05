@@ -45,12 +45,12 @@ npm run dev                      # http://localhost:5173/
 `python -m pipeline fetch [source …]` refreshes `data/snapshot/` from the official APIs (network; slow; polite
 rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation optouts train`. A source
 that fails keeps its previous files; `data/snapshot/_manifest.json` records each source's status and last
-successful fetch. You rarely need this locally: the snapshot is committed and refreshed weekly by CI. The weekly
-refresh is incremental for EP procedures, EP votes and the Legislative Train: new, open and recently changed
-records are read again, and the others are reused, except for a weekly share of them that is read again on a
-rotation (every record at least every 8 weeks; Train files every 4). `EU_INTEL_FULL_REFRESH=1`, or a change of a
-source's `PARSER_VERSION`, re-reads every record (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "What a weekly run
-re-reads").
+successful fetch. You rarely need this locally: the snapshot is committed and refreshed weekly by the *Data refresh*
+workflow (below). The weekly refresh is incremental for EP procedures, EP votes and the Legislative Train: new, open
+and recently changed records are read again, and the others are reused, except for a weekly share of them that is
+read again on a rotation (every record at least every 8 weeks; Train files every 4). `EU_INTEL_FULL_REFRESH=1`, or a
+change of a source's `PARSER_VERSION`, re-reads every record (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "What a
+weekly run re-reads").
 
 ## Checks
 
@@ -58,7 +58,7 @@ re-reads").
 | --- | --- |
 | `ruff check .` | Python lint |
 | `pytest` | Offline unit tests (network tests are deselected; run them with `pytest -m network`) |
-| `python -m pipeline validate` | Snapshot schema and invariants, and that no file is missing or emptied (against the manifest's record counts and minimum counts); once built, the claims in `public/data` against the rules and the files' own records (an act on two files, a file past adoption without Parliament's position, an adoption date on a file shown before adoption, a transposition deadline before its act, …). `--built` fails if there is no build, if it is incomplete (a missing or unreadable file, an empty list, a count of zero), or if it does not match `src/types/data.ts` (keys, nulls, types, enums; `pipeline/contract.py`). Warnings are by design (printed as INFO, not counted), integrity or backlog: it fails when an integrity class has more findings than `pipeline/validate_baseline.json` records (`--built --update-baseline` rewrites it once they are checked) |
+| `python -m pipeline validate` | Snapshot schema and invariants, and that no file is missing or emptied (against the manifest's record counts and minimum counts); once built, the claims in `public/data` against the rules and the files' own records (an act on two files, a file past adoption without Parliament's position, an adoption date on a file shown before adoption, a transposition deadline before its act, …). `--built` fails if there is no build, if it is incomplete (a missing or unreadable file, an empty list, a count of zero), or if it does not match `src/types/data.ts` (keys, nulls, types, enums; `pipeline/contract.py`, also for detail files no index lists). Warnings are by design (printed as INFO, not counted), integrity or backlog: it fails on any integrity finding that `pipeline/validate_baseline.json` does not accept, whatever the count (`--built --update-baseline` rewrites it once they are checked; it refuses while there are errors) |
 | `python -m pipeline build --strict` | Also `EU_INTEL_STRICT=1`: fails, listing every problem at the end, when the build had to work around one (an analysis module or function that did not load, a curated file or entry not applied, a status that fell back, a vote margin or Council assessment that failed) |
 | `npm run typecheck` · `npx vitest run` | TypeScript types · frontend unit tests |
 | `BASE_PATH=/eu-intel/ npm run build` | Production build under the Pages subpath, with prerendered route shells |
@@ -107,14 +107,15 @@ data/snapshot/       committed, normalized source data (diff-friendly JSON) + _m
 data/curated/        editorial YAML: featured files, topics, search aliases, checked corrections of act dates
                      (act_dates.yaml), amendment links (act_relations.yaml), transposition deadlines
                      (transposition.yaml), Denmark's Schengen decisions (denmark_schengen.yaml), Council
-                     adoption dates (council_dates.yaml), Council voting records (council_votes.yaml) and acts
-                     named but not officially linked (unlinked_acts.yaml)
+                     adoption dates (council_dates.yaml), Council voting records (council_votes.yaml), acts
+                     named but not officially linked (unlinked_acts.yaml) and procedure links that the act's
+                     own text rules out (act_links.yaml)
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
 src/                 React app: pages/, features/ (one folder per area, insights/ included), components/, lib/,
                      types/data.ts (public data contract)
 scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py, test-frozen.sh
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
-docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap
+docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap, assessment
 .github/workflows/   ci.yml, pages.yml, refresh.yml, watchdog.yml
 ```
 

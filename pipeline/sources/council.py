@@ -1078,9 +1078,24 @@ def _act_type(title: str) -> str | None:
 
 
 # =============================================================== fetch
+# Cellar's SPARQL replicas do not all answer this query alike: on 5 Nov 2026 the same query listed 823 notes, then 822
+# without ST 14946/26 (2023/0134(COD), adopted 26 Oct 2026, in Cellar since 27 Oct), which two snapshots in a row missed
+# while the source reported "ok". The listing is the union of several passes; a note known from an earlier run that no
+# pass lists is kept (fetch), so one replica's gap neither hides a new vote for long nor drops an old one.
+LISTING_PASSES = 3
+# A listing below this share of the notes known from earlier runs is taken as truncated: the snapshot is kept.
+MIN_LISTED_SHARE = 0.9
+
+
 def list_versions(http: Http) -> dict[str, list[DocVersion]]:
     # Include notes dated slightly before MIN_VOTE_DATE (corrigenda refer back); filtered by vote date later.
-    rows = http.sparql(SPARQL_VOTING_RESULTS % {"min_date": "2018-12-01"}, use_cache=False)
+    rows: list[dict[str, str]] = []
+    seen: set[tuple[tuple[str, str], ...]] = set()
+    for _ in range(LISTING_PASSES):
+        for r in http.sparql(SPARQL_VOTING_RESULTS % {"min_date": "2018-12-01"}, use_cache=False):
+            if (key := tuple(sorted(r.items()))) not in seen:
+                seen.add(key)
+                rows.append(r)
     return _versions_from_rows(rows)
 
 
@@ -1215,7 +1230,7 @@ def fetch(http: Http) -> SourceStatus:
     bases = sorted(groups)
     prev_states = {st.id: st for st in read_records(SOURCE_ID, "notes", CouncilNoteState)}
     prev_votes = {v.id: v for v in read_records(SOURCE_ID, "votes", CouncilVote)}
-    if prev_states and len(bases) < 0.9 * len(prev_states):
+    if prev_states and len(bases) < MIN_LISTED_SHARE * len(prev_states):
         # A truncated Cellar answer must not shrink the snapshot.
         return SourceStatus(
             source=SOURCE_ID,
@@ -1252,6 +1267,16 @@ def fetch(http: Http) -> SourceStatus:
             if i % 100 == 0:
                 log.info("council: %d/%d notes processed (%d unchanged, reused)", i, len(bases), reused)
 
+    # notes known from earlier runs that no listing pass returned this time: kept as they were (list_versions)
+    unlisted = sorted(set(prev_states) - set(groups))
+    for base in unlisted:
+        st = prev_states[base]
+        states.append(st)
+        if st.vote_id and (pv := prev_votes.get(st.vote_id)) is not None:
+            votes.append(pv)
+    if unlisted:
+        log.warning("council: %d known notes not listed by Cellar this run, kept: %s", len(unlisted), unlisted[:10])
+
     if not votes:
         return SourceStatus(
             source=SOURCE_ID,
@@ -1277,6 +1302,7 @@ def fetch(http: Http) -> SourceStatus:
             if deferred
             else ""
         )
+        + (f". {len(unlisted)} notes known from earlier runs not listed by Cellar this run, kept" if unlisted else "")
         + ". The Council's open-data datasets were discontinued (2025) and its web voting-results pages "
         "are bot-protected."
     )

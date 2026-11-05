@@ -1772,6 +1772,49 @@ def apply_act_relations(acts: list[LegalAct], fixes: list[dict]) -> list[LegalAc
     return out
 
 
+# What an act_links.yaml entry must give: the act's citation of its legal basis, verbatim, starts with the formula of an
+# EU act's citations ("Having regard to the Treaty ...")
+ACT_LINK_FIELDS = ("celex", "procedure", "quote", "why", "cellar", "oeil", "reviewed")
+LEGAL_BASIS_CITATION_RE = re.compile(r"^Having regard to the Treaty\b.*\bArticle\b", re.S)
+
+
+def load_act_links(curated: Path = CURATED) -> dict[str, set[str]]:
+    """Procedure links that Cellar records for an act and that the act's own text rules out
+    (data/curated/act_links.yaml): CELEX -> the normalized procedure references to drop. An entry must name the act and
+    the procedure, quote verbatim the act's citation of its legal basis, say why the link is wrong, record what Cellar
+    and the Legislative Observatory hold, list the texts checked (https) and give a review date; otherwise it is skipped
+    whole and reported (a strict build fails)."""
+    out: dict[str, set[str]] = defaultdict(set)
+    for e in _curated_list("act_links.yaml", curated):
+        ok = isinstance(e, dict) and all(isinstance(e.get(k), str) and e[k].strip() for k in ACT_LINK_FIELDS)
+        srcs = e.get("sources") if isinstance(e, dict) else None
+        if not (
+            ok
+            and CELEX_RE.match(e["celex"])
+            and REF_RE.match(norm_ref(e["procedure"]))
+            and LEGAL_BASIS_CITATION_RE.match(_squash(e["quote"]))
+            and ISO_DATE_RE.match(e["reviewed"])
+            and isinstance(srcs, list) and srcs
+            and all(isinstance(x, dict) and isinstance(x.get("label"), str) and str(x.get("url") or "").startswith("https://")
+                    for x in srcs)
+        ):  # fmt: skip
+            _problem("curated act_links.yaml: malformed entry %r; ignored", e)
+            continue
+        out[e["celex"]].add(norm_ref(e["procedure"]))
+    return dict(out)
+
+
+def apply_act_links(acts: list[LegalAct], drop: dict[str, set[str]]) -> list[LegalAct]:
+    """The acts without the procedure links load_act_links drops (validate.py reports an entry Cellar no longer
+    matches): the act is not shown on that file, and a file that only the link gave (a file shown from its EUR-Lex
+    record only, Builder._stub_procedures) is not shown."""
+    out = []
+    for a in acts:
+        refs = [r for r in a.procedure_refs if norm_ref(r) not in drop.get(a.celex, set())]
+        out.append(a.model_copy(update={"procedure_refs": refs}) if refs != a.procedure_refs else a)
+    return out
+
+
 def act_date_source(e: dict, d: str) -> dict | None:
     """The text a curated act_dates entry cites for date d: the date's own source (e.g. the amending act
     that set it), else the entry's first source."""
@@ -2055,6 +2098,9 @@ class Builder:
         self.act_relations = load_act_relations(curated)
         if self.act_relations:  # amendment links checked against the amending act's text
             snap.acts = apply_act_relations(snap.acts, self.act_relations)
+        self.act_links = load_act_links(curated)
+        if self.act_links:  # procedure links that the act's own text rules out (2020/3521(COD), Decision (EU) 2020/2059)
+            snap.acts = apply_act_links(snap.acts, self.act_links)
         self.act_dates = load_act_dates(curated)
         if self.act_dates:
             snap.acts = [apply_act_dates(a, self.act_dates.get(a.celex)) for a in snap.acts]
@@ -3118,8 +3164,8 @@ class Builder:
         if not e or acts or r["status"].get("stage") not in ACTIVE_STAGES:
             return r
         if not any(x.kind == EventKind.ep_position and x.date == e["opinion"] for x in p.events):
-            log.warning("curated unlinked_acts.yaml: %s records no opinion of Parliament on %s; ignored", p.reference,
-                        e["opinion"])  # fmt: skip
+            _problem("curated unlinked_acts.yaml: %s records no opinion of Parliament on %s; ignored", p.reference,
+                     e["opinion"])  # fmt: skip
             return r
         opened = isinstance(e.get("initiative"), str) and any(
             x.kind == EventKind.proposal and e.get("document") in {d.id for d in x.docs} for x in p.events
@@ -3319,10 +3365,11 @@ class Builder:
         # aligned with them so the timeline and the Council vote cards cannot disagree.
         cvotes = [cv for cv in self.council_of.get(p.id, []) if cv["date"] <= self.today]
         position_dates = {cv["date"] for cv in cvotes if cv.get("vote_on") == "first_reading_position"}
-        act_adopted = any(  # the Council's vote on the act, or on its consent to an act Parliament adopts
-            cv["outcome"] == "adopted" and (cv.get("vote_on") == "act" or COUNCIL_CONSENT_RE.match(cv.get("stage") or ""))
-            for cv in cvotes
-        )
+        adoption_votes = sorted(  # the Council's votes on the act, or on its consent to an act Parliament adopts
+            cv["date"] for cv in cvotes
+            if cv["outcome"] == "adopted" and (cv.get("vote_on") == "act" or COUNCIL_CONSENT_RE.match(cv.get("stage") or ""))
+        )  # fmt: skip
+        act_adopted = bool(adoption_votes)
         # A Council act bears the date of its adoption; OEIL's Council step is shown on that date when they differ
         # (2024/0016(CNS): OEIL 17 July 2024, Council Regulation (EU) 2024/1732 of 17 June 2024, published 19 June)
         adopts = _lazy("pipeline.analysis.status", "parliament_adopts")
@@ -3345,7 +3392,8 @@ class Builder:
         # position of Parliament and no Council adoption; the EP later deleted it). The snapshot labels the EP's
         # publication record "EUR-Lex" (sources.ep_procedures.ACTIVITY_INSTITUTION), which has no such record then
         confirm = _lazy("pipeline.analysis.status", "unconfirmed_final_steps")
-        unconfirmed = {e.id for e in confirm(p.events, acts, act_adopted)} if confirm else set()
+        past = [e for e in p.events if e.date <= self.today]  # as the status reads them
+        unconfirmed = {e.id for e in confirm(past, acts, adoption_votes)} if confirm else set()
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
         # (kind, date, title, detail) -> the day's steps so far: position in `out`, documents other than the sitting's
@@ -3496,6 +3544,9 @@ class Builder:
                 "id": e.id, "date": when, "kind": kind, "title": title, "detail": detail,
                 "institution": inst, "state": "done", "key": key,
                 "docs": [d.model_dump(mode="json") for d in e.docs], "source": src, "vote_id": vote_id,
+                # the EP's record of a publication or signature that nothing confirms: shown as its record, and not the
+                # file's latest step (last_event, latest_event; status._stall)
+                **({"unconfirmed": True} if e.id in unconfirmed else {}),
             })  # fmt: skip
             same.append((len(out) - 1, papers))
             seen.add((kind, when))
@@ -4129,7 +4180,7 @@ class Builder:
         docs = sorted(a.date_document for a in acts if a.date_document and a.date_document <= t)
         # not the EP's records of a signature or publication that nothing confirms (status.unconfirmed_final_steps)
         confirm = _lazy("pipeline.analysis.status", "unconfirmed_final_steps")
-        unconfirmed = {e.id for e in confirm(p.events, acts)} if confirm else set()
+        unconfirmed = {e.id for e in confirm([e for e in p.events if e.date <= t], acts)} if confirm else set()
         sigs = sorted(e.date for e in p.events if e.kind == EventKind.signature and e.date <= t and e.id not in unconfirmed)
         pubs = sorted(a.date_publication for a in acts if a.date_publication and a.date_publication <= t)
         pubs = pubs or sorted(e.date for e in p.events if e.kind == EventKind.publication and e.date <= t
@@ -4155,7 +4206,7 @@ class Builder:
         act is one of the file's."""
         e = self.council_dates.get(norm_ref(p.reference))
         if e and not any(a.celex == e["celex"] for a in self.acts_of.get(p.id, [])):
-            log.warning("curated council_dates.yaml: %s is not an act of %s; ignored", e["celex"], p.reference)
+            _problem("curated council_dates.yaml: %s is not an act of %s; ignored", e["celex"], p.reference)
             return None
         return e
 
@@ -4260,7 +4311,11 @@ class Builder:
             st = self.classify(p)
             tl = mark_after_end_of_validity(self.joint_debates(p, self.timeline(p, acts, votes)), acts)
             cur = self.curated_of.get(pid)
-            done = [e for e in tl if e["state"] == "done" and not e.get("after_end_of_validity")]
+            # the latest recorded step: not one recorded after the act's validity ended, nor the EP's record of a
+            # publication or signature that nothing confirms (2023/0421(COD), 2 Nov 2026: its deleted record of 30
+            # October put the file under examination since 2023 at the top of home's "Under discussion")
+            done = [e for e in tl if e["state"] == "done" and not e.get("after_end_of_validity")
+                    and not e.get("unconfirmed")]  # fmt: skip
             instrument = None
             for a in acts:
                 if a.act_type != "other":
@@ -4832,13 +4887,13 @@ class Builder:
         # as recorded, citing the record that gave a status, without what the current records no longer support
         recorded = activity.update_state(self, self.state_dir, record=record)
         recorded = activity.supported(activity.recited(recorded, self), self)
-        items = activity.merge(recorded, snapshot, today=self.today)
+        items = [activity.public_item(it) for it in activity.merge(recorded, snapshot, today=self.today, b=self)]
         self.activity_items = items
         self.files["activity.json"] = items
         by_dossier: dict[str, list[dict]] = defaultdict(list)
         for it in recorded:
             if it.get("dossier_id"):
-                by_dossier[it["dossier_id"]].append(it)
+                by_dossier[it["dossier_id"]].append(activity.public_item(it))
         for pid, its in by_dossier.items():
             if pid in self.dossier_detail:
                 self.dossier_detail[pid]["changes"] = sorted(
@@ -4851,7 +4906,7 @@ class Builder:
     def latest_event(self, pid: str) -> dict | None:
         """The latest recorded step, as the dossier page shows it ("Latest recorded step")."""
         done = [e for e in self.dossier_detail[pid]["timeline"] if e["state"] == "done" and e["date"] <= self.today
-                and not e.get("after_end_of_validity")]  # fmt: skip
+                and not e.get("after_end_of_validity") and not e.get("unconfirmed")]  # fmt: skip
         return done[-1] if done else None
 
     def undated_amendments_note(self, pid: str) -> str | None:
@@ -5120,8 +5175,12 @@ class Builder:
         fetched = [m[sid].fetched_at for sid in SOURCES if sid in m and m[sid].fetched_at]
         scope = self.coverage_scope()
         notes = self.coverage_notes(scope)
+        commit = os.environ.get("EU_INTEL_COMMIT", "")
         self.files["meta.json"] = {
             "built_at": os.environ.get("EU_INTEL_BUILT_AT") or now_iso(),
+            # the commit the site was built from: set by the deploy (pages.yml), so that the live site says which data
+            # and code it serves, whichever way it was deployed (docs/DEPLOYMENT.md, rolling back); null in other builds
+            "commit": commit if re.fullmatch(r"[0-9a-f]{40}", commit) else None,
             # the latest successful retrieval of any listed source: it identifies the snapshot (docs/DEPLOYMENT.md,
             # restoring data), but says nothing of the sources retrieved earlier
             "snapshot_at": max(fetched) if fetched else None,
@@ -5236,7 +5295,10 @@ class Builder:
                        f"directives ({with_m:,} with at least one measure) and {len(s.infringements):,} "
                        "infringement cases.")  # fmt: skip
             if not s.indicators:
-                out.append("Country indicators (Single Market Scoreboard) could not be retrieved.")
+                # Its host answers scripted requests again since 2 Nov 2026, but the indicators are published only in
+                # embedded Power BI reports (pipeline/sources/implementation.py), so none are read
+                out.append("Country indicators (Single Market Scoreboard) are not published in a machine-readable form, "
+                           "so none are shown.")  # fmt: skip
         elif sid == "optouts":
             read = list(self.optouts.values())
 
@@ -5565,7 +5627,7 @@ def build_search_docs(b: Builder) -> list[dict]:
     for rule in b.alias_rules:
         terms = _as_list(rule.get("terms"))
         targets = [_norm_key(t) for t in _as_list(rule.get("expands_to")) if _norm_key(t)]
-        if not terms or not targets:
+        if not terms or not targets:  # a per-file name entry ({procedure, names}): not a rule
             continue
         hits = []
         for doc, names, idk in match_keys:
@@ -5579,7 +5641,8 @@ def build_search_docs(b: Builder) -> list[dict]:
                 add = [w for t in terms for w in [re.sub(r"\s+", "-", t.strip())] if w and w not in have]
                 doc["x"] = " ".join([*(doc.get("x") or "").split(), *add]).strip() or None
         elif hits:
-            log.warning("alias rule %s matches %d documents; not embedded", terms[:1], len(hits))
+            _problem("curated aliases.yaml: rule %s matches %d documents (more than %d); not embedded", terms[:1],
+                     len(hits), ALIAS_RULE_MAX_DOCS)  # fmt: skip
     # country names as on the MEP and party pages, the former member state included ("United Kingdom")
     country_name = {**MEMBER_STATES, **FORMER_MEMBER_STATES}
     for m in sorted(b.mep_summary.values(), key=lambda m: m["id"]):

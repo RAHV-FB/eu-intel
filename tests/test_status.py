@@ -1011,7 +1011,9 @@ def test_a_publication_only_the_ep_records_does_not_make_the_file_published():
         "October 2026, but no act published under this procedure is recorded in our EUR-Lex data."
     )
     assert s.next_step.text == "Parliament's responsible committee prepares and votes on its report."
-    assert s.stall is not None and s.stall.last_event_date == "2026-10-30"  # the EP did record a step that day
+    # nor is the EP's record the file's latest step: the stall counts from the referral, not from 30 October ("No
+    # recorded procedural update in 3 days" on 2 Nov, from a record the EP deleted)
+    assert s.stall is not None and s.stall.last_event_date == "2023-12-14"
 
 
 def test_a_signature_needs_a_recorded_adoption_or_act():
@@ -1057,3 +1059,22 @@ def test_the_eps_final_act_steps_count_once_the_act_is_linked():
     s = classify(p, [act], [], date(2026, 11, 2))
     assert (s.stage, s.label, s.since) == ("published", "Published in the Official Journal", "2026-10-30")
     assert "European Parliament's procedure record" not in s.explanation
+
+
+def test_a_signature_is_not_confirmed_by_an_adoption_weeks_after_it():
+    """The EP's record of a signature is confirmed by the act's adoption on or before it, or a few days after (the
+    EP and OEIL date 2017/0329(COD)'s signature 11 April 2018, the day before the Council adopted the act). An adoption
+    recorded weeks later is another decision: the signature it "confirmed" made the file "Signed, awaiting publication"
+    since a day before the act was adopted."""
+    from pipeline.analysis.status import unconfirmed_final_steps
+
+    ep_pos = _ep_step("ep_position", "2026-09-16", "PLENARY_ADOPT_POSITION", "Parliament took its decision")
+    sig = _ep_step(SIGNED[0], "2026-10-01", SIGNED[1], SIGNED[2])
+    late = _event("council_adoption", "2026-12-01", "oeil:Act adopted by Council after Parliament's 1st reading",
+                  "Council adopted the act", "Council")  # fmt: skip
+    day_after = late.model_copy(update={"date": "2026-10-02"})
+    assert unconfirmed_final_steps([ep_pos, sig, late], []) == [sig]
+    assert unconfirmed_final_steps([ep_pos, sig, day_after], []) == []
+    assert unconfirmed_final_steps([ep_pos, sig], [], council_adoptions=["2026-10-01"]) == []  # the Council's vote
+    s = classify(_ep_file(ep_pos, sig, late, stage_raw=None), [], [], date(2026, 12, 2))
+    assert (s.stage, s.label, s.since) == ("adopted", "Adopted by Parliament and Council", "2026-12-01")

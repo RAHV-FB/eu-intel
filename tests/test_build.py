@@ -404,6 +404,18 @@ def test_snapshot_time_comes_from_a_listed_source(tmp_path: Path):
         assert set(json.loads(real.read_text(encoding="utf-8"))) <= set(SOURCES)
 
 
+def test_meta_names_the_commit_the_deploy_built(tmp_path, monkeypatch):
+    # a refresh's deploy is recorded by GitHub under the commit the refresh started from: the site itself says which
+    # commit it was built from (EU_INTEL_COMMIT, set by pages.yml); a local or CI build says none
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    sha = "9aba2533d8d17c20b97a845fb2a5072b97d92d3c"
+    for value, expected in [(sha, sha), ("", None), ("main; rm -rf /", None)]:
+        monkeypatch.setenv("EU_INTEL_COMMIT", value)
+        out = tmp_path / f"public-{expected}"
+        build(out=out, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state", today=TODAY)
+        assert load(out, "meta.json")["commit"] == expected
+
+
 def test_meta_scope_and_plain_source_summaries(out: Path):
     meta = load(out, "meta.json")
     scope = meta["scope"]
@@ -2171,3 +2183,104 @@ def test_build_strict_flag(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(B, "build", lambda **kw: seen.append(kw.get("strict")) or 0)
     assert cli.main(["build", "--strict"]) == 0 and cli.main(["build"]) == 0
     assert seen == [True, None]  # None: EU_INTEL_STRICT decides
+
+
+# ------------------------------------------------------------------------------ audit of #17: curated links, strictness
+ACT_LINK = {
+    "celex": "32099D3521", "procedure": "2099/3521(COD)",
+    "quote": "Having regard to the Treaty on the Functioning of the European Union, and in particular the first "
+             "subparagraph of Article 207(4), in conjunction with Article 218(9) thereof,",
+    "why": "A decision under Article 218(9) TFEU is adopted by the Council alone: no ordinary legislative procedure.",
+    "cellar": "Cellar records the act in a dossier 2099/3521/COD.", "oeil": "OEIL: HTTP 404.",
+    "sources": [{"label": "The act (EUR-Lex)", "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32099D3521"}],
+    "reviewed": "2026-11-05",
+}  # fmt: skip
+
+
+def _with_act_link(snap: Path) -> None:
+    """The fixture with a Council decision that EUR-Lex links to 2099/3521(COD), a procedure the EP does not have."""
+    acts = json.loads((snap / "eurlex" / "acts.json").read_text(encoding="utf-8"))
+    acts.append({**acts[0], "celex": "32099D3521", "act_type": "decision", "procedure_refs": ["2099/3521(COD)"],
+                 "title": "Council Decision (EU) 2099/3521 on the position to be taken on behalf of the Union",
+                 "eurlex_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32099D3521"})  # fmt: skip
+    (snap / "eurlex" / "acts.json").write_text(json.dumps(acts), encoding="utf-8")
+
+
+def test_a_procedure_link_that_the_acts_text_rules_out_is_dropped(tmp_path: Path):
+    """2020/3521(COD): Cellar tags Council Decision (EU) 2020/2059 ("Having regard to ... Article 207(4), in
+    conjunction with Article 218(9)") with an ordinary legislative procedure that OEIL does not have; the site showed it
+    as a file of its own, "Ordinary legislative procedure", "In force". data/curated/act_links.yaml drops the link,
+    and so the file; a malformed entry is not applied and fails a strict build."""
+    import yaml
+
+    from pipeline import build as B
+
+    snap, curated = tmp_path / "snapshot", tmp_path / "curated"
+    shutil.copytree(FIX / "snapshot", snap)
+    shutil.copytree(FIX / "curated", curated)
+    _with_act_link(snap)
+    assert build(out=tmp_path / "a", snapshot=snap, curated=curated, state=tmp_path / "sa", today=TODAY, strict=True) == 0
+    assert (tmp_path / "a" / "dossiers" / "2099-3521.json").exists()  # shown from its EUR-Lex record only
+    (curated / "act_links.yaml").write_text(yaml.safe_dump([ACT_LINK]), encoding="utf-8")
+    assert build(out=tmp_path / "b", snapshot=snap, curated=curated, state=tmp_path / "sb", today=TODAY, strict=True) == 0
+    assert not (tmp_path / "b" / "dossiers" / "2099-3521.json").exists()
+    assert "2099-3521" not in {d["id"] for d in load(tmp_path / "b", "dossiers/index.json")}
+    for broken in ({k: v for k, v in ACT_LINK.items() if k != "quote"}, {**ACT_LINK, "quote": "Article 218(9) TFEU"},
+                   {**ACT_LINK, "sources": [{"label": "x", "url": "http://eur-lex.europa.eu"}]}):  # fmt: skip
+        (curated / "act_links.yaml").write_text(yaml.safe_dump([broken]), encoding="utf-8")
+        assert build(out=tmp_path / "c", snapshot=snap, curated=curated, state=tmp_path / "sc", today=TODAY,
+                     strict=True) == 1  # fmt: skip
+        assert B.PROBLEMS and B.PROBLEMS[0].startswith("curated act_links.yaml: malformed entry")
+    B.PROBLEMS.clear()
+    assert B.load_act_links() == {"32020D2059": {"2020/3521(COD)"}} and B.PROBLEMS == []  # the committed entry
+
+
+def test_a_curated_entry_the_build_cannot_apply_fails_a_strict_build():
+    """A council_dates.yaml entry whose act is not the file's (reproduced: 2022/0051's entry pointing at 32024R1717,
+    another file's act) was ignored with a log line only: `build --strict` said "every curated entry applied" and the
+    CSDDD's Council adoption moved from 24 to 23 May 2024. Likewise an unlinked_acts.yaml entry whose opinion date the
+    file does not record."""
+    from types import SimpleNamespace
+
+    from pipeline import build as B
+    from pipeline.build import Builder
+
+    B.PROBLEMS.clear()
+    me = SimpleNamespace(council_dates={"2022/0051(COD)": {"procedure": "2022/0051(COD)", "celex": "32024R1717",
+                                                           "date": "2024-05-24"}},
+                         acts_of={"2022-0051": [SimpleNamespace(celex="32024L1760")]})  # fmt: skip
+    assert Builder.checked_council_date(me, SimpleNamespace(id="2022-0051", reference="2022/0051(COD)")) is None  # type: ignore[arg-type]
+    assert B.PROBLEMS == ["curated council_dates.yaml: 32024R1717 is not an act of 2022/0051(COD); ignored"]
+    B.PROBLEMS.clear()
+    me = SimpleNamespace(unlinked_acts={"2025/0806(CNS)": {"opinion": "2025-11-26"}})
+    r = {"status": {"stage": "parliament_position"}}
+    p = SimpleNamespace(id="2025-0806", reference="2025/0806(CNS)", events=[])
+    assert Builder.unlinked_act_status(me, p, [], r) is r  # type: ignore[arg-type]
+    assert B.PROBLEMS == ["curated unlinked_acts.yaml: 2025/0806(CNS) records no opinion of Parliament on 2025-11-26; "
+                          "ignored"]  # fmt: skip
+    B.PROBLEMS.clear()
+
+
+def test_an_unconfirmed_ep_record_is_not_the_files_latest_step(tmp_path: Path):
+    """2023/0421(COD), 2 Nov 2026: its record of a publication on 30 October, with no act behind it (the EP deleted it
+    later), was shown as "The European Parliament's record lists the final act as published …" and still dated the
+    file: last_event, so first in home's "Under discussion" (a proposal under examination since 2023), and the stall
+    ("No recorded procedural update in 3 days"). The step says it is unconfirmed, and dates nothing."""
+    snap = tmp_path / "snapshot"
+    shutil.copytree(FIX / "snapshot", snap)
+    procs = json.loads((snap / "ep_procedures" / "procedures.json").read_text(encoding="utf-8"))
+    p = next(x for x in procs if x["id"] == "2099-0002")  # a consultation file: its proposal only, no act
+    p["events"].append({**p["events"][0], "id": "2099-0002-PUB-2026-10-20", "date": "2026-10-20", "kind": "publication",
+                        "raw_type": "def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL", "institution": "EUR-Lex",
+                        "title": "Final act published in the Official Journal", "docs": []})  # fmt: skip
+    (snap / "ep_procedures" / "procedures.json").write_text(json.dumps(procs), encoding="utf-8")
+    out = tmp_path / "public"
+    assert build(out=out, snapshot=snap, curated=FIX / "curated", state=tmp_path / "state", today=TODAY, strict=True) == 0
+    d = load(out, "dossiers/2099-0002.json")
+    step = next(e for e in d["timeline"] if e["id"] == "2099-0002-PUB-2026-10-20")
+    assert (step["kind"], step["unconfirmed"], step["key"]) == ("other", True, False)
+    assert all("unconfirmed" not in e for e in d["timeline"] if e is not step)
+    assert d["last_event"] == "2020-02-01" and d["stall"]["last_event_date"] == "2020-02-01"
+    home = load(out, "home.json")
+    debate = next(x for x in home["lists"] if x["id"] == "under_debate")
+    assert "2099-0002" not in {i["dossier_id"] for i in debate["items"]}

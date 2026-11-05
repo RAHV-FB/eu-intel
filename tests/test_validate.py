@@ -97,12 +97,23 @@ def test_general_deadline_by_date_order_is_reported(tmp_path: Path):
     assert "transposition-date-order" not in check(FIX, today=TODAY).warnings
 
 
-def test_act_procedure_mismatch_warning(tmp_path: Path):
+def test_an_act_linked_to_a_procedure_that_cannot_have_adopted_it_is_an_error_of_eurlex(tmp_path: Path):
+    """Cellar tags Council Decision (EU) 2020/2059 (Art. 207(4) with 218(9) TFEU) with 2020/3521(COD): the site showed
+    it as an ordinary legislative procedure, "In force", and the validator only warned. An error of EUR-Lex's data
+    (the refresh restores that source's last good files), unless data/curated/act_links.yaml drops the link."""
     snap = _copy(tmp_path)
     _edit(snap / "eurlex" / "acts.json", lambda r: r[0].update(procedure_refs=["2099/3521(COD)"]))
     rep = check(snap, today=TODAY)
-    assert rep.warnings["act-procedure-mismatch"]
-    assert rep.errors == []
+    assert rep.errors_by_check == {"act-procedure-mismatch": 1} and list(rep.errors_by_source) == ["eurlex"]
+    assert "act-procedure-mismatch" not in rep.warnings
+    # the committed correction drops exactly that link: the act itself, under its own CELEX
+    _edit(snap / "eurlex" / "acts.json", lambda r: r[0].update(celex="32020D2059", procedure_refs=["2020/3521(COD)"]))
+    rep = check(snap, today=TODAY)
+    assert "act-procedure-mismatch" not in rep.errors_by_check and "act-link-stale" not in rep.warnings
+    # ... and an entry that EUR-Lex no longer needs is reported, so that it is removed
+    _edit(snap / "eurlex" / "acts.json", lambda r: r[0].update(procedure_refs=[]))
+    assert check(snap, today=TODAY).warnings["act-link-stale"] == [
+        "32020D2059: data/curated/act_links.yaml drops its link to 2020/3521(COD), which EUR-Lex no longer records"]
 
 
 def test_entry_into_force_before_the_act_is_a_warning(tmp_path: Path):
@@ -568,7 +579,8 @@ def test_every_warning_class_is_classified_once():
     assert not (kinds[0] & kinds[1] or kinds[0] & kinds[2] or kinds[1] & kinds[2])
     assert used and used - set().union(*kinds) == set()
     assert {"ref-procedure", "ref-mep", "procedure-ref"} == kinds[0]
-    assert "act-procedure-mismatch" in kinds[1] and "application-not-recorded" in kinds[2]
+    assert "act-type" in kinds[1] and "application-not-recorded" in kinds[2]
+    assert "act-procedure-mismatch" in val.ERROR_CHECKS and "act-procedure-mismatch" not in set().union(*kinds)
     assert val.warning_kind("a-new-check") == "integrity"
 
 
@@ -594,29 +606,31 @@ def test_ratchet_fails_when_an_integrity_class_rises_or_appears_never_for_backlo
         apply_baseline(rep, baseline, accepted=accepted)
         return rep
 
-    base = {"act-procedure-mismatch": 1, "application-not-recorded": 19}
-    assert run({"act-procedure-mismatch": 1, "application-not-recorded": 25}, base).breaches == []  # backlog: never
-    rose = run({"act-procedure-mismatch": 2}, base)
-    assert len(rose.breaches) == 1 and rose.breaches[0].startswith("[act-procedure-mismatch] 2, above its baseline of 1: ")
-    new = run({"amends-link-type": 1, "a-new-check": 1, "ref-mep": 9}, base)  # by design: not a warning at all
-    assert [b.split(":")[0] for b in new.breaches] == [
-        "[a-new-check] 1, a new integrity class (none in the baseline)",
-        "[amends-link-type] 1, a new integrity class (none in the baseline)",
-    ]
+    base = {"act-type": 1, "application-not-recorded": 19}
+    ok = {"act-type": ["act-type finding 0"]}
+    assert run({"act-type": 1, "application-not-recorded": 25}, base, ok).breaches == []  # backlog: never
+    rose = run({"act-type": 2}, base, ok)
+    assert rose.breaches == ["[act-type] 1 finding not in the baseline (e.g. act-type finding 1): an act whose type "
+                             "differs from its CELEX type letter: the site names the wrong kind of act"]  # fmt: skip
+    new = run({"amends-link-type": 1, "a-new-check": 1, "ref-mep": 9}, base, ok)  # by design: not a warning at all
+    assert [b.split(" (")[0] for b in new.breaches] == [
+        "[a-new-check] 1 finding not in the baseline", "[amends-link-type] 1 finding not in the baseline"]
     assert "classify it" in new.breaches[0]
-    lower = run({}, base)
+    lower = run({}, base, ok)
     assert lower.breaches == [] and lower.ratchet_notes == [
-        "[act-procedure-mismatch] 0, below its baseline of 1: lower it with --update-baseline",
+        "[act-type] 0, below its baseline of 1: lower it with --update-baseline",
         "[application-not-recorded] 0, below its baseline of 19: lower it with --update-baseline",
     ]
-    # one accepted finding fixed and another of the class appeared: within the count, told
-    swapped = run({"act-procedure-mismatch": 1}, base, accepted={"act-procedure-mismatch": ["an older finding"]})
-    assert swapped.breaches == [] and swapped.ratchet_notes[0] == (
-        "[act-procedure-mismatch] not in the baseline, within its count: act-procedure-mismatch finding 0")
+    # the accepted finding fixed and a new one of the class appeared: a breach, although the count did not rise (the
+    # count-only ratchet let a new wrong link replace 2020/3521's once that was fixed)
+    swapped = run({"act-type": 1}, base, {"act-type": ["an older finding"]})
+    assert swapped.breaches == ["[act-type] 1 finding not in the baseline (e.g. act-type finding 0): an act whose type "
+                                "differs from its CELEX type letter: the site names the wrong kind of act"]  # fmt: skip
+    assert run({"act-type": 1}, base).breaches  # no accepted findings: every integrity finding is new
     out = io.StringIO()
     rose.print(out)
     assert "validate: FAILED — 0 errors, 1 ratchet breaches" in out.getvalue()
-    assert "  failed: ratchet [act-procedure-mismatch] 2, above its baseline of 1: an act linked to a procedure" in out.getvalue()
+    assert "  failed: ratchet [act-type] 1 finding not in the baseline (e.g. act-type finding 1)" in out.getvalue()
 
 
 def test_the_committed_baseline_is_readable_and_accepts_only_known_classes():
@@ -624,8 +638,10 @@ def test_the_committed_baseline_is_readable_and_accepts_only_known_classes():
 
     counts, accepted = val.load_baseline()
     assert counts and all(val.warning_kind(k) != "by design" for k in counts)
-    assert counts["act-procedure-mismatch"] == 1 and accepted["act-procedure-mismatch"] == [
-        "32020D2059 (decision) linked to 2020/3521(COD): number range is not used for legislative procedures"]  # fmt: skip
+    assert "act-procedure-mismatch" not in counts  # an error now; 2020/3521's link is dropped in act_links.yaml
+    assert accepted["index-unlisted"] == [  # the two party records the EP names "-" (build.unnamed_parties)
+        f"public/data/people/parties/{p}.json: not listed in its folder's index (people/parties/<id>.json)"
+        for p in ("5500", "5719")]  # fmt: skip
     assert set(accepted) == {k for k in counts if val.warning_kind(k) == "integrity"}
     assert all(len(accepted[k]) == counts[k] for k in accepted)
 
@@ -643,28 +659,37 @@ def test_validate_cli_ratchet_and_update_baseline(built: Path, tmp_path: Path, m
     monkeypatch.setattr(val, "BASELINE", tmp_path / "baseline.json")  # none yet: every integrity class is new
     assert cli.main(["validate", "--built"]) == 0  # the fixture: backlog and by-design findings only
     assert "0 ratchet breaches" in capsys.readouterr().out
-    _edit(snap / "eurlex" / "acts.json", lambda r: r[0].update(procedure_refs=["2099/3521(COD)"]))
+    acts = snap / "eurlex" / "acts.json"
+    first, first_type = (lambda a: (a["celex"], a["act_type"]))(json.loads(acts.read_text())[0])
+    _edit(acts, lambda r: r[0].update(act_type="recommendation"))  # an integrity finding: act-type
     assert cli.main(["validate", "--built"]) == 1
     out = capsys.readouterr().out
-    assert "RATCHET [act-procedure-mismatch] 1, a new integrity class (none in the baseline)" in out
+    assert f"RATCHET [act-type] 1 finding not in the baseline (e.g. {first}: act_type recommendation" in out
     assert "validate: FAILED — 0 errors, 1 ratchet breaches" in out
     assert cli.main(["validate", "--built", "--update-baseline"]) == 0
-    assert "(act-procedure-mismatch 0 -> 1; ballot-totals 0 -> 1)" in capsys.readouterr().out
+    assert "(act-type 0 -> 1; ballot-totals 0 -> 1)" in capsys.readouterr().out
     counts, accepted = val.load_baseline()
-    assert counts == {"act-procedure-mismatch": 1, "ballot-totals": 1} and list(accepted) == ["act-procedure-mismatch"]
+    assert counts == {"act-type": 1, "ballot-totals": 1} and list(accepted) == ["act-type"]
     assert cli.main(["validate", "--built"]) == 0
-    _edit(snap / "eurlex" / "acts.json", lambda r: r[1].update(procedure_refs=["2099/3522(COD)"]))
+    # the accepted finding fixed and another of the class in its place: the count is the same, but it is new
+    _edit(acts, lambda r: (r[0].update(act_type=first_type), r[1].update(act_type="recommendation")))
     assert cli.main(["validate", "--built"]) == 1
-    assert "failed: ratchet [act-procedure-mismatch] 2, above its baseline of 1" in capsys.readouterr().out
+    assert "failed: ratchet [act-type] 1 finding not in the baseline" in capsys.readouterr().out
     assert cli.main(["validate"]) == 1  # the gate holds without --built as well
+    # the baseline accepts warnings, never errors: with an error it is not rewritten
+    _edit(acts, lambda r: r[2].update(procedure_refs=["2099/3521(COD)"]))  # act-procedure-mismatch: an error
+    before = val.BASELINE.read_text()
+    assert cli.main(["validate", "--built", "--update-baseline"]) == 1
+    assert "validate: baseline not written: 1 error (fix them first)" in capsys.readouterr().out
+    assert val.BASELINE.read_text() == before
     with pytest.raises(SystemExit):
         cli.main(["validate", "--update-baseline"])  # needs --built
 
 
 # ------------------------------------------------------------------------------ invariants of the built output
 def _dossier(**kw) -> dict:
-    return {"id": "2099-0001", "type": "COD", "stage": "in_force", "status_label": "In force", "celex": [], "timeline": [],
-            "acts": [], "ep_votes": [], **kw}  # fmt: skip
+    return {"id": "2099-0001", "type": "COD", "stage": "in_force", "status_label": "In force", "celex": ["32099R0001"],
+            "timeline": [], "acts": [], "ep_votes": [], **kw}  # fmt: skip
 
 
 def test_an_act_shown_on_two_files_is_an_error(tmp_path: Path):
@@ -684,10 +709,15 @@ def test_a_file_past_adoption_needs_parliaments_position():
     Parliament position, Council adoption or act."""
     from pipeline.validate import dossier_invariants
 
-    published = _dossier(id="2023-0421", stage="published", status_label="Published in the Official Journal",
+    published = _dossier(id="2023-0421", stage="published", status_label="Published in the Official Journal", celex=[],
                          timeline=[{"kind": "proposal", "date": "2023-11-27"}, {"kind": "publication", "date": "2026-10-30"}])  # fmt: skip
-    assert dossier_invariants(published) == [("stage-without-parliament", "COD file shown as 'published' ('Published in "
-                                              "the Official Journal'), but no position or decision of Parliament is recorded")]  # fmt: skip
+    without = ("stage-without-parliament", "COD file shown as 'published' ('Published in the Official Journal'), but no "
+               "position or decision of Parliament is recorded")  # fmt: skip
+    assert dossier_invariants(published) == [
+        ("stage-without-act", "shown as 'published' ('Published in the Official Journal'), but no act is linked to the "
+         "file"), without]  # fmt: skip
+    published["celex"] = ["32099L0421"]  # with an act, still without Parliament's position
+    assert dossier_invariants(published) == [without]
     position = {"kind": "ep_position", "date": "2024-04-24"}
     assert dossier_invariants({**published, "timeline": [*published["timeline"], position]}) == []
     assert dossier_invariants({**published, "ep_approval_without_vote": {"date": "2026-01-20"}}) == []  # second reading
@@ -765,3 +795,101 @@ def test_activity_duplicates_flags_a_step_reported_twice():
     (msg,) = activity_duplicates([wrong, other, right])
     assert msg.startswith("chg:2025-0177:ev:act-32026L2383-signature-2026-10-21 repeats chg:2025-0177:ev:act-32026D2402")
     assert "activity-duplicate" in ERROR_CHECKS
+
+
+# ------------------------------------------------------------------------------ activity: one step, its record (audit of #17)
+COVID_CERT = ("Framework for the issuance, verification and acceptance of interoperable COVID-19 vaccination, test and "
+              "recovery certificates (EU Digital COVID Certificate) to facilitate free movement during the COVID-19 "
+              "pandemic")  # fmt: skip
+
+
+def test_twin_files_moving_together_are_not_an_activity_duplicate():
+    """2021/0068(COD) and 2021/0071(COD) (the EU Digital COVID Certificate for citizens and for third-country
+    nationals) took every step on the same days under one 110-character short title: keyed on day and title only, a
+    build as of 20 June 2021 gave 8 "activity-duplicate" errors, which would fail every refresh while they are listed.
+    The same step of one file reported twice is still one."""
+    from pipeline.analysis.activity import short_title
+    from pipeline.validate import activity_duplicates
+
+    title = f"{short_title(COVID_CERT)}: Council adopted the act"
+    citizens = {"id": "ev:council-ST-9718-2021", "dossier_id": "2021-0068", "date": "2021-06-11", "title": title}
+    others = {"id": "ev:council-ST-9720-2021", "dossier_id": "2021-0071", "date": "2021-06-11", "title": title}
+    assert activity_duplicates([citizens, others]) == []
+    again = {**citizens, "id": "chg:2021-0068:ev:council-ST-9718-2021"}
+    assert activity_duplicates([citizens, again]) == [
+        f"chg:2021-0068:ev:council-ST-9718-2021 repeats ev:council-ST-9718-2021 (2021-06-11: {title[:80]})"]
+
+
+def test_one_step_reported_from_two_records_is_an_activity_duplicate():
+    """2025/0232(COD), 9aba253: "…: Published in the Official Journal of the EU" (the act's step, recorded 2 Nov 2026)
+    and "…: Final act published in the Official Journal" (the EP's record of the same day, recorded 5 Nov): different
+    titles, one step (same file, day and kind)."""
+    from pipeline.validate import activity_duplicates
+
+    kinds = {"chg:2025-0232:ev:act-32026L2450-publication-2026-10-30": "publication",
+             "chg:2025-0232:ev:2025-0232-PUB-2026-10-30": "publication"}  # fmt: skip
+    items = [{"id": i, "dossier_id": "2025-0232", "date": "2026-10-30", "title": t} for i, t in zip(
+        kinds, ("Carcinogens: Published in the Official Journal of the EU",
+                "Carcinogens: Final act published in the Official Journal"), strict=True)]  # fmt: skip
+    assert activity_duplicates(items) == []  # by title only: missed
+    assert activity_duplicates(items, lambda it: kinds.get(it["id"])) == [
+        "chg:2025-0232:ev:2025-0232-PUB-2026-10-30 repeats chg:2025-0232:ev:act-32026L2450-publication-2026-10-30 "
+        "(2026-10-30: publication)"]  # fmt: skip
+
+
+def test_an_activity_item_cites_the_record_it_reports():
+    """Plan 1.2(d): 2023/0421(COD), 2 Nov 2026, "status now Published in the Official Journal" cited the OEIL page
+    (which said "Awaiting committee decision"); a status change to a stage an act establishes cites the act's EUR-Lex
+    record, a current one the record that gave the status, a step its own record."""
+    from pipeline.validate import activity_sources
+
+    oeil = {"institution": "OEIL", "url": "https://oeil.europarl.europa.eu/x"}
+    act = {"institution": "EUR-Lex", "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32099R0001",
+           "identifier": "32099R0001"}  # fmt: skip
+    council = {"institution": "Council", "url": "https://data.consilium.europa.eu/doc/document/ST-1-2099-INIT/EN/pdf"}
+    det = {"id": "2099-0001", "stage": "adopted", "status": {"since": "2026-10-26"}, "sources": [oeil], "acts": [],
+           "ep_votes": [], "timeline": [{"id": "council-ST-1-2099", "date": "2026-10-26", "kind": "council_adoption",
+                                         "state": "done", "key": True, "source": council}]}  # fmt: skip
+    dossier = {"2099-0001": det}.get
+    item = {"dossier_id": "2099-0001", "kind": "status_change"}
+    published = {**item, "id": "chg:2099-0001:stage:published:2026-10-30", "source": oeil}
+    adopted = {**item, "id": "chg:2099-0001:stage:adopted:2026-10-26", "source": oeil}
+    step = {**item, "id": "chg:2099-0001:ev:council-ST-1-2099", "kind": "milestone", "source": oeil}
+    assert activity_sources([published, adopted, step], dossier, "2026-11-05") == [
+        "chg:2099-0001:stage:published:2026-10-30: a status change to 'published' cites 'OEIL', not the act's EUR-Lex "
+        "record",
+        f"chg:2099-0001:stage:adopted:2026-10-26: cites {oeil['url']}, not the record that gave the status "
+        f"({council['url']})",
+        f"chg:2099-0001:ev:council-ST-1-2099: cites {oeil['url']}, not the record of its step ({council['url']})",
+    ]
+    assert activity_sources([{**published, "source": act}, {**adopted, "source": council}, {**step, "source": council}],
+                            dossier, "2026-11-05") == []  # fmt: skip
+
+
+def test_a_file_shown_published_needs_an_act():
+    """2025/0177(COD) on 2 Nov 2026: "Published in the Official Journal" from the EP's record of a publication on 28
+    October, which the EP then deleted; no act of the file in our EUR-Lex data."""
+    from pipeline.validate import dossier_invariants
+
+    d = _dossier(id="2025-0177", stage="published", status_label="Published in the Official Journal", celex=[],
+                 timeline=[{"kind": "ep_position", "date": "2026-09-16"}])  # fmt: skip
+    assert dossier_invariants(d) == [("stage-without-act", "shown as 'published' ('Published in the Official Journal'), "
+                                      "but no act is linked to the file")]  # fmt: skip
+    for stage in ("in_force", "no_longer_in_force", "takes_effect_on_notification"):
+        assert [n for n, _ in dossier_invariants({**d, "stage": stage})] == ["stage-without-act"]
+    assert dossier_invariants({**d, "celex": ["32026L2383"]}) == []
+    assert dossier_invariants({**d, "stage": "adopted"}) == []  # signed, awaiting publication: no act yet
+
+
+def test_a_built_file_no_index_lists_is_checked_and_reported(built: Path, tmp_path: Path):
+    """people/parties/5500.json and 5719.json (the party records the EP names "-") are written but not listed in
+    people/parties.json: the contract check, which went by the index, never read them."""
+    pub = _built_copy(built, tmp_path)
+    party = next((pub / "people" / "parties").glob("*.json"))
+    (pub / "people" / "parties" / "9999.json").write_text(json.dumps({"id": "9999"}), encoding="utf-8")  # not listed
+    rep = check(FIX, public=pub, built=True, today=TODAY)
+    assert rep.warnings["index-unlisted"] == [
+        "public/data/people/parties/9999.json: not listed in its folder's index (people/parties/<id>.json)"]
+    assert any(e.startswith("public people/parties/<id>.json: PartyDetail.") and "people/parties/9999.json" in e
+               for e in rep.errors)  # and checked against its type  # fmt: skip
+    assert party.name != "9999.json"

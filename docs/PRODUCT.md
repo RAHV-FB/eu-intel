@@ -23,13 +23,18 @@ professional should be able to follow those facts down to the official documents
 | Tool | Strength | Difficulty for ordinary users |
 | --- | --- | --- |
 | EP Legislative Observatory (OEIL) | Authoritative procedure files | Institutional vocabulary, document-centric, no voting breakdowns, no national implementation |
+| EU Law Tracker (law-tracker.europa.eu; Parliament, Council and Commission) | Official joint record of ordinary-procedure files from proposal to adoption; 2026 Ombudsman Award for Good Administration | Stops at adoption: not when the rules apply, each Member State's transposition or infringement cases |
 | Legislative Train Schedule | Curated status of major initiatives, official "blocked" monitoring | Covers priorities only; no votes; no link to national application |
 | EUR-Lex | Authoritative legal texts, dates, national measures | Built for lawyers; status of proposals hard to read; bot-protected |
 | Council voting results | Member State positions | Separate site, not linked to Parliament votes or the procedure |
 | HowTheyVote.eu, similar independent explorers | Excellent EP roll-call exploration | Parliament-only; little about procedure status, Council or implementation |
+| EuropeScope (featured by data.europa.eu, 11 September 2026) | Parliament roll calls and Council voting records together; MEP attendance, votes against their group, national delegations; public API | Built around votes and MEP activity; no national implementation |
 
 **Our advantage is the combination**: discovery + plain explanation + procedural progress + Parliament
 votes + Council positions + national implementation, joined by official identifiers in one coherent product.
+Parliament and Council votes in one place are also on EuropeScope, and the EU Law Tracker follows each file until
+adoption; none of the tools above joins what follows adoption (when each part applies, each Member State's
+transposition, infringement cases) to how MEPs and Member States voted on the law.
 
 ## Principles (non-negotiable)
 
@@ -50,6 +55,6 @@ in text, with a note on what the figures cannot show. Detail pages (a law, a vot
 
 ## What "done" means for the first release
 
-See the acceptance criteria in `docs/PLAN.md`. The release is honest about coverage: where a source was not
-accessible (e.g. the Single Market Scoreboard indicators, whose host refuses scripted access), the site says so
-instead of filling the gap.
+See the acceptance criteria in `docs/PLAN.md`. The release is honest about coverage: where a source is not
+available in a machine-readable form (e.g. the Single Market Scoreboard indicators, published only in embedded Power
+BI reports), the site says so instead of filling the gap.

@@ -155,14 +155,19 @@ def cmd_restore_manifest(previous: Path, sources: list[str], reason: str | None)
 
 
 def cmd_health(
-    manifest: Path | None, meta: Path | None, problems: list[str], max_age: float, fmt: str
+    manifest: Path | None,
+    meta: Path | None,
+    problems: list[str],
+    max_age: float,
+    fmt: str,
+    deploy_grace_hours: float = 6.0,
 ) -> int:
     """Failed or stale sources (pipeline.freshness, from the manifest), the age of the newest data on the live site
     (`meta`: its data/meta.json) and the problems the workflow found itself (KEY=TEXT). Prints them (`fmt`: text,
     markdown for the issue body, json) and returns 1 if there is any."""
     from datetime import UTC, datetime
 
-    from pipeline.freshness import source_health
+    from pipeline.freshness import LABELS_EXPIRE_AFTER_DAYS, source_health
     from pipeline.snapshot import MANIFEST
 
     now = datetime.now(UTC)
@@ -188,7 +193,14 @@ def cmd_health(
         if flags:
             last = f"{s['fetched_at'][:10]}, {s['age_days']:g} days ago" if s["fetched_at"] else "never"
             text = f"{', '.join(flags)}; last successful retrieval {last} (stale after {s['stale_after_days']} days)"
-            found.append({"key": f"source:{s['source']}", "text": f"**{s['source']}**: {text}"})
+            # The key names the worst state, so that the issue gets a comment (a notification) each time a source gets
+            # worse: failed -> stale (the site says "not up to date") -> its labels expired (the site withdraws them)
+            key = f"source:{s['source']}" + (":stale" if s["stale"] else "")
+            expire = LABELS_EXPIRE_AFTER_DAYS.get(s["source"])
+            if expire is not None and (s["age_days"] is None or s["age_days"] > expire):
+                key = f"source:{s['source']}:labels-expired"
+                text += f"; its classifications (the Legislative Train's “blocked”) are no longer shown, after {expire} days"
+            found.append({"key": key, "text": f"**{s['source']}**: {text}"})
     site = None
     if meta is not None:
         try:
@@ -200,8 +212,28 @@ def cmd_health(
                 found.append({"key": "site", "text": (
                     f"**The live site's data is overdue**: its newest data was retrieved on {newest[:10]}, {age:.1f} "
                     f"days ago (more than {max_age:g}). No refresh has reached the site since: the schedule may "
-                    "be late, dropped or disabled (GitHub disables it after 60 days without repository activity), or "
+                    "be late, dropped or disabled (GitHub disables it after 60 days without a commit), or "
                     "the refresh or its deploy fails."
+                )})  # fmt: skip
+            # data on main the live site does not have: a core source retrieved on main after the live site's copy of
+            # it, longer ago than the grace period (a refresh deploys its commit within minutes of the push, or once CI
+            # has passed on main's code)
+            live = {x.get("id"): x.get("fetched_at") for x in m["sources"]}
+            behind = [
+                s for s in sources
+                if s["core"] and s["fetched_at"] and (not live.get(s["source"]) or live[s["source"]] < s["fetched_at"])
+                and s["age_days"] * 24 > deploy_grace_hours
+            ]  # fmt: skip
+            if behind:
+                names = ", ".join(s["source"] for s in behind)
+                on_main = min(s["fetched_at"] for s in behind)
+                on_site = min((live.get(s["source"]) or "never") for s in behind)
+                found.append({"key": "undeployed", "text": (
+                    f"**Data on main is not on the live site**: {names} retrieved on main on {on_main[:10]} "
+                    f"({(now - datetime.fromisoformat(on_main.replace('Z', '+00:00'))).total_seconds() / 3600:.0f} h ago),"
+                    f" the live site's copy on {on_site[:10]}. A refresh deploys its commit only once CI has passed on "
+                    "main's code (otherwise the deploy after the next successful CI run on main does): check the latest "
+                    "CI run, the refresh's deploy job and the Deploy to GitHub Pages runs."
                 )})  # fmt: skip
         except (OSError, ValueError, KeyError, TypeError) as e:
             found.append(
@@ -273,13 +305,19 @@ def main(argv: list[str] | None = None) -> int:
     h.add_argument("--manifest", type=Path, default=None, help="default: data/snapshot/_manifest.json")
     h.add_argument("--meta", type=Path, default=None, help="the live site's data/meta.json: check its age")
     h.add_argument("--max-age-days", type=float, default=8.0, help="for --meta (default: 8)")
+    h.add_argument(
+        "--deploy-grace-hours",
+        type=float,
+        default=6.0,
+        help="for --meta: how long a core source retrieved on main may be missing from the live site (default: 6)",
+    )
     h.add_argument("--problem", action="append", default=[], metavar="KEY=TEXT", help="found elsewhere")
     hfmt = h.add_mutually_exclusive_group()
     hfmt.add_argument("--markdown", dest="fmt", action="store_const", const="markdown", default="text")
     hfmt.add_argument("--json", dest="fmt", action="store_const", const="json")
     a = p.parse_args(argv)
     if a.cmd == "health":
-        return cmd_health(a.manifest, a.meta, a.problem, a.max_age_days, a.fmt)
+        return cmd_health(a.manifest, a.meta, a.problem, a.max_age_days, a.fmt, a.deploy_grace_hours)
     if a.cmd == "fetch":
         return cmd_fetch(a.sources)
     if a.cmd == "build":
