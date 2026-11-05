@@ -83,7 +83,7 @@ function DossierPage({ id }: { id: string }) {
   const active = ACTIVE_STAGES.has(d.stage);
   const blocked = blockedNow(d.officially_blocked, train);
   // a file still being decided: how long without a recorded step, on the reader's date, when officially blocked or
-  // for a year or more (the stuck view lists them: /legislation?stage=active&sort=stuck)
+  // for a year or more (the stuck view lists them: /legislation?stage=active&type=COD&sort=stuck)
   const lastStep = d.stall?.last_event_date ?? null;
   const quietDays = lastStep ? daysSince(lastStep, new Date(`${today}T00:00:00Z`)) : 0;
   const quiet =

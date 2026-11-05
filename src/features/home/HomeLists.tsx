@@ -10,8 +10,8 @@ type HomeList = HomeData['lists'][number];
 const MORE: Partial<Record<HomeList['id'], { to: string; label: string }>> = {
   recently_adopted: { to: '/legislation?stage=law&sort=adopted', label: 'Adopted legislation in our dataset' },
   under_debate: { to: '/legislation?stage=active&sort=updated', label: 'All files still being decided' },
-  // the stuck view: every file still being decided, the longest without a recorded step first
-  stalled: { to: STUCK_VIEW, label: 'All files still being decided, longest without a recorded step first' },
+  // the stuck view: files of the ordinary legislative procedure still being decided, the longest without a step first
+  stalled: { to: STUCK_VIEW, label: 'Ordinary-procedure files still being decided, longest without a recorded step first' },
   upcoming: { to: '/legislation?sort=deadline', label: 'All upcoming dates' },
   close_votes: { to: '/votes?kind=final&close=1', label: 'All close final votes' },
   rejected: { to: '/votes?kind=final&outcome=rejected', label: 'All final votes Parliament rejected' },

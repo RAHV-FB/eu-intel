@@ -19,7 +19,10 @@ export const SORT_LABEL: Record<SortKey, string> = {
 
 /** The stuck view (the home page's "Stalled" list leads to it): files still being decided, longest without a recorded
  * procedural step first. */
-export const STUCK_VIEW = '/legislation?stage=active&sort=stuck';
+// Ordinary legislative procedure only: under the consultation and consent procedures the Council decides after
+// Parliament's opinion or consent and Parliament's file may not record that decision, so those files would lead the
+// list without being stalled (2015 consultation files did). The sort itself covers every procedure.
+export const STUCK_VIEW = '/legislation?stage=active&type=COD&sort=stuck';
 
 export const PAGE_SIZE = 25;
 

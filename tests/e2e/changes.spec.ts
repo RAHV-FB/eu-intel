@@ -132,9 +132,9 @@ test.describe('the stuck view', () => {
   test('the home page’s “Stalled” list leads to the files still being decided, longest without a recorded step first', async ({ page }) => {
     await open(page, './');
     const more = page.locator('section[aria-labelledby="hl-stalled"] .hl__more');
-    await expect(more).toHaveAttribute('href', `${BASE_PATH}legislation?stage=active&sort=stuck`);
+    await expect(more).toHaveAttribute('href', `${BASE_PATH}legislation?stage=active&type=COD&sort=stuck`);
     await more.click();
-    await expect(page).toHaveURL(/stage=active&sort=stuck/);
+    await expect(page).toHaveURL(/stage=active&type=COD&sort=stuck/);
     await expect(page.locator('.lx-count')).toContainText('sorted by longest without a recorded step');
     await expect(page.getByLabel('Sort by')).toHaveValue('stuck');
     const rows = page.locator('.drow');
