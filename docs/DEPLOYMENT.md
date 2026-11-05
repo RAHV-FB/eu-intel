@@ -347,8 +347,11 @@ The `e2e` job in `ci.yml` (Playwright + axe-core on the site built from the froz
 e2e + accessibility tests".
 
 It runs once per browser engine (Chromium, Firefox and WebKit, the engine of Safari; one failing engine does not
-cancel the others). Each run reuses the site built by the `check` job (uploaded as the `site-dist` artifact),
-installs its browser, runs `npx playwright test --project=<browser>` (`E2E_BROWSERS` adds the Firefox and WebKit
+cancel the others), in the official Playwright image of the version `package-lock.json` pins
+(`mcr.microsoft.com/playwright:v<version>-noble`; the `check` job reads the version, so a Dependabot bump of the playwright
+group moves the image with it): the browsers and their OS packages are in the image, so nothing is installed (installing
+them from the Ubuntu mirror kept jobs past their time limit). Each run reuses the site built by the `check` job (uploaded
+as the `site-dist` artifact), runs `npx playwright test --project=<browser>` (`E2E_BROWSERS` adds the Firefox and WebKit
 projects to `playwright.config.ts`; locally only Chromium runs unless it is set), and uploads the HTML report and
 traces as the `playwright-report-<browser>` artifact.
 
@@ -408,7 +411,7 @@ at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes n
 ## Free-plan limits
 
 Public repositories get unlimited standard GitHub-hosted runner minutes. Every job has a `timeout-minutes` cap
-(CI: check 30, e2e 20; deploy: build 20, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
+(CI: check 30, e2e 25; deploy: build 25, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
 watchdog 10). Pages limits: published site ≤ 1 GB (checked at build time), soft bandwidth limit 100 GB/month. Artifacts
 are kept 1–7 days.
 

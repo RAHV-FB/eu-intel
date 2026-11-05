@@ -139,6 +139,34 @@ def test_the_live_smoke_test_runs_only_when_asked_for():
     assert "live-smoke.spec.ts" not in frozen_run and "smoke.spec.ts" in frozen_run
 
 
+def test_the_browser_tests_run_in_the_playwright_image_of_the_locked_version(tmp_path):
+    # `playwright install --with-deps` downloaded the browsers' OS packages from the Ubuntu mirror (WebKit: 181); on
+    # 5 Nov 2026 e2e jobs ran past their time limit and were cancelled, and a refresh deploys only after a green CI run
+    w = workflow("ci.yml")
+    e2e = w["jobs"]["e2e"]
+    assert e2e["container"]["image"] == "mcr.microsoft.com/playwright:v${{ needs.check.outputs.playwright }}-noble"
+    assert e2e["container"]["options"].split() == ["--user", "1001", "--ipc=host"]  # the runner's user owns $HOME
+    assert not any("playwright install" in (x.get("run") or "") for x in e2e["steps"]) and e2e["needs"] == "check"
+    assert w["jobs"]["check"]["outputs"] == {"playwright": "${{ steps.playwright.outputs.version }}"}
+    s = w["jobs"]["check"]["steps"]
+    step = s[named(s, "The Playwright version of package-lock.json (the e2e job's image)")]
+    assert step["id"] == "playwright"
+    work = tmp_path / "repo"
+    work.mkdir()
+    shutil.copy(ROOT / "package-lock.json", work / "package-lock.json")
+    version = run_step(step["run"], work, {})["version"]
+    lock = json.loads((ROOT / "package-lock.json").read_text(encoding="utf-8"))["packages"]
+    deps = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["devDependencies"]
+    # exact pins, and the browsers' package with them, so that the image has the browsers the tests expect
+    assert version == lock["node_modules/@playwright/test"]["version"] == lock["node_modules/playwright-core"]["version"]
+    assert deps["@playwright/test"] == deps["playwright-core"] == version
+    npm = next(u for u in yaml.safe_load((ROOT / ".github" / "dependabot.yml").read_text())["updates"] if u["package-ecosystem"] == "npm")
+    assert {"@playwright/test", "playwright-core"} <= set(npm["groups"]["playwright"]["patterns"])  # bumped together
+    (work / "package-lock.json").write_text(json.dumps({"packages": {"node_modules/@playwright/test": {"version": "1.56.1; x"}}}))
+    with pytest.raises(subprocess.CalledProcessError):  # nothing but a version reaches the image name
+        run_step(step["run"], work, {})
+
+
 def test_vitest_fails_when_it_finds_no_tests():
     runs = [s["run"] for s in steps("ci.yml", "check") if "vitest" in (s.get("run") or "")]
     # with --passWithNoTests a broken include pattern was a green step
