@@ -5,7 +5,7 @@ everything on the site is computed from official sources. The one exception is a
 in `data/curated/`: editorial selections and texts, date corrections checked against the acts' texts,
 corrections of Council voting records checked against the acts, the Treaties and the Council's own
 documents, and a few single entries of the same kind (an amendment link, a Danish decision on a Schengen
-directive, an act that no official record links to its file). This document covers what goes into that layer and how it is written and reviewed. The About page
+directive, an act that no official record links to its file, a procedure link that the act's own text rules out). This document covers what goes into that layer and how it is written and reviewed. The About page
 describes the corrections ("Corrections checked against official texts") and states the selection criteria below
 ("How featured files are selected"); when a correction file or the criteria change, change that text with them.
 
@@ -20,6 +20,7 @@ describes the corrections ("Corrections checked against official texts") and sta
 | `act_relations.yaml` | Amendment links that Cellar records between the wrong acts, replaced by the link the amending act's text establishes (evidence quoted, texts listed). The correction applies in the build only. |
 | `denmark_schengen.yaml` | Denmark's decision under Article 4 of Protocol No 22 on a directive that builds upon the Schengen acquis, from its notification to the Council (the Council document and Denmark's decision quoted). |
 | `unlinked_acts.yaml` | An act whose own text cites a step of a procedure while no official record links the two: the file's status names the act and says what it cites. It does not link the act, and the quote of the act's citation is checked against the file's recorded Parliament opinion. |
+| `act_links.yaml` | A procedure link that Cellar records for an act but that the act's own text rules out: Council Decision (EU) 2020/2059, an Article 218(9) TFEU position, tagged with the ordinary legislative procedure 2020/3521(COD), which the Legislative Observatory does not have. Each entry names the act and the procedure, quotes verbatim the act's citation of its legal basis, says why that basis rules the procedure out, records what Cellar and the Legislative Observatory hold, lists the texts checked and has a review date. The build drops the link, so the act is not shown on that file and a file known only from the link is not shown; the snapshot keeps Cellar's link. |
 | `council_votes.yaml` | Council voting results corrected where the Council's voting-result document prints something else than the Treaties require, and Council adoptions that no voting-result document records. A correction shows the voting rule as unanimity where the sheet prints "qualified majority" but the act's legal basis requires unanimity: only a Treaty provision listed in `UNANIMITY_BASES` (`pipeline/build.py`, which quotes it), with the act's citation of it quoted verbatim. It may set the outcome to "not adopted" only when, under unanimity, the vote did not adopt the act, with a note on what the Council did instead citing its documents. A correction lists the official texts checked, which are linked on the vote. A record is taken from the Council's communication on the outcome of a written procedure, which is its source, with a note on why it is recorded by hand. Each entry has a review date; the snapshot keeps what the voting-result documents print. |
 
 ## What the curated layer must not contain
@@ -117,7 +118,7 @@ does not give its date, a legal basis not in `UNANIMITY_BASES`, no texts listed)
 the build log; a plain build carries on, but the strict build of CI's data gate, the refresh and the deploy
 (`EU_INTEL_STRICT=1`) fails, so the change is not deployed. `act_dates.yaml` and `transposition.yaml` are also
 checked by `python -m pipeline validate` (a `transposition.yaml` entry naming a date EUR-Lex does not record is an
-integrity finding, which fails it above the count in `pipeline/validate_baseline.json`; suspicious act dates that
+integrity finding, which fails it unless `pipeline/validate_baseline.json` accepts it; suspicious act dates that
 no `act_dates.yaml` entry covers are listed as backlog) and `tests/test_build.py`;
 `council_dates.yaml` and `council_votes.yaml` by `tests/test_build_real_records.py` on the real records.
 Their entries follow the same review process, including the second review and the re-review of their

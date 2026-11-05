@@ -407,7 +407,9 @@ def test_parser_change_while_the_site_is_blocked_destroys_nothing(train_dir, mon
     http = Blocked(make_site())
     st = lt.fetch(http)
     state = train_state(train_dir)
-    assert st.status == "partial" and http.file_pages() == [] and stored(train_dir) == before
+    # nothing was retrieved: "failed", so the manifest keeps the last retrieval (snapshot.update_manifest)
+    assert st.status == "failed" and http.file_pages() == [] and stored(train_dir) == before
+    assert st.note.startswith("nothing retrieved: no schedule or theme page could be read")
     assert (state["parser"], state["pass_parser"], set(state["pending"])) == (old, "test-bump", ALL)
     again = FakeTrain(make_site())  # the site answers again: the pass reads every file page and completes
     assert lt.fetch(again).status == "ok" and set(again.file_pages()) == ALL
@@ -423,7 +425,8 @@ def test_file_pages_failing_in_a_row_stop_the_run(train_dir, monkeypatch):
     http = FakeTrain(make_site(), fail=blocked)  # theme pages answer, file pages are blocked
     st = lt.fetch(http)
     assert len(http.file_pages()) == 3 and set(train_state(train_dir)["pending"]) == ALL
-    assert st.status == "partial" and "stopped reading file pages after 3 failures in a row" in st.note
+    # every file page tried failed: nothing was retrieved, so the run is "failed" (its index was read, but no record)
+    assert st.status == "failed" and "stopped reading file pages after 3 failures in a row" in st.note
     assert stored(train_dir) == before and train_state(train_dir)["parser"] != "test-bump"
 
 
@@ -441,3 +444,33 @@ def test_snapshot_statuses_in_vocabulary():
             assert lt._PROC_RE.fullmatch(ref), ref
         if r.blocking_institution is not None:
             assert r.status == "Blocked", r.url
+
+
+def test_a_run_that_retrieves_nothing_keeps_the_last_retrieval(train_dir):
+    """Once a run has stored the theme list, a run that the WAF blocks entirely read no page and still returned
+    "partial", so update_manifest moved `fetched_at` to that day: the site called the Train current, restarted the 42
+    days before its "blocked" labels are withdrawn, and `pipeline health` (which flags "failed") said nothing."""
+    from datetime import UTC, datetime
+
+    from pipeline import freshness, snapshot
+
+    first = lt.fetch(FakeTrain(make_site()))
+    snapshot.update_manifest(first.model_copy(update={"fetched_at": "2026-09-01T00:00:00Z"}))  # a while ago
+    http = Blocked(make_site())
+    st = lt.fetch(http)
+    snapshot.update_manifest(st)
+    m = snapshot.read_manifest()["train"]
+    assert http.file_pages() == [] and st.status == "failed"
+    assert m.fetched_at == "2026-09-01T00:00:00Z" and m.attempted_at == st.attempted_at
+    health = freshness.source_health({"train": m}, datetime(2026, 11, 5, tzinfo=UTC))[0]
+    assert health["stale"] and health["status"] == "failed"
+
+
+def test_a_run_that_reads_the_index_and_needs_no_file_page_is_ok(train_dir, monkeypatch):
+    """Not a blocked run: the schedule and theme pages were read and no file is due for a re-read (none changed,
+    none active, none on its re-check week): every stored record was checked against the index."""
+    lt.fetch(FakeTrain(make_site()))
+    monkeypatch.setattr(lt, "_today", lambda: date(2027, 6, 1))  # every file quiet by then
+    http = FakeTrain(make_site())
+    st = lt.fetch(http)
+    assert http.file_pages() == [] and http.calls and st.status == "ok", st.note

@@ -56,10 +56,12 @@ describe.skipIf(!built)('home lists and feed on the built data', () => {
       if (asOf(blocked[k]) === asOf(blocked[k - 1])) expect(blocked[k - 1].date! <= blocked[k].date!, blocked[k].dossier_id!).toBe(true);
   });
 
-  it('gives no two activity items the same date and headline (motions 195775 and 195807 of 9 July 2026)', () => {
+  it('gives no two activity items of one file the same date and headline (motions 195775 and 195807 of 9 July 2026)', () => {
+    // per file: twin files share their headlines and move together (2021/0068 and 2021/0071(COD), the EU Digital
+    // COVID Certificate for citizens and for third-country nationals), as pipeline/validate.py activity_duplicates
     const seen = new Map<string, string>();
     for (const it of activity) {
-      const key = `${it.date} ${it.title}`;
+      const key = `${it.dossier_id ?? ''} ${it.date} ${it.title}`;
       expect(seen.get(key), it.id).toBeUndefined();
       seen.set(key, it.id);
     }

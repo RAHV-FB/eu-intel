@@ -2,15 +2,17 @@
 
 State (committed, data/state/):
     digest.json    {version, classifier, sources: {source: seen?}, dossiers: {dossier_id: {stage, label,
-                   title, events[], votes[], council[], acts[]}}}
+                   title, events[], votes[], council[], acts[], sigs[]}}} (sigs: the steps of the last RECENT_DAYS
+                   as "<date>|<kind>")
                    ids are the union of everything ever seen, so a temporarily missing source
                    never makes old records look "new" when it comes back; records of a source seen
                    for the first time are a baseline, not changes.
     activity.json  append-only list of verified changes, each with `detected_at`.
 
 What counts as a change (substantive only — never a metadata refresh such as a new retrieved_at): an activity item
-the snapshot lists (the same selection and wording, any date; see _entries) that rests on no record of the file seen
-before, a status change, and a new file:
+the snapshot lists (the same selection and wording; see _entries), dated within RECENT_DAYS, that rests on no record of
+the file seen before, nor on its step of that kind on that day under another source's record (_known_steps), a status
+change (with the stage it left, `previous_stage`), and a new file:
     new_dossier     a procedure id not seen before, when none of its recent items is its proposal
     status_change   the derived lifecycle stage changed. Recorded only when procedure AND act data are
                     present, the manifest says this snapshot's ep_procedures and eurlex fetches were
@@ -37,6 +39,7 @@ import logging
 import os
 import re
 from collections import Counter
+from collections.abc import Mapping
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -207,20 +210,12 @@ STAGE_STEP_KINDS: dict[str, tuple[str, ...]] = {
 }  # fmt: skip
 
 
-def status_source(det: dict) -> dict | None:
-    """The source of the record that gave a file its status, which a status change cites: for a stage that the act
-    establishes, the act's step dated as the status (its EUR-Lex record, or the text a curated date was checked
-    against), else the act's EUR-Lex record; for another stage, the step that dates it (an EP or OEIL event, the
-    Council's voting result); else, as when the status follows OEIL's stage label (no date), the procedure file.
-    Every status change recorded on 2 November 2026 cited the OEIL page, also when EUR-Lex, the Council or the EP API
-    gave the status: 2023/0421(COD), "status now Published in the Official Journal" from an EP API event, cited the
-    OEIL page, which gave "Awaiting committee decision"."""
-    procedure = det["sources"][0] if det.get("sources") else None
-    since = (det.get("status") or {}).get("since")
+def _dating_record(det: dict, stage: str | None, since: str | None) -> dict | None:
+    """The source of the file's record that dated `stage` on `since` (see status_source), or None if none does."""
     if not since:
-        return procedure
-    stage = det.get("stage")
-    steps = [e for e in det.get("timeline") or [] if e["state"] == "done" and e["date"] == since and e.get("source")]
+        return None
+    steps = [e for e in det.get("timeline") or [] if e["state"] == "done" and e["date"] == since and e.get("source")
+             and not e.get("unconfirmed")]  # fmt: skip
     if stage in ACT_STAGES:
         own = [e for e in steps if e["id"].startswith("act-") and e["kind"] in ACT_STEP_KINDS]
         if own:
@@ -231,66 +226,217 @@ def status_source(det: dict) -> dict | None:
                 s.get("identifier") == a["celex"] or s.get("url") == a.get("eurlex_url"))), None)  # fmt: skip
             if src:
                 return src
-        return procedure
+        return None
     for kind in STAGE_STEP_KINDS.get(stage or "", ()):
         found = sorted((e for e in steps if e["kind"] == kind), key=lambda e: not e.get("key"))
         if found:
             return found[0]["source"]
-    return procedure
+    return None
+
+
+def status_source(det: dict, stage: str | None = None, since: str | None = None) -> dict | None:
+    """The source of the record that gave a file its status, which a status change cites: for a stage that the act
+    establishes, the act's step dated as the status (its EUR-Lex record, or the text a curated date was checked
+    against), else the act's EUR-Lex record; for another stage, the step that dates it (an EP or OEIL event, the
+    Council's voting result); else, as when the status follows OEIL's stage label (no date), the procedure file.
+    Every status change recorded on 2 November 2026 cited the OEIL page, also when EUR-Lex, the Council or the EP API
+    gave the status: 2023/0421(COD), "status now Published in the Official Journal" from an EP API event, cited the
+    OEIL page, which gave "Awaiting committee decision". With `stage` and `since`, of an earlier status of the file (a
+    recorded status change it has since moved on from), found the same way; None when no record of the file dates it."""
+    if stage is not None:
+        return _dating_record(det, stage, since)
+    found = _dating_record(det, det.get("stage"), (det.get("status") or {}).get("since"))
+    return found or (det["sources"][0] if det.get("sources") else None)
+
+
+# --------------------------------------------------------------------------------------- one step, whichever record
+# A file records at most one step of a kind on a day: of the 13,131 steps that activity lists on the 1,587 files of the
+# 5 November 2026 data none shares its file, day and kind with another, and the timeline itself shows one step of a kind
+# per day (build.Builder.timeline, `seen`). A step of the same file, day and kind as one already seen is that step,
+# whichever source's record, and so whichever id, now carries it: 2025/0232(COD) and 2025/0380(COD), "Published in the
+# Official Journal of the EU" (the act's step, recorded on 2 November 2026) and then "Final act published in the
+# Official Journal" (the EP's record of the same day, which the timeline shows instead, recorded again on 5 November);
+# 2023/0134(COD), OEIL's "Council adopted the act after Parliament's first reading" (26 October), then the Council's
+# voting result ST 14946/26 of that day.
+_STAGE_ITEM = re.compile(r"^chg:([^:]+):stage:([^:]+):(.*)$")  # a recorded status change: chg:<pid>:stage:<stage>:<since>
+_STEP_ITEM = re.compile(r"^(?:chg:[^:]+:)?ev:(.+)$")  # a step: "ev:<key>", recorded as "chg:<pid>:ev:<key>"
+_RECORDED = re.compile(r"^chg:[^:]+:(stage|ev|vote|council|act):(.+)$")
+_ACT_STEP = re.compile(r"^act-[^-]+-([a-z_]+)-\d{4}-\d{2}-\d{2}$")  # an act's step: "act-<celex>-<kind>-<date>"
+_VOTE_STEP = re.compile(r"^vote-\d+-([a-z_]+)$")  # a step built from a vote: "vote-<id>-<kind>"
+
+
+def step_key(item_id: str) -> str | None:
+    """The key (event_keys) of the step a step item reports ("ev:<key>", "chg:<pid>:ev:<key>"); None for other items."""
+    m = _STEP_ITEM.match(item_id or "")
+    return m.group(1) if m else None
+
+
+def stage_item(item_id: str) -> tuple[str, str, str] | None:
+    """(file, stage, since) of a recorded status change ("chg:<pid>:stage:<stage>:<since>"); None for other items."""
+    m = _STAGE_ITEM.match(item_id or "")
+    return (m.group(1), m.group(2), m.group(3)) if m else None
+
+
+def step_sig(pid: str, day: str, kind: str) -> str:
+    """The reference (item_refs) to a file's step of `kind` on `day`, whichever record carries it."""
+    return f"sig:{pid}|{day}|{kind}"
+
+
+def step_kind(key: str, det: dict | None, today: str, events: Mapping[str, str] | None = None) -> str | None:
+    """The kind of the step an item key (event_keys) names: the step of the file's timeline with that id or key, else
+    what the key says (an act's step "act-<celex>-<kind>-<date>", a step built from a vote "vote-<id>-<kind>"), else the
+    kind of the procedure's event of that id (`events`: event id -> kind) when the timeline shows another record of the
+    step."""
+    if det is not None:
+        keys = event_keys(det, today)
+        for e in det.get("timeline") or []:
+            if e["id"] == key or keys.get(e["id"]) == key:
+                return e["kind"]
+    if m := _ACT_STEP.match(key) or _VOTE_STEP.match(key):
+        return m.group(1)
+    return (events or {}).get(key)
+
+
+def event_kinds(b: Any, pid: str) -> dict[str, str]:
+    """The kinds of the procedure's events (its EP API and OEIL records), by event id."""
+    proc = (getattr(b, "proc", None) or {}).get(pid)
+    return {e.id: str(getattr(e.kind, "value", e.kind)) for e in getattr(proc, "events", None) or []
+            if getattr(e, "kind", None) is not None}  # fmt: skip
+
+
+def item_signature(it: dict, b: Any) -> str | None:
+    """The step an item reports, as step_sig, for a step item ("ev:<key>", recorded "chg:<pid>:ev:<key>") of a kind
+    that activity lists; None for other items."""
+    m, pid = _STEP_ITEM.match(it.get("id") or ""), it.get("dossier_id")
+    if not m or not pid or not it.get("date"):
+        return None
+    today = getattr(b, "today", None) or "9999-12-31"  # (event_keys: which votes decided a step by then)
+    kind = step_kind(m.group(1), b.dossier_detail.get(pid), today, event_kinds(b, pid))
+    return step_sig(pid, it["date"], kind) if kind in SNAPSHOT_EVENT_KINDS else None
+
+
+def _too_late(it: dict) -> bool:
+    """Recorded more than RECENT_DAYS after the day it reports: not a change detected then (see diff)."""
+    when, day = it.get("detected_at"), it.get("date")
+    return bool(when and day) and (date.fromisoformat(when[:10]) - date.fromisoformat(day)).days > RECENT_DAYS
+
+
+def _withdrawn(it: dict, b: Any) -> bool:
+    """A recorded item that the current records no longer support (supported)."""
+    from pipeline.analysis.status import ACTIVE_STAGES, RANK
+
+    det = b.dossier_detail.get(it.get("dossier_id") or "")
+    m = _RECORDED.match(it["id"]) if det else None
+    if not m:
+        return False
+    if m.group(1) != "stage":
+        if _too_late(it):
+            return True  # 2020/0112(COD): its committee vote of 1 July 2021, recorded on 5 November 2026 (a new id)
+        if m.group(1) != "ev":
+            return False
+    if m.group(1) == "stage":
+        was, _, when = m.group(2).partition(":")
+        now = det["stage"]
+        if RANK.get(was, 0) >= RANK["adopted"] and now in ACTIVE_STAGES | {"adopted"} and RANK[now] < RANK.get(was, 0):
+            return True
+        # a publication or an entry into force that no act of the file backs (status._acts_stage)
+        if was in ACT_STAGES and not det.get("celex"):
+            return True
+        # the same status, now dated otherwise, with no step of the file on the day recorded: the date was the source's
+        # (2025/0177(COD), recorded on 2 November as "Published" on 28 October from an EP record deleted since;
+        # published on 3 November). A later step of the same stage moves the date on and keeps the change
+        # (2025/0311(COD): "Adopted by Parliament and Council" on 26 October, then signed: "Signed, awaiting publication")
+        since = (det.get("status") or {}).get("since") or when
+        return bool(was == now and when and when != since and not any(
+            e["state"] == "done" and e["date"] == when and not e.get("unconfirmed") for e in det.get("timeline") or []
+        ))  # fmt: skip
+    key = m.group(2)
+    step = next((e for e in det.get("timeline") or [] if e["id"] == key), None)
+    if step is not None and not is_listed(step):
+        return True
+    # an EP record deleted at source: on no timeline step and no longer among the procedure's events (the 5 November
+    # refresh: 2023/0421's "2023-0421-PUB-2026-10-30", 2025/0177's "2025-0177-PUB-2026-10-28"). Steps the build makes
+    # from acts, votes and Council results have their own ids and are checked by what they link.
+    if step is None and not _BUILT_STEP.match(key):
+        proc = (getattr(b, "proc", None) or {}).get(it.get("dossier_id") or "")
+        if proc is not None and key not in {e.id for e in proc.events}:
+            return True
+    # a step of an act that is not the file's (2025/0177(COD): Decision (EU) 2026/2402, 2025/0380's)
+    return bool((act := _ACT_EVENT.match(key)) and act.group(1) not in (det.get("celex") or []))
+
+
+def _reverses(it: dict, items: list[dict], dropped: set[str]) -> bool:
+    """A status change from a status that a withdrawn change had claimed: the file's previous recorded status change
+    (of the stage `previous_stage` names, recorded with each change since 5 November 2026; for earlier changes, the
+    file's last one recorded before it) is withdrawn. 2023/0421(COD): "status now Proposal under examination
+    (previously Published in the Official Journal)", recorded on 5 November 2026 once the EP had deleted the record of
+    the publication that the change recorded on 2 November claimed."""
+    m = _STAGE_ITEM.match(it["id"])
+    if not m or not it.get("detected_at"):
+        return False
+    earlier = [x for x in items if (s := _STAGE_ITEM.match(x["id"])) and s.group(1) == m.group(1)
+               and (x.get("detected_at") or "") < it["detected_at"]
+               and ("previous_stage" not in it or s.group(2) == it["previous_stage"])]  # fmt: skip
+    return bool(earlier) and max(earlier, key=lambda x: (x["detected_at"], x["id"]))["id"] in dropped
 
 
 def supported(items: list[dict], b: Any) -> list[dict]:
     """The recorded items that the current records still support, for publication (data/state/activity.json keeps
-    every item as recorded). Left out: a change of a file's status to adoption or a later stage while its status is now
-    an earlier stage of the procedure, a step that the file's timeline no longer lists as an item (is_listed), and a
-    step of an act that is no longer the file's (the act's link was corrected; build.Builder.build_dossier_links). On 2
-    November 2026 the EP's records of the latest publications made 2023/0421(COD) "Published in the Official Journal"
-    (30 October, with no position of Parliament, no Council adoption and no act in Cellar) and 2025/0177(COD)
+    every item as recorded). Left out:
+    - a change of a file's status to adoption or a later stage while its status is now an earlier stage of the
+      procedure; to a stage that an act establishes while no act is the file's; to the file's current stage but dated
+      on a day on which no step of the file is recorded (the source's date was corrected);
+    - a step that the file's timeline no longer lists as an item (is_listed), an EP record deleted at source, and a step
+      of an act that is no longer the file's (the act's link was corrected; build.Builder.build_dossier_links);
+    - an item recorded more than RECENT_DAYS after the day it reports (an older step under a new id; see diff);
+    - a step reported again from another source's record (same file, day and kind, item_signature): the first one
+      recorded is kept;
+    - a status change that only reverses a withdrawn one (_reverses).
+    On 2 November 2026 the EP's records of the latest publications made 2023/0421(COD) "Published in the Official
+    Journal" (30 October, with no position of Parliament, no Council adoption and no act in Cellar) and 2025/0177(COD)
     "Published" (28 October); both records were deleted at source, and the status no longer counts such records
     (status.unconfirmed_final_steps)."""
-    from pipeline.analysis.status import ACTIVE_STAGES, RANK
-
-    out = []
-    for it in items:
-        det = b.dossier_detail.get(it.get("dossier_id") or "")
-        m = re.match(r"chg:[^:]+:(stage|ev):(.+)$", it["id"]) if det else None
-        if m and m.group(1) == "stage":
-            was, _, when = m.group(2).partition(":")
-            now = det["stage"]
-            if RANK.get(was, 0) >= RANK["adopted"] and now in ACTIVE_STAGES | {"adopted"} and RANK[now] < RANK.get(was, 0):
-                continue
-            # the same status, now dated otherwise: the date recorded was the source's (2025/0177(COD), recorded on 2
-            # November as "Published" on 28 October from an EP record deleted since; published on 3 November)
-            if was == now and when and when != ((det.get("status") or {}).get("since") or when):
-                continue
-        elif m:
-            step = next((e for e in det.get("timeline") or [] if e["id"] == m.group(2)), None)
-            if step is not None and not is_listed(step):
-                continue
-            # an EP record deleted at source: on no timeline step and no longer among the procedure's events (the 5
-            # November refresh: 2023/0421's "2023-0421-PUB-2026-10-30", 2025/0177's "2025-0177-PUB-2026-10-28"). Steps
-            # the build makes from acts, votes and Council results have their own ids and are checked by what they link.
-            if step is None and not _BUILT_STEP.match(m.group(2)):
-                proc = (getattr(b, "proc", None) or {}).get(it.get("dossier_id") or "")
-                if proc is not None and m.group(2) not in {e.id for e in proc.events}:
-                    continue
-            if (act := _ACT_EVENT.match(m.group(2))) and act.group(1) not in (det.get("celex") or []):
-                continue  # a step of an act that is not the file's (2025/0177(COD): Decision (EU) 2026/2402, 2025/0380's)
-        out.append(it)
-    return out
+    dropped = {it["id"] for it in items if _withdrawn(it, b)}
+    first: dict[str, str] = {}
+    for it in sorted((x for x in items if x["id"] not in dropped), key=lambda x: (x.get("detected_at") or "", x["id"])):
+        if (sig := item_signature(it, b)) is not None:
+            if sig in first:
+                dropped.add(it["id"])
+            else:
+                first[sig] = it["id"]
+    dropped |= {it["id"] for it in items if it["id"] not in dropped and _reverses(it, items, dropped)}
+    return [it for it in items if it["id"] not in dropped]
 
 
 def recited(items: list[dict], b: Any) -> list[dict]:
-    """Recorded status changes citing the record that gave the status (status_source) while the file still has that
-    status (same stage, since the same day): the changes recorded before status_source cited the procedure file
-    (data/state/activity.json keeps them as recorded). Other items unchanged."""
+    """Recorded items citing the record they report (data/state/activity.json keeps them as recorded): a status change
+    the record that gave the status (status_source) while the file has it, else the record that dated that earlier
+    status, when the file still has one; a step the record of that step on the file's timeline. The changes recorded
+    before status_source cited the procedure file."""
     out = []
     for it in items:
-        det = b.dossier_detail.get(it.get("dossier_id") or "") if it.get("kind") == "status_change" else None
-        if det and it["id"] == f"chg:{det['id']}:stage:{det['stage']}:{(det.get('status') or {}).get('since') or b.today}":
-            it = {**it, "source": status_source(det)}
+        det = b.dossier_detail.get(it.get("dossier_id") or "")
+        src = None
+        if det and (m := _STAGE_ITEM.match(it["id"])):
+            stage, since = m.group(2), m.group(3)
+            if it["id"] == f"chg:{det['id']}:stage:{det['stage']}:{(det.get('status') or {}).get('since') or b.today}":
+                it = {**it, "source": status_source(det)}  # the status the file has
+            else:
+                src = status_source(det, stage, since)
+        elif det and (m := _STEP_ITEM.match(it["id"])):
+            keys = event_keys(det, getattr(b, "today", None) or "9999-12-31")
+            step = next((e for e in det.get("timeline") or [] if keys.get(e["id"], e["id"]) == m.group(1)
+                         or e["id"] == m.group(1)), None)  # fmt: skip
+            src = step.get("source") if step is not None else None
+        if src and src.get("url") != (it.get("source") or {}).get("url"):  # the same record: cited as recorded
+            it = {**it, "source": src}
         out.append(it)
     return out
+
+
+def public_item(it: dict) -> dict:
+    """An item as published: without what is recorded for the build only (`previous_stage`, see _reverses)."""
+    return {k: v for k, v in it.items() if k != "previous_stage"}
 
 
 # --------------------------------------------------------------------------------------- snapshot items
@@ -350,15 +496,17 @@ def item_refs(raw: str) -> list[str]:
     return out
 
 
-def _event_refs(e: dict, key: str) -> list[str]:
+def _event_refs(e: dict, key: str, pid: str | None = None) -> list[str]:
     """What a step's item rests on: the act it is a step of (digest `acts`), else the step (its id and key), its
-    Council vote and the vote it links."""
+    Council vote and the vote it links; and, with the file (`pid`), the file's step of that kind on that day, whichever
+    record carries it (step_sig)."""
+    sig = [step_sig(pid, e["date"], e["kind"])] if pid and e["kind"] in SNAPSHOT_EVENT_KINDS else []
     if m := _ACT_EVENT.match(e["id"]):
-        return [f"act:{m.group(1)}"]
+        return [f"act:{m.group(1)}", *sig]
     refs = item_refs(f"ev:{e['id']}") + (item_refs(f"ev:{key}") if key != e["id"] else [])
     if e.get("vote_id"):
         refs.append(f"vote:{e['vote_id']}")
-    return list(dict.fromkeys(refs))
+    return list(dict.fromkeys(refs + sig))
 
 
 def _counts(v: dict) -> str:
@@ -384,7 +532,7 @@ def _entries(b: Any, cut: str | None) -> list[tuple[dict, list[str]]]:
             out.append((
                 _item(f"ev:{key}", e["date"], _event_kind(e["kind"]), f"{title}: {event_title(e, b)}", pid,
                       e.get("vote_id"), e.get("source")),
-                _event_refs(e, key),
+                _event_refs(e, key, pid),
             ))  # fmt: skip
     # a vote that is already a dossier milestone (its timeline event, or the step keyed by it) is listed once, as that
     # milestone; so is a Council vote that its own step records
@@ -425,6 +573,7 @@ def snapshot_items(b: Any, days: int = RECENT_DAYS) -> list[dict]:
 # --------------------------------------------------------------------------------------- digest + diff
 def digest(b: Any) -> dict[str, dict]:
     out: dict[str, dict] = {}
+    cut = (date.fromisoformat(b.today) - timedelta(days=RECENT_DAYS)).isoformat()
     for pid in b.dossier_ids:
         det = b.dossier_detail[pid]
         keys = event_keys(det, b.today)
@@ -439,6 +588,9 @@ def digest(b: Any) -> dict[str, dict]:
             "votes": sorted(v["id"] for v in det["ep_votes"]),
             "council": sorted(c["id"] for c in det["council_votes"]),
             "acts": sorted(a["celex"] for a in det["acts"]),
+            # the listed steps of the last RECENT_DAYS by day and kind ("<date>|<kind>", step_sig): a step seen under one
+            # record is not new under another (diff); older steps are not recorded as changes at all
+            "sigs": sorted({f"{e['date']}|{e['kind']}" for e in det["timeline"] if is_listed(e) and cut <= e["date"] <= b.today}),
         }
     return out
 
@@ -523,14 +675,18 @@ def diff(
     stage_reliable: bool,
     seen: dict[str, bool] | None = None,
     held: set[str] | frozenset[str] = frozenset(),
+    recorded_items: list[dict] | tuple[dict, ...] = (),
 ) -> list[dict]:
-    """Verified substantive changes from `old` to `new` digests: the activity items the snapshot gives (_entries, any
-    date), as it gives them, that rest on no record of their file seen before; status changes; new files (with their
-    recent items, as the snapshot lists them, and a "New file" item when none of them is the file's proposal).
+    """Verified substantive changes from `old` to `new` digests: the activity items the snapshot gives (_entries) of
+    the last RECENT_DAYS, as it gives them, that rest on no record of their file seen before (_known_steps: nor on its
+    step of that kind on that day, whichever record carried it); status changes; new files (with their recent items, as
+    the snapshot lists them, and a "New file" item when none of them is the file's proposal). An older item is not a
+    change detected now: a step whose record and id changed (2020/0112(COD): its committee vote of 1 July 2021,
+    recorded on 5 November 2026 when OEIL's record of it gave way to the EP's), or that a source added late.
 
     `seen` says which sources were already present when `old` was recorded: records of a source that
     was absent then are the first observation of that source (a baseline), not changes. Dossiers in `held`
-    (see unsettled_dossiers) get no status change in this run.
+    (see unsettled_dossiers) get no status change in this run. `recorded_items`: the changes recorded so far.
     """
     seen = seen or dict.fromkeys(("ep_procedures", "eurlex", "ep_votes", "council", "stage_reliable"), True)
     stubs = getattr(b, "stub_ids", set())
@@ -539,8 +695,12 @@ def diff(
     cut = (date.fromisoformat(today) - timedelta(days=RECENT_DAYS)).isoformat()
     of: dict[str, list[tuple[dict, list[str]]]] = {}
     for it, refs in _entries(b, None):
-        if it["dossier_id"] in new and all(seen.get(REF_SOURCES[r.split(":", 1)[0]]) for r in refs):
+        sources = [REF_SOURCES[ns] for r in refs if (ns := r.split(":", 1)[0]) in REF_SOURCES]
+        if it["dossier_id"] in new and all(seen.get(x) for x in sources):
             of.setdefault(it["dossier_id"], []).append((it, refs))
+    recorded_of: dict[str, list[dict]] = {}
+    for it in recorded_items:
+        recorded_of.setdefault(it.get("dossier_id") or "", []).append(it)
 
     def recorded(it: dict) -> dict:
         return {**it, "id": f"chg:{it['dossier_id']}:{it['id']}", "detected_at": detected_at}
@@ -568,12 +728,34 @@ def diff(
             and n["stage"] != o["stage"]
         ):
             since = (det.get("status") or {}).get("since") or today
-            items.append(_item(f"chg:{pid}:stage:{n['stage']}:{since}", since, "status_change",
-                               f"{title}: status now “{n['label']}” (previously “{o.get('label', o.get('stage'))}”)",
-                               pid, None, status_source(det), detected_at))  # fmt: skip
+            items.append({**_item(f"chg:{pid}:stage:{n['stage']}:{since}", since, "status_change",
+                                  f"{title}: status now “{n['label']}” (previously “{o.get('label', o.get('stage'))}”)",
+                                  pid, None, status_source(det), detected_at),
+                          "previous_stage": o["stage"]})  # the status it reverses, if withdrawn (_reverses)  # fmt: skip
         known = {f"{ns}:{x}" for ns, k in REF_LISTS.items() for x in o.get(k, [])}
-        items += [recorded(it) for it, refs in of.get(pid, []) if not known.intersection(refs)]
+        known |= _known_steps(pid, o, det, b, recorded_of.get(pid, []))
+        items += [recorded(it) for it, refs in of.get(pid, []) if not known.intersection(refs) and it["date"] >= cut]
     return items
+
+
+def _known_steps(pid: str, o: dict, det: dict, b: Any, items: list[dict]) -> set[str]:
+    """The file's steps already seen, by day and kind (step_sig): those the digest keeps (`sigs`), the steps of the
+    timeline that rest on a record seen before, the procedure's events seen before (also when the timeline now shows
+    another record of the step: OEIL's Council step under the Council's voting result), and the steps recorded as
+    items (an act's step that the EP's record of the same day replaced on the timeline)."""
+    out = {step_sig(pid, *x.split("|", 1)) for x in o.get("sigs", []) if "|" in x}
+    known = {f"{ns}:{x}" for ns, k in REF_LISTS.items() for x in o.get(k, [])}
+    keys = event_keys(det, b.today)
+    for e in det["timeline"]:
+        if e["id"] in keys and known.intersection(_event_refs(e, keys[e["id"]])):
+            out.add(step_sig(pid, e["date"], e["kind"]))
+    ids = set(o.get("events", []))
+    for e in getattr((getattr(b, "proc", None) or {}).get(pid), "events", None) or []:
+        kind = str(getattr(getattr(e, "kind", None), "value", getattr(e, "kind", None)))
+        if e.id in ids and kind in SNAPSHOT_EVENT_KINDS:
+            out.add(step_sig(pid, e.date, kind))
+    out |= {sig for it in items if (sig := item_signature(it, b))}
+    return out
 
 
 def _merge_digest(
@@ -583,6 +765,7 @@ def _merge_digest(
     held: set[str] | frozenset[str] = frozenset(),
     rebaseline: bool = False,
     detected_at: str | None = None,
+    cut: str = "",
 ) -> dict[str, dict]:
     """Union of ids ever seen; the stage is only updated when it was computed from complete inputs
     (otherwise a known dossier keeps its stored stage and a new one is stored without a stage). A held
@@ -594,6 +777,8 @@ def _merge_digest(
         merged = {
             **n,
             **{k: sorted(set(o.get(k, [])) | set(n[k])) for k in ("events", "votes", "council", "acts")},
+            # the steps of the last RECENT_DAYS (`cut`) by day and kind: older ones are never recorded as changes
+            "sigs": sorted(x for x in set(o.get("sigs", [])) | set(n.get("sigs", [])) if x[:10] >= cut),
         }
         if not stage_reliable or pid in held:
             merged["stage"], merged["label"] = o.get("stage"), o.get("label")
@@ -652,12 +837,13 @@ def update_state(b: Any, state_dir: Path, record: bool = False) -> list[dict]:
     record_status = stages_trusted and classifier == CLASSIFIER_VERSION
     if old is not None:
         known = {it["id"] for it in recorded}
-        fresh = [it for it in diff(old, new, b, detected_at, record_status, seen, held) if it["id"] not in known]
+        fresh = [it for it in diff(old, new, b, detected_at, record_status, seen, held, recorded) if it["id"] not in known]
         recorded = recorded + fresh
         _write(act_path, recorded)
     elif not act_path.exists():
         _write(act_path, [])
-    dossiers = _merge_digest(old or {}, new, stages_trusted, held, classifier != CLASSIFIER_VERSION, detected_at)
+    cut = (date.fromisoformat(b.today) - timedelta(days=RECENT_DAYS)).isoformat()
+    dossiers = _merge_digest(old or {}, new, stages_trusted, held, classifier != CLASSIFIER_VERSION, detected_at, cut)
     suspended_since = None if stages_trusted else suspended_since or detected_at
     _write(dig_path, {
         "version": 1,
@@ -680,15 +866,22 @@ def update_state(b: Any, state_dir: Path, record: bool = False) -> list[dict]:
 
 
 def merge(
-    recorded: list[dict], snapshot: list[tuple[dict, list[str]]], today: str, limit: int = PUBLIC_LIMIT
+    recorded: list[dict],
+    snapshot: list[tuple[dict, list[str]]],
+    today: str,
+    limit: int = PUBLIC_LIMIT,
+    b: Any = None,
 ) -> list[dict]:
     """Recorded changes first-class; the snapshot's items (snapshot_entries) fill in, except those resting on a record
-    that a recorded change names: its step (by id or key), its vote or its Council vote."""
+    that a recorded change names: its step (by id or key, and with `b` by the file, day and kind: item_signature), its
+    vote or its Council vote."""
     seen: set[str] = set()
     out: list[dict] = []
     for it in recorded:
         key = it["id"].split(":", 2)[-1] if it["id"].startswith("chg:") else it["id"]
         seen.update(item_refs(key), [it["id"]], [f"vote:{it['vote_id']}"] if it.get("vote_id") else [])
+        if b is not None and (sig := item_signature(it, b)):
+            seen.add(sig)
         out.append(it)
     for it, refs in snapshot:
         if it["id"] in seen or seen.intersection(refs):

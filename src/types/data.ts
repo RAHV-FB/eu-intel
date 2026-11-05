@@ -280,6 +280,10 @@ export interface TimelineEvent {
   source?: SourceRef | null;
   vote_id?: string | null; // EP vote linked to this event, if any
   after_end_of_validity?: ISODate | null; // an act's date recorded for after its validity ended (that end date)
+  // the European Parliament's record of the final act's publication or signature that no act or adoption in our data
+  // confirms: shown as its record (kind 'other'), and not the file's latest recorded step (pipeline status.py
+  // unconfirmed_final_steps); absent otherwise
+  unconfirmed?: boolean;
   // a joint debate: the other files debated with this one, each with its report on the item when cited; a file not
   // in our data has id/ref/title null and is named by its report
   joint_with?: { id: string | null; ref: string | null; title: string | null; report: DocRef | null }[];

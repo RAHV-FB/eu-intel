@@ -225,3 +225,24 @@ def test_every_curated_check_names_recorded_dates():
         assert e.get("provision") and e.get("quote") and e.get("source", {}).get("url") and e.get("reviewed"), celex
         if celex in _records():
             assert real(celex).transposition_checked is not None, celex
+
+
+def test_an_early_wrong_date_does_not_drop_the_general_deadline():
+    """When EUR-Lex records a wrong unlabelled date before the act (as for Directive (EU) 2015/412) beside the real
+    deadline labelled APPLICATION only, the wrong date is set aside (before_the_act) and the remaining dates are all
+    APPLICATION-labelled: as when every date is, the labels do not separate them and the deadline is among them, not
+    before the act. It was dropped: the directive lost its general deadline."""
+    src = SourceRef(institution="EUR-Lex", url="https://eur-lex.europa.eu/", retrieved_at="2026-11-05T00:00:00Z")
+    a = LegalAct(celex="32015L9999", act_type="directive", title="Directive (EU) 2015/9999", date_document="2015-03-11",
+                 eurlex_url="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32015L9999",
+                 transposition_deadlines=["2002-10-17", "2017-03-11"],
+                 transposition_dates=[TranspositionDate(date="2002-10-17"),
+                                      TranspositionDate(date="2017-03-11", labels=["APPLICATION"])],
+                 source=src)  # fmt: skip
+    assert [(x.date, x.kind) for x in classify(a)] == [("2002-10-17", "other"), ("2017-03-11", "deadline")]
+    assert general_deadline(a) == "2017-03-11"
+    # an APPLICATION date before the act stays out of the candidates (Directive (EU) 2022/642: retroactive application)
+    b = a.model_copy(update={"transposition_deadlines": ["2002-10-17", "2014-01-01", "2017-03-11"],
+                             "transposition_dates": [*a.transposition_dates,
+                                                     TranspositionDate(date="2014-01-01", labels=["APPLICATION"])]})  # fmt: skip
+    assert general_deadline(b) == "2017-03-11"

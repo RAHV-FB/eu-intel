@@ -44,7 +44,7 @@ data/curated/*.yaml ─────────────────┤ build
 | `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds |
 | `build.py` | Joins everything by official identifiers → `public/data/**` per `src/types/data.ts`; `--strict` (`EU_INTEL_STRICT=1`) fails when it had to work around a problem |
 | `freshness.py` | How old each source's data may get before the site and the Data health issue call it stale; the core sources behind `core_data_at`; when the Legislative Train's "blocked" stops being shown |
-| `validate.py` | Schema + invariants (ballot totals, referential integrity, legal-type rules); on a build, the claims in `public/data` against the rules and the files' own records, and the contract (`contract.py`: the built JSON against `src/types/data.ts`). Errors fail; warnings are by design (not counted), integrity (fail above `validate_baseline.json`) or backlog |
+| `validate.py` | Schema + invariants (ballot totals, referential integrity, legal-type rules); on a build, the claims in `public/data` against the rules and the files' own records, and the contract (`contract.py`: the built JSON against `src/types/data.ts`). Errors fail; warnings are by design (not counted), integrity (fail unless `validate_baseline.json` accepts the finding) or backlog |
 
 ### Identifiers and linking
 

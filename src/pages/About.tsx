@@ -333,9 +333,9 @@ export default function About() {
                 procedure that no voting-result document records is entered from the Council’s own communication on the outcome.
               </li>
               <li>
-                A few further entries of the same kind, such as a link between two acts that EUR-Lex records wrongly, Denmark’s decision
-                (notified to the Council) on a directive that builds on the Schengen acquis, and the status of a file whose act the
-                official records do not link to it.
+                A few further entries of the same kind, such as a link between two acts, or between an act and a procedure, that EUR-Lex
+                records wrongly, Denmark’s decision (notified to the Council) on a directive that builds on the Schengen acquis, and the
+                status of a file whose act the official records do not link to it.
               </li>
             </ul>
             <p>

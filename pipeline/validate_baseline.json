@@ -1,14 +1,15 @@
 {
-  "about": "Warning counts of `python -m pipeline validate --built` on the committed snapshot. validate fails when an integrity class (pipeline/validate.py INTEGRITY, and any class not classified) has more; backlog classes never fail. `accepted`: the integrity findings counted, so that one replaced by another is told. Rewrite with `python -m pipeline validate --built --update-baseline` once new findings are checked and accepted, or when a count fell.",
+  "about": "Warnings of `python -m pipeline validate --built` on the committed snapshot. `accepted`: the integrity findings checked and accepted (pipeline/validate.py INTEGRITY, and any class not classified); validate fails on any other integrity finding, whatever the count. `counts`: every class's count; backlog classes never fail. Rewrite with `python -m pipeline validate --built --update-baseline` once new findings are checked and accepted, or when a count fell (refused while validate reports errors).",
   "counts": {
-    "act-procedure-mismatch": 1,
-    "application-before-act": 8,
+    "application-before-act": 9,
     "application-not-recorded": 19,
+    "index-unlisted": 2,
     "report-off-timeline": 1
   },
   "accepted": {
-    "act-procedure-mismatch": [
-      "32020D2059 (decision) linked to 2020/3521(COD): number range is not used for legislative procedures"
+    "index-unlisted": [
+      "public/data/people/parties/5500.json: not listed in its folder's index (people/parties/<id>.json)",
+      "public/data/people/parties/5719.json: not listed in its folder's index (people/parties/<id>.json)"
     ],
     "report-off-timeline": [
       "dossier 2016-0224: key document A-8-2018-0171 is on no timeline step"
