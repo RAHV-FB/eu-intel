@@ -191,6 +191,15 @@ def test_the_browser_tests_install_their_browser_with_bounded_retries(tmp_path):
     assert run().returncode == 1
 
 
+def test_the_docs_give_the_ci_jobs_time_limits_that_ci_sets():
+    # the e2e limit went from 25 to 40 minutes (a slow apt mirror) while docs/DEPLOYMENT.md kept "e2e 25"
+    text = " ".join((ROOT / "docs" / "DEPLOYMENT.md").read_text(encoding="utf-8").split())
+    stated = re.search(r"\(CI: check (\d+), e2e (\d+);", text)
+    assert stated, "docs/DEPLOYMENT.md, Free-plan limits: (CI: check N, e2e N; ..."
+    jobs = workflow("ci.yml")["jobs"]
+    assert (int(stated[1]), int(stated[2])) == (jobs["check"]["timeout-minutes"], jobs["e2e"]["timeout-minutes"])
+
+
 def test_vitest_fails_when_it_finds_no_tests():
     runs = [s["run"] for s in steps("ci.yml", "check") if "vitest" in (s.get("run") or "")]
     # with --passWithNoTests a broken include pattern was a green step
