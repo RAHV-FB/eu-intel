@@ -153,6 +153,30 @@ def test_attempt_timeout_shrinks_to_the_time_left(monkeypatch):
     assert timeouts[-1] < 60.0
 
 
+def test_a_redirect_loop_is_a_permanent_http_error(monkeypatch):
+    """Sources handle a failed request as HttpError; httpx's TooManyRedirects escaped as itself."""
+    http, clock, calls = make(monkeypatch, lambda r: httpx.Response(302, headers={"Location": str(r.url)}))
+    with pytest.raises(H.HttpError, match="too many redirects"):
+        http.get(URL)
+    assert clock.waits == []  # not retried, as a 404 is not
+
+
+def test_a_body_that_cannot_be_decoded_is_retried_then_an_http_error(monkeypatch):
+    """A compressed body that does not decode (a transfer cut short) raised httpx's DecodingError, not HttpError."""
+    monkeypatch.delenv(H.FETCH_DEADLINE_ENV, raising=False)
+
+    def broken(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, headers={"Content-Encoding": "gzip"}, content=b"not gzip")
+
+    http, clock, calls = make(monkeypatch, broken)
+    with pytest.raises(H.HttpError) as e:
+        http.get(URL)
+    assert "DecodingError" in str(e.value) and len(calls) == 6 and clock.waits == [1, 2, 4, 8, 16]
+    answers = iter([broken, lambda r: httpx.Response(200, content=b"ok")])
+    http, _, calls = make(monkeypatch, lambda r: next(answers)(r))
+    assert http.get(URL) == b"ok" and len(calls) == 2
+
+
 def test_abort_stops_requests(monkeypatch):
     http, _, calls = make(monkeypatch, always(200))
     http.abort()
