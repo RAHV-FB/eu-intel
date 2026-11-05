@@ -16,7 +16,7 @@
  *   votes/index.json                EpVoteSummary[]          (roll-call votes on whole texts + final, mandate and
  *                                                            negotiation-decision votes linked to procedures)
  *   votes/titles.json               EpVoteTitle[]            (the same votes in the same order, with only what the vote
- *                                                            tables of the MEP and group pages show)
+ *                                                            tables of the MEP, group and party pages show)
  *   votes/<id>.json                 EpVoteDetail
  *   council/index.json              CouncilVote[]
  *   people/meps.json                MepSummary[]
@@ -496,12 +496,13 @@ export interface EpVoteSummary {
   source: SourceRef;
 }
 
-/** votes/titles.json: the votes of votes/index.json, in its order, with only what the vote tables of the MEP and group
- * pages show: date, title, the line of kind of vote, procedure reference and distinction, and the result. `title` is
- * there only for a vote with no `display_title` (none today), which VoteTitle then falls back to. */
+/** votes/titles.json: the votes of votes/index.json, in its order, with only what the vote tables of the MEP, group and
+ * party pages show: date, title, the line of kind of vote, procedure reference and distinction, the result, and the
+ * file the vote belongs to (`dossier_id`, for a link to its page). `title` is there only for a vote with no
+ * `display_title` (none today), which VoteTitle then falls back to. */
 export type EpVoteTitle = Pick<
   EpVoteSummary,
-  'id' | 'date' | 'display_title' | 'display_title_parts' | 'distinction' | 'kind_label' | 'procedure_ref' | 'outcome'
+  'id' | 'date' | 'display_title' | 'display_title_parts' | 'distinction' | 'kind_label' | 'procedure_ref' | 'outcome' | 'dossier_id'
 > &
   Partial<Pick<EpVoteSummary, 'title'>>;
 
@@ -533,6 +534,21 @@ export interface Ballot {
   intended?: BallotPosition | null; // correction recorded after the vote (does not change the result)
 }
 
+/**
+ * MEPs in office on the day of a vote (as Parliament's membership records give them) with no recorded vote, counted by
+ * the national party record (EP org id; null: none recorded), political group (slug) and country of representation
+ * they had that day. With the ballots, which give the same for each MEP who voted, it makes the vote page's table by
+ * national party.
+ */
+export type NoVoteCount = [party: string | null, group: string | null, country: string | null, meps: number];
+
+/**
+ * How a party record's MEPs voted on a vote on a whole text (kinds 'final' and 'mandate'), by their party record on
+ * the day: recorded votes for, against and abstaining, and the MEPs in office that day with no recorded vote
+ * (null when Parliament's membership records do not give the Members in office that day). Not a party position.
+ */
+export type PartyVote = [vote_id: string, in_favour: number, against: number, abstain: number, did_not_vote: number | null];
+
 /** An MEP with no recorded vote who stated afterwards how they had intended to vote. */
 export interface VoteIntention {
   mep: string;
@@ -556,6 +572,12 @@ export interface EpVoteDetail extends EpVoteSummary {
   groups: GroupBreakdown[];
   countries: CountryBreakdown[];
   ballots: Ballot[]; // empty when has_ballots = false
+  // votes with individual votes only: the MEPs in office that day with no recorded vote; null when the membership
+  // records do not give the Members in office that day (the days a margin based on them is not shown either)
+  no_vote?: NoVoteCount[] | null;
+  // party records in which Parliament's membership data lists MEPs on the day of this vote although the day is outside
+  // the record's own period (as PartyDetail.outside_period says); absent when there are none
+  parties_outside_period?: { party: string; start?: ISODate | null; end?: ISODate | null }[];
   intentions?: VoteIntention[]; // stated intentions of MEPs without a recorded vote
   mep_names: Record<string, string>; // id -> display name for ballots
   reconciliation: { matches: boolean; note?: string | null }; // ballots vs official totals
@@ -734,6 +756,9 @@ export interface PartyDetail extends PartySummary {
   outside_period?: { id: string; name: string; from?: ISODate | null; to?: ISODate | null }[];
   same_name?: PartyRef[]; // records with the same name and country (the same party in other terms)
   now_parties?: PartyRef[]; // the records this record's sitting MEPs are in now, most MEPs first
+  // its MEPs' votes on whole texts (final and mandate votes with individual votes, when it had MEPs in office), newest
+  // first
+  votes: PartyVote[];
   source: SourceRef;
 }
 

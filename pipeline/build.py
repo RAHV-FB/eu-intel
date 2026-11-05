@@ -1238,11 +1238,14 @@ def _vote_index_entry(v: dict) -> dict:
 
 
 def _vote_title_entry(e: dict) -> dict:
-    """EpVoteTitle for votes/titles.json, from the entry of votes/index.json: only what the vote tables of the MEP
-    and group pages show (date, title, the line of kind, procedure reference and distinction, result), so those
-    pages need not download the whole index. A key without a value is left out; `title` stays only as the fallback
-    of a vote with no display title (none in the index today)."""
-    keep = ("id", "date", "display_title", "display_title_parts", "distinction", "kind_label", "procedure_ref", "outcome")
+    """EpVoteTitle for votes/titles.json, from the entry of votes/index.json: only what the vote tables of the MEP,
+    group and party pages show (date, title, the line of kind, procedure reference and distinction, result, the
+    file's page), so those pages need not download the whole index. A key without a value is left out; `title` stays
+    only as the fallback of a vote with no display title (none in the index today)."""
+    keep = (
+        "id", "date", "display_title", "display_title_parts", "distinction", "kind_label", "procedure_ref", "outcome",
+        "dossier_id",
+    )  # fmt: skip
     out = {k: e[k] for k in keep if e.get(k)}
     if not e.get("display_title"):
         out["title"] = e["title"]
@@ -2601,10 +2604,12 @@ class Builder:
         self.votes_from = idx[-1].date if idx else "9999"  # the first vote listed (meta scope "ep_votes_from")
         self.referred_back = referred_back(s.votes)
         self.component_cache: dict[str, int | None] = {}
+        self.office_cache: dict[str, list[str]] = {}  # day -> the MEPs in office (in_office)
         margin_fn = _lazy("pipeline.analysis.ep_margin", "margin")
         self.vote_summary: dict[str, dict] = {}
         self.group_votes: dict[str, list[dict]] = defaultdict(list)
         self.mep_votes: dict[str, list[dict]] = defaultdict(list)
+        self.party_votes: dict[str, list[dict]] = defaultdict(list)  # party record -> its PartyVote rows
         for v in idx:
             summ = self.ep_vote_summary(v, margin_fn)
             self.vote_summary[v.id] = summ
@@ -2618,7 +2623,53 @@ class Builder:
     def members_in_office(self, d: str) -> int:
         """MEPs whose political-group membership (non-attached included) covers day `d` in the EP's
         membership records (ep_people)."""
-        return sum(1 for spans in self.mep_groups.values() if any(_valid_on(a, b, d) for a, b, _ in spans))
+        return len(self.in_office(d))
+
+    def in_office(self, d: str) -> list[str]:
+        """The ids of the MEPs members_in_office counts on day `d`."""
+        if d not in self.office_cache:
+            spans = self.mep_groups.items()
+            self.office_cache[d] = sorted(m for m, sp in spans if any(_valid_on(a, b, d) for a, b, _ in sp))
+        return self.office_cache[d]
+
+    def party_breakdown(self, v: EpVote, ballots: list[dict]) -> dict:
+        """What the vote page's table by national party needs besides the ballots, which give each voter's party
+        record, group and country on the day of the vote:
+        - `no_vote`: the MEPs in office that day (members_in_office) with no recorded vote, counted by the party
+          record, group and country they had that day ([party, group, country, MEPs]); None when the membership
+          records do not give the Members in office that day (component_members), so that no one is said not to have
+          voted who did not sit then, or left out who did;
+        - `parties_outside_period`: the party records Parliament's membership data lists MEPs in on that day although
+          the day is outside the record's own period, as their party pages say (`outside_period`).
+        Each party record's counts on a vote on a whole text (final, mandate) go to its page (party_votes)."""
+        known = self.component_members(v.date) is not None
+        voted = {x["mep"] for x in ballots}
+        absent: Counter = Counter()
+        for mid in self.in_office(v.date) if known else []:
+            if mid not in voted:
+                gid = self.group_at(mid, v.date)
+                group = self.org_slug.get(gid) if gid else None
+                absent[(self.party_at(mid, v.date), group, self.mep[mid].country)] += 1
+        no_vote = sorted(([*k, n] for k, n in absent.items()), key=lambda r: tuple(x or "" for x in r[:3]))
+        out: dict[str, Any] = {"no_vote": no_vote if known else None}
+        counts: dict[str, list[int]] = defaultdict(lambda: [0, 0, 0, 0])
+        for x in ballots:
+            if x.get("party"):
+                counts[x["party"]][("for", "against", "abstain").index(x["pos"])] += 1
+        for (party, _group, _country), n in absent.items():
+            if party:
+                counts[party][3] += n
+        outside = [
+            {"party": p, "start": o.start, "end": o.end}
+            for p in sorted(counts)
+            if (o := self.org.get(p)) is not None and not _valid_on(o.start, o.end, v.date)
+        ]
+        if outside:
+            out["parties_outside_period"] = outside
+        if v.kind in ("final", "mandate"):
+            for p, (f, a, x, n) in counts.items():
+                self.party_votes[p].append({"row": [v.id, f, a, x, n if known else None], "_d": v.date})
+        return out
 
     def component_members(self, d: str) -> int | None:
         """Number of component Members for majority rules: the Members in office on the day of the vote.
@@ -2807,6 +2858,7 @@ class Builder:
         names: dict[str, str] = {}
         groups: dict[str, Counter] = defaultdict(Counter)
         countries: dict[str, Counter] = defaultdict(Counter)
+        by_party: dict = {}  # party_breakdown, for a vote with individual votes
         recon = {"matches": False, "note": "No individual (roll-call) votes are recorded for this vote."}
         if b is not None:
             intended: dict[str, str] = {}
@@ -2838,6 +2890,7 @@ class Builder:
                         countries[country][pos] += 1
                     self.mep_votes[mid].append({"vote_id": v.id, "pos": pos, "_d": v.date})
             ballots.sort(key=lambda x: (x["pos"], names.get(x["mep"], ""), x["mep"]))
+            by_party = self.party_breakdown(v, ballots)
             # MEPs with no recorded vote who stated afterwards how they had intended to vote
             for mid, it in intended.items():
                 if mid in seen:
@@ -2907,6 +2960,7 @@ class Builder:
             "groups": gb,
             "countries": cb,
             "ballots": ballots,
+            **by_party,
             "intentions": intentions,
             "mep_names": dict(sorted(names.items())),
             "reconciliation": recon,
@@ -4775,6 +4829,9 @@ class Builder:
                     }
                     for h in sorted(gh.values(), key=lambda h: (h["from"] or "", h["group"]))
                 ],  # fmt: skip
+                # how its MEPs voted on whole texts (party_breakdown), newest first, as the MEP pages list votes
+                "votes": [r["row"] for r in sorted(self.party_votes.get(oid, []), key=lambda r: (r["_d"], r["row"][0]),
+                                                   reverse=True)],  # fmt: skip
                 "source": _src(o.source),
             }
         parties_out.sort(key=lambda p: (p["country"], -p["members_active"], p["label"], p["id"]))
