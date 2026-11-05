@@ -29,6 +29,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from pipeline.analysis.lawcontext import LawContext
 from pipeline.analysis.scheduled import home_items, scheduled_by_dossier
 from pipeline.analysis.transposition import (
     act_day,
@@ -42,6 +43,8 @@ from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models import entities
 from pipeline.models.countries import FORMER_MEMBER_STATES, MEMBER_STATES
 from pipeline.models.entities import (
+    ActContext,
+    AdvisoryOpinion,
     CouncilVote,
     CountryIndicator,
     DirectiveOptOut,
@@ -54,9 +57,11 @@ from pipeline.models.entities import (
     LegalAct,
     Mep,
     NationalMeasure,
+    OfficialSummary,
     Organization,
     PlannedStep,
     Procedure,
+    ProcedureCase,
     ProcedureNotice,
     RegulationOptIn,
     SourceRef,
@@ -144,6 +149,20 @@ SOURCES: dict[str, dict[str, str]] = {
         "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
         "licence": "© European Union, https://eur-lex.europa.eu. Reuse authorised under Commission "
         "Decision 2011/833/EU, with acknowledgement of the source.",
+    },
+    # Decision 2011/833/EU covers "documents held by the Commission or on its behalf by the Publications Office"
+    # (Art. 1), authorises their reuse (Art. 4) and allows conditions such as acknowledging the source and not
+    # distorting the documents' original meaning or message (Art. 6(2)); each summary's text carries "© European Union"
+    # (docs/DATA_SOURCES.md, "Law context"). The summaries' opening sections are quoted unchanged, labelled and linked.
+    "lawcontext": {
+        "name": "EUR-Lex / Publications Office (Cellar) – summaries of EU legislation, court cases on the acts, "
+        "consolidated texts, and opinions of the European Economic and Social Committee and the European Committee "
+        "of the Regions",
+        "institution": "EUR-Lex",
+        "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+        "licence": "© European Union, https://eur-lex.europa.eu. Reuse authorised under Commission Decision "
+        "2011/833/EU, with acknowledgement of the source. The summaries are quoted unchanged, in part, with their "
+        "date and a link to the full summary.",
     },
     "train": {
         "name": "European Parliament – Legislative Train Schedule",
@@ -2115,6 +2134,11 @@ class Snapshot:
         # planned steps (pipeline/sources/agenda.py): Cellar's planned events, Parliament's plenary agenda
         self.planned = _load("agenda", "planned", PlannedStep, i, root)
         self.plenary_agenda = _load("agenda", "plenary", PlannedStep, i, root)
+        # absent until the source is first retrieved: the files' pages then show no law context
+        self.law_acts = _load("lawcontext", "acts", ActContext, i, root)
+        self.law_summaries = _load("lawcontext", "summaries", OfficialSummary, i, root)
+        self.law_opinions = _load("lawcontext", "opinions", AdvisoryOpinion, i, root)
+        self.law_cases = _load("lawcontext", "procedure_cases", ProcedureCase, i, root)
 
     def _manifest(self) -> dict[str, SourceStatus]:
         if self.root == SNAPSHOT:
@@ -2200,6 +2224,8 @@ class Builder:
             self.mep_by_name[" ".join(f"{m.family_name} {m.given_name}".casefold().split())].append(m)
         self.ballots = {b.vote_id: b for b in s.ballots}
         self.optouts = {o.celex: o for o in s.optouts if o.status == "ok"}
+        self.law = LawContext(getattr(s, "law_acts", []), getattr(s, "law_summaries", []),
+                              getattr(s, "law_opinions", []), getattr(s, "law_cases", []), self.act)  # fmt: skip
         self.train_by_ref: dict[str, list[TrainFile]] = defaultdict(list)
         for t in s.train:
             for r in t.procedure_refs:
@@ -4555,6 +4581,11 @@ class Builder:
                 )
             det["next_step"] = self.derived_next_step(det)
             det["next_step"] = self.amending_deadlines(det, acts)
+            law = getattr(self, "law", None)
+            if law:  # EUR-Lex summaries, court cases, consolidated texts, advisory opinions (analysis/lawcontext.py)
+                det.update(law.for_dossier(p.reference, acts, act_label))
+            if det["known_as"] and det["known_as"]["names"]:  # list rows give the names under the title too
+                summ["names"] = det["known_as"]["names"]
             self.dossier_detail[pid] = det
             # said under "Latest recorded step" on the law page (2021/0366(COD): Delegated Regulation (EU)
             # 2026/2102 "of 13 July 2026", in force on 18 September 2026 as Cellar records, after the file's latest
@@ -5262,6 +5293,7 @@ class Builder:
         "council": "Council votes",
         "implementation": "National transposition and infringements",
         "optouts": "Danish and Irish participation",
+        "lawcontext": "Official summaries and court cases",
         "train": "Legislative Train",
         "agenda": "Planned dates of next steps",
     }
@@ -5441,6 +5473,21 @@ class Builder:
                 out.append(f"{len(regs):,} Commission decisions confirming a Member State's participation in a "
                            f"regulation after its adoption (Protocol No 21, Article 4), for {len({r.celex for r in regs}):,} "
                            "regulations, found by their titles; regulations' own texts are not read.")
+        elif sid == "lawcontext":
+            summaries = [x for x in getattr(s, "law_summaries", []) if not x.obsolete and x.acts]
+            ctx = getattr(s, "law_acts", [])
+            # distinct cases: a judgment or a case can concern several acts
+            pending = {k.celex for r in ctx for k in r.cases if k.state == "pending"} | {
+                k.celex for k in getattr(s, "law_cases", []) if k.state == "pending"}  # fmt: skip
+            out.append(f"EUR-Lex's summaries of EU legislation for {len({c for x in summaries for c in x.acts}):,} acts "
+                       f"({len(summaries):,} summaries, the opening section of "
+                       f"{sum(x.text_status == 'ok' for x in summaries):,} quoted), "
+                       f"{len({d.celex for r in ctx for d in r.interpreted_by}):,} judgments and orders interpreting "
+                       f"{sum(1 for r in ctx if r.interpreted_by):,} of the acts, "
+                       f"{len(pending):,} cases before the Court of Justice or the General Court with no decision recorded, "
+                       f"the consolidated versions of {sum(1 for r in ctx if r.consolidated):,} acts, and "
+                       f"{len(getattr(s, 'law_opinions', [])):,} opinions of the European Economic and Social Committee "
+                       "and the European Committee of the Regions on the files.")  # fmt: skip
         elif sid == "train":
             blocked = sum(1 for t in s.train if t.status.strip().lower() == "blocked")
             out.append(f"{len(s.train):,} files on Parliament's Legislative Train Schedule, {blocked:,} of them "

@@ -178,6 +178,9 @@ export interface DossierSummary {
   next_date?: ISODate | null; // earliest legally fixed future date (application / transposition deadline), if any
   instrument?: LegalInstrument | null; // final act type if adopted, or proposed instrument if known
   celex: string[];
+  // the file's names besides its title, as its page lists them (`known_as.names`: an act's own short title, names in
+  // data/curated/aliases.yaml, each with a cited official source); set only when there are some
+  names?: string[];
   featured: boolean;
   officially_blocked: boolean; // only true when an official source (Legislative Train) says so
   has_ep_votes: boolean;
@@ -359,6 +362,79 @@ export interface CourtRulingInfo {
   url: string;
 }
 
+/**
+ * A summary of one of the file's acts in EUR-Lex's "Summaries of EU legislation" (pipeline/sources/lawcontext.py):
+ * written by the EU Publications Office, not by this site, and quoted unchanged.
+ */
+export interface OfficialSummaryInfo {
+  id: string; // LEGISSUM identifier, "310401_2"
+  title: string; // as published
+  date?: ISODate | null; // last update as EUR-Lex records it: the version whose opening section is quoted
+  acts: string[]; // CELEX of the file's acts it summarises
+  aim: string[]; // its opening section ("What is the aim of …"), plain text as published; empty when not read
+  aim_items: number[]; // indexes of `aim` that are list items in the summary (shown as a list)
+  aim_heading?: string | null; // that section's heading as published ("WHAT IS THE AIM OF THE REGULATION?")
+  aim_complete: boolean; // false: the section goes on in the full summary
+  url: string; // the summary on EUR-Lex
+  // the latest act amending the summarised act that our EUR-Lex data dates, when the summary was last updated before
+  // that act was published (date: its publication, else its adoption); set only then
+  predates?: { celex: string; label: string; date: ISODate } | null;
+}
+
+/** A judgment or order that EUR-Lex records as interpreting one of the file's acts. */
+export interface CourtDecisionInfo {
+  celex: string; // "62024CJ0312"
+  case: string; // "C-312/24", "Joined Cases C-26/22 and C-64/22"
+  date?: ISODate | null;
+  ecli?: string | null;
+  kind: 'judgment' | 'order';
+  court: 'Court of Justice' | 'General Court';
+  acts: string[]; // the file's acts it interprets
+  url: string; // on EUR-Lex
+}
+
+/**
+ * A case before the Court of Justice or the General Court for which EUR-Lex records the notice of the new case and, in
+ * the case's file, no judgment, order, closure or withdrawal: a request for a preliminary ruling on one of the file's
+ * acts, an action for the annulment (in whole or in part) of one, or an action against the withdrawal of the file's
+ * proposal (annulment_of_withdrawal: of the Commission's withdrawal notice, `annulled`, as regards the proposal).
+ */
+export interface CourtCaseInfo {
+  celex: string; // the notice of the new case in the Official Journal, "62026CN0660"
+  case: string; // "C-660/26"
+  kind: 'preliminary_reference' | 'annulment' | 'annulment_of_withdrawal';
+  lodged?: ISODate | null;
+  court: 'Court of Justice' | 'General Court';
+  acts: string[]; // the file's acts it concerns (none for an action against a withdrawal)
+  applicants?: string[]; // annulment_of_withdrawal: who brought it, as EUR-Lex names them ("European Parliament")
+  annulled?: string; // annulment_of_withdrawal: CELEX of the act whose annulment is sought
+  url: string; // the notice on EUR-Lex
+}
+
+export interface CourtContextInfo {
+  interpreted_by: CourtDecisionInfo[]; // newest first
+  pending: CourtCaseInfo[]; // newest first
+}
+
+/** The consolidated versions EUR-Lex publishes of one of the file's acts (only of the act itself). */
+export interface ConsolidatedTextInfo {
+  act: string; // CELEX of the act
+  act_label: string; // "Directive (EU) 2022/2555"
+  // ascending by date; the current one is the latest dated on or before the reader's date, a later one consolidates
+  // changes that apply from its date
+  versions: { celex: string; date: ISODate }[];
+}
+
+/** An opinion of the European Economic and Social Committee (EESC) or the European Committee of the Regions (CoR)
+ * that EUR-Lex records in the file's procedure. */
+export interface AdvisoryOpinionInfo {
+  celex: string; // "52021AE2482"
+  body: 'EESC' | 'CoR';
+  date?: ISODate | null;
+  title?: string | null; // as published
+  url: string; // on EUR-Lex
+}
+
 export interface EditorialInfo {
   short_title: string;
   what: string;
@@ -423,6 +499,12 @@ export interface DossierDetail extends DossierSummary {
   started_from_parts?: boolean; // a split parent's `started` and proposal document are the ones all its parts record; set only when true
   sources: SourceRef[];
   changes: ActivityItem[]; // verified changes detected between snapshots for this dossier
+  // The law in context, from EUR-Lex / Cellar (the "lawcontext" source); each absent when EUR-Lex records nothing for
+  // the file or the source has not been retrieved
+  official_summaries?: OfficialSummaryInfo[]; // summaries of the file's acts, most recently updated first
+  court?: CourtContextInfo; // judgments and orders interpreting its acts, cases pending before the Court
+  consolidated?: ConsolidatedTextInfo[]; // per act
+  advisory_opinions?: AdvisoryOpinionInfo[]; // EESC and CoR opinions on the file, by date
 }
 
 // ---------------------------------------------------------------- EP votes

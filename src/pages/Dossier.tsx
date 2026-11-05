@@ -16,6 +16,7 @@ import { splitParts } from '../features/legislation/dossier/Split';
 import { CouncilVotes, ParliamentVotes } from '../features/legislation/dossier/Votes';
 import { NationalApplication } from '../features/legislation/dossier/Application';
 import { DossierDetails } from '../features/legislation/dossier/Details';
+import { ConsolidatedSection, CourtSection, OpinionsSection, currentVersion, hasCourt } from '../features/legislation/dossier/LawContext';
 import { FollowButton } from '../features/watchlist/FollowButton';
 import { useHashScroll } from '../features/guide/useHashScroll';
 import '../features/legislation/common.css';
@@ -93,6 +94,9 @@ function DossierPage({ id }: { id: string }) {
   const topicLabel = (slug: string) => topics.find((t) => t.slug === slug)?.label ?? slug;
   const primaryAct = d.acts[0];
   const proposal = commissionProposal(d);
+  // the primary act's consolidated text on EUR-Lex, as it stands on the reader's date
+  const consolidated = d.consolidated?.find((c) => c.act === primaryAct?.celex);
+  const currentText = consolidated ? currentVersion(consolidated, today).current : undefined;
 
   const nav = [
     { id: 'summary', label: 'Summary' },
@@ -101,6 +105,9 @@ function DossierPage({ id }: { id: string }) {
     { id: 'ep-votes', label: 'Parliament votes' },
     { id: 'council-votes', label: 'Council votes' },
     { id: 'national', label: 'In the Member States' },
+    ...(hasCourt(d) ? [{ id: 'court', label: d.acts.length ? 'Court rulings' : 'Court cases' }] : []),
+    ...(d.consolidated?.length ? [{ id: 'consolidated', label: 'Consolidated text' }] : []),
+    ...(d.advisory_opinions?.length ? [{ id: 'opinions', label: 'Advisory opinions' }] : []),
     { id: 'details', label: 'Details & sources' },
   ];
 
@@ -285,6 +292,11 @@ function DossierPage({ id }: { id: string }) {
                   <ExtLink href={primaryAct.eurlex_url || EURLEX_CELEX(primaryAct.celex)}>Legal text (EUR-Lex)</ExtLink>
                 </li>
               )}
+              {currentText && (
+                <li>
+                  <ExtLink href={EURLEX_CELEX(currentText.celex)}>Consolidated text (EUR-Lex)</ExtLink>
+                </li>
+              )}
             </ul>
           </div>
           <nav className="dz-toc" aria-label="On this page">
@@ -305,6 +317,9 @@ function DossierPage({ id }: { id: string }) {
           <ParliamentVotes votes={d.ep_votes} oeilUrl={d.oeil_url} split={splitParts(d)} approval={d.ep_approval_without_vote} />
           <CouncilVotes votes={d.council_votes} meta={meta} split={splitParts(d)} timeline={d.timeline} adopted={d.adopted} />
           <NationalApplication d={d} today={today} />
+          <CourtSection d={d} meta={meta} />
+          <ConsolidatedSection d={d} today={today} meta={meta} />
+          <OpinionsSection d={d} meta={meta} />
           <DossierDetails d={d} />
         </div>
       </div>

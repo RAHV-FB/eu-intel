@@ -214,6 +214,34 @@
 # source: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52017DC0476 (Commission, COM(2017) 476 final, Introduction: "The Directive (EU) 2016/1148 on the security of network and information systems across the Union (hereinafter referred to as “NIS Directive” or the “Directive”)")
 - {procedure: "2013/0027(COD)", names: ["NIS Directive"]}
 
+# ---------------------------------------------- acronyms and short names of major acts (read 5 November 2026)
+# Shown under the file's title and in lists ("also known as"), and found by search. Each names the act it is given to.
+# source: https://digital-strategy.ec.europa.eu/en/policies/nis2-directive (Commission: "Directive 2022/2555, also known as NIS2, replaced its predecessor, Directive 2016/1148 or NIS1")
+- {procedure: "2020/0359(COD)", names: ["NIS2"]}
+# source: https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai (Commission: "The AI Act (Regulation (EU) 2024/1689 laying down harmonised rules on artificial intelligence) is the first-ever comprehensive legal framework on AI worldwide")
+- {procedure: "2021/0106(COD)", names: ["AI Act"]}
+# source: https://commission.europa.eu/law/law-topic/data-protection/legal-framework-eu-data-protection_en (Commission: "The General Data Protection Regulation (GDPR) Regulation (EU) 2016/679 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data")
+- {procedure: "2012/0011(COD)", names: ["GDPR"]}
+# source: https://commission.europa.eu/strategy-and-policy/priorities-2019-2024/europe-fit-digital-age/digital-services-act_en (Commission, "The Digital Services Act": "The Digital Services Act (DSA) introduces rules for online services used by European citizens in their everyday life")
+# source: https://publications.europa.eu/resource/celex/32022R2065 (Cellar, the English metadata of Regulation (EU) 2022/2065: short title, cdm:expression_title_short, "DSA, Digital Services Act, DSA Regulation")
+- {procedure: "2020/0361(COD)", names: ["DSA"]}
+# source: https://digital-markets-act.ec.europa.eu/about-dma_en (Commission, "About the Digital Markets Act": "the Digital Markets Act (“DMA”) establishes a set of clearly defined objective criteria to identify “gatekeepers”")
+- {procedure: "2020/0374(COD)", names: ["DMA"]}
+# source: https://environment.ec.europa.eu/topics/forests/deforestation/regulation-deforestation-free-products_en (Commission, "EU Deforestation Regulation (EUDR)": "The EU Deforestation Regulation (EUDR) aims to reduce the EU’s contribution to global deforestation, forest degradation, greenhouse gas emissions, and biodiversity loss")
+- {procedure: "2021/0366(COD)", names: ["EUDR"]}
+# source: https://publications.europa.eu/resource/celex/32024L1760 (Cellar, the English metadata of Directive (EU) 2024/1760: short title, cdm:expression_title_short, "CSDDD, Corporate Sustainability Due Diligence Directive")
+- {procedure: "2022/0051(COD)", names: ["CSDDD"]}
+# source: https://publications.europa.eu/resource/celex/32022L2464 (Cellar, the English metadata of Directive (EU) 2022/2464: short title, cdm:expression_title_short, "CSRD Directive, Corporate sustainability Reporting Directive")
+- {procedure: "2021/0104(COD)", names: ["CSRD"]}
+# source: https://publications.europa.eu/resource/celex/32022R2554 (Cellar, the English metadata of Regulation (EU) 2022/2554: short title, cdm:expression_title_short, "DORA, Digital operational Resilience Act")
+- {procedure: "2020/0266(COD)", names: ["DORA"]}
+# source: https://publications.europa.eu/resource/celex/32023R1114 (Cellar, the English metadata of Regulation (EU) 2023/1114: short title, cdm:expression_title_short, "MiCA, MiCA Regulation"; the title of its EUR-Lex summary, LEGISSUM 4626998: "European crypto-assets regulation (MiCA)")
+- {procedure: "2020/0265(COD)", names: ["MiCA"]}
+# source: https://publications.europa.eu/resource/celex/32025R0040 (Cellar, the English metadata of Regulation (EU) 2025/40: short title, cdm:expression_title_short, "PPWR")
+- {procedure: "2022/0396(COD)", names: ["PPWR"]}
+# source: https://publications.europa.eu/resource/legissum/5780941 (Cellar, the English title of the EUR-Lex summary of Regulation (EU) 2025/327, LEGISSUM 5780941: "European Health Data Space (EHDS)")
+- {procedure: "2022/0140(COD)", names: ["EHDS"]}
+
 # ------------------------------------------------------------------------------ Fit for 55 package
 # The package's other carriages (2021/0197(COD) and 2021/0210(COD) have entries above). The carriage "Revised regulatory
 # framework for competitive decarbonised gas markets" is only announced and names no procedure; the carriage "Revision
@@ -224,6 +252,7 @@
 # source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55 (EP Legislative Train, "Fit for 55 package under the European Green Deal (20 carriage(s) in this package)": each carriage names its procedure)
 # source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-revision-of-the-eu-emission-trading-system-for-aviation (the carriage of 2021/0207(COD))
 # source: https://www.europarl.europa.eu/legislative-train/package-fit-for-55/file-notification-on-international-aviation-carbon-offsetting-and-reduction-scheme (the carriage of 2021/0204(COD))
+# source: https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism_en (Commission, "Carbon Border Adjustment Mechanism", the mechanism of Regulation (EU) 2023/956, 2021/0214(COD): "CBAM complements the EU Emissions Trading System (EU ETS) and supports the EU’s climate objectives")
 - {procedure: "2021/0200(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0201(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0202(COD)", names: ["Fit for 55 package"]}
@@ -236,7 +265,7 @@
 - {procedure: "2021/0211A(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0211B(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0213(CNS)", names: ["Fit for 55 package"]}
-- {procedure: "2021/0214(COD)", names: ["Fit for 55 package"]}
+- {procedure: "2021/0214(COD)", names: ["Fit for 55 package", "CBAM"]}
 - {procedure: "2021/0218(COD)", names: ["Fit for 55 package", "RED III"]}
 - {procedure: "2021/0223(COD)", names: ["Fit for 55 package"]}
 - {procedure: "2021/0423(COD)", names: ["Fit for 55 package"]}

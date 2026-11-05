@@ -103,7 +103,8 @@ test.describe('country page directive search', () => {
     for (const q of ['NIS2', '2022/2555', 'Directive (EU) 2022/2555']) {
       await page.fill('#tr-q', q);
       await expect(count).toHaveText('1 directive');
-      await expect(page.locator('td.impl-dir').first()).toContainText('· Directive (EU) 2022/2555 (NIS 2 Directive)');
+      // the act's own short title, then the name the Commission gives it (data/curated/aliases.yaml)
+      await expect(page.locator('td.impl-dir').first()).toContainText('· Directive (EU) 2022/2555 (NIS 2 Directive, NIS2)');
     }
     await page.fill('#tr-q', '2022/2464');
     await expect(page.locator('td.impl-dir').first()).toContainText('Corporate Sustainability Reporting Directive');

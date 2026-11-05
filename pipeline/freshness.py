@@ -25,6 +25,7 @@ STALE_AFTER_DAYS: dict[str, int] = {
     "ep_people": 14,
     "implementation": 35,
     "optouts": 35,
+    "lawcontext": 35,
     "train": 35,
 }
 DEFAULT_STALE_AFTER_DAYS = 14
