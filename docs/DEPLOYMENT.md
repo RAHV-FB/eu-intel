@@ -107,13 +107,16 @@ open http://127.0.0.1:4174/eu-intel/).
   average; with this run, after about 2. The Council's and Parliament's plans for the coming weeks (`agenda`) are
   published during the week, and `agenda`'s 9-day threshold assumes a weekly copy at least. Its incremental reads take
   no rotation share: the Monday run of the same week took it ("What a weekly run re-reads"). If it is dropped or fails,
-  the Monday run covers it. GitHub also disables every scheduled
-  workflow of a public repository after 60 days without activity in it. A commit is activity: the refresh's weekly
-  commits keep the repository active as long as it commits. A scheduled run that commits nothing (the watchdog's, the
-  daily rebuild's) is not. The watchdog's daily run is disabled together with the refresh's, so it cannot report this by
-  itself: it then runs only after a CI run for a push to `main` or a deploy, and the first of those reports the live
-  data as overdue. Re-enable each under *Actions → <workflow> → Enable workflow* (`gh workflow enable refresh.yml`, `gh
-  workflow enable watchdog.yml`).
+  the Monday run covers it.
+- **Schedules switched off after 60 days without a commit**: GitHub disables every scheduled workflow of a public
+  repository after 60 days without activity in it, all three here at once (the refresh, the daily rebuild and the
+  watchdog). A commit is activity: a refresh whose data passes the gate always commits (`_manifest.json` records each
+  run's attempt), so the repository stays active as long as refreshes pass. A scheduled run that commits nothing (the
+  watchdog's, the daily rebuild's) is not activity. Sixty days without a commit are sixty days of refreshes that failed
+  or did not run, and from the eighth the watchdog reports the live data as overdue (`MAX_AGE_DAYS`). Once the schedules
+  are off, so is the watchdog's daily run: it then runs only after a CI run for a push to `main` or a deploy, and the
+  first of those reports the live data as overdue. Re-enable each under *Actions → <workflow> → Enable workflow* (`gh
+  workflow enable refresh.yml`, `gh workflow enable rebuild.yml`, `gh workflow enable watchdog.yml`).
 - **Daily rebuild** (`rebuild.yml`, 01:23 UTC): the site is built again from `main`'s committed data with that day's date
   and deployed, without fetching or committing anything. Statuses and labels are written when the site is built, while
   the explanations beside them follow the reader's date (`src/lib/format.ts`): between weekly refreshes a file published
@@ -266,11 +269,13 @@ For data on the site that is wrong because of a refresh (a commit "Data refresh 
 changes only `data/snapshot/` and `data/state/`). Fixing the cause and rolling back are two jobs: the next scheduled refresh
 starts from whatever `main` holds and fetches again, so a rollback alone does not last.
 
-1. **Stop the refresh from moving `main`.** Cancel a run that is going (*Actions → Data refresh → the run → Cancel workflow*, or
-   `gh run list --workflow refresh.yml --status in_progress`, then `gh run cancel <run-id>`; likewise for `--status queued`): when
-   its push is rejected, a refresh re-applies its own data files on top of `main`, and it would overwrite your restore. Then
-   disable the schedule: `gh workflow disable refresh.yml` (or *Actions → Data refresh → ⋯ → Disable workflow*), which does not stop a
-   run that is already going.
+1. **Stop the refresh from moving `main`, and the daily rebuild from publishing it.** Cancel a run that is going (*Actions → Data
+   refresh → the run → Cancel workflow*, or `gh run list --workflow refresh.yml --status in_progress`, then `gh run cancel
+   <run-id>`; likewise for `--status queued`): when its push is rejected, a refresh re-applies its own data files on top of
+   `main`, and it would overwrite your restore. Then disable the schedule: `gh workflow disable refresh.yml` (or *Actions → Data
+   refresh → ⋯ → Disable workflow*), which does not stop a run that is already going. Disable the daily rebuild too, `gh workflow
+   disable rebuild.yml`: it deploys `main` every night at 01:23 UTC, the bad data included until step 3 is pushed, which would
+   undo step 5.
 2. **Find the last good commit.** `git log --format='%h %ad %s' --date=short -- data/snapshot data/state` lists the commits that
    changed data; take the one before the bad refresh (`data/snapshot/_manifest.json` in it has each source's `fetched_at`).
 3. **Put that commit's data back in a new commit on `main`.**
@@ -291,7 +296,8 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
    `https://rahv-fb.github.io/eu-intel/data/meta.json` (the latest retrieval of any source) is that of the restored data, and
    the footer's "Procedures, votes and acts current to" date (`core_data_at`, the oldest retrieval of the core sources) is too,
    and `commit` is the commit the deploy built (`git log -1 <commit>`: your restore, or a later commit with the same data).
-   `built_at` moves with every deploy, so it does not show that the data is the good one.
+   `built_at` moves with every deploy, so it does not show that the data is the good one. Then switch the daily rebuild back
+   on (`gh workflow enable rebuild.yml`): `main` has the good data again, and the rebuild keeps statuses on the day's date.
 5. **While you prepare that, an earlier version can be deployed again.** Each deploy's job summary names the commit it built
    (*Built commit … / Deployed commit …*), and so does the live `data/meta.json` (`commit`). Deploys after CI or by hand are
    *Deploy to GitHub Pages* runs; a refresh's deploy is the *Deploy* jobs of its *Data refresh* run, and GitHub's Pages
@@ -301,9 +307,9 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
    (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`, then `gh run rerun
    <run-id>`), or, for the data of an earlier refresh, the *Deploy / Build site* job of that *Data refresh* run (*Re-run this
    job*, which also re-runs the jobs that depend on it). A re-run builds what the original run built (a re-run keeps the
-   original event, commit and job outputs), so it deploys that commit's data; GitHub allows re-runs for 30 days. It changes what is published only: `main`
-   still has the bad data, and the next deploy (after CI passes on a push to `main`, or after the next refresh) publishes `main` again. Step 3 must
-   follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).
+   original event, commit and job outputs), so it deploys that commit's data; GitHub allows re-runs for 30 days. It changes
+   what is published only: `main` still has the bad data, and the next deploy publishes `main` again (the daily rebuild, unless
+   it is disabled as in step 1; after CI passes on a push to `main`; or after the next refresh). Step 3 must follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).
 6. **Fix the cause.** The next refresh starts from the restored data and fetches again. If the cause is at the source, the same
    data comes back: hold that source back (below), and keep the schedule disabled until it is corrected. If the cause was how
    the pipeline reads or derives a source, fix the code and bump that source's `PARSER_VERSION` (EP procedures, EP votes,
@@ -322,16 +328,17 @@ that source and its manifest entry (what the refresh does for a source that fail
     python -m pipeline validate
 
 then commit and push as in step 3. The manifest entry is marked `partial` with the reason, and the About page shows its last
-successful retrieval. Then disable the schedule (step 1) and refresh by hand without that source, naming the others in the `sources`
-input of *Run workflow* (the names are `ep_people ep_procedures ep_votes eurlex council implementation optouts train agenda`; those not
-listed are not fetched and keep their files and manifest entries):
+successful retrieval. Then disable the refresh's schedule (`gh workflow disable refresh.yml`, as in step 1; the daily rebuild can
+stay on, since `main` has the data you want) and refresh by hand without that source, naming the others in the `sources`
+input of *Run workflow* (the names are `ep_people ep_procedures ep_votes eurlex council implementation optouts lawcontext train
+agenda`, in the order the fetch should take them; those not listed are not fetched and keep their files and manifest entries):
 
-    gh workflow run refresh.yml -f sources="ep_people ep_procedures eurlex council implementation optouts train agenda"
+    gh workflow run refresh.yml -f sources="ep_people ep_procedures eurlex council implementation optouts lawcontext train agenda"
 
 (that holds back `ep_votes`). Sources read the files of earlier ones in that order, so a held-back `ep_people` or
 `ep_procedures` leaves the later sources working from its older records. To let the source go again, run it once by hand
 (`-f sources=ep_votes`, with `-f full_refresh=true` for `ep_procedures`, `ep_votes` or `train` after a change to how they are
-derived), check the result, and enable the schedule.
+derived), check the result, and enable the schedule (`gh workflow enable refresh.yml`).
 
 ## Frozen test data
 
@@ -392,8 +399,9 @@ or an empty heading; then nothing is uploaded or deployed, and the report is kep
 `watchdog.yml` keeps one issue titled "Data health" (label `data-health`) open while anything below is wrong, rewrites
 it with the current list on each run, comments when a problem is new (an edit alone notifies no one; a source that gets
 worse counts as new: failed, then stale, then its official labels withdrawn), and closes it once
-everything passes. It runs after each *Data refresh*, each *CI* run on `main` and each *Deploy to GitHub Pages* run, daily
-at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes nothing to the repository. It lists:
+everything passes. It runs after each *Data refresh*, each *CI* run on `main`, each *Deploy to GitHub Pages* run and each
+*Daily rebuild*, daily at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes nothing to the repository.
+It lists:
 
 - each source that failed in its last run or is stale: its last successful retrieval is older than its threshold in
   `pipeline/freshness.py` (EP votes and procedures, EUR-Lex, Council 9 days; MEPs 14; the others 35), as
@@ -413,7 +421,12 @@ at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes n
 - the live site's data overdue: the newest retrieval in `https://rahv-fb.github.io/eu-intel/data/meta.json` (or the
   repository variable `SITE_URL`; fetched with a query string, past Pages' 10-minute cache) is older than 8 days, whether the schedule was late, dropped or disabled or the refresh
   or its deploy failed. This also fails the watchdog run, so GitHub sends its own notification;
-- the repository past 750 MB (GitHub recommends under 1 GB; each refresh commit adds to every clone).
+- the repository past 750 MB (GitHub recommends under 1 GB; each refresh commit adds to every clone);
+- what it could not read (the latest runs of a workflow, the repository's size: GitHub's API failed, or its answer
+  changed): never taken as a pass, so the issue stays open until it can read them.
+
+If the watchdog cannot finish its own check (an exception in `pipeline health`, a failed install), its run fails and its last
+step comments on the issue, once per spell of failures (or opens the issue): the list is then that of its last complete run.
 
 `python -m pipeline health` runs the source and site checks locally (`--meta FILE` for a downloaded `meta.json`,
 `--markdown` for the issue body, `--json`); it exits 1 when anything is wrong.
@@ -435,9 +448,18 @@ at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes n
 ## Free-plan limits
 
 Public repositories get unlimited standard GitHub-hosted runner minutes. Every job has a `timeout-minutes` cap
-(CI: check 30, e2e 25; deploy: build 25, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
-watchdog 10; daily rebuild: plan 5, its deploy as above). Pages limits: published site ≤ 1 GB (checked at build time), soft bandwidth limit 100 GB/month. Artifacts
-are kept 1–7 days.
+(CI: check 30, e2e 40; deploy: build 25, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
+watchdog 10; daily rebuild: plan 5, its deploy as above). Pages limits: published site ≤ 1 GB (checked at build time), soft
+bandwidth limit 100 GB/month. Artifacts are kept 1–7 days.
+
+**Site size.** The size check (CI, the refresh's data gate, the deploy) measures `dist` with `du -sk`, which counts disk
+blocks and so a little more than the files hold: a warning from 500,000 KB, a failure from 900,000 KB. A failure fails CI on
+every push and every refresh's gate (nothing is committed), and stops every deploy before the upload: the site keeps its last
+version and the watchdog reports the failed runs. On 5 Nov 2026 the site was 418,456 KB by that measure (360,658 KB of file
+contents, 14,552 files). It grows with the Parliament votes it lists, each about 101 KB (the vote's file with its ballots, its
+page, a line on each of its MEPs' pages), about 430 a year: about 42 MB a year, so the warning comes in about 2 years, the
+failure in about 11 and 1 GB in about 14. Ballots for every roll-call vote (26,267) would be about 2.7 GB, which is why votes
+on amendments and on parts of texts have none here (docs/ASSESSMENT_2026-11.md, section 6).
 
 ## Optional link check
 

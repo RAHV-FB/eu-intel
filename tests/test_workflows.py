@@ -83,6 +83,35 @@ def test_the_data_that_is_deployed_passes_the_whole_data_gate(name, job):
     assert index(s, "node scripts/check_privacy.mjs") < size and "900000" in s[size]["run"]
 
 
+@pytest.mark.parametrize(("name", "job"), [("ci.yml", "check"), ("pages.yml", "build"), ("refresh.yml", "refresh")])
+def test_the_size_check_warns_from_500_mb_and_fails_from_900_mb(tmp_path, name, job):
+    # Pages publishes at most 1 GB. On 5 Nov 2026 `du -sk dist` was 418,456 KB, growing about 42 MB a year (each listed
+    # Parliament vote adds about 101 KB): the warning in about 2 years, the failure in about 11 (docs/DEPLOYMENT.md)
+    s = steps(name, job)
+    script = s[named(s, "Check Pages size limit")]["run"]
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "du").write_text('#!/bin/sh\n[ "$1" = -sk ] && printf "%s\\tdist\\n" "$DIST_KB" || echo "1G dist"\n')
+    (bin_dir / "du").chmod(0o755)
+    (tmp_path / "dist").mkdir()
+
+    def check(kb: int) -> subprocess.CompletedProcess:
+        env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "DIST_KB": str(kb)}
+        return subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=env, capture_output=True, text=True)
+
+    for kb, passes, said in [(418_456, True, []), (500_001, True, ["::warning::"]), (900_001, False, ["::error::"])]:
+        r = check(kb)
+        assert (r.returncode == 0) == passes, kb
+        assert re.findall(r"::\w+::", r.stdout) == said, kb
+    # a failure stops what comes after: the upload (pages.yml) and the commit (refresh.yml) run only once it has passed
+    size = named(s, "Check Pages size limit")
+    if name == "pages.yml":
+        upload = next(i for i, x in enumerate(s) if x.get("uses", "").startswith("actions/upload-pages-artifact@"))
+        assert size < upload and "if" not in s[size] and "if" not in s[upload]
+    if name == "refresh.yml":
+        assert s[named(s, "Commit and push snapshot")]["if"] == "${{ !cancelled() && steps.size.outcome == 'success' }}"
+
+
 def test_the_refresh_commits_nothing_before_its_data_has_passed_the_gate():
     # the refresh pushed to main after `validate --built` alone (the other checks ran later, in CI, as reports), so
     # data that failed them was live before anyone knew; it also committed the snapshot of a run whose build failed
@@ -1049,6 +1078,195 @@ def test_a_watchdog_that_cannot_finish_its_check_fails_and_says_so_in_the_issue(
     calls = report_with({"issues": []})  # no open issue: one is opened
     assert any(c.startswith("label create data-health --force") for c in calls)
     assert calls[-1].startswith("issue create --title Data health --label data-health --body **The watchdog itself failed**")
+
+
+# ---------------------------------------------------------------- the runbook (docs/DEPLOYMENT.md)
+
+DEPLOYMENT = ROOT / "docs" / "DEPLOYMENT.md"
+
+
+def runbook(heading: str | None = None) -> str:
+    """docs/DEPLOYMENT.md, or its section under `heading` up to the next heading, with its whitespace collapsed (a
+    command in the text can wrap over two lines)."""
+    text = DEPLOYMENT.read_text(encoding="utf-8")
+    if heading is not None:
+        start = re.search(rf"^#+ {re.escape(heading)}\n", text, re.M).end()
+        end = re.compile(r"^#", re.M).search(text, start)
+        text = text[start : end.start() if end else None]
+    return " ".join(text.split())
+
+
+def code_spans(text: str, prefix: str) -> list[str]:
+    """The `code` of `text` that starts with `prefix`."""
+    return [c for c in re.findall(r"`([^`]+)`", text) if c.startswith(prefix)]
+
+
+def test_the_runbook_lists_every_workflow():
+    rows = re.findall(r"^\| `([\w.-]+\.yml)` \(", DEPLOYMENT.read_text(encoding="utf-8"), re.M)
+    assert sorted(rows) == sorted(p.name for p in WORKFLOWS.glob("*.yml"))
+
+
+def test_the_runbook_and_the_manual_refresh_name_every_source_in_fetch_order():
+    # lawcontext (5 Nov 2026) was missing from the runbook's list of names, so its command to hold back ep_votes, which
+    # lists the sources to fetch, held lawcontext back too; the fetch takes the sources in the order they are given
+    from pipeline.__main__ import SOURCES
+
+    hold = runbook("Holding one source back")
+    assert re.search(r"the names are `([a-z_ ]+)`", hold).group(1).split() == list(SOURCES)
+    example = re.search(r'gh workflow run refresh\.yml -f sources="([a-z_ ]+)"', hold).group(1).split()
+    assert example == [s for s in SOURCES if s != "ep_votes"] and "(that holds back `ep_votes`)" in hold
+    described = triggers("refresh.yml")["workflow_dispatch"]["inputs"]["sources"]["description"]
+    assert described.split(": ", 1)[1].split() == list(SOURCES)
+
+
+def test_the_runbook_commands_name_workflows_jobs_and_inputs_that_exist():
+    text = runbook()
+    gh = code_spans(text, "gh ")
+    assert len(gh) >= 10
+    for command in gh:
+        m = re.match(r"gh (?:workflow (?:run|enable|disable)|run list --workflow) ([\w.-]+)", command)
+        if not m:
+            continue
+        assert (WORKFLOWS / m.group(1)).exists(), command
+        if command.startswith("gh workflow run "):
+            inputs = (triggers(m.group(1))["workflow_dispatch"] or {}).get("inputs", {})
+            assert all(name in inputs for name in re.findall(r"-f (\w+)=", command)), command
+    # the job a rollback re-runs to deploy an earlier refresh's data (step 5)
+    called = workflow("refresh.yml")["jobs"]["deploy"]
+    assert called["uses"] == "./.github/workflows/pages.yml"
+    assert f"*{called['name']} / {workflow('pages.yml')['jobs']['build']['name']}*" in runbook(
+        "Rolling back a bad data refresh"
+    )
+
+
+def scheduled_workflows() -> set[str]:
+    return {p.name for p in WORKFLOWS.glob("*.yml") if "schedule" in triggers(p.name)}
+
+
+def test_a_rollback_stops_every_scheduled_run_that_would_publish_main_again():
+    # step 1 disabled the refresh only: the daily rebuild deploys main every night (rebuild.yml), bad data included, so
+    # it undid step 5 (an earlier deployment published again) within a day
+    deploys = {
+        name for name in scheduled_workflows()
+        if any(j.get("uses") == "./.github/workflows/pages.yml" for j in workflow(name)["jobs"].values())
+    }  # fmt: skip
+    assert deploys == {"refresh.yml", "rebuild.yml"}
+    steps_ = re.split(r" (?=[1-9]\. \*\*)", runbook("Rolling back a bad data refresh"))[1:]
+    assert [s[:2] for s in steps_] == ["1.", "2.", "3.", "4.", "5.", "6."]
+    disabled = {c.split()[-1] for c in code_spans(steps_[0], "gh workflow disable ")}
+    assert disabled == deploys
+    later = " ".join(steps_[1:])
+    assert {c.split()[-1] for c in code_spans(later, "gh workflow enable ")} == deploys  # and back on
+    assert "rebuild" in steps_[4]  # step 5 says what publishes main again
+
+
+def test_after_60_days_without_a_commit_the_runbook_switches_every_schedule_back_on():
+    # GitHub disables every scheduled workflow of the repository; the runbook re-enabled the refresh and the watchdog,
+    # and left the daily rebuild off
+    text = runbook("Schedule and failure behaviour")
+    assert "60 days" in text
+    assert {c.split()[-1] for c in code_spans(text, "gh workflow enable ")} == scheduled_workflows()
+
+
+def test_the_time_limits_the_runbook_states_are_the_workflows():
+    # it said e2e 25 after the job's limit was raised to 40
+    def t(name: str, job: str) -> int:
+        return workflow(name)["jobs"][job]["timeout-minutes"]
+
+    refresh = steps("refresh.yml", "refresh")
+    fetch = refresh[named(refresh, "Fetch official sources")]["timeout-minutes"]
+    stated = (
+        f"(CI: check {t('ci.yml', 'check')}, e2e {t('ci.yml', 'e2e')}; deploy: build {t('pages.yml', 'build')}, deploy "
+        f"{t('pages.yml', 'deploy')}; refresh: plan {t('refresh.yml', 'plan')}, refresh {t('refresh.yml', 'refresh')}, "
+        f"with the fetch step capped at {fetch}; watchdog {t('watchdog.yml', 'health')}; daily rebuild: plan "
+        f"{t('rebuild.yml', 'plan')}, its deploy as above)"
+    )
+    assert stated in runbook("Free-plan limits")
+    assert f"The job may run {t('ci.yml', 'e2e')} minutes." in runbook("End-to-end tests in CI")
+
+
+def test_the_runbook_rollback_restore_and_hold_back_work_as_written(tmp_path):
+    # its git commands, run as written on a history like main's: a first commit without data/state, refreshes that each
+    # rewrite _manifest.json and data/state, a code commit between them (checked on the real history on 5 Nov 2026 too)
+    rollback, hold = runbook("Rolling back a bad data refresh"), DEPLOYMENT.read_text(encoding="utf-8")
+    newest, = code_spans(rollback, "git log -1 --format=%h ")
+    revert, = code_spans(rollback, "git revert ")
+    restore, = code_spans(rollback, "git restore --source=<good-sha>")
+    checkout, = code_spans(rollback, "git checkout <good-sha>")
+    diff, = code_spans(rollback, "git diff <good-sha> HEAD")
+    commit_, = code_spans(rollback, "git commit ")
+    held = re.search(r"\n\n((?: {4}\S.*\n)+)\nthen commit and push as in step 3", hold).group(1).splitlines()
+    assert [line.split()[:3] for line in held] == [
+        ["git", "show", "<good-sha>:data/snapshot/_manifest.json"], ["git", "restore", "--source=<good-sha>"],
+        ["python", "-m", "pipeline"], ["python", "-m", "pipeline"],
+    ]  # fmt: skip
+
+    def history(path: Path):
+        path.mkdir()
+        git, commit = git_repo(path)
+        shutil.copytree(ROOT / "pipeline", path / "pipeline", ignore=shutil.ignore_patterns("__pycache__"))
+        (path / ".gitignore").write_text("pipeline/\n", encoding="utf-8")
+
+        def manifest(n: int) -> str:
+            entry = lambda s: {"source": s, "status": "ok", "fetched_at": f"2026-10-0{n}T05:00:00Z",  # noqa: E731
+                               "attempted_at": f"2026-10-0{n}T05:00:00Z", "records": {"votes": n}, "note": f"run {n}"}  # fmt: skip
+            return json.dumps({s: entry(s) for s in ("council", "ep_votes")}, indent=1, sort_keys=True)
+
+        shas = [commit({"data/snapshot/_manifest.json": manifest(1), "data/snapshot/ep_votes/votes.json": "[1]",
+                        "data/snapshot/council/votes.json": "[1]", "src/app.ts": "1", ".gitignore": "pipeline/\n"},
+                       "first release, before data/state")]  # fmt: skip
+        for n in (2, 3, 4):
+            if n == 3:
+                commit({"src/app.ts": "3"}, "a code commit")
+            files = {"data/snapshot/_manifest.json": manifest(n), "data/snapshot/ep_votes/votes.json": f"[{n}]",
+                     "data/snapshot/council/votes.json": f"[{n}]", "data/state/digest.json": f"{{\"run\": {n}}}"}  # fmt: skip
+            if n == 3:
+                files["data/snapshot/ep_votes/_state.json"] = "{}"  # a file the bad refresh added
+            shas.append(commit(files, f"Data refresh 2026-10-0{n}"))
+        return git, shas  # first, refresh 2 (good), refresh 3 (bad), refresh 4
+
+    def run(command: str, cwd: Path, **subs: str) -> subprocess.CompletedProcess:
+        for key, value in subs.items():
+            command = command.replace(f"<{key}>", value)
+        env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.org", "GIT_COMMITTER_NAME": "t",
+               "GIT_COMMITTER_EMAIL": "t@example.org", "GIT_EDITOR": "true"}  # the default message  # fmt: skip
+        return subprocess.run(["bash", "-c", command], cwd=cwd, env=env, capture_output=True, text=True)
+
+    # the bad refresh is the newest commit that changed data: a revert applies cleanly
+    git, (_, good, bad, newer) = history(tmp_path / "revert")
+    assert run(newest, tmp_path / "revert").stdout.strip() == git("rev-parse", "--short", newer)
+    assert run(revert, tmp_path / "revert", **{"bad-sha": newer}).returncode == 0
+    assert run(diff, tmp_path / "revert", **{"good-sha": bad}).stdout == ""
+    # an older one: the revert stops with conflicts; the restore puts the good commit's data back, files added since
+    # removed, in one commit
+    git, (_, good, bad, newer) = history(tmp_path / "restore")
+    reverted = run(revert, tmp_path / "restore", **{"bad-sha": bad})
+    assert reverted.returncode != 0 and "CONFLICT" in reverted.stdout + reverted.stderr
+    git("revert", "--abort")
+    assert run(restore, tmp_path / "restore", **{"good-sha": good}).returncode == 0
+    assert run(commit_, tmp_path / "restore", **{"good-sha": good[:7]}).returncode == 0
+    assert run(diff, tmp_path / "restore", **{"good-sha": good}).stdout == ""
+    assert not (tmp_path / "restore" / "data/snapshot/ep_votes/_state.json").exists() and git("status", "--porcelain") == ""
+    # a good commit from before the first refresh: checkout stops on data/state, restore removes it
+    git, (first, *_) = history(tmp_path / "first")
+    assert "pathspec 'data/state' did not match" in run(checkout, tmp_path / "first", **{"good-sha": first}).stderr
+    assert run(restore, tmp_path / "first", **{"good-sha": first}).returncode == 0
+    assert not (tmp_path / "first" / "data" / "state").exists()
+    assert run(commit_, tmp_path / "first", **{"good-sha": first[:7]}).returncode == 0
+    assert run(diff, tmp_path / "first", **{"good-sha": first}).stdout == ""
+    # holding one source back: its files and manifest entry as of the good commit, marked partial with the reason; the
+    # other sources keep this refresh's (`python -m pipeline validate`, the last line, needs a whole snapshot)
+    git, (_, good, bad, newer) = history(tmp_path / "hold")
+    subs = {"good-sha": good, "source": "ep_votes", "date": "2 Oct 2026", "why": "a test"}
+    for line in held[:-1]:
+        result = run(line.strip().replace("/tmp/manifest_good.json", str(tmp_path / "manifest_good.json")), tmp_path / "hold", **subs)
+        assert result.returncode == 0, (line, result.stderr)
+    m = json.loads((tmp_path / "hold" / "data/snapshot/_manifest.json").read_text(encoding="utf-8"))
+    assert m["ep_votes"]["status"] == "partial" and m["ep_votes"]["fetched_at"] == "2026-10-02T05:00:00Z"
+    assert m["ep_votes"]["note"] == "Held at the data of 2 Oct 2026: a test. Previous note: run 2"
+    assert m["council"]["fetched_at"] == "2026-10-04T05:00:00Z"  # not held back
+    assert git("diff", "--stat", good, "--", "data/snapshot/ep_votes") == ""
+    assert git("diff", "--stat", "HEAD", "--", "data/snapshot/council") == ""
 
 
 # ---------------------------------------------------------------- supply chain
