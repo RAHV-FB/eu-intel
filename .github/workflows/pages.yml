@@ -6,8 +6,8 @@
 # - workflow_call: a "Data refresh" run deploys the commit it pushed (`ref`), once that commit's data has passed the
 #   refresh's data gate and its code has passed CI (refresh.yml). The caller grants pages: write and id-token: write;
 # - workflow_dispatch: a manual run builds the branch it is started on, without waiting for CI.
-# After CI or a refresh, if main has moved on since that commit only by data refresh commits (data/snapshot, data/state),
-# main is built instead: same code, newer data, so that a deploy never takes refreshed data off the site.
+# After CI, if main (as of the run's event) had moved on since that commit only by data refresh commits (data/snapshot,
+# data/state), main is built instead: same code, newer data, so that a deploy never takes refreshed data off the site.
 # The build job runs the data gate again on what it deploys (snapshot validation, the strict data build, validation of
 # the built data, the dated-wording check, site build, privacy check, size check); any failure stops the run before
 # deploy, and the previous deployment stays live.
