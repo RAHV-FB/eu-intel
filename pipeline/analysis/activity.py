@@ -255,13 +255,25 @@ def supported(items: list[dict], b: Any) -> list[dict]:
         det = b.dossier_detail.get(it.get("dossier_id") or "")
         m = re.match(r"chg:[^:]+:(stage|ev):(.+)$", it["id"]) if det else None
         if m and m.group(1) == "stage":
-            was, now = m.group(2).split(":", 1)[0], det["stage"]
+            was, _, when = m.group(2).partition(":")
+            now = det["stage"]
             if RANK.get(was, 0) >= RANK["adopted"] and now in ACTIVE_STAGES | {"adopted"} and RANK[now] < RANK.get(was, 0):
+                continue
+            # the same status, now dated otherwise: the date recorded was the source's (2025/0177(COD), recorded on 2
+            # November as "Published" on 28 October from an EP record deleted since; published on 3 November)
+            if was == now and when and when != ((det.get("status") or {}).get("since") or when):
                 continue
         elif m:
             step = next((e for e in det.get("timeline") or [] if e["id"] == m.group(2)), None)
             if step is not None and not is_listed(step):
                 continue
+            # an EP record deleted at source: on no timeline step and no longer among the procedure's events (the 5
+            # November refresh: 2023/0421's "2023-0421-PUB-2026-10-30", 2025/0177's "2025-0177-PUB-2026-10-28"). Steps
+            # the build makes from acts, votes and Council results have their own ids and are checked by what they link.
+            if step is None and not _BUILT_STEP.match(m.group(2)):
+                proc = (getattr(b, "proc", None) or {}).get(it.get("dossier_id") or "")
+                if proc is not None and m.group(2) not in {e.id for e in proc.events}:
+                    continue
             if (act := _ACT_EVENT.match(m.group(2))) and act.group(1) not in (det.get("celex") or []):
                 continue  # a step of an act that is not the file's (2025/0177(COD): Decision (EU) 2026/2402, 2025/0380's)
         out.append(it)
@@ -287,6 +299,7 @@ def recited(items: list[dict], b: Any) -> list[dict]:
 DECISION_VOTE_KINDS = {"ep_position": "final", "negotiation_mandate": "mandate"}
 _VOTE_KEY = re.compile(r"^vote-(\d+)-")  # a step built from a vote, or keyed by it (event_keys)
 _ACT_EVENT = re.compile(r"^act-([^-]+)-")  # a step of a legal act (build: "act-<celex>-<kind>-<date>")
+_BUILT_STEP = re.compile(r"^(act|vote|council)-")  # steps the build makes from an act, a vote or a Council result
 # the digest list, and the source, of the record an item id names ("ev:<event id or key>", "vote:<id>", ...)
 REF_LISTS = {"ev": "events", "vote": "votes", "council": "council", "act": "acts"}
 REF_SOURCES = {"ev": "ep_procedures", "vote": "ep_votes", "council": "council", "act": "eurlex"}

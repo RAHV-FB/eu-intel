@@ -752,3 +752,16 @@ def test_the_contract_check_runs_with_built_and_reports_each_kind_of_drift_once(
     assert rep.errors_by_check == {"contract": 1}
     assert rep.warnings["contract-unlisted"] == ["public/data/extra.json: no type in the file list of src/types/data.ts"]
     assert check(FIX, public=pub, today=TODAY).errors == []  # without --built: not checked
+
+
+def test_activity_duplicates_flags_a_step_reported_twice():
+    from pipeline.validate import ERROR_CHECKS, activity_duplicates
+
+    title = "Amending Directives 2009/43/EC and 2009/81/EC…: Signed by the Presidents of Parliament and Council"
+    wrong = {"id": "chg:2025-0177:ev:act-32026D2402-signature-2026-10-21", "date": "2026-10-21", "title": title}
+    right = {**wrong, "id": "chg:2025-0177:ev:act-32026L2383-signature-2026-10-21"}
+    other = {**wrong, "id": "chg:2025-0177:ev:2025-0177-PUB-2026-11-03", "date": "2026-11-03"}
+    assert activity_duplicates([right, other]) == []
+    (msg,) = activity_duplicates([wrong, other, right])
+    assert msg.startswith("chg:2025-0177:ev:act-32026L2383-signature-2026-10-21 repeats chg:2025-0177:ev:act-32026D2402")
+    assert "activity-duplicate" in ERROR_CHECKS

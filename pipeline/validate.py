@@ -131,6 +131,7 @@ ERROR_CHECKS = {
     "built-incomplete": "the built output is incomplete: a file missing or unreadable, a list empty, a count of zero "
     "or below the snapshot's",
     "contract": "built JSON that does not match the public data contract (src/types/data.ts)",
+    "activity-duplicate": "one step reported twice in the activity feed, once from a record the source has corrected",
 }
 # Findings that the dataset's scope makes expected: printed as INFO, not counted as warnings.
 BY_DESIGN = {
@@ -681,6 +682,9 @@ def check(
                         f"public council/index.json {cv['id']}: single-state veto outside unanimity", "public",
                         "council-veto",
                     )  # fmt: skip
+        if (public / "activity.json").exists():
+            for msg in activity_duplicates(_public_json(public, "activity.json", rep, docs) or []):
+                rep.error(f"public activity.json: {msg}", "public", "activity-duplicate")
         owners: dict[str, list[str]] = {}
         for f in sorted((public / "dossiers").glob("*.json")):
             if f.name != "index.json":
@@ -887,6 +891,22 @@ POST_ADOPTION = ("adopted", "published", "in_force", "takes_effect_on_notificati
 # quotas under Art. 31 TFEU, adopted with none), and NLE files are shown only because EUR-Lex gives them as CNS/APP.
 NEEDS_PARLIAMENT = ("COD", "APP")
 DEADLINE_KINDS = ("deadline", "further_deadline")
+
+
+def activity_duplicates(items: list[dict]) -> list[str]:
+    """Published activity items that repeat another's date and title: the same step reported twice, once from a record
+    the source has since corrected (2025/0177(COD), 5 Nov 2026: its signature on 21 October recorded with Decision (EU)
+    2026/2402, another file's act, and again with Directive (EU) 2026/2383). Checked on the data that is deployed; the
+    data tests run on frozen data (tests/frozen-data.txt)."""
+    seen: dict[tuple[str, str], str] = {}
+    out: list[str] = []
+    for it in items:
+        key = (it.get("date") or "", it.get("title") or "")
+        if key in seen:
+            out.append(f"{it.get('id')} repeats {seen[key]} ({key[0]}: {key[1][:80]})")
+        else:
+            seen[key] = it.get("id") or ""
+    return out
 
 
 def dossier_invariants(d: dict) -> list[tuple[str, str]]:

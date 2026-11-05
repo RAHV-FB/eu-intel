@@ -246,6 +246,32 @@ def test_recorded_changes_the_records_no_longer_support_are_not_published():
         assert published in supported([published], b)
 
 
+def test_recorded_changes_from_records_deleted_at_source_are_not_published():
+    """The refresh of 5 November 2026: the EP deleted 2023/0421's publication record (2023-0421-PUB-2026-10-30) and
+    re-dated 2025/0177's (2025-0177-PUB-2026-10-28, now -2026-11-03). The items recorded from them on 2 November name a
+    step that is on no timeline and among no event of the procedure, and 2025/0177's "Published" is now dated 3
+    November, not 28 October."""
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import supported
+
+    new_pub = _step("2099-0002-PUB-2026-11-03", "2026-11-03", "publication", EP_EVENT)
+    council = _step("council-ST-9-2026", "2026-10-09", "council_adoption", COUNCIL_DOC)
+    det = _det("published", "2026-11-03", [council, new_pub])
+    proc = SimpleNamespace(events=[SimpleNamespace(id="2099-0002-PUB-2026-11-03")])
+    b = SimpleNamespace(dossier_detail={"2099-0002": det}, proc={"2099-0002": proc})
+    item = {"kind": "publication", "dossier_id": "2099-0002", "source": EP_EVENT}
+    deleted = {**item, "id": "chg:2099-0002:ev:2099-0002-PUB-2026-10-28"}
+    current = {**item, "id": "chg:2099-0002:ev:2099-0002-PUB-2026-11-03"}
+    misdated = {**item, "id": "chg:2099-0002:stage:published:2026-10-28", "kind": "status_change"}
+    dated = {**misdated, "id": "chg:2099-0002:stage:published:2026-11-03"}
+    # a step the build makes from a Council result is judged by what it links, not by the EP's events
+    built = {**item, "id": "chg:2099-0002:ev:council-ST-8-2026", "kind": "milestone"}
+    assert supported([deleted, current, misdated, dated, built], b) == [current, dated, built]
+    # without the procedure's events (a file shown from its EUR-Lex record only), a missing step is not judged deleted
+    assert deleted in supported([deleted], SimpleNamespace(dossier_detail={"2099-0002": det}, proc={}))
+
+
 @pytest.mark.parametrize("source", ["ep_procedures", "eurlex"])
 @pytest.mark.parametrize("status", ["partial", "failed"])
 def test_no_status_change_from_an_incomplete_fetch(
