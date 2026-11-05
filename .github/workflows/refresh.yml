@@ -1,39 +1,42 @@
-# Weekly data refresh: fetch official sources -> validate per source -> build and record activity -> validate the
-# built data -> commit the snapshot.
+# Weekly data refresh: fetch official sources -> validate per source -> data gate -> commit the snapshot to main ->
+# deploy that commit.
 #
+# - Schedule: Mondays 05:17 UTC, and Mondays 22:37 UTC as a second try. GitHub starts scheduled runs late or drops
+#   them under load (the Monday cron has started up to 8 h late), so a scheduled run is skipped when a commit changed
+#   data/snapshot less than RECENT_HOURS ago. A scheduled run in the first seven days of a month is a full refresh
+#   (EU_INTEL_FULL_REFRESH=1, decided in the plan job: cron would OR a day-of-month with the weekday). GitHub disables
+#   schedules in public repos after 60 days without repository activity; the daily watchdog (watchdog.yml) notices.
 # - Each source is failure-isolated by `python -m pipeline fetch`: a failed source keeps its previous
-#   snapshot files and is recorded in data/snapshot/_manifest.json; the job carries on.
+#   snapshot files and is recorded in data/snapshot/_manifest.json; the job carries on. A failed source alone does not
+#   fail the run (the Legislative Train fails on every runner): it goes into the "Data health" issue (watchdog.yml).
 # - Time limits: the fetch gets a run-wide deadline (EU_INTEL_FETCH_DEADLINE, FETCH_DEADLINE_MIN after it
 #   starts). After it no source is started, sources start no new work and requests get no retries or long
 #   waits (pipeline/http.py). `timeout --signal=INT` stops the fetch at FETCH_LIMIT_MIN at the latest, well
-#   before the job timeout, so the checkpoints already written are always validated and committed.
+#   before the job timeout, so the checkpoints already written still go through the gate and are committed.
 # - Validation is per source: a source whose new files fail structural validation gets its files and its
-#   manifest entry back from the last commit; the other sources' new data is kept. If the snapshot still
-#   fails validation after that, nothing is committed and the job fails (so no deploy is triggered).
-# - The snapshot, with the resumable _state.json checkpoints, is committed even if the activity build fails;
-#   data/state (the activity log) is committed only after a successful build. A failed build fails the job,
-#   so nothing is deployed until a later run succeeds.
-# - After a successful build, `python -m pipeline validate --built` checks the built data (pipeline/validate.py,
-#   e.g. a vote margin that contradicts its outcome, a withdrawn file with an act, a veto outside unanimity). If it
-#   fails, nothing is committed (neither the snapshot nor data/state) and the job fails: main keeps the last
-#   snapshot whose build passed, and the next run fetches again.
+#   manifest entry back from the last commit; the other sources' new data is kept.
+# - The data gate, before anything reaches main: snapshot validation, the strict data build that records the activity
+#   log (EU_INTEL_STRICT=1, EU_INTEL_RECORD_ACTIVITY=1), validation of the built data, its dated wording
+#   (src/lib/format.test.ts), the site build, the privacy check and the size limit: the checks CI runs on the current
+#   data and the deploy runs again. If any fails, nothing is committed (neither data/snapshot nor data/state), the run
+#   fails and the site keeps the last data that passed; the next run fetches again.
 # - The push survives concurrent commits on main: this run's data changes are re-applied on top of the
 #   current main (for the data files this run changed, its version wins; _manifest.json is merged per
 #   source). Do not commit data/snapshot or data/state by hand while a refresh is running.
-# - On success, "Deploy to GitHub Pages" runs via its workflow_run trigger and publishes the new data. "CI" runs on
-#   the new main after a successful or failed run (its workflow_run trigger): the tests that pin snapshot values
-#   report there, without blocking the deploy.
-# - GitHub runs scheduled workflows on a best-effort basis (they can be delayed or skipped under load) and
-#   disables them in public repos after 60 days without repository activity. Re-enable from the Actions tab.
+# - Deploy: the commit pushed, through pages.yml (workflow_call; GITHUB_TOKEN pushes trigger no workflow), once CI has
+#   passed on its code. If CI has not (yet), e.g. after a code push during the refresh, the deploy that follows CI's
+#   next success on main publishes this data (pages.yml builds main when only data commits followed the tested one).
+#   CI does not run on the refresh commit: its tests use the frozen test data, and this run gated the new data.
 # - Scheduled runs are incremental: EP procedures, EP votes and the Legislative Train re-read only new, open
 #   or recently changed records and reuse the others (docs/DEPLOYMENT.md, "What a weekly run re-reads").
 # Manual run: Actions -> Data refresh -> Run workflow (optionally list specific sources; "Full refresh" re-reads
-# every stored record of those three sources).
+# every stored record of those three sources). A manual run is never skipped.
 name: Data refresh
 
 on:
   schedule:
     - cron: "17 5 * * 1" # Mondays 05:17 UTC
+    - cron: "37 22 * * 1" # Mondays 22:37 UTC: skipped if the first run (or any other) committed data
   workflow_dispatch:
     inputs:
       sources:
@@ -49,12 +52,14 @@ on:
 permissions:
   contents: read
 
+# One refresh at a time (the second cron's run waits for a late first one, then skips); never cancel one mid-run.
 concurrency:
   group: refresh
   cancel-in-progress: false
 
 env:
   PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   EU_INTEL_NO_CACHE: "1"
   # Per-source time budget (seconds). Sources fetch in chunks, upsert each finished chunk into the committed
@@ -62,23 +67,71 @@ env:
   # budget stops cleanly, is committed, and continues on the next run.
   EU_INTEL_FETCH_BUDGET_S: "1500"
   # Whole fetch: soft deadline (no new work, no retries) and hard stop, in minutes from the start of the fetch.
-  # Job budget: setup ~5 + fetch <= FETCH_LIMIT_MIN + 3 (kill grace) + validate/build/commit ~5 < 120.
+  # Job budget: setup ~5 + fetch <= FETCH_LIMIT_MIN + 3 (kill grace) + validate, data gate and commit ~10 < 120.
   FETCH_DEADLINE_MIN: "80"
   FETCH_LIMIT_MIN: "90"
+  # A scheduled run is skipped when data/snapshot changed on main less than this many hours ago.
+  RECENT_HOURS: "20"
 
 jobs:
-  refresh:
-    name: Fetch, validate, commit
+  plan:
+    name: Plan
     # Scheduled runs only in the canonical repository (forks can still dispatch manually).
     if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'rahv-fb/eu-intel' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+      full: ${{ steps.plan.outputs.full }}
+    steps:
+      - name: Skip after a recent refresh; full refresh in the first week of a month
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          FULL_INPUT: ${{ inputs.full_refresh }}
+        run: |
+          full=""
+          if [ "$EVENT" = schedule ]; then
+            last=$(gh api "repos/$GITHUB_REPOSITORY/commits?sha=main&path=data/snapshot&per_page=1" \
+              --jq '.[0].commit.committer.date // empty')
+            if [ -n "$last" ] && [ $(( $(date -u +%s) - $(date -u -d "$last" +%s) )) -lt $(( RECENT_HOURS * 3600 )) ]; then
+              echo "data/snapshot last changed on main at $last, less than ${RECENT_HOURS} h ago: this scheduled run is skipped." |
+                tee -a "$GITHUB_STEP_SUMMARY"
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            # cron ORs a day-of-month field with the weekday, so "the first Monday of the month" is decided here
+            if [ "$(date -u +%-d)" -le 7 ]; then
+              full=1
+              echo "First week of the month: full refresh." | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          elif [ "$FULL_INPUT" = true ]; then
+            full=1
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+
+  refresh:
+    name: Fetch, validate, gate, commit
+    needs: plan
+    if: ${{ needs.plan.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
-      contents: write
+      contents: write # push the refresh commit to main
+      actions: read # find the CI runs that passed on main's code
+    outputs:
+      sha: ${{ steps.push.outputs.sha }}
+      deploy: ${{ steps.tested.outputs.deploy }}
     steps:
+      # main with every commit and tree of its history but only the current files (filter: blob:none): the push's
+      # re-apply and the check that CI passed on the pushed code compare commits and trees
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
+          fetch-depth: 0
+          filter: blob:none
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -86,14 +139,21 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
       - name: Install dependencies
         # poppler-utils (pdftoppm) renders Council voting-result sheets for the council source. The Python packages are
         # the pinned, hash-checked runtime dependencies (requirements.txt): this job can push to main, and an unattended
         # run must not install a release CI has not tested. The pipeline runs from the checkout (python -m pipeline).
+        # The Node packages are those of package-lock.json, for the data gate's dated-wording check and site build.
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq poppler-utils
           python -m pip install --require-hashes -r requirements.txt
+          npm ci
 
       - name: Fetch official sources
         id: fetch
@@ -101,8 +161,8 @@ jobs:
         timeout-minutes: 100
         env:
           SOURCES: ${{ inputs.sources }}
-          # "1" only on a manual run with "Full refresh" ticked (scheduled runs are incremental)
-          EU_INTEL_FULL_REFRESH: ${{ inputs.full_refresh && '1' || '' }}
+          # "1" on a manual run with "Full refresh" ticked and on scheduled runs in the first week of a month
+          EU_INTEL_FULL_REFRESH: ${{ needs.plan.outputs.full }}
         run: |
           if [[ ! "$SOURCES" =~ ^[a-z_\ ]*$ ]]; then
             echo "rc=2" >> "$GITHUB_OUTPUT"
@@ -176,11 +236,18 @@ jobs:
               print(f"| {k} | {v.get('status')} | {v.get('fetched_at') or '-'} | {recs} | {note} |")
           PY
 
-      - name: Build and record activity
+      # ---------------------------------------------------------------- the data gate (nothing is committed before it)
+      # TODO(quarantine, docs/ASSESSMENT_2026-11.md 1.5): when the gate fails, revert each source this run changed to
+      # HEAD in turn (its files, its manifest entry marked partial with a note, data/state back to HEAD), re-run the gate
+      # and commit the largest set of sources that passes, instead of nothing. Not done yet: sources read each other's
+      # files (ep_votes reads ep_procedures), the activity log must be rebuilt for each attempt, and up to eight more
+      # gate runs (~4 min each) do not fit the job's time limit after a long fetch.
+      - name: Build and record activity (strict)
         id: build
         if: ${{ !cancelled() && steps.validate.outcome == 'success' }}
         env:
           EU_INTEL_RECORD_ACTIVITY: "1"
+          EU_INTEL_STRICT: "1"
         run: python -m pipeline build
 
       - name: Validate built data
@@ -188,19 +255,46 @@ jobs:
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: python -m pipeline validate --built
 
-      - name: Commit and push snapshot
-        # Also after a failed build: the validated snapshot and its checkpoints must not be lost. Never after a
-        # build whose output failed validation.
-        if: ${{ !cancelled() && steps.validate.outcome == 'success' && steps.validate_built.outcome != 'failure' }}
+      - name: Check the dated wording of the built data
+        id: wording
+        if: ${{ !cancelled() && steps.validate_built.outcome == 'success' }}
+        run: npx vitest run src/lib/format.test.ts
+
+      - name: Build site
+        id: site
+        if: ${{ !cancelled() && steps.wording.outcome == 'success' }}
         env:
-          BUILD_OK: ${{ steps.build.outcome == 'success' && steps.validate_built.outcome == 'success' }}
+          BASE_PATH: /eu-intel/
+        run: npm run build
+
+      - name: Privacy check
+        id: privacy
+        if: ${{ !cancelled() && steps.site.outcome == 'success' }}
+        run: node scripts/check_privacy.mjs
+
+      - name: Check Pages size limit
+        id: size
+        if: ${{ !cancelled() && steps.privacy.outcome == 'success' }}
+        run: |
+          du -sh dist
+          kb=$(du -sk dist | cut -f1)
+          # GitHub Pages sites may be at most 1 GB; fail well before that (as pages.yml does).
+          if [ "$kb" -gt 900000 ]; then echo "::error::dist is ${kb} KB (Pages limit is 1 GB)"; exit 1; fi
+          if [ "$kb" -gt 500000 ]; then echo "::warning::dist is ${kb} KB; Pages limit is 1 GB"; fi
+
+      - name: Report a failed data gate
+        if: ${{ failure() && steps.validate.outcome == 'success' && steps.size.outcome != 'success' }}
+        run: |
+          echo "::error::The refreshed data failed the data gate: nothing was committed or deployed; the site keeps the last data that passed."
+          echo "**The refreshed data failed the data gate**: nothing was committed or deployed." >> "$GITHUB_STEP_SUMMARY"
+
+      # ---------------------------------------------------------------- commit, push
+      - name: Commit and push snapshot
+        id: push
+        if: ${{ !cancelled() && steps.size.outcome == 'success' }}
         run: |
           paths=(data/snapshot)
-          if [ "$BUILD_OK" = "true" ]; then
-            [ -d data/state ] && paths+=(data/state)
-          else
-            echo "::warning::The build failed: committing the snapshot without the activity log (data/state)."
-          fi
+          [ -d data/state ] && paths+=(data/state)
           git add -A -- "${paths[@]}"
           if git diff --cached --quiet; then
             echo "No data changes." | tee -a "$GITHUB_STEP_SUMMARY"
@@ -256,7 +350,7 @@ jobs:
               with open(PATH, "w", encoding="utf-8") as f:
                   f.write(json.dumps(dict(sorted(merged.items())), indent=1, sort_keys=True) + "\n")
           PY
-            git add -A -- "${paths[@]}" || return 1  # data/state only after a successful build
+            git add -A -- "${paths[@]}" || return 1
             if git diff --cached --quiet; then return 3; fi
             git commit -q -m "$subject" -m "$body" || return 1
           }
@@ -264,6 +358,7 @@ jobs:
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then
               echo "Pushed $(git rev-parse --short HEAD)." | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             if [ "$attempt" -eq 5 ]; then
@@ -284,3 +379,42 @@ jobs:
           done
           echo "::error::could not push the data refresh commit"
           exit 1
+
+      - name: Deploy only code that CI has passed
+        id: tested
+        if: ${{ steps.push.outputs.sha != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.push.outputs.sha }}
+        run: |
+          # The data passed the gate above; its code must have passed CI (tests on the frozen data, e2e): a successful
+          # CI run for a push to main on a commit with the same files outside data/snapshot and data/state.
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::warning::Started from $GITHUB_REF: the github-pages environment deploys from main only. The data is on main; deploy it by hand (Actions -> Deploy to GitHub Pages -> Run workflow on main)."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          tested=$(gh run list --workflow ci.yml --branch main --event push --status success --limit 30 \
+            --json headSha --jq '.[].headSha')
+          for ci in $tested; do
+            if git merge-base --is-ancestor "$ci" "$SHA" 2>/dev/null &&
+              git diff --quiet --no-renames "$ci" "$SHA" -- . ':(exclude)data/snapshot' ':(exclude)data/state'; then
+              echo "CI passed on $ci, which has the code of $SHA: deploying $SHA." | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "deploy=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "::warning::CI has not passed (yet) on the code of $SHA: not deployed now. The deploy that follows the next successful CI run on main publishes this data."
+          echo "deploy=false" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy
+    needs: refresh
+    if: ${{ needs.refresh.outputs.deploy == 'true' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      ref: ${{ needs.refresh.outputs.sha }}

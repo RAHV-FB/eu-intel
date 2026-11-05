@@ -99,6 +99,7 @@ function VoteOn({ vote }: { vote: CouncilVote }) {
  * or of 28, under TEU Art. 16(4)).
  */
 function blockingRule(a: CouncilAssessment, notParticipating: number, participating: number): string | null {
+  if (a.states_required == null) return null; // unanimity: no blocking minority
   const byNumber = formatNumber(participating - a.states_required + 1);
   if (notParticipating === 0 && a.legal_basis === 'TEU Art. 16(4)') {
     return `at least four Member States representing more than 35% of the EU population, or ${byNumber} Member States whatever their population`;

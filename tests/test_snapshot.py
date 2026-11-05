@@ -17,6 +17,24 @@ def test_unchanged_records_keep_previous_retrieved_at(tmp_path, monkeypatch):
     assert data[0]["source"]["retrieved_at"] == "2026-01-01T00:00:00Z"
 
 
+def test_unchanged_records_kept_when_a_value_holds_a_unicode_line_separator(tmp_path, monkeypatch):
+    # A raw U+0085 (NEL) or U+2028 in one record's text must not make the writer discard every previous record
+    # (it did for implementation/measures.json: str.splitlines() broke the line, json.loads failed on it).
+    monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
+
+    def recs(ts: str) -> list[TrainFile]:
+        src = SourceRef(institution="LegislativeTrain", url="https://example.invalid/b", retrieved_at=ts)
+        odd = TrainFile(url="https://example.invalid/b", title="Gesetz\x85über Teil", status="Adopted", source=src)
+        return [_rec("Adopted", ts), odd]
+
+    snapshot.write_records("t", "files", recs("2026-01-01T00:00:00Z"))
+    first = (tmp_path / "t" / "files.json").read_bytes()
+    snapshot.write_records("t", "files", recs("2026-02-01T00:00:00Z"))
+    assert (tmp_path / "t" / "files.json").read_bytes() == first
+    data = json.loads(first)
+    assert data[1]["title"] == "Gesetz\x85über Teil"
+
+
 def test_changed_records_get_new_retrieved_at(tmp_path, monkeypatch):
     monkeypatch.setattr(snapshot, "SNAPSHOT", tmp_path)
     snapshot.write_records("t", "files", [_rec("Tabled", "2026-01-01T00:00:00Z")])

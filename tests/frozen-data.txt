@@ -1,0 +1,6 @@
+# The data the tests that read real data run on, in CI and in scripts/test-frozen.sh: data/snapshot and data/state as
+# of `commit` (the data refresh of 2 November 2026), built with EU_INTEL_BUILT_AT=`built_at` and EU_INTEL_TODAY = its
+# date; the browser tests see that moment on the page's clock (tests/e2e/fixtures.ts). A data refresh changes none of
+# it, so it cannot turn the tests red. To move the tests to newer data, see docs/DEPLOYMENT.md, "Frozen test data".
+commit=5f83a06bb43c5d80f80ff88e7d342502f845cbb2
+built_at=2026-11-02T14:00:00Z

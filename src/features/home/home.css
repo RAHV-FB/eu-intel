@@ -83,6 +83,17 @@
   vertical-align: 1px;
 }
 
+/* a core source is not up to date on the reader's date: the headline date is old, so no "fresh" colour */
+.home-hero__fresh-dot.is-stale {
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
+/* the sources not up to date on the reader's date (.meta): one neutral line under the date */
+.home-hero__stale {
+  margin: var(--sp-1) 0 0;
+}
+
 @media (min-width: 48rem) {
   .home-hero {
     padding-block: var(--sp-8) var(--sp-7);

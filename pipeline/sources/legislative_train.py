@@ -303,16 +303,24 @@ def build_record(url: str, listed_title: str, page: FilePage, retrieved_at: str)
 # - its "Information updated as of" date is older than ACTIVE_DAYS,
 # - it is not in this week's share of the RECHECK_WEEKS rotation (each quiet file is re-read every
 #   RECHECK_WEEKS weeks anyway), and it was not left pending by the previous run.
-# EU_INTEL_FULL_REFRESH=1 re-reads every file page.
+# EU_INTEL_FULL_REFRESH=1, or a PARSER_VERSION other than _state.json `parser`, re-reads every file page (a full
+# pass). A full pass that does not complete in one run keeps `pass_parser` and its unread files (pending, including
+# those of theme pages that could not be read) in _state.json; the next runs read the pending files first and
+# `parser` takes the code's version once none is left. A pass started for another version starts again.
 #
 # Failure safety. A file page or theme page that cannot be read keeps the stored records (by URL, or by
 # file slug for a file that moved to another theme); a schedule page that cannot be read falls back to the
-# theme list of the previous run (_state.json). After fetch_deadline() no new page is requested; the files
-# not read are carried forward and listed as pending in _state.json, so the next run starts with them.
-# files.json is not written if it would lose more than MAX_SHRINK of its records.
+# theme list of the previous run (_state.json), and without one the source fails before writing anything. After
+# fetch_deadline(), or once OUTAGE_STOP file pages in a row failed (e.g. the site's WAF blocks the runner), no new
+# page is requested; the files not read are carried forward and listed as pending in _state.json, so the next run
+# starts with them. files.json is not written if it would lose more than MAX_SHRINK of its records.
 ACTIVE_DAYS = 90
 RECHECK_WEEKS = 4
 MAX_SHRINK = 0.05
+OUTAGE_STOP = 10
+# Bump when the parsing of a page or the derivation of a record changes (parse_file_page, parse_theme,
+# build_record, ...): the next runs then read every file page again (see above).
+PARSER_VERSION = "2026-11-05.1"
 
 
 def _today() -> date:  # monkeypatched in tests
@@ -429,29 +437,41 @@ def fetch(http: Http) -> SourceStatus:
         http, COMMISSION_TERMS, previous=previous, known_themes=state.get("themes"), deadline=deadline
     )
     pending_before = set(state.get("pending", []))
+    # `parser`: the PARSER_VERSION every stored record was read with (a state written before there was one counts as
+    # the current version); `pass_parser`: that of the full pass in progress (see "crawling" above).
+    parser_done = state.get("parser", PARSER_VERSION)
+    pass_before = state.get("pass_parser") if pending_before else None
+    upgrade = (parser_done if pass_before is None else pass_before) != PARSER_VERSION
+    reread_all = full or upgrade
+    in_pass = reread_all or pass_before is not None
 
     records: dict[str, TrainFile] = {}
     errors: list[str] = []
     pending: list[str] = []
     reasons: Counter[str] = Counter()
     reused = 0
+    failing = 0  # file pages that failed one after the other (OUTAGE_STOP)
     # files left pending by the previous run first
     order = sorted(disc.files.items(), key=lambda kv: (kv[1][0] not in pending_before, kv[0]))
     for i, (slug, (url, listed_title)) in enumerate(order):
         if url in disc.carried:
             records[url] = disc.carried[url]
+            if in_pass:  # not read: the pass reads it in a later run
+                pending.append(url)
             continue
         old = previous.get(url) or by_slug.get(slug)
         why = (
             "pending"
-            if url in pending_before
-            else needs_page(url, previous.get(url), disc.hints.get(url), today, full)
+            if url in pending_before and not reread_all
+            else needs_page(url, previous.get(url), disc.hints.get(url), today, reread_all)
         )
+        if why == "full refresh" and not full:
+            why = "parser change"
         if why is None and old is not None:
             records[old.url] = old
             reused += 1
             continue
-        if past(deadline):
+        if past(deadline) or failing >= OUTAGE_STOP:
             pending.append(url)
             if old is not None:
                 records[old.url] = old
@@ -462,10 +482,12 @@ def fetch(http: Http) -> SourceStatus:
                 raise ValueError("no status found")
         except Exception as e:  # noqa: BLE001 - HTTP error, WAF or unreadable page: keep the stored record
             errors.append(f"{url}: {f'HTTP {e.status}' if isinstance(e, HttpError) else str(e)[:80]}")
+            failing += 1
             pending.append(url)
             if old is not None:
                 records[old.url] = old
             continue
+        failing = 0
         records[url] = build_record(url, listed_title, page, now_iso())
         reasons[why or "new"] += 1
         if (i + 1) % 100 == 0:
@@ -488,7 +510,15 @@ def fetch(http: Http) -> SourceStatus:
     unknown = sorted({r.status for r in out} - STATUS_VOCABULARY)
     counts = Counter(r.status for r in out)
     write_records(SOURCE_ID, "files", out, key=lambda r: r.url)
-    write_state(SOURCE_ID, {"themes": disc.themes, "pending": sorted(pending)})
+    new_state: dict = {
+        "themes": disc.themes,
+        "pending": sorted(pending),
+        # every file page read with this code: a full pass that left nothing pending
+        "parser": PARSER_VERSION if in_pass and not pending else parser_done,
+    }
+    if in_pass and pending:
+        new_state["pass_parser"] = PARSER_VERSION
+    write_state(SOURCE_ID, new_state)
 
     fetched = sum(reasons.values())
     note_parts = [
@@ -496,6 +526,15 @@ def fetch(http: Http) -> SourceStatus:
         f"{fetched} file pages read ({', '.join(f'{k} {v}' for k, v in sorted(reasons.items()))}), "
         f"{reused} unchanged files reused, {len(disc.carried)} kept from unreadable theme pages",
     ]
+    if in_pass:
+        note_parts.append(
+            "full pass"
+            + (f" (parser {PARSER_VERSION}; stored records read with {parser_done})" if parser_done != PARSER_VERSION
+               else "")  # fmt: skip
+            + ("; complete" if not pending else f"; {len(pending)} files left for the next runs")
+        )
+    if failing >= OUTAGE_STOP:
+        note_parts.append(f"stopped reading file pages after {OUTAGE_STOP} failures in a row (blocked or down)")
     if unknown:
         note_parts.append(f"statuses outside known vocabulary (stored as published): {unknown}")
     if errors:

@@ -43,6 +43,7 @@ Output: data/snapshot/ep_procedures/procedures.json (list[Procedure], sorted by 
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -50,7 +51,7 @@ import re
 import threading
 import time
 from collections import Counter
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Collection, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
@@ -105,8 +106,28 @@ OEIL_GAP_S = 0.5
 FALLBACK_TERMS = (7, 8, 9, 10)  # parliamentary terms covering procedures from 2009 onwards
 CHUNK_SIZE = 100  # procedures per checkpoint (snapshot upsert + _state.json)
 RECENT_DAYS = 120  # incremental mode re-fetches files with an event in this window
-# Lifecycle stages (pipeline.analysis.status) after which a file is not re-fetched incrementally.
-TERMINAL_STAGES = {"adopted", "published", "in_force", "withdrawn", "rejected", "lapsed"}
+# Lifecycle stages (pipeline.analysis.status) in which a file is closed: an incremental run re-reads it only when it
+# had an event in the last RECENT_DAYS days or on its rotation week (ROTATION_WEEKS). These are status.TERMINAL
+# ("no longer in force" and "takes effect on notification" included: EUR-Lex data, not the EP file, moves those)
+# plus "adopted" (awaiting publication, which EUR-Lex records).
+TERMINAL_STAGES = {
+    "adopted",
+    "published",
+    "in_force",
+    "takes_effect_on_notification",
+    "no_longer_in_force",
+    "withdrawn",
+    "rejected",
+    "lapsed",
+}
+# Each stored file is re-read at least once every ROTATION_WEEKS weeks: an incremental run also re-reads the closed
+# files whose rotation_slot() is due (rotation_slots()), so a stage wrongly derived as closed cannot protect itself
+# from correction.
+ROTATION_WEEKS = 8
+# Bump when the parsing or derivation of a record changes (parse_oeil, build_events, build_procedure, ...): the
+# next runs then re-read every file, as a full refresh does (chunked and resumable over several runs), and
+# _state.json `parser` takes the new value once that pass is complete.
+PARSER_VERSION = "2026-11-05.1"
 
 # --------------------------------------------------------------------------------------
 # EP activity types -> EventKind + deterministic plain-English title.
@@ -1556,6 +1577,28 @@ def needs_refresh(
     return None
 
 
+def rotation_slot(key: str, weeks: int = ROTATION_WEEKS) -> int:
+    """The week (modulo `weeks`) in which a stored record is due for its periodic re-read: a stable hash of its id
+    (Python's hash() of a str changes from one process to the next)."""
+    return int(hashlib.sha256(key.encode()).hexdigest()[:8], 16) % weeks
+
+
+def week_number(day: date) -> int:
+    """Weeks since Monday 1 January of year 1; a week runs from Monday to Sunday, as an ISO week does. Unlike the ISO
+    week number it does not start again at 1 in January, so `week_number % n` takes each value once in any n
+    weeks in a row, also across a new year (ISO week 52 or 53, then week 1, would skip or repeat slots)."""
+    return (day.toordinal() - 1) // 7
+
+
+def rotation_slots(today: date, last_week: int | None, weeks: int = ROTATION_WEEKS) -> set[int]:
+    """The rotation slots due in a run: this week's, plus those of the weeks since `last_week` (the week of the last
+    run that took its slots) that no run took, e.g. after a missed or failed run; none when a run already took this
+    week's slot."""
+    now = week_number(today)
+    first = now if last_week is None or last_week > now else max(last_week + 1, now - weeks + 1)
+    return {w % weeks for w in range(first, now + 1)}
+
+
 def select_ids(
     wanted: dict[str, str],
     existing: dict[str, Procedure],
@@ -1563,13 +1606,16 @@ def select_ids(
     acts_by_ref: dict[str, list[LegalAct]],
     today: date,
     full: bool,
+    slots: Collection[int] = (),
+    full_reason: str = "full refresh",
 ) -> tuple[list[str], Counter[str]]:
-    """Ids to fetch this run (newest first) and the reasons, for the manifest note."""
+    """Ids to fetch this run (newest first) and the reasons, for the manifest note. `slots`: the rotation slots due
+    (rotation_slots); a stored file that needs no re-read otherwise is re-read when its slot is due."""
     reasons: Counter[str] = Counter()
     out: list[str] = []
     for pid in sorted(wanted, reverse=True):
         if full:
-            why: str | None = "full refresh"
+            why: str | None = full_reason
         elif pid not in existing:
             why = "new"
         elif pid in featured:
@@ -1578,6 +1624,8 @@ def select_ids(
             rec = existing[pid]
             why = needs_refresh(rec, acts_by_ref.get(rec.reference, []), today)
             why = why.split(" (")[0] if why else None
+            if why is None and rotation_slot(pid) in slots:
+                why = "rotation"
         if why:
             reasons[why] += 1
             out.append(pid)
@@ -1864,9 +1912,13 @@ def fetch(http: Http) -> SourceStatus:
     """Incremental, chunked and resumable; the committed snapshot is the checkpoint.
 
     - Default (incremental): list ids (3 cheap requests), then fetch only ids that are new, open
-      (status not terminal), had an event in the last RECENT_DAYS days, lack OEIL data, or are
-      featured; all other records are reused unchanged from the snapshot.
-    - EU_INTEL_FULL_REFRESH=1: fetch every id in scope.
+      (status not terminal), had an event in the last RECENT_DAYS days, lack OEIL data, are
+      featured, or are closed files whose rotation slot is due (each stored file at least every ROTATION_WEEKS
+      weeks); all other records are reused unchanged from the snapshot. Stored ids and the ids left pending by
+      the last run are in scope even when this run's list did not return them (the paged list repeats rows).
+    - EU_INTEL_FULL_REFRESH=1, or a PARSER_VERSION other than the one in _state.json (`parser`): fetch every id
+      in scope. `parser` takes the code's version once such a pass is complete; `pass_parser` is the version of
+      the pass in progress, so an interrupted pass resumes, and one started for an older version starts again.
     - Work is done in chunks of CHUNK_SIZE; after each chunk the records are upserted into the
       snapshot and data/snapshot/ep_procedures/_state.json lists the ids still pending. A new
       run continues pending ids first, except ids whose fetch failed in an earlier run (`failing`, with
@@ -1925,9 +1977,36 @@ def fetch(http: Http) -> SourceStatus:
     featured = featured_ids()
     for pid in featured:
         wanted.setdefault(pid, "")
+    # The paged list repeats rows from one page to the next and so leaves others out (COD on 2 Nov 2026: 2,972 rows,
+    # 2,756 distinct ids). Stored files and the ids the last run left pending (e.g. new files it listed) stay in
+    # scope when this run's list misses them: open ones are re-read in every run, closed ones on their rotation week.
+    carried = 0
+    for pid in [*sorted(existing), *state.get("pending", [])]:
+        if pid not in wanted:
+            wanted[pid] = existing[pid].reference if pid in existing else ""
+            carried += 1
+
+    # Ids left over by an interrupted run come first (an interrupted full pass stays "full"), ids that
+    # failed in an earlier run last: they do not count towards the outage stop (see OUTAGE_STOP).
+    resumed = [i for i in state.get("pending", []) if i in wanted]
+    resuming_full = bool(resumed) and state.get("mode") == "full"
+    # `parser`: the PARSER_VERSION every stored record was last read with (a state written before there was one
+    # counts as the current version). Another version re-reads every file, as a full refresh does, unless a pass for
+    # this version is already in progress (`pass_parser`); a pass started for another version starts again.
+    parser_done = state.get("parser", PARSER_VERSION)
+    if resuming_full:
+        upgrade = state.get("pass_parser", parser_done) != PARSER_VERSION
+    else:
+        upgrade = parser_done != PARSER_VERSION
+    reread_all = full or upgrade
+    mode = "full" if reread_all or resuming_full else "incremental"
+    # A full pass re-reads every file anyway; the rotation then only moves on to this week.
+    last_week = state.get("rotation_week")
+    slots = set() if mode == "full" else rotation_slots(today, last_week if isinstance(last_week, int) else None)
+
     # ids known to be unusable: structural cases (split procedure, merged record) are retried
-    # only by a full refresh; others (404, missing title) are retried by every run.
-    unavailable: dict[str, str] = {} if full else dict(state.get("unavailable", {}))
+    # only by a full pass; others (404, missing title) are retried by every run.
+    unavailable: dict[str, str] = {} if reread_all else dict(state.get("unavailable", {}))
     skip = {k for k, v in unavailable.items() if "split procedure" in v or "merges several" in v}
     # enriched files whose OEIL page answers 404: {id: {"since": first run date, "runs": runs in a row}}
     oeil_gone: dict[str, dict] = dict(state.get("oeil_gone", {}))
@@ -1942,17 +2021,15 @@ def fetch(http: Http) -> SourceStatus:
     except Exception as e:  # noqa: BLE001 - optional input for the terminal-state check
         log.info("eurlex snapshot not usable (%s)", e)
 
-    # Ids left over by an interrupted run come first (an interrupted full refresh stays "full"), ids that
-    # failed in an earlier run last: they do not count towards the outage stop (see OUTAGE_STOP).
-    resumed = [i for i in state.get("pending", []) if i in wanted]
-    mode = "full" if full or (resumed and state.get("mode") == "full") else "incremental"
     selected, reasons = select_ids(
         {k: v for k, v in wanted.items() if k not in skip},
         existing,
         featured,
         acts_by_ref,
         today,
-        full,
+        reread_all,
+        slots,
+        "full refresh" if full else "parser change",
     )
     todo = list(dict.fromkeys(resumed + selected))
     todo = [i for i in todo if i not in failing] + [i for i in todo if i in failing]
@@ -1972,7 +2049,7 @@ def fetch(http: Http) -> SourceStatus:
     run = _Run(
         http, wanted, committees, enriched, deadline, hard_deadline, min_progress=CHUNK_SIZE, failed_before=failing
     )
-    started_at = state.get("started_at") if resumed else attempted
+    started_at = state.get("started_at") if resumed and not reread_all else attempted
     done: list[str] = []
     built: set[str] = set()
     stopped_early = False
@@ -2013,9 +2090,13 @@ def fetch(http: Http) -> SourceStatus:
             "oeil_gone": dict(sorted(oeil_gone.items())),
             "failing": dict(sorted(failing_now(pending).items())),
             "unsettled": {"attempted_at": attempted, "ids": sorted(set(pending) | run.degraded)},
+            # a complete full pass read every file with this code; otherwise the version of the last such pass
+            "parser": PARSER_VERSION if mode == "full" and not pending else parser_done,
+            "rotation_week": week_number(today),  # this week's rotation slots are taken (selected or pending)
         }
         if pending:
-            write_state(SOURCE_ID, {**base, "mode": mode, "pending": pending, "started_at": started_at})
+            in_pass = {"pass_parser": PARSER_VERSION} if mode == "full" else {}
+            write_state(SOURCE_ID, {**base, **in_pass, "mode": mode, "pending": pending, "started_at": started_at})
         else:
             write_state(
                 SOURCE_ID,
@@ -2140,8 +2221,12 @@ def fetch(http: Http) -> SourceStatus:
     note = (
         f"Scope: {', '.join(PROCEDURE_TYPES)} with reference year >= {MIN_YEAR}: {listed} ids from the "
         f"paged list (API totals all years, with repeats: {by_type}) + {sum(discovered.values())} more "
-        f"referenced by other snapshots ({dict(discovered)}) + {len(featured)} featured. Mode {mode}: "
-        f"fetched {len(built)} ({dict(reasons)}), reused {len(final) - len(built)} from the snapshot. "
+        f"referenced by other snapshots ({dict(discovered)}) + {len(featured)} featured + {carried} stored or "
+        f"pending ids the list did not return. Mode {mode}"
+        + (f" (parser {PARSER_VERSION}; stored records read with {parser_done})" if mode == "full" and
+           parser_done != PARSER_VERSION else "")  # fmt: skip
+        + (f", rotation slots {sorted(slots)} of {ROTATION_WEEKS}" if slots else "")
+        + f": fetched {len(built)} ({dict(reasons)}), reused {len(final) - len(built)} from the snapshot. "
         f"OEIL enrichment for {counts['with_oeil']}/{len(final)}."
     )
     if pending:

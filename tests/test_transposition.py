@@ -41,6 +41,49 @@ def kinds(a: LegalAct) -> list[tuple[str, str]]:
     return [(x.date, x.kind) for x in classify(a)]
 
 
+def dated_directive(day: str, dates: dict[str, list[str]]) -> LegalAct:
+    return directive(dates).model_copy(update={"date_document": day})
+
+
+def test_a_date_before_the_act_is_not_its_deadline():
+    # Directive (EU) 2015/412 of 11 March 2015 (GMOs): Cellar records 17 October 2002, unlabelled, the deadline of
+    # Directive 2001/18/EC that it amends; the site said "The transposition deadline (17 October 2002) has passed"
+    from pipeline.analysis.transposition import before_the_act
+
+    a = dated_directive("2015-03-11", {"2002-10-17": []})
+    assert before_the_act(a) == ["2002-10-17"]
+    assert kinds(a) == [("2002-10-17", "other")]
+    assert general_deadline(a) is None and general_deadline_basis(a) is None and application_start(a) is None
+    # beside a deadline the act sets, it is "other" and the later date is the deadline
+    a = dated_directive("2015-03-11", {"2002-10-17": [], "2017-03-11": ["ADOPTION"]})
+    assert kinds(a) == [("2002-10-17", "other"), ("2017-03-11", "deadline")]
+    # when every date is labelled APPLICATION only (the labels do not separate them), one before the act is not the
+    # general deadline either
+    a = dated_directive("2015-03-11", {"2002-10-17": ["APPLICATION"], "2017-03-11": ["APPLICATION"]})
+    assert general_deadline(a) == "2017-03-11" and ("2002-10-17", "other") in kinds(a)
+    # without the act's own date nothing is compared
+    assert kinds(directive({"2002-10-17": []})) == [("2002-10-17", "deadline")]
+
+
+def test_an_application_date_before_the_act_stays_an_application_date():
+    # Directive (EU) 2022/642 of 12 April 2022, Art. 3(1): national measures apply from 1 January 2022, as EUR-Lex
+    # records (retroactively); its deadline, 20 August 2022, is after the act
+    from pipeline.analysis.transposition import before_the_act
+
+    a = dated_directive("2022-04-12", {"2022-01-01": ["APPLICATION"], "2022-08-20": ["ADOPTION"]})
+    assert before_the_act(a) == []
+    assert kinds(a) == [("2022-01-01", "application"), ("2022-08-20", "deadline")]
+
+
+def test_a_checked_date_before_the_act_is_kept():
+    from pipeline.analysis.transposition import before_the_act
+    from pipeline.models.entities import CheckedTransposition
+
+    a = dated_directive("2015-03-11", {"2002-10-17": []})
+    a = a.model_copy(update={"transposition_checked": CheckedTransposition(deadline="2002-10-17")})
+    assert before_the_act(a) == [] and general_deadline(a) == "2002-10-17"
+
+
 def test_adoption_and_application_dates():  # NIS2 Art. 41(1)
     a = directive({"2024-10-17": ["ADOPTION"], "2024-10-18": ["APPLICATION"]})
     assert kinds(a) == [("2024-10-17", "deadline"), ("2024-10-18", "application")]

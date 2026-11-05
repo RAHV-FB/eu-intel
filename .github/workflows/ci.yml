@@ -1,25 +1,29 @@
-# Continuous integration: lint, offline tests, snapshot validation, data build and its validation, typecheck,
-# site build and privacy gate. Runs fully offline against the committed snapshot (no EU API calls).
+# Continuous integration: lint and typecheck; the tests on the frozen test data; the data gate on the current data.
+# Runs fully offline (no EU API calls).
 #
-# The Playwright e2e/accessibility job runs on every push to main and every pull request against the site
-# built by the check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
-# A successful run for a push to main starts the deploy (pages.yml, workflow_run).
+# Two kinds of data, two kinds of checks (docs/DEPLOYMENT.md, "Frozen test data"):
+# - The tests that read real data (pytest via data/snapshot, the vitest data tests via public/data, the Playwright tests
+#   on the built site) run on the data of the commit pinned in tests/frozen-data.txt, built as of the moment it names:
+#   they test the code, and a data refresh changes none of their inputs, so it cannot turn them red.
+# - The current data (data/snapshot and data/state of this commit) must pass the data gate that also guards each data
+#   refresh before it reaches main (refresh.yml) and each deploy (pages.yml): snapshot validation, the strict data
+#   build, validation of the built data, its dated wording (src/lib/format.test.ts), the site build, the privacy check
+#   and the size limit.
 #
-# The whole workflow also runs after each completed "Data refresh" (workflow_run), on the latest main: refresh commits
-# are pushed with GITHUB_TOKEN, which triggers no push workflow, and pytest and the vitest data tests pin values of the
-# committed snapshot, so a refresh can turn them red. That run only reports (pages.yml deploys after CI for a push
-# alone; the refresh deploys its own data), and it has its own concurrency group, so it never cancels the CI run of a
-# push. A cancelled refresh commits nothing, and its CI run is skipped.
+# The Playwright e2e/accessibility job runs on every push to main and every pull request, on the site built from the
+# frozen data by the check job. A manual run (Actions -> CI -> Run workflow) can skip it by unticking the e2e option.
+# A successful run for a push to main starts the deploy (pages.yml, workflow_run); its result goes into the "Data
+# health" issue (watchdog.yml, workflow_run).
+#
+# CI does not run after a data refresh: the refresh commits only data/snapshot and data/state, so the tests on the
+# frozen data would test the same code on the same data again, and the refresh runs the data gate on its data itself
+# before pushing (its commits, pushed with GITHUB_TOKEN, trigger no workflow).
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_run:
-    workflows: ["Data refresh"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       e2e:
@@ -31,9 +35,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: >-
-    ci-${{ github.workflow }}-${{ github.event_name == 'workflow_run' &&
-    format('data-refresh-{0}', github.event.workflow_run.conclusion) || github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -46,12 +48,8 @@ env:
 jobs:
   check:
     name: Lint, test, build
-    # after a refresh that succeeded or failed: one whose build failed has still pushed its snapshot (refresh.yml)
-    if: >-
-      ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' ||
-      github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -85,14 +83,72 @@ jobs:
       - name: Ruff
         run: ruff check --output-format=github .
 
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Typecheck e2e tests
+        run: npx tsc -p tests/e2e/tsconfig.json
+
+      # ------------------------------------------------------------ the tests, on the frozen test data
+      - name: Use the frozen test data (tests/frozen-data.txt)
+        id: frozen
+        run: |
+          commit=$(sed -n 's/^commit=//p' tests/frozen-data.txt)
+          built_at=$(sed -n 's/^built_at=//p' tests/frozen-data.txt)
+          if ! [[ "$commit" =~ ^[0-9a-f]{40}$ && "$built_at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+            echo "::error file=tests/frozen-data.txt::expected the lines commit=<full commit sha> and built_at=YYYY-MM-DDTHH:MM:SSZ"
+            exit 1
+          fi
+          # the checkout is shallow: fetch the pinned commit (a public repository needs no credentials for this)
+          git cat-file -e "$commit^{commit}" 2>/dev/null || git fetch --quiet --depth=1 --no-tags origin "$commit"
+          # no-overlay: files that commit does not have are removed
+          git restore --source="$commit" --staged --worktree -- data/snapshot data/state
+          echo "Testing on data/snapshot and data/state of $commit, built as of $built_at." | tee -a "$GITHUB_STEP_SUMMARY"
+          {
+            echo "today=${built_at:0:10}"
+            echo "built_at=$built_at"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Pytest (offline; network tests deselected)
         # Any non-zero exit fails the job, including 5 (no tests collected).
         run: python -m pytest -q
 
+      - name: Build the frozen test data (public/data)
+        env:
+          EU_INTEL_TODAY: ${{ steps.frozen.outputs.today }}
+          EU_INTEL_BUILT_AT: ${{ steps.frozen.outputs.built_at }}
+        run: python -m pipeline build
+
+      - name: Unit and data tests (vitest)
+        # Fails when no test file matches the include pattern in vite.config.ts.
+        run: npx vitest run
+
+      - name: Build the site for the browser tests (BASE_PATH=${{ env.BASE_PATH }})
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.e2e }}
+        run: npm run build
+
+      - name: Upload the site built from the frozen test data for e2e
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.e2e }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-dist
+          path: dist/
+          retention-days: 3
+          if-no-files-found: error
+
+      # ------------------------------------------------------------ the data gate, on this commit's data
+      - name: Use this commit's data
+        run: |
+          git restore --source=HEAD --staged --worktree -- data/snapshot data/state
+          test -z "$(git status --porcelain -- data/snapshot data/state)"
+          rm -rf public/data dist
+
       - name: Validate snapshot
         run: python -m pipeline validate
 
-      - name: Build site data (public/data)
+      - name: Build site data (public/data, strict)
+        env:
+          EU_INTEL_STRICT: "1"
         run: python -m pipeline build
 
       - name: Validate built data
@@ -101,15 +157,10 @@ jobs:
         # when public/data is missing.
         run: python -m pipeline validate --built
 
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Typecheck e2e tests
-        run: npx tsc -p tests/e2e/tsconfig.json
-
-      - name: Unit tests (vitest)
-        # Fails when no test file matches the include pattern in vite.config.ts.
-        run: npx vitest run
+      - name: Check the dated wording of the built data
+        # src/lib/format.test.ts on this build: every date a next step, status explanation or timeline step states as
+        # still ahead is restated correctly once it has passed, and no dated wording is unknown to src/lib/format.ts.
+        run: npx vitest run src/lib/format.test.ts
 
       - name: Build site (BASE_PATH=${{ env.BASE_PATH }})
         run: npm run build
@@ -117,19 +168,14 @@ jobs:
       - name: Privacy check
         run: node scripts/check_privacy.mjs
 
-      - name: Site size
+      - name: Check Pages size limit
         run: |
-          du -sh dist dist/data 2>/dev/null || true
+          du -sh dist dist/data
           echo "files: $(find dist -type f | wc -l)"
-
-      - name: Upload built site for e2e
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.e2e }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: site-dist
-          path: dist/
-          retention-days: 3
-          if-no-files-found: error
+          kb=$(du -sk dist | cut -f1)
+          # GitHub Pages sites may be at most 1 GB; fail well before that (as pages.yml does).
+          if [ "$kb" -gt 900000 ]; then echo "::error::dist is ${kb} KB (Pages limit is 1 GB)"; exit 1; fi
+          if [ "$kb" -gt 500000 ]; then echo "::warning::dist is ${kb} KB; Pages limit is 1 GB"; fi
 
   e2e:
     name: E2E + accessibility (Playwright, ${{ matrix.browser }})
@@ -157,6 +203,7 @@ jobs:
         run: npm ci
 
       - name: Download built site
+        # built from the frozen test data; each page's clock starts at its build time (tests/e2e/fixtures.ts)
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: site-dist
