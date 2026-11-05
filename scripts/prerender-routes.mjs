@@ -143,6 +143,38 @@ for (const c of readJson('countries/index.json')) {
   page(`countries/${c.code}`, c.name, `${c.name} in the EU: MEPs, Council votes and implementation of EU law.`);
   n++;
 }
+// Former topic addresses (/topics/<slug>/, now /legislation/?topic=<slug>): a page with status 200 that redirects without
+// a script (relative, so it holds under any base path), points search engines at the new address and is not indexed
+// itself. The app redirects these addresses too (App.tsx TopicRedirect), for one opened from the 404.html fallback.
+// (the shell's CSP and icon: without an icon link a browser asks for /favicon.ico, outside the site)
+const csp = /<meta http-equiv="Content-Security-Policy"[^>]*>/.exec(shell)?.[0];
+const icon = /<link rel="icon"[^>]*>/.exec(shell)?.[0];
+if (!csp || !icon) throw new Error('prerender-routes: no Content-Security-Policy meta or icon link in dist/index.html');
+for (const t of readJson('topics.json')) {
+  const target = `legislation/?topic=${encodeURIComponent(t.slug)}`;
+  const out = join(DIST, 'topics', t.slug, 'index.html');
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(
+    out,
+    `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    ${csp}
+    ${icon}
+    <meta name="robots" content="noindex" />
+    <title>${esc(documentTitle(`${t.label} – Legislation`))}</title>${SITE_URL ? `
+    <link rel="canonical" href="${esc(SITE_URL + target)}" />` : ''}
+    <meta http-equiv="refresh" content="0; url=../../${esc(target)}" />
+  </head>
+  <body>
+    <p>This page has moved: <a href="../../${esc(target)}">${esc(t.label)} – Legislation</a>.</p>
+  </body>
+</html>
+`,
+  );
+  n++;
+}
 // the home page keeps its address; the fallback for unknown addresses (served with status 404) is not for search engines
 writeFileSync(join(DIST, 'index.html'), withHead(shell, canonical('')));
 writeFileSync(join(DIST, '404.html'), withHead(shell, '<meta name="robots" content="noindex" />'));

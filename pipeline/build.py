@@ -2293,10 +2293,23 @@ class Builder:
                 p = self.resolve_ref(r)
                 if p:
                     act_dossiers[a.celex].add(p.id)
+        # The EP's final-act list may name an act that EUR-Lex gives to another procedure. That is kept only where
+        # something else supports it: the procedure EUR-Lex names lists its own, different, final acts (the swap
+        # below), or the claimant is a part of it (a split procedure). Otherwise the act's own record wins: OEIL
+        # listed Decision (EU) 2026/2402, which amends the market stability reserve Decision (2025/0380(COD), as
+        # EUR-Lex records), as the final act of 2025/0177(COD), on the transfer of defence-related products.
+        eurlex_named = {celex: set(ds) for celex, ds in act_dossiers.items()}
         claimed_by: dict[str, set[str]] = defaultdict(set)
         for p in self.procedures:
             for c in p.celex_refs:
                 if c in self.act:
+                    named = eurlex_named.get(c, set())
+                    if named and p.id not in named and p.id[:9] not in named and not any(
+                        self.proc[o].celex_refs for o in named
+                    ):
+                        log.warning("act %s: the EP gives %s, EUR-Lex %s, which lists no other act; kept on EUR-Lex's",
+                                    c, p.id, ", ".join(sorted(named)))  # fmt: skip
+                        continue
                     act_dossiers[c].add(p.id)
                     claimed_by[c].add(p.id)
         # Split procedures (e.g. 2016/0224A and 2016/0224B): EUR-Lex links their acts to the parent reference,

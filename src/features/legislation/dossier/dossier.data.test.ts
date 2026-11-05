@@ -120,9 +120,19 @@ describe.skipIf(!built)('dossiers on the built data', () => {
     }
   });
 
+  it('shows an act on one file, or on the parts of one split file', () => {
+    // OEIL lists Decision (EU) 2026/2402 as the final act of 2025/0177(COD); EUR-Lex, and the Decision's title, give
+    // it to 2025/0380(COD)
+    const files = new Map<string, string[]>();
+    for (const d of all) for (const a of d.acts) files.set(a.celex, [...(files.get(a.celex) ?? []), d.id]);
+    const shared = [...files].filter(([, ids]) => new Set(ids.map((id) => id.slice(0, 9))).size > 1);
+    expect(shared).toEqual([]);
+    expect(files.get('32026D2402')).toEqual(['2025-0380']);
+  });
+
   it('says why a file adopted while our Council data runs has no Council vote, and links CRR II’s (2016-0360A)', () => {
     const scope = read<Meta>('meta.json').scope;
-    expect([scope?.council_votes_from, scope?.council_votes_to]).toEqual(['2019-01-28', '2026-10-19']);
+    expect([scope?.council_votes_from, scope?.council_votes_to]).toEqual(['2019-01-28', '2026-10-26']);
     const none = all.filter((d) => d.council_votes.length === 0 && !d.related.some((r) => r.relation === 'Split into'));
     const within = none.filter((d) => noCouncilVoteNote(d.timeline, d.adopted, scope).includes('within the period'));
     // Council Directive (EU) 2020/1151 (2018/0173(CNS)), adopted 29 July 2020; the Pillar Two Directive (2021/0433(CNS))
