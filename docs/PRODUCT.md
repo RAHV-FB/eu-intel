@@ -59,5 +59,5 @@ link it.
 ## What "done" means for the first release
 
 See the acceptance criteria in `docs/PLAN.md`. The release is honest about coverage: where a source is not
-available in a machine-readable form (e.g. the Single Market Scoreboard indicators, published only in embedded Power
-BI reports), the site says so instead of filling the gap.
+available in a machine-readable form (e.g. the Single Market Scoreboard's headline indicators, published only in
+embedded Power BI reports), the site says so instead of filling the gap.

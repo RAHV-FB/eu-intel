@@ -98,6 +98,13 @@ check, and the link check depends on third-party sites).
   it applies. For every date, each topic and each Member State there is an Atom feed of the next 90 days
   (`data/feeds/applies/{all,topics/<topic>,countries/<code>}.xml`) and a calendar of every date ahead (`.ics`, the same
   names), whose entries and events keep their ids from one refresh to the next.
+- **Directives into national law** (`/legislation/transposition/`): each directive due in the last three years or the
+  next twelve months, with every Member State's status and the Commission's open non-communication cases; a Member
+  State's view of the same. Each directive's table has one address, `/legislation/<id>/#national`, with
+  `?country=FR` to highlight one Member State's row.
+- **A feed per Member State** (`data/feeds/countries/<CC>.xml`, linked from its country page): the national measures it
+  notified for the directives on this site, the Commission's infringement decisions on it and the transposition
+  deadlines it reached, each entry dated by its event.
 
 ## Data refresh and deployment
 

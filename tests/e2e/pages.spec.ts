@@ -134,9 +134,15 @@ test.describe('country page directive search', () => {
     await expect(page.getByRole('link', { name: 'Search the whole site' })).toHaveAttribute('href', `${BASE_PATH}search?q=zzqx`);
   });
 
-  test('shows no empty indicators section', async ({ page }) => {
+  test('shows no empty indicators section', async ({ page, request }) => {
+    // the Commission's count (Single Market Scoreboard) has a section only in a release that has it for the country
+    const lv = (await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/countries/LV.json`)).json()) as { indicators: unknown[] };
     await open(page, 'countries/LV/');
-    await expect(page.locator('#implementation h3')).toHaveText(['National measures for directives', 'Infringement cases']);
+    await expect(page.locator('#implementation h3')).toHaveText([
+      ...(lv.indicators.length ? ['The Commission’s count of overdue directives'] : []),
+      'National measures for directives',
+      'Infringement cases',
+    ]);
   });
 });
 
@@ -537,18 +543,22 @@ test('a shared list: Unfollow keeps focus on the file’s button and says what c
   await expect(page.getByRole('status').filter({ hasText: 'Now following Artificial Intelligence Act in this browser.' })).toHaveCount(1);
 });
 
-test('"Show all … Council votes" moves focus to the first vote it adds; the sources name no indicators', async ({ page }) => {
+test('"Show all … Council votes" moves focus to the first vote it adds; the sources name indicators only when there are', async ({ page, request }) => {
+  const index = (await (await request.get(`${PAGES_ORIGIN}${BASE_PATH}data/countries/index.json`)).json()) as { indicators: unknown[] }[];
+  const indicators = index.some((c) => c.indicators.length > 0);
   await open(page, 'countries/IE/');
   await page.getByRole('button', { name: /^Show all [\d,]+ Council votes$/ }).press('Enter');
   await expect(page).toHaveURL(/cvotes=all/);
   await expect(page.locator(':focus')).toHaveCount(1);
-  const index = await page.evaluate(() => {
+  const row = await page.evaluate(() => {
     const tr = document.activeElement?.closest('tr');
     return tr ? [...tr.parentElement!.children].indexOf(tr) : -1;
   });
-  expect(index).toBe(20);
+  expect(row).toBe(20);
   await expect(page.locator('#implementation .note', { hasText: 'Sources:' })).toHaveText(
-    /^Sources: European Commission \/ EUR-Lex – national transposition measures and infringements/,
+    indicators
+      ? /^Sources: European Commission \/ EUR-Lex – national transposition measures, infringements and indicators/
+      : /^Sources: European Commission \/ EUR-Lex – national transposition measures and infringements/,
   );
 });
 

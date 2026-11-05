@@ -27,6 +27,10 @@
  *   people/parties/<id>.json        PartyDetail              (id = EP org id)
  *   countries/index.json            CountrySummary[]
  *   countries/<code>.json           CountryDetail            (code = ISO alpha-2, e.g. "ES")
+ *   transposition.json              TranspositionTracker     (the implementation tracker: each Member State's status on
+ *                                                            the directives whose deadline falls in its window)
+ *   feeds/countries/<code>.xml      Atom feed of one Member State: national measures it notified, the Commission's
+ *                                                            infringement decisions on it, transposition deadlines reached
  *   topics.json                     Topic[]
  *   search.json                     SearchDoc[]
  *   activity.json                   ActivityItem[]
@@ -970,6 +974,46 @@ export interface DossierImplementation {
   // the directive's own exemption from transposition, quoted; countries: the rows marked not_required; named: countries
   // it exempts from some provisions only (Directive (EU) 2016/797, Art. 57(5)), whose rows are not marked
   exemption?: { provision: string; quote: string; countries?: string[] | null; named?: string[] | null } | null;
+}
+
+// ---------------------------------------------------------------- implementation tracker
+
+/** transposition.json (pipeline/analysis/tracker.py): the directives of the site's files whose general transposition
+ * deadline falls in the tracker's window. The page applies the window on the reader's date; the build writes a month
+ * more at each end. Statuses are those of each directive's own page (DossierImplementation); nothing is ranked or added
+ * up into a score. */
+export interface TranspositionTracker {
+  built_on: ISODate; // the build's date: `status` is as on it
+  window: { years_back: number; months_ahead: number }; // deadlines from this many years before the reader's date to this many months after
+  directives: TrackedDirective[]; // by deadline, then CELEX
+}
+
+export interface TrackedDirective {
+  celex: string;
+  title: string; // as on the country pages (CountryDetail.transposition)
+  act?: string | null; // "Directive (EU) 2022/2555"
+  names: string[]; // names its file is known by: "NIS 2 Directive", "NIS2"
+  dossier_id?: string | null;
+  deadline: ISODate; // the general transposition deadline
+  topics: string[]; // its file's topics
+  countries: TrackedCountry[]; // the 27 Member States, by code
+}
+
+export interface TrackedCountry {
+  country: string;
+  status: TranspositionStatus; // on `built_on` (src/lib/deadline.ts restates it on the reader's date)
+  measures: number;
+  latest_notification?: ISODate | null; // latest date a measure was notified to the Commission
+  cases?: TrackedCase[]; // open infringement cases on the directive, at their latest decision
+  participation_unknown?: boolean; // Denmark or Ireland without measures: no record says whether the directive binds it
+}
+
+export interface TrackedCase {
+  id: string;
+  stage?: string | null; // the register's latest decision, verbatim
+  date?: ISODate | null;
+  non_communication?: boolean | null;
+  url: string; // the case in the Commission's register
 }
 
 // ---------------------------------------------------------------- home & activity

@@ -1237,6 +1237,86 @@
   padding: 0;
 }
 
+/* how long ago the deadline passed, or how long until it does, on the reader's date */
+.dz-deadline__when {
+  white-space: nowrap;
+}
+
+/* "Link to this table": its address to copy, and the Member State whose row the link highlights */
+.tp-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-3) var(--sp-4);
+  margin: var(--sp-4) 0 var(--sp-2);
+  max-width: var(--measure-wide);
+}
+
+.tp-link__field {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.tp-link__field--url {
+  flex: 1 1 22rem;
+}
+
+.tp-link__field label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-2);
+}
+
+.tp-link__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.tp-link__row .lx-input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+/* the row of the Member State a link names (?country=FR): a tint and a bar, and words that say so */
+.tp-table tr.tp-row--linked > th,
+.tp-table tr.tp-row--linked > td {
+  background: var(--blue-pale);
+}
+
+.tp-table tr.tp-row--linked > th {
+  box-shadow: inset 4px 0 0 var(--eu-blue);
+}
+
+/* muted text keeps 4.5:1 on the tint (--text-3 would fall to 4.2:1, --text-2 is 5.9:1) */
+.tp-table tr.tp-row--linked .meta {
+  color: var(--text-2);
+}
+
+.tp-linked {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  color: var(--text-2);
+  white-space: normal; /* under the name, within the column the names set (the cell does not wrap) */
+}
+
+@media (max-width: 39.99rem) {
+  .tp-table tr.tp-row--linked {
+    padding-left: var(--sp-3);
+    background: var(--blue-pale);
+    box-shadow: inset 4px 0 0 var(--eu-blue);
+  }
+
+  .tp-table tr.tp-row--linked > th {
+    box-shadow: none;
+  }
+}
+
 /* ---------- details ---------- */
 .dz-kv {
   margin: 0;

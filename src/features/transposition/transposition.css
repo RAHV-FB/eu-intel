@@ -1,0 +1,139 @@
+/* Directives into national law (/legislation/transposition): the implementation tracker. Filters, tables and section
+   titles are the site's shared patterns (legislation.css, components.css, base.css); only what is its own is here. */
+
+.tt-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  list-style: none;
+  margin: 0 0 var(--sp-4);
+  padding: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.tt-crumbs li + li::before {
+  content: '/';
+  margin-right: var(--sp-2);
+  color: var(--border-strong);
+}
+
+.tt-crumbs a {
+  color: var(--text-2);
+}
+
+.tt-scope {
+  max-width: var(--measure-wide);
+  margin: 0 0 var(--sp-2);
+}
+
+/* three filters of one width (the explorer's grid gives its first field, the search box, two columns) */
+@media (min-width: 40rem) {
+  .lx-filters.tt-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .lx-filters.tt-filters {
+    grid-template-columns: repeat(3, minmax(0, 18rem));
+  }
+}
+
+/* the chosen Member State: its pages, its feed and the Commission's own count for it (on white, where muted text keeps
+   4.7:1; on a tint it would fall below 4.5:1) */
+.tt-country {
+  margin-top: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  max-width: var(--measure-wide);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--eu-blue);
+  border-radius: var(--radius);
+}
+
+.tt-country p {
+  margin: 0;
+}
+
+.tt-country p + p {
+  margin-top: var(--sp-2);
+}
+
+.tt-note {
+  max-width: var(--measure-wide);
+  margin: var(--sp-4) 0 0;
+}
+
+.tt-count {
+  margin: var(--sp-5) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.tt-count strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.tt-section {
+  margin-top: var(--sp-6);
+}
+
+.tt-section > .meta {
+  margin: 0 0 var(--sp-3);
+}
+
+.tt-section__n {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.tt-dir {
+  min-width: 16rem;
+}
+
+.tt-deadline {
+  white-space: nowrap;
+}
+
+/* "22 Member States: Deadline not yet reached" on one line beside the title */
+@media (min-width: 40rem) {
+  .tt-status {
+    min-width: 19rem;
+  }
+}
+
+.tt-counts,
+.tt-cases {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+/* the number of Member States, then their status, in two columns */
+.tt-counts__row {
+  display: grid;
+  grid-template-columns: 2.25em minmax(0, 1fr);
+  align-items: baseline;
+}
+
+.tt-counts__n {
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 39.99rem) {
+  .tt-dir {
+    min-width: 0;
+  }
+
+  .tt-deadline {
+    white-space: normal;
+  }
+}

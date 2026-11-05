@@ -368,8 +368,9 @@ def test_meta_sources_and_counts(out: Path):
     # the About page's count is the number of Council votes listed (curated records included: 746 against 747)
     assert meta["counts"]["council_votes"] == len(load(out, "council/index.json"))
     assert meta["snapshot_at"] == "2099-01-01T00:00:00Z"
-    assert any("Country indicators" in n for n in meta["coverage_notes"])
-    # no indicators in this release: the country pages' source does not name them
+    # no Scoreboard figures in this release (the fixture has no indicators.json): the notes say so, and the country
+    # pages' source does not name them
+    assert any(n.startswith("Single Market Scoreboard:") and "not in this release" in n for n in meta["coverage_notes"])
     impl = next(s for s in meta["sources"] if s["id"] == "implementation")
     assert impl["name"] == "European Commission / EUR-Lex – national transposition measures and infringements"
 

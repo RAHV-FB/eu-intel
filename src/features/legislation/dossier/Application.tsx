@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { DossierDetail, DossierImplementation, ISODate, LegalInstrument, TranspositionStatus } from '../../../types/data';
 import { ExtLink, SourceLink, Term } from '../../../components/ui';
 import { StackLabel } from '../../../components/StackedTable';
-import { countryName, formatDate, formatNumber, safeUrl } from '../../../lib/format';
+import { afterDeadline, fromToday, statusOn } from '../../../lib/deadline';
+import { aheadOn, countryName, formatDate, formatNumber, safeUrl } from '../../../lib/format';
+import { useParamState } from '../../../lib/urlState';
 import { ACTIVE_STAGES, ADOPTED_STAGES, TRANSPOSITION_LABEL } from '../labels';
 import { SplitNote, splitParts } from './Split';
 import { transpositionDates } from './Summary';
@@ -36,11 +38,83 @@ function StatusMark({ s }: { s: TranspositionStatus }) {
   return <span className={`tp tp--${s}`}>{TRANSPOSITION_LABEL[s]}</span>;
 }
 
-function ImplementationTable({ impl }: { impl: DossierImplementation }) {
+/** The Member State that a link to the table names (`?country=FR`), when the table has its row. */
+export function linkedCountry(params: URLSearchParams, impl: DossierImplementation | null | undefined): string | null {
+  const code = (params.get('country') ?? '').toUpperCase();
+  return impl?.countries.some((c) => c.country === code) ? code : null;
+}
+
+/** The address of a directive's table on its file's page, as GitHub Pages serves it (the trailing slash), with the
+ * Member State whose row it highlights. */
+function tableUrl(id: string, anchor: string, country: string | null): string {
+  const page = `${window.location.origin}${import.meta.env.BASE_URL}legislation/${encodeURIComponent(id)}/`;
+  return `${page}${country ? `?country=${country}` : ''}#${anchor}`;
+}
+
+/** "Link to this table": its address to copy, and the Member State whose row it highlights (kept in the address). */
+function TableLink({ d, impl, anchor }: { d: DossierDetail; impl: DossierImplementation; anchor: string }) {
+  const [params, patch] = useParamState();
+  const country = linkedCountry(params, impl);
+  const ids = useId();
+  const [copied, setCopied] = useState<'' | 'yes' | 'no'>('');
+  const url = tableUrl(d.id, anchor, country);
+  const copy = async () => {
+    let ok = true;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      ok = false;
+    }
+    setCopied(ok ? 'yes' : 'no');
+    window.setTimeout(() => setCopied(''), ok ? 2500 : 6000);
+  };
+  const codes = impl.countries.map((c) => c.country).sort((a, b) => countryName(a).localeCompare(countryName(b)));
+  return (
+    <div className="tp-link">
+      <div className="tp-link__field tp-link__field--url">
+        <label htmlFor={`${ids}-url`}>Link to this table</label>
+        <div className="tp-link__row">
+          <input id={`${ids}-url`} className="input lx-input" readOnly value={url} onFocus={(e) => e.currentTarget.select()} />
+          <button type="button" className="btn" onClick={copy}>
+            {copied === 'yes' ? 'Copied' : 'Copy link'}
+          </button>
+        </div>
+      </div>
+      <div className="tp-link__field">
+        <label htmlFor={`${ids}-country`}>Highlight a Member State</label>
+        <select
+          id={`${ids}-country`}
+          className="select"
+          value={country ?? ''}
+          onChange={(e) => patch({ country: e.target.value || null })}
+        >
+          <option value="">None</option>
+          {codes.map((c) => (
+            <option key={c} value={c}>
+              {countryName(c)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="visually-hidden" role="status">
+        {copied === 'yes'
+          ? 'Link copied to your clipboard.'
+          : copied === 'no'
+            ? 'The link could not be copied. Copy it from the link field.'
+            : ''}
+      </p>
+    </div>
+  );
+}
+
+function ImplementationTable({ impl, today, selected }: { impl: DossierImplementation; today: ISODate; selected: string | null }) {
   const [filter, setFilter] = useState<TranspositionStatus | 'all'>('all');
+  // each Member State's status on the reader's date: the build states it on its own (src/lib/deadline.ts statusOn)
+  const countries = impl.countries.map((c) => ({ ...c, status: statusOn(c.status, impl.deadline, today) }));
+  const since = afterDeadline(impl.deadline, today);
   const counts = new Map<TranspositionStatus, number>();
-  for (const c of impl.countries) counts.set(c.status, (counts.get(c.status) ?? 0) + 1);
-  const rows = impl.countries
+  for (const c of countries) counts.set(c.status, (counts.get(c.status) ?? 0) + 1);
+  const rows = countries
     .filter((c) => filter === 'all' || c.status === filter)
     .slice()
     .sort((a, b) => countryName(a.country).localeCompare(countryName(b.country)));
@@ -82,14 +156,18 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
           </thead>
           <tbody role="rowgroup">
             {rows.map((c) => (
-              <tr key={c.country} role="row">
+              // the Member State a link to the table names (?country=FR) is highlighted, and says so to a screen reader
+              <tr key={c.country} role="row" className={c.country === selected ? 'tp-row--linked' : undefined}>
                 <th scope="row" role="rowheader" className="stack-title">
                   <Link to={`/countries/${encodeURIComponent(c.country)}`}>{countryName(c.country)}</Link>
+                  {c.country === selected && <span className="tp-linked">Highlighted by the link</span>}
                 </th>
                 <td role="cell">
                   <StackLabel>Status</StackLabel>
                   <span>
                     <StatusMark s={c.status} />
+                    {/* how long the deadline has passed, on the reader's date; the caveat below the table holds */}
+                    {c.status === 'none_found' && since && <span className="tp-case meta tp-since">{since}</span>}
                     {c.opted_in && (
                       <span className="tp-case meta">
                         Took part after adoption (
@@ -151,7 +229,7 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
           </tbody>
         </table>
       </div>
-      {impl.countries.some(
+      {countries.some(
         (c) => c.status === 'none_found' && (impl.participation_unknown ?? []).includes(c.country),
       ) && (
         <p className="meta tp-optout">
@@ -192,12 +270,27 @@ function ImplementationTable({ impl }: { impl: DossierImplementation }) {
   );
 }
 
-/** A directive's national measures: the table, what its statuses mean, and the EUR-Lex links. */
-function NationalTable({ d, impl, celex }: { d: DossierDetail; impl: DossierImplementation | null | undefined; celex?: string }) {
+/** A directive's national measures: a link to the table, the table, what its statuses mean, and the EUR-Lex links.
+ * `anchor`: the id the link lands on (the section, or the directive's own part when the file has several). */
+function NationalTable({
+  d,
+  impl,
+  celex,
+  today,
+  anchor,
+}: {
+  d: DossierDetail;
+  impl: DossierImplementation | null | undefined;
+  celex?: string;
+  today: ISODate;
+  anchor: string;
+}) {
+  const [params] = useParamState();
   const nim = impl?.celex ?? celex;
   return impl && impl.countries.length > 0 ? (
     <>
-      <ImplementationTable impl={impl} />
+      <TableLink d={d} impl={impl} anchor={anchor} />
+      <ImplementationTable impl={impl} today={today} selected={linkedCountry(params, impl)} />
       <p className="dz-caveat">
         “Measures notified” means that at least one national measure was notified to the Commission; it does{' '}
         <strong>not</strong> show that transposition is complete or correct, and the Commission may still have a case
@@ -246,6 +339,19 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
   // dates EUR-Lex records for after the act's validity ended (e.g. a deadline after a repeal)
   const ended = new Set(d.application?.after_end_of_validity ?? []);
   const endedNote = (x: ISODate) => ended.has(x) && <span className="meta"> (a date after the directive’s validity ended)</span>;
+  // a transposition deadline and how long ago it passed, or how long until it does, on the reader's date: it is
+  // upcoming on its own day too, as measures are due by the end of it (src/lib/format.ts aheadOn)
+  const deadlineLine = (date: ISODate) => (
+    <p className="dz-deadline">
+      Transposition deadline:{' '}
+      <strong>
+        <time dateTime={date}>{formatDate(date, true)}</time>
+      </strong>
+      {aheadOn(date, today, true) && <span className="dz-upcoming">upcoming</span>}{' '}
+      <span className="meta dz-deadline__when">({fromToday(date, today)})</span>
+      {endedNote(date)}
+    </p>
+  );
   const dateList = (xs: { date: ISODate; articles: string[]; exceptions?: string | null }[]) =>
     xs.map((x, i) => (
       <span key={x.date}>
@@ -307,16 +413,7 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
           A <Term id="directive">directive</Term> sets goals that each Member State must reach through its own national law.
           Governments notify the Commission of the measures they adopt (<Term id="transposition">transposition</Term>).
         </p>
-        {general && tables.length <= 1 && (
-          <p className="dz-deadline">
-            Transposition deadline:{' '}
-            <strong>
-              <time dateTime={general}>{formatDate(general, true)}</time>
-            </strong>
-            {general > today && <span className="dz-upcoming">upcoming</span>}
-            {endedNote(general)}
-          </p>
-        )}
+        {general && tables.length <= 1 && deadlineLine(general)}
         {tables.length <= 1 && further.length > 0 && <p className="meta">Deadline{further.length > 1 ? 's' : ''} for specific provisions: {dateList(further)}</p>}
         {tables.length <= 1 && applies.length > 0 && (
           <p className="meta">
@@ -328,20 +425,12 @@ export function NationalApplication({ d, today }: { d: DossierDetail; today: ISO
           tables.map((t) => (
             <div key={t.celex} className="dz-sub" id={`national-${t.celex}`}>
               <h3>{t.act ?? t.celex}</h3>
-              {t.deadline && (
-                <p className="dz-deadline">
-                  Transposition deadline:{' '}
-                  <strong>
-                    <time dateTime={t.deadline}>{formatDate(t.deadline, true)}</time>
-                  </strong>
-                  {t.deadline > today && <span className="dz-upcoming">upcoming</span>}
-                </p>
-              )}
-              <NationalTable d={d} impl={t} />
+              {t.deadline && deadlineLine(t.deadline)}
+              <NationalTable d={d} impl={t} today={today} anchor={`national-${t.celex}`} />
             </div>
           ))
         ) : (
-          <NationalTable d={d} impl={impl} celex={celex} />
+          <NationalTable d={d} impl={impl} celex={celex} today={today} anchor="national" />
         )}
       </>
     );
