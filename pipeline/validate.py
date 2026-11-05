@@ -151,6 +151,8 @@ ERROR_CHECKS = {
     "act establishes without the act's EUR-Lex record, a current status change without the record that gave the "
     "status, a step without the record of that step",
     "stage-without-act": "a file shown as published, in force or no longer in force with no act linked to it",
+    "index-detail": "a file's entry in dossiers/index.json (the explorer, search) that its own dossiers/<id>.json (its "
+    "page) contradicts: stage, status, dates, acts or names",
     "act-procedure-mismatch": "an act linked to a procedure of another kind or a number range no legislative "
     "procedure uses: the file would show it as its law (Cellar tags Council Decision (EU) 2020/2059 with 2020/3521(COD); "
     "drop such a link in data/curated/act_links.yaml, quoting the act's legal basis)",
@@ -725,11 +727,15 @@ def check(
             for msg in activity_sources(items, dossier, today):
                 rep.error(f"public activity.json: {msg}", "public", "activity-source")
         owners: dict[str, list[str]] = {}
+        listed = _public_json(public, "dossiers/index.json", rep, docs) if (public / "dossiers" / "index.json").exists() else None
+        entries = {e.get("id"): e for e in listed if isinstance(e, dict)} if isinstance(listed, list) else {}
         for f in sorted((public / "dossiers").glob("*.json")):
             if f.name != "index.json":
                 d = _public_json(public, f"dossiers/{f.name}", rep)
                 if d is None:
                     continue
+                for msg in summary_mismatches(entries.get(d.get("id")), d):
+                    rep.error(f"public dossiers/{f.name}: {msg}", "public", "index-detail")
                 for msg in dossier_contradictions(d):
                     rep.error(f"public dossiers/{f.name}: {msg}", "public", "dossier-dates")
                 for msg in rapporteur_problems(d, public):
@@ -1081,6 +1087,20 @@ def rapporteur_problems(d: dict, public: Path) -> list[str]:
         if r.get("mep_id"):
             seen[(r["mep_id"], r.get("role"), r.get("committee"))] += 1
     out += [f"MEP {i} listed {n} times as {role}" + (f" ({c})" if c else "") for (i, role, c), n in seen.items() if n > 1]
+    return out
+
+
+def summary_mismatches(entry: dict | None, d: dict) -> list[str]:
+    """The fields of a file's dossiers/index.json entry that its own dossiers/<id>.json contradicts (DossierDetail
+    extends DossierSummary; the index only shortens titles, ending them with "…")."""
+    out = []
+    for k, v in (entry or {}).items():
+        dv = d.get(k)
+        if v == dv or (k in ("title", "official_title", "short") and isinstance(v, str) and isinstance(dv, str)
+                       and v.endswith("…") and dv.startswith(v[:-1])):  # fmt: skip
+            continue
+        out.append(f"{k}: the index gives {json.dumps(v, ensure_ascii=False)[:80]}, the file "
+                   f"{json.dumps(dv, ensure_ascii=False)[:80]}")  # fmt: skip
     return out
 
 
