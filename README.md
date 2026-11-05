@@ -45,12 +45,12 @@ npm run dev                      # http://localhost:5173/
 `python -m pipeline fetch [source …]` refreshes `data/snapshot/` from the official APIs (network; slow; polite
 rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation optouts train`. A source
 that fails keeps its previous files; `data/snapshot/_manifest.json` records each source's status and last
-successful fetch. You rarely need this locally: the snapshot is committed and refreshed weekly by CI. The weekly
-refresh is incremental for EP procedures, EP votes and the Legislative Train: new, open and recently changed
-records are read again, and the others are reused, except for a weekly share of them that is read again on a
-rotation (every record at least every 8 weeks; Train files every 4). `EU_INTEL_FULL_REFRESH=1`, or a change of a
-source's `PARSER_VERSION`, re-reads every record (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "What a weekly run
-re-reads").
+successful fetch. You rarely need this locally: the snapshot is committed and refreshed weekly by the *Data refresh*
+workflow (below). The weekly refresh is incremental for EP procedures, EP votes and the Legislative Train: new, open
+and recently changed records are read again, and the others are reused, except for a weekly share of them that is
+read again on a rotation (every record at least every 8 weeks; Train files every 4). `EU_INTEL_FULL_REFRESH=1`, or a
+change of a source's `PARSER_VERSION`, re-reads every record (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "What a
+weekly run re-reads").
 
 ## Checks
 
@@ -114,7 +114,7 @@ src/                 React app: pages/, features/ (one folder per area, insights
                      types/data.ts (public data contract)
 scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py, test-frozen.sh
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
-docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap
+docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap, assessment
 .github/workflows/   ci.yml, pages.yml, refresh.yml, watchdog.yml
 ```
 

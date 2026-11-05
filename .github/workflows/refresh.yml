@@ -12,7 +12,8 @@
 # - Time limits: the fetch gets a run-wide deadline (EU_INTEL_FETCH_DEADLINE, FETCH_DEADLINE_MIN after it
 #   starts). After it no source is started, sources start no new work and requests get no retries or long
 #   waits (pipeline/http.py). `timeout --signal=INT` stops the fetch at FETCH_LIMIT_MIN at the latest, well
-#   before the job timeout, so the checkpoints already written still go through the gate and are committed.
+#   before the job timeout, so the checkpoints already written still go through the gate and are committed if they
+#   pass.
 # - Validation is per source: a source whose new files fail structural validation gets its files and its
 #   manifest entry back from the last commit; the other sources' new data is kept.
 # - The data gate, before anything reaches main: snapshot validation, the strict data build that records the activity
@@ -27,8 +28,10 @@
 #   passed on its code. If CI has not (yet), e.g. after a code push during the refresh, the deploy that follows CI's
 #   next success on main publishes this data (pages.yml builds main when only data commits followed the tested one).
 #   CI does not run on the refresh commit: its tests use the frozen test data, and this run gated the new data.
-# - Scheduled runs are incremental: EP procedures, EP votes and the Legislative Train re-read only new, open
-#   or recently changed records and reuse the others (docs/DEPLOYMENT.md, "What a weekly run re-reads").
+# - Scheduled runs other than the monthly full refresh are incremental: EP procedures, EP votes and the Legislative
+#   Train re-read new, open or recently changed records, plus this week's share of the others (a rotation: each record
+#   at least every 8 weeks), and reuse the rest; a change of a source's PARSER_VERSION re-reads all of its records
+#   (docs/DEPLOYMENT.md, "What a weekly run re-reads").
 # Manual run: Actions -> Data refresh -> Run workflow (optionally list specific sources; "Full refresh" re-reads
 # every stored record of those three sources). A manual run is never skipped.
 name: Data refresh

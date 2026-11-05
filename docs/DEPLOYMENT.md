@@ -6,7 +6,7 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Four 
 | --- | --- | --- | --- |
 | `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, typecheck; on the [frozen test data](#frozen-test-data): pytest (offline), data build, vitest, site build, Playwright e2e and accessibility tests in three engines; on the commit's own data: the [data gate](#the-data-gate) | `contents: read` |
 | `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`; called by *Data refresh* with the commit it pushed; manual | the data gate on the commit it deploys (data built with the Pages URL and base path) → upload → deploy → check the public URL | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
-| `refresh.yml` (Data refresh) | Mondays 05:17 UTC, again 22:37 UTC unless data was committed in the last 20 h, manual | fetch all sources (incremental, see below; a full refresh in the first week of each month) → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
+| `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC (a scheduled run is skipped if data was committed in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month) → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
 | `watchdog.yml` (Watchdog) | after each *Data refresh* and each *CI* run on `main`, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
 
 All actions are pinned to full commit SHAs (with the version in a comment); Dependabot
@@ -47,7 +47,7 @@ check → size check (fails over 900 MB; Pages allows 1 GB).
 3. **If `main` is protected** by a ruleset or branch protection that blocks direct pushes, add
    `github-actions[bot]` (or the "GitHub Actions" app) to the bypass list, or the refresh commit will be rejected.
    Required status checks on `main` also block bot pushes unless bypassed. (The deploy waits for CI by itself, see
-   "Deploys and CI" below; protection is not needed for that.)
+   "Paths to production" below; protection is not needed for that.)
 4. **Environment**: enabling Pages creates the `github-pages` environment, which by default only accepts
    deployments from `main`. Keep it that way (manual runs from other branches will build but not deploy; a refresh
    started from another branch commits to `main` but does not deploy).
@@ -87,9 +87,10 @@ open http://127.0.0.1:4174/eu-intel/).
 
 ## Schedule and failure behaviour
 
-- **Refresh** runs weekly on Monday at 05:17 UTC, and again at 22:37 UTC unless a commit changed `data/snapshot` in the
-  last 20 hours (`RECENT_HOURS`): GitHub runs schedules on a best-effort basis (the 05:17 run has started up to 8 hours
-  late) and can drop a run at busy times. A scheduled run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`;
+- **Refresh** runs weekly on Monday at 05:17 UTC, and again at 22:37 UTC; a scheduled run is skipped when a commit
+  changed `data/snapshot` on `main` in the last 20 hours (`RECENT_HOURS`), so the second one does not run after the
+  first committed data: GitHub runs schedules on a best-effort basis (the 05:17 run has started up to 8 hours late) and
+  can drop a run at busy times. A scheduled run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`;
   decided in the job, since cron would OR a day of the month with the weekday). A manual run is never skipped. GitHub
   also disables scheduled workflows in a public repository after 60 days without repository activity; the watchdog then
   reports the live data as overdue. Re-enable it under *Actions → Data refresh → Enable workflow*.
@@ -174,9 +175,9 @@ open http://127.0.0.1:4174/eu-intel/).
 
 ## What a weekly run re-reads
 
-A scheduled refresh is incremental for three sources. A stored record that is not re-read keeps the data and the
-derivation of the run that last read it, but a rotation re-reads each one at least every 8 weeks, as long as the
-source answers:
+A scheduled refresh, except the full refresh in the first week of each month, is incremental for three sources. A
+stored record that is not re-read keeps the data and the derivation of the run that last read it, but a rotation
+re-reads each one at least every 8 weeks, as long as the source answers:
 
 - **EP procedures**: files new to the list, still open (not adopted, published, in force, no longer in force,
   taking effect on notification, withdrawn, rejected or lapsed), with a recorded step in the last 120 days,
@@ -203,11 +204,12 @@ The other sources read their whole scope each run, except that Council notes who
 unchanged are reused and opt-outs read each directive's text once (again when the recital matcher changes).
 
 A **full pass** re-reads every stored record of one of those three sources. It runs with a full refresh
-(`EU_INTEL_FULL_REFRESH=1`, see "Manual operations"). It also runs by itself when the source's `PARSER_VERSION`
-(in `pipeline/sources/ep_procedures.py`, `ep_votes.py` or `legislative_train.py`) differs from the `parser`
-recorded in its `_state.json`. Bump that version with any change to how the source reads or derives its records,
-so that reused records do not keep the old derivation. A full refresh is still useful from time to time, to pick
-up late corrections at source. A full pass is chunked and resumable like any run. One interrupted by its time
+(`EU_INTEL_FULL_REFRESH=1`: the scheduled runs in the first week of each month, and manual runs with "Full refresh"
+ticked, see "Manual operations"). It also runs by itself when the source's `PARSER_VERSION` (in
+`pipeline/sources/ep_procedures.py`, `ep_votes.py` or `legislative_train.py`) differs from the `parser` recorded in
+its `_state.json`. Bump that version with any change to how the source reads or derives its records, so that reused
+records do not keep the old derivation. The monthly full refresh also picks up late corrections at source. A full
+pass is chunked and resumable like any run. One interrupted by its time
 budget stays a full pass in the next runs until it completes (`pass_parser` in `_state.json`); only then does
 `parser` take the new version. A pass started for another version starts again. A source that cannot be reached
 keeps its records and its old `parser`, and its pass waits until the source answers. This is the case of the
@@ -225,9 +227,9 @@ Legislative Train, which the EP's WAF blocks on GitHub's runners.
 - **Roll back** a data refresh: see "Rolling back a bad data refresh" below. A plain `git revert` is enough only when the bad
   refresh is the latest commit that touched `data/`.
 - **Refresh locally** (e.g. to debug a source): `EU_INTEL_NO_CACHE=1 python -m pipeline fetch ep_votes`, then
-  `python -m pipeline validate && EU_INTEL_RECORD_ACTIVITY=1 python -m pipeline build && python -m pipeline
-  validate --built`, review the diff, commit. If the last check fails, do not commit: the build has already
-  written the activity it recorded to `data/state`.
+  `python -m pipeline validate && EU_INTEL_STRICT=1 EU_INTEL_RECORD_ACTIVITY=1 python -m pipeline build && python -m
+  pipeline validate --built` (the first steps of the data gate, which CI runs on the commit), review the diff, commit.
+  If a step fails, do not commit: the build has already written the activity it recorded to `data/state`.
 
 ## Rolling back a bad data refresh
 
@@ -269,8 +271,9 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
    follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).
 6. **Fix the cause.** The next refresh starts from the restored data and fetches again. If the cause is at the source, the same
    data comes back: hold that source back (below), and keep the schedule disabled until it is corrected. If the cause was how
-   the pipeline reads or derives a source, fix the code and run a full refresh of that source ("What a weekly run
-   re-reads"); otherwise the records a run does not re-read keep the old derivation. Then switch the schedule back on
+   the pipeline reads or derives a source, fix the code and bump that source's `PARSER_VERSION` (EP procedures, EP votes,
+   Legislative Train), so that the next runs re-read all its records ("What a weekly run re-reads"); otherwise the records
+   a run does not re-read keep the old derivation until the rotation reaches them. Then switch the schedule back on
    (`gh workflow enable refresh.yml`).
 
 ### Holding one source back

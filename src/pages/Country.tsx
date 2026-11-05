@@ -407,7 +407,7 @@ export default function Country() {
           the European Commission.
         </p>
 
-        {/* Country indicators (Single Market Scoreboard) could not be retrieved for any Member State in this release (see About) */}
+        {/* Country indicators (Single Market Scoreboard) are not published in a machine-readable form, so no release has had them yet (see About) */}
         {c.indicators.length > 0 && (
           <>
             <h3>Published indicators</h3>

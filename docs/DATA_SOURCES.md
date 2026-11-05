@@ -1,20 +1,21 @@
 # Data sources — audit
 
-Status as of the first sprint (2026-10-22). "Reachable" means reachable anonymously from a script (the
-pipeline runs in CI without credentials). Details are refined from each ingestion module's findings.
+Status as of the first sprint (2026-10-22); the Legislative Train and Single Market Scoreboard rows as of
+2026-11-05. "Reachable" means reachable anonymously from a script (the pipeline runs on GitHub's runners without
+credentials). Details are refined from each ingestion module's findings.
 
 | Source | Interface | Reachable | Used for | Notes |
 | --- | --- | --- | --- | --- |
 | EP Open Data API v2 `data.europarl.europa.eu/api/v2` | JSON-LD REST | ✅ | MEPs, groups, national parties, committees, procedures + events, plenary decisions **with individual roll-call ballots** | Anonymous; paginated (`offset`/`limit`); stable ELI-style ids (`eli/dl/proc/2021-0106`, `person/197443`) |
 | EP Legislative Observatory (OEIL) | HTML | ✅ | Status label, subjects, COM references, Commission/Council key events, final-act CELEX, type of act proposed | One procedure-file page per procedure, at most 4 at a time; requests start at least 0.25 s apart, usually about 0.5–0.7 s; fills what the EP API does not carry |
-| EP Legislative Train Schedule | HTML | ✅ | Official status of major files incl. "blocked" monitoring | No API; controlled crawl of theme + file pages |
+| EP Legislative Train Schedule | HTML | ⚠️ 202 bot challenge (AWS WAF) on GitHub's runners | Official status of major files incl. "blocked" monitoring | No API; controlled crawl of theme + file pages. Every refresh since 26 Oct 2026 has failed to read it; the snapshot keeps the copy of 22 Oct 2026 (see the Legislative Train section) |
 | EP `doceo` documents (RCV XML/PDF) | HTML/XML | ⚠️ 202 bot challenge | — | Roll-calls come from the API instead |
 | Cellar SPARQL `publications.europa.eu/webapi/rdf/sparql` | SPARQL 1.1 | ✅ | Legal acts (CELEX, ELI, dates incl. phased entry-into-force/application, procedure links, amendments), national implementing measures | Batched queries; CDM ontology |
 | EUR-Lex website | HTML | ⚠️ 202 bot challenge | Human links only | Not scraped |
 | Act texts (Cellar content negotiation `publications.europa.eu/resource/celex/{CELEX}`) | XHTML | ✅ | Directives' opt-out recitals (Protocols 21/22) | Each directive read once |
 | Council voting results (consilium.europa.eu pages) | HTML | ❌ 403 "Browser check" | — | Not used; see Council section |
 | Council "voting result" documents (ST notes) | Cellar SPARQL + PDF at data.consilium.europa.eu | ✅ | Member State positions, voting rule, outcome | Annex table is an image; parsed deterministically, fail-closed |
-| Single Market Scoreboard | HTML/JSON | ❌ 403 | Transposition deficit indicators | Alternatives investigated by the implementation module |
+| Single Market Scoreboard | HTML; indicators in Power BI embeds | ✅ since 2 Nov 2026 (403 on 22 and 26 Oct) | — | Indicators only in embedded Power BI reports, not machine-readable; a plain HTML table of overdue directives per Member State (`/enforcement-tools/transposition_en`) is not read yet. See the implementation section |
 | Commission infringement decisions | HTML / search | ⚠️ redirects to commission.europa.eu | Infringement cases | See implementation section below |
 
 ## Identifiers that connect the sources
@@ -49,9 +50,11 @@ lists (`SOURCES` in `build.py`, one per manifest entry), identifies the snapshot
 
 EP data changes after each plenary session and committee meeting; Cellar is updated daily; the Legislative Train
 monthly. A weekly scheduled refresh is sufficient for v1 and stays well within the free GitHub Actions allowance.
-Scheduled runs are best-effort; the site shows the real retrieval timestamp per source. The weekly run is
-incremental for EP procedures, EP votes and the Legislative Train; a full refresh re-reads every stored record
-(docs/DEPLOYMENT.md, "What a weekly run re-reads").
+Scheduled runs are best-effort (a second Monday run is skipped if data was committed in the last 20 hours); the
+site shows the real retrieval timestamp per source. The weekly run is incremental for EP procedures, EP votes and
+the Legislative Train, and re-reads each of their stored records at least every 8 weeks on a rotation; the run in
+the first week of each month is a full refresh, which re-reads every stored record, as does a change of a source's
+`PARSER_VERSION` (docs/DEPLOYMENT.md, "What a weekly run re-reads").
 
 ## Module findings
 
@@ -460,10 +463,13 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   4(8) only). Dates whose role the data do not establish are "other dates recorded by EUR-Lex", kept off the
   timeline: a date from another article (Drinking Water Directive Art. 25, a transitional period), an
   application date before the general deadline in a paragraph that sets no deadline (VAT in the digital age,
-  Art. 6(1): Member States "may apply ... from 14 April 2025"), or one the curated file marks. A directive with no
-  transposition date (e.g. a codification) is described as such, never as one EU countries must transpose. The
-  next step speaks of "the Member States bound by the directive" (Art. 288 TFEU: not those it is not addressed
-  to, Directive (EU) 2016/1629, Art. 40; nor Denmark or Ireland under a Treaty opt-out). Where the directive's own
+  Art. 6(1): Member States "may apply ... from 14 April 2025"), one the curated file marks, or a date earlier than
+  the directive itself that would otherwise be read as a deadline, which no directive can set (Directive (EU)
+  2015/412 of 11 March 2015: 17 October 2002, the deadline of Directive 2001/18/EC, which it amends; its next step
+  says that EUR-Lex records no deadline for it, and `validate --built` fails on a deadline before its act). A
+  directive with no transposition date (e.g. a codification) is described as such, never as one EU countries must
+  transpose. The next step speaks of "the Member States bound by the directive" (Art. 288 TFEU: not those it is not
+  addressed to, Directive (EU) 2016/1629, Art. 40; nor Denmark or Ireland under a Treaty opt-out). Where the directive's own
   text gives some Member States more time or exempts them, the next step adds "except as its text provides" and
   says how (`exceptions` in the curated file, checked against the text; also the detail of the deadline's
   timeline step): Directive (EU) 2016/798, Art. 33(2) and (2a), extensions to 16 June 2020 and 31 October 2020,
@@ -1063,7 +1069,11 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   One that exempts named countries from some articles only (Directive (EU) 2016/797, Art. 57(5): Cyprus and Malta,
   Article 13 and others; `named`) is quoted with those countries named, and their rows are not marked: they must
   still transpose the rest.
-- Country indicators (Single Market Scoreboard): **unavailable** — host returns a CloudFront 403 to scripts;
+- Country indicators (Single Market Scoreboard): **not read**. The host answered scripts with a CloudFront 403 on
+  22 and 26 October 2026 and has answered them since 2 November 2026 (each refresh records its probe in the manifest
+  note), but the indicators are published only in embedded Power BI reports. Its plain HTML table of overdue Single
+  Market directives by sector and Member State
+  (`https://single-market-scoreboard.ec.europa.eu/enforcement-tools/transposition_en`) is not read yet.
   data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed. Country
   pages show an indicators section only when a release has indicators, and the source is named "national
   transposition measures and infringements" (meta.json, under the country pages' Implementation section), with
@@ -1269,7 +1279,12 @@ incremental for EP procedures, EP votes and the Legislative Train; a full refres
   The Council's consent to Parliament's own regulation ("Consent of the Council (Article 228(4) TFEU)",
   ST 9947/21, the Ombudsman Statute) is never on a Commission proposal: 72% of Member States, TFEU Art. 238(2).
 
-### Legislative Train (`train`) — ok
+### Legislative Train (`train`) — failed since 26 October 2026
+- The Train's site answers requests from GitHub's runners with an AWS WAF challenge (HTTP 202): every refresh since
+  26 October 2026 has recorded the source as failed and kept the copy retrieved on 22 October 2026, which the
+  figures below describe. About marks the retrieval as failed; once the copy is older than 35 days, home and the
+  footer name the source as not up to date, and once it is older than 42 days no file is shown as officially blocked
+  (`pipeline/freshness.py`, `src/lib/freshness.ts`).
 - 1,492 files across the 2014–19, 2019–24 and 2024–29 Commission terms; 663 carry procedure references. Statuses
   verbatim. "Blocked" is the Train's own classification (no progress by a co-legislator for at least nine
   months); 35 Blocked files name the blocking institution(s). The Train updates monthly and can lag recorded

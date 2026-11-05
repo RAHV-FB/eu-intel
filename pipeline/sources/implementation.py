@@ -29,11 +29,13 @@ Three independent sub-sources; each output file is written only if its sub-sourc
    An open case at e.g. "Referral to Court" is not a Court judgment.
 
 3. Country indicators (Single Market Scoreboard) -> indicators.json
-   single-market-scoreboard.ec.europa.eu rejects scripted access (CloudFront 403), and no other
-   official machine-readable distribution of the current figures was found (data.europa.eu only
-   links 2019 HTML/PDF; Eurostat tsdgo220 was discontinued in 2018). We probe the host and record
-   the result; nothing is written until an official machine-readable source is available.
-   We never compute a compliance score ourselves.
+   single-market-scoreboard.ec.europa.eu refused scripted access (CloudFront 403) on 22 and 26 October
+   2026 and has answered since 2 November 2026, but it publishes the indicators only in embedded Power BI
+   reports. Its plain HTML table of overdue Single Market directives by sector and Member State
+   (/enforcement-tools/transposition_en) is not read. No other official machine-readable distribution
+   of the current figures was found (data.europa.eu only links 2019 HTML/PDF; Eurostat tsdgo220 was
+   discontinued in 2018). We probe the host and record the result; nothing is written until an official
+   machine-readable source is available. We never compute a compliance score ourselves.
 """
 
 from __future__ import annotations

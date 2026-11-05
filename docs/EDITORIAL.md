@@ -114,9 +114,11 @@ proposal. At most two items may come from the same topic.
 "no status wording" rule, word counts and the homepage rules. The correction files are checked when the
 build loads them (`pipeline/build.py`): an entry that breaks its file's rules (a malformed date, a quote that
 does not give its date, a legal basis not in `UNANIMITY_BASES`, no texts listed) is skipped with a warning in
-the build log, and the build carries on. `act_dates.yaml` and `transposition.yaml` are also checked by
-`python -m pipeline validate` (it warns about a `transposition.yaml` entry naming a date EUR-Lex does not
-record, and about suspicious act dates that no `act_dates.yaml` entry covers) and `tests/test_build.py`;
+the build log; a plain build carries on, but the strict build of CI's data gate, the refresh and the deploy
+(`EU_INTEL_STRICT=1`) fails, so the change is not deployed. `act_dates.yaml` and `transposition.yaml` are also
+checked by `python -m pipeline validate` (a `transposition.yaml` entry naming a date EUR-Lex does not record is an
+integrity finding, which fails it above the count in `pipeline/validate_baseline.json`; suspicious act dates that
+no `act_dates.yaml` entry covers are listed as backlog) and `tests/test_build.py`;
 `council_dates.yaml` and `council_votes.yaml` by `tests/test_build_real_records.py` on the real records.
 Their entries follow the same review process, including the second review and the re-review of their
 `reviewed` dates.
