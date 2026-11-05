@@ -17,7 +17,11 @@ export function loadData<T>(path: string): Promise<T> {
       if (!(r.headers.get('content-type') ?? '').includes('json')) throw new NotFoundError(path);
       return (await r.json()) as T;
     });
-    p.catch(() => cache.delete(path)); // allow retry after failure
+    // allow retry after failure; a file that is not there stays so, and is not asked for again (a page's data is
+    // requested both from its address, src/lib/routeData.ts, and by the page)
+    p.catch((e) => {
+      if (!(e instanceof NotFoundError)) cache.delete(path);
+    });
     cache.set(path, p);
   }
   return p;
