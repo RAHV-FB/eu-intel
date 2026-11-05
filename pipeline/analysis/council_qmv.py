@@ -159,6 +159,13 @@ def _meets_population(pop_for: int, pop_total: int) -> bool:
     return pop_for * 100 >= 65 * pop_total
 
 
+def _share_pct(pop_for: int, pop_total: int) -> float:
+    """Share of the population in favour, in percent to 0.01 (the Council's voting results print "85,52 %"). A share
+    short of 65 % is never rounded up to it: 64.996 % is given as 64.99, not 65.00 beside a criterion not met."""
+    pct = round(100 * pop_for / pop_total, 2)
+    return 64.99 if pct >= 65 and not _meets_population(pop_for, pop_total) else pct
+
+
 def _min_states_over_35pct(pops: list[int]) -> int:
     """Minimum number of members whose combined population exceeds 35 % of sum(pops)."""
     total = sum(pops)
@@ -209,7 +216,7 @@ def assess(
     if table is not None and n_part:
         pop_for = sum(table.population[c] for c in supporters)
         pop_part = sum(table.population[c] for c in part)
-        pop_pct = round(100 * pop_for / pop_part, 2)
+        pop_pct = _share_pct(pop_for, pop_part)
     elif table is None:
         notes.append(f"No verified official population figures for {year}; population checks not computed.")
 

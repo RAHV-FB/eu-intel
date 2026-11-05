@@ -37,7 +37,7 @@ describe('Council vote card: what the qualified-majority rule meant', () => {
   it('says the qualified majority was deemed attained, not that both thresholds were met, when three large states voted against', () => {
     // Germany, France and Italy: 46.84% of the 2026 population against, 53.16% for, but only three Member States
     const t = text(vote(['DE', 'FR', 'IT'], { population_for_pct: 53.16, adopted_by_rule: true, deemed_attained: true, blocking_minority_existed: false }));
-    expect(t).toContain('They represent 53.2% of the EU population; at least 65% was needed.');
+    expect(t).toContain('They represent 53.16% of the EU population; at least 65% was needed.');
     expect(t).toContain(
       'The population threshold was not met, but the Member States not voting in favour were too few to form a blocking minority, so ' +
         'the qualified majority is deemed attained (TEU Art. 16(4)).',
@@ -52,5 +52,14 @@ describe('Council vote card: what the qualified-majority rule meant', () => {
     const blocked = text(vote(['DE', 'ES', 'NL', 'AT'], { population_for_pct: 64.62, adopted_by_rule: false, deemed_attained: false, blocking_minority_existed: true }));
     expect(blocked).toContain('On these figures, the qualified-majority thresholds were not met.');
     expect(blocked).toContain('The Member States not voting in favour formed a blocking minority');
+  });
+
+  it('gives the population share to 0.01 as the Council does, so that a share short of 65% never reads as 65%', () => {
+    // 293,888,017 of 452,162,974 in favour (64.996%): council_qmv gives 64.99 (tests/test_council_qmv.py)
+    const t = text(vote(['DE', 'GR', 'HR', 'HU', 'LT', 'PL', 'SE'], { population_for_pct: 64.99, adopted_by_rule: false, deemed_attained: false, blocking_minority_existed: true }));
+    expect(t).toContain('They represent 64.99% of the EU population; at least 65% was needed.');
+    expect(t).toContain('On these figures, the qualified-majority thresholds were not met.');
+    // Eurodac, ST 9841/24: the voting sheet prints 85,52 %
+    expect(text(vote(['HU', 'PL'], { population_for_pct: 85.52, adopted_by_rule: true, deemed_attained: false }))).toContain('They represent 85.52% of');
   });
 });

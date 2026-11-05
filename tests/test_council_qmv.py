@@ -172,6 +172,19 @@ def test_qmv_four_state_blocking_minority_edge_hand_computed():
     assert assess(pos, "qmv", year=2026).adopted_by_rule is False
 
 
+def test_population_share_short_of_65_is_never_shown_as_65():
+    # 2026: Germany 83,502,300, Greece 10,409,547, Croatia 3,874,350, Hungary 9,539,502, Lithuania 2,890,664, Poland
+    # 37,475,594 and Sweden 10,583,000 against: 158,274,957. The 20 in favour: 293,888,017 of 452,162,974 = 64.996 %,
+    # 17,916 people short of 65 % (293,905,933.1). Rounded to two decimals that is 65.00, next to "at least 65 % was
+    # needed" and "not met"; the share is given as 64.99 instead.
+    against = ("DE", "GR", "HR", "HU", "LT", "PL", "SE")
+    a = assess(dict(all_("for"), **dict.fromkeys(against, "against")), "qmv", year=2026)
+    assert (a.states_for, a.population_for, a.adopted_by_rule) == (20, 293_888_017, False)
+    assert (a.population_for_pct, a.margin_population_pct) == (64.99, -0.01)
+    # a share at or above 65 % keeps its ordinary rounding (Eurodac, ST 9841/24: the sheet's 85,52 %)
+    assert assess(all_("for"), "qmv", year=2026).population_for_pct == 100.0
+
+
 def test_build_passes_on_a_qualified_majority_deemed_attained():
     # the page must not say that both thresholds were met when the population criterion was not (council_assessment)
     from pipeline.build import _as_dict, council_assessment
