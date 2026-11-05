@@ -110,6 +110,10 @@
   margin: 0;
   font-weight: var(--fw-medium);
 }
+/* the count of a table's rows and its "Download CSV", just above the table */
+.results-bar--table {
+  margin-bottom: var(--sp-2);
+}
 .linkish {
   background: none;
   border: 0;

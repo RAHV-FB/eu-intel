@@ -227,6 +227,35 @@
   text-decoration: none;
 }
 
+/* ---------- CSV download (src/components/CsvButton.tsx): a button that reads as a link ---------- */
+.csv-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--link);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+  min-height: 2rem;
+}
+
+.csv-btn:hover {
+  color: var(--eu-blue-hover);
+  text-decoration-thickness: 2px;
+}
+
+/* the button above a table, at its right */
+.table-tools {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+  margin-bottom: var(--sp-1);
+}
+
 /* ---------- glossary term ---------- */
 .term {
   position: relative;
