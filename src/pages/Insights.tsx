@@ -5,7 +5,7 @@ import { useData } from '../lib/data';
 import { formatDateTime, formatNumber } from '../lib/format';
 import { ErrorState, Loading } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
-import { councilPatterns, legislativePatterns, parliamentPatterns } from '../features/insights/analysis';
+import { councilPatterns, legislativePatterns, notCountedText, parliamentPatterns } from '../features/insights/analysis';
 import '../features/insights/insights.css';
 
 const percentage = (part: number, total: number) => total ? `${(100 * part / total).toFixed(1)}%` : '—';
@@ -76,13 +76,13 @@ export default function Insights() {
                   {legislative.stages.map((s) => (
                     <div className="insights-bar-row" key={s.id}>
                       <div className="insights-bar-row__label"><span>{s.label}</span><strong>{formatNumber(s.count)}</strong></div>
-                      <div className="insights-track" role="img" aria-label={`${s.label}: ${s.count} files, ${percentage(s.count, legislative.total)} of tracked files`}>
+                      <div className="insights-track" role="img" aria-label={`${s.label}: ${s.count} files, ${percentage(s.count, legislative.counted)} of the files counted`}>
                         <div className={`insights-fill insights-fill--${s.id}`} style={{ width: barWidth(s.count, legislative.stages[0]?.count || 1) }} />
                       </div>
                     </div>
                   ))}
                 </div>
-                <p className="insights-panel__footnote">Stages are based on official procedural and legal-act records. “Not determinable” is retained rather than assigned an assumed result.</p>
+                <p className="insights-panel__footnote">Stages are based on official procedural and legal-act records. “Not determinable” is retained rather than assigned an assumed result. {notCountedText(legislative)}</p>
               </div>
             </section>
 
@@ -109,7 +109,7 @@ export default function Insights() {
                     ))}
                   </div>
                 ) : <p>No dated proposal or adoption records in this snapshot.</p>}
-                <p className="insights-panel__footnote">The first number in each row is proposals; the second is adoptions. Only files for which the corresponding date is recorded contribute to that series.</p>
+                <p className="insights-panel__footnote">The first number in each row is proposals; the second is adoptions. Only files for which the corresponding date is recorded contribute to that series. A proposal split into separate procedures counts once for each of them.</p>
               </div>
             </section>
 
