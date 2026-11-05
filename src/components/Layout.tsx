@@ -111,7 +111,19 @@ export function Layout() {
           // Tabbing out of the open phone menu closes it: on a short screen (a phone held sideways, 400% zoom) the open
           // menu fills the screen, and the element focused next would be hidden below it (WCAG 2.4.11)
           const to = e.relatedTarget as Node | null;
-          if (menuOpen && to && !e.currentTarget.contains(to)) setMenuOpen(false);
+          if (!menuOpen || !to || e.currentTarget.contains(to)) return;
+          setMenuOpen(false);
+          // The browser scrolled the newly focused element into view while the open menu still pushed the page down;
+          // once the menu has collapsed (this update is applied before the next frame) the page has moved up under it.
+          // Firefox leaves the element there, off screen: bring it back below the sticky header.
+          const header = e.currentTarget;
+          requestAnimationFrame(() => {
+            if (document.activeElement !== to || !(to instanceof HTMLElement)) return;
+            const r = to.getBoundingClientRect();
+            const top = header.getBoundingClientRect().bottom;
+            if (r.top < top) window.scrollBy(0, r.top - top - 8);
+            else if (r.bottom > window.innerHeight) window.scrollBy(0, r.bottom - window.innerHeight + 8);
+          });
         }}
       >
         <div className="container site-header__inner">
