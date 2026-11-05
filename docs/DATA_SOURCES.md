@@ -13,6 +13,7 @@ credentials). Details are refined from each ingestion module's findings.
 | Cellar SPARQL `publications.europa.eu/webapi/rdf/sparql` | SPARQL 1.1 | ✅ | Legal acts (CELEX, ELI, dates incl. phased entry-into-force/application, procedure links, amendments), national implementing measures | Batched queries; CDM ontology |
 | EUR-Lex website | HTML | ⚠️ 202 bot challenge | Human links only | Not scraped |
 | Act texts (Cellar content negotiation `publications.europa.eu/resource/celex/{CELEX}`) | XHTML | ✅ | Directives' opt-out recitals (Protocols 21/22) | Each directive read once |
+| Summaries of EU legislation (Cellar SPARQL + content negotiation `publications.europa.eu/resource/legissum/{id}`); case law, consolidated versions, EESC/CoR opinions (Cellar SPARQL) | SPARQL, XHTML | ✅ | Official summary, court cases, consolidated text and advisory opinions on a law's page (`lawcontext`) | A summary's text is read again only when its date changes; see the law context section |
 | Council voting results (consilium.europa.eu pages) | HTML | ❌ 403 "Browser check" | — | Not used; see Council section |
 | Council "voting result" documents (ST notes) | Cellar SPARQL + PDF at data.consilium.europa.eu | ✅ | Member State positions, voting rule, outcome | Annex table is an image; parsed deterministically, fail-closed |
 | Single Market Scoreboard | HTML; indicators in Power BI embeds | ✅ since 2 Nov 2026 (403 on 22 and 26 Oct) | — | Indicators only in embedded Power BI reports, not machine-readable; a plain HTML table of overdue directives per Member State (`/enforcement-tools/transposition_en`) is not read yet. See the implementation section |
@@ -33,7 +34,8 @@ credentials). Details are refined from each ingestion module's findings.
 - European Parliament: "© European Union – Source: European Parliament"; CC BY 4.0 for the Open Data Portal's
   datasets of MEPs, procedures and results of votes (2024 and 2025), the European Parliament legal notice for its
   other data and web pages (details under "Licences" below).
-- EUR-Lex / Publications Office: reuse authorised under Commission Decision 2011/833/EU, with attribution.
+- EUR-Lex / Publications Office: reuse authorised under Commission Decision 2011/833/EU, with attribution. EUR-Lex's
+  summaries of EU legislation are quoted unchanged, in part, labelled with their date and linked (law context section).
 - Council and Commission websites: reuse authorised with acknowledgement of the source, unless stated otherwise.
 
 The site footer and About page credit each source. MEP portraits are not used (avoids hot-linking third-party
@@ -1134,6 +1136,62 @@ the first week of each month is a full refresh, which re-reads every stored reco
 - The source is listed on the About page like the others (`SOURCES["optouts"]`), with the number of directives
   read, how many of them contain the statement, and how many Denmark and Ireland are not bound by.
 
+### Law context: official summaries, court cases, consolidated texts, opinions (`lawcontext`) — ok
+- Read from Cellar for each act of the EUR-Lex snapshot and each procedure of the EP snapshot, joined by CELEX and
+  procedure reference only (`pipeline/sources/lawcontext.py`, whose docstring gives the queries). First retrieved on
+  5 November 2026, in about 5 minutes (about 30 SPARQL queries and 526 summary texts); later runs read a summary's text
+  again only when its date changes.
+- **Summaries of EU legislation** (`cdm:summary_summarizes_work`): 576 of the 1,279 acts have one (570 summaries, some
+  covering several acts). 44 are marked obsolete (`cdm:summary_legislation_eu_obsolete`) and are not shown, so 535
+  files show one. Their English text is served by content negotiation in one format each: `application/xhtml+xml;
+  type=xhtml5` (499 current summaries), `application/xhtml+xml` or `text/html` (27 of 2014–2022). The opening section
+  is kept as plain text: "What is the aim of …?" (498) or "What does … do?" (16), else the start of "Key points" or
+  "Summary" (12); at most three paragraphs, six with list items, about 900 characters. The page shows it, labelled
+  "Official summary (EUR-Lex, last updated <date>)", where no editorial summary exists; a file with an editorial summary
+  links it instead (the editorial text stays the 15–30 second overview, and the two would overlap). When the summary was
+  last updated before the latest act amending the law that our EUR-Lex data dates was published, the page says so
+  (85 files).
+- **Court cases**: 389 links from 369 judgments and orders interpreting 82 acts (`cdm:case-law_interpretes_
+  resource_legal`), and the Official Journal notices of 922 new cases on the acts: requests for a preliminary ruling
+  (`cdm:communication_case_new_submits_preliminary_question_resource_legal`) and actions for annulment
+  (`…_requests_annulment_of_…`, `…_requests_partial_annulment_of_…`). A case is shown as pending only when the notice
+  links its case file (`cdm:case_court`) and that file lists no judgment or order, no delivery of one
+  (`DELIV_JUDG_ORDER`), no publication of the decision (`CC_CD_PUB_OJ`) and no closed or withdrawn status, and no
+  judgment interpreting the act names the case (T-686/24 was decided with T-685/24 under the latter's number). The
+  file's status "in progress" is not used: C-26/22, decided on 7 December 2023, still has it. Notices link a case file
+  for every case lodged since 2024 but one, 53 of the 117 of 2023 and none before, so earlier cases are not known to be
+  pending: 219 pending (176 preliminary references, 43 actions for annulment) on 97 acts. Annulments and declarations
+  of invalidity themselves come from the eurlex source. The badges "Annulled (in whole or in part)", "Declared invalid
+  (in whole or in part)", "Questions pending before the Court" and "Action for annulment pending" each appear only when
+  such a record exists.
+- **Actions against the withdrawal of a proposal**: Cellar records them. Case C-727/25 is the European Parliament's
+  action (lodged 14 November 2025, notice OJ C/2026/89) for the partial annulment of the Commission's notice "Withdrawal
+  of Commission proposals" (52025XC05423, 6 October 2025), citing the proposal on standard essential patents
+  (52023PC0232, 2023/0133(COD)); its case file records no judgment or order. The source finds such actions for the
+  files the Commission withdrew: an action seeking the annulment of an act in the procedure's Cellar file that renders
+  the procedure's proposal obsolete (`cdm:resource_legal_renders_obsolete_resource_legal`, the withdrawal notice) and
+  citing that proposal. 2023/0133(COD)'s page says that its withdrawal is challenged.
+- **Consolidated versions** (`cdm:act_consolidated_consolidates_resource_legal`): 1,186 versions of 551 acts. The link
+  also gives versions of the acts an act amends (for NIS2, 02018L1972-20241018 and 02014R0910-20241018 besides
+  02022L2555-20221227), so only versions with the act's own CELEX are kept. The page links the latest dated on or before
+  the reader's date, and a later one. EUR-Lex's consolidated texts state: "This text is meant purely as a documentation
+  tool and has no legal effect. … The authentic versions of the relevant acts, including their preambles, are those
+  published in the Official Journal of the European Union and available in EUR-Lex" (02022L2555-20221227, read
+  5 November 2026).
+- **Opinions of the European Economic and Social Committee and the European Committee of the Regions** in a procedure's
+  Cellar file (`cdm:work_part_of_dossier`, author EESC or COR): 490 opinions (393 EESC, 97 CoR) on 479 files. Older
+  files often have none linked (2012/0011(COD), the GDPR).
+- Not read: Parliament's adopted texts (the EP API's `/adopted-texts` answered HTTP 500 when sorted, 5 November 2026).
+- Reuse: each summary's XHTML text carries "© European Union, 2026" (author PUBL). Commission Decision 2011/833/EU
+  "determines the conditions for the reuse of documents held by the Commission or on its behalf by the Publications
+  Office of the European Union" (Article 1); documents are available for reuse "for commercial or non-commercial
+  purposes" without charge or individual application (Article 4), on conditions that may include "the obligation for
+  the reuser to acknowledge the source of the documents" and "the obligation not to distort the original meaning or
+  message of the documents" (Article 6(2)). No notice specific to the summaries was found in Cellar or on
+  data.europa.eu (which lists only the summaries' classification, `class-sum-leg`, under Decision 2011/833/EU); the
+  EUR-Lex legal notice page answers scripts with a bot challenge and was not re-read. The site quotes the opening
+  section unchanged, with its source, date and a link to the full summary.
+
 ### Council of the EU (`council`) — ok
 - The Council's voting-results web pages are behind a browser check (403), and the data.europa.eu dataset
   "Council votes on legislative acts" is marked discontinued (its download returns 404).
@@ -1325,7 +1383,8 @@ the first week of each month is a full refresh, which re-reads every stored reco
   states the legal notice's terms, its general rule.
 - EUR-Lex / Cellar: reuse authorised with acknowledgement ("© European Union, https://eur-lex.europa.eu") under the
   EUR-Lex legal notice and Commission Decision 2011/833/EU. The live notice page is bot-protected for scripts and
-  should be re-checked manually before any change of attribution text.
+  should be re-checked manually before any change of attribution text. The summaries of EU legislation are documents
+  of the Publications Office, which the Decision covers (Article 1); see the law context section.
 - Commission infringement register: Commission reuse policy (Decision 2011/833/EU), "© European Union".
 - Council documents: reuse permitted with acknowledgement of the source ("© European Union", Council of the EU),
   per the Council's copyright notice.

@@ -353,6 +353,7 @@ def test_meta_sources_and_counts(out: Path):
         "council",
         "implementation",
         "optouts",
+        "lawcontext",
         "train",
     }
     assert all(s["licence"] for s in meta["sources"])

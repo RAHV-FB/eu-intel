@@ -444,7 +444,10 @@ def test_the_floors_are_well_below_what_the_committed_snapshot_holds():
     from pipeline import validate as val
 
     for (source, name), floor in val.MIN_RECORDS.items():
-        n = len(json.loads((val.SNAPSHOT / source / f"{name}.json").read_text(encoding="utf-8")))
+        path = val.SNAPSHOT / source / f"{name}.json"
+        if source in val.FLOOR_ONCE_FETCHED and not path.exists():  # a newer source not retrieved in this snapshot
+            continue
+        n = len(json.loads(path.read_text(encoding="utf-8")))
         assert 0 < floor <= 0.6 * n, (source, name, floor, n)
 
 

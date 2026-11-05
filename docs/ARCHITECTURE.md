@@ -27,7 +27,7 @@ data/curated/*.yaml ─────────────────┤ build
 | --- | --- |
 | `http.py` | Single HTTP client: timeouts, retries with backoff, Retry-After, per-host throttle, disk cache, Cellar SPARQL helper |
 | `snapshot.py` | Atomic, diff-friendly JSON writing (one record per line, sorted keys); manifest |
-| `models/entities.py` | **Snapshot contract** (pydantic): Procedure, Event, LegalAct (with its TranspositionDate, ValidityNote and CourtRuling sub-records), ProcedureNotice, EpVote, EpBallots, Mep, Organization, Membership, CouncilVote, NationalMeasure, InfringementCase, CountryIndicator, ImplementationCoverage, DirectiveOptOut, TrainFile, SourceRef, and SourceStatus (`_manifest.json`). CheckedTransposition is a build-only annotation (`exclude=True`, set by `build.py` from curated YAML), not part of the snapshot |
+| `models/entities.py` | **Snapshot contract** (pydantic): Procedure, Event, LegalAct (with its TranspositionDate, ValidityNote and CourtRuling sub-records), ProcedureNotice, EpVote, EpBallots, Mep, Organization, Membership, CouncilVote, NationalMeasure, InfringementCase, CountryIndicator, ImplementationCoverage, DirectiveOptOut, TrainFile, OfficialSummary, ActContext (with ConsolidatedVersion, CourtDecision and CourtCase), AdvisoryOpinion, ProcedureCase, SourceRef, and SourceStatus (`_manifest.json`). CheckedTransposition is a build-only annotation (`exclude=True`, set by `build.py` from curated YAML), not part of the snapshot |
 | `models/countries.py` | Member State table and code normalization (EU "EL" → ISO "GR") |
 | `sources/ep_people.py` | MEPs, groups, national parties, committees, dated memberships (EP Open Data API v2) |
 | `sources/ep_procedures.py` | Procedures and their events/documents (EP Open Data API v2) |
@@ -36,12 +36,14 @@ data/curated/*.yaml ─────────────────┤ build
 | `sources/council.py` | Council voting results (see DATA_SOURCES.md for availability) |
 | `sources/implementation.py` | National implementing measures (Cellar), infringements, country indicators |
 | `sources/optouts.py` | Treaty opt-outs (Protocols No 21 and 22: Denmark, Ireland) that a directive's recitals record, and later opt-ins confirmed by Commission decisions → `optouts/directives.json` (EUR-Lex texts via Cellar) |
+| `sources/lawcontext.py` | The law in context (Cellar): EUR-Lex's summaries of EU legislation (their opening section, read as plain text by content negotiation), judgments interpreting each act and cases pending on it, consolidated versions, EESC and CoR opinions on each file, actions against a proposal's withdrawal → `lawcontext/{acts,summaries,opinions,procedure_cases}.json` |
 | `sources/legislative_train.py` | EP Legislative Train status of major files |
 | `analysis/status.py` | Lifecycle stage, next step, inactivity vs official "blocked" |
 | `analysis/transposition.py` | Classifies each transposition date Cellar records as a deadline, an application date or another date; `data/curated/transposition.yaml` settles the cases its labels cannot |
 | `analysis/ep_margin.py` | Vote margin relative to the legally applicable majority |
 | `analysis/council_qmv.py` | Council QMV/unanimity arithmetic |
 | `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds |
+| `analysis/lawcontext.py` | A file's official summaries, court cases, consolidated texts and advisory opinions for its page, by the CELEX of its acts and its procedure reference (fields left out when there are none) |
 | `build.py` | Joins everything by official identifiers → `public/data/**` per `src/types/data.ts`; `--strict` (`EU_INTEL_STRICT=1`) fails when it had to work around a problem |
 | `freshness.py` | How old each source's data may get before the site and the Data health issue call it stale; the core sources behind `core_data_at`; when the Legislative Train's "blocked" stops being shown |
 | `validate.py` | Schema + invariants (ballot totals, referential integrity, legal-type rules); on a build, the claims in `public/data` against the rules and the files' own records, and the contract (`contract.py`: the built JSON against `src/types/data.ts`). Errors fail; warnings are by design (not counted), integrity (fail above `validate_baseline.json`) or backlog |

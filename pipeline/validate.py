@@ -73,7 +73,11 @@ MIN_RECORDS: dict[tuple[str, str], int] = {
     ("implementation", "coverage"): 250,
     ("train", "files"): 700,
     ("optouts", "directives"): 150, ("optouts", "regulations"): 8,
+    ("lawcontext", "acts"): 600, ("lawcontext", "summaries"): 250, ("lawcontext", "opinions"): 200,
 }  # fmt: skip
+# Sources added after the snapshot began: their files may be absent until the source is first retrieved (the site then
+# shows nothing from them), so their floors apply once the manifest records the source.
+FLOOR_ONCE_FETCHED = {"lawcontext"}
 # Built lists that are never empty (activity.json can be, before the first recorded change).
 BUILT_LISTS = [
     "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json", "people/meps.json",
@@ -110,6 +114,10 @@ FILES: list[tuple[str, str, str, Callable[[Any], Any] | None]] = [
     ("train", "files", "TrainFile", lambda r: r.url),
     ("optouts", "directives", "DirectiveOptOut", lambda r: r.celex),
     ("optouts", "regulations", "RegulationOptIn", lambda r: r.decision),
+    ("lawcontext", "acts", "ActContext", lambda r: r.celex),
+    ("lawcontext", "summaries", "OfficialSummary", lambda r: r.id),
+    ("lawcontext", "opinions", "AdvisoryOpinion", lambda r: r.celex),
+    ("lawcontext", "procedure_cases", "ProcedureCase", lambda r: r.id),
 ]
 
 
@@ -334,6 +342,8 @@ def check_size(
     otherwise be built and deployed as an empty section). `n` is None when `_load` read nothing."""
     count = recorded.get(source, {}).get(name) or 0
     floor = floors.get((source, name)) or 0
+    if source in FLOOR_ONCE_FETCHED and source not in recorded:  # not yet retrieved: no file is expected
+        floor = 0
     if n is None:
         if (count or floor) and not (snapshot / source / f"{name}.json").exists():
             what = f"_manifest.json records {count} records" if count else f"a complete snapshot has at least {floor}"

@@ -1,0 +1,120 @@
+[
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62024CN0312",
+  "lodged": "2024-04-29",
+  "case": "C-312/24",
+  "status": "http://publications.europa.eu/resource/authority/case-status/CLOSED",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_CD_PUB_OJ",
+  "decided": "62024CJ0312"
+ },
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62024CN0312",
+  "lodged": "2024-04-29",
+  "case": "C-312/24",
+  "status": "http://publications.europa.eu/resource/authority/case-status/CLOSED",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_NC_PUB_OJ",
+  "decided": "62024CJ0312"
+ },
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62024CN0312",
+  "lodged": "2024-04-29",
+  "case": "C-312/24",
+  "status": "http://publications.europa.eu/resource/authority/case-status/CLOSED",
+  "etype": "http://publications.europa.eu/resource/authority/event/DELIV_JUDG_ORDER",
+  "decided": "62024CJ0312"
+ },
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62024CN0312",
+  "lodged": "2024-04-29",
+  "case": "C-312/24",
+  "status": "http://publications.europa.eu/resource/authority/case-status/CLOSED",
+  "etype": "http://publications.europa.eu/resource/authority/event/DELIV_OPI_VIEW",
+  "decided": "62024CJ0312"
+ },
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62024CN0312",
+  "lodged": "2024-04-29",
+  "case": "C-312/24",
+  "status": "http://publications.europa.eu/resource/authority/case-status/CLOSED",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_CD_PUB_OJ",
+  "decided": "62024CJ0312_RES"
+ },
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62024CN0312",
+  "lodged": "2024-04-29",
+  "case": "C-312/24",
+  "status": "http://publications.europa.eu/resource/authority/case-status/CLOSED",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_NC_PUB_OJ",
+  "decided": "62024CJ0312_RES"
+ },
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62024CN0312",
+  "lodged": "2024-04-29",
+  "case": "C-312/24",
+  "status": "http://publications.europa.eu/resource/authority/case-status/CLOSED",
+  "etype": "http://publications.europa.eu/resource/authority/event/DELIV_JUDG_ORDER",
+  "decided": "62024CJ0312_RES"
+ },
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62024CN0312",
+  "lodged": "2024-04-29",
+  "case": "C-312/24",
+  "status": "http://publications.europa.eu/resource/authority/case-status/CLOSED",
+  "etype": "http://publications.europa.eu/resource/authority/event/DELIV_OPI_VIEW",
+  "decided": "62024CJ0312_RES"
+ },
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62026CN0660",
+  "lodged": "2026-06-16",
+  "case": "C-660/26",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_NC_PUB_OJ"
+ },
+ {
+  "c": "32016R0679",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62019CN0272",
+  "lodged": "2019-04-01"
+ },
+ {
+  "c": "32020L0262",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_submits_preliminary_question_resource_legal",
+  "n": "62024TN0686",
+  "lodged": "2024-12-05",
+  "case": "T-686/24",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_NC_PUB_OJ"
+ },
+ {
+  "c": "32025R0040",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_requests_annulment_of_resource_legal",
+  "n": "62025TN0239",
+  "lodged": "2025-04-13",
+  "case": "T-239/25",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_NC_PUB_OJ"
+ },
+ {
+  "c": "32025R0040",
+  "p": "http://publications.europa.eu/ontology/cdm#communication_case_new_requests_partial_annulment_of_resource_legal",
+  "n": "62025TN0239",
+  "lodged": "2025-04-13",
+  "case": "T-239/25",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_NC_PUB_OJ"
+ }
+]

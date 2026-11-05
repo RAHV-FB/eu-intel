@@ -194,6 +194,12 @@
   text-decoration: underline;
 }
 
+.drow__names {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
 .drow__short {
   margin: var(--sp-1) 0 0;
   color: var(--text-2);

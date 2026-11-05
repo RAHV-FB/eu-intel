@@ -442,6 +442,18 @@ export default function About() {
             </li>
           </ul>
 
+          <h3>Official summaries, court cases and opinions</h3>
+          <p>
+            Where we have not written a summary of a law, its page quotes the opening section of EUR-Lex’s summary of the act
+            (“Summaries of EU legislation”, written by the EU Publications Office), unchanged, labelled with the date EUR-Lex last
+            updated it and linked to the full summary; pages with our own summary link it. Summaries EUR-Lex marks as obsolete are
+            not shown, and a page says when a summary was last updated before the latest amending act we know of was published.
+            The page also lists what EUR-Lex records on the law’s court cases (judgments and orders interpreting it, and cases
+            whose file records no judgment, order or closure yet), its consolidated text, and the opinions of the European
+            Economic and Social Committee and the European Committee of the Regions on the file. EUR-Lex links a case to its file
+            for cases brought from 2024 and some of 2023, so earlier cases are never shown as pending.
+          </p>
+
           <h3>Missing and changing records</h3>
           <p>
             Official databases are sometimes incomplete, late or inconsistent with each other. When a record is missing we say “not

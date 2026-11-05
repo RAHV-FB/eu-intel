@@ -40,6 +40,8 @@ export function DossierRow({
             {d.title}
           </Link>
         </H>
+        {/* the names the file's page gives under its heading (an act's own short title, verified common names) */}
+        {d.names && d.names.length > 0 && <p className="drow__names">Also known as {d.names.join(', ')}</p>}
         {d.short && <p className="drow__short">{d.short}</p>}
         <p className="drow__meta dot-list">
           <span>{d.type_label || d.type}</span>

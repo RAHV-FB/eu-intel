@@ -133,10 +133,12 @@ Their entries follow the same review process, including the second review and th
   an official page that uses both. It does not
   include ambiguous everyday words (for example, plain "safe" or "red").
 - **Per-file names in `aliases.yaml`** (`{procedure: "2023/0083(COD)", names: [...]}`) attach a name
-  to one procedure. Search finds the file by it, and the file's page lists a short name ("also known
-  as") or, for a name given to several files, the package ("part of the Fit for 55 package"); long
-  descriptive names are for search only. Each entry needs a `# source:` comment citing a Commission,
-  Parliament or Council page that uses the name for that file (a test enforces the comment).
+  to one procedure. Search finds the file by it, and the file's page and its row in lists give a short
+  name ("also known as") or, on the page, for a name given to several files, the package ("part of the
+  Fit for 55 package"); long descriptive names are for search only. Each entry needs a `# source:`
+  comment citing a Commission, Parliament or Council page that uses the name for that file (a test
+  enforces the comment); an acronym may also cite EUR-Lex's own record of the act (its short title in
+  Cellar, or the title of its EUR-Lex summary).
   Names an act gives itself in its Official Journal title, and Legislative Train file names, are
   added automatically from the snapshot.
 - **`featured.yaml` `aliases`** may also include common names that the public actually uses.

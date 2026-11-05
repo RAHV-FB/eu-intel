@@ -4,6 +4,7 @@ import { BasisNote, ExtLink, SourceLink, Term, institutionLabel } from '../../..
 import { asOfToday, eventOn, formatDate, safeUrl } from '../../../lib/format';
 import { ADOPTED_STAGES, EURLEX_CELEX, dossierPath, institutionSuffix, isSameTitle } from '../labels';
 import { SplitParts, splitParts } from './Split';
+import { OfficialSummary, OfficialSummaryLink } from './LawContext';
 
 /**
  * Most recent recorded (done) event on or before today; not a date an act records for after its validity ended.
@@ -300,11 +301,31 @@ export function commissionProposal(d: Pick<DossierDetail, 'documents'>) {
 }
 
 /**
+ * "What is it?" with EUR-Lex's official summary of the file's act and no editorial summary: the summary's opening
+ * section, labelled with its source and date, then the official title when it differs from the heading.
+ */
+function WithOfficialSummary({ d }: { d: DossierDetail }) {
+  const [first, ...others] = d.official_summaries ?? [];
+  const sameTitle = !!d.official_title && isSameTitle(d.title, d.official_title);
+  return (
+    <>
+      <OfficialSummary s={first} others={others} />
+      {d.official_title && !sameTitle && (
+        <p className="dz-nocurated dz-osum__title">
+          Official title: <span className="dz-what__official">{d.official_title}</span>
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
  * "What is it?" without an editorial summary: never the heading repeated. The official title when it differs from
  * the heading; then the official text that sets out what the file is about: the adopted act, else the Commission's
- * proposal.
+ * proposal. EUR-Lex's official summary when there is one (WithOfficialSummary).
  */
 function NoSummary({ d }: { d: DossierDetail }) {
+  if (d.official_summaries?.length) return <WithOfficialSummary d={d} />;
   const act = d.acts[0];
   const proposal = commissionProposal(d);
   const sameTitle = !!d.official_title && isSameTitle(d.title, d.official_title);
@@ -342,6 +363,7 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
   const adopted = ADOPTED_STAGES.has(d.stage);
   const parts = splitParts(d);
   const when = adopted && d.application ? 'when-it-applies' : undefined;
+  const withdrawalCase = d.court?.pending.find((k) => k.kind === 'annulment_of_withdrawal');
   const amendedBy = d.related.filter((r) => r.relation === 'Amended by');
   const amendedLinks = amendedBy.slice(0, 3).map((r, i) => (
     <span key={r.id}>
@@ -395,6 +417,8 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
             . Everything else on this page comes from official records.
           </p>
         )}
+        {/* an editorial summary is kept short (15–30 seconds): EUR-Lex's own, longer summary is linked, not repeated */}
+        {ed && <OfficialSummaryLink summaries={d.official_summaries ?? []} />}
       </div>
 
       <dl className="dz-facts">
@@ -410,6 +434,13 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
             )}
             {explanation !== d.status.explanation && (
               <p className="meta">Status as recorded at the last data refresh, before the date above had passed.</p>
+            )}
+            {withdrawalCase && (
+              <p className="meta dz-withdrawal-case">
+                The Commission’s withdrawal of this proposal is challenged before the {withdrawalCase.court}
+                {withdrawalCase.applicants?.length ? ` by the ${withdrawalCase.applicants.join(' and the ')}` : ''}:{' '}
+                <a href="#court">Case {withdrawalCase.case}</a>, with no judgment or order recorded yet.
+              </p>
             )}
             {adopted && amendedBy.length > 0 && (
               <p className="meta">
