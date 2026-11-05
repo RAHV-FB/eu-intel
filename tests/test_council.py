@@ -720,3 +720,32 @@ def test_statements_come_from_the_latest_version_that_prints_any():
     # a corrigendum printing no statements keeps those of the version before it
     p_cor = C.Parsed(rev, [rev_pages[0]], C.parse_note(rev_pages[0]), None, "no voting sheet")
     assert C.build_vote([p_rev, p_cor], "t")[0].statements == ["Statement by Italy"]
+
+
+def test_list_versions_unions_passes_over_replicas_that_disagree():
+    # 5 Nov 2026: the same query listed ST 14946/26 on one pass and not on the next
+    ai = [r for r in rows() if r["docid"] == "consil:ST_10199_2024_INIT"]
+    other = [r for r in rows() if r["docid"] != "consil:ST_10199_2024_INIT"]
+
+    class Replicas(FakeHttp):
+        def __init__(self):
+            super().__init__([])
+            self.answers = [other, ai + other, other]
+
+        def sparql(self, query, **kw):
+            return self.answers.pop(0)
+
+    groups = C.list_versions(Replicas())
+    assert "ST-10199-2024" in groups and groups.keys() == C._versions_from_rows(rows()).keys()
+
+
+def test_fetch_keeps_a_known_note_that_no_listing_pass_returns(tmp_path, monkeypatch):
+    from pipeline.models.entities import CouncilVote
+
+    snapshot, ai_rows, prev = _seed(tmp_path, monkeypatch, C.note_fingerprint)
+    monkeypatch.setattr(C, "MIN_LISTED_SHARE", 0.0)  # one of one note missing would otherwise read as truncated
+    st = C.fetch(FakeHttp([]))
+    assert st.status == "ok" and "1 notes known from earlier runs not listed by Cellar this run, kept" in st.note
+    assert snapshot.read_records("council", "votes", CouncilVote) == [prev]  # not dropped
+    (state,) = snapshot.read_records("council", "notes", C.CouncilNoteState)
+    assert state.vote_id == prev.id
