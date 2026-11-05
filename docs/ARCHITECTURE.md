@@ -205,13 +205,15 @@ the UI; every institutional fact on a page has a reachable origin.
   `validate --built`, the dated-wording check, site build, privacy check, size check). It does not run after a refresh.
 - `pages.yml`: deploy to GitHub Pages once CI has passed on a push to `main`, when a refresh calls it with the commit
   it pushed, or on manual dispatch, after running the data gate again on the commit it deploys.
-- `refresh.yml`: twice on Mondays (a scheduled run is skipped if data was committed in the last 20 hours): `fetch`
-  (incremental, each record re-read at least every 8 weeks; a full refresh in the first week of each month or by hand) →
-  `validate` per source → the data gate, recording activity → commit snapshot and state → deploy that commit, if CI
-  has passed on its code.
-- `watchdog.yml`: after each refresh and each CI run on `main`, and daily, opens, updates or closes the "Data health"
-  issue (failed or stale sources, a failed refresh, red CI on `main`, live data more than 8 days old, the repository
-  past 750 MB).
+- `refresh.yml`: twice on Mondays, and on Fridays for the core sources and the planned dates (a scheduled run is skipped
+  if every core source was retrieved in the last 20 hours): `fetch` (incremental, each record re-read at least every 8
+  weeks; a full refresh in the first week of each month or by hand) → `validate` per source → the data gate, recording
+  activity → commit snapshot and state → deploy that commit, if CI has passed on its code.
+- `rebuild.yml`: daily, deploys `main` again, built with the day's date (no fetch, no commit), once CI has passed on its
+  code and while no refresh runs.
+- `watchdog.yml`: after each refresh, CI run on `main`, deploy and daily rebuild, and daily, opens, updates or closes the
+  "Data health" issue (failed or stale sources, a failed refresh, deploy or rebuild, red CI on `main`, live data more
+  than 8 days old, the repository past 750 MB, and anything it could not check).
 
 ## Future analytics (not implemented)
 

@@ -109,7 +109,8 @@ check, and the link check depends on third-party sites).
 ## Data refresh and deployment
 
 - **Weekly refresh** ([refresh.yml](.github/workflows/refresh.yml)): Mondays 05:17 UTC, a second try at 22:37 UTC
-  unless data was committed in the last 20 hours (schedules are best effort), a full refresh in the first week of each
+  unless EP procedures, EP votes, EUR-Lex and Council were all retrieved in the last 20 hours (schedules are best
+  effort), a full refresh in the first week of each
   month, a light refresh on Fridays at 05:17 UTC (EP procedures, EP votes, EUR-Lex, Council and the planned dates:
   Parliament votes Tuesday to Thursday), and on demand from the Actions tab. Fetch → validate per source → the data gate (strict build recording
   verified activity, validation of the built data, its dated wording, site build, privacy, size) → commit
@@ -118,9 +119,12 @@ check, and the link check depends on third-party sites).
 - **Deploy** ([pages.yml](.github/workflows/pages.yml)): once CI has passed on a push to `main`; the commit a refresh
   pushed, once CI has passed on its code; and on demand. It runs the data gate again on what it deploys; a failure
   never deploys, and the previous version stays online.
-- **Data health** ([watchdog.yml](.github/workflows/watchdog.yml)): after each refresh and each CI run on `main`, and
-  daily, it opens, updates or closes one "Data health" issue listing failed or stale sources, a failed refresh, red CI on
-  `main` and live data more than 8 days old.
+- **Daily rebuild** ([rebuild.yml](.github/workflows/rebuild.yml)): daily at 01:23 UTC, `main` is built again with the
+  day's date and deployed, without fetching or committing anything (once CI has passed on its code, and not while a
+  refresh runs), so that statuses and labels move on with the calendar between refreshes.
+- **Data health** ([watchdog.yml](.github/workflows/watchdog.yml)): after each refresh, CI run on `main`, deploy and
+  daily rebuild, and daily, it opens, updates or closes one "Data health" issue listing failed or stale sources, a failed
+  refresh, deploy or rebuild, red CI on `main` and live data more than 8 days old.
 
 Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time Pages setup.
 
@@ -138,10 +142,11 @@ data/curated/        editorial YAML: featured files, topics, search aliases, che
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
 src/                 React app: pages/, features/ (one folder per area, insights/ included), components/, lib/,
                      types/data.ts (public data contract)
-scripts/             prerender-routes.mjs (with seo.mjs), render-og-image.mjs, check_privacy.mjs, check_links.py, test-frozen.sh
+scripts/             prerender-routes.mjs (with seo.mjs), render-og-image.mjs, check_privacy.mjs, check_links.py, test-frozen.sh,
+                     ci-passed.sh, latest_run.py
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
 docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap, assessment
-.github/workflows/   ci.yml, pages.yml, refresh.yml, watchdog.yml
+.github/workflows/   ci.yml, pages.yml, refresh.yml, rebuild.yml, watchdog.yml
 ```
 
 ## Licences
