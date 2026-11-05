@@ -40,13 +40,15 @@
   }
 }
 
-/* the chosen Member State: its pages, its feed and the Commission's own count for it */
+/* the chosen Member State: its pages, its feed and the Commission's own count for it (on white, where muted text keeps
+   4.7:1; on a tint it would fall below 4.5:1) */
 .tt-country {
   margin-top: var(--sp-4);
   padding: var(--sp-3) var(--sp-4);
   max-width: var(--measure-wide);
-  background: var(--blue-paler);
+  background: var(--surface);
   border: 1px solid var(--border);
+  border-left: 4px solid var(--eu-blue);
   border-radius: var(--radius);
 }
 
