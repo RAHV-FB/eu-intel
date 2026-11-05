@@ -100,6 +100,7 @@ PUBLIC_FILES = [
     "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json",
     "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
     "topics.json", "search.json", "activity.json", "feeds/updates.xml",
+    "transposition.json", "feeds/countries/DE.xml",  # the implementation tracker; one of the 27 country feeds
 ]  # fmt: skip
 
 # (source, file, model name, id function)

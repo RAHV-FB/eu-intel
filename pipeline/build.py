@@ -2444,6 +2444,7 @@ class Builder:
         self.build_dossiers()
         self.build_people()
         self.build_countries()
+        self.build_tracker()
         self.build_topics()
         self.build_activity()
         self.build_home()
@@ -4916,26 +4917,36 @@ class Builder:
             f["now_parties"] = [ref(t) | {"meps": n} for t, n in sorted(now.items(), key=lambda kv: (-kv[1], kv[0]))]
 
     # ---------------------------------------------------------------- countries
+    def site_directives(self) -> list[LegalAct]:
+        """The directives of the files on this site, by CELEX: those the country pages list, the implementation
+        tracker (transposition.json) and the country feeds (pipeline/analysis/tracker.py)."""
+        return sorted(
+            {a.celex: a for d in self.dossier_ids for a in self.acts_of.get(d, []) if a.act_type == "directive"}.values(),
+            key=lambda a: a.celex,
+        )
+
+    def directive_info(self, a: LegalAct) -> dict:
+        """How a country page and the tracker name a directive: its file's title (with the directive's number when the
+        file has several directives: 2013/0400(CNS) has two), its own number as its official title cites it
+        ("Directive (EU) 2022/2555", "Directive 2014/35/EU") and the names its file is known by, so that it can be
+        searched by them; its file, and its general transposition deadline."""
+        ds = sorted(self.act_dossiers.get(a.celex, ()))
+        known = self.known_as(self.proc[ds[0]], self.acts_of.get(ds[0], [])) if len(ds) == 1 else None
+        names = (known or {}).get("names") or ([n] if (n := act_short_name(a.title)) else [])
+        title = self.dossier_summary[ds[0]]["title"] if len(ds) == 1 else a.title
+        if len(ds) == 1 and sum(x.act_type == "directive" for x in self.dossier_acts.get(ds[0], [])) > 1:
+            title = f"{act_label(a)}: {title}"
+        return {
+            "celex": a.celex, "title": title,
+            "act": act_label(a) if act_label(a) != a.celex else celex_act_label(a.celex), "names": names,
+            "dossier_id": ds[0] if len(ds) == 1 else None, "deadline": general_deadline(a),
+        }  # fmt: skip
+
     def build_countries(self) -> None:
         s = self.s
         infr_available = s.file_exists("implementation", "infringements")
-        directives = sorted(
-            {
-                a.celex: a
-                for d in self.dossier_ids
-                for a in self.acts_of.get(d, [])
-                if a.act_type == "directive"
-            }.values(),
-            key=lambda a: a.celex,
-        )
-        # each directive's own number as its official title cites it ("Directive (EU) 2022/2555", "Directive
-        # 2014/35/EU") and the names its file is known by, so that a country page can be searched by them
-        act_names: dict[str, tuple[str | None, list[str]]] = {}
-        for a in directives:
-            ds = sorted(self.act_dossiers.get(a.celex, ()))
-            known = self.known_as(self.proc[ds[0]], self.acts_of.get(ds[0], [])) if len(ds) == 1 else None
-            names = (known or {}).get("names") or ([n] if (n := act_short_name(a.title)) else [])
-            act_names[a.celex] = (act_label(a) if act_label(a) != a.celex else celex_act_label(a.celex), names)
+        directives = self.site_directives()
+        info = {a.celex: self.directive_info(a) for a in directives}
         index = []
         for code, name in sorted(MEMBER_STATES.items()):
             active = sorted(
@@ -4972,17 +4983,12 @@ class Builder:
                                             if self.mep_summary[m.id]["party"])  # fmt: skip
             trans = []
             for a in directives:
-                deadline = general_deadline(a)
-                ds = sorted(self.act_dossiers.get(a.celex, ()))
-                title = self.dossier_summary[ds[0]]["title"] if len(ds) == 1 else a.title
-                if len(ds) == 1 and sum(x.act_type == "directive" for x in self.dossier_acts.get(ds[0], [])) > 1:
-                    title = f"{act_label(a)}: {title}"  # one of the file's directives (2013/0400(CNS) has two)
-                status = self.transposition_status(a.celex, code, deadline)
+                d = info[a.celex]
+                status = self.transposition_status(a.celex, code, d["deadline"])
                 schengen = self.schengen_note(a.celex, code) if status == "not_participating" else None
                 trans.append({
-                    "celex": a.celex, "title": title,
-                    "act": act_names[a.celex][0], "names": act_names[a.celex][1],
-                    "dossier_id": ds[0] if len(ds) == 1 else None, "deadline": deadline,
+                    "celex": a.celex, "title": d["title"], "act": d["act"], "names": d["names"],
+                    "dossier_id": d["dossier_id"], "deadline": d["deadline"],
                     "measures": len(self.measures_by.get((a.celex, code), [])),
                     "status": status,
                     # the exemption and its condition (Directive (EU) 2016/798, Art. 33(4)), not the bare label
@@ -5010,6 +5016,12 @@ class Builder:
                 "infringements": [self.infr_info(i) for i in infr],
             }
         self.files["countries/index.json"] = index
+
+    def build_tracker(self) -> None:
+        """transposition.json: the implementation tracker's directives (pipeline/analysis/tracker.py)."""
+        from pipeline.analysis import tracker
+
+        self.files["transposition.json"] = tracker.tracker_data(self)
 
     # ---------------------------------------------------------------- topics
     def build_topics(self) -> None:
@@ -5935,7 +5947,7 @@ def build(
     """Build public/data. 0, or with `strict` (default: the environment's EU_INTEL_STRICT=1) 1 when the build had to
     work around a problem (PROBLEMS: a feature whose code did not load, a curated file or entry not applied, a status
     or assessment that fell back); the output is written either way, and every problem is listed at the end."""
-    from pipeline.analysis import feeds
+    from pipeline.analysis import feeds, tracker
 
     if strict is None:
         strict = os.environ.get("EU_INTEL_STRICT", "").strip().lower() in ("1", "true", "yes")
@@ -5946,6 +5958,7 @@ def build(
     files = b.run()
     site = os.environ.get("SITE_URL") or DEFAULT_SITE_URL
     extra = feeds.build_feeds(b, site_url=site)
+    extra.update(tracker.country_feeds(b, site_url=site))  # feeds/countries/<CC>.xml
     write_output(files, extra, out)
     sizes = {
         k: len(json.dumps(v, ensure_ascii=False, separators=(",", ":")).encode()) for k, v in files.items()
