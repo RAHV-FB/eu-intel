@@ -67,14 +67,23 @@ def write_records(
     previous: dict[object, tuple[object, str]] = {}
     if path.exists():
         try:
-            for line in path.read_text(encoding="utf-8").splitlines():
-                line = line.rstrip(",")
-                if line.startswith("{"):
-                    d = json.loads(line)
-                    if (ident := _identity(d)) is not None:
-                        previous[ident] = (_strip_retrieved(d), line)
-        except (OSError, ValueError):
-            previous = {}
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            text = ""
+        # Split on "\n" only: records are written one per line with ensure_ascii=False, so a value may hold a raw
+        # U+0085, U+2028 or similar, which str.splitlines() would also break on. That once cut a national
+        # measure's title in two, the whole previous file was discarded, and every one of its 62,000 records was
+        # rewritten with a new retrieved_at on each refresh. A line that still fails to parse is skipped alone.
+        for line in text.split("\n"):
+            line = line.rstrip(",")
+            if not line.startswith("{"):
+                continue
+            try:
+                d = json.loads(line)
+            except ValueError:
+                continue
+            if (ident := _identity(d)) is not None:
+                previous[ident] = (_strip_retrieved(d), line)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
     with tmp.open("w", encoding="utf-8") as f:
