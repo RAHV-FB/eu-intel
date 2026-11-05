@@ -264,7 +264,7 @@ def test_a_manual_ci_run_does_not_cancel_the_run_of_a_push():
     assert evaluate("push", "refs/heads/main") != evaluate("workflow_dispatch", "refs/heads/main")
     assert evaluate("pull_request", "refs/pull/7/merge", "7") == evaluate("pull_request", "refs/pull/7/merge", "7")
     assert triggers("pages.yml")["workflow_run"]["workflows"] == ["CI"]
-    assert "--event push" in steps("refresh.yml", "refresh")[named(steps("refresh.yml", "refresh"), "Deploy only code that CI has passed")]["run"]
+    assert "--event push" in CI_PASSED.read_text(encoding="utf-8")  # the refresh's and the rebuild's deploy check
 
 
 # ---------------------------------------------------------------- paths to production
@@ -446,6 +446,15 @@ def test_a_deploy_builds_main_only_when_main_added_nothing_but_data(tmp_path):
     assert build(refreshed, unrelated) == refreshed
 
 
+CI_PASSED = ROOT / "scripts" / "ci-passed.sh"
+
+
+def with_ci_passed_script(work: Path) -> None:
+    """scripts/ci-passed.sh in a test repository (untracked), where the steps that call it run."""
+    (work / "scripts").mkdir(exist_ok=True)
+    shutil.copy(CI_PASSED, work / "scripts" / "ci-passed.sh")
+
+
 def fake_gh(tmp_path: Path, output: str) -> dict[str, str]:
     """A `gh` on PATH that prints `output` whatever it is asked."""
     bin_dir = tmp_path / "bin"
@@ -459,10 +468,12 @@ def test_a_refresh_deploys_only_code_that_ci_has_passed(tmp_path):
     # the refresh deployed the latest main, including a code commit whose CI had failed or had not finished
     s = steps("refresh.yml", "refresh")
     script = s[named(s, "Deploy only code that CI has passed")]["run"]
-    assert "gh run list --workflow ci.yml --branch main --event push --status success" in script
+    assert script == 'scripts/ci-passed.sh "$SHA"'  # shared with the daily rebuild (rebuild.yml)
+    assert "gh run list --workflow ci.yml --branch main --event push --status success" in CI_PASSED.read_text()
     work = tmp_path / "repo"
     work.mkdir()
     git, commit = git_repo(work)
+    with_ci_passed_script(work)
     tested = commit({"src/app.ts": "1"}, "code")
     pushed = commit({"data/snapshot/x.json": "[1]"}, "Data refresh")
 
@@ -538,6 +549,46 @@ def test_the_refresh_pushes_with_a_token_it_never_stores_and_reapplies_its_data_
     assert "t0ken" not in (job / ".git" / "config").read_text(encoding="utf-8")
 
 
+def test_the_daily_rebuild_deploys_main_once_its_code_passed_ci_and_commits_nothing(tmp_path):
+    # statuses are written at build time while their explanations follow the reader's date: between weekly refreshes
+    # 2025/0380 read "Published, not yet in force" beside "It entered into force on 17 November 2026"
+    w = workflow("rebuild.yml")
+    text = (WORKFLOWS / "rebuild.yml").read_text(encoding="utf-8")
+    assert w["name"] == "Daily rebuild" and "workflow_dispatch" in triggers("rebuild.yml")
+    minute, hour, *rest = triggers("rebuild.yml")["schedule"][0]["cron"].split()
+    assert rest == ["*", "*", "*"] and minute.isdigit() and int(minute) not in (0, 30)
+    assert int(hour) not in range(13, 18)  # not 06-09 in the Pacific (13-16 UTC in summer, 14-17 in winter)
+    assert w["permissions"] == {"contents": "read"} and w["concurrency"] == {"group": "rebuild", "cancel-in-progress": False}
+    assert "contents: write" not in text and "git push" not in text and "git commit" not in text  # it commits nothing
+    plan, deploy = w["jobs"]["plan"], w["jobs"]["deploy"]
+    assert plan["permissions"] == {"contents": "read", "actions": "read"}
+    assert plan["steps"][0]["with"]["persist-credentials"] is False and plan["steps"][0]["with"]["ref"] == "main"
+    assert deploy["uses"] == "./.github/workflows/pages.yml" and deploy["with"] == {"ref": "${{ needs.plan.outputs.sha }}"}
+    assert deploy["if"] == "${{ needs.plan.outputs.deploy == 'true' }}" and deploy["needs"] == "plan"
+    assert deploy["permissions"] == {"contents": "read", "pages": "write", "id-token": "write"}
+    if not shutil.which("jq"):
+        pytest.skip("jq is not installed")
+    step = plan["steps"][named(plan["steps"], "Deploy only if no refresh is running and CI has passed on main's code")]
+    work = tmp_path / "repo"
+    work.mkdir()
+    _, commit = git_repo(work)
+    older = commit({"src/app.ts": "1"}, "code")
+    main = commit({"src/app.ts": "2", "data/snapshot/x.json": "[1]"}, "code and data")
+    data_only = commit({"data/snapshot/x.json": "[2]"}, "Data refresh")
+    with_ci_passed_script(work)
+
+    def decide(refresh_statuses: list[str], ci_passed_on: list[str], sha: str = data_only) -> str:
+        runs = {"refresh.yml": [{"status": s} for s in refresh_statuses], "ci.yml": [{"headSha": c} for c in ci_passed_on]}
+        env, _ = gh_serving(tmp_path, {"runs": runs, "jobs": {}})
+        return run_step(step["run"], work, {**env, "SHA": sha, "GITHUB_REF": "refs/heads/main"})["deploy"]
+
+    assert decide(["completed"], [main]) == "true"  # main = CI's commit plus a data refresh
+    assert decide(["in_progress", "completed"], [main]) == "false"  # that refresh deploys
+    assert decide(["queued"], [main]) == "false"
+    assert decide([], [older]) == "false"  # main's code has not passed CI (yet)
+    assert decide([], []) == "false"
+
+
 # ---------------------------------------------------------------- schedules
 
 
@@ -609,14 +660,14 @@ def test_only_the_watchdog_writes_issues_and_it_writes_nothing_else():
     on = triggers("watchdog.yml")
     minute, hour, *rest = on["schedule"][0]["cron"].split()
     assert rest == ["*", "*", "*"] and minute not in ("0", "00", "30") and hour.isdigit()  # daily, off the hour
-    assert on["workflow_run"]["workflows"] == ["CI", "Data refresh", "Deploy to GitHub Pages"]
+    assert on["workflow_run"]["workflows"] == ["CI", "Data refresh", "Deploy to GitHub Pages", "Daily rebuild"]
     assert on["workflow_run"]["types"] == ["completed"] and on["workflow_run"]["branches"] == ["main"]
     s = steps("watchdog.yml", "health")
     check = s[named(s, "Check")]["run"]
     assert '"${site%/}/data/meta.json?watchdog=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"' in check
     assert "python -m pipeline health" in check
     assert 'latest refresh.yml --job "Fetch, validate, gate, commit"' in check and "latest ci.yml --event push" in check
-    assert 'latest pages.yml --job "Build site" --cancelled-if-last' in check
+    assert 'latest pages.yml --job "Build site" --cancelled-if-last' in check and "latest rebuild.yml --job Deploy" in check
     issue = s[named(s, "Open, update or close the issue")]["run"]
     for command in ("gh issue create", "gh issue edit", "gh issue close", 'gh label create "$LABEL"'):
         assert command in issue
@@ -715,13 +766,21 @@ def test_the_watchdog_judges_the_latest_run_that_did_its_work(tmp_path):
     data["runs"]["pages.yml"] = data["runs"]["pages.yml"][1:]  # nothing came after the cancelled deploy
     env, _ = gh_serving(tmp_path, data)
     assert latest("pages.yml", "--job", build_job, "--cancelled-if-last").split()[:2] == ["cancelled", "28"]
-    data["jobs"]["28"] = skipped(build_job)  # a deploy after a CI run that deploys nothing did nothing
+    # a deploy run after a CI run that deploys nothing (a manual one) concludes "success" having done nothing: it does
+    # not hide the failed deploy before it
+    data["runs"]["pages.yml"] = [run_(30, "success"), run_(26, "failure")]
+    data["jobs"]["30"] = skipped(build_job)
     env, _ = gh_serving(tmp_path, data)
-    assert latest("pages.yml", "--job", build_job, "--cancelled-if-last").split()[:2] == ["success", "27"]
+    assert latest("pages.yml", "--job", build_job, "--cancelled-if-last").split()[:2] == ["failure", "26"]
     data["runs"]["refresh.yml"] = [run_(5, "success")]
     data["jobs"]["5"] = ran(refresh_job, "success")
     env, _ = gh_serving(tmp_path, data)
     assert latest("refresh.yml", "--job", refresh_job).split()[:2] == ["success", "5"]
+    # a failed plan skips the refresh job too, but a failed run is always the latest word
+    data["runs"]["refresh.yml"] = [run_(4, "failure"), run_(3, "success")]
+    data["jobs"]["4"] = [{"name": "Plan", "conclusion": "failure"}, {"name": refresh_job, "conclusion": "skipped"}]
+    env, _ = gh_serving(tmp_path, data)
+    assert latest("refresh.yml", "--job", refresh_job).split()[:2] == ["failure", "4"]
     data["runs"] = {}
     env, _ = gh_serving(tmp_path, data)
     assert latest("refresh.yml", "--job", refresh_job) == ""

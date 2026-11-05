@@ -5,8 +5,9 @@
 Prints "<conclusion> <run id> <url> <commit>" of the newest completed run of WORKFLOW (its file name, e.g.
 refresh.yml) on main, or nothing. Left out:
 
-- a run in which job NAME was skipped by its `if`: it did nothing, concludes "success" and must not hide an earlier
-  failure (a scheduled refresh its plan skipped; a deploy after a CI run that deploys nothing);
+- a successful run in which job NAME was skipped by its `if`: it did nothing and must not hide an earlier failure (a
+  scheduled refresh its plan skipped; a deploy after a CI run that deploys nothing). A failed run is always counted,
+  also when NAME was skipped because a job before it failed;
 - a run that was skipped, or cancelled (a newer push cancels CI, a newer deploy replaces a pending one), except with
   --cancelled-if-last when no later run of the workflow has started since it: then it is the latest word.
 
@@ -36,7 +37,7 @@ def latest(workflow: str, job: str | None, event: str | None, cancelled_if_last:
             continue
         if run["conclusion"] == "cancelled" and not (cancelled_if_last and i == 0):
             continue
-        if job:
+        if job and run["conclusion"] == "success":
             jobs = (gh("run", "view", str(run["databaseId"]), "--json", "jobs") or {}).get("jobs", [])
             if any(j.get("name") == job and j.get("conclusion") == "skipped" for j in jobs):
                 continue

@@ -5,15 +5,16 @@
 # - sources that failed in their last run or are stale (`python -m pipeline health`: pipeline/freshness.py thresholds,
 #   on main's data/snapshot/_manifest.json);
 # - the latest Data refresh run that did run (a failed data gate, a failed push or deploy; not one its plan skipped), the
-#   latest CI run for a push to main, and the latest deploy after CI or by hand (failed, or cancelled with nothing after);
+#   latest CI run for a push to main, the latest deploy after CI or by hand (failed, or cancelled with nothing after), and
+#   the latest daily rebuild (rebuild.yml) that did not skip its deploy;
 # - the live site's data/meta.json (SITE_URL repository variable, default the Pages URL below): its newest data older
 #   than MAX_AGE_DAYS means no refresh has reached the site, whether the schedule was late, dropped or disabled, or
 #   the refresh or its deploy failed. That alone also fails this run, so GitHub e-mails its notice too; and data on main
 #   that the live site still lacks hours after it was retrieved (`pipeline health`, problem "undeployed");
 # - the repository's size (every refresh commit adds to each clone).
 #
-# Runs after every Data refresh, every CI run for a push to main and every deploy (workflow_run: the results reach the
-# issue without a step in those workflows that could fail them), daily at 19:41 UTC (after a Monday refresh even 8 h
+# Runs after every Data refresh, every CI run for a push to main, every deploy and every daily rebuild (workflow_run:
+# the results reach the issue without a step in those workflows that could fail them), daily at 19:41 UTC (after a Monday refresh even 8 h
 # late), and by hand (Actions -> Watchdog -> Run workflow).
 name: Watchdog
 
@@ -21,7 +22,7 @@ on:
   schedule:
     - cron: "41 19 * * *" # daily 19:41 UTC
   workflow_run:
-    workflows: ["CI", "Data refresh", "Deploy to GitHub Pages"]
+    workflows: ["CI", "Data refresh", "Deploy to GitHub Pages", "Daily rebuild"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -127,6 +128,13 @@ jobs:
           if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
             detail=$(failed "$id")
             problems+=(--problem "deploy=**The latest deploy did not finish** ($conclusion, [run $id]($url), commit ${sha:0:7})${detail:+: $detail}. The site still serves the deployment before it: fix the cause and re-run it, or push a fix.")
+          fi
+
+          # the latest daily rebuild that deployed (or failed): one that skipped its deploy (CI not green, a refresh
+          # running) did nothing
+          read -r conclusion id url _ <<< "$(latest rebuild.yml --job Deploy)" || true
+          if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
+            problems+=(--problem "rebuild=**The latest daily rebuild failed** ($conclusion, [run $id]($url)): $(failed "$id"). The site keeps its previous build, whose statuses and labels are as of the day it was built: fix the cause (e.g. a data gate that fails on today's date) and re-run it.")
           fi
 
           site=${SITE_URL:-$DEFAULT_SITE_URL}

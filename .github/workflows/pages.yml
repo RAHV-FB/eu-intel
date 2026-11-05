@@ -4,7 +4,8 @@
 # - workflow_run: a successful "CI" run for a push to main deploys the commit CI tested (code reaches the site only once
 #   its tests have passed);
 # - workflow_call: a "Data refresh" run deploys the commit it pushed (`ref`), once that commit's data has passed the
-#   refresh's data gate and its code has passed CI (refresh.yml). The caller grants pages: write and id-token: write;
+#   refresh's data gate and its code has passed CI (refresh.yml); the "Daily rebuild" deploys main's commit, once its
+#   code has passed CI (rebuild.yml). The caller grants pages: write and id-token: write;
 # - workflow_dispatch: a manual run builds the branch it is started on, without waiting for CI.
 # After CI, if main (as of the run's event) had moved on since that commit only by data refresh commits (data/snapshot,
 # data/state), main is built instead: same code, newer data, so that a deploy never takes refreshed data off the site.
@@ -25,7 +26,7 @@ on:
   workflow_call:
     inputs:
       ref:
-        description: The commit to deploy (a data refresh commit that passed the data gate)
+        description: The commit to deploy (the commit a data refresh pushed, or main for the daily rebuild)
         type: string
         required: true
 

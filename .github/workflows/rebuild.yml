@@ -1,0 +1,85 @@
+# Daily rebuild: the site built again from main's committed data with today's date, and deployed. It fetches nothing and
+# commits nothing.
+#
+# Statuses and labels are written when the site is built, while the explanations beside them are restated on the reader's
+# date (src/lib/format.ts): between weekly refreshes a file published with a known entry-into-force date kept the badge
+# "Published, not yet in force" beside "It entered into force on 17 November 2026" (2025/0380, with the clock at 18 Nov),
+# and list rows kept the old label all week. A daily build moves them on with the calendar.
+#
+# - It deploys main as it is, through pages.yml (workflow_call, ref = main's commit when this run started), where the
+#   data gate and the browser smoke test run again on what is deployed.
+# - Only once CI has passed on main's code (scripts/ci-passed.sh, as the refresh's deploy): otherwise the deploy that
+#   follows CI's next success publishes main.
+# - Skipped while a data refresh is queued or running: that refresh deploys the newest data itself. Deploys are
+#   serialised by pages.yml (concurrency: pages); this workflow runs one at a time.
+# - The watchdog (watchdog.yml) reports a failed run.
+# - A run that commits nothing is not activity for GitHub's rule that disables schedules after 60 days without any
+#   (docs/DEPLOYMENT.md): the refresh's weekly commits keep the repository active.
+name: Daily rebuild
+
+on:
+  schedule:
+    - cron: "23 1 * * *" # daily 01:23 UTC: off-peak (evening in the Pacific), not on the hour
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rebuild
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Main's code has passed CI, no refresh running
+    # Scheduled runs only in the canonical repository (forks can still dispatch manually).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'rahv-fb/eu-intel' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read # the Data refresh and CI runs
+    outputs:
+      sha: ${{ steps.main.outputs.sha }}
+      deploy: ${{ steps.deploy.outputs.deploy }}
+    steps:
+      # main's commits and trees, without file contents beyond its own (filter: blob:none): scripts/ci-passed.sh compares
+      # commits and trees
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Main's commit
+        id: main
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy only if no refresh is running and CI has passed on main's code
+        id: deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.main.outputs.sha }}
+        run: |
+          busy=$(gh run list --workflow refresh.yml --limit 20 --json status \
+            --jq '[.[] | select(.status != "completed")] | length')
+          if [ "$busy" != 0 ]; then
+            echo "A data refresh is queued or running: it deploys the newest data itself, so this rebuild is skipped." |
+              tee -a "$GITHUB_STEP_SUMMARY"
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          scripts/ci-passed.sh "$SHA"
+
+  deploy:
+    name: Deploy
+    needs: plan
+    if: ${{ needs.plan.outputs.deploy == 'true' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      ref: ${{ needs.plan.outputs.sha }}

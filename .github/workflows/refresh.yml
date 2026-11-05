@@ -425,26 +425,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ steps.push.outputs.sha }}
-        run: |
-          # The data passed the gate above; its code must have passed CI (tests on the frozen data, e2e): a successful
-          # CI run for a push to main on a commit with the same files outside data/snapshot and data/state.
-          if [ "$GITHUB_REF" != refs/heads/main ]; then
-            echo "::warning::Started from $GITHUB_REF: the github-pages environment deploys from main only. The data is on main; deploy it by hand (Actions -> Deploy to GitHub Pages -> Run workflow on main)."
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          tested=$(gh run list --workflow ci.yml --branch main --event push --status success --limit 30 \
-            --json headSha --jq '.[].headSha')
-          for ci in $tested; do
-            if git merge-base --is-ancestor "$ci" "$SHA" 2>/dev/null &&
-              git diff --quiet --no-renames "$ci" "$SHA" -- . ':(exclude)data/snapshot' ':(exclude)data/state'; then
-              echo "CI passed on $ci, which has the code of $SHA: deploying $SHA." | tee -a "$GITHUB_STEP_SUMMARY"
-              echo "deploy=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          done
-          echo "::warning::CI has not passed (yet) on the code of $SHA: not deployed now. The deploy that follows the next successful CI run on main publishes this data."
-          echo "deploy=false" >> "$GITHUB_OUTPUT"
+        # The data passed the gate above; its code must have passed CI (tests on the frozen data, e2e): a successful CI
+        # run for a push to main on a commit with the same files outside data/snapshot and data/state.
+        run: scripts/ci-passed.sh "$SHA"
 
   deploy:
     name: Deploy

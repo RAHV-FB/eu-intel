@@ -1,13 +1,14 @@
 # Deployment and operations
 
-The site is a static build deployed to **GitHub Pages** by GitHub Actions. Four workflows:
+The site is a static build deployed to **GitHub Pages** by GitHub Actions. Five workflows:
 
 | Workflow | Trigger | Does | Permissions |
 | --- | --- | --- | --- |
 | `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, typecheck; on the [frozen test data](#frozen-test-data): pytest (offline), data build, vitest, site build, Playwright e2e and accessibility tests in three engines; on the commit's own data: the [data gate](#the-data-gate) | `contents: read` |
-| `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`; called by *Data refresh* with the commit it pushed; manual | the data gate on the commit it deploys (data built with the Pages URL and base path) → a browser smoke test of the built site on its own data → upload → deploy → check the public URL | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
+| `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`; called by *Data refresh* with the commit it pushed, and by *Daily rebuild* with `main`; manual | the data gate on the commit it deploys (data built with the Pages URL and base path) → a browser smoke test of the built site on its own data → upload → deploy → check the public URL | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
 | `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC (a scheduled run is skipped if every core source on `main` was retrieved in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month) → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
-| `watchdog.yml` (Watchdog) | after each *Data refresh* and each *CI* run on `main`, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
+| `rebuild.yml` (Daily rebuild) | daily 01:23 UTC, manual | no fetch, no commit: deploys `main` (its committed data built with today's date) through `pages.yml` once CI has passed on its code, unless a refresh is running | `contents: read`, `actions: read`; its deploy job: as `pages.yml` |
+| `watchdog.yml` (Watchdog) | after each *Data refresh*, *CI* run on `main`, deploy and *Daily rebuild*, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
 
 All actions are pinned to full commit SHAs (with the version in a comment); Dependabot
 (`.github/dependabot.yml`) proposes weekly grouped updates. The Python runtime dependencies in `pyproject.toml` have a
@@ -100,11 +101,18 @@ open http://127.0.0.1:4174/eu-intel/).
   run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`; decided in the job, since cron
   would OR a day of the month with the weekday). A manual run is never skipped. GitHub also disables every scheduled
   workflow of a public repository after 60 days without activity in it. A commit is activity: the refresh's weekly
-  commits keep the repository active as long as it commits. A scheduled run that commits nothing (the watchdog's) is
-  not. The watchdog's daily run is disabled together with the refresh's, so it cannot report this by itself: it then
-  runs only after a CI run for a push to `main` or a deploy, and the first of those reports the live data as overdue.
-  Re-enable each under *Actions → <workflow> → Enable workflow* (`gh workflow enable refresh.yml`, `gh workflow enable
-  watchdog.yml`).
+  commits keep the repository active as long as it commits. A scheduled run that commits nothing (the watchdog's, the
+  daily rebuild's) is not. The watchdog's daily run is disabled together with the refresh's, so it cannot report this by
+  itself: it then runs only after a CI run for a push to `main` or a deploy, and the first of those reports the live
+  data as overdue. Re-enable each under *Actions → <workflow> → Enable workflow* (`gh workflow enable refresh.yml`, `gh
+  workflow enable watchdog.yml`).
+- **Daily rebuild** (`rebuild.yml`, 01:23 UTC): the site is built again from `main`'s committed data with that day's date
+  and deployed, without fetching or committing anything. Statuses and labels are written when the site is built, while
+  the explanations beside them follow the reader's date (`src/lib/format.ts`): between weekly refreshes a file published
+  with a known entry-into-force date kept the badge "Published, not yet in force" beside "It entered into force on 17
+  November 2026", and list rows kept the old label all week; the daily build moves them on. It deploys only once CI has
+  passed on `main`'s code (`scripts/ci-passed.sh`, as the refresh) and not while a refresh is queued or running (that
+  refresh deploys); the watchdog reports a failed run.
 - **Time limits**: the fetch has a run-wide deadline (`EU_INTEL_FETCH_DEADLINE`, set by the workflow); after it
   no source starts and running sources start no new work. A request made after it gets a single short attempt
   (at most 30 s, no retries), and none starts at all 5 minutes after it. `timeout --signal=INT` then stops the
@@ -171,6 +179,7 @@ open http://127.0.0.1:4174/eu-intel/).
   | --- | --- | --- |
   | push to `main` → CI → `pages.yml` (`workflow_run`) | the whole CI run: ruff, typecheck, pytest, vitest and the browser tests in three engines, on the frozen test data | the data gate in CI, then again in the deploy |
   | refresh → `pages.yml` (`workflow_call`, `ref` = the pushed commit) | a successful CI run for a push to `main` on a commit with the same files outside `data/snapshot` and `data/state` | the data gate before the push, then again in the deploy |
+  | daily rebuild → `pages.yml` (`workflow_call`, `ref` = `main`) | as for a refresh: a successful CI run for a push to `main` with the same files outside `data/snapshot` and `data/state` | the data gate of the commit that brought it (CI or the refresh), then again in the deploy |
   | manual `pages.yml` | none (emergency redeploy) | the data gate in the deploy |
 
   After CI or a refresh, if `main` has moved on since that commit only by data refresh commits, the deploy builds `main`
@@ -384,6 +393,8 @@ at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes n
   known WebKit CSP flake ("Refused to apply a stylesheet because its hash…", docs/ASSESSMENT_2026-11.md 4.5);
 - a failed latest deploy after CI or by hand (*Deploy to GitHub Pages*), or one cancelled with no later deploy that replaced
   it; a refresh's own deploy is part of its run (above);
+- a failed latest *Daily rebuild* (passing over runs that skipped their deploy): the site keeps its previous build,
+  whose statuses and labels are as of the day it was built;
 - data on `main` that the live site lacks: a core source retrieved on `main` after the live site's copy of it, more than 6
   hours ago (`--deploy-grace-hours`): the refresh's deploy did not run (it waits for CI to pass on `main`'s code) or failed;
 - the live site's data overdue: the newest retrieval in `https://rahv-fb.github.io/eu-intel/data/meta.json` (or the
@@ -412,7 +423,7 @@ at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes n
 
 Public repositories get unlimited standard GitHub-hosted runner minutes. Every job has a `timeout-minutes` cap
 (CI: check 30, e2e 25; deploy: build 25, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
-watchdog 10). Pages limits: published site ≤ 1 GB (checked at build time), soft bandwidth limit 100 GB/month. Artifacts
+watchdog 10; daily rebuild: plan 5, its deploy as above). Pages limits: published site ≤ 1 GB (checked at build time), soft bandwidth limit 100 GB/month. Artifacts
 are kept 1–7 days.
 
 ## Optional link check
