@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import type { DossierDetail, DossierSummary, Meta } from '../types/data';
-import { useData } from '../lib/data';
-import { formatDate } from '../lib/format';
+import { DATA_BASE, useData } from '../lib/data';
+import { useFeedLink } from '../components/useFeedLink';
+import { daysSince, formatDate, noUpdateText } from '../lib/format';
 import { blockedNow, classifications } from '../lib/freshness';
 import { changeSince, getWatchlist, markSeen, type ChangeInfo } from '../lib/watchlist';
 import { ExtLink, LoadFailed, Loading, LookupNotice, NotFound, PageHeader, StatusBadge, Term } from '../components/ui';
@@ -15,6 +16,7 @@ import { splitParts } from '../features/legislation/dossier/Split';
 import { CouncilVotes, ParliamentVotes } from '../features/legislation/dossier/Votes';
 import { NationalApplication } from '../features/legislation/dossier/Application';
 import { DossierDetails } from '../features/legislation/dossier/Details';
+import { ConsolidatedSection, CourtSection, OpinionsSection, currentVersion, hasCourt } from '../features/legislation/dossier/LawContext';
 import { FollowButton } from '../features/watchlist/FollowButton';
 import { useHashScroll } from '../features/guide/useHashScroll';
 import '../features/legislation/common.css';
@@ -63,6 +65,9 @@ function DossierPage({ id }: { id: string }) {
   }, [d]);
   // a link to a section (/legislation/2021-0106#timeline) lands on it once the file has loaded
   useHashScroll(!loading && !!d);
+  // the file's own Atom feed, announced in <head> as its prerendered page does
+  const feed = `${DATA_BASE}feeds/dossiers/${encodeURIComponent(id)}.xml`;
+  useFeedLink(d ? feed : null, d ? `${d.ref}: updates (Atom)` : '');
 
   if (notFound) return <NotFound what="legislative file" />;
   if (error) return <LoadFailed title="This legislative file could not be loaded" />;
@@ -77,9 +82,21 @@ function DossierPage({ id }: { id: string }) {
   // the Legislative Train's classification is shown as current only while our copy of it is (src/lib/freshness.ts)
   const train = classifications(meta, Date.now());
   const active = ACTIVE_STAGES.has(d.stage);
+  const blocked = blockedNow(d.officially_blocked, train);
+  // a file still being decided: how long without a recorded step, on the reader's date, when officially blocked or
+  // for a year or more (the stuck view lists them: /legislation?stage=active&type=COD&sort=stuck)
+  const lastStep = d.stall?.last_event_date ?? null;
+  const quietDays = lastStep ? daysSince(lastStep, new Date(`${today}T00:00:00Z`)) : 0;
+  const quiet =
+    active && d.stall && lastStep && (blocked || quietDays >= 365) && quietDays > 0
+      ? noUpdateText(d.stall.days_since_last_event, lastStep, today)
+      : null;
   const topicLabel = (slug: string) => topics.find((t) => t.slug === slug)?.label ?? slug;
   const primaryAct = d.acts[0];
   const proposal = commissionProposal(d);
+  // the primary act's consolidated text on EUR-Lex, as it stands on the reader's date
+  const consolidated = d.consolidated?.find((c) => c.act === primaryAct?.celex);
+  const currentText = consolidated ? currentVersion(consolidated, today).current : undefined;
 
   const nav = [
     { id: 'summary', label: 'Summary' },
@@ -88,6 +105,9 @@ function DossierPage({ id }: { id: string }) {
     { id: 'ep-votes', label: 'Parliament votes' },
     { id: 'council-votes', label: 'Council votes' },
     { id: 'national', label: 'In the Member States' },
+    ...(hasCourt(d) ? [{ id: 'court', label: d.acts.length ? 'Court rulings' : 'Court cases' }] : []),
+    ...(d.consolidated?.length ? [{ id: 'consolidated', label: 'Consolidated text' }] : []),
+    ...(d.advisory_opinions?.length ? [{ id: 'opinions', label: 'Advisory opinions' }] : []),
     { id: 'details', label: 'Details & sources' },
   ];
 
@@ -115,7 +135,7 @@ function DossierPage({ id }: { id: string }) {
         {d.known_as && <KnownAs k={d.known_as} />}
         {/* "Is it law yet?" on the first screen of every file: the status, explained under "Current status" below */}
         <p className="dz-statusline">
-          <StatusBadge stage={d.status.stage} label={d.status.label} blocked={blockedNow(d.officially_blocked, train)} />
+          <StatusBadge stage={d.status.stage} label={d.status.label} blocked={blocked} />
           {d.status.since && (
             <span className="dz-statusline__since">
               {/* the publication date: EUR-Lex records no date of notification */}
@@ -124,6 +144,24 @@ function DossierPage({ id }: { id: string }) {
             </span>
           )}
         </p>
+        {/* Stuck: the Legislative Train's "blocked" while our copy of it is current, and how long the file has gone
+            without a recorded step; both are detailed under "Where is it now?" */}
+        {active && (blocked || quiet) && (
+          <p className="dz-stuck dot-list">
+            {blocked && (
+              <span className="dz-stuck__blocked">
+                Officially reported as blocked
+                {d.stall?.official_label_date && (
+                  <> (Legislative Train Schedule, information updated as of {formatDate(d.stall.official_label_date, true)})</>
+                )}
+              </span>
+            )}
+            {quiet && <span>{quiet}</span>}
+            <span>
+              <a href="#where">Where it is now</a>
+            </span>
+          </p>
+        )}
         {/* Without an editorial summary, "What is it?" below already shows the official title in full. */}
         {d.editorial && d.official_title && !isSameTitle(d.title, d.official_title) && <OfficialTitle text={d.official_title} />}
         {change && (
@@ -157,12 +195,18 @@ function DossierPage({ id }: { id: string }) {
 
       <div className="dz-layout">
         <div className="dz-main-top">
-          <DossierSummaryPanel d={d} today={today} />
+          <DossierSummaryPanel d={d} today={today} plansRetrieved={meta?.sources.find((s) => s.id === 'agenda')?.fetched_at} />
         </div>
 
         <aside className="dz-aside" aria-label="Key facts">
           <div className="dz-aside__card">
             <FollowButton dossier={d} />
+            <p className="dz-feed">
+              <a href={feed} type="application/atom+xml">
+                Follow in a feed reader
+              </a>{' '}
+              <span className="meta">(the Atom feed of this file’s steps, votes and status changes)</span>
+            </p>
             <dl className="dz-keyfacts">
               <div>
                 <dt>
@@ -248,6 +292,11 @@ function DossierPage({ id }: { id: string }) {
                   <ExtLink href={primaryAct.eurlex_url || EURLEX_CELEX(primaryAct.celex)}>Legal text (EUR-Lex)</ExtLink>
                 </li>
               )}
+              {currentText && (
+                <li>
+                  <ExtLink href={EURLEX_CELEX(currentText.celex)}>Consolidated text (EUR-Lex)</ExtLink>
+                </li>
+              )}
             </ul>
           </div>
           <nav className="dz-toc" aria-label="On this page">
@@ -268,6 +317,9 @@ function DossierPage({ id }: { id: string }) {
           <ParliamentVotes votes={d.ep_votes} oeilUrl={d.oeil_url} split={splitParts(d)} approval={d.ep_approval_without_vote} />
           <CouncilVotes votes={d.council_votes} meta={meta} split={splitParts(d)} timeline={d.timeline} adopted={d.adopted} />
           <NationalApplication d={d} today={today} />
+          <CourtSection d={d} meta={meta} />
+          <ConsolidatedSection d={d} today={today} meta={meta} />
+          <OpinionsSection d={d} meta={meta} />
           <DossierDetails d={d} />
         </div>
       </div>

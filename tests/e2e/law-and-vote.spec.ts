@@ -6,6 +6,7 @@
  */
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
+import type { DossierDetail, DossierSummary } from '../../src/types/data';
 import { AI_ACT_ID, BASE_PATH } from './env';
 import { expect, open, test } from './fixtures';
 
@@ -128,7 +129,7 @@ test.describe('law page: status and key facts', () => {
     await expect(page.locator('.dz-sched li').first()).toContainText(/1 Aug 2024\s*Entered into force/);
   });
 
-  test('"What is it?" without a summary does not repeat the title: it points to the official text', async ({ page }) => {
+  test('"What is it?" without a summary does not repeat the title: it points to the official text', async ({ page, request }) => {
     // 2023/0437(COD): its title is its official title; a proposal, COM(2023)0753
     await open(page, 'legislation/2023-0437/');
     const what = page.locator('.dz-what');
@@ -138,9 +139,23 @@ test.describe('law page: status and key facts', () => {
     await expect(what.getByRole('link', { name: /the Commission proposal, COM\(2023\)0753/ })).toHaveAttribute('href', proposal);
     await expect(page.locator('.dz-official-links').getByRole('link', { name: /Commission proposal \(COM\(2023\)0753\)/ })).toHaveAttribute('href', proposal);
     await expect(page.locator('.dz-official-links')).toContainText('Procedure file (Legislative Observatory)');
-    // an adopted act: its text on EUR-Lex (NIS 2 Directive)
-    await open(page, 'legislation/2020-0359/');
-    await expect(page.locator('.dz-what').getByRole('link', { name: /the adopted act on EUR-Lex/ })).toHaveAttribute('href', /CELEX:32022L2555/);
+    // an adopted act: its text on EUR-Lex (NIS 2 Directive, while the data has no EUR-Lex summary of it; else another
+    // adopted file with neither our summary nor EUR-Lex's, which "What is it?" would show instead)
+    const index = (await (await request.get('data/dossiers/index.json')).json()) as DossierSummary[];
+    let adopted: DossierDetail | null = null;
+    for (const id of ['2020-0359', ...index.filter((x) => x.celex.length && !x.featured).map((x) => x.id).slice(0, 40)]) {
+      const x = (await (await request.get(`data/dossiers/${id}.json`)).json()) as DossierDetail;
+      if (x.acts.length && !x.editorial && !x.official_summaries?.length) {
+        adopted = x;
+        break;
+      }
+    }
+    expect(adopted, 'an adopted file with no summary').not.toBeNull();
+    await open(page, `legislation/${adopted!.id}/`);
+    await expect(page.locator('.dz-what').getByRole('link', { name: /the adopted act on EUR-Lex/ })).toHaveAttribute(
+      'href',
+      new RegExp(`CELEX:${adopted!.acts[0].celex}`),
+    );
   });
 
   test('the Follow button says there are no alerts', async ({ page }) => {
@@ -170,12 +185,19 @@ test.describe('law page: status and key facts', () => {
 });
 
 test.describe('law page: on this page', () => {
-  test('on a phone, the sections are a row of links under the head that lands on each section', async ({ page }) => {
+  test('on a phone, the sections are a row of links under the head that lands on each section', async ({ page, request }) => {
     await page.setViewportSize(PHONE);
     await open(page, `legislation/${AI_ACT_ID}/`);
     const nav = page.getByRole('navigation', { name: 'On this page' });
     await expect(nav).toHaveCount(1);
-    await expect(nav.getByRole('link')).toHaveText(['Timeline', 'Parliament votes', 'Council votes', 'In the Member States', 'Details & sources']);
+    // the law-context sections are listed when the data has them (EUR-Lex / Cellar, the "lawcontext" source)
+    const d = (await (await request.get(`data/dossiers/${AI_ACT_ID}.json`)).json()) as DossierDetail;
+    const court = !!(d.court || d.acts.some((a) => a.court_rulings.length));
+    await expect(nav.getByRole('link')).toHaveText([
+      'Timeline', 'Parliament votes', 'Council votes', 'In the Member States',
+      ...(court ? ['Court rulings'] : []), ...(d.consolidated?.length ? ['Consolidated text'] : []),
+      ...(d.advisory_opinions?.length ? ['Advisory opinions'] : []), 'Details & sources',
+    ]);
     // above the summary, on the first screen
     const navBox = (await nav.boundingBox())!;
     expect(navBox.y + navBox.height).toBeLessThanOrEqual(PHONE.height);
@@ -209,9 +231,11 @@ test.describe('vote page', () => {
       await page.setViewportSize(viewport);
       await open(page, 'votes/166051/'); // AI Act, final vote, 13 March 2024
       const nav = page.getByRole('navigation', { name: 'On this page' });
-      await expect(nav.getByRole('link')).toHaveText(['By political group', 'By MEPs’ country', 'Individual MEPs']);
+      await expect(nav.getByRole('link')).toHaveText(['By political group', 'By MEPs’ country', 'By national party', 'Individual MEPs']);
       await nav.getByRole('link', { name: 'Individual MEPs' }).click();
       await expectLandedOn(page, 'meps');
+      await nav.getByRole('link', { name: 'By national party' }).click();
+      await expectLandedOn(page, 'parties');
       await nav.getByRole('link', { name: 'By political group' }).click();
       await expectLandedOn(page, 'groups');
     });

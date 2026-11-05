@@ -43,7 +43,7 @@ npm run dev                      # http://localhost:5173/
 ```
 
 `python -m pipeline fetch [source …]` refreshes `data/snapshot/` from the official APIs (network; slow; polite
-rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation optouts train`. A source
+rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation optouts lawcontext train agenda`. A source
 that fails keeps its previous files; `data/snapshot/_manifest.json` records each source's status and last
 successful fetch. You rarely need this locally: the snapshot is committed and refreshed weekly by the *Data refresh*
 workflow (below). The weekly refresh is incremental for EP procedures, EP votes and the Legislative Train: new, open
@@ -82,11 +82,24 @@ CI runs both on every push to `main`, every pull request and on manual runs
 ([.github/workflows/ci.yml](.github/workflows/ci.yml)): every check above but the last two (the watchdog runs the health
 check, and the link check depends on third-party sites).
 
+## Following changes
+
+- **What changed** (`/legislation/changes/`): the steps, votes and status changes the weekly refresh recorded, by week
+  and by topic, each linked to its file and its official record. The home page opens with the latest week.
+- **Atom feeds** (no account, nothing stored on a server): all recent changes (`data/feeds/updates.xml`), one per topic
+  (`data/feeds/<topic>.xml`) and one per legislative file (`data/feeds/dossiers/<id>.xml`, linked as "Follow in a feed
+  reader" on the file's page). Entries give the file's full title, what happened, the status it gave the file and the
+  next step; a status change and the step that caused it are one entry. Entry ids are stable tag URIs: an entry keeps
+  its id when its wording or the site's address changes.
+- **OPML**: the Following page downloads the feeds of the files you follow as one OPML file, which feed readers import.
+  It is made in your browser from the list kept there.
+
 ## Data refresh and deployment
 
 - **Weekly refresh** ([refresh.yml](.github/workflows/refresh.yml)): Mondays 05:17 UTC, a second try at 22:37 UTC
   unless data was committed in the last 20 hours (schedules are best effort), a full refresh in the first week of each
-  month, and on demand from the Actions tab. Fetch → validate per source → the data gate (strict build recording
+  month, a light refresh on Fridays at 05:17 UTC (EP procedures, EP votes, EUR-Lex, Council and the planned dates:
+  Parliament votes Tuesday to Thursday), and on demand from the Actions tab. Fetch → validate per source → the data gate (strict build recording
   verified activity, validation of the built data, its dated wording, site build, privacy, size) → commit
   `data/snapshot/` and `data/state/` → deploy that commit. A source whose new data fails validation gets its previous
   files and manifest entry back from the last commit; if the data then fails the gate, nothing is committed or deployed.

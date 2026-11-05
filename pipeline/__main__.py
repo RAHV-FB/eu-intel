@@ -52,7 +52,9 @@ SOURCES: dict[str, str] = {
     "council": "pipeline.sources.council",
     "implementation": "pipeline.sources.implementation",
     "optouts": "pipeline.sources.optouts",
+    "lawcontext": "pipeline.sources.lawcontext",  # reads the eurlex and ep_procedures snapshots
     "train": "pipeline.sources.legislative_train",
+    "agenda": "pipeline.sources.agenda",
 }
 SOURCE_NAME_RE = re.compile(r"^[a-z_]+$")
 

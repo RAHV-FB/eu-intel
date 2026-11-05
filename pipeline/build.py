@@ -29,6 +29,8 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from pipeline.analysis.lawcontext import LawContext
+from pipeline.analysis.scheduled import home_items, scheduled_by_dossier
 from pipeline.analysis.transposition import (
     act_day,
     application_start,
@@ -41,6 +43,8 @@ from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models import entities
 from pipeline.models.countries import FORMER_MEMBER_STATES, MEMBER_STATES
 from pipeline.models.entities import (
+    ActContext,
+    AdvisoryOpinion,
     CouncilVote,
     CountryIndicator,
     DirectiveOptOut,
@@ -53,8 +57,11 @@ from pipeline.models.entities import (
     LegalAct,
     Mep,
     NationalMeasure,
+    OfficialSummary,
     Organization,
+    PlannedStep,
     Procedure,
+    ProcedureCase,
     ProcedureNotice,
     RegulationOptIn,
     SourceRef,
@@ -143,6 +150,20 @@ SOURCES: dict[str, dict[str, str]] = {
         "licence": "© European Union, https://eur-lex.europa.eu. Reuse authorised under Commission "
         "Decision 2011/833/EU, with acknowledgement of the source.",
     },
+    # Decision 2011/833/EU covers "documents held by the Commission or on its behalf by the Publications Office"
+    # (Art. 1), authorises their reuse (Art. 4) and allows conditions such as acknowledging the source and not
+    # distorting the documents' original meaning or message (Art. 6(2)); each summary's text carries "© European Union"
+    # (docs/DATA_SOURCES.md, "Law context"). The summaries' opening sections are quoted unchanged, labelled and linked.
+    "lawcontext": {
+        "name": "EUR-Lex / Publications Office (Cellar) – summaries of EU legislation, court cases on the acts, "
+        "consolidated texts, and opinions of the European Economic and Social Committee and the European Committee "
+        "of the Regions",
+        "institution": "EUR-Lex",
+        "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+        "licence": "© European Union, https://eur-lex.europa.eu. Reuse authorised under Commission Decision "
+        "2011/833/EU, with acknowledgement of the source. The summaries are quoted unchanged, in part, with their "
+        "date and a link to the full summary.",
+    },
     "train": {
         "name": "European Parliament – Legislative Train Schedule",
         "institution": "LegislativeTrain",
@@ -150,6 +171,17 @@ SOURCES: dict[str, dict[str, str]] = {
         "licence": f"{EP_CREDIT} Under the European Parliament legal notice, reuse is authorised provided that the "
         "entire item is reproduced and the source is acknowledged; a partial reproduction must cite the URL of the "
         "complete item or of the web page it comes from (each file here links its Legislative Train page).",
+    },
+    "agenda": {
+        "name": "Council and Parliament – planned dates of next steps (planned events in EUR-Lex/Cellar, Parliament's "
+        "plenary agenda)",
+        "institution": "EUR-Lex",
+        "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+        "licence": "Planned events: © European Union, https://eur-lex.europa.eu. Reuse authorised under Commission "
+        f"Decision 2011/833/EU, with acknowledgement of the source. Parliament's plenary agenda: {EP_CREDIT} Under the "
+        "European Parliament legal notice, reuse is authorised provided that the entire item is reproduced and the "
+        "source is acknowledged; a partial reproduction must cite the URL of the complete item or of the web page it "
+        f"comes from (each planned step here links the agenda it comes from). {EP_ADAPTED}",
     },
 }
 
@@ -1161,7 +1193,30 @@ def _truncate(text: str, n: int) -> str:
     return cut + "…"
 
 
-_OPTIONAL_SUMMARY = ("short", "started", "last_event", "adopted", "published", "next_date", "instrument")
+_OPTIONAL_SUMMARY = ("short", "started", "last_event", "last_step", "adopted", "published", "next_date", "instrument")
+# The steps dated in the law that a file summary lists ahead of the build (DossierSummary.steps_ahead): the data is read
+# for a week or more, and longer than this only when its sources are long out of date (pipeline/freshness.py)
+STEPS_AHEAD_DAYS = 60
+
+
+def last_step(done: list[dict]) -> dict | None:
+    """The latest recorded step of a file, as its page names it ("Latest recorded step", latestDone in
+    src/features/legislation/dossier/Summary.tsx), from its done steps in date order: of the steps of the latest day,
+    the key one, else the last listed. Its date is the file's `last_event`."""
+    if not done:
+        return None
+    same = [e for e in done if e["date"] == done[-1]["date"]]
+    e = next((x for x in reversed(same) if x.get("key")), same[-1])
+    return {"title": e["title"], "kind": e["kind"]}
+
+
+def steps_ahead(timeline: list[dict], today: str, days: int = STEPS_AHEAD_DAYS) -> list[dict]:
+    """The steps dated in the law (entry into force, application, transposition dates) that a timeline schedules in the
+    `days` after `today`: a list names one as the latest step once its date has passed on the reader's date, as the
+    file's page does (src/lib/format.ts eventOn)."""
+    end = _add_days(today, days)
+    return [{"date": e["date"], "kind": e["kind"], "title": e["title"], "key": bool(e.get("key"))} for e in timeline
+            if e["state"] == "scheduled" and e["date"] <= end and not e.get("after_end_of_validity")]  # fmt: skip
 
 
 def _index_entry(d: dict) -> dict:
@@ -1225,11 +1280,14 @@ def _vote_index_entry(v: dict) -> dict:
 
 
 def _vote_title_entry(e: dict) -> dict:
-    """EpVoteTitle for votes/titles.json, from the entry of votes/index.json: only what the vote tables of the MEP
-    and group pages show (date, title, the line of kind, procedure reference and distinction, result), so those
-    pages need not download the whole index. A key without a value is left out; `title` stays only as the fallback
-    of a vote with no display title (none in the index today)."""
-    keep = ("id", "date", "display_title", "display_title_parts", "distinction", "kind_label", "procedure_ref", "outcome")
+    """EpVoteTitle for votes/titles.json, from the entry of votes/index.json: only what the vote tables of the MEP,
+    group and party pages show (date, title, the line of kind, procedure reference and distinction, result, the
+    file's page), so those pages need not download the whole index. A key without a value is left out; `title` stays
+    only as the fallback of a vote with no display title (none in the index today)."""
+    keep = (
+        "id", "date", "display_title", "display_title_parts", "distinction", "kind_label", "procedure_ref", "outcome",
+        "dossier_id",
+    )  # fmt: skip
     out = {k: e[k] for k in keep if e.get(k)}
     if not e.get("display_title"):
         out["title"] = e["title"]
@@ -2073,6 +2131,14 @@ class Snapshot:
         self.notices = _load("eurlex", "procedure_notices", ProcedureNotice, i, root)
         self.optouts = _load("optouts", "directives", DirectiveOptOut, i, root)
         self.regulation_opt_ins = _load("optouts", "regulations", RegulationOptIn, i, root)
+        # planned steps (pipeline/sources/agenda.py): Cellar's planned events, Parliament's plenary agenda
+        self.planned = _load("agenda", "planned", PlannedStep, i, root)
+        self.plenary_agenda = _load("agenda", "plenary", PlannedStep, i, root)
+        # absent until the source is first retrieved: the files' pages then show no law context
+        self.law_acts = _load("lawcontext", "acts", ActContext, i, root)
+        self.law_summaries = _load("lawcontext", "summaries", OfficialSummary, i, root)
+        self.law_opinions = _load("lawcontext", "opinions", AdvisoryOpinion, i, root)
+        self.law_cases = _load("lawcontext", "procedure_cases", ProcedureCase, i, root)
 
     def _manifest(self) -> dict[str, SourceStatus]:
         if self.root == SNAPSHOT:
@@ -2158,6 +2224,8 @@ class Builder:
             self.mep_by_name[" ".join(f"{m.family_name} {m.given_name}".casefold().split())].append(m)
         self.ballots = {b.vote_id: b for b in s.ballots}
         self.optouts = {o.celex: o for o in s.optouts if o.status == "ok"}
+        self.law = LawContext(getattr(s, "law_acts", []), getattr(s, "law_summaries", []),
+                              getattr(s, "law_opinions", []), getattr(s, "law_cases", []), self.act)  # fmt: skip
         self.train_by_ref: dict[str, list[TrainFile]] = defaultdict(list)
         for t in s.train:
             for r in t.procedure_refs:
@@ -2585,10 +2653,12 @@ class Builder:
         self.votes_from = idx[-1].date if idx else "9999"  # the first vote listed (meta scope "ep_votes_from")
         self.referred_back = referred_back(s.votes)
         self.component_cache: dict[str, int | None] = {}
+        self.office_cache: dict[str, list[str]] = {}  # day -> the MEPs in office (in_office)
         margin_fn = _lazy("pipeline.analysis.ep_margin", "margin")
         self.vote_summary: dict[str, dict] = {}
         self.group_votes: dict[str, list[dict]] = defaultdict(list)
         self.mep_votes: dict[str, list[dict]] = defaultdict(list)
+        self.party_votes: dict[str, list[dict]] = defaultdict(list)  # party record -> its PartyVote rows
         for v in idx:
             summ = self.ep_vote_summary(v, margin_fn)
             self.vote_summary[v.id] = summ
@@ -2602,7 +2672,53 @@ class Builder:
     def members_in_office(self, d: str) -> int:
         """MEPs whose political-group membership (non-attached included) covers day `d` in the EP's
         membership records (ep_people)."""
-        return sum(1 for spans in self.mep_groups.values() if any(_valid_on(a, b, d) for a, b, _ in spans))
+        return len(self.in_office(d))
+
+    def in_office(self, d: str) -> list[str]:
+        """The ids of the MEPs members_in_office counts on day `d`."""
+        if d not in self.office_cache:
+            spans = self.mep_groups.items()
+            self.office_cache[d] = sorted(m for m, sp in spans if any(_valid_on(a, b, d) for a, b, _ in sp))
+        return self.office_cache[d]
+
+    def party_breakdown(self, v: EpVote, ballots: list[dict]) -> dict:
+        """What the vote page's table by national party needs besides the ballots, which give each voter's party
+        record, group and country on the day of the vote:
+        - `no_vote`: the MEPs in office that day (members_in_office) with no recorded vote, counted by the party
+          record, group and country they had that day ([party, group, country, MEPs]); None when the membership
+          records do not give the Members in office that day (component_members), so that no one is said not to have
+          voted who did not sit then, or left out who did;
+        - `parties_outside_period`: the party records Parliament's membership data lists MEPs in on that day although
+          the day is outside the record's own period, as their party pages say (`outside_period`).
+        Each party record's counts on a vote on a whole text (final, mandate) go to its page (party_votes)."""
+        known = self.component_members(v.date) is not None
+        voted = {x["mep"] for x in ballots}
+        absent: Counter = Counter()
+        for mid in self.in_office(v.date) if known else []:
+            if mid not in voted:
+                gid = self.group_at(mid, v.date)
+                group = self.org_slug.get(gid) if gid else None
+                absent[(self.party_at(mid, v.date), group, self.mep[mid].country)] += 1
+        no_vote = sorted(([*k, n] for k, n in absent.items()), key=lambda r: tuple(x or "" for x in r[:3]))
+        out: dict[str, Any] = {"no_vote": no_vote if known else None}
+        counts: dict[str, list[int]] = defaultdict(lambda: [0, 0, 0, 0])
+        for x in ballots:
+            if x.get("party"):
+                counts[x["party"]][("for", "against", "abstain").index(x["pos"])] += 1
+        for (party, _group, _country), n in absent.items():
+            if party:
+                counts[party][3] += n
+        outside = [
+            {"party": p, "start": o.start, "end": o.end}
+            for p in sorted(counts)
+            if (o := self.org.get(p)) is not None and not _valid_on(o.start, o.end, v.date)
+        ]
+        if outside:
+            out["parties_outside_period"] = outside
+        if v.kind in ("final", "mandate"):
+            for p, (f, a, x, n) in counts.items():
+                self.party_votes[p].append({"row": [v.id, f, a, x, n if known else None], "_d": v.date})
+        return out
 
     def component_members(self, d: str) -> int | None:
         """Number of component Members for majority rules: the Members in office on the day of the vote.
@@ -2791,6 +2907,7 @@ class Builder:
         names: dict[str, str] = {}
         groups: dict[str, Counter] = defaultdict(Counter)
         countries: dict[str, Counter] = defaultdict(Counter)
+        by_party: dict = {}  # party_breakdown, for a vote with individual votes
         recon = {"matches": False, "note": "No individual (roll-call) votes are recorded for this vote."}
         if b is not None:
             intended: dict[str, str] = {}
@@ -2822,6 +2939,7 @@ class Builder:
                         countries[country][pos] += 1
                     self.mep_votes[mid].append({"vote_id": v.id, "pos": pos, "_d": v.date})
             ballots.sort(key=lambda x: (x["pos"], names.get(x["mep"], ""), x["mep"]))
+            by_party = self.party_breakdown(v, ballots)
             # MEPs with no recorded vote who stated afterwards how they had intended to vote
             for mid, it in intended.items():
                 if mid in seen:
@@ -2891,6 +3009,7 @@ class Builder:
             "groups": gb,
             "countries": cb,
             "ballots": ballots,
+            **by_party,
             "intentions": intentions,
             "mep_names": dict(sorted(names.items())),
             "reconciliation": recon,
@@ -4297,6 +4416,14 @@ class Builder:
         relevant = _lazy("pipeline.analysis.status", "relevant_acts")
         self.dossier_acts: dict[str, list[LegalAct]] = {}
         self.proposed_type: set[str] = set()  # files whose type of act is the one proposed (no typed act linked)
+        # the steps the Council and Parliament have scheduled after the build's date, by file (analysis/scheduled.py),
+        # joined by the procedure's full reference only: not by its number alone, which a Parliament report shares
+        # ("2025/0162R(NLE)")
+        def file_of(ref: str) -> str | None:
+            found = self.proc_by_ref.get(norm_ref(ref))
+            return found.id if found and found.id in self.proc else None
+
+        self.scheduled = scheduled_by_dossier([*self.s.plenary_agenda, *self.s.planned], file_of, self.today)
         self.index_file_documents()
         for pid in self.dossier_ids:
             p = self.proc[pid] = self.with_recorded_events(self.proc[pid])
@@ -4342,6 +4469,7 @@ class Builder:
             else:
                 blocked = any("block" in t.status.lower() for t in self.train_of.get(pid, []))
             from_parts = None if self.proposal_date(p) else self.parts_proposal(pid)
+            ahead = steps_ahead(tl, self.today)
             summ = {
                 "id": pid,
                 "ref": p.reference,
@@ -4358,6 +4486,11 @@ class Builder:
                 "status_label": st["status"].get("label") or STAGE_LABELS.get(st["status"].get("stage"), ""),
                 "started": self.proposal_date(p) or (from_parts.date if from_parts else None),
                 "last_event": done[-1]["date"] if done else None,
+                "last_step": last_step(done),
+                **({"steps_ahead": ahead} if ahead else {}),
+                # the earliest planned step after the build (pipeline/analysis/scheduled.py), for the explorer's
+                # "Next scheduled step" order that the home page's "Scheduled in the next 3 weeks" list leads to
+                **({"next_scheduled": self.scheduled[pid][0]["date"]} if pid in self.scheduled else {}),
                 "adopted": adopted,
                 "published": published,
                 "next_date": fut[0] if fut else None,
@@ -4415,6 +4548,8 @@ class Builder:
                 "known_as": self.known_as(p, acts),
                 "editorial": editorial,
                 **{k: st[k] for k in ("status", "next_step", "stall", "application")},
+                # steps the Council and Parliament have scheduled (planned dates, which can change), when there are any
+                **({"scheduled": self.scheduled[pid]} if pid in self.scheduled else {}),
                 "timeline": tl,
                 "acts": [self.act_summary(a) for a in acts],
                 "ep_votes": [self.vote_summary[v.id] for v in votes if v.id in self.vote_summary],
@@ -4449,6 +4584,11 @@ class Builder:
                 )
             det["next_step"] = self.derived_next_step(det)
             det["next_step"] = self.amending_deadlines(det, acts)
+            law = getattr(self, "law", None)
+            if law:  # EUR-Lex summaries, court cases, consolidated texts, advisory opinions (analysis/lawcontext.py)
+                det.update(law.for_dossier(p.reference, acts, act_label))
+            if det["known_as"] and det["known_as"]["names"]:  # list rows give the names under the title too
+                summ["names"] = det["known_as"]["names"]
             self.dossier_detail[pid] = det
             # said under "Latest recorded step" on the law page (2021/0366(COD): Delegated Regulation (EU)
             # 2026/2102 "of 13 July 2026", in force on 18 September 2026 as Cellar records, after the file's latest
@@ -4749,6 +4889,9 @@ class Builder:
                     }
                     for h in sorted(gh.values(), key=lambda h: (h["from"] or "", h["group"]))
                 ],  # fmt: skip
+                # how its MEPs voted on whole texts (party_breakdown), newest first, as the MEP pages list votes
+                "votes": [r["row"] for r in sorted(self.party_votes.get(oid, []), key=lambda r: (r["_d"], r["row"][0]),
+                                                   reverse=True)],  # fmt: skip
                 "source": _src(o.source),
             }
         parties_out.sort(key=lambda p: (p["country"], -p["members_active"], p["label"], p["id"]))
@@ -4880,14 +5023,19 @@ class Builder:
 
     # ---------------------------------------------------------------- activity
     def build_activity(self) -> None:
-        from pipeline.analysis import activity
+        from pipeline.analysis import activity, changes
 
         snapshot = activity.snapshot_entries(self)
         record = os.environ.get("EU_INTEL_RECORD_ACTIVITY") == "1"
         # as recorded, citing the record that gave a status, without what the current records no longer support
         recorded = activity.update_state(self, self.state_dir, record=record)
         recorded = activity.supported(activity.recited(recorded, self), self)
-        items = [activity.public_item(it) for it in activity.merge(recorded, snapshot, today=self.today, b=self)]
+        # as published (activity.public_item), for the files' own feeds (analysis/feeds.py)
+        self.activity_recorded = [activity.public_item(it) for it in recorded]
+        # with what each says happened apart from the file's title, and a status change paired with its step (the What
+        # changed page and the feeds tell them as one)
+        merged = activity.merge(recorded, snapshot, today=self.today, b=self)
+        items = changes.annotate([activity.public_item(it) for it in merged], self)
         self.activity_items = items
         self.files["activity.json"] = items
         by_dossier: dict[str, list[dict]] = defaultdict(list)
@@ -4997,7 +5145,8 @@ class Builder:
             key=lambda d: (d["last_event"], d["featured"], d["id"]), reverse=True,
         )[:12]  # fmt: skip
         under_debate = [{"dossier_id": d["id"], "title": d["title"], "subtitle": d["status_label"],
-                         "date": d["last_event"], "badge": HOME_PROCEDURE_BADGES.get(d["type"], d["type_label"])}
+                         "date": d["last_event"], "step": (d.get("last_step") or {}).get("title"),
+                         "badge": HOME_PROCEDURE_BADGES.get(d["type"], d["type_label"])}
                         for d in debate]  # fmt: skip
 
         def badge(v: dict, text: str) -> str:
@@ -5052,8 +5201,8 @@ class Builder:
                 sub = f"Legislative Train: {label}" if label else "Officially reported as blocked"
                 stalled_items.append({"dossier_id": d["id"], "title": d["title"],
                                       "subtitle": sub + (f" (information updated as of {_long_date(as_of)})" if as_of else ""),
-                                      "date": d["last_event"], "badge": "Officially blocked", "_o": 0,
-                                      "_as_of": as_of or ""})  # fmt: skip
+                                      "date": d["last_event"], "step": (d.get("last_step") or {}).get("title"),
+                                      "badge": "Officially blocked", "_o": 0, "_as_of": as_of or ""})  # fmt: skip
         # the most recently confirmed blockages first; of those, the longest without a recorded procedural step (the
         # date shown), as the inactive files below
         stalled_items.sort(key=lambda x: (x["date"] or "", x["dossier_id"]))
@@ -5078,7 +5227,7 @@ class Builder:
         for n, d in inactive[:n_inactive]:
             stalled_items.append({"dossier_id": d["id"], "title": d["title"],
                                   "subtitle": f"No recorded procedural update in {n} days", "date": d["last_event"],
-                                  "badge": d["status_label"], "_o": 1})  # fmt: skip
+                                  "step": (d.get("last_step") or {}).get("title"), "badge": d["status_label"], "_o": 1})  # fmt: skip
         for x in stalled_items:
             x.pop("_o", None)
             x.pop("_as_of", None)
@@ -5097,6 +5246,7 @@ class Builder:
                                      "date": e["date"], "badge": "Deadline" if e["kind"] == "transposition_deadline"
                                      else "Applies"})  # fmt: skip
         upcoming.sort(key=lambda x: (x["date"], not summ[x["dossier_id"]]["featured"], x["dossier_id"]))
+        scheduled = home_items(self.scheduled, summ, today)  # the next three weeks (pipeline/analysis/scheduled.py)
         lists = [
             {"id": "recently_adopted", "title": "Recently adopted",
              "description": "Laws formally adopted, newest first, by date of adoption (by the Council, or by "
@@ -5122,6 +5272,10 @@ class Builder:
                             + ", then ordinary-procedure files with no recorded procedural update for a year or more. "
                             "Dates are each file's last recorded procedural step.",
              "items": stalled_items},
+            {"id": "scheduled", "title": "Scheduled in the next 3 weeks",
+             "description": "Steps the Council and Parliament have scheduled on these files, as they publish them: "
+                            "planned events in EUR-Lex and Parliament's plenary agenda. Planned dates can change.",
+             "items": scheduled},
             {"id": "upcoming", "title": "Coming up",
              "description": "Legally fixed dates in the next 12 months: provisions starting to apply and transposition deadlines.",
              "items": upcoming[:15]},
@@ -5142,7 +5296,9 @@ class Builder:
         "council": "Council votes",
         "implementation": "National transposition and infringements",
         "optouts": "Danish and Irish participation",
+        "lawcontext": "Official summaries and court cases",
         "train": "Legislative Train",
+        "agenda": "Planned dates of next steps",
     }
     def build_meta(self) -> None:
         from pipeline.freshness import LABELS_EXPIRE_AFTER_DAYS, oldest_core_fetch, source_health
@@ -5320,10 +5476,31 @@ class Builder:
                 out.append(f"{len(regs):,} Commission decisions confirming a Member State's participation in a "
                            f"regulation after its adoption (Protocol No 21, Article 4), for {len({r.celex for r in regs}):,} "
                            "regulations, found by their titles; regulations' own texts are not read.")
+        elif sid == "lawcontext":
+            summaries = [x for x in getattr(s, "law_summaries", []) if not x.obsolete and x.acts]
+            ctx = getattr(s, "law_acts", [])
+            # distinct cases: a judgment or a case can concern several acts
+            pending = {k.celex for r in ctx for k in r.cases if k.state == "pending"} | {
+                k.celex for k in getattr(s, "law_cases", []) if k.state == "pending"}  # fmt: skip
+            out.append(f"EUR-Lex's summaries of EU legislation for {len({c for x in summaries for c in x.acts}):,} acts "
+                       f"({len(summaries):,} summaries, the opening section of "
+                       f"{sum(x.text_status == 'ok' for x in summaries):,} quoted), "
+                       f"{len({d.celex for r in ctx for d in r.interpreted_by}):,} judgments and orders interpreting "
+                       f"{sum(1 for r in ctx if r.interpreted_by):,} of the acts, "
+                       f"{len(pending):,} cases before the Court of Justice or the General Court with no decision recorded, "
+                       f"the consolidated versions of {sum(1 for r in ctx if r.consolidated):,} acts, and "
+                       f"{len(getattr(s, 'law_opinions', [])):,} opinions of the European Economic and Social Committee "
+                       "and the European Committee of the Regions on the files.")  # fmt: skip
         elif sid == "train":
             blocked = sum(1 for t in s.train if t.status.strip().lower() == "blocked")
             out.append(f"{len(s.train):,} files on Parliament's Legislative Train Schedule, {blocked:,} of them "
                        "labelled as blocked.")  # fmt: skip
+        elif sid == "agenda":
+            steps = sum(len(x) for x in self.scheduled.values())
+            out.append(f"The steps the Council and Parliament have scheduled, as they publish them: {len(s.planned):,} "
+                       f"planned events recorded in EUR-Lex and {len(s.plenary_agenda):,} items of Parliament's plenary "
+                       f"agenda naming a procedure. {len(self.scheduled):,} legislative files covered here have a step "
+                       f"scheduled after this release was built ({steps:,} steps in all). Planned dates can change.")  # fmt: skip
         if st.status == "partial" and not (sid == "implementation" and not s.indicators):
             out.append("The latest retrieval did not complete; records from earlier retrievals are kept, and the "
                        "rest is added at the next update.")  # fmt: skip
@@ -5444,6 +5621,14 @@ class Builder:
         else:
             notes.append("Legislative Train Schedule: not available in this release, so no file is labelled as "
                          "officially blocked; inactivity is shown only as days without a recorded update.")  # fmt: skip
+        if avail("agenda"):
+            notes.append("Scheduled steps: the dates the Council and Parliament have published for the next steps on a "
+                         "file (planned events recorded in EUR-Lex, Parliament's plenary agenda), about three weeks "
+                         "ahead. They are plans, shown as such, and can change; a step is shown as taken only once "
+                         "the procedure's records show it.")  # fmt: skip
+        else:
+            notes.append("Scheduled steps: the Council's and Parliament's planned dates were not retrieved for this "
+                         "release, so no scheduled step is shown.")  # fmt: skip
         return notes
 
 
@@ -5614,6 +5799,8 @@ def build_search_docs(b: Builder) -> list[dict]:
             # a split procedure's parent holds no act: its parts rank above it
             "w": 0.4 if pid in b.split_children else 3.0 if d["featured"] else (1.2 if d["type"] in LEGISLATIVE_TYPES else 0.8),
             "d": d["last_event"],
+            # the latest recorded step, dated `d`, and the steps dated in the law just ahead (DossierSummary.steps_ahead)
+            "e": (d.get("last_step") or {}).get("title"), "n": d.get("steps_ahead") or None,
         }  # fmt: skip
         docs.append(doc)
     # curated alias rules (data/curated/aliases.yaml): add `terms` as keywords to the documents whose

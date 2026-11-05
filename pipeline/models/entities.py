@@ -520,6 +520,31 @@ class TrainFile(Model):
     source: SourceRef
 
 
+class PlannedStep(Model):
+    """A step an institution has scheduled for a procedure and published before it takes place
+    (pipeline/sources/agenda.py): a planned event that Cellar records on the procedure (`cdm:event_legal_projected`,
+    from the Council's file planning and Parliament's), or an item of Parliament's plenary agenda (EP Open Data API,
+    foreseen activities of a sitting). A plan, not a record that the step took place: its date can change."""
+
+    id: str  # "cellar:2023_167.2026-11-19_APR_R1_byCONSIL" | "ep:MTG-PL-2026-11-12-OJ-ITM-V-13:2023-0167"
+    reference: str  # the procedure, as the EP writes it: "2023/0167(COD)"
+    date: str  # the planned date
+    institution: Institution  # who takes the step: "Council", "EP" (or "Commission")
+    # code of the Publications Office's authority table "event" ("APR_R1_byCONSIL", "VOTE_byEP"); an item of
+    # Parliament's agenda takes the code of its kind (a vote VOTE_byEP, a debate DEBATE_byEP)
+    event_type: str
+    label: str  # the code's English label in that authority table, verbatim ("Vote in EP plenary")
+    phase_code: str | None = None  # authority table "procedure-phase": "RDG1", "RDG2", "PROC_END"
+    phase: str | None = None  # its English label there: "First reading", "Second reading", "End of procedure"
+    # the meeting, by the English title of its agenda in Cellar: "COUNCIL OF THE EUROPEAN UNION (General Affairs)"
+    meeting: str | None = None
+    item: str | None = None  # Parliament's agenda item as titled there ("Union retail investor protection rules")
+    # the documents the plan names: a Council agenda ("CM 4825/26", kind "agenda"), the act to adopt ("PE-CONS
+    # 34/26"), a Council note; Parliament's report. `url` only where a public copy answered when retrieved
+    documents: list[DocRef] = Field(default_factory=list)
+    source: SourceRef
+
+
 class SourceStatus(Model):
     """One entry of data/snapshot/_manifest.json."""
 
@@ -529,3 +554,103 @@ class SourceStatus(Model):
     attempted_at: str
     records: dict[str, int] = Field(default_factory=dict)
     note: str | None = None
+
+
+# ------------------------------------------------------------- law context (pipeline/sources/lawcontext.py, Cellar)
+
+
+class OfficialSummary(Model):
+    """A summary in EUR-Lex's "Summaries of EU legislation" (LEGISSUM) that Cellar links to the acts it summarises
+    (cdm:summary_summarizes_work), with the opening section of its English text, read as plain text."""
+
+    id: str  # LEGISSUM identifier, e.g. "310401_2"
+    acts: list[str] = Field(default_factory=list)  # CELEX of the acts of the eurlex snapshot it summarises
+    title: str  # English title as published, e.g. "General data protection regulation (GDPR)"
+    date: str | None = None  # its last update (cdm:work_date_document)
+    obsolete: bool = False  # Cellar marks it obsolete (cdm:summary_legislation_eu_obsolete): not shown
+    abstract: str | None = None  # its one-sentence description (cdm:expression_abstract), plain text
+    formats: list[str] = Field(default_factory=list)  # manifestation types of its English text: xhtml5, xhtml, fmx4
+    # the opening section of the text: "What is the aim of ...?" (or "What does ... do?"), else the first paragraphs of
+    # "Key points" (or of "Summary"); plain text, whitespace normalised, at most three paragraphs
+    aim: list[str] = Field(default_factory=list)
+    aim_items: list[int] = Field(default_factory=list)  # indexes of `aim` that are list items in the text
+    aim_heading: str | None = None  # that section's heading as published
+    aim_complete: bool = True  # False when the section goes on after the paragraphs kept
+    text_status: Literal["ok", "unavailable", "not_read"] = "not_read"
+    text_date: str | None = None  # the summary's `date` when its text was read: the text is of that version
+    parser: int = 1  # version of the text reader; older readings are read again
+    url: str  # its EUR-Lex page
+    source: SourceRef
+
+
+class ConsolidatedVersion(Model):
+    """A consolidated version of an act (cdm:act_consolidated_consolidates_resource_legal), only of the act itself."""
+
+    celex: str  # "02022L2555-20221227"
+    date: str  # the date as of which it consolidates the act (cdm:act_consolidated_date)
+
+
+class CourtDecision(Model):
+    """A judgment or order that Cellar records as interpreting an act (cdm:case-law_interpretes_resource_legal)."""
+
+    celex: str  # "62024CJ0312" (CJ judgment, CO order; TJ/TO of the General Court)
+    case: str | None = None  # the case identifier as published: "Case C-312/24", "Joined Cases C-26/22 and C-64/22"
+    date: str | None = None
+    ecli: str | None = None
+
+
+class CourtCase(Model):
+    """A case before the Court of Justice or the General Court concerning an act, from the Official Journal notice of
+    the new case (CELEX 6YYYYCN.../6YYYYTN...): a request for a preliminary ruling on the act
+    (cdm:communication_case_new_submits_preliminary_question_resource_legal) or an action for its annulment, in whole
+    or in part (..._requests_annulment_of_ / ..._requests_partial_annulment_of_resource_legal)."""
+
+    celex: str  # the notice, e.g. "62026CN0660"
+    case: str | None = None  # the case number, from the case's Cellar file: "C-660/26"
+    kind: Literal["preliminary_reference", "annulment"]
+    lodged: str | None = None  # the date the request or action was lodged (the notice's cdm:work_date_document)
+    # what the case's Cellar file records: "decided" (a judgment or order delivered or listed, or the case closed or
+    # withdrawn, or a judgment interpreting the act names the case), "pending" (none of these), None (the notice links
+    # no case file, as for every case lodged before 2023: not known)
+    state: Literal["pending", "decided"] | None = None
+
+
+class ActContext(Model):
+    """What Cellar links to an act of the eurlex snapshot beyond the act's own record: its consolidated versions, the
+    judgments and orders interpreting it, and the cases before the Court concerning it."""
+
+    celex: str
+    consolidated: list[ConsolidatedVersion] = Field(default_factory=list)  # by date
+    interpreted_by: list[CourtDecision] = Field(default_factory=list)  # by date
+    cases: list[CourtCase] = Field(default_factory=list)  # by date lodged
+    source: SourceRef
+
+
+class AdvisoryOpinion(Model):
+    """An opinion of the European Economic and Social Committee or the European Committee of the Regions that Cellar
+    records in a legislative procedure's file (cdm:work_part_of_dossier)."""
+
+    celex: str  # "52021AE2482"
+    body: Literal["EESC", "CoR"]
+    procedure_refs: list[str] = Field(default_factory=list)  # "2021/0106(COD)"
+    date: str | None = None  # the date of the opinion (cdm:work_date_document)
+    title: str | None = None  # English title as published, whitespace normalised
+    url: str
+    source: SourceRef
+
+
+class ProcedureCase(Model):
+    """An action for annulment against the withdrawal of a proposal: a new case whose notice seeks the annulment, in
+    whole or in part, of an act in the procedure's Cellar file that renders the proposal obsolete (the Commission's
+    withdrawal notice), and cites that proposal (Case C-727/25, European Parliament, on 2023/0133(COD))."""
+
+    id: str  # "62025CN0727:2023/0133(COD)"
+    celex: str  # the notice of the new case
+    reference: str  # the procedure, "2023/0133(COD)"
+    case: str | None = None  # "C-727/25"
+    lodged: str | None = None
+    annulled: str  # CELEX of the act whose annulment is sought (the withdrawal notice, "52025XC05423")
+    proposal: str  # CELEX of the withdrawn proposal it cites, "52023PC0232"
+    applicants: list[str] = Field(default_factory=list)  # as Cellar names them (fd_110): "European Parliament"
+    state: Literal["pending", "decided"] | None = None  # as for CourtCase
+    source: SourceRef

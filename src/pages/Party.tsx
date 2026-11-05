@@ -1,16 +1,24 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { PartyDetail, PartyRef } from '../types/data';
+import type { EpVoteTitle, Meta, PartyDetail, PartyRef } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { countryName, formatDate, formatNumber } from '../lib/format';
-import { LoadFailed, Loading, LookupNotice, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
-import { useDocumentTitle } from '../features/legislation/labels';
+import { shownParam, useParamState } from '../lib/urlState';
+import { votesSince } from '../lib/scope';
+import { EmptyState, ErrorState, LoadFailed, Loading, LookupNotice, NotFound, PageHeader, SourceLink, Term } from '../components/ui';
+import { RowTitle } from '../components/StackedTable';
+import { useFocusRevealed } from '../components/useFocusRevealed';
+import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { partyRecordTitle, partySeating, periodText, recordPeriod, termYears, useGroups } from '../features/people/labels';
 import { SortTh, compareValues, useSortable } from '../features/votes/sortable';
+import { VoteRowMeta, VoteTitle } from '../features/votes/VoteTitle';
+import { PartyCounts } from '../features/votes/PartyBreakdown';
 import '../features/people/people.css';
 
 type MepRow = PartyDetail['meps'][number];
+
+const VOTES_PAGE = 40;
 
 /** A link to another party record, with the term it covers when it shares this record's name (and its period when
  * it also shares the term with this record or with another record listed, as Azione's two 2019–2024 records do). */
@@ -63,6 +71,16 @@ export default function Party() {
   );
   const history = useMemo(() => [...(p?.group_history ?? [])].sort((a, b) => (b.from ?? '').localeCompare(a.from ?? '')), [p]);
   const now = useMemo(() => new Map((p?.now_parties ?? []).map((r) => [r.id, r])), [p]);
+  // its MEPs' votes on whole texts: titles and dates from votes/titles.json, as on the MEP and group pages
+  const votes = p?.votes ?? [];
+  const votesIndex = useData<EpVoteTitle[]>(votes.length > 0 ? 'votes/titles.json' : null);
+  const meta = useData<Meta>('meta.json');
+  const voteById = useMemo(() => new Map((votesIndex.data ?? []).map((v) => [v.id, v])), [votesIndex.data]);
+  // votes shown: kept in the address, so that Back from a vote returns to the same list
+  const [params, patch] = useParamState();
+  const shown = shownParam(params, 'show', VOTES_PAGE);
+  // "Show more votes" moves keyboard focus to the first vote it shows
+  const more = useFocusRevealed<HTMLTableSectionElement>(Math.min(shown, votes.length));
 
   if (loading) return <div className="container page"><Loading label="Loading party…" /></div>;
   if (isMissing(error)) return <NotFound what="national party" />;
@@ -82,6 +100,14 @@ export default function Party() {
   // the non-attached members (NI) are not a political group; MEPs no longer in this record "sat"
   const seating = partySeating(p.groups);
   const sit = p.members_active > 0 ? 'sit' : 'sat';
+  const since = votesSince(meta.data?.scope);
+  const noVoteData = meta.data ? meta.data.counts.ep_votes_with_ballots === 0 : false;
+  // a vote's date while the vote list loads, or when it failed to: not "—", which means not recorded
+  const unknown = votesIndex.error ? <span className="muted">Not loaded</span> : <span className="muted">…</span>;
+  // a vote on a day outside this record's period counts the MEPs Parliament's data lists in it then (outside_period)
+  const outsideRecord = (d?: string) => !!d && ((!!p.end && d > p.end) || (!!p.start && d < p.start));
+  const anyOutside = votes.some(([id]) => outsideRecord(voteById.get(id)?.date));
+  const anyUnknown = votes.some((r) => r[4] == null);
 
   return (
     <div className="container page">
@@ -316,6 +342,112 @@ export default function Party() {
           <Link to="/about#coverage">coverage</Link>). “Current MEP” means the person sits in Parliament today; “Now” names the party
           record a sitting MEP is listed under when it is another one.
         </p>
+      </section>
+
+      <section className="section" aria-labelledby="pv-h">
+        <h2 id="pv-h">How its MEPs voted on whole texts</h2>
+        <p className="section-intro">
+          Parliament’s final votes on texts and its votes on a negotiating mandate, in <Term id="roll-call">roll-call votes</Term>
+          {since && <> from {since} onwards</>}, newest first. Each row adds up the votes of the MEPs that Parliament’s membership data
+          lists in this party record on the day of the vote: a party has no vote of its own in Parliament. “Did not vote” counts those in
+          office that day with no recorded vote, which is not the same as abstaining.
+        </p>
+        {anyOutside && (
+          <p className="note mb-3">
+            On days outside this record’s period ({recordPeriod(p.start, p.end)}), the figures count only the MEPs that Parliament’s
+            membership data lists in it then{outside.length > 0 && <>: {outside.map((x) => x.name).join(', ')}</>}.
+          </p>
+        )}
+        {votes.length === 0 ? (
+          noVoteData ? (
+            <EmptyState title="Parliament vote data is not available in this release">
+              See <Link to="/about#coverage">coverage</Link> for the status of each source.
+            </EmptyState>
+          ) : (
+            <EmptyState title="No final votes or negotiating mandates recorded for this party’s MEPs">
+              Each MEP’s vote is recorded only in roll-call votes{since && <>, and the votes we list start in {since}</>}.
+            </EmptyState>
+          )
+        ) : (
+          <>
+            {votesIndex.error && (
+              <div className="mb-3">
+                <ErrorState error={votesIndex.error} title="The titles and dates of these votes could not be loaded. Each vote’s own page has them." />
+              </div>
+            )}
+            <div className="table-wrap table-card">
+              <table className="table table--clamp">
+                <caption className="visually-hidden">How this party’s MEPs voted on whole texts, newest first</caption>
+                <thead>
+                  <tr>
+                    {/* phones: the vote stays; its date and the counts are shown inside it */}
+                    <th scope="col" className="hide-narrow">
+                      Date
+                    </th>
+                    <th scope="col">Vote</th>
+                    <th scope="col" className="num hide-narrow">
+                      For
+                    </th>
+                    <th scope="col" className="num hide-narrow">
+                      Against
+                    </th>
+                    <th scope="col" className="num hide-narrow">
+                      Abstained
+                    </th>
+                    <th scope="col" className="num hide-narrow">
+                      Did not vote
+                    </th>
+                  </tr>
+                </thead>
+                <tbody ref={more.ref}>
+                  {votes.slice(0, shown).map(([id, inFavour, against, abstain, didNotVote]) => {
+                    const v = voteById.get(id);
+                    const date = v ? formatDate(v.date) : votesIndex.data ? '—' : unknown;
+                    return (
+                      <tr key={id}>
+                        <td className="nowrap hide-narrow">{date}</td>
+                        <td className="gv-vote">
+                          <span className="only-narrow meta">{date}</span>
+                          <RowTitle to={`/votes/${encodeURIComponent(id)}`}>{v ? <VoteTitle v={v} /> : `Vote ${id}`}</RowTitle>
+                          {v && <VoteRowMeta v={v} file={v.dossier_id ? <Link to={dossierPath(v.dossier_id)}>{v.procedure_ref}</Link> : null} />}
+                          {outsideRecord(v?.date) && <span className="meta as-block">On a day outside this record’s period</span>}
+                          <PartyCounts counts={[inFavour, against, abstain, didNotVote]} className="only-narrow" />
+                        </td>
+                        <td className="num hide-narrow">{formatNumber(inFavour)}</td>
+                        <td className="num hide-narrow">{formatNumber(against)}</td>
+                        <td className="num hide-narrow">{formatNumber(abstain)}</td>
+                        <td className="num hide-narrow">{didNotVote != null ? formatNumber(didNotVote) : <span className="muted">—</span>}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {votes.length > shown && (
+              <div className="more">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    more.reveal();
+                    patch({ show: String(shown + VOTES_PAGE) });
+                  }}
+                >
+                  Show more votes
+                </button>
+                <span className="meta">
+                  Showing {formatNumber(shown)} of {formatNumber(votes.length)}
+                </span>
+              </div>
+            )}
+            {anyUnknown && (
+              <p className="note mt-3">
+                “—” under “Did not vote”: not known for that vote, because Parliament’s membership records do not give the Members in office
+                on that day.
+              </p>
+            )}
+          </>
+        )}
       </section>
 
       <p className="note section">

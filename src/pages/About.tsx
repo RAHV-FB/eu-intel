@@ -45,6 +45,7 @@ const RECORD_LABEL: Record<string, Record<string, string>> = {
   council: { votes: 'voting results', votes_with_positions: 'with Member State positions' },
   implementation: { measures: 'national measures', infringements: 'infringement cases' },
   train: { files: 'files' },
+  agenda: { planned: 'planned events (EUR-Lex)', plenary: 'plenary agenda items' },
 };
 
 function recordsText(s: SourceStatusInfo): string | null {
@@ -148,6 +149,10 @@ export default function About() {
             and it is not endorsed by them. It takes no position on legislation, parties or countries: labels are neutral, and we do not rank
             parties, MEPs or Member States. Where official records are missing or unclear, we say so rather than fill the gap.
           </div>
+          <p>
+            A few links lead to independent, non-official websites, such as each roll-call vote’s page on HowTheyVote.eu; they are labelled
+            as such, and we take no data from those sites.
+          </p>
           <p id="contact">
             <strong>Maintainer and corrections.</strong> The site is maintained by RAHV-FB, the GitHub account that owns the project’s{' '}
             <ExtLink href={REPOSITORY} official={false}>public repository</ExtLink>, where its code, data and editorial policy are kept. To
@@ -290,7 +295,10 @@ export default function About() {
               Parliament voted down, and motions to reject a proposal or the Council’s position that it adopted, with what happened to the
               file next; then files recorded as rejected — never amendments, rejected objections or motions of censure, or decisions on
               discharge for the EU budget);{' '}
-              <em>Stalled</em> (see below); <em>Coming up</em> (legally fixed dates in the next 12 months).
+              <em>Stalled</em> (see below); <em>Scheduled in the next 3 weeks</em> (steps the Council and Parliament have
+              scheduled on a file, as they publish them: planned events recorded in EUR-Lex and Parliament’s plenary agenda;
+              planned dates can change, and a step is left out once its day is over); <em>Coming up</em> (legally fixed dates
+              in the next 12 months).
             </li>
           </ul>
         </section>
@@ -406,6 +414,11 @@ export default function About() {
               which is expressed by its government in the <Term id="council">Council of the EU</Term>.
             </li>
             <li>
+              Breakdowns by national party use the party record Parliament’s membership data gives each MEP on the day of the vote, and
+              are listed by country and party name. “Did not vote” counts a party’s MEPs in office that day, by those records, with no
+              recorded vote; it is not given for days on which the records do not establish who was in office.
+            </li>
+            <li>
               An MEP with no recorded vote did not vote or was absent: <strong>“not recorded” is not “abstained”</strong>. Vote corrections
               published after a vote are shown as notes and never change the result.
             </li>
@@ -442,6 +455,18 @@ export default function About() {
             </li>
           </ul>
 
+          <h3>Official summaries, court cases and opinions</h3>
+          <p>
+            Where we have not written a summary of a law, its page quotes the opening section of EUR-Lex’s summary of the act
+            (“Summaries of EU legislation”, written by the EU Publications Office), unchanged, labelled with the date EUR-Lex last
+            updated it and linked to the full summary; pages with our own summary link it. Summaries EUR-Lex marks as obsolete are
+            not shown, and a page says when a summary was last updated before the latest amending act we know of was published.
+            The page also lists what EUR-Lex records on the law’s court cases (judgments and orders interpreting it, and cases
+            whose file records no judgment, order or closure yet), its consolidated text, and the opinions of the European
+            Economic and Social Committee and the European Committee of the Regions on the file. EUR-Lex links a case to its file
+            for cases brought from 2024 and some of 2023, so earlier cases are never shown as pending.
+          </p>
+
           <h3>Missing and changing records</h3>
           <p>
             Official databases are sometimes incomplete, late or inconsistent with each other. When a record is missing we say “not
@@ -459,8 +484,9 @@ export default function About() {
               Our membership and voting data covers the parliamentary terms listed under coverage; earlier periods are not fully included.
             </li>
             <li>
-              The data is refreshed about once a week; a refresh can be late or skipped. The homepage and the footer give the date to
-              which procedures, votes and acts are current, and name any source that is not up to date. The site is not a live feed.
+              Procedures, votes, adopted acts and planned dates are refreshed twice a week (Mondays and Fridays), the other sources
+              weekly; a refresh can be late or skipped. The homepage and the footer give the date to which procedures, votes and acts
+              are current, and name any source that is not up to date. The site is not a live feed.
             </li>
           </ul>
           <p>

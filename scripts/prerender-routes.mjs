@@ -1,6 +1,6 @@
 // Post-build: make every known route directly loadable on GitHub Pages (HTTP 200, no server rewrites).
-// Writes dist/<route>/index.html copies of the SPA shell with a route-specific <title> and description,
-// plus dist/404.html as a fallback for anything else. Reads route lists from dist/data/*.json (party pages from
+// Writes dist/<route>/index.html copies of the SPA shell with a route-specific <title> and description (and, for a
+// legislative file, a <link rel="alternate"> to its own Atom feed), plus dist/404.html as a fallback for anything else. Reads route lists from dist/data/*.json (party pages from
 // the party files themselves: two parties without a recorded name are left out of parties.json).
 // SITE_URL (the Pages URL, as the data build takes it for the Atom feeds) gives each page its canonical address,
 // <SITE_URL><route>/; without it a page has none (a local or fork build must not point at another host).
@@ -65,13 +65,20 @@ const documentTitle = (title, qualifier) => (title ? `${shortTitle(title)}${qual
 // Replacement functions, not strings: `$&`, `$'` or a `$$` in a title or description is text, not a replacement pattern.
 const withHead = (html, tag) => (tag ? html.replace('</head>', () => `  ${tag}\n  </head>`) : html);
 const canonical = (route) => (SITE_URL ? `<link rel="canonical" href="${esc(SITE_URL + (route ? `${route.split('/').map(encodeURIComponent).join('/')}/` : ''))}" />` : '');
+// The base path the site is built for, from the shell's link to the site-wide Atom feed ("/eu-intel/data/feeds/updates.xml").
+const BASE = /<link rel="alternate" type="application\/atom\+xml"[^>]*href="([^"]*)data\/feeds\/updates\.xml"/.exec(shell)?.[1];
+if (BASE == null) throw new Error('prerender-routes: no link to data/feeds/updates.xml in dist/index.html');
+// A file's own Atom feed (data/feeds/dossiers/<id>.xml), announced to browsers and feed readers as the app announces it
+// once the page has loaded (src/components/useFeedLink.ts: the same id and title).
+const feedLink = (d) =>
+  `<link rel="alternate" type="application/atom+xml" id="page-feed" title="${esc(`${d.ref}: updates (Atom)`)}" href="${esc(`${BASE}data/feeds/dossiers/${encodeURIComponent(d.id)}.xml`)}" />`;
 
-function page(route, title, description, qualifier) {
+function page(route, title, description, qualifier, head = '') {
   let html = shell.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(documentTitle(title, qualifier))}</title>`);
   if (description) {
     html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/, () => `<meta name="description" content="${esc(description)}" />`);
   }
-  html = withHead(html, canonical(route));
+  html = withHead(withHead(html, canonical(route)), head);
   const out = join(DIST, route, 'index.html');
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, html);
@@ -79,6 +86,11 @@ function page(route, title, description, qualifier) {
 
 const routes = [
   ['legislation', 'Legislation', 'Search and filter EU legislative files: proposals, adopted laws and their status.'],
+  [
+    'legislation/changes',
+    'What changed – Legislation',
+    'Steps, votes and status changes recorded on EU legislative files, week by week and by topic, each linked to its official record.',
+  ],
   ['insights', 'Data insights', 'Evidence-led analysis of tracked EU legislative files, Parliament votes and Council positions, with careful limitations.'],
   ['votes', 'Parliament votes', 'How the European Parliament voted: final votes, close votes, political groups and countries.'],
   ['people', 'MEPs', 'Members of the European Parliament, political groups and national parties.'],
@@ -95,7 +107,13 @@ for (const [r, t, d] of routes) page(r, t, d);
 let n = routes.length;
 for (const d of readJson('dossiers/index.json')) {
   // the procedure reference tells apart files of the same title (Energy performance of buildings: 2021/0426(COD), 2016/0381(COD))
-  page(`legislation/${d.id}`, d.title, d.short || `${d.ref}: ${d.status_label}.${d.official_title ? ` ${d.official_title}` : ''}`.slice(0, 300), d.ref);
+  page(
+    `legislation/${d.id}`,
+    d.title,
+    d.short || `${d.ref}: ${d.status_label}.${d.official_title ? ` ${d.official_title}` : ''}`.slice(0, 300),
+    d.ref,
+    feedLink(d),
+  );
   n++;
 }
 for (const v of readJson('votes/index.json')) {

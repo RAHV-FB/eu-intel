@@ -3,9 +3,9 @@
  */
 import type { DossierSummary, LegalInstrument } from '../../types/data';
 import { dossierScores, hasWord, keywordTokens, wordSet, type SearchEngine } from '../../lib/search';
-import { ADOPTED_STAGES, dossierYear, stagesFor } from './labels';
+import { ACTIVE_STAGES, ADOPTED_STAGES, dossierYear, stagesFor } from './labels';
 
-export type SortKey = 'relevance' | 'updated' | 'newest' | 'adopted' | 'blocked' | 'deadline';
+export type SortKey = 'relevance' | 'updated' | 'newest' | 'adopted' | 'blocked' | 'deadline' | 'stuck' | 'scheduled';
 
 export const SORT_LABEL: Record<SortKey, string> = {
   relevance: 'Best match',
@@ -14,7 +14,19 @@ export const SORT_LABEL: Record<SortKey, string> = {
   adopted: 'Most recently adopted',
   blocked: 'Officially blocked first',
   deadline: 'Upcoming application dates & deadlines',
+  stuck: 'Longest without a recorded step',
+  scheduled: 'Next scheduled step',
 };
+
+/** Files with a planned step ahead, soonest first (the home page's "Scheduled in the next 3 weeks" leads here). */
+export const SCHEDULED_VIEW = '/legislation?sort=scheduled';
+
+/** The stuck view (the home page's "Stalled" list leads to it): files still being decided, longest without a recorded
+ * procedural step first. */
+// Ordinary legislative procedure only: under the consultation and consent procedures the Council decides after
+// Parliament's opinion or consent and Parliament's file may not record that decision, so those files would lead the
+// list without being stalled (2015 consultation files did). The sort itself covers every procedure.
+export const STUCK_VIEW = '/legislation?stage=active&type=COD&sort=stuck';
 
 export const PAGE_SIZE = 25;
 
@@ -209,6 +221,32 @@ export function sortRows(rows: DossierSummary[], sort: SortKey, scores: Map<stri
     case 'blocked':
       out.sort((a, b) => Number(b.officially_blocked) - Number(a.officially_blocked) || desc(a.last_event, b.last_event));
       break;
+    case 'stuck':
+      // files still being decided first, the longest without a recorded step first (a file with no dated step after
+      // them: how long is not known); the others after, by their latest recorded step
+      out.sort((a, b) => {
+        const aa = ACTIVE_STAGES.has(a.stage) ? 1 : 0;
+        const bb = ACTIVE_STAGES.has(b.stage) ? 1 : 0;
+        if (aa !== bb) return bb - aa;
+        if (!aa) return desc(a.last_event, b.last_event);
+        if (!a.last_event || !b.last_event) return Number(!a.last_event) - Number(!b.last_event);
+        return a.last_event.localeCompare(b.last_event) || a.id.localeCompare(b.id);
+      });
+      break;
+    case 'scheduled': {
+      // a planned step on or after the reader's date first, soonest first (a date that has passed is no longer ahead:
+      // the file's page says it was scheduled); the others after, by their latest recorded step
+      const ahead = (d: DossierSummary) => (d.next_scheduled && d.next_scheduled >= today ? d.next_scheduled : null);
+      out.sort((a, b) => {
+        const da = ahead(a);
+        const db = ahead(b);
+        if (da && db) return da.localeCompare(db) || a.id.localeCompare(b.id);
+        if (da) return -1;
+        if (db) return 1;
+        return desc(a.last_event, b.last_event);
+      });
+      break;
+    }
     case 'deadline':
       out.sort((a, b) => {
         const da = upcomingDate(a, today);

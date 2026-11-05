@@ -16,7 +16,7 @@
  *   votes/index.json                EpVoteSummary[]          (roll-call votes on whole texts + final, mandate and
  *                                                            negotiation-decision votes linked to procedures)
  *   votes/titles.json               EpVoteTitle[]            (the same votes in the same order, with only what the vote
- *                                                            tables of the MEP and group pages show)
+ *                                                            tables of the MEP, group and party pages show)
  *   votes/<id>.json                 EpVoteDetail
  *   council/index.json              CouncilVote[]
  *   people/meps.json                MepSummary[]
@@ -30,7 +30,8 @@
  *   topics.json                     Topic[]
  *   search.json                     SearchDoc[]
  *   activity.json                   ActivityItem[]
- *   feeds/updates.xml, feeds/<topic>.xml   Atom feeds
+ *   feeds/updates.xml, feeds/<topic>.xml   Atom feeds (all recent activity; the activity on one topic's files)
+ *   feeds/dossiers/<id>.xml         Atom feed of one legislative file (id as for dossiers/<id>.json)
  */
 
 export type ISODate = string;
@@ -166,6 +167,10 @@ export interface DossierSummary {
   status_label: string; // "Approved by Parliament", "In force", ...
   started?: ISODate | null; // proposal date: the earliest recorded proposal or COM document (a consent file's Commission proposal precedes the Council draft)
   last_event?: ISODate | null;
+  last_step?: LatestStep | null; // the step recorded on `last_event`, as the file's page names its latest recorded step
+  // steps dated in the law in the 60 days after the build, so that lists name the latest step on the reader's date as
+  // the file's page does (src/features/legislation/latestStep.ts); absent when there are none
+  steps_ahead?: StepAhead[];
   // adoption: Parliament's second-reading approval, else the Council's adoption dated by its voting result; a Council act's own date
   // when no vote is linked; Parliament's decision for acts it adopts with the Council's consent (never after publication)
   adopted?: ISODate | null;
@@ -173,10 +178,30 @@ export interface DossierSummary {
   next_date?: ISODate | null; // earliest legally fixed future date (application / transposition deadline), if any
   instrument?: LegalInstrument | null; // final act type if adopted, or proposed instrument if known
   celex: string[];
+  // the file's names besides its title, as its page lists them (`known_as.names`: an act's own short title, names in
+  // data/curated/aliases.yaml, each with a cited official source); set only when there are some
+  names?: string[];
   featured: boolean;
   officially_blocked: boolean; // only true when an official source (Legislative Train) says so
+  // the date of the file's earliest planned step after the build (Council and Parliament schedules, the `agenda`
+  // source); absent when none is published
+  next_scheduled?: ISODate;
   has_ep_votes: boolean;
   has_council_votes: boolean;
+}
+
+/** A file's latest recorded step (of the steps of its latest day, the key one, else the last listed). */
+export interface LatestStep {
+  title: string; // "Council adopted the act", "Entered into force"
+  kind: EventKind;
+}
+
+/** A step the file's timeline schedules (dated in the law): done once its date has passed (src/lib/format.ts eventOn). */
+export interface StepAhead {
+  date: ISODate;
+  kind: EventKind;
+  title: string; // as scheduled: "Enters into force", "Deadline for Member States to transpose the directive"
+  key: boolean;
 }
 
 export interface DossierStatus {
@@ -290,6 +315,19 @@ export interface TimelineEvent {
   joint_with?: { id: string | null; ref: string | null; title: string | null; report: DocRef | null }[];
 }
 
+/** A step the Council or Parliament has scheduled on a file, as published before it takes place (pipeline/analysis/
+ * scheduled.py): a plan, not a record that it happened. The build gives only steps dated after its own date; the page
+ * compares the date with the reader's (a passed step "was scheduled"). */
+export interface ScheduledStep {
+  date: ISODate; // the planned date
+  institution: Institution; // 'Council' | 'EP'
+  label: string; // the step as the Publications Office's authority table names it ("Vote in EP plenary"), verbatim
+  phase?: string | null; // the reading, from the same tables ("Second reading")
+  meeting?: string | null; // the meeting, from its agenda's title ("Council of the European Union (General Affairs)")
+  documents: DocRef[]; // the Council agenda (kind 'agenda'), the act's text, Parliament's report; url only where public
+  sources: SourceRef[]; // Parliament's plenary agenda (EP Open Data API), the planned event recorded in Cellar
+}
+
 export interface LegalActSummary {
   celex: string;
   eli?: string | null;
@@ -327,6 +365,79 @@ export interface CourtRulingInfo {
   url: string;
 }
 
+/**
+ * A summary of one of the file's acts in EUR-Lex's "Summaries of EU legislation" (pipeline/sources/lawcontext.py):
+ * written by the EU Publications Office, not by this site, and quoted unchanged.
+ */
+export interface OfficialSummaryInfo {
+  id: string; // LEGISSUM identifier, "310401_2"
+  title: string; // as published
+  date?: ISODate | null; // last update as EUR-Lex records it: the version whose opening section is quoted
+  acts: string[]; // CELEX of the file's acts it summarises
+  aim: string[]; // its opening section ("What is the aim of …"), plain text as published; empty when not read
+  aim_items: number[]; // indexes of `aim` that are list items in the summary (shown as a list)
+  aim_heading?: string | null; // that section's heading as published ("WHAT IS THE AIM OF THE REGULATION?")
+  aim_complete: boolean; // false: the section goes on in the full summary
+  url: string; // the summary on EUR-Lex
+  // the latest act amending the summarised act that our EUR-Lex data dates, when the summary was last updated before
+  // that act was published (date: its publication, else its adoption); set only then
+  predates?: { celex: string; label: string; date: ISODate } | null;
+}
+
+/** A judgment or order that EUR-Lex records as interpreting one of the file's acts. */
+export interface CourtDecisionInfo {
+  celex: string; // "62024CJ0312"
+  case: string; // "C-312/24", "Joined Cases C-26/22 and C-64/22"
+  date?: ISODate | null;
+  ecli?: string | null;
+  kind: 'judgment' | 'order';
+  court: 'Court of Justice' | 'General Court';
+  acts: string[]; // the file's acts it interprets
+  url: string; // on EUR-Lex
+}
+
+/**
+ * A case before the Court of Justice or the General Court for which EUR-Lex records the notice of the new case and, in
+ * the case's file, no judgment, order, closure or withdrawal: a request for a preliminary ruling on one of the file's
+ * acts, an action for the annulment (in whole or in part) of one, or an action against the withdrawal of the file's
+ * proposal (annulment_of_withdrawal: of the Commission's withdrawal notice, `annulled`, as regards the proposal).
+ */
+export interface CourtCaseInfo {
+  celex: string; // the notice of the new case in the Official Journal, "62026CN0660"
+  case: string; // "C-660/26"
+  kind: 'preliminary_reference' | 'annulment' | 'annulment_of_withdrawal';
+  lodged?: ISODate | null;
+  court: 'Court of Justice' | 'General Court';
+  acts: string[]; // the file's acts it concerns (none for an action against a withdrawal)
+  applicants?: string[]; // annulment_of_withdrawal: who brought it, as EUR-Lex names them ("European Parliament")
+  annulled?: string; // annulment_of_withdrawal: CELEX of the act whose annulment is sought
+  url: string; // the notice on EUR-Lex
+}
+
+export interface CourtContextInfo {
+  interpreted_by: CourtDecisionInfo[]; // newest first
+  pending: CourtCaseInfo[]; // newest first
+}
+
+/** The consolidated versions EUR-Lex publishes of one of the file's acts (only of the act itself). */
+export interface ConsolidatedTextInfo {
+  act: string; // CELEX of the act
+  act_label: string; // "Directive (EU) 2022/2555"
+  // ascending by date; the current one is the latest dated on or before the reader's date, a later one consolidates
+  // changes that apply from its date
+  versions: { celex: string; date: ISODate }[];
+}
+
+/** An opinion of the European Economic and Social Committee (EESC) or the European Committee of the Regions (CoR)
+ * that EUR-Lex records in the file's procedure. */
+export interface AdvisoryOpinionInfo {
+  celex: string; // "52021AE2482"
+  body: 'EESC' | 'CoR';
+  date?: ISODate | null;
+  title?: string | null; // as published
+  url: string; // on EUR-Lex
+}
+
 export interface EditorialInfo {
   short_title: string;
   what: string;
@@ -344,6 +455,7 @@ export interface DossierDetail extends DossierSummary {
   next_step: NextStep;
   stall?: Stall | null;
   application?: ApplicationInfo | null;
+  scheduled?: ScheduledStep[]; // steps the Council and Parliament have scheduled, by date; absent when none
   timeline: TimelineEvent[]; // ascending by date
   // Acts EUR-Lex lists as amending the file's acts that are not in our data (no dated step), as on the home card
   // (FeaturedItem.latest_note): said under the latest step, which may be older than they are
@@ -390,6 +502,12 @@ export interface DossierDetail extends DossierSummary {
   started_from_parts?: boolean; // a split parent's `started` and proposal document are the ones all its parts record; set only when true
   sources: SourceRef[];
   changes: ActivityItem[]; // verified changes detected between snapshots for this dossier
+  // The law in context, from EUR-Lex / Cellar (the "lawcontext" source); each absent when EUR-Lex records nothing for
+  // the file or the source has not been retrieved
+  official_summaries?: OfficialSummaryInfo[]; // summaries of the file's acts, most recently updated first
+  court?: CourtContextInfo; // judgments and orders interpreting its acts, cases pending before the Court
+  consolidated?: ConsolidatedTextInfo[]; // per act
+  advisory_opinions?: AdvisoryOpinionInfo[]; // EESC and CoR opinions on the file, by date
 }
 
 // ---------------------------------------------------------------- EP votes
@@ -482,12 +600,13 @@ export interface EpVoteSummary {
   source: SourceRef;
 }
 
-/** votes/titles.json: the votes of votes/index.json, in its order, with only what the vote tables of the MEP and group
- * pages show: date, title, the line of kind of vote, procedure reference and distinction, and the result. `title` is
- * there only for a vote with no `display_title` (none today), which VoteTitle then falls back to. */
+/** votes/titles.json: the votes of votes/index.json, in its order, with only what the vote tables of the MEP, group and
+ * party pages show: date, title, the line of kind of vote, procedure reference and distinction, the result, and the
+ * file the vote belongs to (`dossier_id`, for a link to its page). `title` is there only for a vote with no
+ * `display_title` (none today), which VoteTitle then falls back to. */
 export type EpVoteTitle = Pick<
   EpVoteSummary,
-  'id' | 'date' | 'display_title' | 'display_title_parts' | 'distinction' | 'kind_label' | 'procedure_ref' | 'outcome'
+  'id' | 'date' | 'display_title' | 'display_title_parts' | 'distinction' | 'kind_label' | 'procedure_ref' | 'outcome' | 'dossier_id'
 > &
   Partial<Pick<EpVoteSummary, 'title'>>;
 
@@ -519,6 +638,21 @@ export interface Ballot {
   intended?: BallotPosition | null; // correction recorded after the vote (does not change the result)
 }
 
+/**
+ * MEPs in office on the day of a vote (as Parliament's membership records give them) with no recorded vote, counted by
+ * the national party record (EP org id; null: none recorded), political group (slug) and country of representation
+ * they had that day. With the ballots, which give the same for each MEP who voted, it makes the vote page's table by
+ * national party.
+ */
+export type NoVoteCount = [party: string | null, group: string | null, country: string | null, meps: number];
+
+/**
+ * How a party record's MEPs voted on a vote on a whole text (kinds 'final' and 'mandate'), by their party record on
+ * the day: recorded votes for, against and abstaining, and the MEPs in office that day with no recorded vote
+ * (null when Parliament's membership records do not give the Members in office that day). Not a party position.
+ */
+export type PartyVote = [vote_id: string, in_favour: number, against: number, abstain: number, did_not_vote: number | null];
+
 /** An MEP with no recorded vote who stated afterwards how they had intended to vote. */
 export interface VoteIntention {
   mep: string;
@@ -542,6 +676,12 @@ export interface EpVoteDetail extends EpVoteSummary {
   groups: GroupBreakdown[];
   countries: CountryBreakdown[];
   ballots: Ballot[]; // empty when has_ballots = false
+  // votes with individual votes only: the MEPs in office that day with no recorded vote; null when the membership
+  // records do not give the Members in office that day (the days a margin based on them is not shown either)
+  no_vote?: NoVoteCount[] | null;
+  // party records in which Parliament's membership data lists MEPs on the day of this vote although the day is outside
+  // the record's own period (as PartyDetail.outside_period says); absent when there are none
+  parties_outside_period?: { party: string; start?: ISODate | null; end?: ISODate | null }[];
   intentions?: VoteIntention[]; // stated intentions of MEPs without a recorded vote
   mep_names: Record<string, string>; // id -> display name for ballots
   reconciliation: { matches: boolean; note?: string | null }; // ballots vs official totals
@@ -720,6 +860,9 @@ export interface PartyDetail extends PartySummary {
   outside_period?: { id: string; name: string; from?: ISODate | null; to?: ISODate | null }[];
   same_name?: PartyRef[]; // records with the same name and country (the same party in other terms)
   now_parties?: PartyRef[]; // the records this record's sitting MEPs are in now, most MEPs first
+  // its MEPs' votes on whole texts (final and mandate votes with individual votes, when it had MEPs in office), newest
+  // first
+  votes: PartyVote[];
   source: SourceRef;
 }
 
@@ -840,10 +983,17 @@ export interface ActivityItem {
     | 'publication'
     | 'deadline'
     | 'implementation';
-  title: string;
+  title: string; // the headline: "<file title, shortened>: <what happened>", "New file: <file title>", a vote's headline
   dossier_id?: string | null;
   vote_id?: string | null;
   source?: SourceRef | null;
+  // activity.json only (pipeline/analysis/changes.py): what happened, without the file's title ("Council adopted the
+  // act", "Status now “In force” (previously “Signed, awaiting publication”)", "New file"); absent when the headline does
+  // not name the file that way (a vote on another text, a Council vote)
+  event?: string;
+  // activity.json only: a status change told as one change with the item of the step that gave the status (same file
+  // and day, the record it cites)
+  step_id?: string;
 }
 
 export interface HomeListItem {
@@ -852,6 +1002,7 @@ export interface HomeListItem {
   title: string;
   subtitle?: string | null;
   date?: ISODate | null;
+  step?: string | null; // a row dated by the file's latest recorded step: that step's title
   badge?: string | null;
 }
 
@@ -871,7 +1022,8 @@ export interface FeaturedItem {
 export interface HomeData {
   featured: FeaturedItem[];
   lists: {
-    id: 'recently_adopted' | 'under_debate' | 'close_votes' | 'rejected' | 'stalled' | 'upcoming';
+    // scheduled: steps planned in the next three weeks (badge "Planned"); upcoming: dates fixed in law
+    id: 'recently_adopted' | 'under_debate' | 'close_votes' | 'rejected' | 'stalled' | 'scheduled' | 'upcoming';
     title: string;
     description: string;
     items: HomeListItem[];
@@ -892,5 +1044,7 @@ export interface SearchDoc {
   x?: string; // extra keywords (identifiers, subjects)
   u: string; // app route, e.g. "/legislation/2021-0106"
   w?: number; // static boost (e.g. featured dossiers, active MEPs)
-  d?: ISODate; // relevant date for display/sorting
+  d?: ISODate; // relevant date for display/sorting (a file: its latest recorded step's)
+  e?: string; // a file: the title of its latest recorded step (DossierSummary.last_step), dated `d`
+  n?: StepAhead[]; // a file: the steps dated in the law just ahead (DossierSummary.steps_ahead)
 }

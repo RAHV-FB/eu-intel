@@ -91,6 +91,26 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* under the status: officially blocked (while the Legislative Train's copy is current) and how long without a recorded
+   step; separators: .dot-list (base.css) */
+.dz-stuck {
+  margin-top: calc(-1 * var(--sp-2));
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.dz-stuck__blocked {
+  color: var(--st-alert);
+  font-weight: var(--fw-semibold);
+}
+
+/* the file's Atom feed, under the Follow button */
+.dz-feed {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-sm);
+}
+
 /* "On this page" below 64rem: the sections as a row of chips under the head (the sidebar's list is not shown) */
 .dz-jump {
   margin: 0 0 var(--sp-5);
@@ -399,6 +419,62 @@
 .dz-sched__what {
   min-width: 0;
   line-height: var(--lh-snug);
+}
+
+/* "Scheduled next" (ScheduledNext.tsx): one planned step per row, its date beside it from 40rem */
+.dz-plan {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.dz-plan__step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px var(--sp-4);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--border);
+}
+
+.dz-plan__step:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+@media (min-width: 40rem) {
+  .dz-plan__step {
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+}
+
+.dz-plan__date {
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.dz-plan__what {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: var(--lh-snug);
+}
+
+.dz-plan__label {
+  overflow-wrap: anywhere;
+}
+
+/* a date passed since the data was built: said so, never shown as done */
+.dz-plan__passed {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-2);
+}
+
+.dz-plan__step.is-passed .dz-plan__date {
+  color: var(--text-2);
 }
 
 .dz-dates__note {
@@ -1264,4 +1340,111 @@
 
 .dz-rulings li + li {
   margin-top: var(--sp-2);
+}
+
+/* ---------- the law in context (LawContext.tsx): EUR-Lex / Cellar ---------- */
+/* EUR-Lex's official summary in "What is it?": official text, set apart from the site's own words and labelled */
+.dz-osum {
+  margin-top: var(--sp-1);
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 3px solid var(--blue-muted);
+  background: var(--surface-sunk);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  max-width: var(--measure);
+}
+
+.dz-osum__label {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.dz-osum__src {
+  font-weight: var(--fw-regular);
+  color: var(--text-2);
+}
+
+.dz-osum__quote {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--fs-md);
+  line-height: var(--lh-body);
+  color: var(--text);
+}
+
+.dz-osum__quote p + p,
+.dz-osum__quote p + ul,
+.dz-osum__quote ul + p {
+  margin-top: var(--sp-2);
+}
+
+.dz-osum__quote ul {
+  margin: 0;
+  padding-left: var(--sp-5);
+  max-width: 34em;
+}
+
+.dz-osum__quote li + li {
+  margin-top: var(--sp-1);
+}
+
+/* the muted colour is below 4.5:1 on the sunk background: the secondary one, as in .callout */
+.dz-osum .meta {
+  color: var(--text-2);
+}
+
+.dz-block .dz-osum__note,
+.dz-block .dz-osum__predates,
+.dz-osum > .meta {
+  margin-top: var(--sp-2);
+}
+
+.dz-block .dz-osum__title {
+  margin-top: var(--sp-3);
+}
+
+.dz-osum__title .dz-what__official {
+  font-size: var(--fs-base);
+}
+
+.dz-osum__link {
+  margin: var(--sp-2) 0 0;
+}
+
+.dz-withdrawal-case {
+  margin-top: var(--sp-2) !important;
+}
+
+/* "Annulled (in whole or in part)", "Questions pending before the Court": each only when a record states it */
+.dz-badges {
+  list-style: none;
+  margin: 0 0 var(--sp-3);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.dz-law__intro {
+  margin: 0 0 var(--sp-2);
+  max-width: var(--measure);
+}
+
+.dz-law__list {
+  gap: var(--sp-3);
+  max-width: var(--measure);
+}
+
+.dz-law__title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.dz-law__source {
+  margin: var(--sp-4) 0 0;
 }

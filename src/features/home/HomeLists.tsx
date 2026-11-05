@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { HomeData, HomeListItem } from '../../types/data';
 import { formatDate } from '../../lib/format';
 import { dossierPath } from '../legislation/labels';
+import { SCHEDULED_VIEW, STUCK_VIEW } from '../legislation/explorer';
 
 type HomeList = HomeData['lists'][number];
 
@@ -9,7 +10,9 @@ type HomeList = HomeData['lists'][number];
 const MORE: Partial<Record<HomeList['id'], { to: string; label: string }>> = {
   recently_adopted: { to: '/legislation?stage=law&sort=adopted', label: 'Adopted legislation in our dataset' },
   under_debate: { to: '/legislation?stage=active&sort=updated', label: 'All files still being decided' },
-  stalled: { to: '/legislation?blocked=1', label: 'Officially reported as blocked' },
+  // the stuck view: files of the ordinary legislative procedure still being decided, the longest without a step first
+  scheduled: { to: SCHEDULED_VIEW, label: 'All files with a planned step, soonest first' },
+  stalled: { to: STUCK_VIEW, label: 'Ordinary-procedure files still being decided, longest without a recorded step first' },
   upcoming: { to: '/legislation?sort=deadline', label: 'All upcoming dates' },
   close_votes: { to: '/votes?kind=final&close=1', label: 'All close final votes' },
   rejected: { to: '/votes?kind=final&outcome=rejected', label: 'All final votes Parliament rejected' },
@@ -30,7 +33,7 @@ function itemHref(it: HomeListItem): string | null {
 function Row({ it }: { it: HomeListItem }) {
   const href = itemHref(it);
   return (
-    <li className="hl__row">
+    <li className={it.step ? 'hl__row hl__row--step' : 'hl__row'}>
       <div className="hl__date">{it.date ? <time dateTime={it.date}>{formatDate(it.date)}</time> : <span aria-hidden="true">—</span>}</div>
       <div className="hl__body">
         {href ? (
@@ -39,6 +42,13 @@ function Row({ it }: { it: HomeListItem }) {
           </Link>
         ) : (
           <span className="hl__title">{it.title}</span>
+        )}
+        {/* a row dated by the file's latest recorded step names it */}
+        {it.step && (
+          <p className="hl__step">
+            <span className="visually-hidden">Latest recorded step: </span>
+            {it.step}
+          </p>
         )}
         {(it.subtitle || it.badge) && (
           <div className="hl__sub">
@@ -51,8 +61,7 @@ function Row({ it }: { it: HomeListItem }) {
   );
 }
 
-/** `noMore`: lists shown without their "see more" link (Stalled, while the Legislative Train's reports of blocked files
- * are not shown: src/lib/freshness.ts). */
+/** `noMore`: lists shown without their "see more" link. */
 export function HomeLists({ lists, noMore = [] }: { lists: HomeList[]; noMore?: HomeList['id'][] }) {
   if (!lists.length) return null;
   const filled = lists.filter((l) => l.items.length > 0);

@@ -13,10 +13,14 @@ credentials). Details are refined from each ingestion module's findings.
 | Cellar SPARQL `publications.europa.eu/webapi/rdf/sparql` | SPARQL 1.1 | ✅ | Legal acts (CELEX, ELI, dates incl. phased entry-into-force/application, procedure links, amendments), national implementing measures | Batched queries; CDM ontology |
 | EUR-Lex website | HTML | ⚠️ 202 bot challenge | Human links only | Not scraped |
 | Act texts (Cellar content negotiation `publications.europa.eu/resource/celex/{CELEX}`) | XHTML | ✅ | Directives' opt-out recitals (Protocols 21/22) | Each directive read once |
+| Summaries of EU legislation (Cellar SPARQL + content negotiation `publications.europa.eu/resource/legissum/{id}`); case law, consolidated versions, EESC/CoR opinions (Cellar SPARQL) | SPARQL, XHTML | ✅ | Official summary, court cases, consolidated text and advisory opinions on a law's page (`lawcontext`) | A summary's text is read again only when its date changes; see the law context section |
 | Council voting results (consilium.europa.eu pages) | HTML | ❌ 403 "Browser check" | — | Not used; see Council section |
 | Council "voting result" documents (ST notes) | Cellar SPARQL + PDF at data.consilium.europa.eu | ✅ | Member State positions, voting rule, outcome | Annex table is an image; parsed deterministically, fail-closed |
 | Single Market Scoreboard | HTML; indicators in Power BI embeds | ✅ since 2 Nov 2026 (403 on 22 and 26 Oct) | — | Indicators only in embedded Power BI reports, not machine-readable; a plain HTML table of overdue directives per Member State (`/enforcement-tools/transposition_en`) is not read yet. See the implementation section |
 | Commission infringement decisions | HTML / search | ⚠️ redirects to commission.europa.eu | Infringement cases | See implementation section below |
+| Cellar planned events (`cdm:event_legal_projected`) | SPARQL 1.1 | ✅ | Steps scheduled on a file, about three weeks ahead (`agenda`) | The Council's file planning and Parliament's; labels from the Publications Office's authority tables. See the scheduled-steps section |
+| EP Open Data API `/meetings/{sitting}/foreseen-activities` | JSON-LD REST | ✅ (204 until published) | Parliament's plenary agenda: votes and debates on a file (`agenda`) | Published about three weeks ahead of each sitting |
+| Council documents named by a plan (data.consilium.europa.eu) | PDF | ✅ public ones; 404 otherwise | Links to the meeting's agenda and the act's text | HEAD answers 405 and Range is ignored: each document is checked with one GET per run |
 
 ## Identifiers that connect the sources
 
@@ -33,7 +37,8 @@ credentials). Details are refined from each ingestion module's findings.
 - European Parliament: "© European Union – Source: European Parliament"; CC BY 4.0 for the Open Data Portal's
   datasets of MEPs, procedures and results of votes (2024 and 2025), the European Parliament legal notice for its
   other data and web pages (details under "Licences" below).
-- EUR-Lex / Publications Office: reuse authorised under Commission Decision 2011/833/EU, with attribution.
+- EUR-Lex / Publications Office: reuse authorised under Commission Decision 2011/833/EU, with attribution. EUR-Lex's
+  summaries of EU legislation are quoted unchanged, in part, labelled with their date and linked (law context section).
 - Council and Commission websites: reuse authorised with acknowledgement of the source, unless stated otherwise.
 
 The site footer and About page credit each source. MEP portraits are not used (avoids hot-linking third-party
@@ -49,8 +54,9 @@ lists (`SOURCES` in `build.py`, one per manifest entry), identifies the snapshot
 ## Update frequency and refresh
 
 EP data changes after each plenary session and committee meeting; Cellar is updated daily; the Legislative Train
-monthly. A weekly scheduled refresh is sufficient for v1 and stays well within the free GitHub Actions allowance.
-Scheduled runs are best-effort (a second Monday run is skipped if data was committed in the last 20 hours); the
+monthly. A weekly scheduled refresh of every source (Mondays), plus a light one on Fridays (EP procedures, EP votes,
+EUR-Lex, Council and the planned dates, since Parliament votes Tuesday to Thursday), stays well within the free GitHub
+Actions allowance. Scheduled runs are best-effort (a run is skipped if the core sources were retrieved in the last 20 hours); the
 site shows the real retrieval timestamp per source. The weekly run is incremental for EP procedures, EP votes and
 the Legislative Train, and re-reads each of their stored records at least every 8 weeks on a rotation; the run in
 the first week of each month is a full refresh, which re-reads every stored record, as does a change of a source's
@@ -370,12 +376,25 @@ the first week of each month is a full refresh, which re-reads every stored reco
   appended to `display_title` ("motion B10-0432/2026"); group and MEP vote tables, which cut long titles on phones,
   show it with the kind of vote and the procedure reference on a line of its own.
 - `votes/titles.json`: the same votes as `votes/index.json`, in the same order, with only the fields the vote tables
-  of the MEP and political group pages show (`id`, `date`, `display_title`, `display_title_parts`, `distinction`,
-  `kind_label`, `procedure_ref`, `outcome`), so those pages do not download the whole index (in the build of
+  of the MEP, political group and national party pages show (`id`, `date`, `display_title`, `display_title_parts`,
+  `distinction`, `kind_label`, `procedure_ref`, `outcome`, and `dossier_id` for the party pages' link to the file), so
+  those pages do not download the whole index (in the build of
   24 October 2026, 3,000 votes: 0.8 MB, 120 KB compressed, against 2.5 MB and 305 KB). A field without a value is
   left out, as in the index; `title` is written only for a vote with no `display_title` (none in the index). The
   values are those of the index entry. `validate --built` fails if the file is missing, or lists other votes than
   the index, or the same votes in another order.
+- National parties (`party_breakdown`): each ballot carries the MEP's party record on the day of the vote, and
+  `no_vote` in `votes/<id>.json` lists the MEPs in office that day (a group membership covering the day, as
+  `members_in_office` counts them) with no recorded vote, by the party record, group and country they had then. It is
+  null on the days the membership records do not give the Members in office (`component_members`: 2 July 2019 to
+  12 January 2020, 79 votes). The vote page adds both up by party record, listed by country and then party name.
+  `parties_outside_period` names the records Parliament's data lists MEPs in on a day outside the record's own period
+  (PSD 5320 and Dan Nica, from 16 July 2024), as the party page says. Each party page lists its MEPs' final and
+  negotiating-mandate votes (`votes`: vote, for, against, abstained, did not vote), newest first. On the Nature
+  Restoration Law (164499, 27 February 2024) CDU's MEPs voted 0 for, 19 against, 0 abstaining, and 4 did not vote;
+  77 MEPs in all had no recorded vote, the figure HowTheyVote.eu (an independent site, not a source) also gives. In
+  the build of 5 November 2026 the fields add 3.1 MB to the vote files and 5.3 MB to the party files (336.1 MB to
+  344.5 MB in all); the whole table in each vote file would have added 20.7 MB.
 
 ### EUR-Lex / Cellar (`eurlex`) — ok
 - 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 21 final acts that OEIL
@@ -1135,6 +1154,62 @@ the first week of each month is a full refresh, which re-reads every stored reco
 - The source is listed on the About page like the others (`SOURCES["optouts"]`), with the number of directives
   read, how many of them contain the statement, and how many Denmark and Ireland are not bound by.
 
+### Law context: official summaries, court cases, consolidated texts, opinions (`lawcontext`) — ok
+- Read from Cellar for each act of the EUR-Lex snapshot and each procedure of the EP snapshot, joined by CELEX and
+  procedure reference only (`pipeline/sources/lawcontext.py`, whose docstring gives the queries). First retrieved on
+  5 November 2026, in about 5 minutes (about 30 SPARQL queries and 526 summary texts); later runs read a summary's text
+  again only when its date changes.
+- **Summaries of EU legislation** (`cdm:summary_summarizes_work`): 576 of the 1,279 acts have one (570 summaries, some
+  covering several acts). 44 are marked obsolete (`cdm:summary_legislation_eu_obsolete`) and are not shown, so 535
+  files show one. Their English text is served by content negotiation in one format each: `application/xhtml+xml;
+  type=xhtml5` (499 current summaries), `application/xhtml+xml` or `text/html` (27 of 2014–2022). The opening section
+  is kept as plain text: "What is the aim of …?" (498) or "What does … do?" (16), else the start of "Key points" or
+  "Summary" (12); at most three paragraphs, six with list items, about 900 characters. The page shows it, labelled
+  "Official summary (EUR-Lex, last updated <date>)", where no editorial summary exists; a file with an editorial summary
+  links it instead (the editorial text stays the 15–30 second overview, and the two would overlap). When the summary was
+  last updated before the latest act amending the law that our EUR-Lex data dates was published, the page says so
+  (85 files).
+- **Court cases**: 389 links from 369 judgments and orders interpreting 82 acts (`cdm:case-law_interpretes_
+  resource_legal`), and the Official Journal notices of 922 new cases on the acts: requests for a preliminary ruling
+  (`cdm:communication_case_new_submits_preliminary_question_resource_legal`) and actions for annulment
+  (`…_requests_annulment_of_…`, `…_requests_partial_annulment_of_…`). A case is shown as pending only when the notice
+  links its case file (`cdm:case_court`) and that file lists no judgment or order, no delivery of one
+  (`DELIV_JUDG_ORDER`), no publication of the decision (`CC_CD_PUB_OJ`) and no closed or withdrawn status, and no
+  judgment interpreting the act names the case (T-686/24 was decided with T-685/24 under the latter's number). The
+  file's status "in progress" is not used: C-26/22, decided on 7 December 2023, still has it. Notices link a case file
+  for every case lodged since 2024 but one, 53 of the 117 of 2023 and none before, so earlier cases are not known to be
+  pending: 219 pending (176 preliminary references, 43 actions for annulment) on 97 acts. Annulments and declarations
+  of invalidity themselves come from the eurlex source. The badges "Annulled (in whole or in part)", "Declared invalid
+  (in whole or in part)", "Questions pending before the Court" and "Action for annulment pending" each appear only when
+  such a record exists.
+- **Actions against the withdrawal of a proposal**: Cellar records them. Case C-727/25 is the European Parliament's
+  action (lodged 14 November 2025, notice OJ C/2026/89) for the partial annulment of the Commission's notice "Withdrawal
+  of Commission proposals" (52025XC05423, 6 October 2025), citing the proposal on standard essential patents
+  (52023PC0232, 2023/0133(COD)); its case file records no judgment or order. The source finds such actions for the
+  files the Commission withdrew: an action seeking the annulment of an act in the procedure's Cellar file that renders
+  the procedure's proposal obsolete (`cdm:resource_legal_renders_obsolete_resource_legal`, the withdrawal notice) and
+  citing that proposal. 2023/0133(COD)'s page says that its withdrawal is challenged.
+- **Consolidated versions** (`cdm:act_consolidated_consolidates_resource_legal`): 1,186 versions of 551 acts. The link
+  also gives versions of the acts an act amends (for NIS2, 02018L1972-20241018 and 02014R0910-20241018 besides
+  02022L2555-20221227), so only versions with the act's own CELEX are kept. The page links the latest dated on or before
+  the reader's date, and a later one. EUR-Lex's consolidated texts state: "This text is meant purely as a documentation
+  tool and has no legal effect. … The authentic versions of the relevant acts, including their preambles, are those
+  published in the Official Journal of the European Union and available in EUR-Lex" (02022L2555-20221227, read
+  5 November 2026).
+- **Opinions of the European Economic and Social Committee and the European Committee of the Regions** in a procedure's
+  Cellar file (`cdm:work_part_of_dossier`, author EESC or COR): 490 opinions (393 EESC, 97 CoR) on 479 files. Older
+  files often have none linked (2012/0011(COD), the GDPR).
+- Not read: Parliament's adopted texts (the EP API's `/adopted-texts` answered HTTP 500 when sorted, 5 November 2026).
+- Reuse: each summary's XHTML text carries "© European Union, 2026" (author PUBL). Commission Decision 2011/833/EU
+  "determines the conditions for the reuse of documents held by the Commission or on its behalf by the Publications
+  Office of the European Union" (Article 1); documents are available for reuse "for commercial or non-commercial
+  purposes" without charge or individual application (Article 4), on conditions that may include "the obligation for
+  the reuser to acknowledge the source of the documents" and "the obligation not to distort the original meaning or
+  message of the documents" (Article 6(2)). No notice specific to the summaries was found in Cellar or on
+  data.europa.eu (which lists only the summaries' classification, `class-sum-leg`, under Decision 2011/833/EU); the
+  EUR-Lex legal notice page answers scripts with a bot challenge and was not re-read. The site quotes the opening
+  section unchanged, with its source, date and a link to the full summary.
+
 ### Council of the EU (`council`) — ok
 - The Council's voting-results web pages are behind a browser check (403), and the data.europa.eu dataset
   "Council votes on legislative acts" is marked discontinued (its download returns 404).
@@ -1297,6 +1372,49 @@ the first week of each month is a full refresh, which re-reads every stored reco
   2019/0197(COD), 2022/0430(CNS)). Files that only Cellar's own procedure list names (2018/0802(CNS)) are still
   not discovered.
 
+### Scheduled steps (`agenda`) — ok
+What happens next on a file, and when, as the institutions publish it before it happens (checked on 5 November 2026).
+Plans, not records: the site shows them as planned, judges their dates on the reader's clock, and records a step as
+taken only from the other sources.
+- **Cellar planned events** (`agenda/planned.json`). Cellar holds `cdm:event_legal_projected` events on a procedure
+  (status PROJECTED; `sender_transmission` "CONSIL:FilePlanning" for the Council's): a date, a type of the authority
+  table "event", the institution taking the step, a procedure phase and the documents named
+  (`event_legal_document_reference`). On 5 November: 35 dated from that day on (22 of the Council, up to 19 November;
+  13 of Parliament, up to 25 November). Cellar keeps some after their date (20 of Parliament's, back to 15 January
+  2024, and 5 of the Council's), so only those from the day of the run on are read. Types seen, with their English
+  labels in the authority table (shown verbatim): APR_R1_byCONSIL "Approval of the EP's first reading position by the
+  Council (adoption of the legislative act)", ADP_MAND_NGT_INST_COREPER_byCONSIL "Adoption of negotiating mandate by
+  Coreper", DELIB_COREPER_byCONSIL "Deliberations in Coreper", DELIB_byCONSIL "Deliberations in Council", VOTE_byEP
+  "Vote in EP plenary", DEBATE_byEP "Debate in EP plenary"; phases RDG1 "First reading", RDG2 "Second reading",
+  PROC_END "End of procedure" (not shown: the adoption's own label says it).
+- **The meeting and its documents.** A document named is looked up in Cellar: an agenda (resource type
+  AGENDA_DRAFT_CONSIL) gives the meeting by its title ("COUNCIL OF THE EUROPEAN UNION (General Affairs)" for CM 4825/26,
+  "PERMANENT REPRESENTATIVES COMMITTEE (Part 1)" for ST 15180/26), shown in sentence case; a step that names no agenda
+  has no meeting (never inferred from the date). Of the 7 Council documents named on 5 November, 4 had a public copy
+  (CM 4825/26, ST 15156/26, ST 15180/26 and PE-CONS 34/26, the act's text) and 3 Council notes answered 404; only public
+  copies are linked. Each planned step links its Cellar record (`resource/procedure-event/…`, a 303 to the event's
+  RDF), the machine-readable source: EUR-Lex's procedure pages answer scripts with a 202 bot challenge, so whether they
+  show planned events could not be checked.
+- **Parliament's plenary agenda** (`agenda/plenary.json`). `/meetings?year=Y` lists the sittings ahead (10 from 11
+  November to 17 December 2026); `/meetings/{sitting}/foreseen-activities` gives a sitting's draft agenda, HTTP 204 until
+  it is published (published for the 6 sittings to 26 November; 204 for 14–17 December). Vote and debate items name
+  their procedure in the structured content (`<label typeof="proc" …>2023/0167(COD)</label>`) and a phase
+  (`occured_at_stage`); 40 such items on 5 November, on 57 procedures with Cellar's, 37 of them files on this site
+  (the others own-initiative reports, resolutions, a budget and Parliament's internal files). An item takes the label
+  of the Publications Office's type of its kind (VOTE_byEP, DEBATE_byEP); its source is the API's agenda of the sitting,
+  as Parliament's agenda pages (www.europarl.europa.eu/doceo) answer scripts with 403.
+- **Both schedules.** Cellar's 13 steps of Parliament matched Parliament's agenda in date and kind; the agenda also
+  gave votes Cellar did not (2023/0166, 2025/0102, 2025/0130 and 2025/0134). A file's steps of the same date and type
+  are one step with both sources; steps that differ are each shown with their own.
+- **On the site.** A file gets the steps dated after the build's date (`scheduled`, "Scheduled next" next to "What
+  happens next"); the home page lists those of the next three weeks ("Scheduled in the next 3 weeks", badge
+  "Planned"). On the reader's date a step stays ahead on its day; after it, the file's page says it "was scheduled for
+  …; not yet recorded as done" and the home page leaves it out. Each run replaces both files, so a step moved or dropped
+  is not kept; a sitting whose agenda cannot be read keeps its earlier records, and a part that fails keeps its file
+  (the run is `partial`). Stale after 9 days (`pipeline/freshness.py`): planned dates of the next weeks.
+- Licence: Cellar under the EUR-Lex legal notice (Commission Decision 2011/833/EU); Parliament's agenda under the
+  European Parliament legal notice (each step links the sitting's agenda it comes from); see `build.SOURCES["agenda"]`.
+
 ### Licences
 - European Parliament (MEPs, procedures, votes, Legislative Train): "© European Union – Source: European
   Parliament", with the terms the Parliament gives for each kind of data (`build.SOURCES`, shown on the About page).
@@ -1326,7 +1444,8 @@ the first week of each month is a full refresh, which re-reads every stored reco
   states the legal notice's terms, its general rule.
 - EUR-Lex / Cellar: reuse authorised with acknowledgement ("© European Union, https://eur-lex.europa.eu") under the
   EUR-Lex legal notice and Commission Decision 2011/833/EU. The live notice page is bot-protected for scripts and
-  should be re-checked manually before any change of attribution text.
+  should be re-checked manually before any change of attribution text. The summaries of EU legislation are documents
+  of the Publications Office, which the Decision covers (Article 1); see the law context section.
 - Commission infringement register: Commission reuse policy (Decision 2011/833/EU), "© European Union".
 - Council documents: reuse permitted with acknowledgement of the source ("© European Union", Council of the EU),
   per the Council's copyright notice.

@@ -1,0 +1,24 @@
+[
+ {
+  "ref": "2023/0133/COD",
+  "n": "62025CN0727",
+  "lodged": "2025-11-14",
+  "target": "52025XC05423",
+  "proposal": "52023PC0232",
+  "applicant": "http://publications.europa.eu/resource/authority/fd_110/PARL",
+  "alabel": "European Parliament",
+  "case": "C-727/25",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_NC_PUB_OJ"
+ },
+ {
+  "ref": "2023/0133/COD",
+  "n": "62025CN0727",
+  "lodged": "2025-11-14",
+  "target": "52025XC05423",
+  "proposal": "52023PC0232",
+  "applicant": "http://publications.europa.eu/resource/authority/fd_110/IC",
+  "alabel": "Institutions",
+  "case": "C-727/25",
+  "etype": "http://publications.europa.eu/resource/authority/event/CC_NC_PUB_OJ"
+ }
+]

@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { DossierSummary, LegalInstrument, Meta } from '../types/data';
 import { useData, DATA_BASE } from '../lib/data';
-import { formatNumber } from '../lib/format';
+import { daysSince, formatNumber } from '../lib/format';
 import { asRetrieved, asShownNow, classifications, expiredReason } from '../lib/freshness';
 import { legislationScope } from '../lib/scope';
 import { loadSearch, similarWords, type SearchEngine } from '../lib/search';
@@ -14,6 +14,7 @@ import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 import { ResultCount } from '../components/ResultCount';
 import { useFocusRevealed } from '../components/useFocusRevealed';
 import {
+  ACTIVE_STAGES,
   INSTRUMENT_LABEL,
   STAGE_GROUPS,
   STAGE_LABEL,
@@ -40,6 +41,8 @@ import {
   type SortKey,
 } from '../features/legislation/explorer';
 import { DossierRow } from '../features/legislation/DossierRow';
+import { withLatestStepOn } from '../features/legislation/latestStep';
+import { OutOfScope } from '../components/OutOfScope';
 import '../features/legislation/common.css';
 import '../features/legislation/legislation.css';
 
@@ -100,7 +103,11 @@ export default function Legislation() {
   // shown as blocked, so the filter, its count, the sorting and the rows agree (src/lib/freshness.ts)
   const train = classifications(meta.data, Date.now());
   const trainCurrent = !!train?.current;
-  const rows = useMemo(() => asShownNow(index.data ?? [], trainCurrent), [index.data, trainCurrent]);
+  // and each file's latest recorded step on the reader's date (a step dated in the law may have passed since the build)
+  const rows = useMemo(
+    () => withLatestStepOn(asShownNow(index.data ?? [], trainCurrent), today),
+    [index.data, trainCurrent, today],
+  );
   const trainExpired = !!train && !trainCurrent;
   // until meta.json is read (or when it cannot be), whether the Train's copy is current is not known: no file is shown as
   // blocked, and the page says why instead of saying that none is
@@ -133,6 +140,15 @@ export default function Legislation() {
     .map((w) => `“${w}”`)
     .join(', ');
   const sorted = useMemo(() => sortRows(filtered, state.sort, scores, today), [filtered, state.sort, scores, today]);
+  // the stuck view: files still being decided without a recorded step for a year or more, on the reader's date
+  const stuckForAYear = useMemo(
+    () =>
+      state.sort === 'stuck'
+        ? filtered.filter((d) => ACTIVE_STAGES.has(d.stage) && d.last_event && daysSince(d.last_event, new Date(`${today}T00:00:00Z`)) >= 365)
+            .length
+        : 0,
+    [filtered, state.sort, today],
+  );
 
   // ---- facet counts (each facet counted with all *other* filters applied)
   const facets = useMemo(() => {
@@ -159,6 +175,8 @@ export default function Legislation() {
   const years = useMemo(() => [...new Set(rows.map(dossierYear).filter((y): y is number => !!y))].sort((a, b) => b - a), [rows]);
   const hasAdopted = rows.some((d) => d.adopted);
   const hasNextDates = rows.some((d) => d.next_date);
+  // offered while some file has a planned step on or after the reader's date (the `agenda` source)
+  const hasScheduled = rows.some((d) => d.next_scheduled && d.next_scheduled >= today);
   const anyBlocked = rows.some((d) => d.officially_blocked);
 
   const advancedActive = !!(state.type || state.instrument || state.year || state.blocked);
@@ -221,6 +239,11 @@ export default function Legislation() {
             {scopeText} <Link to="/about#coverage">What’s covered</Link>
           </p>
         )}
+        <p className="lx-changes">
+          <Link to={currentTopic ? `/legislation/changes?topic=${encodeURIComponent(currentTopic.slug)}` : '/legislation/changes'}>
+            What changed recently{currentTopic ? ` in ${currentTopic.label}` : ''}, week by week
+          </Link>
+        </p>
       </PageHeader>
 
       <form className="lx-filters" role="search" aria-label="Filter legislation" onSubmit={(e) => e.preventDefault()}>
@@ -299,6 +322,7 @@ export default function Legislation() {
               {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => {
                 if (k === 'relevance' && !hasQuery) return null;
                 if (k === 'deadline' && !hasNextDates) return null;
+                if (k === 'scheduled' && !hasScheduled && state.sort !== 'scheduled') return null;
                 if (k === 'blocked' && !anyBlocked) return null;
                 return (
                   <option key={k} value={k}>
@@ -522,6 +546,28 @@ export default function Legislation() {
             </p>
           )}
 
+          {state.sort === 'scheduled' && (
+            <p className="meta lx-sortnote">
+              Files with a planned step ahead come first, the soonest first: planned dates as the Council and Parliament publish
+              them, which can change. A file's page lists its scheduled steps and their sources.
+            </p>
+          )}
+
+          {state.sort === 'stuck' && (
+            <p className="meta lx-sortnote">
+              Files still being decided come first, the longest without a recorded procedural step first
+              {stuckForAYear > 0 && (
+                <>
+                  {' '}
+                  ({formatNumber(stuckForAYear)} of those listed have had none for a year or more)
+                </>
+              )}
+              . This measures only the official procedure file: work can continue between recorded steps. Under the
+              consultation and consent procedures the Council decides after Parliament’s opinion or consent, and Parliament’s
+              file may not record that decision.
+            </p>
+          )}
+
           {sorted.length === 0 ? (
             <EmptyState title={rows.length === 0 ? 'No legislative files are available yet' : 'No files match these filters'}>
               {rows.length === 0 ? (
@@ -532,6 +578,10 @@ export default function Legislation() {
                     Try fewer words, a procedure reference such as <span className="mono">2021/0106(COD)</span>, or remove a
                     filter.
                   </p>
+                  {/* the words find nothing whatever the filters: say what the site covers, and where else to look */}
+                  {hasQuery && matched.length === 0 && (engine || engineFailed) && (
+                    <OutOfScope q={state.q} scope={meta.data?.scope} />
+                  )}
                   {anyFilter && (
                     <button type="button" className="btn" onClick={clearAll}>
                       Clear all filters

@@ -596,7 +596,7 @@ def test_the_daily_rebuild_deploys_main_once_its_code_passed_ci_and_commits_noth
 def test_the_refresh_schedule_retries_and_runs_a_monthly_full_refresh(tmp_path):
     # the Monday cron started up to 8 h late, and a full refresh ran only by hand
     crons = [c["cron"] for c in triggers("refresh.yml")["schedule"]]
-    assert len(crons) == 2 and all(not c.startswith("0 ") for c in crons)
+    assert len(crons) == 3 and all(not c.startswith("0 ") for c in crons)
     w = workflow("refresh.yml")
     assert w["concurrency"] == {"group": "refresh", "cancel-in-progress": False}
     assert w["jobs"]["refresh"]["needs"] == "plan" and w["jobs"]["refresh"]["if"] == "${{ needs.plan.outputs.run == 'true' }}"
@@ -610,11 +610,12 @@ def test_the_refresh_schedule_retries_and_runs_a_monthly_full_refresh(tmp_path):
     now = datetime.now(UTC)
     iso = lambda d: d.strftime("%Y-%m-%dT%H:%M:%SZ")  # noqa: E731
 
-    def plan(event: str, manifest: dict | None, full_input: str = "") -> dict[str, str]:
+    def plan(event: str, manifest: dict | None, full_input: str = "", schedule: str = "") -> dict[str, str]:
         # `gh api` answers with main's manifest; None: it fails
         env = fake_gh(tmp_path, json.dumps(manifest)) if manifest is not None else failing_gh(tmp_path)
         env |= {"EVENT": event, "FULL_INPUT": full_input, "RECENT_HOURS": "20", "GITHUB_REPOSITORY": "o/r",
-                "CORE_SOURCES": plan_step["env"]["CORE_SOURCES"]}  # fmt: skip
+                "SCHEDULE": (schedule or crons[0]) if event == "schedule" else "",  # a Monday run by default
+                **{k: plan_step["env"][k] for k in ("CORE_SOURCES", "LIGHT_SCHEDULE", "LIGHT_SOURCES")}}  # fmt: skip
         return run_step(script, tmp_path, env)
 
     def manifest(core_hours: float, **other_hours: float) -> dict:
@@ -635,6 +636,49 @@ def test_the_refresh_schedule_retries_and_runs_a_monthly_full_refresh(tmp_path):
     assert plan("schedule", None) == {"run": "true", "full": first_week}  # the API failed: run rather than skip a week
     assert plan("workflow_dispatch", manifest(1)) == {"run": "true", "full": ""}
     assert plan("workflow_dispatch", manifest(0), full_input="true") == {"run": "true", "full": "1"}
+    assert plan("schedule", manifest(30), schedule=crons[1]) == {"run": "true", "full": first_week}  # the Monday retry
+
+
+def test_a_friday_run_refreshes_the_core_sources_and_the_planned_dates_only(tmp_path):
+    # 97.7% of Parliament's recorded votes fall Tuesday to Thursday: with Mondays only, a vote reached the site after
+    # about 5 days on average. The Friday run fetches the core sources and the planned dates (agenda), never in full.
+    from pipeline.__main__ import SOURCES
+    from pipeline.freshness import CORE_SOURCES
+
+    crons = [c["cron"] for c in triggers("refresh.yml")["schedule"]]
+    plan_step = steps("refresh.yml", "plan")[0]
+    light, light_sources = plan_step["env"]["LIGHT_SCHEDULE"], plan_step["env"]["LIGHT_SOURCES"].split()
+    assert plan_step["env"]["SCHEDULE"] == "${{ github.event.schedule }}"
+    assert light in crons and light.split()[4] == "5" and light not in crons[:2]
+    assert set(CORE_SOURCES) <= set(light_sources) and "agenda" in light_sources
+    # the fetch takes them in the registry's order (later sources read earlier ones' snapshot files)
+    assert light_sources == [s for s in SOURCES if s in light_sources]
+    fetch = steps("refresh.yml", "refresh")[named(steps("refresh.yml", "refresh"), "Fetch official sources")]
+    assert fetch["env"]["SOURCES"] == "${{ inputs.sources || needs.plan.outputs.sources }}"
+    assert workflow("refresh.yml")["jobs"]["plan"]["outputs"]["sources"] == "${{ steps.plan.outputs.sources }}"
+
+    # a `date` that says it is the 3rd of the month: a Monday run then is a full refresh, a Friday run never is
+    bin_dir = tmp_path / "bin-date"
+    bin_dir.mkdir()
+    real_date = shutil.which("date")
+    (bin_dir / "date").write_text(
+        f'#!/bin/sh\nif [ "$*" = "-u +%-d" ]; then echo 3; else exec {real_date} "$@"; fi\n', encoding="utf-8"
+    )
+    (bin_dir / "date").chmod(0o755)
+    now = datetime.now(UTC)
+
+    def plan(core_hours: float, schedule: str) -> dict[str, str]:
+        fetched = (now - timedelta(hours=core_hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        env = fake_gh(tmp_path, json.dumps({s: {"status": "ok", "fetched_at": fetched} for s in CORE_SOURCES}))
+        env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+        env |= {"EVENT": "schedule", "SCHEDULE": schedule, "FULL_INPUT": "", "RECENT_HOURS": "20",
+                "GITHUB_REPOSITORY": "o/r",
+                **{k: plan_step["env"][k] for k in ("CORE_SOURCES", "LIGHT_SCHEDULE", "LIGHT_SOURCES")}}  # fmt: skip
+        return run_step(plan_step["run"], tmp_path, env)
+
+    assert plan(30, light) == {"run": "true", "full": "", "sources": " ".join(light_sources)}
+    assert plan(30, crons[0]) == {"run": "true", "full": "1"}  # Monday, first week: every source, in full
+    assert plan(3, light) == {"run": "false"}  # a refresh in the last 20 h (e.g. by hand on Thursday): skipped
 
 
 def failing_gh(tmp_path: Path) -> dict[str, str]:

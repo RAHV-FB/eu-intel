@@ -1,0 +1,660 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "ev",
+   "same",
+   "date",
+   "type",
+   "label",
+   "inst",
+   "status",
+   "ref",
+   "ptype",
+   "doc",
+   "phase",
+   "phase_label"
+  ]
+ },
+ "results": {
+  "distinct": false,
+  "ordered": true,
+  "bindings": [
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/ed6b89e2-d69e-11f0-8da2-01aa75ed71a1.0036"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2025_399.2026-11-06_DELIB_COREPER_byCONSIL"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-06"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/DELIB_COREPER_byCONSIL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Deliberations in Coreper"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2025/0399/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "doc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ST 14751 2026 INIT"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "First reading"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/ed6b89e2-d69e-11f0-8da2-01aa75ed71a1.0036"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2025_399.2026-11-06_DELIB_COREPER_byCONSIL"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-06"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/DELIB_COREPER_byCONSIL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Deliberations in Coreper"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2025/0399/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "doc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ST 15180 2026 INIT"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "First reading"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/70f42e75-7088-11f1-9800-01aa75ed71a1.0015"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2026_169.2026-11-06_ADP_MAND_NGT_INST_COREPER_byCONSIL"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-06"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/ADP_MAND_NGT_INST_COREPER_byCONSIL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Adoption of negotiating mandate by Coreper"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2026/0169/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "doc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ST 14973 2026 INIT"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "First reading"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/70f42e75-7088-11f1-9800-01aa75ed71a1.0015"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2026_169.2026-11-06_ADP_MAND_NGT_INST_COREPER_byCONSIL"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-06"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/ADP_MAND_NGT_INST_COREPER_byCONSIL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Adoption of negotiating mandate by Coreper"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2026/0169/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "doc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "ST 15156 2026 INIT"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "First reading"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/73cac44f-fae0-11ed-a05c-01aa75ed71a1.0031"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2023_167.2026-11-12_VOTE_byEP"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-12"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/VOTE_byEP"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Vote in EP plenary"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/EP"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2023/0167/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "First reading"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/73cac44f-fae0-11ed-a05c-01aa75ed71a1.0032"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2023_167.2026-11-19_APR_R1_byCONSIL"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-19"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/APR_R1_byCONSIL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Approval of the EP's first reading position by the Council (adoption of the legislative act)"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2023/0167/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "doc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "CM 4825 2026 INIT"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/PROC_END"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "End of procedure"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/204193d7-007b-11ee-87ec-01aa75ed71a1.0048"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2023_169.2026-11-19_APR_R1_byCONSIL"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-19"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/APR_R1_byCONSIL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Approval of the EP's first reading position by the Council (adoption of the legislative act)"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2023/0169/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "doc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "CM 4825 2026 INIT"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/PROC_END"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "End of procedure"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/204193d7-007b-11ee-87ec-01aa75ed71a1.0048"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2023_169.2026-11-19_APR_R1_byCONSIL"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-19"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/APR_R1_byCONSIL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Approval of the EP's first reading position by the Council (adoption of the legislative act)"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2023/0169/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "doc": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "PE 34 2026 INIT"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/PROC_END"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "End of procedure"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/d738270e-d67e-11f0-8da2-01aa75ed71a1.0033"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2025_391.2026-11-19_DELIB_byCONSIL"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-19"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/DELIB_byCONSIL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Deliberations in Council"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2025/0391/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "First reading"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/70f42e75-7088-11f1-9800-01aa75ed71a1.0016"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2026_169.2026-11-19_DELIB_byCONSIL"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-19"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/DELIB_byCONSIL"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Deliberations in Council"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/CONSIL"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2026/0169/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "First reading"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/d738270e-d67e-11f0-8da2-01aa75ed71a1.0032"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2025_391.2026-11-24_VOTE_byEP"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-24"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/VOTE_byEP"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Vote in EP plenary"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/EP"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2025/0391/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "First reading"
+    }
+   },
+   {
+    "ev": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/cellar/de6bbc54-e437-11ed-a05c-01aa75ed71a1.0063"
+    },
+    "same": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/procedure-event/2023_131.2026-11-25_VOTE_byEP"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-25"
+    },
+    "type": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/VOTE_byEP"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Vote in EP plenary"
+    },
+    "inst": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/corporate-body/EP"
+    },
+    "status": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event-status/PROJECTED"
+    },
+    "ref": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "2023/0131/COD"
+    },
+    "ptype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure/OLP"
+    },
+    "phase": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2"
+    },
+    "phase_label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Second reading"
+    }
+   }
+  ]
+ }
+}

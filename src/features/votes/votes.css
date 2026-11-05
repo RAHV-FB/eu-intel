@@ -266,6 +266,29 @@
   }
 }
 
+/* By national party (PartyBreakdown.tsx). Below 40rem only the party column stays: its country, group and the four
+   counts are lines under its name (.only-narrow), so that long names are not broken inside a word. */
+/* the line "MEPs from Germany: 15 national parties", as the list of MEPs below gives its count (.results-bar__count) */
+.party-tally {
+  margin: 0 0 var(--sp-2);
+  font-weight: var(--fw-medium);
+}
+.table--parties thead th.num {
+  vertical-align: bottom;
+}
+.party-counts {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  color: var(--text);
+}
+.party-counts b {
+  font-weight: var(--fw-semibold);
+}
+.party-counts__item {
+  white-space: nowrap;
+}
+
 /* ShortOnNarrow (Breakdowns.tsx): "Abst." on the narrowest screens; the full heading stays for screen readers */
 .label-short {
   display: none;

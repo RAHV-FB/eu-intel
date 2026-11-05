@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import type { DossierDetail, EpVoteDetail } from '../types/data';
+import type { DossierDetail, EpVoteDetail, PartySummary } from '../types/data';
 import { useData } from '../lib/data';
 import { isMissing } from '../features/guide/missing';
 import { useHashScroll } from '../features/guide/useHashScroll';
@@ -10,6 +10,7 @@ import { dossierPath, useDocumentTitle } from '../features/legislation/labels';
 import { useGroups } from '../features/people/labels';
 import { CloseVoteMethod, MarginText, OutcomeBadge } from '../features/votes/components';
 import { BallotList, CountryBreakdownTable, GroupBreakdownTable } from '../features/votes/Breakdowns';
+import { PartyBreakdown } from '../features/votes/PartyBreakdown';
 import { LangText, VoteTitle } from '../features/votes/VoteTitle';
 import { DETAIL_EXPLAINER, FINAL_ROLE_EXPLAINER, KIND_EXPLAINER, KIND_LABEL, POSITION_LABEL } from '../features/votes/labels';
 
@@ -31,6 +32,9 @@ export default function Vote() {
   const groups = useGroups();
   // the file's Council votes, if any: the page links on to how the Member States voted on the same file
   const { data: dossier } = useData<DossierDetail>(v?.dossier_id ? `dossiers/${v.dossier_id}.json` : null);
+  // the names of the national party records, for the table by national party (votes with individual votes only)
+  const parties = useData<PartySummary[]>(v?.has_ballots ? 'people/parties.json' : null);
+  const partyById = useMemo(() => (parties.data ? new Map(parties.data.map((p) => [p.id, p])) : null), [parties.data]);
   const notFound = !validId || (!!v && !Array.isArray(v.ballots)) || isMissing(error);
   useDocumentTitle(
     notFound ? 'Vote not found' : v ? v.display_title || v.title : error ? 'Vote could not be loaded' : 'Parliament vote',
@@ -117,6 +121,9 @@ export default function Vote() {
             </li>
             <li>
               <a href="#countries">By MEPs’ country</a>
+            </li>
+            <li>
+              <a href="#parties">By national party</a>
             </li>
             <li>
               <a href="#meps">Individual MEPs</a>
@@ -304,11 +311,33 @@ export default function Vote() {
             )}
           </section>
 
+          <section className="section" id="parties" aria-labelledby="parties-h">
+            <h2 id="parties-h">By national party</h2>
+            <p className="section-intro">
+              How MEPs voted, by the national party (or electoral list) that Parliament’s membership data lists each of them under on the
+              day of the vote. A national party has no vote of its own in Parliament: these figures add up its MEPs’ individual votes.
+              “Did not vote” counts its MEPs in office that day with no recorded vote, for example because they were absent;{' '}
+              <strong>it is not the same as abstaining.</strong> Parties are listed by country, then by name.
+            </p>
+            {parties.loading ? (
+              <Loading label="Loading party names…" />
+            ) : (
+              <PartyBreakdown v={v} parties={partyById} groupCodes={groupCodes} />
+            )}
+          </section>
+
           <section className="section" id="meps" aria-labelledby="meps-h">
             <h2 id="meps-h">Individual MEPs</h2>
             <p className="section-intro">
               Each MEP’s recorded vote, with their group and country on the day of the vote. MEPs who are not listed have no vote
               recorded — for example because they were absent or did not take part. <strong>Not recorded is not the same as abstained.</strong>
+            </p>
+            <p className="note mb-3">
+              The same roll-call vote is also on{' '}
+              <ExtLink href={`https://howtheyvote.eu/votes/${encodeURIComponent(v.id)}`} official={false}>
+                HowTheyVote.eu
+              </ExtLink>
+              , an independent website that is not an official source.
             </p>
             <BallotList ballots={v.ballots} names={v.mep_names} groupCodes={groupCodes} />
           </section>

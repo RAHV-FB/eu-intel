@@ -43,9 +43,13 @@ test.describe('homepage', () => {
       await expect(card.getByRole('link', { name: /^Full details on / })).toBeVisible();
     }
     expect(await pageTop(page.locator('#topics-title'))).toBeLessThan(await pageTop(page.locator('#lists-title')));
-    // the whole page in phone screens: 18.8 before the featured cards became an overview (23 October 2026)
+    // the whole page in phone screens: 18.8 before the featured cards became an overview (23 October 2026); about 13.1
+    // then, and 14.3 once the page opened with "This week in EU law" and its lists named each file's latest step (5
+    // November 2026: the strip shows three changes on a phone, the What changed page the rest); 15.1 with the steps the
+    // Council and Parliament have scheduled (Plan 2.1, the same day: three on a phone, the explorer's "Next scheduled
+    // step" order the rest). The bound catches a list that stops being a three-row preview on phones.
     const screens = await page.evaluate(() => document.documentElement.scrollHeight / window.innerHeight);
-    expect(screens).toBeLessThan(14);
+    expect(screens).toBeLessThan(16);
   });
 
   test('gives the guide a reading time that matches its length', async ({ page }) => {

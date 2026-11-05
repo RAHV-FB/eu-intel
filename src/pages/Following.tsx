@@ -18,6 +18,7 @@ import {
   type WatchEntry,
 } from '../lib/watchlist';
 import { EmptyState, Loading, PageHeader, StatusBadge } from '../components/ui';
+import { opml, opmlFileName, opmlHref } from '../lib/opml';
 import { dossierPath, institutionSuffix, isMissing, useDocumentTitle } from '../features/legislation/labels';
 import { latestDone } from '../features/legislation/dossier/Summary';
 import { todayISO } from '../features/legislation/explorer';
@@ -219,6 +220,15 @@ export default function Following() {
   // Changed first; otherwise keep the stored order (most recently followed first).
   const ordered = shared ? ids : [...changedIds, ...ids.filter((id) => !changedIds.includes(id))];
   const notYetFollowed = sharedIds.filter((id) => !followingIds.has(id) && loaded[id]?.state === 'ok');
+  // the feeds of the files listed, for a feed reader (named by their titles once loaded)
+  const opmlXml = opml(
+    ordered.map((id) => {
+      const l = loaded[id];
+      return l?.state === 'ok' ? { id, title: l.d.title, ref: l.d.ref } : { id };
+    }),
+    `${window.location.origin}${import.meta.env.BASE_URL}`,
+    new Date(),
+  );
 
   const remove = (id: string, title: string) => {
     onSaved(unfollow(id));
@@ -429,6 +439,18 @@ export default function Following() {
               />
             ))}
           </ul>
+
+          {/* the list's feeds for a feed reader, as one OPML file made here: a data: link, nothing sent anywhere */}
+          <div className="following__opml">
+            <p>
+              <strong>Follow {ids.length === 1 ? 'this file' : 'these files'} in a feed reader.</strong> Each file has an Atom feed
+              of its steps, votes and status changes. Feed readers can import them all from one OPML file.
+            </p>
+            <a className="btn" href={opmlHref(opmlXml)} download={opmlFileName(today)} type="text/x-opml">
+              Download the {ids.length === 1 ? 'feed' : `${formatNumber(ids.length)} feeds`} (OPML)
+            </a>
+            <p className="meta">The file is made in your browser from the list above; nothing is sent anywhere.</p>
+          </div>
 
           <div className="following__share">
             <label htmlFor={shareId} className="lx-field__label">

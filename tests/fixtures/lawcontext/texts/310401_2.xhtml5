@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>General data protection regulation (GDPR)</title><meta name="description" content="The regulation protects personal data in the EU while allowing such data to move freely between EU Member States."/><meta name="author" content="PUBL"/><meta name="copyright" content="© European Union, 2026"/><meta name="op-spec-version" content="4.0"/><meta name="op-creator-version" content="ESTeam EUR-Lex LegisSum Editor v1.0"/><meta name="op-multilingual-pub" content="no"/><meta property="og:title" content="General data protection regulation (GDPR)"/><meta property="og:type" content="website"/><meta property="og:description" content="The regulation protects personal data in the EU while allowing such data to move freely between EU Member States."/><link rel="stylesheet" type="text/css" href="LSEU_XHTML5.css" data-framework="no"/></head>
+    <body>
+        <header>
+            <h1>General Data Protection Regulation (GDPR)</h1>
+        </header>
+
+        <section class="lseu-section-summary-of" id="lseu-section-summary-of">
+            <h2>SUMMARY OF:</h2>
+            <p><a href="http://data.europa.eu/eli/reg/2016/679/oj/eng" hreflang="en">Regulation (EU) <span class="lseu-nowrap">2016/679</span> on the protection of natural persons with regard to the processing of personal data and the free movement of such data</a></p>
+        </section>
+
+        <section class="lseu-section-aim" id="lseu-section-aim">
+            <h2>WHAT IS THE AIM OF THE REGULATION?</h2>
+            <ul>
+                <li>Regulation (EU) <span class="lseu-nowrap">2016/679</span>, the General Data Protection Regulation (GDPR), protects individuals (natural persons) when their data is being processed by the private sector and most of the public sector. The processing of data by the relevant authorities for law-enforcement purposes is subject to the <a href="http://data.europa.eu/eli/dir/2016/680/oj/eng" hreflang="en">Data Protection Law Enforcement Directive</a> (LED) instead (see <a href="https://eur-lex.europa.eu/EN/legal-content/summary/protecting-personal-data-that-is-used-by-police-and-criminal-justice-authorities-from-2018.html" hreflang="en">summary</a>).</li>
+                <li>It allows individuals to better control their personal data. It also modernises and unifies rules, allowing businesses to reduce red tape and to benefit from greater consumer trust.</li>
+                <li>It establishes a system of completely independent supervisory authorities in charge of monitoring and enforcing compliance.</li>
+                <li>It is part of the <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/european-union.html" hreflang="en">European Union</a> (EU) <a href="https://ec.europa.eu/commission/presscorner/api/files/attachment/858764/data-protection-factsheet-citizens_en_1.pdf" hreflang="en" target="_blank" rel="noopener">data protection reform</a>, along with the Data Protection Law Enforcement Directive and Regulation (EU) <span class="lseu-nowrap"><a href="http://data.europa.eu/eli/reg/2018/1725/oj/eng" hreflang="en">2018/1725</a></span> on the protection of individuals with regard to the processing of personal data by the EU institutions, bodies, offices and agencies (see <a href="https://eur-lex.europa.eu/EN/legal-content/summary/protection-of-individuals-with-regard-to-the-processing-of-personal-data-by-eu-institutions-bodies-offices-and-agencies.html" hreflang="en">summary</a>).</li>
+            </ul>
+        </section>
+
+        <section class="lseu-section-key-points" id="lseu-section-key-points">
+            <h2>KEY POINTS</h2>
+            <h3>Individuals’ rights</h3>
+            <p>The GDPR strengthens existing rights, provides for new rights and gives individuals more control over their personal data. It includes the following.</p>
+            <ul>
+                <li><strong>Easier access to an individual’s own data.</strong> This includes providing more information on how that data is processed and ensuring that that information is available in a clear and understandable way.</li>
+                <li><strong>A right to data portability.</strong> This makes it easier to transmit personal data between service providers.</li>
+                <li><strong>A right to erasure</strong> (<a href="https://eur-lex.europa.eu/EN/legal-content/summary/right-to-be-forgotten-on-the-internet.html" hreflang="en"><strong>right to be forgotten</strong></a>). When an individual no longer wants their data to be processed and there is no legitimate reason to keep it, the data will be deleted.</li>
+                <li><strong>The right to know when their personal data has been breached.</strong> Companies and organisations have to notify the relevant <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/data-protection.html" hreflang="en">data protection</a> supervisory authority and, in cases of serious data breaches, also the individuals affected.</li>
+            </ul>
+
+            <h3>Rules for businesses</h3>
+            <p>The GDPR creates a level playing field for all companies operating in the EU <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/internal-market.html" hreflang="en">internal market</a>, adopts a technology-neutral approach and stimulates innovation through a number of steps, which include the following.</p>
+            <ul>
+                <li><strong>A single set of EU-wide rules.</strong> A single EU-wide law for data protection increases legal certainty and reduces administrative burdens.</li>
+                <li><strong>A data protection officer.</strong> A person responsible for data protection has to be designated by public authorities and by businesses that process data on a large scale, or whose core activity is the processing of special categories of data, such as health-related data.</li>
+                <li><strong>One-stop shop.</strong> Businesses only have to deal with one single supervisory authority (in the EU <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/member-states.html" hreflang="en">Member State</a> in which they have their main establishment); the relevant supervisory authorities cooperate within the framework of the <a href="https://edpb.europa.eu/" hreflang="en" target="_blank" rel="noopener">European Data Protection Board</a> for cross-border cases, with additional procedural rules for cross-border enforcement laid down in Regulation (EU) <span class="lseu-nowrap"><a href="http://data.europa.eu/eli/reg/2025/2518/oj/eng" hreflang="en">2025/2518</a></span>.</li>
+                <li><strong>EU rules for non-EU companies.</strong> Companies based outside the EU must apply the same rules when offering services or goods to, or when monitoring the behaviours of, individuals within the EU.</li>
+                <li><strong>Innovation-friendly rules.</strong> A guarantee that data protection safeguards are built into products and services from the earliest stage of development (data protection by design and by default).</li>
+                <li><strong>Privacy-friendly techniques.</strong> Pseudonymisation (when identifying fields within a data record are replaced by one or more artificial identifiers) and encryption (when data is coded in such a way that only authorised parties can read it), for example, are encouraged, in order to limit the intrusiveness of processing.</li>
+                <li><strong>Removal of notifications.</strong> The GDPR scrapped most notification obligations and the costs associated with these. One of its aims is to remove obstacles that affect the free flow of personal data within the EU. This will make it easier for businesses to expand in the digital single market.</li>
+                <li><strong>Data protection impact assessments.</strong> Organisations will have to carry out impact assessments when data processing may result in a high risk for the rights and freedoms of individuals.</li>
+                <li><strong>Record keeping.</strong> <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/small-and-medium-sized-enterprises.html" hreflang="en">Small and medium-sized enterprises</a> are not required to keep records of processing activities – unless the processing is regular or likely to result in a risk to the rights and freedoms of the person whose data is being processed, or includes sensitive categories of data.</li>
+                <li><strong>A modern toolbox for international data transfers.</strong> The GDPR offers various instruments to transfer data outside the EU, including adequacy <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/decision.html" hreflang="en">decisions</a> adopted by the <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/european-commission.html" hreflang="en">European Commission</a> where the non-EU country offers an adequate level of protection, pre-approved (standard) contractual clauses, binding corporate rules, codes of conduct and certification.</li>
+            </ul>
+
+            <h3>Enforcement of the GDPR in cross-border cases</h3>
+            <p>Regulation (EU) <span class="lseu-nowrap">2025/2518</span> (adopted on <time datetime="2025-11-26">26 November 2025</time> and published in the <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/official-journal-of-the-european-union.html" hreflang="en">Official Journal</a> on <time datetime="2025-12-12">12 December 2025</time>) sets procedural rules for enforcing the GDPR in cross-border cases (where more than one EU / <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/european-economic-area-eea.html" hreflang="en">European Economic Area</a> authority is involved). The goal is to make investigations and complaint-handling faster and more consistent across Member States.</p>
+            <p>The <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/regulation.html" hreflang="en">regulation</a> strengthens and <a href="https://eur-lex.europa.eu/EN/legal-content/glossary/standardisation.html" hreflang="en">standardises</a> processes such as how complaints are lodged and assessed, cooperation between the lead supervisory authority and other concerned authorities, and clearer procedural rights for key parties (complainants and parties under investigation). It is intended to improve efficiency and legal certainty in cross-border GDPR enforcement while supporting smoother coordination between regulators.</p>
+
+            <h3>Review</h3>
+            <p>The Commission published the first <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52020DC0264" hreflang="en">report</a> on the evaluation and review of the regulation in June 2020. A second <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52024DC0357" hreflang="en">report</a> was published in July 2024, and the next report is due in 2028.</p>
+        </section>
+
+        <section class="lseu-section-applicability" id="lseu-section-applicability">
+            <h2>FROM WHEN DOES THE REGULATION APPLY?</h2>
+            <p>The GDPR has applied since <time datetime="2018-05-25">25 May 2018</time>.</p>
+            <p>The procedural rules for cross-border enforcement laid down in Regulation (EU) <span class="lseu-nowrap">2025/2518</span> apply from <time datetime="2027-04-02">2 April 2027</time>.</p>
+        </section>
+
+        <section class="lseu-section-background" id="lseu-section-background">
+            <h2>BACKGROUND</h2>
+            <p>For further information, see:</p>
+            <ul>
+                <li><a href="https://ec.europa.eu/commission/presscorner/detail/en/ip_15_6321" hreflang="en" target="_blank" rel="noopener">Agreement on Commission’s EU data protection reform will boost digital single market</a> (European Commission)</li>
+                <li><a href="https://commission.europa.eu/law/law-topic/data-protection_en" hreflang="en" target="_blank" rel="noopener">Data protection</a> (European Commission)</li>
+                <li><a href="https://commission.europa.eu/law/law-topic/data-protection/legal-framework-eu-data-protection_en" hreflang="en" target="_blank" rel="noopener">Legal framework of EU data protection</a> (European Commission)</li>
+                <li><a href="https://commission.europa.eu/publications/reports-application-gdpr_en" hreflang="en" target="_blank" rel="noopener">Reports on the application of the GDPR</a> (European Commission)</li>
+                <li><a href="http://europa.eu/rapid/press-release_MEMO-15-6385_en.htm" hreflang="en" target="_blank" rel="noopener">Questions and answers – data protection reform</a> (European Commission)</li>
+                <li><a href="https://commission.europa.eu/aid-development-cooperation-fundamental-rights/your-fundamental-rights-eu/know-your-rights/freedoms/protection-personal-data_en" hreflang="en" target="_blank" rel="noopener">Protection of personal data</a> (European Commission).</li>
+            </ul>
+            <p>Following the COVID-19 outbreak and the introduction of measures to cope with the impact of the crisis, the Commission adopted:</p>
+            <ul>
+                <li><a href="http://data.europa.eu/eli/reco/2020/518/oj/eng" hreflang="en">Commission Recommendation (EU) <span class="lseu-nowrap">2020/518</span> of <time datetime="2020-04-08">8 April 2020</time> on a common Union toolbox for the use of technology and data to combat and exit from the COVID-19 crisis, in particular concerning mobile applications and the use of anonymised mobility data</a>.</li>
+            </ul>
+        </section>
+
+        <section class="lseu-section-main-document" id="lseu-section-main-document">
+            <h2>MAIN DOCUMENT</h2>
+            <p>Regulation (EU) <span class="lseu-nowrap"><a href="http://data.europa.eu/eli/reg/2016/679/oj/eng" hreflang="en">2016/679</a></span> of the European Parliament and of the Council of <time datetime="2016-04-27">27 April 2016</time> on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC (General Data Protection Regulation) (OJ L 119, <time datetime="2016-05-04">4.5.2016</time>, <span class="lseu-nowrap">pp. 1–88</span>).</p>
+            <p>Successive amendments to Regulation (EU) <span class="lseu-nowrap">2016/679</span> have been incorporated into the original text. This <a href="http://data.europa.eu/eli/reg/2016/679/2016-05-04/eng" hreflang="en">consolidated version</a> is of documentary value only.</p>
+        </section>
+
+        <section class="lseu-section-related-documents" id="lseu-section-related-documents">
+            <h2>RELATED DOCUMENTS</h2>
+            <p>Regulation (EU) <span class="lseu-nowrap"><a href="http://data.europa.eu/eli/reg/2025/2518/oj/eng" hreflang="en">2025/2518</a></span> on additional procedural rules on the enforcement of the GDPR.</p>
+            <p>Regulation (EU) <span class="lseu-nowrap"><a href="http://data.europa.eu/eli/reg/2018/1725/oj/eng" hreflang="en">2018/1725</a></span> on the protection of personal data by the EU institutions, bodies, offices and agencies and on the free movement of such data.</p>
+            <p>Directive (EU) <a href="http://data.europa.eu/eli/dir/2016/680/oj/eng" hreflang="en">2016/680</a> on the protection of personal data by police and criminal justice authorities and on the free movement of such data.</p>
+            <p>See <a href="http://data.europa.eu/eli/dir/2016/680/2016-05-04/eng" hreflang="en">consolidated version</a>.</p>
+            <p>Directive <a href="http://data.europa.eu/eli/dir/2002/58/oj/eng" hreflang="en">2002/58/EC</a> on the processing of personal data and the protection of privacy in the electronic communications sector (Directive on privacy and electronic communications).</p>
+            <p>See <a href="http://data.europa.eu/eli/dir/2002/58/2009-12-19/eng" hreflang="en">consolidated version</a>.</p>
+        </section>
+
+        <p class="lseu-lastmod">last update <time datetime="2026-03-24">24.3.2026</time></p>
+
+    </body></html>

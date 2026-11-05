@@ -14,7 +14,9 @@ so that nobody reads a gap as a fact about EU law.
   it is not shown (Council Decision (EU) 2020/2059 and 2020/3521(COD): `data/curated/act_links.yaml`).
 - **Parliament votes**: plenary votes from 18 July 2019 (9th and 10th terms). Votes on whole texts,
   resolutions, motions, final and negotiating-mandate votes and votes on entering negotiations are listed;
-  how each MEP voted is shown only for those votes, not for amendments or split votes.
+  how each MEP voted is shown only for those votes, not for amendments or split votes. A national party's page lists
+  its MEPs' final and negotiating-mandate votes only (not resolutions or motions); for MEP-level analysis, each vote
+  links to the same vote on HowTheyVote.eu, an independent site.
 - **Council votes**: the Council's published voting results from 2019, read from its own documents (the
   Council's open-data datasets were discontinued in 2025 and its web pages are bot-protected).
 - **National implementation**: measures notified to the Commission and listed by EUR-Lex, and the
@@ -75,9 +77,13 @@ so that nobody reads a gap as a fact about EU law.
   number in that id ("Regulation 2026/2102"), not by their full type, unless a curated date correction cites
   their text ("Commission Delegated Regulation (EU) 2026/2102"). Such an act's publication is not dated on the
   timeline, so the EUDR's latest step (23 December 2025) is older than its amendment published on 17 September 2026.
-- Actions before the Court of Justice are not read: a proposal whose withdrawal is challenged (2023/0133(COD),
-  Parliament's action for annulment, Case C-727/25, pending) is shown as withdrawn, with the Legislative
-  Observatory's stage where that stage is not "lapsed or withdrawn" (5 withdrawn files on 24 October 2026).
+- A proposal whose withdrawal is challenged before the Court of Justice is shown as withdrawn, with the Legislative
+  Observatory's stage where that stage is not "lapsed or withdrawn" (5 withdrawn files on 24 October 2026); its page
+  also says that the withdrawal is challenged (2023/0133(COD): Parliament's action for annulment, Case C-727/25,
+  pending).
+- Court cases on an act are shown as pending only when EUR-Lex links the case to its file, which it does for cases
+  brought from 2024 and some of 2023; earlier pending cases are not shown as pending. EUR-Lex summaries it marks as
+  obsolete are not shown.
 - Initiatives of Member States are named from the Legislative Observatory's file title, and requests of the
   Court of Justice from its record; other initiators, such as the ECB, are not named.
 - Links to committee documents on www.europarl.europa.eu could not be checked automatically (the site refuses

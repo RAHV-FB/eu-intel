@@ -247,12 +247,16 @@ def test_vote_breakdowns_use_membership_on_vote_date(out: Path):
 
 
 def test_vote_titles_hold_what_the_mep_and_group_vote_tables_show(out: Path):
-    """MEP and group pages read votes/titles.json instead of the whole index (2.5 MB, 3,000 votes in the October 2026
-    build): the same votes in the same order, the fields their tables show and nothing else."""
+    """MEP, group and party pages read votes/titles.json instead of the whole index (2.5 MB, 3,000 votes in the October
+    2026 build): the same votes in the same order, the fields their tables show and nothing else."""
     index, titles = load(out, "votes/index.json"), load(out, "votes/titles.json")
     assert [t["id"] for t in titles] == [v["id"] for v in index] == ["V3", "V1", "V4"]
-    # the fields src/pages/Mep.tsx and Group.tsx render: date, VoteTitle, VoteRowMeta, result (Mep)
-    shown = {"id", "date", "display_title", "display_title_parts", "distinction", "kind_label", "procedure_ref", "outcome"}
+    # the fields src/pages/Mep.tsx, Group.tsx and Party.tsx render: date, VoteTitle, VoteRowMeta, result (Mep), the
+    # link to the file's page (Party)
+    shown = {
+        "id", "date", "display_title", "display_title_parts", "distinction", "kind_label", "procedure_ref", "outcome",
+        "dossier_id",
+    }  # fmt: skip
     for t, v in zip(titles, index, strict=True):
         assert t == {k: v[k] for k in shown if v.get(k)}  # as in the index, an empty field is left out
         assert {"date", "display_title", "kind_label", "outcome"} <= set(t)
@@ -322,8 +326,10 @@ def test_home_lists_only_from_real_data(out: Path):
         "close_votes",
         "rejected",
         "stalled",
+        "scheduled",
         "upcoming",
     }
+    assert lists["scheduled"]["items"] == []  # no planned steps retrieved in the fixture (tests/test_agenda.py)
     stalled = lists["stalled"]["items"]
     assert stalled and stalled[0]["dossier_id"] == "2099-0002"
     rejected_desc = lists["rejected"]["description"]
@@ -353,7 +359,9 @@ def test_meta_sources_and_counts(out: Path):
         "council",
         "implementation",
         "optouts",
+        "lawcontext",
         "train",
+        "agenda",
     }
     assert all(s["licence"] for s in meta["sources"])
     assert meta["counts"]["dossiers"] == 4 and meta["counts"]["ep_votes"] == 3

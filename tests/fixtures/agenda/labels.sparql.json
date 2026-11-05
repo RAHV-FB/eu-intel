@@ -1,0 +1,59 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "c",
+   "label"
+  ]
+ },
+ "results": {
+  "distinct": false,
+  "ordered": true,
+  "bindings": [
+   {
+    "c": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/DEBATE_byEP"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Debate in EP plenary"
+    }
+   },
+   {
+    "c": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/event/VOTE_byEP"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Vote in EP plenary"
+    }
+   },
+   {
+    "c": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Second reading"
+    }
+   },
+   {
+    "c": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "First reading"
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,164 @@
+{
+ "head": {
+  "link": [],
+  "vars": [
+   "id",
+   "date",
+   "rtype",
+   "title"
+  ]
+ },
+ "results": {
+  "distinct": false,
+  "ordered": true,
+  "bindings": [
+   {
+    "id": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "consil:ST_15156_2026_INIT"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-10-30"
+    },
+    "rtype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/resource-type/AGENDA_DRAFT_CONSIL"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "PERMANENT REPRESENTATIVES COMMITTEE (Part 2)"
+    }
+   },
+   {
+    "id": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "consil:CM_4825_2026_INIT"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-04"
+    },
+    "rtype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/resource-type/AGENDA_DRAFT_CONSIL"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "COUNCIL OF THE EUROPEAN UNION (General Affairs)"
+    }
+   },
+   {
+    "id": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "consil:ST_15180_2026_INIT"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-04"
+    },
+    "rtype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/resource-type/AGENDA_DRAFT_CONSIL"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "PERMANENT REPRESENTATIVES COMMITTEE (Part 1)"
+    }
+   },
+   {
+    "id": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "consil:PE_34_2026_INIT"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-08-15"
+    },
+    "rtype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/resource-type/ACT_LEGIS"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL on jurisdiction, applicable law, recognition and enforcement of measures and cooperation in matters relating to the protection of adults"
+    }
+   },
+   {
+    "id": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "consil:ST_14735_2026_INIT"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-11-04"
+    },
+    "rtype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/resource-type/NOTE"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Proposal for a REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL amending Regulation (EU) 2024/1787 on the reduction of methane emissions in the energy sector as regards the postponement of certain obligations - Mandate for negotiations with the European Parliament"
+    }
+   },
+   {
+    "id": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "consil:ST_14751_2026_INIT"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-10-30"
+    },
+    "rtype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/resource-type/NOTE"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Proposal for a REGULATION OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL on guidelines for trans-European energy infrastructure, amending Regulations (EU) 2019/942, (EU) 2019/943 and (EU) 2024/1789 and repealing Regulation (EU) 2022/869 (Text with EEA relevance) - Preparation for the trilogue"
+    }
+   },
+   {
+    "id": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#string",
+     "value": "consil:ST_14973_2026_INIT"
+    },
+    "date": {
+     "type": "literal",
+     "datatype": "http://www.w3.org/2001/XMLSchema#date",
+     "value": "2026-10-30"
+    },
+    "rtype": {
+     "type": "uri",
+     "value": "http://publications.europa.eu/resource/authority/resource-type/NOTE"
+    },
+    "title": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Proposal for a Regulation of the European Parliament and of the Council amending Regulation (EU) 2017/1369 and Regulation (EU) 2020/740 as regards simplification and better use of digital options for energy and tyre labelling - Mandate for negotiations with the European Parliament"
+    }
+   }
+  ]
+ }
+}

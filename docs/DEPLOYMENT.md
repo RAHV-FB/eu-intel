@@ -6,7 +6,7 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Five 
 | --- | --- | --- | --- |
 | `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, typecheck; on the [frozen test data](#frozen-test-data): pytest (offline), data build, vitest, site build, Playwright e2e and accessibility tests in three engines; on the commit's own data: the [data gate](#the-data-gate) | `contents: read` |
 | `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`; called by *Data refresh* with the commit it pushed, and by *Daily rebuild* with `main`; manual | the data gate on the commit it deploys (data built with the Pages URL and base path) → a browser smoke test of the built site on its own data → upload → deploy → check the public URL | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
-| `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC (a scheduled run is skipped if every core source on `main` was retrieved in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month) → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
+| `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC, Fridays 05:17 UTC (a scheduled run is skipped if every core source on `main` was retrieved in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month); on Fridays the core sources and `agenda` only → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
 | `rebuild.yml` (Daily rebuild) | daily 01:23 UTC, manual | no fetch, no commit: deploys `main` (its committed data built with today's date) through `pages.yml` once CI has passed on its code, unless a refresh is running | `contents: read`, `actions: read`; its deploy job: as `pages.yml` |
 | `watchdog.yml` (Watchdog) | after each *Data refresh*, *CI* run on `main`, deploy and *Daily rebuild*, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
 
@@ -71,7 +71,8 @@ The site will be at `https://rahv-fb.github.io/eu-intel/`.
 GitHub Pages serves a project site under `/<repo>/`. `pages.yml` takes the path from
 `actions/configure-pages` (`steps.pages.outputs.base_path`, e.g. `/eu-intel`, or empty for a custom domain) and
 builds with `BASE_PATH=<base_path>/`. `vite.config.ts` uses it as Vite's `base`, the router uses it as its
-`basename`, and data is loaded from `${BASE_URL}data/`. The Atom feeds (`data/feeds/*.xml`) need absolute links:
+`basename`, and data is loaded from `${BASE_URL}data/`. The Atom feeds (`data/feeds/*.xml`, and one per file in
+`data/feeds/dossiers/`) need absolute links:
 the data build takes them from `SITE_URL`, which `pages.yml` sets to the Pages URL
 (`steps.pages.outputs.base_url`, e.g. `https://rahv-fb.github.io/eu-intel` or the custom domain); without it
 (CI, local builds) they point at `https://rahv-fb.github.io/eu-intel/`. `SITE_URL` sets the links only: the ids
@@ -98,8 +99,15 @@ open http://127.0.0.1:4174/eu-intel/).
   not run after a first one that refreshed them, and does run after one whose core sources failed (an outage) or that
   never came: GitHub runs schedules on a best-effort basis (the 05:17 run has started up to 8 hours late) and can drop a
   run at busy times. A commit of other data (a manual refresh of one source, a restore) does not skip it. A scheduled
-  run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`; decided in the job, since cron
-  would OR a day of the month with the weekday). A manual run is never skipped. GitHub also disables every scheduled
+  Monday run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`; decided in the job, since
+  cron would OR a day of the month with the weekday). A manual run is never skipped.
+- **Friday light refresh** (05:17 UTC, the same skip rule): the core sources and the planned dates only (`LIGHT_SOURCES`
+  in `refresh.yml`: EP procedures, EP votes, EUR-Lex, Council, `agenda`), never a full refresh. Parliament votes Tuesday
+  to Thursday (97.7% of its recorded votes), so with Monday runs alone a vote reached the site after about 5 days on
+  average; with this run, after about 2. The Council's and Parliament's plans for the coming weeks (`agenda`) are
+  published during the week, and `agenda`'s 9-day threshold assumes a weekly copy at least. Its incremental reads take
+  no rotation share: the Monday run of the same week took it ("What a weekly run re-reads"). If it is dropped or fails,
+  the Monday run covers it. GitHub also disables every scheduled
   workflow of a public repository after 60 days without activity in it. A commit is activity: the refresh's weekly
   commits keep the repository active as long as it commits. A scheduled run that commits nothing (the watchdog's, the
   daily rebuild's) is not. The watchdog's daily run is disabled together with the refresh's, so it cannot report this by
@@ -315,10 +323,10 @@ that source and its manifest entry (what the refresh does for a source that fail
 
 then commit and push as in step 3. The manifest entry is marked `partial` with the reason, and the About page shows its last
 successful retrieval. Then disable the schedule (step 1) and refresh by hand without that source, naming the others in the `sources`
-input of *Run workflow* (the names are `ep_people ep_procedures ep_votes eurlex council implementation optouts train`; those not
+input of *Run workflow* (the names are `ep_people ep_procedures ep_votes eurlex council implementation optouts train agenda`; those not
 listed are not fetched and keep their files and manifest entries):
 
-    gh workflow run refresh.yml -f sources="ep_people ep_procedures eurlex council implementation optouts train"
+    gh workflow run refresh.yml -f sources="ep_people ep_procedures eurlex council implementation optouts train agenda"
 
 (that holds back `ep_votes`). Sources read the files of earlier ones in that order, so a held-back `ep_people` or
 `ep_procedures` leaves the later sources working from its older records. To let the source go again, run it once by hand

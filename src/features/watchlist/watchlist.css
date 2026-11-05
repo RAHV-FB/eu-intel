@@ -189,6 +189,19 @@
   background: #c79a00;
 }
 
+/* the list's feeds as one OPML file */
+.following__opml {
+  margin-top: var(--sp-6);
+  display: grid;
+  gap: var(--sp-2);
+  justify-items: start;
+  max-width: 46rem;
+}
+
+.following__opml p {
+  margin: 0;
+}
+
 .following__share {
   margin-top: var(--sp-6);
   display: grid;
