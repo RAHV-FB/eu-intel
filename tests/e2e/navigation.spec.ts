@@ -295,6 +295,36 @@ test.describe('a page whose own data could not be loaded', () => {
   }
 });
 
+test.describe('a law page opened from another law page', () => {
+  test('says it is loading the new file until it has, not that the file does not exist', async ({ page }) => {
+    await open(page, `legislation/${AI_ACT_ID}/`);
+    // a visible link to another file's page (the AI Act's page names the act amending it under "What is it?")
+    const hrefs = await page
+      .locator('main a:visible')
+      .evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
+    const href = hrefs.find((h) => /\/legislation\/\d{4}-\d{4}[A-Z]{0,2}$/.test(h) && !h.endsWith(`/${AI_ACT_ID}`));
+    expect(href, 'a link to another legislative file').toBeTruthy();
+    const other = href!.split('/').pop()!;
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    await page.route(`**/data/dossiers/${other}.json`, async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.locator(`main a[href="${href}"]:visible`).first().click();
+    await expect(page).toHaveURL(new RegExp(`/legislation/${other}$`));
+    // while its file loads: the loading state, under a neutral tab title (the previous file's page was taken for a
+    // malformed file: "We couldn’t find this legislative file", "Legislative file not found")
+    await expect(page.locator('main .state--loading')).toBeVisible();
+    await expect(page.getByText(/We couldn.t find this/)).toHaveCount(0);
+    await expect(page).not.toHaveTitle(/not found/i);
+    release();
+    await settle(page);
+    await expect(page.getByText(/We couldn.t find this/)).toHaveCount(0);
+    await expect(page.locator('.dz-keyfacts .ref').first()).toHaveText(new RegExp(`^${other.slice(0, 4)}/${other.slice(5, 9)}`));
+  });
+});
+
 test.describe('secondary data that fails to load', () => {
   test('an MEP page says the vote details could not be loaded, rather than showing them as not recorded', async ({ page, guard }) => {
     guard.ignore(/votes\/titles\.json/);
