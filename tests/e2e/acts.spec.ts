@@ -103,7 +103,9 @@ test.describe('act validity', () => {
 
 test.describe('type of act', () => {
   test('an adopted file with no linked act is not described by the type proposed', async ({ page }) => {
-    await open(page, 'legislation/2025-0232/'); // signed, awaiting publication; proposed as a directive
+    // adopted, no act linked yet; proposed as a directive (2025/0232(COD), the earlier example, has its act since the
+    // refresh of 2 Nov 2026)
+    await open(page, 'legislation/2023-0134/');
     const national = page.locator('#national');
     await expect(national).toContainText('No adopted act is linked to this file in our sources yet');
     await expect(national).toContainText('It was proposed as a directive; the adopted act’s type can differ from the one proposed.');
