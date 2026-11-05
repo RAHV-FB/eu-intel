@@ -47,9 +47,12 @@
   short_title: "Digital Omnibus on AI"
   what: >-
     Amends the AI Act to change how and when it applies: it replaces the original start date of the
-    rules for high-risk AI systems with later fixed dates, adds a prohibition on AI practices that
-    generate non-consensual intimate or sexual content or child sexual abuse material, and adjusts
-    registration, documentation and supervision rules.
+    rules for high-risk AI systems with later fixed dates, adds a prohibition, applying from 2 December
+    2026, on AI practices that generate non-consensual intimate or sexual content or child sexual abuse
+    material, and adjusts registration, documentation and supervision rules.
+  # Regulation (EU) 2026/1744, Art. 1, point (40)(a), replacing Art. 113, third paragraph, point (a), of the AI Act:
+  # "Chapters I and II shall apply from 2 February 2025, with the exception of Article 5(1), first subparagraph, points
+  # (ba) and (bb), and Article 5(1a) and (1b) which shall apply from 2 December 2026"
   why: >-
     Providers of high-risk AI systems get more time before the high-risk requirements apply, AI-enabled
     machinery is handled under the Machinery Regulation instead of directly under the AI Act's
@@ -62,7 +65,7 @@
     - {label: "Regulation (EU) 2026/1744 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/reg/2026/1744/oj"}
     - {label: "Legislative Train – Digital Omnibus on AI", url: "https://www.europarl.europa.eu/legislative-train/package-digital-package/file-digital-omnibus-on-ai"}
     - {label: "Council press release, 29 June 2026", url: "https://www.consilium.europa.eu/en/press/press-releases/2026/06/29/artificial-intelligence-council-gives-final-green-light-to-simplify-and-streamline-rules/"}
-  reviewed: "2026-10-22"
+  reviewed: "2026-11-05"
 
 - id: "2020-0361"
   reference: "2020/0361(COD)"
@@ -478,14 +481,20 @@
   celex: ["32026L0470"]
   short_title: "Omnibus I – sustainability reporting and due diligence simplification"
   what: >-
-    Narrows the scope of the CSRD and CSDDD. Once transposed, sustainability reporting will apply from
-    financial years starting from 1 January 2027 to companies with over 1,000 employees and EUR 450 million
-    turnover, and to certain EU subsidiaries and branches of non-EU groups. From 26 July 2029, due diligence
+    Narrows the scope of the CSRD and CSDDD. Once transposed, sustainability reporting will apply for
+    financial years starting from 2027 to companies with over 1,000 employees and EUR 450 million turnover,
+    and from 2028 to certain EU subsidiaries and branches of non-EU groups. From 26 July 2029, due diligence
     will apply to EU companies with over 5,000 employees and EUR 1.5 billion turnover, and to non-EU
     companies with over EUR 1.5 billion EU turnover.
+  # Directive (EU) 2022/2464, Art. 5(2), second subparagraph (amended by neither Directive (EU) 2025/794 nor
+  # 2026/470): "Member States shall apply the measures necessary to comply with point (14) of Article 1 [Article 40a of
+  # Directive 2013/34/EU, third-country undertakings] for financial years starting on or after 1 January 2028."
+  # Directive (EU) 2026/470, Art. 2, point (4)(b) (Art. 19a(3) of Directive 2013/34/EU): a "protected undertaking"
+  # is one which "does not exceed, on its balance sheet date, an average number of 1 000 employees during the preceding
+  # financial year".
   why: >-
     Once the changes are transposed, most companies previously covered will no longer have to report
-    or carry out due diligence under these directives; companies with fewer than 1,000 employees
+    or carry out due diligence under these directives; companies with no more than 1,000 employees
     will not have to give their larger business partners information beyond the voluntary reporting
     standard, and the obligation to adopt climate transition plans is removed.
   aliases: ["Omnibus I", "sustainability omnibus", "CSRD omnibus", "CSDDD omnibus", "simplification omnibus"]
@@ -494,9 +503,10 @@
   feature_order: null
   sources:
     - {label: "Directive (EU) 2026/470 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2026/470/oj"}
+    - {label: "Directive (EU) 2022/2464, Article 5 (EUR-Lex)", url: "https://eur-lex.europa.eu/eli/dir/2022/2464/oj"}
     - {label: "European Parliament press release, 16 December 2025", url: "https://www.europarl.europa.eu/news/en/press-room/20251211IPR32164/simplified-sustainability-reporting-and-due-diligence-rules-for-businesses"}
     - {label: "Legislative Train – Omnibus I", url: "https://www.europarl.europa.eu/legislative-train/package-simplification-business/file-first-omnibus-package-on-sustainability-proposal-amending-csrd-and-csddd"}
-  reviewed: "2026-10-23"
+  reviewed: "2026-11-05"
 
 - id: "2023-0079"
   reference: "2023/0079(COD)"
