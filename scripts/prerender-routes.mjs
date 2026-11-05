@@ -4,9 +4,10 @@
 // the party files themselves: two parties without a recorded name are left out of parties.json).
 // SITE_URL (the Pages URL, as the data build takes it for the Atom feeds) gives each page its canonical address,
 // <SITE_URL><route>/; without it a page has none (a local or fork build must not point at another host).
-// Every page written by page() also gets Open Graph and Twitter tags (its title and description; og:url with SITE_URL)
-// and, with SITE_URL, a place in sitemap.xml; a legislative file's page gets its key facts for readers without JavaScript
-// (<noscript>) and its act as schema.org Legislation (JSON-LD). robots.txt names the sitemap. See scripts/seo.mjs.
+// Every page written by page() also gets Open Graph and Twitter tags (its title and description; with SITE_URL, its
+// address and the site's image) and, with SITE_URL, a place in sitemap.xml; a legislative file's page gets its key facts
+// for readers without JavaScript (<noscript>) and its act as schema.org Legislation (JSON-LD). robots.txt names the
+// sitemap. See scripts/seo.mjs.
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { SITE, esc, formatDate, keyFacts, legislationJsonLd, robotsTxt, sitemapFiles, socialTags } from './seo.mjs';
@@ -69,6 +70,11 @@ const withHead = (html, ...tags) => {
 // a page's absolute address, as its canonical link, og:url and the sitemap give it; null without SITE_URL
 const pageUrl = (route) => (SITE_URL ? SITE_URL + (route ? `${route.split('/').map(encodeURIComponent).join('/')}/` : '') : null);
 const canonical = (route) => (SITE_URL ? `<link rel="canonical" href="${esc(pageUrl(route))}" />` : '');
+// The image of every page's link preview, the site's icon (public/og-image.png, which Vite copies into the site; made by
+// scripts/render-og-image.mjs): only with SITE_URL, since its address must be absolute too; its size from the PNG itself
+const IMAGE = 'og-image.png';
+const png = SITE_URL && existsSync(join(DIST, IMAGE)) ? readFileSync(join(DIST, IMAGE)) : null;
+const image = png && { url: SITE_URL + IMAGE, width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
 // the shell's own title and description (the home page's), and its note for browsers without JavaScript
 const shellTitle = unesc(/<title>([^<]*)<\/title>/.exec(shell)?.[1] ?? SITE);
 const shellDescription = unesc(/<meta name="description" content="([^"]*)"/.exec(shell)?.[1] ?? '');
@@ -113,7 +119,7 @@ function page(route, title, description, qualifier, head = '', { lastmod, facts 
   if (description) {
     html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/, () => `<meta name="description" content="${esc(description)}" />`);
   }
-  html = withHead(html, canonical(route), socialTags(pageTitle, description || shellDescription, pageUrl(route)), head);
+  html = withHead(html, canonical(route), socialTags(pageTitle, description || shellDescription, pageUrl(route), image), head);
   if (facts) html = html.replace(NOSCRIPT, () => `<noscript>\n      <div class="container page">\n${facts}      </div>\n    </noscript>`);
   const out = join(DIST, route, 'index.html');
   mkdirSync(dirname(out), { recursive: true });
@@ -241,8 +247,8 @@ for (const t of readJson('topics.json')) {
   n++;
 }
 // the home page keeps its address; the fallback for unknown addresses (served with status 404) is not for search engines
-writeFileSync(join(DIST, 'index.html'), withHead(shell, canonical(''), socialTags(shellTitle, shellDescription, pageUrl(''))));
-writeFileSync(join(DIST, '404.html'), withHead(shell, '<meta name="robots" content="noindex" />', socialTags(shellTitle, shellDescription)));
+writeFileSync(join(DIST, 'index.html'), withHead(shell, canonical(''), socialTags(shellTitle, shellDescription, pageUrl(''), image)));
+writeFileSync(join(DIST, '404.html'), withHead(shell, '<meta name="robots" content="noindex" />', socialTags(shellTitle, shellDescription, null, image)));
 // The sitemap, whose addresses must be absolute (only with SITE_URL), and robots.txt, which names it. Crawlers read
 // robots.txt only at the root of a host, so under a project site's path it applies once the site has a domain of its own
 // (docs/DEPLOYMENT.md, "Search engines and link previews"). A sitemap of an earlier run is removed first.

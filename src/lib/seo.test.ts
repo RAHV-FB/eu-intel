@@ -147,6 +147,7 @@ function build(dir: string, siteUrl?: string) {
   };
   if (!existsSync(join(dir, 'dist'))) {
     put('dist/index.html', readFileSync(new URL('index.html', ROOT), 'utf8').replace(/%BASE_URL%/g, '/eu-intel/'));
+    copyFileSync(new URL('public/og-image.png', ROOT), join(dir, 'dist/og-image.png')); // as Vite copies public/
     put('dist/data/meta.json', { built_at: '2099-11-05T10:00:00Z', core_data_at: '2099-11-04T08:00:00Z' });
     put('dist/data/dossiers/index.json', [
       ...FILES.map(({ id, ref, title, status, last_event }) => ({ id, ref, title, status_label: status.label, official_title: null, last_event })),
@@ -218,8 +219,21 @@ describe('link previews', () => {
         // the page for unknown addresses has no address of its own
         expect(canonical, p).toBe(withUrl && p !== '404.html' ? SITE_URL + p.replace(/index\.html$/, '') : undefined);
         expect(tags['og:url'], p).toEqual(canonical ? [canonical] : undefined);
+        // the site's image, whose address must be absolute too
+        expect(tags['og:image'], p).toEqual(withUrl ? [`${SITE_URL}og-image.png`] : undefined);
+        if (withUrl) {
+          expect([tags['og:image:type'], tags['og:image:width'], tags['og:image:height']], p).toEqual([['image/png'], ['512'], ['512']]);
+          expect(tags['og:image:alt'], p).toEqual(['EU Legislative Intelligence logo: three yellow lines on a blue square']);
+        } else expect(Object.keys(tags).filter((t) => t.startsWith('og:image')), p).toEqual([]);
       }
     }
+  });
+
+  it('show the site’s icon: a small PNG, rendered by scripts/render-og-image.mjs', () => {
+    const png = readFileSync(new URL('public/og-image.png', ROOT));
+    expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([512, 512]); // square, as twitter:card "summary" shows it
+    expect(png.length).toBeLessThanOrEqual(100 * 1024);
   });
 
   it('are written once, also when the script runs again on its own output', () => {

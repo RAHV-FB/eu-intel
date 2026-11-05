@@ -28,11 +28,15 @@ export function formatDate(d, long = false) {
 
 // ------------------------------------------------------------------ link previews
 
+/** What the image of the link previews shows (public/og-image.png, scripts/render-og-image.mjs: the site's icon). */
+export const IMAGE_ALT = `${SITE} logo: three yellow lines on a blue square`;
+
 /**
  * Open Graph and Twitter tags of a page: a link preview shows the page's own title and description (plain text, escaped
- * here). `url`, the page's absolute address, only when the build knows it (SITE_URL), as for its canonical link.
+ * here). `url`, the page's absolute address, only when the build knows it (SITE_URL), as for its canonical link; so too
+ * `image` ({ url, width, height }: the site's image, a PNG, whose address must be absolute as well).
  */
-export function socialTags(title, description, url) {
+export function socialTags(title, description, url, image) {
   return [
     ['property', 'og:type', 'website'],
     ['property', 'og:site_name', SITE],
@@ -40,6 +44,15 @@ export function socialTags(title, description, url) {
     ['property', 'og:title', title],
     ['property', 'og:description', description],
     ...(url ? [['property', 'og:url', url]] : []),
+    ...(image
+      ? [
+          ['property', 'og:image', image.url],
+          ['property', 'og:image:type', 'image/png'],
+          ['property', 'og:image:width', String(image.width)],
+          ['property', 'og:image:height', String(image.height)],
+          ['property', 'og:image:alt', IMAGE_ALT],
+        ]
+      : []),
     ['name', 'twitter:card', 'summary'],
   ]
     .map(([attr, key, value]) => `<meta ${attr}="${key}" content="${esc(value)}" />`)

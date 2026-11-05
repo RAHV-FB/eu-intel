@@ -74,7 +74,10 @@ the UI; every institutional fact on a page has a reachable origin.
 - **Link previews, search engines and readers without JavaScript** (`scripts/seo.mjs`, used by the prerender; Plan 3.1).
   Every page the prerender writes with `page()`, the home page and `404.html` carry Open Graph and Twitter tags: `og:title`
   and `og:description` are the page's own title and description, `og:type` `website`, `og:site_name`, `og:locale`
-  `en_GB`, `twitter:card` `summary`, and `og:url` its canonical address (only with `SITE_URL`, as the canonical link). A
+  `en_GB`, `twitter:card` `summary`, and, only with `SITE_URL` (their addresses are absolute), `og:url` (the canonical
+  address) and `og:image`, the site's icon as a 512 × 512 PNG (`public/og-image.png`, 6 KB, with `og:image:alt`), which
+  `scripts/render-og-image.mjs` renders from the icon in `index.html` with Chromium (shapes only, so the same Chromium
+  gives the same file; run it again when the icon changes). A
   legislative file's page also carries, in its `<noscript>` block, the key facts its page states once loaded: title and
   names, status and its explanation, the next step, procedure and type, the dates of proposal, adoption and publication,
   the CELEX number and the official links, and "When it applies" (entry into force, application and transposition dates,

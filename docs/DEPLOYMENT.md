@@ -97,10 +97,11 @@ The prerender (`scripts/prerender-routes.mjs` with `scripts/seo.mjs`; docs/ARCHI
 and Twitter tags, so that a link shared in Slack, X, LinkedIn or Mastodon previews with the page's own title and
 description, and a legislative file's page its key facts for crawlers and readers without JavaScript (`<noscript>`) and
 its act as schema.org `Legislation` (JSON-LD). With `SITE_URL`, which `pages.yml` sets to the Pages URL, it also writes
-`og:url` (the canonical address) and **`sitemap.xml`**, at `https://rahv-fb.github.io/eu-intel/sitemap.xml`: every page
+`og:url` (the canonical address), `og:image` (the site's icon, `public/og-image.png`, made by
+`scripts/render-og-image.mjs`) and **`sitemap.xml`**, at `https://rahv-fb.github.io/eu-intel/sitemap.xml`: every page
 for search engines (about 6,400 addresses and 0.6 MB in November 2026; over 50,000 addresses or 50 MB it becomes an
 index of `sitemap-<n>.xml` files), with `lastmod` for legislative files and votes. Builds without `SITE_URL` (CI, local
-builds, forks) have neither, since both need absolute addresses. **`robots.txt`** (always written) lets every crawler
+builds, forks) have none of these three, which need absolute addresses. **`robots.txt`** (always written) lets every crawler
 read every page and, with `SITE_URL`, names the sitemap. The data files must stay readable to crawlers: a search engine
 that runs the app (Google) loads them to render the pages.
 

@@ -101,8 +101,21 @@ test.describe('link previews', () => {
         expect(canonical).toBe(SITE_URL + path);
         expect(tags['og:url']).toEqual([canonical]);
       } else expect(tags['og:url']).toBeUndefined();
+      // the site's image (its address is absolute too), with what it shows
+      expect(tags['og:image']).toEqual(SITE_URL ? [`${SITE_URL}og-image.png`] : undefined);
+      expect(tags['og:image:alt']).toEqual(SITE_URL ? [expect.stringContaining(SITE_NAME)] : undefined);
     });
   }
+
+  test('the image is the site’s own small PNG, served with the pages', async ({ request }) => {
+    const res = await request.get(pagesUrl('og-image.png'));
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toBe('image/png');
+    const png = await res.body();
+    expect(png.length).toBeLessThanOrEqual(100 * 1024);
+    const { tags } = head((await shell(request, '')).html);
+    if (SITE_URL) expect(tags['og:image:width']).toEqual([String(png.readUInt32BE(16))]);
+  });
 });
 
 /** The key facts as a browser without JavaScript renders them: the page's <noscript> block. */
