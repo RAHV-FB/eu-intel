@@ -397,7 +397,7 @@ repository-size limits in §3.2 are decades away, not 2027–2028.
 |---|---|---|
 | 0.1–0.3 | Done | 2025/0177, 2023/0421, 2025/0312, 2010/0208 correct live; feeds carry none of the withdrawn claims |
 | 1.1 Corroborate the leading edge | Done | an EP publication or signature record alone no longer moves a file; differential build on the 2 Nov and 5 Nov snapshots: only intended changes |
-| 1.2 Validator gates | Done; strengthened in follow-up | follow-up: `act-procedure-mismatch` an error (2020/3521), identity-based ratchet, published ⇒ act invariant, duplicate check per file |
+| 1.2 Validator gates | Done; strengthened in follow-up | follow-up: `act-procedure-mismatch` an error (2020/3521), identity-based ratchet, published ⇒ act invariant, duplicate check per file and step, 1.2(d): an activity item cites the record it reports |
 | 1.3 Strict build | Done; gaps closed in follow-up | follow-up: skipped `council_dates` / `unlinked_acts` entries fail `--strict` |
 | 1.4 Frozen test data | Done | `tests/frozen-data.txt` (5f83a06), `scripts/test-frozen.sh` |
 | 1.5 Gated promotion | Done; extended in follow-up | follow-up: a Chromium smoke of live data before every deploy (the data gate had no browser step) |
@@ -428,7 +428,8 @@ Fixed in the follow-up PR (each with a test that fails without it):
   - a manual CI run could cancel the push run that a deploy waits for;
   - the skip guard was fooled by manifest-only commits;
   - the refresh job exposed its push token to npm install scripts;
-  - deploys were labelled with the caller's commit;
+  - a deploy did not record the commit it built (GitHub labels a refresh's deploy with the caller's commit): it is now
+    in `meta.json` and the job summary;
   - e2e jobs were cancelled while installing OS packages from a slow apt mirror (now run in the Playwright image).
 - **Status labels were fixed at build time** while explanations follow the reader's date ("Published, not yet in
   force" beside "It entered into force on 17 November"). A daily rebuild without fetching now keeps them within a day.
