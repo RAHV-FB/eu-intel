@@ -3,7 +3,7 @@
  * Used by the legislation explorer, the dossier page, the homepage and the watchlist.
  */
 import { useEffect } from 'react';
-import { NotFoundError, useData } from '../../lib/data';
+import { useData } from '../../lib/data';
 import { institutionLabel } from '../../components/ui';
 import type { DossierSummary, LegalInstrument, LifecycleStage, Topic, TranspositionStatus } from '../../types/data';
 
@@ -169,13 +169,8 @@ export function useTopics() {
 export const EURLEX_CELEX = (celex: string) =>
   `https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:${encodeURIComponent(celex)}`;
 
-/**
- * A missing data file is a 404 on GitHub Pages, but a dev/preview server may answer with the SPA's HTML
- * (which fails JSON parsing). Treat both as "not in our dataset".
- */
-export function isMissing(e: unknown): boolean {
-  return e instanceof NotFoundError || e instanceof SyntaxError;
-}
+/** Whether a data file does not exist (one definition for every page: src/features/guide/missing.ts). */
+export { isMissing } from '../guide/missing';
 
 /** Steps whose date the act itself sets (entry into force, application, transposition dates), or a repealing act or
  * the end of its validity does: EUR-Lex records them, it does not take them, so no institution is named after their

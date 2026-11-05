@@ -304,6 +304,27 @@ test.describe('a page whose own data could not be loaded', () => {
   }
 });
 
+test.describe('a page whose own data file cannot be read', () => {
+  for (const [path, file] of [
+    [`legislation/${AI_ACT_ID}/`, `dossiers/${AI_ACT_ID}.json`],
+    ['votes/166051/', 'votes/166051.json'],
+    ['people/meps/197400/', 'people/meps/197400.json'],
+    ['countries/ES/', 'countries/ES.json'],
+  ]) {
+    test(`${path}: a file cut short says it could not be loaded, not that the record does not exist`, async ({ page }) => {
+      await page.route(`**/data/${file}`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"id": "2021-0106", "ti' }));
+      await open(page, path);
+      await expect(page.locator('main h1')).toHaveText(/could not be loaded/);
+      await expect(page).toHaveTitle(/could not be loaded/);
+      await expect(page.getByText(/We couldn.t find this/)).toHaveCount(0);
+      await page.unroute(`**/data/${file}`);
+      await page.getByRole('button', { name: 'Reload the page' }).click();
+      await settle(page);
+      await expect(page.locator('main h1')).not.toHaveText(/could not be loaded/);
+    });
+  }
+});
+
 test.describe('a law page opened from another law page', () => {
   test('says it is loading the new file until it has, not that the file does not exist', async ({ page }) => {
     await open(page, `legislation/${AI_ACT_ID}/`);
