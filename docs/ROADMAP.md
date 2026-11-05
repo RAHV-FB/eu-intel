@@ -13,7 +13,9 @@ so that nobody reads a gap as a fact about EU law.
   gives their number).
 - **Parliament votes**: plenary votes from 18 July 2019 (9th and 10th terms). Votes on whole texts,
   resolutions, motions, final and negotiating-mandate votes and votes on entering negotiations are listed;
-  how each MEP voted is shown only for those votes, not for amendments or split votes.
+  how each MEP voted is shown only for those votes, not for amendments or split votes. A national party's page lists
+  its MEPs' final and negotiating-mandate votes only (not resolutions or motions); for MEP-level analysis, each vote
+  links to the same vote on HowTheyVote.eu, an independent site.
 - **Council votes**: the Council's published voting results from 2019, read from its own documents (the
   Council's open-data datasets were discontinued in 2025 and its web pages are bot-protected).
 - **National implementation**: measures notified to the Commission and listed by EUR-Lex, and the

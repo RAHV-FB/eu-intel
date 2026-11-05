@@ -148,6 +148,10 @@ export default function About() {
             and it is not endorsed by them. It takes no position on legislation, parties or countries: labels are neutral, and we do not rank
             parties, MEPs or Member States. Where official records are missing or unclear, we say so rather than fill the gap.
           </div>
+          <p>
+            A few links lead to independent, non-official websites, such as each roll-call vote’s page on HowTheyVote.eu; they are labelled
+            as such, and we take no data from those sites.
+          </p>
           <p id="contact">
             <strong>Maintainer and corrections.</strong> The site is maintained by RAHV-FB, the GitHub account that owns the project’s{' '}
             <ExtLink href={REPOSITORY} official={false}>public repository</ExtLink>, where its code, data and editorial policy are kept. To
@@ -404,6 +408,11 @@ export default function About() {
             <li>
               Breakdowns by country group MEPs by the country they were elected in. They are <strong>not</strong> that country’s position,
               which is expressed by its government in the <Term id="council">Council of the EU</Term>.
+            </li>
+            <li>
+              Breakdowns by national party use the party record Parliament’s membership data gives each MEP on the day of the vote, and
+              are listed by country and party name. “Did not vote” counts a party’s MEPs in office that day, by those records, with no
+              recorded vote; it is not given for days on which the records do not establish who was in office.
             </li>
             <li>
               An MEP with no recorded vote did not vote or was absent: <strong>“not recorded” is not “abstained”</strong>. Vote corrections

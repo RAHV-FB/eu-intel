@@ -68,9 +68,12 @@ the UI; every institutional fact on a page has a reachable origin.
   (`/topics/<slug>/`) get a static page that redirects to `/legislation/?topic=<slug>` without a script (`noindex`).
 - `src/types/data.ts` is the **public data contract**. Pages lazy-load only the JSON they need:
   `home.json` for the homepage, `dossiers/index.json` for the explorer, `dossiers/<id>.json` per law, etc. The vote
-  tables of the MEP and political group pages read `votes/titles.json` (the votes of `votes/index.json`, in its order,
-  with only the date, title, kind of vote, procedure reference, distinction and result they show), not the whole
-  index, which only the votes list needs.
+  tables of the MEP, political group and national party pages read `votes/titles.json` (the votes of
+  `votes/index.json`, in its order, with only the date, title, kind of vote, procedure reference, distinction, result
+  and file they show), not the whole index, which only the votes list needs. A vote page's table by national party
+  is added up in the browser (`src/features/votes/partyRows.ts`) from the ballots, which give each MEP's party record
+  on the day, and the vote file's `no_vote`, with the party names of `people/parties.json`; the party pages' counts
+  come from the same build step (`party_breakdown`), and a data test checks that the two agree.
 - Search: `search.json` + an in-browser engine (`src/lib/search.ts`): accent/case folding, aliases, identifier
   matching, prefix, word-family ("fish" -> "fisheries", ranked below whole words) and bounded fuzzy matching
   (flagged `approximate` and ranked last; /search, the header suggestions, /legislation and /votes say so), static

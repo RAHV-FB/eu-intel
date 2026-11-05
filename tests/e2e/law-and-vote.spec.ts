@@ -209,9 +209,11 @@ test.describe('vote page', () => {
       await page.setViewportSize(viewport);
       await open(page, 'votes/166051/'); // AI Act, final vote, 13 March 2024
       const nav = page.getByRole('navigation', { name: 'On this page' });
-      await expect(nav.getByRole('link')).toHaveText(['By political group', 'By MEPs’ country', 'Individual MEPs']);
+      await expect(nav.getByRole('link')).toHaveText(['By political group', 'By MEPs’ country', 'By national party', 'Individual MEPs']);
       await nav.getByRole('link', { name: 'Individual MEPs' }).click();
       await expectLandedOn(page, 'meps');
+      await nav.getByRole('link', { name: 'By national party' }).click();
+      await expectLandedOn(page, 'parties');
       await nav.getByRole('link', { name: 'By political group' }).click();
       await expectLandedOn(page, 'groups');
     });

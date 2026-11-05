@@ -370,12 +370,25 @@ the first week of each month is a full refresh, which re-reads every stored reco
   appended to `display_title` ("motion B10-0432/2026"); group and MEP vote tables, which cut long titles on phones,
   show it with the kind of vote and the procedure reference on a line of its own.
 - `votes/titles.json`: the same votes as `votes/index.json`, in the same order, with only the fields the vote tables
-  of the MEP and political group pages show (`id`, `date`, `display_title`, `display_title_parts`, `distinction`,
-  `kind_label`, `procedure_ref`, `outcome`), so those pages do not download the whole index (in the build of
+  of the MEP, political group and national party pages show (`id`, `date`, `display_title`, `display_title_parts`,
+  `distinction`, `kind_label`, `procedure_ref`, `outcome`, and `dossier_id` for the party pages' link to the file), so
+  those pages do not download the whole index (in the build of
   24 October 2026, 3,000 votes: 0.8 MB, 120 KB compressed, against 2.5 MB and 305 KB). A field without a value is
   left out, as in the index; `title` is written only for a vote with no `display_title` (none in the index). The
   values are those of the index entry. `validate --built` fails if the file is missing, or lists other votes than
   the index, or the same votes in another order.
+- National parties (`party_breakdown`): each ballot carries the MEP's party record on the day of the vote, and
+  `no_vote` in `votes/<id>.json` lists the MEPs in office that day (a group membership covering the day, as
+  `members_in_office` counts them) with no recorded vote, by the party record, group and country they had then. It is
+  null on the days the membership records do not give the Members in office (`component_members`: 2 July 2019 to
+  12 January 2020, 79 votes). The vote page adds both up by party record, listed by country and then party name.
+  `parties_outside_period` names the records Parliament's data lists MEPs in on a day outside the record's own period
+  (PSD 5320 and Dan Nica, from 16 July 2024), as the party page says. Each party page lists its MEPs' final and
+  negotiating-mandate votes (`votes`: vote, for, against, abstained, did not vote), newest first. On the Nature
+  Restoration Law (164499, 27 February 2024) CDU's MEPs voted 0 for, 19 against, 0 abstaining, and 4 did not vote;
+  77 MEPs in all had no recorded vote, the figure HowTheyVote.eu (an independent site, not a source) also gives. In
+  the build of 5 November 2026 the fields add 3.1 MB to the vote files and 5.3 MB to the party files (336.1 MB to
+  344.5 MB in all); the whole table in each vote file would have added 20.7 MB.
 
 ### EUR-Lex / Cellar (`eurlex`) — ok
 - 1,248 legislative acts 2014+ that Cellar links to a COD, CNS or APP procedure, plus 21 final acts that OEIL

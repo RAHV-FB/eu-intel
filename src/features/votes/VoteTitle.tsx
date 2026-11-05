@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import type { EpVoteTitle, LangRun } from '../../types/data';
 
 /** Text whose runs in another language (Parliament's French or German wording) carry their own `lang`. */
@@ -20,12 +20,18 @@ export function LangText({ text, parts }: { text: string; parts?: LangRun[] | nu
 }
 
 /** What tells a vote apart in a list whose titles are cut short on phones (`.table--clamp`): the kind of vote, its
- * procedure reference and the distinction appended to its title, on a line that is never clamped. */
-export function VoteRowMeta({ v }: { v: Pick<EpVoteTitle, 'kind_label' | 'procedure_ref' | 'distinction'> }) {
-  const parts = [v.kind_label, v.procedure_ref, v.distinction].filter(Boolean);
+ * procedure reference and the distinction appended to its title, on a line that is never clamped. `file` replaces the
+ * procedure reference, e.g. with a link to the file's page. */
+export function VoteRowMeta({ v, file }: { v: Pick<EpVoteTitle, 'kind_label' | 'procedure_ref' | 'distinction'>; file?: ReactNode }) {
+  const parts: ReactNode[] = [v.kind_label, (v.procedure_ref && file) || v.procedure_ref, v.distinction].filter(Boolean);
   return parts.length ? (
     <span className="meta vote-row-meta as-block">
-      {parts.join(' · ')}
+      {parts.map((p, i) => (
+        <Fragment key={i}>
+          {i > 0 && ' · '}
+          {p}
+        </Fragment>
+      ))}
     </span>
   ) : null;
 }
