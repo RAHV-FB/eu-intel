@@ -218,6 +218,15 @@ test.describe('section links', () => {
       });
     }
   }
+
+  // a fragment that is not valid percent-encoding (a link cut short, "#100%") made the page fail with a URIError
+  for (const path of [`legislation/${AI_ACT_ID}/#%E0%A4%A`, 'how-the-eu-works/#100%', 'votes/166051/#%']) {
+    test(`${path} shows the page`, async ({ page }) => {
+      await open(page, path);
+      await expect(page.getByText('This page could not be displayed')).toHaveCount(0);
+      await expect(page.locator('main h1').first()).not.toBeEmpty();
+    });
+  }
 });
 
 test.describe('phone menu on short screens', () => {
