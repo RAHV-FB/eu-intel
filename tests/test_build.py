@@ -682,7 +682,8 @@ def test_output_matches_data_ts_contract(out: Path):
 
     contract = Contract.load(DATA_TS)
     checked = {pattern for pattern, _, _ in contract.files_to_check(out, lambda rel: load(out, rel))}
-    assert checked == set(contract.files) and len(checked) == 19  # every listed file, and one of each detail kind
+    assert checked == set(contract.files) and len(checked) == 20  # every listed file, and one of each detail kind
+    assert "open/datapackage.json" in checked  # the open dataset's descriptor (pipeline/analysis/opendata.py)
     assert check_public(out, contract).lines() == []
 
 

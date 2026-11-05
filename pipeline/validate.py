@@ -94,7 +94,7 @@ SAME_SIZE_COUNTS = ("legal_acts", "meps", "national_measures", "infringements")
 PUBLIC_FILES = [
     "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json",
     "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
-    "topics.json", "search.json", "activity.json", "feeds/updates.xml",
+    "topics.json", "search.json", "activity.json", "feeds/updates.xml", "open/datapackage.json",
 ]  # fmt: skip
 
 # (source, file, model name, id function)
@@ -143,6 +143,9 @@ ERROR_CHECKS = {
     "act-procedure-mismatch": "an act linked to a procedure of another kind or a number range no legislative "
     "procedure uses: the file would show it as its law (Cellar tags Council Decision (EU) 2020/2059 with 2020/3521(COD); "
     "drop such a link in data/curated/act_links.yaml, quoting the act's legal basis)",
+    "open-data": "the open dataset (public/data/open) does not match its datapackage.json: a table's size or hash, its "
+    "header, a value's type, a required value or an enumeration, a primary or foreign key, or a crosswalk identifier "
+    "that its table does not list",
 }
 # Findings that the dataset's scope makes expected: printed as INFO, not counted as warnings.
 BY_DESIGN = {
@@ -846,6 +849,11 @@ def check_built(public: Path, data: dict[tuple[str, str], list[Any]], rep: Repor
             if missing:
                 incomplete(f"public {index}: {len(missing)} of {len(entries)} listed files not written (e.g. {missing[:3]})")
     check_contract(public, rep, docs)
+    if (public / "open" / "datapackage.json").exists():  # missing: reported above (PUBLIC_FILES)
+        from pipeline.analysis.opendata import check as check_open_data
+
+        for msg in check_open_data(public / "open"):
+            rep.error(f"public open/{msg}", "public", "open-data")
 
 
 # The detail files that an index lists: (index, folder, key of the file name)

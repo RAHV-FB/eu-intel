@@ -31,6 +31,7 @@
  *   search.json                     SearchDoc[]
  *   activity.json                   ActivityItem[]
  *   feeds/updates.xml, feeds/<topic>.xml   Atom feeds
+ *   open/datapackage.json           DataPackage              (the open dataset: open/*.csv and open/README.md beside it)
  */
 
 export type ISODate = string;
@@ -893,4 +894,70 @@ export interface SearchDoc {
   u: string; // app route, e.g. "/legislation/2021-0106"
   w?: number; // static boost (e.g. featured dossiers, active MEPs)
   d?: ISODate; // relevant date for display/sorting
+}
+
+// ---------------------------------------------------------------- open dataset
+
+/**
+ * open/datapackage.json: the descriptor of the open dataset, a Frictionless Tabular Data Package 1.0
+ * (https://specs.frictionlessdata.io/tabular-data-package/), written with the CSV files beside it by
+ * pipeline/analysis/opendata.py and released weekly (.github/workflows/release-data.yml). `as_of`, `snapshot_at`,
+ * `core_data_at`, `attribution`, the sources' `id` and `retrieved_at` and the resources' `rows` are this dataset's
+ * own properties; the others are the standard's.
+ */
+export interface DataPackage {
+  profile: 'tabular-data-package';
+  name: string; // "eu-legislative-intelligence"
+  title: string;
+  description: string;
+  homepage: string; // the site
+  keywords: string[];
+  as_of: ISODate; // the day statuses, labels and "next" dates are computed for (the build's today)
+  snapshot_at?: ISODateTime | null; // as Meta.snapshot_at
+  core_data_at?: ISODateTime | null; // as Meta.core_data_at
+  licenses: { name: string; title: string; path: string }[]; // the compilation's licence ("CC-BY-4.0")
+  attribution: string; // the credit line for reusing the dataset
+  contributors: { title: string; path: string; role: string }[];
+  sources: DataPackageSource[]; // every source, with its reuse terms
+  resources: DataPackageResource[];
+}
+
+export interface DataPackageSource {
+  id: string; // as SourceStatusInfo.id
+  title: string;
+  path: string; // the source's documentation
+  attribution: string; // its reuse terms and credit, as SourceStatusInfo.licence
+  retrieved_at?: ISODateTime | null; // its last successful retrieval
+}
+
+/** One CSV table of the open dataset. */
+export interface DataPackageResource {
+  profile: 'tabular-data-resource';
+  name: string; // "files"
+  path: string; // "files.csv", relative to open/
+  title: string;
+  description: string;
+  format: 'csv';
+  mediatype: 'text/csv';
+  encoding: 'utf-8';
+  dialect: { delimiter: string; lineTerminator: string; quoteChar: string; doubleQuote: boolean; header: boolean };
+  bytes: number;
+  hash: string; // "sha256:<hex>"
+  rows: number; // data rows, the header row not counted
+  sources: { title: string; path: string }[]; // the sources its records come from
+  schema: {
+    fields: DataPackageField[];
+    primaryKey: string[];
+    foreignKeys: { fields: string[]; reference: { resource: string; fields: string[] } }[];
+    missingValues: string[]; // [""]: an empty cell is a missing value
+  };
+}
+
+export interface DataPackageField {
+  name: string;
+  type: 'string' | 'integer' | 'boolean' | 'date';
+  format?: 'uri';
+  description: string;
+  // pattern: a field of several ISO dates separated by ";"
+  constraints?: { required?: boolean; unique?: boolean; enum?: string[]; pattern?: string };
 }

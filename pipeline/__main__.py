@@ -15,6 +15,10 @@
     python -m pipeline health [--meta FILE] [--problem KEY=TEXT ...] [--markdown | --json]
                                             # failed or stale sources (pipeline/freshness.py), the age of the
                                             # live site's data and the workflow's own findings; exit 1 if any
+    python -m pipeline opendata content-hash  # the content hash of the built open dataset (public/data/open)
+    python -m pipeline opendata package --tag data-YYYY-MM-DD --out DIR [--commit SHA]
+                                            # its release: DIR/eu-intel-<tag>.zip, datapackage.json, notes.md
+                                            # (pipeline/analysis/opendata.py; exit 1 if the dataset is inconsistent)
 
 Each source module in pipeline/sources/ exposes:
     SOURCE_ID: str
@@ -269,6 +273,12 @@ def cmd_health(
 
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    args = sys.argv[1:] if argv is None else argv
+    if args[:1] == ["opendata"]:  # its own subcommands (content-hash, package)
+        from pipeline.analysis.opendata import main as opendata_main
+        from pipeline.build import OUT
+
+        return opendata_main(args[1:], OUT / "open")
     p = argparse.ArgumentParser(prog="pipeline")
     sub = p.add_subparsers(dest="cmd", required=True)
     f = sub.add_parser("fetch")
