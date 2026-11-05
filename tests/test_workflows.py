@@ -940,8 +940,10 @@ def test_the_site_build_gets_the_pages_url_for_the_canonical_links():
 
 
 @pytest.mark.parametrize(
-    ("name", "job"), [("refresh.yml", "refresh"), ("pages.yml", "build"), ("ci.yml", "check"), ("watchdog.yml", "health")]
-)
+    ("name", "job"),
+    [("refresh.yml", "refresh"), ("pages.yml", "build"), ("ci.yml", "check"), ("watchdog.yml", "health"),
+     ("release-data.yml", "build")],
+)  # fmt: skip
 def test_python_packages_are_installed_from_the_hashed_requirements(name, job):
     # the refresh holds a token that can push to main: it installs only the pinned files, as the deploy and CI do
     s = steps(name, job)
@@ -977,3 +979,165 @@ def test_dependabot_bumps_vite_with_its_react_plugin():
     vite = [g for g in groups if "vite" in g.get("patterns", [])]
     assert len(vite) == 1 and "@vitejs/plugin-react" in vite[0]["patterns"]
     assert groups.index(vite[0]) < next(i for i, g in enumerate(groups) if "dependency-type" in g)  # first match wins
+
+
+# ---------------------------------------------------------------- the open-data release (release-data.yml)
+
+
+def test_the_data_release_runs_weekly_after_the_refresh_and_by_hand():
+    w = workflow("release-data.yml")
+    on = triggers("release-data.yml")
+    assert w["name"] == "Data release" and "workflow_dispatch" in on
+    [schedule] = on["schedule"]
+    minute, hour, *rest = schedule["cron"].split()
+    # Tuesdays: after Monday's refresh, whose second try (22:37) can run past midnight, and the 01:23 daily rebuild
+    assert rest == ["*", "*", "2"] and minute.isdigit() and int(minute) not in (0, 30)
+    assert 2 <= int(hour) < 13  # not 13-17 UTC (06-09 in the Pacific), when GitHub delays scheduled runs most
+    assert w["concurrency"] == {"group": "release-data", "cancel-in-progress": False}
+    # scheduled runs only in the canonical repository; a fork can still run it by hand
+    assert w["jobs"]["plan"]["if"] == "${{ github.event_name == 'workflow_dispatch' || github.repository == 'rahv-fb/eu-intel' }}"
+
+
+def test_only_the_job_that_creates_the_release_can_write_and_it_runs_no_repository_code():
+    w = workflow("release-data.yml")
+    jobs = w["jobs"]
+    assert w["permissions"] == {"contents": "read"}
+    assert jobs["plan"]["permissions"] == {"contents": "read", "actions": "read"}
+    assert jobs["build"]["permissions"] == {"contents": "read"}
+    assert jobs["release"]["permissions"] == {"contents": "write"} and set(jobs) == {"plan", "build", "release"}
+    # the job that can write runs gh on the files built, nothing of the repository's or a package's
+    rel = jobs["release"]["steps"]
+    assert not any(s.get("uses", "").startswith("actions/checkout@") for s in rel)
+    assert not any(re.search(r"\b(?:python|pip|npm|npx|node)\b", s.get("run") or "") for s in rel)
+    assert rel[0]["uses"].startswith("actions/download-artifact@") and rel[0]["with"]["name"] == "open-data"
+    create = rel[named(rel, "Create the release")]
+    assert 'gh release create "$TAG" --target "$SHA"' in create["run"] and "--notes-file release/notes.md" in create["run"]
+    assert '"release/eu-intel-$TAG.zip" release/datapackage.json' in create["run"]
+    assert create["env"] == {"GH_TOKEN": "${{ github.token }}", "GH_REPO": "${{ github.repository }}",
+                             "TAG": "${{ needs.build.outputs.tag }}", "SHA": "${{ needs.plan.outputs.sha }}"}  # fmt: skip
+    # no credentials in .git/config, and the token only in the steps that call gh
+    checkouts = [s for j in jobs.values() for s in j["steps"] if s.get("uses", "").startswith("actions/checkout@")]
+    assert len(checkouts) == 2 and all(s["with"]["persist-credentials"] is False for s in checkouts)
+    with_token = sorted(s["name"] for j in jobs.values() for s in j["steps"] if "GH_TOKEN" in (s.get("env") or {}))
+    assert with_token == ["Compare with the latest data release", "Create the release", "Release only code that CI has passed"]
+
+
+def test_the_release_is_the_strict_data_build_checked_then_compared_then_packaged():
+    jobs = workflow("release-data.yml")["jobs"]
+    s = jobs["build"]["steps"]
+    assert s[0]["uses"].startswith("actions/checkout@") and s[0]["with"]["ref"] == "${{ needs.plan.outputs.sha }}"
+    chain = [
+        index(s, "python -m pip install --require-hashes -r requirements.txt"),
+        index(s, "python -m pipeline validate"),
+        strict_build(s),
+        index(s, "python -m pipeline validate --built"),  # checks the open dataset against its descriptor (open-data)
+        named(s, "Content hash of the open dataset"),
+        named(s, "Compare with the latest data release"),
+        named(s, "Package the release"),
+        named(s, "Upload the release's files"),
+    ]
+    assert chain == sorted(chain)
+    assert "$(python -m pipeline opendata content-hash)" in s[chain[4]]["run"]
+    assert s[chain[5]]["env"]["HASH"] == "${{ steps.hash.outputs.hash }}"
+    assert s[chain[6]]["run"] == 'python -m pipeline opendata package --tag "$TAG" --out release --commit "$SHA"'
+    for i in chain[6:]:
+        assert s[i]["if"] == "${{ steps.compare.outputs.release == 'true' }}"
+    assert s[chain[7]]["with"]["name"] == "open-data" and s[chain[7]]["with"]["path"] == "release/"
+    # each job runs only once the one before has said to go on
+    assert jobs["build"]["needs"] == "plan" and jobs["build"]["if"] == "${{ needs.plan.outputs.release == 'true' }}"
+    assert jobs["release"]["needs"] == ["plan", "build"]
+    assert jobs["release"]["if"] == "${{ needs.build.outputs.release == 'true' }}"
+    assert jobs["build"]["outputs"] == {"release": "${{ steps.compare.outputs.release }}", "tag": "${{ steps.compare.outputs.tag }}"}
+    plan = jobs["plan"]["steps"]
+    assert plan[named(plan, "Release only code that CI has passed")]["run"] == 'scripts/ci-passed.sh "$SHA" release'
+
+
+FAKE_GH_RELEASES = r"""#!/usr/bin/env python3
+# `gh release list` and `gh release view` answered from FAKE_GH_DATA ({"releases": [{tagName, createdAt, body, draft}]})
+import json, os, subprocess, sys
+args = sys.argv[1:]
+releases = json.load(open(os.environ["FAKE_GH_DATA"]))["releases"]
+jq = args[args.index("--jq") + 1] if "--jq" in args else None
+if args[:2] == ["release", "list"]:
+    out = [{"tagName": r["tagName"], "createdAt": r["createdAt"]} for r in releases
+           if not ("--exclude-drafts" in args and r.get("draft"))]
+elif args[:2] == ["release", "view"]:
+    out = {"body": next(r["body"] for r in releases if r["tagName"] == args[2])}
+else:
+    sys.exit(f"unexpected: gh {' '.join(args)}")
+text = json.dumps(out)
+if jq:
+    text = subprocess.run(["jq", "-r", jq], input=text, capture_output=True, text=True, check=True).stdout
+sys.stdout.write(text if text.endswith("\n") else text + "\n")
+"""
+
+
+def test_the_release_compares_its_content_hash_with_the_notes_of_the_latest_data_release(tmp_path):
+    from pipeline.analysis.opendata import content_hash, release_notes
+
+    if not shutil.which("jq"):
+        pytest.skip("jq is not installed")
+    s = steps("release-data.yml", "build")
+    script = s[named(s, "Compare with the latest data release")]["run"]
+    # the repository, with an origin holding the tags of earlier releases
+    origin, work = tmp_path / "origin.git", tmp_path / "work"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
+    work.mkdir()
+    git, commit = git_repo(work)
+    commit({"README.md": "x"}, "code")
+    git("remote", "add", "origin", str(origin))
+    git("push", "-q", "origin", "HEAD:main")
+    # gh answering from a list of releases, and today's date
+    bin_dir, data = tmp_path / "bin", tmp_path / "releases.json"
+    bin_dir.mkdir()
+    (bin_dir / "gh").write_text(FAKE_GH_RELEASES, encoding="utf-8")
+    (bin_dir / "date").write_text("#!/bin/sh\necho 2026-11-10\n", encoding="utf-8")
+    for f in ("gh", "date"):
+        (bin_dir / f).chmod(0o755)
+    env = {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "FAKE_GH_DATA": str(data), "GH_REPO": "o/r"}
+
+    def compare(releases: list[dict], digest: str) -> dict[str, str]:
+        data.write_text(json.dumps({"releases": releases}), encoding="utf-8")
+        return run_step(script, work, {**env, "HASH": digest})
+
+    # the notes the release job publishes (pipeline/analysis/opendata.py) carry the hash this step reads
+    dp = {"title": "t", "as_of": "2026-11-03", "core_data_at": "2026-11-02T14:00:00Z", "snapshot_at": "2026-11-02T14:16:00Z",
+          "attribution": "a", "sources": [], "resources": [{"path": "files.csv", "rows": 2, "title": "Legislative files"}]}  # fmt: skip
+    digest = content_hash(dp)
+    releases = [
+        {"tagName": "v1.0", "createdAt": "2026-11-05T09:00:00Z", "body": "A release of the code."},
+        {"tagName": "data-2026-11-03", "createdAt": "2026-11-03T10:52:00Z", "body": release_notes(dp, "data-2026-11-03")},
+        {"tagName": "data-2026-10-27", "createdAt": "2026-10-27T10:50:00Z", "body": f"<!-- content-sha256: {'1' * 64} -->"},
+    ]
+    assert compare(releases, digest) == {"release": "false"}  # unchanged since the latest data release
+    assert compare(releases, "2" * 64) == {"release": "true", "tag": "data-2026-11-10"}
+    assert compare(releases[:1], digest) == {"release": "true", "tag": "data-2026-11-10"}  # the first data release
+    # a draft is not a release; an older data release's hash does not count
+    draft = {"tagName": "data-2026-11-09", "createdAt": "2026-11-09T12:00:00Z", "body": "<!-- content-sha256: x -->", "draft": True}
+    assert compare([draft, *releases], digest) == {"release": "false"}
+    assert compare(releases[::-1], "1" * 64)["release"] == "true"
+    # a second release the same day takes the next free tag
+    git("tag", "data-2026-11-10")
+    git("push", "-q", "origin", "data-2026-11-10")
+    assert compare(releases, "2" * 64) == {"release": "true", "tag": "data-2026-11-10.2"}
+    with pytest.raises(subprocess.CalledProcessError):  # no hash (the export failed): no release
+        compare(releases, "")
+
+
+def test_a_data_release_is_made_only_of_code_that_ci_has_passed(tmp_path):
+    work = tmp_path / "repo"
+    work.mkdir()
+    git, commit = git_repo(work)
+    with_ci_passed_script(work)
+    tested = commit({"src/app.ts": "1"}, "code")
+    data = commit({"data/snapshot/x.json": "[1]"}, "Data refresh")
+
+    def release(ci_passed_on: list[str], ref: str = "refs/heads/main") -> dict[str, str]:
+        env = {**fake_gh(tmp_path, "\n".join(ci_passed_on)), "GITHUB_REF": ref}
+        return run_step(f'scripts/ci-passed.sh "{data}" release', work, env)
+
+    assert release([tested]) == {"release": "true"}  # main's code is the code CI passed, with newer data
+    assert release([]) == {"release": "false"}
+    assert release([tested], ref="refs/heads/other") == {"release": "false"}  # main's workflow only
+    with pytest.raises(subprocess.CalledProcessError):
+        run_step(f'scripts/ci-passed.sh "{data}" publish', work, fake_gh(tmp_path, tested))
