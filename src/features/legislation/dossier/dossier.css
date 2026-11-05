@@ -1302,6 +1302,7 @@
   font-size: var(--fs-sm);
   font-weight: var(--fw-regular);
   color: var(--text-2);
+  white-space: normal; /* under the name, within the column the names set (the cell does not wrap) */
 }
 
 @media (max-width: 39.99rem) {
