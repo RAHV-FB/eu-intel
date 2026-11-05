@@ -206,6 +206,17 @@ def test_dossier_linking_by_identifier_only(out: Path):
     assert idx["2099-0002"]["topics"] == ["migration"]
 
 
+def test_a_files_index_entry_is_its_own_files_summary(out: Path):
+    """DossierDetail extends DossierSummary: each field of a file's entry in dossiers/index.json is in the file's own
+    JSON with the same value (titles there in full). `names` was set on the summary after the file's JSON had copied
+    it, so on 5 Nov 2026 the files of 42 entries with names (the AI Act's "AI Act") had none."""
+    for e in load(out, "dossiers/index.json"):
+        det = load(out, f"dossiers/{e['id']}.json")
+        assert {k: det.get(k) for k in e if k not in ("title", "official_title", "short")} == {
+            k: v for k, v in e.items() if k not in ("title", "official_title", "short")}, e["id"]  # fmt: skip
+    assert load(out, "dossiers/2099-0003.json")["names"] == ["Thingamajig rules"]
+
+
 def test_timeline_marks_scheduled_dates_and_links_votes(out: Path):
     tl = load(out, "dossiers/2099-0001.json")["timeline"]
     assert [e["date"] for e in tl] == sorted(e["date"] for e in tl)
@@ -287,6 +298,24 @@ def test_groups_merge_across_terms_and_people_files(out: Path):
     assert {v["vote_id"] for v in epp["votes"]} == {"V1", "V3"}
     party = load(out, "people/parties/P2.json")
     assert party["members_total"] == 2 and party["members_active"] == 1
+
+
+def test_a_party_counts_the_same_sitting_members_on_every_page(tmp_path: Path):
+    """A sitting MEP whose party record has ended and who has no current one (Antoni Comín i Oliveres, 5 Nov 2026:
+    non-attached again from 22 Oct 2026, his 2019-2024 Junts record closed) is not a sitting member of that record: the
+    Spain page and the non-attached group's page counted him in it, beside the record's own page saying 0."""
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    path = tmp_path / "snapshot" / "ep_people" / "meps.json"
+    meps = json.loads(path.read_text(encoding="utf-8"))
+    t4 = next(m for m in meps if m["id"] == "T4")  # ES, EPP, sitting; P1 open since 16 Jul 2024
+    next(x for x in t4["memberships"] if x["kind"] == "party")["end"] = "2025-01-31"
+    path.write_text(json.dumps(meps), encoding="utf-8")
+    o = tmp_path / "public"
+    build(out=o, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state", today=TODAY)
+    assert load(o, "people/parties/P1.json")["members_active"] == 1  # T1 only
+    assert {p["id"]: p["members_active"] for p in load(o, "countries/ES.json")["parties"]} == {"P1": 1}
+    assert all(p["id"] != "P1" for p in load(o, "people/groups/epp.json")["parties"])  # T4 has no current party
+    assert load(o, "people/meps/T4.json")["party"] == "P1"  # the MEP's last party record, as its page dates it
 
 
 def test_countries_and_transposition_status(out: Path):

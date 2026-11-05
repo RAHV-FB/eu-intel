@@ -2378,6 +2378,13 @@ class Builder:
             return max(ongoing, key=lambda t: t[0] or "")[2]
         return max(spans, key=lambda t: t[1] or "")[2]
 
+    def current_party(self, mep_id: str) -> str | None:
+        """The party record an MEP is in now (an open membership), else None: the sitting members a country or group
+        page counts in a party are those its own page counts (`members_active`), not those whose last record has ended
+        (Antoni Comín i Oliveres, sitting again from 22 Oct 2026 with no current party record)."""
+        ongoing = [s for s in self.mep_parties.get(mep_id, []) if s[1] is None]
+        return max(ongoing, key=lambda t: t[0] or "")[2] if ongoing else None
+
     def rapporteur_entries(self, p: Procedure) -> list[dict]:
         """A file's rapporteurs with the political group they held in that role, never their current group:
         their group membership on the date the EP API gives for the appointment, else the group the OEIL file
@@ -4588,7 +4595,8 @@ class Builder:
             if law:  # EUR-Lex summaries, court cases, consolidated texts, advisory opinions (analysis/lawcontext.py)
                 det.update(law.for_dossier(p.reference, acts, act_label))
             if det["known_as"] and det["known_as"]["names"]:  # list rows give the names under the title too
-                summ["names"] = det["known_as"]["names"]
+                # in the file's own JSON as well, which copied the summary above (DossierDetail extends it)
+                summ["names"] = det["names"] = det["known_as"]["names"]
             self.dossier_detail[pid] = det
             # said under "Latest recorded step" on the law page (2021/0366(COD): Delegated Regulation (EU)
             # 2026/2102 "of 13 July 2026", in force on 18 September 2026 as Cellar records, after the file's latest
@@ -4799,7 +4807,7 @@ class Builder:
             groups.append(summ)
             parties: Counter = Counter()
             for m in members:
-                pid = self.current_or_last(self.mep_parties.get(m.id, []))
+                pid = self.current_party(m.id)
                 if pid:
                     parties[pid] += 1
             gv = sorted(self.group_votes.get(slug, []), key=lambda x: (x["_d"], x["vote_id"]), reverse=True)
@@ -4968,8 +4976,7 @@ class Builder:
                 "open_infringements": sum(1 for i in infr if i.status == "open") if infr_available else None,
             }  # fmt: skip
             index.append(summ)
-            party_counts: Counter = Counter(self.mep_summary[m.id]["party"] for m in active
-                                            if self.mep_summary[m.id]["party"])  # fmt: skip
+            party_counts: Counter = Counter(p for m in active if (p := self.current_party(m.id)))
             trans = []
             for a in directives:
                 deadline = general_deadline(a)
