@@ -1,5 +1,7 @@
 /** Shared e2e constants (imported by playwright.config.ts and the specs). */
-export const BASE_PATH = '/eu-intel/';
+/** The base path the site was built for: BASE_PATH as the build had it (the deploy's live-data smoke test runs on a site
+ * built with the Pages base path, "/" under a custom domain), else the project site's. */
+export const BASE_PATH = (process.env.BASE_PATH || '/eu-intel/').replace(/\/?$/, '/');
 /** `vite preview` of dist/ (SPA fallback) — general navigation tests. Ports can be moved with E2E_PREVIEW_PORT and
  * E2E_PAGES_PORT, e.g. when another checkout's servers already use the defaults. */
 export const PREVIEW_ORIGIN = `http://127.0.0.1:${process.env.E2E_PREVIEW_PORT || 4173}`;

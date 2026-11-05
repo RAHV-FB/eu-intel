@@ -404,6 +404,18 @@ def test_snapshot_time_comes_from_a_listed_source(tmp_path: Path):
         assert set(json.loads(real.read_text(encoding="utf-8"))) <= set(SOURCES)
 
 
+def test_meta_names_the_commit_the_deploy_built(tmp_path, monkeypatch):
+    # a refresh's deploy is recorded by GitHub under the commit the refresh started from: the site itself says which
+    # commit it was built from (EU_INTEL_COMMIT, set by pages.yml); a local or CI build says none
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    sha = "9aba2533d8d17c20b97a845fb2a5072b97d92d3c"
+    for value, expected in [(sha, sha), ("", None), ("main; rm -rf /", None)]:
+        monkeypatch.setenv("EU_INTEL_COMMIT", value)
+        out = tmp_path / f"public-{expected}"
+        build(out=out, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state", today=TODAY)
+        assert load(out, "meta.json")["commit"] == expected
+
+
 def test_meta_scope_and_plain_source_summaries(out: Path):
     meta = load(out, "meta.json")
     scope = meta["scope"]

@@ -2,10 +2,13 @@
 # deploy that commit.
 #
 # - Schedule: Mondays 05:17 UTC, and Mondays 22:37 UTC as a second try. GitHub starts scheduled runs late or drops
-#   them under load (the Monday cron has started up to 8 h late), so a scheduled run is skipped when a commit changed
-#   data/snapshot less than RECENT_HOURS ago. A scheduled run in the first seven days of a month is a full refresh
+#   them under load (the Monday cron has started up to 8 h late), so a scheduled run is skipped when every core source
+#   (pipeline/freshness.py CORE_SOURCES) was retrieved less than RECENT_HOURS ago, by main's _manifest.json: a run
+#   whose core sources failed is retried, and a commit of other data (a partial manual refresh, a restore) does not
+#   count. A scheduled run in the first seven days of a month is a full refresh
 #   (EU_INTEL_FULL_REFRESH=1, decided in the plan job: cron would OR a day-of-month with the weekday). GitHub disables
-#   schedules in public repos after 60 days without repository activity; the daily watchdog (watchdog.yml) notices.
+#   schedules in public repos after 60 days without activity (a commit): this run's weekly commits keep the repository
+#   active. The watchdog's own daily run is disabled with it; it then reports overdue data after the next push to main.
 # - Each source is failure-isolated by `python -m pipeline fetch`: a failed source keeps its previous
 #   snapshot files and is recorded in data/snapshot/_manifest.json; the job carries on. A failed source alone does not
 #   fail the run (the Legislative Train fails on every runner): it goes into the "Data health" issue (watchdog.yml).
@@ -39,7 +42,7 @@ name: Data refresh
 on:
   schedule:
     - cron: "17 5 * * 1" # Mondays 05:17 UTC
-    - cron: "37 22 * * 1" # Mondays 22:37 UTC: skipped if the first run (or any other) committed data
+    - cron: "37 22 * * 1" # Mondays 22:37 UTC: skipped if the core sources were all retrieved in the last 20 h
   workflow_dispatch:
     inputs:
       sources:
@@ -73,7 +76,7 @@ env:
   # Job budget: setup ~5 + fetch <= FETCH_LIMIT_MIN + 3 (kill grace) + validate, data gate and commit ~10 < 120.
   FETCH_DEADLINE_MIN: "80"
   FETCH_LIMIT_MIN: "90"
-  # A scheduled run is skipped when data/snapshot changed on main less than this many hours ago.
+  # A scheduled run is skipped when every core source on main was retrieved less than this many hours ago.
   RECENT_HOURS: "20"
 
 jobs:
@@ -93,17 +96,40 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           FULL_INPUT: ${{ inputs.full_refresh }}
+          # pipeline/freshness.py CORE_SOURCES (tests/test_workflows.py checks they agree)
+          CORE_SOURCES: ep_procedures ep_votes eurlex council
         run: |
           full=""
           if [ "$EVENT" = schedule ]; then
-            last=$(gh api "repos/$GITHUB_REPOSITORY/commits?sha=main&path=data/snapshot&per_page=1" \
-              --jq '.[0].commit.committer.date // empty')
-            if [ -n "$last" ] && [ $(( $(date -u +%s) - $(date -u -d "$last" +%s) )) -lt $(( RECENT_HOURS * 3600 )) ]; then
-              echo "data/snapshot last changed on main at $last, less than ${RECENT_HOURS} h ago: this scheduled run is skipped." |
+            # main's manifest, read through the API (this job has no checkout); unreadable, the run goes ahead
+            manifest=$(gh api -H "Accept: application/vnd.github.raw+json" \
+              "repos/$GITHUB_REPOSITORY/contents/data/snapshot/_manifest.json?ref=main") || manifest=""
+            # the oldest last successful retrieval of the core sources, in hours ("none" if one has none)
+            oldest=$(MANIFEST="$manifest" python3 - <<'PY'
+          import json, os
+          from datetime import UTC, datetime
+
+          try:
+              m = json.loads(os.environ["MANIFEST"])
+          except ValueError:
+              m = {}
+          ages = []
+          for s in os.environ["CORE_SOURCES"].split():
+              at = (m.get(s) or {}).get("fetched_at") if isinstance(m, dict) else None
+              try:
+                  ages.append((datetime.now(UTC) - datetime.fromisoformat(at.replace("Z", "+00:00"))).total_seconds() / 3600)
+              except (AttributeError, TypeError, ValueError):
+                  ages.append(None)
+          print("none" if not ages or None in ages else f"{max(ages):.1f}")
+          PY
+            )
+            if [ "$oldest" != none ] && awk -v a="$oldest" -v h="$RECENT_HOURS" 'BEGIN { exit !(a < h) }'; then
+              echo "Every core source ($CORE_SOURCES) was retrieved in the last ${oldest} h, less than ${RECENT_HOURS} h ago (main's data/snapshot/_manifest.json): this scheduled run is skipped." |
                 tee -a "$GITHUB_STEP_SUMMARY"
               echo "run=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
+            echo "The oldest retrieval of a core source on main is ${oldest} h old: this scheduled run goes ahead." | tee -a "$GITHUB_STEP_SUMMARY"
             # cron ORs a day-of-month field with the weekday, so "the first Monday of the month" is decided here
             if [ "$(date -u +%-d)" -le 7 ]; then
               full=1
@@ -129,12 +155,15 @@ jobs:
       deploy: ${{ steps.tested.outputs.deploy }}
     steps:
       # main with every commit and tree of its history but only the current files (filter: blob:none): the push's
-      # re-apply and the check that CI passed on the pushed code compare commits and trees
+      # re-apply and the check that CI passed on the pushed code compare commits and trees. No credentials are kept in
+      # .git/config: this job runs npm packages (npm ci, vitest, the site build), and only the push step gets the token.
+      # Other fetches (git's lazy fetch of a file's contents) need none: the repository is public.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
           filter: blob:none
+          persist-credentials: false
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -295,7 +324,14 @@ jobs:
       - name: Commit and push snapshot
         id: push
         if: ${{ !cancelled() && steps.size.outcome == 'success' }}
+        env:
+          PUSH_TOKEN: ${{ github.token }}
         run: |
+          # The token for the push and the re-apply's fetch only, in the header actions/checkout would have stored
+          # (persist-credentials: false above); git passes -c settings on to the lazy fetches it starts itself.
+          basic=$(printf 'x-access-token:%s' "$PUSH_TOKEN" | base64 -w0)
+          echo "::add-mask::$basic"
+          authgit() { git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic" "$@"; }
           paths=(data/snapshot)
           [ -d data/state ] && paths+=(data/state)
           git add -A -- "${paths[@]}"
@@ -318,8 +354,8 @@ jobs:
             local ours base f
             ours=$(git rev-parse HEAD) || return 1
             base=$(git rev-parse HEAD~1) || return 1
-            git fetch -q origin main || return 1
-            git reset -q --hard FETCH_HEAD || return 1
+            authgit fetch -q origin main || return 1
+            authgit reset -q --hard FETCH_HEAD || return 1
             mapfile -d '' -t changed < <(git diff --name-only --no-renames -z "$base" "$ours" -- data/snapshot data/state)
             for f in "${changed[@]}"; do
               if git cat-file -e "$ours:$f" 2>/dev/null; then
@@ -359,7 +395,7 @@ jobs:
           }
 
           for attempt in 1 2 3 4 5; do
-            if git push origin HEAD:main; then
+            if authgit push origin HEAD:main; then
               echo "Pushed $(git rev-parse --short HEAD)." | tee -a "$GITHUB_STEP_SUMMARY"
               echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
               exit 0
@@ -389,26 +425,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ steps.push.outputs.sha }}
-        run: |
-          # The data passed the gate above; its code must have passed CI (tests on the frozen data, e2e): a successful
-          # CI run for a push to main on a commit with the same files outside data/snapshot and data/state.
-          if [ "$GITHUB_REF" != refs/heads/main ]; then
-            echo "::warning::Started from $GITHUB_REF: the github-pages environment deploys from main only. The data is on main; deploy it by hand (Actions -> Deploy to GitHub Pages -> Run workflow on main)."
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          tested=$(gh run list --workflow ci.yml --branch main --event push --status success --limit 30 \
-            --json headSha --jq '.[].headSha')
-          for ci in $tested; do
-            if git merge-base --is-ancestor "$ci" "$SHA" 2>/dev/null &&
-              git diff --quiet --no-renames "$ci" "$SHA" -- . ':(exclude)data/snapshot' ':(exclude)data/state'; then
-              echo "CI passed on $ci, which has the code of $SHA: deploying $SHA." | tee -a "$GITHUB_STEP_SUMMARY"
-              echo "deploy=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          done
-          echo "::warning::CI has not passed (yet) on the code of $SHA: not deployed now. The deploy that follows the next successful CI run on main publishes this data."
-          echo "deploy=false" >> "$GITHUB_OUTPUT"
+        # The data passed the gate above; its code must have passed CI (tests on the frozen data, e2e): a successful CI
+        # run for a push to main on a commit with the same files outside data/snapshot and data/state.
+        run: scripts/ci-passed.sh "$SHA"
 
   deploy:
     name: Deploy

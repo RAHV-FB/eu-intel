@@ -1,13 +1,14 @@
 # Deployment and operations
 
-The site is a static build deployed to **GitHub Pages** by GitHub Actions. Four workflows:
+The site is a static build deployed to **GitHub Pages** by GitHub Actions. Five workflows:
 
 | Workflow | Trigger | Does | Permissions |
 | --- | --- | --- | --- |
 | `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, typecheck; on the [frozen test data](#frozen-test-data): pytest (offline), data build, vitest, site build, Playwright e2e and accessibility tests in three engines; on the commit's own data: the [data gate](#the-data-gate) | `contents: read` |
-| `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`; called by *Data refresh* with the commit it pushed; manual | the data gate on the commit it deploys (data built with the Pages URL and base path) → upload → deploy → check the public URL | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
-| `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC (a scheduled run is skipped if data was committed in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month) → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
-| `watchdog.yml` (Watchdog) | after each *Data refresh* and each *CI* run on `main`, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
+| `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`; called by *Data refresh* with the commit it pushed, and by *Daily rebuild* with `main`; manual | the data gate on the commit it deploys (data built with the Pages URL and base path) → a browser smoke test of the built site on its own data → upload → deploy → check the public URL | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
+| `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC (a scheduled run is skipped if every core source on `main` was retrieved in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month) → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
+| `rebuild.yml` (Daily rebuild) | daily 01:23 UTC, manual | no fetch, no commit: deploys `main` (its committed data built with today's date) through `pages.yml` once CI has passed on its code, unless a refresh is running | `contents: read`, `actions: read`; its deploy job: as `pages.yml` |
+| `watchdog.yml` (Watchdog) | after each *Data refresh*, *CI* run on `main`, deploy and *Daily rebuild*, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
 
 All actions are pinned to full commit SHAs (with the version in a comment); Dependabot
 (`.github/dependabot.yml`) proposes weekly grouped updates. The Python runtime dependencies in `pyproject.toml` have a
@@ -16,13 +17,17 @@ API, does not reach the unattended refresh and deploy before CI has run on it; D
 once a release passes it. Within those ranges the versions are pinned, with the sha256 hashes of their files, in
 `requirements.txt`, which the refresh, the deploy and CI install with `pip install --require-hashes -r requirements.txt`
 (the pipeline runs from the checkout, `python -m pipeline`): the refresh job holds a token that can push to `main`, and
-an unattended run installs only the files CI has tested. Dependabot proposes updates of the pins; CI runs on them before
+an unattended run installs only the files CI has tested. That token is not kept in the refresh's checkout
+(`persist-credentials: false`): only its push step gets it, so the npm packages the job also runs (`npm ci`, vitest, the
+site build) cannot read it. Dependabot proposes updates of the pins; CI runs on them before
 they reach `main`. To regenerate the file (Python 3.12, as the workflows use): `uv pip compile pyproject.toml
 --python-version 3.12 --generate-hashes -o requirements.txt` (or `pip-compile --generate-hashes`).
 
 The deploy job also makes an independent HTTP smoke check **against the public Pages URL**, including the
 homepage, Insights, legislation, votes, people, countries, and data/meta.json. A successful GitHub Pages
-publish that serves missing routes or empty data is treated as a failed release.
+publish that serves missing routes or empty data is treated as a failed release, and so is one the public URL does not
+serve: the check waits (up to 5 minutes) until `data/meta.json`, fetched with a query string past Pages' 10-minute
+cache, has the `built_at` of the build it deployed.
 
 ### The data gate
 
@@ -87,13 +92,27 @@ open http://127.0.0.1:4174/eu-intel/).
 
 ## Schedule and failure behaviour
 
-- **Refresh** runs weekly on Monday at 05:17 UTC, and again at 22:37 UTC; a scheduled run is skipped when a commit
-  changed `data/snapshot` on `main` in the last 20 hours (`RECENT_HOURS`), so the second one does not run after the
-  first committed data: GitHub runs schedules on a best-effort basis (the 05:17 run has started up to 8 hours late) and
-  can drop a run at busy times. A scheduled run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`;
-  decided in the job, since cron would OR a day of the month with the weekday). A manual run is never skipped. GitHub
-  also disables scheduled workflows in a public repository after 60 days without repository activity; the watchdog then
-  reports the live data as overdue. Re-enable it under *Actions → Data refresh → Enable workflow*.
+- **Refresh** runs weekly on Monday at 05:17 UTC, and again at 22:37 UTC; a scheduled run is skipped when every core
+  source (`CORE_SOURCES` in `pipeline/freshness.py`: EP procedures, EP votes, EUR-Lex, Council) was retrieved
+  successfully in the last 20 hours (`RECENT_HOURS`) by `main`'s `data/snapshot/_manifest.json`, so the second one does
+  not run after a first one that refreshed them, and does run after one whose core sources failed (an outage) or that
+  never came: GitHub runs schedules on a best-effort basis (the 05:17 run has started up to 8 hours late) and can drop a
+  run at busy times. A commit of other data (a manual refresh of one source, a restore) does not skip it. A scheduled
+  run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`; decided in the job, since cron
+  would OR a day of the month with the weekday). A manual run is never skipped. GitHub also disables every scheduled
+  workflow of a public repository after 60 days without activity in it. A commit is activity: the refresh's weekly
+  commits keep the repository active as long as it commits. A scheduled run that commits nothing (the watchdog's, the
+  daily rebuild's) is not. The watchdog's daily run is disabled together with the refresh's, so it cannot report this by
+  itself: it then runs only after a CI run for a push to `main` or a deploy, and the first of those reports the live
+  data as overdue. Re-enable each under *Actions → <workflow> → Enable workflow* (`gh workflow enable refresh.yml`, `gh
+  workflow enable watchdog.yml`).
+- **Daily rebuild** (`rebuild.yml`, 01:23 UTC): the site is built again from `main`'s committed data with that day's date
+  and deployed, without fetching or committing anything. Statuses and labels are written when the site is built, while
+  the explanations beside them follow the reader's date (`src/lib/format.ts`): between weekly refreshes a file published
+  with a known entry-into-force date kept the badge "Published, not yet in force" beside "It entered into force on 17
+  November 2026", and list rows kept the old label all week; the daily build moves them on. It deploys only once CI has
+  passed on `main`'s code (`scripts/ci-passed.sh`, as the refresh) and not while a refresh is queued or running (that
+  refresh deploys); the watchdog reports a failed run.
 - **Time limits**: the fetch has a run-wide deadline (`EU_INTEL_FETCH_DEADLINE`, set by the workflow); after it
   no source starts and running sources start no new work. A request made after it gets a single short attempt
   (at most 30 s, no retries), and none starts at all 5 minutes after it. `timeout --signal=INT` then stops the
@@ -151,7 +170,7 @@ open http://127.0.0.1:4174/eu-intel/).
 - **Push rejected** because `main` moved during the run: the job resets onto the new `main`, re-applies only the
   data files this run changed (this run's version wins for those; `_manifest.json` is merged per source) and
   pushes again, up to five times. Do not commit snapshot data by hand while a refresh is running.
-- **Deploy build fails** (the data gate on what it deploys): the deploy job does not run and the previous deployment
+- **Deploy build fails** (the data gate on what it deploys, or the browser smoke test): the deploy job does not run and the previous deployment
   stays live. Fix and push, or re-run the workflow.
 - Deploys are serialised (`concurrency: pages`, never cancelled mid-flight).
 - **Paths to production**, each deploying one known commit:
@@ -160,11 +179,13 @@ open http://127.0.0.1:4174/eu-intel/).
   | --- | --- | --- |
   | push to `main` → CI → `pages.yml` (`workflow_run`) | the whole CI run: ruff, typecheck, pytest, vitest and the browser tests in three engines, on the frozen test data | the data gate in CI, then again in the deploy |
   | refresh → `pages.yml` (`workflow_call`, `ref` = the pushed commit) | a successful CI run for a push to `main` on a commit with the same files outside `data/snapshot` and `data/state` | the data gate before the push, then again in the deploy |
+  | daily rebuild → `pages.yml` (`workflow_call`, `ref` = `main`) | as for a refresh: a successful CI run for a push to `main` with the same files outside `data/snapshot` and `data/state` | the data gate of the commit that brought it (CI or the refresh), then again in the deploy |
   | manual `pages.yml` | none (emergency redeploy) | the data gate in the deploy |
 
   After CI or a refresh, if `main` has moved on since that commit only by data refresh commits, the deploy builds `main`
   (same code, newer data), so that it does not take refreshed data off the site. A failed or cancelled CI run (a newer
-  push cancels it) deploys nothing; CI on pull requests and manual CI runs never deploy. A refresh whose code has not
+  push cancels it) deploys nothing; CI on pull requests and manual CI runs never deploy, and a manual run does not cancel
+  the run of a push (the event is part of CI's concurrency group). A refresh whose code has not
   passed CI (yet), e.g. a commit pushed while the refresh ran, commits its data but does not deploy it: the deploy that
   follows the next successful CI run on `main` does.
 - Commits made by the refresh use `GITHUB_TOKEN`, which by design does not trigger workflows: the refresh deploys its
@@ -260,12 +281,18 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
    and *Deploy to GitHub Pages* once CI has passed. To deploy without waiting for CI: *Actions → Deploy to GitHub Pages → Run
    workflow* on `main` (`gh workflow run pages.yml --ref main`). When it has succeeded, `snapshot_at` in
    `https://rahv-fb.github.io/eu-intel/data/meta.json` (the latest retrieval of any source) is that of the restored data, and
-   the footer's "Procedures, votes and acts current to" date (`core_data_at`, the oldest retrieval of the core sources) is too.
+   the footer's "Procedures, votes and acts current to" date (`core_data_at`, the oldest retrieval of the core sources) is too,
+   and `commit` is the commit the deploy built (`git log -1 <commit>`: your restore, or a later commit with the same data).
    `built_at` moves with every deploy, so it does not show that the data is the good one.
-5. **While you prepare that, an earlier version can be deployed again.** *Actions → Deploy to GitHub Pages*, an earlier successful
-   run, *Re-run all jobs* (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`,
-   then `gh run rerun <run-id>`), or, for the data of an earlier refresh, the *deploy / Build site* job of that *Data refresh* run
-   (*Re-run this job*, which also re-runs the jobs that depend on it). A re-run builds what the original run built (a re-run keeps the
+5. **While you prepare that, an earlier version can be deployed again.** Each deploy's job summary names the commit it built
+   (*Built commit … / Deployed commit …*), and so does the live `data/meta.json` (`commit`). Deploys after CI or by hand are
+   *Deploy to GitHub Pages* runs; a refresh's deploy is the *Deploy* jobs of its *Data refresh* run, and GitHub's Pages
+   deployment history (and `headSha`) lists it under the commit the refresh started from, not the data commit it deployed:
+   find it by the summary or with `gh run list --workflow refresh.yml --status success --json databaseId,createdAt` then
+   `gh run view <run-id>`. Redeploy one: *Actions → Deploy to GitHub Pages*, an earlier successful run, *Re-run all jobs*
+   (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`, then `gh run rerun
+   <run-id>`), or, for the data of an earlier refresh, the *Deploy / Build site* job of that *Data refresh* run (*Re-run this
+   job*, which also re-runs the jobs that depend on it). A re-run builds what the original run built (a re-run keeps the
    original event, commit and job outputs), so it deploys that commit's data; GitHub allows re-runs for 30 days. It changes what is published only: `main`
    still has the bad data, and the next deploy (after CI passes on a push to `main`, or after the next refresh) publishes `main` again. Step 3 must
    follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).
@@ -329,36 +356,74 @@ The `e2e` job in `ci.yml` (Playwright + axe-core on the site built from the froz
 e2e + accessibility tests".
 
 It runs once per browser engine (Chromium, Firefox and WebKit, the engine of Safari; one failing engine does not
-cancel the others). Each run reuses the site built by the `check` job (uploaded as the `site-dist` artifact),
-installs its browser, runs `npx playwright test --project=<browser>` (`E2E_BROWSERS` adds the Firefox and WebKit
+cancel the others), in the official Playwright image of the version `package-lock.json` pins
+(`mcr.microsoft.com/playwright:v<version>-noble`; the `check` job reads the version, so a Dependabot bump of the playwright
+group moves the image with it): the browsers and their OS packages are in the image, so nothing is installed (installing
+them from the Ubuntu mirror kept jobs past their time limit). Each run reuses the site built by the `check` job (uploaded
+as the `site-dist` artifact), runs `npx playwright test --project=<browser>` (`E2E_BROWSERS` adds the Firefox and WebKit
 projects to `playwright.config.ts`; locally only Chromium runs unless it is set), and uploads the HTML report and
 traces as the `playwright-report-<browser>` artifact.
+
+**The deploy's smoke test on the data it publishes.** These tests run on the frozen test data only, so every deploy
+(`pages.yml`, whichever way it starts) also opens the site it has just built, on that site's own data, before uploading
+it: `tests/e2e/live-smoke.spec.ts`, Chromium, with the reader's real clock. It picks the pages from `dist/data` when it
+runs (files of every stage plus an even sample, about 20; votes of every kind, 10; MEPs, groups and parties; every
+country; search by a procedure reference; the main pages), serves them as GitHub Pages does (`tests/e2e/pages-server.mjs`)
+and fails on a console error, an uncaught exception, a failed or third-party request, the error page, a "not found" page
+or an empty heading; then nothing is uploaded or deployed, and the report is kept as the `live-smoke-report` artifact.
+`E2E_LIVE=1` selects it (and only it); the other runs leave it out. Locally, after a build of the current data:
+`E2E_LIVE=1 npx playwright test --project=chromium` (about 1 minute).
 
 ## Data health
 
 `watchdog.yml` keeps one issue titled "Data health" (label `data-health`) open while anything below is wrong, rewrites
-it with the current list on each run, comments when a problem is new (an edit alone notifies no one), and closes it once
-everything passes. It runs after each *Data refresh* and each *CI* run on `main`, daily at 19:41 UTC, and by hand
-(*Actions → Watchdog → Run workflow*). It writes nothing to the repository. It lists:
+it with the current list on each run, comments when a problem is new (an edit alone notifies no one; a source that gets
+worse counts as new: failed, then stale, then its official labels withdrawn), and closes it once
+everything passes. It runs after each *Data refresh*, each *CI* run on `main` and each *Deploy to GitHub Pages* run, daily
+at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes nothing to the repository. It lists:
 
 - each source that failed in its last run or is stale: its last successful retrieval is older than its threshold in
   `pipeline/freshness.py` (EP votes and procedures, EUR-Lex, Council 9 days; MEPs 14; the others 35), as
   `python -m pipeline health` reports from `main`'s `_manifest.json`;
-- a failed latest *Data refresh* (with its failed job and step: a failed data gate, push or deploy);
-- red CI on `main` (the latest CI run for a push);
+- a failed latest *Data refresh* (with its failed job and step: a failed data gate, push or deploy). The latest is the
+  latest that ran: a scheduled run its plan skipped concludes "success" without doing anything and is passed over
+  (`scripts/latest_run.py`), so it cannot hide a failure of the run before it;
+- red CI on `main` (the latest CI run for a push): nothing deploys after it, and a refresh's data waits on `main` until CI
+  passes on its code. When only WebKit's browser tests failed, the issue says to re-run them once if the log shows the
+  known WebKit CSP flake ("Refused to apply a stylesheet because its hash…", docs/ASSESSMENT_2026-11.md 4.5);
+- a failed latest deploy after CI or by hand (*Deploy to GitHub Pages*), or one cancelled with no later deploy that replaced
+  it; a refresh's own deploy is part of its run (above);
+- a failed latest *Daily rebuild* (passing over runs that skipped their deploy): the site keeps its previous build,
+  whose statuses and labels are as of the day it was built;
+- data on `main` that the live site lacks: a core source retrieved on `main` after the live site's copy of it, more than 6
+  hours ago (`--deploy-grace-hours`): the refresh's deploy did not run (it waits for CI to pass on `main`'s code) or failed;
 - the live site's data overdue: the newest retrieval in `https://rahv-fb.github.io/eu-intel/data/meta.json` (or the
-  repository variable `SITE_URL`) is older than 8 days, whether the schedule was late, dropped or disabled or the refresh
+  repository variable `SITE_URL`; fetched with a query string, past Pages' 10-minute cache) is older than 8 days, whether the schedule was late, dropped or disabled or the refresh
   or its deploy failed. This also fails the watchdog run, so GitHub sends its own notification;
 - the repository past 750 MB (GitHub recommends under 1 GB; each refresh commit adds to every clone).
 
 `python -m pipeline health` runs the source and site checks locally (`--meta FILE` for a downloaded `meta.json`,
 `--markdown` for the issue body, `--json`); it exits 1 when anything is wrong.
 
+## Known limitations
+
+- **Re-apply onto new code**: a refresh whose push is rejected because a code commit reached `main` re-applies its data on
+  that code without running the data gate again; the deploy runs the gate (the site is safe), but `main` can hold data
+  that fails its own code's gate until the next refresh.
+- **Pending deploys are replaced**: deploys share one concurrency group (`pages`) and GitHub keeps one pending run per
+  group, so a newer deploy cancels a pending one; a refresh whose deploy was replaced ends `cancelled` (the watchdog skips
+  it), and the replacement publishes its data only if it builds a commit that contains it (the "undeployed" check says so).
+- **Before `meta.json` loads**, the pages treat the Legislative Train's "blocked" as not current (a dossier's status badge
+  and official-status box, the home page's Stalled rows and featured badges), then switch: a brief flash, never a label
+  shown past its expiry.
+- **The home page's Stalled list** drops expired "blocked" rows by matching the build's wording (`badge: "Officially
+  blocked"` and the list's description, `src/pages/Home.tsx`); a change of that wording in `build_home` must change both.
+
 ## Free-plan limits
 
 Public repositories get unlimited standard GitHub-hosted runner minutes. Every job has a `timeout-minutes` cap
-(CI: check 30, e2e 20; deploy: build 20, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
-watchdog 10). Pages limits: published site ≤ 1 GB (checked at build time), soft bandwidth limit 100 GB/month. Artifacts
+(CI: check 30, e2e 25; deploy: build 25, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
+watchdog 10; daily rebuild: plan 5, its deploy as above). Pages limits: published site ≤ 1 GB (checked at build time), soft bandwidth limit 100 GB/month. Artifacts
 are kept 1–7 days.
 
 ## Optional link check

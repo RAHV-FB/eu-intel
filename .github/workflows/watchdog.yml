@@ -4,22 +4,25 @@
 # Checked on every run, from scratch:
 # - sources that failed in their last run or are stale (`python -m pipeline health`: pipeline/freshness.py thresholds,
 #   on main's data/snapshot/_manifest.json);
-# - the latest Data refresh run (a failed data gate, a failed push or deploy) and the latest CI run for a push to main;
+# - the latest Data refresh run that did run (a failed data gate, a failed push or deploy; not one its plan skipped), the
+#   latest CI run for a push to main, the latest deploy after CI or by hand (failed, or cancelled with nothing after), and
+#   the latest daily rebuild (rebuild.yml) that did not skip its deploy;
 # - the live site's data/meta.json (SITE_URL repository variable, default the Pages URL below): its newest data older
 #   than MAX_AGE_DAYS means no refresh has reached the site, whether the schedule was late, dropped or disabled, or
-#   the refresh or its deploy failed. That alone also fails this run, so GitHub e-mails its notice too;
+#   the refresh or its deploy failed. That alone also fails this run, so GitHub e-mails its notice too; and data on main
+#   that the live site still lacks hours after it was retrieved (`pipeline health`, problem "undeployed");
 # - the repository's size (every refresh commit adds to each clone).
 #
-# Runs after every Data refresh and every CI run for a push to main (workflow_run: the results reach the issue without
-# a step in those workflows that could fail them), daily at 19:41 UTC (after a Monday refresh even 8 h late), and by
-# hand (Actions -> Watchdog -> Run workflow).
+# Runs after every Data refresh, every CI run for a push to main, every deploy and every daily rebuild (workflow_run:
+# the results reach the issue without a step in those workflows that could fail them), daily at 19:41 UTC (after a Monday refresh even 8 h
+# late), and by hand (Actions -> Watchdog -> Run workflow).
 name: Watchdog
 
 on:
   schedule:
     - cron: "41 19 * * *" # daily 19:41 UTC
   workflow_run:
-    workflows: ["CI", "Data refresh"]
+    workflows: ["CI", "Data refresh", "Deploy to GitHub Pages", "Daily rebuild"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -46,23 +49,25 @@ jobs:
   health:
     name: Check data health, update the issue
     # The canonical repository only (forks can run it by hand). After CI: runs for pushes and manual runs on main, not
-    # pull requests (whose branch can be called main, in a fork). A cancelled run says nothing.
+    # pull requests (whose branch can be called main, in a fork). A cancelled run says nothing, except a deploy's: one
+    # that nothing replaced means the site did not get what it should have.
     if: >-
       ${{ (github.repository == 'rahv-fb/eu-intel' || github.event_name == 'workflow_dispatch') &&
       (github.event_name != 'workflow_run' || (github.event.workflow_run.event != 'pull_request' &&
-      github.event.workflow_run.conclusion != 'cancelled' && github.event.workflow_run.conclusion != 'skipped')) }}
+      github.event.workflow_run.conclusion != 'skipped' && (github.event.workflow_run.conclusion != 'cancelled' ||
+      github.event.workflow_run.name == 'Deploy to GitHub Pages'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       issues: write # open, update and close the issue
-      actions: read # the latest Data refresh and CI runs
+      actions: read # the latest Data refresh, CI and deploy runs
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      # the pipeline's code and main's manifest, nothing else
+      # the pipeline's code, main's manifest and the run picker, nothing else
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
@@ -72,6 +77,7 @@ jobs:
             /pipeline/
             /requirements.txt
             /data/snapshot/_manifest.json
+            /scripts/latest_run.py
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -88,14 +94,10 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
         run: |
           problems=()
-          # "<conclusion> <run id> <url> <commit>" of the latest completed run of a workflow on main that was neither
-          # cancelled nor skipped; $2: only runs for this event
-          latest() {
-            gh run list --workflow "$1" --branch main ${2:+--event "$2"} --status completed --limit 20 \
-              --json conclusion,databaseId,url,headSha \
-              --jq '[.[] | select(.conclusion != "cancelled" and .conclusion != "skipped")][0] // empty |
-                "\(.conclusion) \(.databaseId) \(.url) \(.headSha)"'
-          }
+          # "<conclusion> <run id> <url> <commit>" of the latest completed run of a workflow on main that did its work:
+          # not cancelled or skipped, and not one in which --job was skipped (a scheduled refresh its plan skipped, which
+          # concludes "success" and would hide a failed one); see scripts/latest_run.py
+          latest() { python scripts/latest_run.py "$@"; }
           # the failed jobs of a run, each with its failed steps
           failed() {
             gh run view "$1" --json jobs --jq '[.jobs[] | select(.conclusion == "failure") | .name +
@@ -103,19 +105,42 @@ jobs:
               | join("; ")' || echo "see the run"
           }
 
-          read -r conclusion id url _ <<< "$(latest refresh.yml)" || true
+          read -r conclusion id url _ <<< "$(latest refresh.yml --job "Fetch, validate, gate, commit")" || true
           if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
             problems+=(--problem "refresh=**The latest Data refresh failed** ($conclusion, [run $id]($url)): $(failed "$id"). A refresh whose data fails the data gate commits and deploys nothing; the site keeps the last data that passed.")
           fi
-          read -r conclusion id url sha <<< "$(latest ci.yml push)" || true
+          read -r conclusion id url sha <<< "$(latest ci.yml --event push)" || true
           if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
-            problems+=(--problem "ci=**CI fails on main** ($conclusion, [run $id]($url), commit ${sha:0:7}): $(failed "$id"). Nothing is deployed after it, and refreshed data waits for the next commit whose CI passes.")
+            detail=$(failed "$id")
+            hint=""
+            # The known WebKit flake (docs/ASSESSMENT_2026-11.md 4.5): WebKit sometimes refuses the site's stylesheet under
+            # its CSP ("Refused to apply a stylesheet because its hash ... does not appear in the style-src directive"),
+            # e.g. in tests/e2e/smoke.spec.ts "typing "AI Act" on the homepage", which then passes on a second run.
+            if [ "$detail" = "E2E + accessibility (Playwright, webkit) (Run Playwright)" ]; then
+              hint=" Only WebKit's browser tests failed: if the log shows the known WebKit CSP flake (\"Refused to apply a stylesheet because its hash…\"), re-run the failed jobs once (*Re-run failed jobs*); fix anything else."
+            fi
+            problems+=(--problem "ci=**CI fails on main** ($conclusion, [run $id]($url), commit ${sha:0:7}): ${detail:-see the run}.${hint} Nothing is deployed after it, and a refresh deploys its data only once CI has passed on main's code: the refreshed data waits on main until then.")
+          fi
+
+          # the latest deploy after CI or by hand (a refresh's own deploy is part of its run, above): failed, or
+          # cancelled with no later deploy that replaced it
+          read -r conclusion id url sha <<< "$(latest pages.yml --job "Build site" --cancelled-if-last)" || true
+          if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
+            detail=$(failed "$id")
+            problems+=(--problem "deploy=**The latest deploy did not finish** ($conclusion, [run $id]($url), commit ${sha:0:7})${detail:+: $detail}. The site still serves the deployment before it: fix the cause and re-run it, or push a fix.")
+          fi
+
+          # the latest daily rebuild that deployed (or failed): one that skipped its deploy (CI not green, a refresh
+          # running) did nothing
+          read -r conclusion id url _ <<< "$(latest rebuild.yml --job Deploy)" || true
+          if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
+            problems+=(--problem "rebuild=**The latest daily rebuild failed** ($conclusion, [run $id]($url)): $(failed "$id"). The site keeps its previous build, whose statuses and labels are as of the day it was built: fix the cause (e.g. a data gate that fails on today's date) and re-run it.")
           fi
 
           site=${SITE_URL:-$DEFAULT_SITE_URL}
           meta=(--max-age-days "$MAX_AGE_DAYS")
           if curl -fsSL --retry 3 --retry-delay 10 --retry-all-errors --max-time 60 \
-            -o "$RUNNER_TEMP/meta.json" "${site%/}/data/meta.json"; then
+            -o "$RUNNER_TEMP/meta.json" "${site%/}/data/meta.json?watchdog=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"; then
             meta+=(--meta "$RUNNER_TEMP/meta.json")
           else
             problems+=(--problem "site=**The live site's data/meta.json could not be fetched** (${site%/}/data/meta.json).")

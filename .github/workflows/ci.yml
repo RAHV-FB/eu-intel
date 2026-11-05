@@ -34,8 +34,11 @@ on:
 permissions:
   contents: read
 
+# A newer run of the same kind replaces an older one (a push the previous push's run, a PR's new commits its earlier
+# run). The event is part of the group: a manual run on main must not cancel the run of a push to main, which is the
+# only kind that deploys (pages.yml) and that a refresh's deploy waits for (refresh.yml).
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -50,10 +53,19 @@ jobs:
     name: Lint, test, build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      playwright: ${{ steps.playwright.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: The Playwright version of package-lock.json (the e2e job's image)
+        id: playwright
+        run: |
+          v=$(python3 -c 'import json; print(json.load(open("package-lock.json"))["packages"]["node_modules/@playwright/test"]["version"])')
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "::error::unexpected @playwright/test version in package-lock.json: $v"; exit 1; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -185,10 +197,17 @@ jobs:
       matrix:
         browser: [chromium, firefox, webkit]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.e2e }}
-    # Playwright 1.56 installs browser dependencies only for the Ubuntu releases it supports;
-    # ubuntu-latest is 26.04, which it does not support yet.
+    # In the official Playwright image of the version package-lock.json pins (read by the check job, so a Dependabot bump
+    # of the playwright group moves the image with it): the browsers and the OS packages they need are in it, so nothing
+    # is installed. `playwright install --with-deps` downloaded them from the Ubuntu mirror, and on 5 Nov 2026 WebKit's
+    # 181 packages kept jobs past their time limit (cancelled), which held back deploys and refreshes. As the runner's
+    # user (1001), who owns the workspace and $HOME: Firefox does not run as root in a home it does not own. Chromium
+    # wants more shared memory than Docker's default 64 MB: --ipc=host.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.check.outputs.playwright }}-noble
+      options: --user 1001 --ipc=host
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -208,9 +227,6 @@ jobs:
         with:
           name: site-dist
           path: dist
-
-      - name: Install ${{ matrix.browser }} for Playwright
-        run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run Playwright
         env:

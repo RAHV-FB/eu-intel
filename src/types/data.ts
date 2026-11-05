@@ -104,6 +104,7 @@ export interface CoverageScope {
 
 export interface Meta {
   built_at: ISODateTime; // when public/data was generated
+  commit?: string | null; // the commit the deployed site was built from (set by the deploy, pages.yml); null in other builds
   snapshot_at?: ISODateTime | null; // latest successful source retrieval across sources (identifies the snapshot)
   core_data_at?: ISODateTime | null; // oldest last successful retrieval of the core sources: statuses, votes and acts are current to it
   sources: SourceStatusInfo[];
