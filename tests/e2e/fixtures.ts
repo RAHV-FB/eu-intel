@@ -2,7 +2,9 @@
  * Shared e2e fixtures and helpers. Every test using this `test` automatically fails on:
  *   - a request to any origin other than the site's own (CSP-blocked loads surface as console errors), and
  *   - console errors, uncaught exceptions, or failed (>= 400) same-origin requests.
+ * Every page sees the moment its data was built on its clock (`buildClock`).
  */
+import { readFileSync } from 'node:fs';
 import { expect, test as base, type APIRequestContext, type Page } from '@playwright/test';
 import { BASE_PATH, SITE_NAME } from './env';
 
@@ -13,7 +15,30 @@ export interface Guard {
   ignore(re: RegExp): void;
 }
 
-export const test = base.extend<{ guard: Guard }>({
+/** `built_at` of the site under test (dist/data/meta.json), in ms; undefined if it cannot be read. */
+function builtAt(): number | undefined {
+  try {
+    const t = Date.parse((JSON.parse(readFileSync('dist/data/meta.json', 'utf8')) as { built_at: string }).built_at);
+    return Number.isNaN(t) ? undefined : t;
+  } catch {
+    return undefined;
+  }
+}
+
+export const test = base.extend<{ guard: Guard; buildClock: void }, { builtAt: number | undefined }>({
+  builtAt: [async ({}, use) => use(builtAt()), { scope: 'worker' }],
+  /**
+   * The page's clock starts at the moment the data was built (meta.json `built_at`) and runs on from there, so that the
+   * pages read as the build wrote them, whatever day the tests run: in CI the frozen test data, built as of the moment
+   * in tests/frozen-data.txt. A test that installs its own clock (`page.clock.install`) replaces this one.
+   */
+  buildClock: [
+    async ({ page, builtAt }, use) => {
+      if (builtAt !== undefined) await page.clock.install({ time: builtAt });
+      await use();
+    },
+    { auto: true },
+  ],
   guard: [
     async ({ page }, use) => {
       const errors: string[] = [];

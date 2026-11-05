@@ -61,26 +61,37 @@ records are read again, the others reused); `EU_INTEL_FULL_REFRESH=1` re-reads e
 | `BASE_PATH=/eu-intel/ npm run build` | Production build under the Pages subpath, with prerendered route shells |
 | `node scripts/check_privacy.mjs` | No third-party loads, trackers, cookie writes or raw-HTML injection in `dist/` and `src/` |
 | `npx playwright test` | End-to-end smoke, deep links, search, accessibility (axe-core) and privacy on the built site |
+| `scripts/test-frozen.sh` | pytest, vitest and the Playwright tests (Chromium) on the frozen test data, as CI runs them, in a temporary worktree |
+| `python -m pipeline health` | Sources that failed in their last run or are stale (exit 1 if any) |
 | `python scripts/check_links.py` | Optional polite spot-check of official source links in `public/data` |
 
 End-to-end tests need a build first: `python -m pipeline build && BASE_PATH=/eu-intel/ npm run build`, then
 `npx playwright test` (it starts `vite preview` and a GitHub-Pages-like static server itself). On a fresh machine
 install the browser once with `npx playwright install chromium`.
 
-All of the above except the link checks run in CI on every push to `main`, every pull request, after each data
-refresh and on manual runs
-([.github/workflows/ci.yml](.github/workflows/ci.yml)).
+The tests that read real data pin ids, counts and dates of it. CI runs them on the **frozen test data**: the snapshot of
+the commit named in `tests/frozen-data.txt`, built as of the moment it names, so a data refresh cannot turn them red.
+`scripts/test-frozen.sh` does the same locally without touching the working tree; to move the tests to newer data, see
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "Frozen test data". The commit's own data goes through the data gate instead:
+`validate`, the strict build (`EU_INTEL_STRICT=1`), `validate --built`, `npx vitest run src/lib/format.test.ts`, the site
+build, the privacy check and the size limit. CI runs both on every push to `main`, every pull request and on manual
+runs ([.github/workflows/ci.yml](.github/workflows/ci.yml)): every check above but the last two (the watchdog runs the
+health check, and the link check depends on third-party sites).
 
 ## Data refresh and deployment
 
-- **Weekly refresh** ([refresh.yml](.github/workflows/refresh.yml)): Mondays 05:17 UTC (best effort) and on demand
-  from the Actions tab (optionally as a full refresh). Fetch → validate → build and record verified activity →
-  validate the built data → commit `data/snapshot/` and `data/state/`. A source whose new data fails validation
-  gets its previous files and manifest entry back from the last commit, and the other sources' new data is
-  committed; nothing is committed if the snapshot still fails after that, or if the built data fails validation.
-  `data/state/` is committed only after a successful build.
-- **Deploy** ([pages.yml](.github/workflows/pages.yml)): once CI has passed on a push to `main`, after each successful
-  refresh, and on demand. A failed CI run, build or validation never deploys; the previous version stays online.
+- **Weekly refresh** ([refresh.yml](.github/workflows/refresh.yml)): Mondays 05:17 UTC, a second try at 22:37 UTC
+  unless data was committed in the last 20 hours (schedules are best effort), a full refresh in the first week of each
+  month, and on demand from the Actions tab. Fetch → validate per source → the data gate (strict build recording
+  verified activity, validation of the built data, its dated wording, site build, privacy, size) → commit
+  `data/snapshot/` and `data/state/` → deploy that commit. A source whose new data fails validation gets its previous
+  files and manifest entry back from the last commit; if the data then fails the gate, nothing is committed or deployed.
+- **Deploy** ([pages.yml](.github/workflows/pages.yml)): once CI has passed on a push to `main`; the commit a refresh
+  pushed, once CI has passed on its code; and on demand. It runs the data gate again on what it deploys; a failure
+  never deploys, and the previous version stays online.
+- **Data health** ([watchdog.yml](.github/workflows/watchdog.yml)): after each refresh and each CI run on `main`, and
+  daily, it opens, updates or closes one "Data health" issue listing failed or stale sources, a failed refresh, red CI on
+  `main` and live data more than 8 days old.
 
 Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time Pages setup.
 
@@ -97,10 +108,10 @@ data/curated/        editorial YAML: featured files, topics, search aliases, che
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
 src/                 React app: pages/, features/ (one folder per area, insights/ included), components/, lib/,
                      types/data.ts (public data contract)
-scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py
+scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py, test-frozen.sh
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
 docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap
-.github/workflows/   ci.yml, pages.yml, refresh.yml
+.github/workflows/   ci.yml, pages.yml, refresh.yml, watchdog.yml
 ```
 
 ## Licences
