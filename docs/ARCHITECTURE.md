@@ -42,6 +42,7 @@ data/curated/*.yaml ─────────────────┤ build
 | `analysis/ep_margin.py` | Vote margin relative to the legally applicable majority |
 | `analysis/council_qmv.py` | Council QMV/unanimity arithmetic |
 | `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds |
+| `analysis/opendata.py` | The open dataset (`public/data/open/`), written by the build from its own output: CSV tables (files, acts, EP votes, Council votes and positions, transposition, national measures, infringements, the identifier crosswalk), `datapackage.json` (Frictionless Tabular Data Package; enumerations from `src/types/data.ts`), README; its content hash and release package for `release-data.yml` |
 | `build.py` | Joins everything by official identifiers → `public/data/**` per `src/types/data.ts`; `--strict` (`EU_INTEL_STRICT=1`) fails when it had to work around a problem |
 | `freshness.py` | How old each source's data may get before the site and the Data health issue call it stale; the core sources behind `core_data_at`; when the Legislative Train's "blocked" stops being shown |
 | `validate.py` | Schema + invariants (ballot totals, referential integrity, legal-type rules); on a build, the claims in `public/data` against the rules and the files' own records, and the contract (`contract.py`: the built JSON against `src/types/data.ts`). Errors fail; warnings are by design (not counted), integrity (fail unless `validate_baseline.json` accepts the finding) or backlog |
@@ -124,6 +125,19 @@ the UI; every institutional fact on a page has a reachable origin.
 - `watchdog.yml`: after each refresh and each CI run on `main`, and daily, opens, updates or closes the "Data health"
   issue (failed or stale sources, a failed refresh, red CI on `main`, live data more than 8 days old, the repository
   past 750 MB).
+- `release-data.yml`: weekly (Tuesdays) and by hand, the open dataset of `main` once CI has passed on its code: validate,
+  strict build, `validate --built`, then a GitHub release tagged `data-YYYY-MM-DD` with the zip and `datapackage.json`
+  when its content hash differs from the latest data release's. Zenodo gives each release a DOI once the owner has
+  switched the repository on (docs/DEPLOYMENT.md, "Open-data releases").
+
+## Reuse
+
+The open dataset (`data/open/` on the site and the weekly releases) is the stable interface for reuse: its columns are
+documented in `datapackage.json`, and a release is cited by its tag (`CITATION.cff`, `.zenodo.json`). The other JSON
+files under `data/` are shaped for the pages and can change with the site; `src/types/data.ts` gives their current
+shape. Tables on the vote pages and the legislation list can be downloaded as CSV, made in the browser from the data
+the page already holds (`src/lib/csv.ts`, `src/components/CsvButton.tsx`: a Blob and the `download` attribute, no
+request).
 
 ## Future analytics (not implemented)
 

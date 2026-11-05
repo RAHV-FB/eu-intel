@@ -96,6 +96,21 @@ check, and the link check depends on third-party sites).
 - **Data health** ([watchdog.yml](.github/workflows/watchdog.yml)): after each refresh and each CI run on `main`, and
   daily, it opens, updates or closes one "Data health" issue listing failed or stale sources, a failed refresh, red CI on
   `main` and live data more than 8 days old.
+- **Data release** ([release-data.yml](.github/workflows/release-data.yml)): Tuesdays, and on demand, the open dataset
+  of `main` (below) as a GitHub release tagged `data-YYYY-MM-DD`, only when its content changed since the latest one.
+
+## Reuse the data
+
+- **Open dataset**: CSV tables of the legislative files, adopted acts, Parliament and Council votes, transposition by
+  Member State with the national measures notified, infringement cases, and a crosswalk of the official identifiers
+  that join them, with a [Frictionless](https://specs.frictionlessdata.io/tabular-data-package/) `datapackage.json`
+  that documents every field and a README. Each data build writes it to `public/data/open/`, the site serves it under
+  [`data/open/`](https://rahv-fb.github.io/eu-intel/data/open/README.md), and the
+  [releases](https://github.com/RAHV-FB/eu-intel/releases) tagged `data-YYYY-MM-DD` carry it as a zip. Cite a release
+  as [`CITATION.cff`](CITATION.cff) says; Zenodo archives each release with a DOI once the owner has enabled it
+  ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "Open-data releases").
+- **The site's JSON** under `data/` is shaped for its pages and can change with them (types in `src/types/data.ts`);
+  the **Atom feeds** are under `data/feeds/`. The About page lists them ("Reuse the data").
 
 Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time Pages setup.
 
@@ -116,12 +131,16 @@ src/                 React app: pages/, features/ (one folder per area, insights
 scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py, test-frozen.sh
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
 docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap, assessment
-.github/workflows/   ci.yml, pages.yml, refresh.yml, watchdog.yml
+.github/workflows/   ci.yml, pages.yml, refresh.yml, rebuild.yml, watchdog.yml, release-data.yml
+CITATION.cff         how to cite the open dataset; .zenodo.json: its Zenodo record's metadata
 ```
 
 ## Licences
 
 - **Code**: MIT — see [LICENSE](LICENSE).
+- **Open dataset** (`data/open/`, the data releases): the compilation is offered under
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), credited as its `datapackage.json` says (`attribution`);
+  the official records it contains keep their publishers' terms, below.
 - **Data** remains subject to the reuse terms of its publishers, with attribution:
   European Parliament — © European Union – Source: European Parliament. The EP Open Data Portal publishes its
   datasets of MEPs, of EU procedures involving the Parliament and of results of votes (2024 and 2025) under
