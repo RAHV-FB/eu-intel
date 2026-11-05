@@ -26,6 +26,7 @@ from pipeline.build import (
     mark_after_end_of_validity,
     short_names,
 )
+from pipeline.contract import Contract
 
 FIX = Path(__file__).parent / "fixtures" / "build"
 TODAY = "2026-10-22"
@@ -262,7 +263,8 @@ def test_vote_titles_hold_what_the_mep_and_group_vote_tables_show(out: Path):
     ts = DATA_TS.read_text(encoding="utf-8")
     pick = re.search(r"export type EpVoteTitle = Pick<\s*EpVoteSummary,\s*(.*?)>", ts, re.S)
     assert pick and set(re.findall(r"'(\w+)'", pick.group(1))) == shown
-    required = _interfaces()["EpVoteSummary"][0] & shown  # the type makes these required: no entry may lack them
+    fields = Contract.load(DATA_TS).fields(("ref", "EpVoteSummary"))
+    required = {k for k, (optional, _) in fields.items() if not optional} & shown  # no entry may lack them
     assert all(required <= set(t) for t in titles)
     text, whole = (out / "votes/titles.json").read_text(encoding="utf-8"), (out / "votes/index.json").read_text(encoding="utf-8")
     assert text == json.dumps(titles, ensure_ascii=False, separators=(",", ":")) and len(text) < len(whole)
@@ -385,7 +387,7 @@ def test_parliaments_reuse_terms_are_stated_as_it_gives_them():
 
 
 def test_snapshot_time_comes_from_a_listed_source(tmp_path: Path):
-    # "Data refreshed" must be traceable to a source on the About page: a manifest entry with no SOURCES entry
+    # `snapshot_at` must be traceable to a source on the About page: a manifest entry with no SOURCES entry
     # (here a later retrieval) does not set it, and every source of the real snapshot is listed
     from pipeline.build import SOURCES
 
@@ -422,7 +424,7 @@ def test_meta_scope_and_plain_source_summaries(out: Path):
 
 
 def test_every_fetched_source_is_listed_and_dates_the_refresh(tmp_path: Path):
-    """The About page lists build.SOURCES, and "Data last refreshed" is the latest retrieval among them. The
+    """The About page lists build.SOURCES, and `snapshot_at` is the latest retrieval among them. The
     opt-outs source was fetched but not listed, so that time belonged to no source the site showed."""
     from pipeline.__main__ import SOURCES as FETCHED
     from pipeline.build import SOURCES
@@ -442,6 +444,44 @@ def test_every_fetched_source_is_listed_and_dates_the_refresh(tmp_path: Path):
     optouts = next(s for s in meta["sources"] if s["id"] == "optouts")
     assert optouts["fetched_at"] == meta["snapshot_at"] and "Denmark" in optouts["summary"]
 
+
+
+def test_meta_gives_each_sources_health_and_the_core_data_date(tmp_path: Path):
+    """Home and the footer said "Data refreshed 2 Nov" (the newest retrieval of any source) while the Legislative
+    Train's copy was from 22 Oct and its weekly retrievals failed. meta.json now gives each source's last successful
+    retrieval, last attempt and threshold (pipeline/freshness.py), for the site to judge on the reader's date, and
+    the date up to which statuses, votes and acts are all current: the oldest retrieval of the core sources."""
+    from pipeline.freshness import CORE_SOURCES, STALE_AFTER_DAYS
+
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    path = tmp_path / "snapshot" / "_manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest["train"].update(status="failed", fetched_at="2098-12-10T17:53:03Z", attempted_at="2099-01-01T13:51:20Z")
+    manifest["ep_votes"].update(fetched_at="2098-12-31T13:40:49Z", attempted_at="2098-12-31T13:39:55Z")
+    manifest["implementation"].update(fetched_at="2098-11-01T00:00:00Z")  # older, but not a core source
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    o = tmp_path / "public"
+    assert build(out=o, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state",
+                 today=TODAY) == 0  # fmt: skip
+    meta = load(o, "meta.json")
+    by = {s["id"]: s for s in meta["sources"]}
+    # the newest retrieval still identifies the snapshot (docs/DEPLOYMENT.md); the headline date is the oldest core one
+    assert meta["snapshot_at"] == "2099-01-01T00:00:00Z"
+    assert meta["core_data_at"] == "2098-12-31T13:40:49Z"
+    train = by["train"]
+    assert (train["status"], train["fetched_at"], train["attempted_at"]) == (
+        "failed", "2098-12-10T17:53:03Z", "2099-01-01T13:51:20Z")  # fmt: skip
+    assert train["stale_after_days"] == STALE_AFTER_DAYS["train"] and train["core"] is False
+    assert train["short_name"] == "Legislative Train" and train["labels_expire_after_days"] == 42
+    for sid, s in by.items():
+        assert s["stale_after_days"] == STALE_AFTER_DAYS[sid] and s["core"] is (sid in CORE_SOURCES), sid
+        assert s["short_name"] and len(s["short_name"]) < len(s["name"]), sid
+        assert ("labels_expire_after_days" in s) is (sid == "train"), sid
+        assert "stale" not in s and "age_days" not in s, sid  # judged on the reader's date, not on the build's
+    # a source not in the manifest: never retrieved, with its threshold all the same
+    assert "optouts" not in manifest
+    assert (by["optouts"]["status"], by["optouts"]["fetched_at"], by["optouts"]["attempted_at"]) == ("unavailable", None, None)
+    assert by["optouts"]["stale_after_days"] == STALE_AFTER_DAYS["optouts"]
 
 def test_search_docs(out: Path):
     docs = load(out, "search.json")
@@ -623,114 +663,101 @@ def test_missing_sources_build_empty_sections(tmp_path: Path):
 DATA_TS = Path(__file__).resolve().parents[1] / "src" / "types" / "data.ts"
 
 
-def _interfaces() -> dict[str, tuple[set[str], set[str]]]:
-    """interface name -> (required keys, all keys), following `extends`."""
-    import re
-
-    text = DATA_TS.read_text(encoding="utf-8")
-    raw: dict[str, tuple[list[str], set[str], set[str]]] = {}
-    for m in re.finditer(r"export interface (\w+)(?: extends ([\w, ]+))? \{(.*?)\n\}", text, re.S):
-        name, ext, body = m.group(1), m.group(2), m.group(3)
-        req, keys = set(), set()
-        depth = 0
-        for line in body.split("\n"):
-            s = line.split("//")[0].strip()
-            if depth == 0:
-                fm = re.match(r"^'?([\w]+)'?(\?)?:", s)
-                if fm:
-                    keys.add(fm.group(1))
-                    if not fm.group(2):
-                        req.add(fm.group(1))
-            depth += s.count("{") - s.count("}")
-        raw[name] = ([e.strip() for e in ext.split(",")] if ext else [], req, keys)
-
-    def resolve(n: str) -> tuple[set[str], set[str]]:
-        ext, req, keys = raw[n]
-        req, keys = set(req), set(keys)
-        for e in ext:
-            r2, k2 = resolve(e)
-            req |= r2
-            keys |= k2
-        return req, keys
-
-    return {n: resolve(n) for n in raw}
-
-
-def _check(obj: dict, iface: str, ifs: dict, where: str, extra_ok: set[str] = frozenset()) -> None:
-    req, keys = ifs[iface]
-    missing = req - set(obj)
-    unknown = set(obj) - keys - set(extra_ok)
-    assert not missing, f"{where}: missing {missing} for {iface}"
-    assert not unknown, f"{where}: unknown keys {unknown} for {iface}"
-
-
 def test_output_matches_data_ts_contract(out: Path):
-    ifs = _interfaces()
-    _check(load(out, "meta.json"), "Meta", ifs, "meta.json")
-    for s in load(out, "meta.json")["sources"]:
-        _check(s, "SourceStatusInfo", ifs, "meta.sources")
-    home = load(out, "home.json")
-    _check(home, "HomeData", ifs, "home.json")
-    for f in home["featured"]:
-        _check(f, "FeaturedItem", ifs, "home.featured")
-        _check(f["dossier"], "DossierSummary", ifs, "home.featured.dossier")
-    for lst in home["lists"]:
-        for it in lst["items"]:
-            _check(it, "HomeListItem", ifs, f"home.lists.{lst['id']}")
-    for d in load(out, "dossiers/index.json"):
-        _check(d, "DossierSummary", ifs, "dossiers/index.json")
-        det = load(out, f"dossiers/{d['id']}.json")
-        _check(det, "DossierDetail", ifs, f"dossiers/{d['id']}.json")
-        _check(det["status"], "DossierStatus", ifs, "status")
-        for r in det["status"].get("named_acts") or []:
-            _check(r, "NamedAct", ifs, "status.named_acts")
-        _check(det["next_step"], "NextStep", ifs, "next_step")
-        if det["stall"]:
-            _check(det["stall"], "Stall", ifs, "stall")
-        if det["application"]:
-            _check(det["application"], "ApplicationInfo", ifs, "application")
-        for e in det["timeline"]:
-            _check(e, "TimelineEvent", ifs, "timeline")
-        for a in det["acts"]:
-            _check(a, "LegalActSummary", ifs, "acts")
-        if det["implementation"]:
-            _check(det["implementation"], "DossierImplementation", ifs, "implementation")
-        for c in det["changes"]:
-            _check(c, "ActivityItem", ifs, "changes")
-    for v in load(out, "votes/index.json"):
-        _check(v, "EpVoteSummary", ifs, "votes/index.json")
-        det = load(out, f"votes/{v['id']}.json")
-        _check(det, "EpVoteDetail", ifs, f"votes/{v['id']}.json")
-        for g in det["groups"]:
-            _check(g, "GroupBreakdown", ifs, "vote.groups")
-        for b in det["ballots"]:
-            _check(b, "Ballot", ifs, "vote.ballots")
-    extra = {"legal_basis", "states_against", "states_abstain", "states_not_participating"}
-    for cv in load(out, "council/index.json"):
-        _check(cv, "CouncilVote", ifs, "council/index.json")
-        if cv["assessment"]:
-            _check(cv["assessment"], "CouncilAssessment", ifs, "assessment", extra)
-    for m in load(out, "people/meps.json"):
-        _check(m, "MepSummary", ifs, "people/meps.json")
-        _check(load(out, f"people/meps/{m['id']}.json"), "MepDetail", ifs, f"people/meps/{m['id']}.json")
-    for g in load(out, "people/groups.json"):
-        _check(g, "GroupSummary", ifs, "people/groups.json")
-        _check(load(out, f"people/groups/{g['id']}.json"), "GroupDetail", ifs, "group detail")
-    for p in load(out, "people/parties.json"):
-        _check(p, "PartySummary", ifs, "people/parties.json")
-        _check(load(out, f"people/parties/{p['id']}.json"), "PartyDetail", ifs, "party detail")
-    for c in load(out, "countries/index.json"):
-        _check(c, "CountrySummary", ifs, "countries/index.json")
-        det = load(out, f"countries/{c['code']}.json")
-        _check(det, "CountryDetail", ifs, f"countries/{c['code']}.json")
-        for i in det["infringements"]:
-            _check(i, "InfringementInfo", ifs, "infringements")
-    for t in load(out, "topics.json"):
-        _check(t, "Topic", ifs, "topics.json")
-    for d in load(out, "search.json"):
-        _check(d, "SearchDoc", ifs, "search.json")
-    for a in load(out, "activity.json"):
-        _check(a, "ActivityItem", ifs, "activity.json")
+    """Every file of the fixture build that the header of data.ts lists, checked against its type (keys, nulls,
+    types, enums; pipeline/contract.py, which `validate --built` runs on the real output)."""
+    from pipeline.contract import Contract, check_public
+
+    contract = Contract.load(DATA_TS)
+    checked = {pattern for pattern, _, _ in contract.files_to_check(out, lambda rel: load(out, rel))}
+    assert checked == set(contract.files) and len(checked) == 19  # every listed file, and one of each detail kind
+    assert check_public(out, contract).lines() == []
+
+
+def test_contract_reports_nulls_enums_types_and_keys(out: Path, tmp_path: Path):
+    """Drift that the key-only check let through: a null where the type has none (CouncilAssessment.states_required,
+    null for every unanimity vote while data.ts said `number`), a value outside an enum, a wrong basic type, and the
+    keys of a Pick<> alias (votes/titles.json, EpVoteTitle)."""
+    from pipeline.contract import Contract, check_public
+
+    pub = tmp_path / "public"
+    shutil.copytree(out, pub)
+    council = load(pub, "council/index.json")
+    cv = next(c for c in council if c["assessment"])
+    cv["assessment"]["states_required"] = None
+    cv["assessment"]["rule"] = "consensus"
+    cv["voting_rule"] = "bogus"
+    cv["date"] = "5 May 2026"
+    (pub / "council" / "index.json").write_text(json.dumps(council), encoding="utf-8")
+    titles = load(pub, "votes/titles.json")
+    titles[0]["for"] = 3  # in EpVoteSummary, not in the EpVoteTitle it picks
+    del titles[0]["kind_label"]
+    (pub / "votes" / "titles.json").write_text(json.dumps(titles), encoding="utf-8")
+    meta = load(pub, "meta.json")
+    meta["scope"]["ep_roll_call_votes"] = "many"  # CoverageScope, never checked before
+    (pub / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+    ts = DATA_TS.read_text(encoding="utf-8").replace("states_required: number | null;", "states_required: number;")
+    lines = check_public(pub, Contract(ts)).lines()
+    assert lines == [
+        "council/index.json: CouncilVote[].assessment.rule: \"consensus\" where \"qmv\" | \"simple_majority\" | "
+        "\"unanimity\" expected (1 time, e.g. council/index.json)",
+        "council/index.json: CouncilVote[].assessment.states_required: null where number expected (1 time, e.g. "
+        "council/index.json)",
+        "council/index.json: CouncilVote[].date: \"5 May 2026\" is not an ISODate (1 time, e.g. council/index.json)",
+        "council/index.json: CouncilVote[].voting_rule: \"bogus\" where \"qmv\" | \"simple_majority\" | \"unanimity\" | "
+        "\"unknown\" expected (1 time, e.g. council/index.json)",
+        "meta.json: Meta.scope.ep_roll_call_votes: \"many\" where number expected (1 time, e.g. meta.json)",
+        "votes/titles.json: EpVoteTitle[].for: not in the contract (1 time, e.g. votes/titles.json)",
+        "votes/titles.json: EpVoteTitle[].kind_label: missing (1 time, e.g. votes/titles.json)",
+    ]
+    assert not any("states_required" in x for x in check_public(pub, Contract.load(DATA_TS)).lines())  # number | null
+
+
+def test_contract_types_the_checker_understands():
+    from pipeline.contract import Contract, ContractError
+
+    c = Contract("""/**
+ *   a.json        A
+ *   things/<id>.json  Thing
+ */
+export type ISODate = string;
+export type Kind = 'x' | 'y';
+export type Run = [lang: string | null, text: string];
+export interface Base { id: string; when?: ISODate | null }
+export interface Thing extends Base {
+  kind: Kind;
+  runs?: Run[];
+  counts: Record<string, number>;
+  nested: { label: string; tags: (Kind | 'z')[] }[];
+  outcome?: Thing['kind'];
+}
+export type Small = Pick<Thing, 'id' | 'kind'> & Partial<Pick<Thing, 'when'>>;
+export interface A { items: Small[]; maybe: Thing | null; flag: boolean }
+""")
+    assert c.files == {"a.json": "A", "things/<id>.json": "Thing"}
+    good = {"id": "t", "kind": "x", "runs": [[None, "a"], ["fr", "b"]], "counts": {"a": 1}, "nested": [{"label": "l", "tags": ["z"]}]}
+    assert c.check_value(good, "Thing") == []
+    bad = {**good, "when": "2026-13", "kind": "w", "runs": [["fr"]], "counts": {"a": "1"}, "outcome": "z", "extra": 1,
+           "nested": [{"label": None, "tags": ["q"]}]}  # fmt: skip
+    del bad["id"]
+    assert sorted(c.check_value(bad, "Thing")) == [
+        ("Thing.counts{}", '"1" where number expected'),
+        ("Thing.extra", "not in the contract"),
+        ("Thing.id", "missing"),
+        ("Thing.kind", '"w" where "x" | "y" expected'),
+        ("Thing.nested[].label", "null where string expected"),
+        ("Thing.nested[].tags[]", '"q" where "x" | "y" | "z" expected'),
+        ("Thing.outcome", '"z" where "x" | "y" expected'),
+        ("Thing.runs[]", "array where a tuple of 2 expected"),
+        ("Thing.when", '"2026-13" is not an ISODate'),
+    ]
+    assert c.check_value({"items": [{"id": "s", "kind": "y"}], "maybe": None, "flag": True}, "A") == []
+    assert c.check_value({"items": [{"id": "s", "kind": "y", "runs": []}], "maybe": good, "flag": 1}, "A") == [
+        ("A.items[].runs", "not in the contract"), ("A.flag", "1 where boolean expected")]  # fmt: skip
+    with pytest.raises(ContractError):  # a construct the parser does not know fails loudly
+        Contract("export interface X { a: string }\nexport enum E { A }")
+    with pytest.raises(ContractError):
+        Contract("export interface X { a: Missing }").check_value({"a": 1}, "X")
 
 
 def test_close_votes_use_margin_when_available(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -1301,6 +1328,110 @@ def test_council_steps_dated_by_the_council_voting_result():
     assert Builder.council_dated(me, p).events[0].date == "2026-10-01"  # type: ignore[arg-type]
 
 
+def _council_vote(vid: str, day: str, vote_on: str, outcome: str = "adopted") -> dict:
+    """A Council voting result as build_council lists it on a file (constructed: 27 Member States in favour)."""
+    return {
+        "id": vid, "date": day, "vote_on": vote_on, "outcome": outcome, "stage": "Adoption of the legislative act",
+        "written_procedure": False, "positions": dict.fromkeys(("AT", "BE", "BG"), "for"),
+        "source": {"institution": "Council", "url": f"https://example.invalid/{vid}", "label": f"Voting result {vid}",
+                   "identifier": vid, "retrieved_at": "2026-11-02T00:00:00Z", "published": None},
+    }  # fmt: skip
+
+
+def _agreed_cod(pid: str, *extra) -> object:
+    """An ordinary procedure up to Parliament's first-reading position on the text agreed with the Council
+    (constructed; the shape of 2025/0312(COD) on 2 November 2026)."""
+    from pipeline.models.entities import Event, EventKind, Procedure, SourceRef
+
+    src = SourceRef(institution="EP", url="https://example.invalid/ep", retrieved_at="2026-10-22T00:00:00Z")
+    steps = [("2025-10-02", EventKind.proposal, "Commission"), ("2025-10-23", EventKind.referral, "EP"),
+             ("2026-07-15", EventKind.provisional_agreement, "EP"), ("2026-10-06", EventKind.ep_position, "EP"), *extra]
+    events = [Event(id=f"e{i}", date=d, kind=k, institution=inst, title=k.value, source=src,
+                    raw_type="def/ep-activities/PLENARY_ADOPT_POSITION" if k == EventKind.ep_position else None)
+              for i, (d, k, inst) in enumerate(steps)]  # fmt: skip
+    return Procedure(id=pid, reference=f"{pid.replace('-', '/')}(COD)", type="COD", title="t", oeil_url="u", source=src,
+                     events=events, stage_raw="Awaiting Council's 1st reading position")  # fmt: skip
+
+
+def test_a_council_vote_the_procedure_record_lacks_counts_for_the_status():
+    """2025/0312(COD) on 2 November 2026: the Council's voting result ST 14961/26 records the act adopted on 26 October
+    2026, 27-0-0, and the timeline listed it, but OEIL (retrieved 22 October) still awaited the Council: the status
+    said the Council had still to approve the act. The vote counts for the status, and is listed once."""
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import Builder
+    from pipeline.models.entities import EventKind
+
+    today = "2026-11-02"
+    p = _agreed_cod("2099-0312")
+    me = _builder(today=today, council_of={"2099-0312": [_council_vote("ST-1-2026", "2026-10-26", "act")]})
+    dated = Builder.council_dated(me, p)  # type: ignore[arg-type]
+    added = [e for e in dated.events if e.kind == EventKind.council_adoption]
+    assert [(e.date, e.institution, e.source.url) for e in added] == [
+        ("2026-10-26", "Council", "https://example.invalid/ST-1-2026")]  # fmt: skip
+    st = classify(dated, [], [], date.fromisoformat(today))
+    assert (st.stage, st.label, st.since) == ("adopted", "Adopted by Parliament and Council", "2026-10-26")
+    assert st.next_step.text.startswith("Signature by the Presidents of Parliament and the Council")
+    assert Builder.adoption_dates(me, p, []) == ("2026-10-26", None)  # type: ignore[arg-type]
+    tl = Builder.timeline(me, p, [], [])  # type: ignore[arg-type]
+    assert [(e["date"], e["title"]) for e in tl if e["kind"] == "council_adoption"] == [
+        ("2026-10-26", "Council adopted the act")]  # fmt: skip
+
+    # once OEIL records the step (dated by OEIL after the vote), the vote dates it and adds none
+    p = _agreed_cod("2099-0312", ("2026-10-29", EventKind.council_adoption, "Council"))
+    dated = Builder.council_dated(me, p)  # type: ignore[arg-type]
+    assert [e.date for e in dated.events if e.kind == EventKind.council_adoption] == ["2026-10-26"]
+    assert len([e for e in Builder.timeline(me, p, [], []) if e["kind"] == "council_adoption"]) == 1  # type: ignore[arg-type]
+
+    # a vote that did not adopt the act, or a vote on another item, adds nothing
+    for cv in (_council_vote("ST-2-2026", "2026-10-26", "act", "not_adopted"), _council_vote("ST-3-2026", "2026-10-26", "other")):
+        me = _builder(today=today, council_of={"2099-0312": [cv]})
+        st = classify(Builder.council_dated(me, _agreed_cod("2099-0312")), [], [], date.fromisoformat(today))  # type: ignore[arg-type]
+        assert (st.stage, st.label) == ("parliament_position", "Approved by Parliament")
+
+
+def test_a_council_first_reading_position_vote_the_procedure_record_lacks_counts_for_the_status():
+    """The Council's adopted first-reading position, recorded only by its voting result: the file is at second
+    reading in Parliament (Art. 294(5) and (7) TFEU), not still awaiting the Council."""
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import Builder
+    from pipeline.models.entities import EventKind
+
+    p = _agreed_cod("2099-0313")
+    p = p.model_copy(update={"events": [e for e in p.events if e.kind != EventKind.provisional_agreement]})  # type: ignore[attr-defined]
+    me = _builder(today="2026-11-02", council_of={
+        "2099-0313": [_council_vote("ST-4-2026", "2026-10-27", "first_reading_position")]})  # fmt: skip
+    st = classify(Builder.council_dated(me, p), [], [], date.fromisoformat("2026-11-02"))  # type: ignore[arg-type]
+    assert (st.stage, st.label, st.since) == ("negotiations", "Second reading in Parliament", "2026-10-27")
+
+
+def test_the_eps_unconfirmed_publication_is_shown_as_its_record():
+    """2023/0421(COD) on 2 November 2026: the EP's "Final act published in the Official Journal" of 30 October 2026,
+    with no act in Cellar, no position of Parliament and no Council adoption, was a key "publication" step labelled
+    EUR-Lex (sources.ep_procedures.ACTIVITY_INSTITUTION), and dated the file's publication. Constructed records."""
+    from pipeline.build import Builder
+    from pipeline.models.entities import Event, EventKind, Procedure, SourceRef
+
+    src = SourceRef(institution="EP", url="https://example.invalid/ep", retrieved_at="2026-11-02T13:33:44Z")
+    pub = Event(id="2099-0421-PUB-2026-10-30", date="2026-10-30", kind=EventKind.publication, institution="EUR-Lex",
+                raw_type="def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL", title="Final act published in the Official "
+                "Journal", source=src)  # fmt: skip
+    ref = Event(id="2099-0421-ANPRO-2023-12-14", date="2023-12-14", kind=EventKind.referral, institution="EP",
+                raw_type="def/ep-activities/REFERRAL", title="Announced in Parliament", source=src)  # fmt: skip
+    p = Procedure(id="2099-0421", reference="2099/0421(COD)", type="COD", title="t", oeil_url="u", source=src,
+                  events=[ref, pub])  # fmt: skip
+    me = _builder(today="2026-11-02")
+    step = next(e for e in Builder.timeline(me, p, [], []) if e["id"] == pub.id)  # type: ignore[arg-type]
+    assert (step["kind"], step["institution"], step["key"], step["title"]) == (
+        "other", "EP", False, "The European Parliament's record lists the final act as published in the Official Journal")
+    assert step["detail"].startswith("No act published under this procedure is recorded in our EUR-Lex data")
+    assert step["source"]["url"] == "https://example.invalid/ep"
+    assert Builder.adoption_dates(me, p, []) == (None, None)  # type: ignore[arg-type]
+
+
 # ------------------------------------------------------------------------------- EP vote labels
 # Labels exactly as Parliament published them (data/snapshot/ep_votes/votes.json, by vote id).
 LABEL_164581 = (
@@ -1660,15 +1791,11 @@ def test_stated_intentions_without_a_recorded_vote_are_kept(votes_out: Path):
 
 
 def test_vote_outputs_match_the_contract(votes_out: Path):
-    ifs = _interfaces()
-    for v in load(votes_out, "votes/index.json"):
-        _check(v, "EpVoteSummary", ifs, "votes/index.json")
-        det = load(votes_out, f"votes/{v['id']}.json")
-        _check(det, "EpVoteDetail", ifs, f"votes/{v['id']}.json")
-        if det["margin"]:
-            _check(det["margin"], "VoteMargin", ifs, "vote.margin")
-        for x in det["intentions"]:
-            _check(x, "VoteIntention", ifs, "vote.intentions")
+    """The votes build (margins, intentions, kinds the main fixture lacks) against src/types/data.ts."""
+    from pipeline.contract import check_public
+
+    assert check_public(votes_out, Contract.load(DATA_TS)).lines() == []
+    assert any(load(votes_out, f"votes/{v['id']}.json")["margin"] for v in load(votes_out, "votes/index.json"))
 
 
 # ------------------------------------------------------------------------------- transposition dates
@@ -1703,6 +1830,36 @@ def test_transposition_dates_without_an_established_role_stay_off_the_timeline(t
     }
     assert "The national measures are to apply from 1 April 2027." in d["next_step"]["text"]
     assert d["implementation"]["deadline"] == "2027-03-30"
+
+
+def test_a_transposition_date_before_the_act_is_not_shown_as_its_deadline(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    # As Cellar records Directive (EU) 2015/412 of 11 March 2015 (2010/0208(COD)): one unlabelled date, 17 October
+    # 2002, the deadline of Directive 2001/18/EC it amends. The page said "The transposition deadline (17 October
+    # 2002) has passed" and every country row carried that deadline.
+    base = tmp_path / "b"
+    shutil.copytree(FIX / "snapshot", base / "snapshot")
+    path = base / "snapshot" / "eurlex" / "acts.json"
+    recs = json.loads(path.read_text(encoding="utf-8"))
+    a = next(r for r in recs if r["celex"] == "32099L0003")  # a directive of 15 January 2023
+    a["transposition_dates"] = [{"date": "2002-10-17", "labels": [], "articles": []}]
+    a["transposition_deadlines"] = ["2002-10-17"]
+    path.write_text(json.dumps(recs), encoding="utf-8")
+    o = base / "public"
+    with caplog.at_level("WARNING", logger="pipeline.build"):
+        assert build(out=o, snapshot=base / "snapshot", curated=FIX / "curated", state=base / "state", today=TODAY) == 0
+    assert "act 32099L0003: EUR-Lex records transposition date(s) 2002-10-17, earlier than the act itself (2023-01-15)" in (
+        caplog.text)  # fmt: skip
+    d = load(o, "dossiers/2099-0003.json")
+    assert [(x["date"], x["kind"]) for x in d["application"]["transposition"]] == [("2002-10-17", "other")]
+    assert d["application"]["transposition_deadlines"] == []
+    assert not [e for e in d["timeline"] if e["kind"].startswith("transposition")]
+    assert "has passed" not in d["next_step"]["text"] and "2002" not in d["next_step"]["text"]
+    assert "the transposition date it records is earlier than the directive itself" in d["next_step"]["text"]
+    assert d["implementation"]["deadline"] is None
+    assert {c["status"] for c in d["implementation"]["countries"]} <= {"measures_notified", "no_deadline"}
+    assert "no_deadline" in {c["status"] for c in d["implementation"]["countries"]}
 
 
 def test_next_step_names_the_deadlines_of_amending_directives():
@@ -1922,3 +2079,95 @@ def test_coverage_notes_format_counts_and_pluralise_unread_documents():
     assert "Only a vote under unanimity" not in one
     two = next(n for n in notes([cv(1, {}), cv(2, {}), cv(3, {"DE": "for"})]) if n.startswith("Council votes"))
     assert two.endswith("2 voting-result documents could not be read and are shown without positions.")
+
+
+# ------------------------------------------------------------------------------- strict build
+def _fixture_build(tmp_path: Path, curated: Path = FIX / "curated", **kw) -> int:
+    snap = tmp_path / "snapshot"
+    if not snap.exists():
+        shutil.copytree(FIX / "snapshot", snap)
+    return build(out=tmp_path / "public", snapshot=snap, curated=curated, state=tmp_path / "state", today=TODAY, **kw)
+
+
+def test_strict_build_passes_on_the_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    import pipeline.build as B
+
+    assert _fixture_build(tmp_path, strict=True) == 0 and B.PROBLEMS == []
+    monkeypatch.setenv("EU_INTEL_STRICT", "1")
+    assert _fixture_build(tmp_path) == 0
+
+
+def test_strict_build_fails_when_a_feature_does_not_load(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog):
+    """`_lazy` turns an import or attribute failure into None and the feature is left out; a renamed status function
+    also makes classify fall back for every file. A strict build fails and lists every problem, once, at the end."""
+    import pipeline.analysis.ep_margin as ep_margin
+    import pipeline.analysis.status as status
+    import pipeline.build as B
+
+    monkeypatch.delattr(ep_margin, "statutory_seats")
+    assert _fixture_build(tmp_path) == 0  # not strict: as before, the build goes on without it
+    assert _fixture_build(tmp_path, strict=True) == 1
+    assert B.PROBLEMS == [
+        "optional module pipeline.analysis.ep_margin has no statutory_seats: the features using it are left out"]
+    monkeypatch.setenv("EU_INTEL_STRICT", "1")
+    assert _fixture_build(tmp_path) == 1
+    monkeypatch.delenv("EU_INTEL_STRICT")
+    monkeypatch.undo()
+
+    monkeypatch.delattr(status, "relevant_acts")  # "renaming a status function fails CI" (Plan 1.3)
+    caplog.clear()
+    with caplog.at_level("ERROR", logger="pipeline.build"):
+        assert _fixture_build(tmp_path, strict=True) == 1
+    assert B.PROBLEMS[0] == "optional module pipeline.analysis.status has no relevant_acts: the features using it are left out"
+    fallbacks = [p for p in B.PROBLEMS if p.startswith("classify failed for ")]
+    assert len(fallbacks) == len(B.PROBLEMS) - 1 >= 3 and all("its status is the fallback" in p for p in fallbacks)
+    errors = [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
+    assert errors == [f"build --strict: FAILED — {len(B.PROBLEMS)} problem(s) worked around:", *(f"  - {p}" for p in B.PROBLEMS)]
+
+
+def test_strict_build_fails_on_an_unreadable_or_skipped_curated_entry(tmp_path: Path):
+    import pipeline.build as B
+
+    cur = tmp_path / "curated"
+    shutil.copytree(FIX / "curated", cur)
+    (cur / "act_dates.yaml").write_text(
+        "- celex: 32099R0001\n  entry_into_force: '2024-13-01'\n  sources: [{label: x, url: 'https://eur-lex.europa.eu/'}]\n"
+        "- not an entry\n",
+        encoding="utf-8",
+    )  # a malformed date, and an entry without a CELEX
+    (cur / "council_dates.yaml").write_text("procedure: 2099/0001(COD)\n", encoding="utf-8")  # a mapping, not a list
+    (cur / "topics.yaml").write_text("topics: [\n", encoding="utf-8")  # unreadable YAML
+    assert _fixture_build(tmp_path, curated=cur) == 0
+    assert _fixture_build(tmp_path, curated=cur, strict=True) == 1
+    assert "curated act_dates.yaml: entry 32099R0001 has a malformed date; ignored" in B.PROBLEMS
+    assert "curated act_dates.yaml: entry 'not an entry' has no CELEX; ignored" in B.PROBLEMS
+    assert "curated council_dates.yaml: expected a list of entries, found dict; ignored" in B.PROBLEMS
+    assert any(p.startswith("curated topics.yaml unreadable: ") for p in B.PROBLEMS)
+
+
+def test_strict_build_fails_when_a_status_or_an_assessment_falls_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    import pipeline.analysis.council_qmv as council_qmv
+    import pipeline.analysis.ep_margin as ep_margin
+    import pipeline.analysis.status as status
+    import pipeline.build as B
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("TEST failure")
+
+    for mod, name in ((status, "classify"), (council_qmv, "assess"), (ep_margin, "margin")):
+        monkeypatch.setattr(mod, name, broken)
+    assert _fixture_build(tmp_path) == 0  # the fallback status, no assessment, no margin: as before
+    assert _fixture_build(tmp_path, strict=True) == 1
+    kinds = {re.sub(r" (for|for vote) [\w-]+:.*", "", p) for p in B.PROBLEMS}
+    assert kinds == {"classify failed", "council assessment failed", "margin failed"}, B.PROBLEMS
+    assert "classify failed for 2099-0001: RuntimeError('TEST failure'); its status is the fallback" in B.PROBLEMS
+
+
+def test_build_strict_flag(monkeypatch: pytest.MonkeyPatch):
+    import pipeline.__main__ as cli
+    import pipeline.build as B
+
+    seen: list = []
+    monkeypatch.setattr(B, "build", lambda **kw: seen.append(kw.get("strict")) or 0)
+    assert cli.main(["build", "--strict"]) == 0 and cli.main(["build"]) == 0
+    assert seen == [True, None]  # None: EU_INTEL_STRICT decides

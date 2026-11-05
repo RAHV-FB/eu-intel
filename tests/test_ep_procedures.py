@@ -9,7 +9,8 @@ Fixtures in tests/fixtures/ep_procedures/:
 from __future__ import annotations
 
 import json
-from datetime import date
+from collections.abc import Iterable
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -1224,6 +1225,196 @@ def test_listing_remembers_the_page_size_and_fails_fast(snapshot_dir):
     again = SmallPagesOnly()
     m.fetch(again)
     assert [c for c in again.list_calls if c[0] == "COD"] == [("COD", 125, None)]  # starts at the size that worked
+
+
+# ---------------------------------------------------------------- re-reads: closed stages, rotation, carried ids, parser
+CLOSED = {"2021-0106", "2021-0104", "2022-0051", "2017-0003", "2022-0196"}  # reused by an incremental run
+
+
+def test_every_terminal_stage_is_closed():
+    from pipeline.analysis.status import TERMINAL
+
+    assert TERMINAL <= m.TERMINAL_STAGES
+
+
+def test_a_file_no_longer_in_force_is_closed(snapshot_dir):
+    """149 files "no longer in force" were re-read every week (2 Nov 2026), although that stage comes from EUR-Lex."""
+    from pipeline.analysis.status import classify
+    from pipeline.models.entities import LegalAct
+
+    m.fetch(FakeHttp())
+    rec = {r.id: r for r in m.read_records(m.SOURCE_ID, "procedures", Procedure)}["2021-0106"]
+    act = next(a for a in m.read_records("eurlex", "acts", LegalAct) if rec.reference in a.procedure_refs)
+    ended = act.model_copy(update={"end_of_validity": "2026-01-01", "in_force": False})
+    today = date(2026, 10, 22)
+    assert classify(rec, [ended], [], today).stage == "no_longer_in_force"
+    assert m.needs_refresh(rec, [ended], today) is None
+    assert m.needs_refresh(rec, [act], today) is None  # in force: closed too
+    wanted = {rec.id: rec.reference}
+    assert m.select_ids(wanted, {rec.id: rec}, [], {rec.reference: [ended]}, today, False)[0] == []
+
+
+def test_rotation_slot_is_a_stable_hash_covering_every_slot():
+    assert [m.rotation_slot(pid) for pid in sorted(CLOSED)] == [3, 7, 1, 3, 4]  # sha256: the same in every process
+    assert {m.rotation_slot(f"2024-{n:04d}") for n in range(200)} == set(range(m.ROTATION_WEEKS))
+
+
+def test_rotation_weeks_run_on_across_a_new_year():
+    mondays = [date(2026, 11, 30) + timedelta(weeks=k) for k in range(8)]  # ISO weeks 49 to 53, then 1 to 3
+    assert {m.week_number(d) % 8 for d in mondays} == set(range(8))
+    assert {d.isocalendar().week % 8 for d in mondays} == {1, 2, 3, 4, 5}  # the ISO week number would skip slots
+    assert m.week_number(date(2026, 11, 2)) == m.week_number(date(2026, 11, 8)) == m.week_number(date(2026, 11, 9)) - 1
+
+
+def test_rotation_slots_catch_up_missed_weeks_once():
+    today = date(2026, 11, 9)
+    now = m.week_number(today)
+    assert m.rotation_slots(today, None) == {now % 8}
+    assert m.rotation_slots(today, now - 1) == {now % 8}
+    assert m.rotation_slots(today, now) == set()  # a second run in the same week
+    assert m.rotation_slots(today, now - 3) == {(now - 2) % 8, (now - 1) % 8, now % 8}  # two runs missed
+    assert m.rotation_slots(today, now - 40) == set(range(8))
+    assert m.rotation_slots(today, now + 5) == {now % 8}  # a state from the future does not stop the rotation
+
+
+def test_closed_files_are_re_read_on_their_rotation_week(snapshot_dir, monkeypatch):
+    m.fetch(FakeHttp())  # 22 Oct 2026: every file read, this week's slot taken
+    seen: dict[str, list[date]] = {}
+    for k in range(1, 9):
+        today = date(2026, 10, 22) + timedelta(weeks=k)
+        monkeypatch.setattr(m, "_today", lambda today=today: today)
+        http = FakeHttp()
+        status = m.fetch(http)
+        assert status.status == "ok", status.note
+        rotated = CLOSED & set(http.detail_calls)
+        assert rotated == {pid for pid in CLOSED if m.rotation_slot(pid) == m.week_number(today) % 8}
+        assert (f"'rotation': {len(rotated)}" in status.note) == bool(rotated)
+        assert state_of(snapshot_dir)["rotation_week"] == m.week_number(today)
+        for pid in rotated:
+            seen.setdefault(pid, []).append(today)
+        again = FakeHttp()
+        m.fetch(again)  # a second run in the same week does not re-read them again
+        assert not CLOSED & set(again.detail_calls)
+    assert {pid: len(days) for pid, days in seen.items()} == dict.fromkeys(CLOSED, 1)  # each once in 8 weeks
+    assert set(snapshot_ids(snapshot_dir)) == in_scope()
+
+
+def test_a_missed_week_is_caught_up(snapshot_dir, monkeypatch):
+    m.fetch(FakeHttp())
+    today = date(2026, 10, 22) + timedelta(weeks=3)  # the runs of two weeks were missed
+    monkeypatch.setattr(m, "_today", lambda: today)
+    http = FakeHttp()
+    m.fetch(http)
+    due = {m.week_number(today - timedelta(weeks=k)) % 8 for k in range(3)}
+    assert CLOSED & set(http.detail_calls) == {pid for pid in CLOSED if m.rotation_slot(pid) in due}
+
+
+class ListMisses(FakeHttp):
+    """The paged list leaves some ids out (it repeats rows from one page to the next)."""
+
+    def __init__(self, missing: Iterable[str]):
+        super().__init__()
+        self.missing = set(missing)
+
+    def get_json(self, url, params=None, **kw):
+        d = super().get_json(url, params=params, **kw)
+        if url == f"{m.EP_API}/procedures":
+            d = {**d, "data": [x for x in d["data"] if x["process_id"] not in self.missing]}
+        return d
+
+
+def test_stored_files_the_list_misses_stay_in_scope(snapshot_dir):
+    m.fetch(FakeHttp())
+    before = records_by_id(snapshot_dir)["2017-0003"]
+    http = ListMisses({"2023-0448", "2017-0003"})  # an open and a closed file, referenced by no other snapshot
+    status = m.fetch(http)
+    assert status.status == "ok", status.note
+    assert "2023-0448" in http.detail_calls  # open: re-read although this run's list did not return it
+    assert "2017-0003" not in http.detail_calls and records_by_id(snapshot_dir)["2017-0003"] == before
+    assert "+ 2 stored or pending ids the list did not return" in status.note
+
+
+def test_pending_new_files_the_list_misses_are_still_read(snapshot_dir, monkeypatch):
+    monkeypatch.setattr(m, "CHUNK_SIZE", 4)
+    monkeypatch.setenv("EU_INTEL_FETCH_BUDGET_S", "0")
+    m.fetch(FakeHttp())  # the newest 4 files read; the other new files pending
+    pending = state_of(snapshot_dir)["pending"]
+    assert {"2023-0448", "2022-0196"} <= set(pending) and not {"2023-0448", "2022-0196"} & set(snapshot_ids(snapshot_dir))
+    monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S")
+    http = ListMisses({"2023-0448", "2022-0196"})
+    assert m.fetch(http).status == "ok"
+    assert set(pending) <= set(http.detail_calls)
+    assert set(snapshot_ids(snapshot_dir)) == in_scope() and state_of(snapshot_dir)["pending"] == []
+
+
+def test_parser_version_change_re_reads_everything_and_resumes(snapshot_dir, monkeypatch):
+    m.fetch(FakeHttp())
+    old = state_of(snapshot_dir)["parser"]
+    assert old == m.PARSER_VERSION
+    monkeypatch.setattr(m, "PARSER_VERSION", "test-bump")
+    monkeypatch.setattr(m, "CHUNK_SIZE", 4)
+    monkeypatch.setenv("EU_INTEL_FETCH_BUDGET_S", "0")  # one chunk per run
+    first = FakeHttp()
+    status = m.fetch(first)
+    assert status.status == "partial" and f"Mode full (parser test-bump; stored records read with {old})" in status.note
+    assert f"'parser change': {len(in_scope())}" in status.note and len(first.detail_calls) == 4
+    state = state_of(snapshot_dir)
+    assert (state["mode"], state["parser"], state["pass_parser"]) == ("full", old, "test-bump")
+    assert set(state["pending"]) == in_scope() - set(first.detail_calls)
+
+    second = FakeHttp()
+    m.fetch(second)  # the pass resumes with the pending files; it does not start again
+    assert len(second.detail_calls) == 4 and not set(second.detail_calls) & set(first.detail_calls)
+    assert state_of(snapshot_dir)["parser"] == old
+
+    monkeypatch.delenv("EU_INTEL_FETCH_BUDGET_S")
+    third = FakeHttp()
+    assert m.fetch(third).status == "ok"
+    assert set(first.detail_calls) | set(second.detail_calls) | set(third.detail_calls) == in_scope()
+    state = state_of(snapshot_dir)
+    assert (state["parser"], state["last_mode"], state["pending"]) == ("test-bump", "full", [])
+    assert "pass_parser" not in state
+    fourth = FakeHttp()
+    m.fetch(fourth)  # the pass is complete: incremental again
+    assert not CLOSED & set(fourth.detail_calls)
+
+
+def test_a_pass_for_an_older_parser_version_starts_again(snapshot_dir, monkeypatch):
+    m.fetch(FakeHttp())
+    monkeypatch.setattr(m, "CHUNK_SIZE", 4)
+    monkeypatch.setenv("EU_INTEL_FETCH_BUDGET_S", "0")
+    monkeypatch.setattr(m, "PARSER_VERSION", "test-bump")
+    m.fetch(FakeHttp())  # a pass for test-bump, interrupted
+    monkeypatch.setattr(m, "PARSER_VERSION", "test-bump-2")
+    status = m.fetch(FakeHttp())
+    assert f"'parser change': {len(in_scope())}" in status.note
+    assert state_of(snapshot_dir)["pass_parser"] == "test-bump-2"
+
+
+def test_a_state_without_parser_version_is_not_a_parser_change(snapshot_dir):
+    m.fetch(FakeHttp())
+    path = snapshot_dir / "ep_procedures" / "_state.json"
+    state = state_of(snapshot_dir)
+    del state["parser"]
+    path.write_text(json.dumps(state))
+    http = FakeHttp()
+    m.fetch(http)
+    assert not CLOSED & set(http.detail_calls)
+    assert state_of(snapshot_dir)["parser"] == m.PARSER_VERSION
+
+
+def test_parser_change_during_an_outage_keeps_every_record(snapshot_dir, monkeypatch):
+    m.fetch(FakeHttp())
+    before = records_by_id(snapshot_dir)
+    old = state_of(snapshot_dir)["parser"]
+    monkeypatch.setattr(m, "PARSER_VERSION", "test-bump")
+    status = m.fetch(ApiDown())
+    assert status.status == "failed" and records_by_id(snapshot_dir) == before
+    state = state_of(snapshot_dir)
+    assert (state["parser"], state["pass_parser"]) == (old, "test-bump") and set(state["pending"]) == in_scope()
+    again = FakeHttp()
+    assert m.fetch(again).status == "ok" and set(again.detail_calls) == in_scope()
+    assert state_of(snapshot_dir)["parser"] == "test-bump"
 
 
 # ---------------------------------------------------------------- live

@@ -2,9 +2,12 @@
 
     python -m pipeline fetch [SOURCE ...]   # network: refresh data/snapshot/<source>/ (per-source, failure-safe)
     python -m pipeline build                # offline: data/snapshot + data/curated -> public/data
+    python -m pipeline build --strict       # same; exit 1 on a degraded result (also EU_INTEL_STRICT=1)
     python -m pipeline validate             # offline: schema + invariant checks on the snapshot, and on the
-                                            # built output (public/data) if there is one
+                                            # built output (public/data) if there is one; ratchet on warnings
     python -m pipeline validate --built     # same; a missing built output is an error (run after build)
+    python -m pipeline validate --built --update-baseline
+                                            # same; record the warning counts in pipeline/validate_baseline.json
     python -m pipeline validate --list-failing
                                             # the snapshot checks; prints the sources with structural errors
     python -m pipeline restore-manifest --previous FILE SOURCE ...
@@ -111,11 +114,11 @@ def cmd_fetch(names: list[str]) -> int:
     return 1 if failures else 0
 
 
-def cmd_validate(list_failing: bool, built: bool = False) -> int:
+def cmd_validate(list_failing: bool, built: bool = False, update_baseline: bool = False) -> int:
     from pipeline.validate import validate, validate_by_source
 
     if not list_failing:
-        return validate(built)
+        return validate(built, update_baseline=update_baseline)
     failing = validate_by_source(out=sys.stderr)
     bad = [s for s in failing if not SOURCE_NAME_RE.match(s)]
     if bad:  # cannot be restored per source (e.g. errors in the built public output)
@@ -238,7 +241,13 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
     f = sub.add_parser("fetch")
     f.add_argument("sources", nargs="*")
-    sub.add_parser("build")
+    bp = sub.add_parser("build")
+    bp.add_argument(
+        "--strict",
+        action="store_true",
+        help="exit 1 if a feature did not load, a curated file or entry was not applied, or a status or assessment "
+        "fell back (also EU_INTEL_STRICT=1); all such problems are listed at the end",
+    )
     v = sub.add_parser("validate")
     vmode = v.add_mutually_exclusive_group()
     vmode.add_argument(
@@ -250,6 +259,11 @@ def main(argv: list[str] | None = None) -> int:
         "--list-failing",
         action="store_true",
         help="print the sources whose snapshot files have structural errors (one per line; report on stderr)",
+    )
+    v.add_argument(
+        "--update-baseline",
+        action="store_true",
+        help="with --built: record this run's warning counts in pipeline/validate_baseline.json (the ratchet)",
     )
     r = sub.add_parser("restore-manifest")
     r.add_argument("--previous", type=Path, required=True, help="manifest to take the entries from")
@@ -271,9 +285,11 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "build":
         from pipeline.build import build
 
-        return build()
+        return build(strict=True if a.strict else None)
     if a.cmd == "validate":
-        return cmd_validate(a.list_failing, a.built)
+        if a.update_baseline and not a.built:
+            p.error("validate --update-baseline needs --built (the baseline counts the built output's warnings too)")
+        return cmd_validate(a.list_failing, a.built, a.update_baseline)
     if a.cmd == "restore-manifest":
         return cmd_restore_manifest(a.previous, a.sources, a.reason)
     return 2

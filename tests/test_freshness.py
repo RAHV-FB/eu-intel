@@ -41,3 +41,10 @@ def test_oldest_core_fetch_ignores_non_core_sources():
     }
     assert oldest_core_fetch(manifest) == "2026-11-02T13:40:49Z"
     assert oldest_core_fetch({"train": {"fetched_at": "2026-10-22T17:53:03Z"}}) is None
+
+
+def test_label_expiry_comes_after_the_source_is_reported_stale():
+    from pipeline.freshness import LABELS_EXPIRE_AFTER_DAYS
+
+    for name, days in LABELS_EXPIRE_AFTER_DAYS.items():
+        assert days > STALE_AFTER_DAYS[name]

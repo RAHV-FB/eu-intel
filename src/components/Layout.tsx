@@ -2,7 +2,8 @@ import { Suspense, useEffect, useRef, useState, type RefObject } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import type { Meta } from '../types/data';
 import { useData } from '../lib/data';
-import { formatDateTime } from '../lib/format';
+import { formatDate } from '../lib/format';
+import { freshness, staleNote } from '../lib/freshness';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SearchBox } from './SearchBox';
 import { Loading } from './ui';
@@ -216,6 +217,8 @@ export function Layout() {
 
 function Footer() {
   const { data: meta } = useData<Meta>('meta.json');
+  // judged on the reader's date: the data is rebuilt weekly but read for a week or more (src/lib/freshness.ts)
+  const f = meta && freshness(meta, Date.now());
   return (
     <footer className="site-footer">
       <div className="container site-footer__inner">
@@ -226,10 +229,15 @@ function Footer() {
             any EU institution, and not endorsed by them. All legislative data comes from official EU open-data sources;
             see <Link to="/about#sources">data sources</Link>.
           </p>
-          {meta && (
+          {meta && f && (
             <p className="meta">
-              Data last refreshed: {formatDateTime(meta.snapshot_at ?? meta.built_at)} ·{' '}
+              {f.coreAt ? <>Procedures, votes and acts current to {formatDate(f.coreAt)}</> : <>Data built {formatDate(meta.built_at)}</>} ·{' '}
               <Link to="/about#coverage">What’s covered</Link>
+            </p>
+          )}
+          {f && f.stale.length > 0 && (
+            <p className="meta">
+              <Link to="/about#sources">{staleNote(f)}</Link>
             </p>
           )}
         </div>

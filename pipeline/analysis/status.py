@@ -30,7 +30,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from pipeline.analysis.transposition import Dated, application_start, article_label
+from pipeline.analysis.transposition import Dated, application_start, article_label, before_the_act
 from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models.entities import (
     EpVote,
@@ -252,6 +252,42 @@ def relevant_acts(proc: Procedure, acts: list[LegalAct], events: list[Event], to
         if a.celex in proc.celex_refs or len(a.procedure_refs) <= 1 or (adopted_here and not proc.celex_refs):
             out.append(a)
     return out
+
+
+def unconfirmed_final_steps(
+    events: Sequence[Event], acts: Sequence[LegalAct], council_adopted: bool = False
+) -> list[Event]:
+    """The European Parliament's records of the final act's publication or signature (EP Open Data API
+    PUBLICATION_OFFICIAL_JOURNAL and SIGNATURE, which OEIL repeats) that no other record confirms: a publication while
+    no act of the procedure is in our EUR-Lex data (`acts`, as relevant_acts gives them), a signature while neither
+    such an act nor the act's adoption is recorded (a Council adoption step, from OEIL or from the Council's voting
+    result, which `council_adopted` says when `events` lack it; or Parliament's approval of the Council's position at
+    second reading, Art. 294(7)(a) TFEU). They do not move the file to a later stage. The EP's records of the latest
+    publications and final acts are corrected at source within days: 2023/0421(COD) had only its proposal, its referral
+    and "Final act published in the Official Journal" on 30 October 2026 (2023-0421-PUB-2026-10-30), with no position
+    of Parliament, no adoption by the Council and no act in Cellar, and the EP later deleted the event; 2025/0177(COD)
+    had a publication on 28 October 2026 that the EP also deleted (the act was published on 3 November). A signature
+    recorded with the act's adoption counts, also on a day before it (2017/0329(COD): the EP and OEIL give 11 April
+    2018, the Council adopted the act on 12 April; Directive (EU) 2018/597 is "of 18 April 2018")."""
+    if acts:
+        return []
+    adopted = council_adopted or any(
+        e.kind == EventKind.council_adoption or _code(e) == "PLENARY_APPROVE_COUNCIL_POSITION" for e in events
+    )
+    return [e for e in events if e.kind == EventKind.publication or (e.kind == EventKind.signature and not adopted)]
+
+
+def unconfirmed_text(e: Event) -> str:
+    """What the status says of a step of unconfirmed_final_steps."""
+    if e.kind == EventKind.publication:
+        return (
+            f"The European Parliament's procedure record lists the final act as published in the Official Journal on "
+            f"{_fmt(e.date)}, but no act published under this procedure is recorded in our EUR-Lex data."
+        )
+    return (
+        f"The European Parliament's procedure record lists the final act as signed on {_fmt(e.date)}, but neither "
+        "the Council's adoption of the act nor the act itself is recorded in our data."
+    )
 
 
 def _main_act(proc: Procedure, acts: list[LegalAct]) -> LegalAct | None:
@@ -586,7 +622,9 @@ def _acts_stage(
     others: Mapping[str, LegalAct] | None = None,
 ) -> _S | None:
     """Published / in force, from EUR-Lex acts and the recorded publication. `others`: acts by CELEX, to
-    name the acts that this one's record refers to (e.g. the repealing act)."""
+    name the acts that this one's record refers to (e.g. the repealing act). None without an act of the procedure in
+    our EUR-Lex data: a publication that only the European Parliament's record lists is not confirmed
+    (unconfirmed_final_steps)."""
     t = today.isoformat()
     others = others or {}
     act = _main_act(proc, acts)
@@ -678,15 +716,6 @@ def _acts_stage(
                 pub_date,
                 "source",
             )
-    if pub_ev:
-        return _S(
-            "published",
-            "Published in the Official Journal",
-            f"The final act was published in the Official Journal on {_fmt(pub_ev.date)}. "
-            "Entry into force and application dates come from the act itself.",
-            pub_ev.date,
-            "source",
-        )
     return None
 
 
@@ -1199,8 +1228,11 @@ def _reconcile_with_oeil(proc: Procedure, s: _S, events: list[Event]) -> _S:
     target = allowed[0]
     if RANK[target] <= RANK[s.stage]:
         return s  # label lags behind dated events; keep the recorded events
-    if s.since and any((e.raw_type or "").startswith("ep_vote:") and e.date == s.since for e in events):
-        return s  # a plenary vote that OEIL does not record yet (e.g. a referral back for negotiations)
+    if s.since and any((e.raw_type or "").startswith(("ep_vote:", "council_vote:")) and e.date == s.since for e in events):
+        # a plenary vote that OEIL does not record yet (e.g. a referral back for negotiations), or a Council vote
+        # (build.Builder.council_dated: the Council's first-reading position, which OEIL's "Awaiting Council's 1st
+        # reading position" precedes)
+        return s
     position = {
         "CNS": "Parliament has given its opinion; the Council takes the final decision.",
         "APP": "Parliament has decided on its consent; the Council takes the final decision.",
@@ -1354,6 +1386,15 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 parts.append(
                     "This directive is a codification of earlier directives. EUR-Lex records no transposition "
                     "deadline for it."
+                )
+            elif dr and (early := before_the_act(dr)):
+                # Directive (EU) 2015/412: 17 October 2002, the deadline of Directive 2001/18/EC (transposition.py)
+                many = len(early) > 1
+                parts.append(
+                    f"EUR-Lex records no transposition deadline for this directive: the transposition "
+                    f"{'dates' if many else 'date'} it records {'are' if many else 'is'} earlier than the directive "
+                    f"itself, so the directive does not set {'them' if many else 'it'}. Its text says whether, and by "
+                    "when, national measures are needed."
                 )
             else:
                 parts.append(
@@ -1563,6 +1604,10 @@ def classify(
         # The OEIL label describes the file as of retrieval, i.e. after `today`: not usable.
         proc = proc.model_copy(update={"stage_raw": None})
     acts = relevant_acts(proc, acts, events, today)
+    # the EP's records of the act's publication or signature that nothing else confirms do not move the file on: the
+    # status says what they list (the stall still counts them as recorded steps)
+    unconfirmed = unconfirmed_final_steps(events, acts)
+    recorded, events = events, [e for e in events if not any(e is u for u in unconfirmed)]
 
     s: _S | None = None
     withdrawal = _last(events, EventKind.withdrawal)
@@ -1707,7 +1752,7 @@ def classify(
         s.stage == "adopted"
         and s.since
         and not acts
-        and not _last(events, EventKind.publication)
+        and not _last(recorded, EventKind.publication)
         and (today - date.fromisoformat(s.since)).days > STALE_DECISION_DAYS
     ):
         # adopted years ago and never recorded as published (2016/0810(CNS): Council 23 January 2017, OEIL still
@@ -1719,6 +1764,8 @@ def classify(
             f"since {_fmt(s.since)}.",
             basis="unknown",
         )
+    for e in unconfirmed:
+        s.explanation += f" {unconfirmed_text(e)}"
     return DossierStatus(
         stage=s.stage,  # type: ignore[arg-type]
         label=s.label,
@@ -1726,7 +1773,7 @@ def classify(
         since=s.since,
         basis=s.basis,
         next_step=next_step,
-        stall=None if s.label == "Procedure completed" else _stall(s.stage, events, train, today),
+        stall=None if s.label == "Procedure completed" else _stall(s.stage, recorded, train, today),
         application=app,
         named_acts=s.named_acts,
     )

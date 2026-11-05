@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { HomeData, Meta, Topic } from '../types/data';
 import { useData } from '../lib/data';
-import { formatDateTime, formatNumber, noUpdateText, stillAhead } from '../lib/format';
+import { formatDate, formatNumber, noUpdateText, stillAhead } from '../lib/format';
+import { asRetrieved, classifications, expiredReason, freshness, staleNote, type Classifications } from '../lib/freshness';
 import { votesSince } from '../lib/scope';
 import { PAGE_PLACEHOLDERS, SearchBox } from '../components/SearchBox';
 import { ErrorState, Loading } from '../components/ui';
@@ -15,6 +16,30 @@ import '../features/home/home.css';
 
 // a "Stalled" file's subtitle, counted on the day the data was built (pipeline/build.py build_home)
 const NO_UPDATE = /^No recorded procedural update in (\d+) days?$/;
+// the badge of the files the Legislative Train reports as blocked in that list, and the part of its description on
+// the files without a recorded update for a year or more (build_home)
+const BLOCKED_BADGE = 'Officially blocked';
+const THEN_INACTIVE = /, then o(rdinary-procedure files .+)$/;
+const INACTIVE = 'Ordinary-procedure files with no recorded procedural update for a year or more.';
+
+type HomeList = HomeData['lists'][number];
+
+/** The "Stalled" list on the reader's date: the Legislative Train's reports dated by our copy of it while that is
+ * current, and left out once it has expired (src/lib/freshness.ts), as on the files' pages and in the explorer. */
+function stalledOn(l: HomeList, train: Classifications | null): HomeList {
+  const blocked = l.items.filter((it) => it.badge === BLOCKED_BADGE);
+  if (!blocked.length) return l;
+  if (train?.current) return { ...l, description: `${l.description ?? ''} ${asRetrieved(train)}.`.trim() };
+  const inactive = THEN_INACTIVE.exec(l.description ?? '');
+  const rest = inactive ? `O${inactive[1]}` : INACTIVE;
+  return {
+    ...l,
+    items: l.items.filter((it) => it.badge !== BLOCKED_BADGE),
+    description: train
+      ? `${rest} The files Parliament’s Legislative Train reports as blocked are not listed: ${expiredReason(train)}.`
+      : rest,
+  };
+}
 
 const EXAMPLES = ['AI Act', 'Migration', 'GDPR', 'Spain', 'EPP', 'Agriculture', 'Digital markets', 'Climate'];
 
@@ -31,17 +56,22 @@ export default function Home() {
   // "Coming up" was computed when the data was built: dates that have passed since are left out; the days since a
   // stalled file's last recorded step are counted on the visitor's date
   const today = todayISO();
+  // the Legislative Train's "blocked" reports are shown as current only while our copy of it is (src/lib/freshness.ts)
+  const train = classifications(meta.data, Date.now());
   const lists = (home.data?.lists ?? []).map((l) =>
     l.id === 'upcoming'
       ? { ...l, items: stillAhead(l.items, today) }
       : l.id === 'stalled'
-        ? {
-            ...l,
-            items: l.items.map((it) => {
-              const n = it.subtitle && NO_UPDATE.exec(it.subtitle);
-              return n ? { ...it, subtitle: noUpdateText(Number(n[1]), it.date, today) } : it;
-            }),
-          }
+        ? stalledOn(
+            {
+              ...l,
+              items: l.items.map((it) => {
+                const n = it.subtitle && NO_UPDATE.exec(it.subtitle);
+                return n ? { ...it, subtitle: noUpdateText(Number(n[1]), it.date, today) } : it;
+              }),
+            },
+            train,
+          )
         : l,
   );
   const featured = home.data?.featured ?? [];
@@ -112,7 +142,7 @@ export default function Home() {
             </div>
             <div className={`fcards${featured.length % 3 === 0 ? ' fcards--3' : ''}`}>
               {featured.slice(0, 6).map((f) => (
-                <FeaturedCard key={f.dossier.id} item={f} topicLabel={topicLabel} />
+                <FeaturedCard key={f.dossier.id} item={f} topicLabel={topicLabel} blockedShown={!!train?.current} />
               ))}
             </div>
           </section>
@@ -151,7 +181,7 @@ export default function Home() {
                 <Link to="/about#selection">How these lists are built</Link>.
               </p>
             </div>
-            <HomeLists lists={lists} />
+            <HomeLists lists={lists} noMore={train?.current ? [] : ['stalled']} />
           </section>
         )}
 
@@ -170,24 +200,33 @@ export default function Home() {
   );
 }
 
+/** The date up to which statuses, votes and acts are current, and the sources not up to date on the reader's date. */
 function Freshness({ meta }: { meta: Meta | undefined }) {
   if (!meta) return null;
   const c = meta.counts;
   const fromYear = meta.scope?.procedures_from_year;
   const since = votesSince(meta.scope);
+  const f = freshness(meta, Date.now());
   return (
-    <p className="home-hero__fresh">
-      <span className="home-hero__fresh-dot" aria-hidden="true" />
-      Data refreshed {formatDateTime(meta.snapshot_at ?? meta.built_at)}
-      {c?.dossiers ? (
-        <>
-          {' '}
-          · {formatNumber(c.dossiers)} legislative files
-          {fromYear ? <> (proposed from {fromYear}, or adopted since {fromYear})</> : null}
-        </>
-      ) : null}
-      {c?.ep_votes ? <> · {formatNumber(c.ep_votes)} Parliament votes{since ? <> since {since}</> : null}</> : null} ·{' '}
-      <Link to="/about#coverage">What’s covered</Link>
-    </p>
+    <>
+      <p className="home-hero__fresh">
+        <span className={`home-hero__fresh-dot${f.coreStale ? ' is-stale' : ''}`} aria-hidden="true" />
+        {f.coreAt ? <>Procedures, votes and acts current to {formatDate(f.coreAt)}</> : <>Data built {formatDate(meta.built_at)}</>}
+        {c?.dossiers ? (
+          <>
+            {' '}
+            · {formatNumber(c.dossiers)} legislative files
+            {fromYear ? <> (proposed from {fromYear}, or adopted since {fromYear})</> : null}
+          </>
+        ) : null}
+        {c?.ep_votes ? <> · {formatNumber(c.ep_votes)} Parliament votes{since ? <> since {since}</> : null}</> : null} ·{' '}
+        <Link to="/about#coverage">What’s covered</Link>
+      </p>
+      {f.stale.length > 0 && (
+        <p className="meta home-hero__stale">
+          <Link to="/about#sources">{staleNote(f)}</Link>
+        </p>
+      )}
+    </>
   );
 }

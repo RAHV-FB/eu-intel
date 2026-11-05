@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import type { DossierDetail, DossierSummary, Meta } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDate } from '../lib/format';
+import { blockedNow, classifications } from '../lib/freshness';
 import { changeSince, getWatchlist, markSeen, type ChangeInfo } from '../lib/watchlist';
 import { ExtLink, LoadFailed, Loading, LookupNotice, NotFound, PageHeader, StatusBadge, Term } from '../components/ui';
 import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, dossierPath, isMissing, isSameTitle, useDocumentTitle, useTopics } from '../features/legislation/labels';
@@ -73,6 +74,8 @@ function DossierPage({ id }: { id: string }) {
     );
 
   const today = todayISO();
+  // the Legislative Train's classification is shown as current only while our copy of it is (src/lib/freshness.ts)
+  const train = classifications(meta, Date.now());
   const active = ACTIVE_STAGES.has(d.stage);
   const topicLabel = (slug: string) => topics.find((t) => t.slug === slug)?.label ?? slug;
   const primaryAct = d.acts[0];
@@ -112,7 +115,7 @@ function DossierPage({ id }: { id: string }) {
         {d.known_as && <KnownAs k={d.known_as} />}
         {/* "Is it law yet?" on the first screen of every file: the status, explained under "Current status" below */}
         <p className="dz-statusline">
-          <StatusBadge stage={d.status.stage} label={d.status.label} blocked={d.officially_blocked} />
+          <StatusBadge stage={d.status.stage} label={d.status.label} blocked={blockedNow(d.officially_blocked, train)} />
           {d.status.since && (
             <span className="dz-statusline__since">
               {/* the publication date: EUR-Lex records no date of notification */}
@@ -260,7 +263,7 @@ function DossierPage({ id }: { id: string }) {
         </aside>
 
         <div className="dz-main">
-          {active && <WhereIsIt d={d} today={today} />}
+          {active && <WhereIsIt d={d} today={today} train={train} />}
           <Timeline events={d.timeline} changes={d.changes ?? []} today={today} eurlexOnly={d.eurlex_only} oeilUrl={d.oeil_url} />
           <ParliamentVotes votes={d.ep_votes} oeilUrl={d.oeil_url} split={splitParts(d)} approval={d.ep_approval_without_vote} />
           <CouncilVotes votes={d.council_votes} meta={meta} split={splitParts(d)} timeline={d.timeline} adopted={d.adopted} />

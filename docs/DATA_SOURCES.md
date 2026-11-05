@@ -36,9 +36,14 @@ pipeline runs in CI without credentials). Details are refined from each ingestio
 - Council and Commission websites: reuse authorised with acknowledgement of the source, unless stated otherwise.
 
 The site footer and About page credit each source. MEP portraits are not used (avoids hot-linking third-party
-images that would expose visitors' IP addresses to another host). "Data refreshed" (`meta.json` `snapshot_at`) is
-the latest retrieval among the sources the About page lists (`SOURCES` in `build.py`, one per manifest entry), so
-a reader can trace it to one of them.
+images that would expose visitors' IP addresses to another host). Home and the footer date the data by
+"Procedures, votes and acts current to" (`meta.json` `core_data_at`): the oldest last successful retrieval of the core
+sources (Parliament's procedures and votes, EUR-Lex acts, Council votes; `pipeline/freshness.py`), so it never
+presents an older source as current. Each source in `meta.json` gives its last successful retrieval, last attempt and
+threshold (`stale_after_days`); the site names the sources older than their threshold on the reader's date ("Not up to
+date: Legislative Train (last retrieved 22 Oct 2026)"), and stops showing the Legislative Train's "blocked" once its
+copy is older than `labels_expire_after_days` (42). `snapshot_at`, the latest retrieval among the sources the About page
+lists (`SOURCES` in `build.py`, one per manifest entry), identifies the snapshot (restores, docs/DEPLOYMENT.md).
 
 ## Update frequency and refresh
 

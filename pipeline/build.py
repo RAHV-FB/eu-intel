@@ -29,7 +29,14 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from pipeline.analysis.transposition import application_start, article_label, articles_text, general_deadline
+from pipeline.analysis.transposition import (
+    act_day,
+    application_start,
+    article_label,
+    articles_text,
+    before_the_act,
+    general_deadline,
+)
 from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models import entities
 from pipeline.models.countries import FORMER_MEMBER_STATES, MEMBER_STATES
@@ -50,6 +57,7 @@ from pipeline.models.entities import (
     Procedure,
     ProcedureNotice,
     RegulationOptIn,
+    SourceRef,
     SourceStatus,
     TrainFile,
 )
@@ -1067,13 +1075,32 @@ def ref_number(ref: str) -> str | None:
     return f"{m.group(1)}/{m.group(2)}" if m else None
 
 
+# What the build worked around instead of failing: a feature whose code did not load, a curated file or entry not
+# applied, a status or assessment that fell back. Logged as it happens; a strict build (build(strict=True),
+# EU_INTEL_STRICT=1) lists them all at the end and exits 1. Reset by each build().
+PROBLEMS: list[str] = []
+_MISSING = object()
+
+
+def _problem(msg: str, *args: Any) -> None:
+    """Log a degraded result (the build goes on) and record it once for a strict build."""
+    text = msg % args if args else msg
+    if text not in PROBLEMS:
+        log.warning("%s", text)
+        PROBLEMS.append(text)
+
+
 def _lazy(module: str, attr: str) -> Any:
     try:
         mod = importlib.import_module(module)
     except Exception as e:  # noqa: BLE001 - optional analysis module (may be absent or broken)
-        log.warning("optional module %s unavailable: %r", module, e)
+        _problem("optional module %s unavailable: %r", module, e)
         return None
-    return getattr(mod, attr, None)
+    value = getattr(mod, attr, _MISSING)
+    if value is _MISSING:
+        _problem("optional module %s has no %s: the features using it are left out", module, attr)
+        return None
+    return value
 
 
 def _load[M: BaseModel](
@@ -1109,8 +1136,16 @@ def _load_yaml(name: str, curated: Path = CURATED) -> Any:
 
         return yaml.safe_load(path.read_text(encoding="utf-8"))
     except Exception as e:  # noqa: BLE001 - curated data must never break the build
-        log.warning("curated %s unreadable: %r", name, e)
+        _problem("curated %s unreadable: %r", name, e)
         return None
+
+
+def _curated_list(name: str, curated: Path) -> list:
+    """A curated file that holds a list of entries; anything else is reported (a strict build fails) and gives none."""
+    raw = _load_yaml(name, curated)
+    if raw is not None and not isinstance(raw, list):
+        _problem("curated %s: expected a list of entries, found %s; ignored", name, type(raw).__name__)
+    return raw if isinstance(raw, list) else []
 
 
 def _write(rel: str, data: Any, root: Path) -> None:
@@ -1363,25 +1398,34 @@ def decision_vote_near(e: Event, votes_by_date: dict[str, list[EpVote]]) -> EpVo
     return pick[0] if len(pick) == 1 else None
 
 
+def council_vote_kind(cv: dict) -> str:
+    """The kind of step a Council vote is (council_vote_event): the Council's first-reading position; its adoption of
+    the act, or its consent to an act Parliament adopts (the step OEIL records as the Council's adoption), when it
+    adopted it; else "other"."""
+    on = cv.get("vote_on")
+    if on == "first_reading_position":
+        return "council_position"
+    if on == "act" or COUNCIL_CONSENT_RE.match(cv.get("stage") or ""):
+        return "council_adoption" if cv["outcome"] == "adopted" else "other"
+    return "other"
+
+
 def council_vote_event(cv: dict) -> dict:
     """Timeline event for a Council vote, dated and sourced by the Council's voting-result document."""
     on, outcome = cv.get("vote_on"), cv["outcome"]
-    kind = "other"
+    kind = council_vote_kind(cv)
     if on == "first_reading_position":
-        kind = "council_position"
         title = {
             "adopted": "Council adopted its position at first reading",
             "not_adopted": "Council did not adopt a position at first reading",
         }.get(outcome, "Council voted on its position at first reading")
     elif on == "act":
-        kind = "council_adoption" if outcome == "adopted" else "other"
         title = {
             "adopted": "Council adopted the act",
             "not_adopted": "Council did not adopt the act",
         }.get(outcome, "Council voted on adopting the act")
     elif COUNCIL_CONSENT_RE.match(cv.get("stage") or ""):
         # the Council's consent to an act Parliament adopts: the step OEIL records as the Council's adoption
-        kind = "council_adoption" if outcome == "adopted" else "other"
         title = {
             "adopted": "Council gave its consent",
             "not_adopted": "Council did not give its consent",
@@ -1397,7 +1441,7 @@ def council_vote_event(cv: dict) -> dict:
     if cv.get("written_procedure"):
         title += " (written procedure)"
     detail = None
-    if cv["positions"]:
+    if cv.get("positions"):
         n = Counter(cv["positions"].values())
         detail = f"{n['for']} Member States in favour, {n['against']} against, {n['abstain']} abstained"
         if n["not_participating"]:
@@ -1649,26 +1693,26 @@ def council_vote_label(title: str, vote_on: str | None, stage: str | None, refs:
 
 
 # ------------------------------------------------------------------------------------------- curated
-ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+ISO_DATE_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")  # month 01-12, day 01-31
 
 
 def load_act_dates(curated: Path = CURATED) -> dict[str, dict]:
     """Checked corrections to EUR-Lex act dates (data/curated/act_dates.yaml), by CELEX. Entries with a
     malformed date are skipped whole: a partial correction would be worse than none."""
-    raw = _load_yaml("act_dates.yaml", curated) or []
     out: dict[str, dict] = {}
-    for e in raw if isinstance(raw, list) else []:
+    for e in _curated_list("act_dates.yaml", curated):
         if not isinstance(e, dict) or not isinstance(e.get("celex"), str):
+            _problem("curated act_dates.yaml: entry %r has no CELEX; ignored", e)
             continue
         app = e.get("application")
         ok = app is None or (isinstance(app, list) and all(isinstance(x, dict) for x in app))
         dates = ([e["entry_into_force"]] if e.get("entry_into_force") else []) + [x.get("date") for x in app or []]
         if not ok or not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates):
-            log.warning("curated act_dates.yaml: entry %s has a malformed date; ignored", e["celex"])
+            _problem("curated act_dates.yaml: entry %s has a malformed date; ignored", e["celex"])
             continue
         n_src = max(len(e.get("sources") or []), 1)  # a date's own source: an index into sources
         if not all(type(x.get("source", 0)) is int and 0 <= x.get("source", 0) < n_src for x in app or []):
-            log.warning("curated act_dates.yaml: entry %s cites a source it does not list; ignored", e["celex"])
+            _problem("curated act_dates.yaml: entry %s cites a source it does not list; ignored", e["celex"])
             continue
         out[e["celex"]] = e
     return out
@@ -1697,14 +1741,13 @@ CELEX_RE = re.compile(r"^3\d{4}[A-Z]{1,2}\d{4}$")
 def load_act_relations(curated: Path = CURATED) -> list[dict]:
     """Checked corrections of the amendment links EUR-Lex records (data/curated/act_relations.yaml); an entry
     without the three CELEX ids or its evidence is skipped."""
-    raw = _load_yaml("act_relations.yaml", curated) or []
     out = []
-    for e in raw if isinstance(raw, list) else []:
+    for e in _curated_list("act_relations.yaml", curated):
         ids = isinstance(e, dict) and all(isinstance(e.get(k), str) and CELEX_RE.match(e[k]) for k in ("act", "replace", "with"))
         if ids and isinstance(e.get("evidence"), str) and e["evidence"].strip():
             out.append(e)
         else:
-            log.warning("curated act_relations.yaml: malformed entry %r; ignored", e)
+            _problem("curated act_relations.yaml: malformed entry %r; ignored", e)
     return out
 
 
@@ -1754,23 +1797,26 @@ def load_council_votes(curated: Path = CURATED) -> tuple[dict[str, dict], list[C
     """Checked Council vote corrections and records (data/curated/council_votes.yaml): corrections by vote id,
     the records, and each record's note. An entry that does not validate is skipped whole."""
     raw = _load_yaml("council_votes.yaml", curated)
+    if raw is not None and not isinstance(raw, dict):
+        _problem("curated council_votes.yaml: expected corrections and records, found %s; ignored", type(raw).__name__)
     raw = raw if isinstance(raw, dict) else {}
     corrections: dict[str, dict] = {}
     for e in raw.get("corrections") or []:
         if not isinstance(e, dict) or not isinstance(e.get("vote"), str):
+            _problem("curated council_votes.yaml: correction %r names no vote; ignored", e)
             continue
         if e.get("legal_basis") not in UNANIMITY_BASES or not e.get("citation"):
-            log.warning("curated council_votes.yaml: %s has no listed unanimity legal basis; ignored", e["vote"])
+            _problem("curated council_votes.yaml: %s has no listed unanimity legal basis; ignored", e["vote"])
             continue
         if e.get("outcome") not in (None, "not_adopted") or (e.get("outcome") and not e.get("outcome_note")):
-            log.warning("curated council_votes.yaml: %s has an unsupported outcome; ignored", e["vote"])
+            _problem("curated council_votes.yaml: %s has an unsupported outcome; ignored", e["vote"])
             continue
         srcs = e.get("sources")
         if not isinstance(srcs, list) or not srcs or not all(
             isinstance(x, dict) and isinstance(x.get("label"), str) and str(x.get("url") or "").startswith("https://")
             for x in srcs
         ):  # the texts checked are shown with the correction (`correction_sources`)
-            log.warning("curated council_votes.yaml: %s lists no texts it was checked against; ignored", e["vote"])
+            _problem("curated council_votes.yaml: %s lists no texts it was checked against; ignored", e["vote"])
             continue
         corrections[e["vote"]] = e
     records: list[CouncilVote] = []
@@ -1779,7 +1825,7 @@ def load_council_votes(curated: Path = CURATED) -> tuple[dict[str, dict], list[C
         try:
             cv = CouncilVote.model_validate({k: v for k, v in e.items() if k not in ("note", "reviewed")})
         except (ValidationError, AttributeError, TypeError):
-            log.warning("curated council_votes.yaml: record %r invalid; ignored", e)
+            _problem("curated council_votes.yaml: record %r invalid; ignored", e)
             continue
         records.append(cv)
         notes[cv.id] = str(e.get("note") or "").strip()
@@ -1799,17 +1845,17 @@ def council_rule_note(e: dict) -> str:
 def load_transposition_checks(curated: Path = CURATED) -> dict[str, dict]:
     """Directives' general transposition deadlines checked against their text (data/curated/transposition.yaml),
     by CELEX. Entries with a malformed date are skipped."""
-    raw = _load_yaml("transposition.yaml", curated) or []
     out: dict[str, dict] = {}
-    for e in raw if isinstance(raw, list) else []:
+    for e in _curated_list("transposition.yaml", curated):
         if not isinstance(e, dict) or not isinstance(e.get("celex"), str):
+            _problem("curated transposition.yaml: entry %r has no CELEX; ignored", e)
             continue
         dates = [e.get("deadline")] + ([e["applies_from"]] if e.get("applies_from") else []) + list(e.get("other") or [])
         if not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates):
-            log.warning("curated transposition.yaml: entry %s has a malformed date; ignored", e["celex"])
+            _problem("curated transposition.yaml: entry %s has a malformed date; ignored", e["celex"])
             continue
         if e.get("amends") is not None and not _amends_ok(e["amends"]):
-            log.warning("curated transposition.yaml: entry %s has a malformed amends list; ignored", e["celex"])
+            _problem("curated transposition.yaml: entry %s has a malformed amends list; ignored", e["celex"])
             e = {k: v for k, v in e.items() if k != "amends"}
         ex = e.get("exemption")
         if ex is not None and not (
@@ -1818,14 +1864,14 @@ def load_transposition_checks(curated: Path = CURATED) -> dict[str, dict]:
                     for k in ("countries", "named"))
             and isinstance(ex.get("country_note") or "", str)
         ):  # fmt: skip
-            log.warning("curated transposition.yaml: entry %s has a malformed exemption; ignored", e["celex"])
+            _problem("curated transposition.yaml: entry %s has a malformed exemption; ignored", e["celex"])
             e = {k: v for k, v in e.items() if k != "exemption"}
         if not isinstance(e.get("exceptions") or "", str):
-            log.warning("curated transposition.yaml: entry %s has malformed exceptions; ignored", e["celex"])
+            _problem("curated transposition.yaml: entry %s has malformed exceptions; ignored", e["celex"])
             e = {k: v for k, v in e.items() if k != "exceptions"}
         if e.get("application_exceptions") and not (isinstance(e["application_exceptions"], str) and e.get("applies_from")):
             # they qualify the general date from which the national measures apply, which the entry must name
-            log.warning("curated transposition.yaml: entry %s has application_exceptions without applies_from; ignored",
+            _problem("curated transposition.yaml: entry %s has application_exceptions without applies_from; ignored",
                         e["celex"])  # fmt: skip
             e = {k: v for k, v in e.items() if k != "application_exceptions"}
         out[e["celex"]] = e
@@ -1865,30 +1911,29 @@ def apply_transposition_checks(a: LegalAct, e: dict | None) -> LegalAct:
 def load_denmark_schengen(curated: Path = CURATED) -> dict[str, dict]:
     """Denmark's decisions under Article 4 of Protocol No 22 on directives building upon the Schengen acquis
     (data/curated/denmark_schengen.yaml), by CELEX. An entry without its decision, date or document is skipped."""
-    raw = _load_yaml("denmark_schengen.yaml", curated) or []
     out: dict[str, dict] = {}
-    for e in raw if isinstance(raw, list) else []:
+    for e in _curated_list("denmark_schengen.yaml", curated):
         ok = isinstance(e, dict) and isinstance(e.get("celex"), str) and e.get("decision") in ("implement", "not_implement")
         if ok and ISO_DATE_RE.match(str(e.get("notified") or "")) and all(isinstance(e.get(k), str) for k in ("document", "url")):
             out[e["celex"]] = e
         else:
-            log.warning("curated denmark_schengen.yaml: malformed entry %r; ignored", e)
+            _problem("curated denmark_schengen.yaml: malformed entry %r; ignored", e)
     return out
 
 
 def load_council_dates(curated: Path = CURATED) -> dict[str, dict]:
     """The Council's adoption of an act dated by the act's own text (data/curated/council_dates.yaml), by
     normalized procedure reference. An entry whose date is malformed or not the one its quote gives is skipped."""
-    raw = _load_yaml("council_dates.yaml", curated) or []
     out: dict[str, dict] = {}
-    for e in raw if isinstance(raw, list) else []:
+    for e in _curated_list("council_dates.yaml", curated):
         if not isinstance(e, dict) or not isinstance(e.get("procedure"), str) or not isinstance(e.get("celex"), str):
+            _problem("curated council_dates.yaml: entry %r names no procedure or CELEX; ignored", e)
             continue
         d = e.get("date")
         if not (isinstance(d, str) and ISO_DATE_RE.match(d)) or f"Council of {_long_date(d)}" not in re.sub(
             r"Council decision of", "Council of", _squash(e.get("quote"))
         ):
-            log.warning("curated council_dates.yaml: entry %s does not quote its date; ignored", e["procedure"])
+            _problem("curated council_dates.yaml: entry %s does not quote its date; ignored", e["procedure"])
             continue
         out[norm_ref(e["procedure"])] = e
     return out
@@ -1898,16 +1943,16 @@ def load_unlinked_acts(curated: Path = CURATED) -> dict[str, dict]:
     """Acts whose text cites a file's steps but which no official record links to the file
     (data/curated/unlinked_acts.yaml), by normalized procedure reference. An entry whose dates are malformed, or
     whose quote does not give the date of Parliament's opinion, is skipped."""
-    raw = _load_yaml("unlinked_acts.yaml", curated) or []
     out: dict[str, dict] = {}
-    for e in raw if isinstance(raw, list) else []:
+    for e in _curated_list("unlinked_acts.yaml", curated):
         if not isinstance(e, dict) or not all(isinstance(e.get(k), str) for k in ("procedure", "celex", "label")):
+            _problem("curated unlinked_acts.yaml: entry %r lacks its procedure, CELEX or label; ignored", e)
             continue
         dates = [e.get(k) for k in ("date", "published", "opinion")]
         if not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates) or (
             f"Opinion of {_long_date(e['opinion'])}" not in _squash(e.get("quote"))
         ):
-            log.warning("curated unlinked_acts.yaml: entry %s does not quote its dates; ignored", e["procedure"])
+            _problem("curated unlinked_acts.yaml: entry %s does not quote its dates; ignored", e["procedure"])
             continue
         out[norm_ref(e["procedure"])] = e
     return out
@@ -1922,11 +1967,11 @@ def load_curated(curated: Path = CURATED) -> tuple[dict[str, dict], dict[str, di
         )
     featured: dict[str, dict] = {}
     for e in featured_raw if isinstance(featured_raw, list) else []:
-        if not isinstance(e, dict):
-            continue
-        key = norm_ref(str(e.get("reference") or "")) or str(e.get("id") or "")
+        key = isinstance(e, dict) and (norm_ref(str(e.get("reference") or "")) or str(e.get("id") or ""))
         if key:
             featured[key] = e
+        else:
+            _problem("curated featured.yaml: entry %r names no file; ignored", e)
     topics_raw = _load_yaml("topics.yaml", curated) or {}
     topics: dict[str, dict] = {}
     if isinstance(topics_raw, dict):
@@ -1935,14 +1980,21 @@ def load_curated(curated: Path = CURATED) -> tuple[dict[str, dict], dict[str, di
         for slug, t in topics_raw.items():
             if isinstance(t, dict):
                 topics[str(slug)] = t
+            else:
+                _problem("curated topics.yaml: topic %s is not a mapping; ignored", slug)
     elif isinstance(topics_raw, list):
         for t in topics_raw:
             if isinstance(t, dict) and t.get("slug"):
                 topics[str(t["slug"])] = t
+            else:
+                _problem("curated topics.yaml: entry %r has no slug; ignored", t)
     aliases_raw = _load_yaml("aliases.yaml", curated) or []
     if isinstance(aliases_raw, dict):
         aliases_raw = aliases_raw.get("aliases", [])
     aliases = [a for a in aliases_raw if isinstance(a, dict)] if isinstance(aliases_raw, list) else []
+    for a in aliases_raw if isinstance(aliases_raw, list) else []:
+        if not isinstance(a, dict):
+            _problem("curated aliases.yaml: entry %r is not a mapping; ignored", a)
     return featured, topics, aliases
 
 
@@ -2011,6 +2063,10 @@ class Builder:
         self.transposition_checks = load_transposition_checks(curated)
         if self.transposition_checks:
             snap.acts = [apply_transposition_checks(a, self.transposition_checks.get(a.celex)) for a in snap.acts]
+        for a in snap.acts:  # read as "other", not as the act's deadline (transposition.before_the_act)
+            if early := before_the_act(a):
+                log.warning("act %s: EUR-Lex records transposition date(s) %s, earlier than the act itself (%s); not "
+                            "read as its deadline", a.celex, ", ".join(early), act_day(a))  # fmt: skip
         self.council_dates = load_council_dates(curated)
         self.unlinked_acts = load_unlinked_acts(curated)
         self.denmark_schengen = load_denmark_schengen(curated)
@@ -2554,8 +2610,11 @@ class Builder:
                     if m["rule"] == "two_thirds_cast" and isinstance(m.get("two_thirds_of_cast"), int):
                         # both conditions of Art. 234 / 354 TFEU, so the page can state each (179569: 372 and 360)
                         margin |= {k: m[k] for k in ("votes_cast", "two_thirds_of_cast", "majority_of_members")}
+                elif m:  # computed, but not shown: an unknown rule or shape, or a margin against the official outcome
+                    _problem("margin for vote %s left out: rule %r, distance %r, relative %r against outcome %r",
+                             v.id, m.get("rule"), m.get("distance"), m.get("relative"), v.outcome)  # fmt: skip
             except Exception as e:  # noqa: BLE001
-                log.debug("margin failed for %s: %r", v.id, e)
+                _problem("margin failed for vote %s: %r", v.id, e)
         refs = sorted(set(v.procedure_refs))
         proc_ref = p.reference if p else (refs[0] if len(refs) == 1 else None)
         display, from_label = self.vote_display_title(v, p)
@@ -2815,16 +2874,16 @@ class Builder:
                 try:
                     assessment = self.council_rule_assessment(assess, cv, p)
                 except Exception as e:  # noqa: BLE001
-                    log.warning("council assessment failed for %s: %r", cv.id, e)
+                    _problem("council assessment failed for %s: %r", cv.id, e)
             if fix and (assessment is None or assessment["adopted_by_rule"] != (cv.outcome == "adopted")):
                 # the outcome must follow from the corrected rule; otherwise the sheet is shown as published
-                log.warning("curated council_votes.yaml: %s does not agree with its positions; ignored", cv.id)
+                _problem("curated council_votes.yaml: %s does not agree with its positions; ignored", cv.id)
                 fix, cv, assessment = None, sheet, None
                 if assess is not None and cv.voting_rule != "unknown" and cv.positions:
                     try:
                         assessment = self.council_rule_assessment(assess, cv, p)
                     except Exception as e:  # noqa: BLE001
-                        log.warning("council assessment failed for %s: %r", cv.id, e)
+                        _problem("council assessment failed for %s: %r", cv.id, e)
             if assessment and cv.voting_rule != "unanimity":
                 assessment["single_state_veto_possible"] = False
             when, date_note = self.council_vote_date(cv, p, vote_on)
@@ -3045,7 +3104,7 @@ class Builder:
                         votes=self.votes_of.get(p.id, []))  # fmt: skip
                 return self.unlinked_act_status(p, acts, self._status_dict(_as_dict(st)))
             except Exception as e:  # noqa: BLE001 - never let one dossier break the build
-                log.warning("classify failed for %s: %r", p.id, e)
+                _problem("classify failed for %s: %r; its status is the fallback", p.id, e)
                 self.s.issues.append(f"status.classify failed for {p.id}: {e!r}"[:300])
         return self.fallback_status(p, acts, train)
 
@@ -3280,6 +3339,13 @@ class Builder:
         # EP gives that day to 2016/0074(COD), whose Regulation (EU) 2019/1241 is in OJ L 198, 25.7.2019)
         act_pubs = {a.date_publication for a in acts if a.date_publication}
         ep_pubs: set[str] = set()
+        # The EP's records of a publication or signature that no act or adoption in our data confirms (status.
+        # unconfirmed_final_steps) are shown as its records, not as the steps: the status does not count them
+        # (2023/0421(COD): "Final act published in the Official Journal", 30 October 2026, with no act in Cellar, no
+        # position of Parliament and no Council adoption; the EP later deleted it). The snapshot labels the EP's
+        # publication record "EUR-Lex" (sources.ep_procedures.ACTIVITY_INSTITUTION), which has no such record then
+        confirm = _lazy("pipeline.analysis.status", "unconfirmed_final_steps")
+        unconfirmed = {e.id for e in confirm(p.events, acts, act_adopted)} if confirm else set()
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
         # (kind, date, title, detail) -> the day's steps so far: position in `out`, documents other than the sitting's
@@ -3318,6 +3384,16 @@ class Builder:
                 continue
             inst = e.institution
             when, detail = e.date, e.detail
+            if e.id in unconfirmed:
+                if kind == "publication":
+                    title = "The European Parliament's record lists the final act as published in the Official Journal"
+                    detail = ("No act published under this procedure is recorded in our EUR-Lex data, so this page does "
+                              "not show the act as published.")  # fmt: skip
+                else:
+                    title = "The European Parliament's record lists the final act as signed"
+                    detail = ("Neither the Council's adoption of the act nor the act itself is recorded in our data, so "
+                              "this page does not show the act as adopted.")  # fmt: skip
+                kind, key, inst = "other", False, "EP"
             if kind == "signature" and p.type == "COD":
                 # "Legislative acts adopted under the ordinary legislative procedure shall be signed by the President
                 # of the European Parliament and by the President of the Council" (Art. 297(1) TFEU); the EP's date
@@ -4051,9 +4127,13 @@ class Builder:
                        if cv["date"] <= t and cv.get("vote_on") == "act" and cv["outcome"] == "adopted")  # fmt: skip
         council = sorted(e.date for e in p.events if e.kind == EventKind.council_adoption and e.date <= t)
         docs = sorted(a.date_document for a in acts if a.date_document and a.date_document <= t)
-        sigs = sorted(e.date for e in p.events if e.kind == EventKind.signature and e.date <= t)
+        # not the EP's records of a signature or publication that nothing confirms (status.unconfirmed_final_steps)
+        confirm = _lazy("pipeline.analysis.status", "unconfirmed_final_steps")
+        unconfirmed = {e.id for e in confirm(p.events, acts)} if confirm else set()
+        sigs = sorted(e.date for e in p.events if e.kind == EventKind.signature and e.date <= t and e.id not in unconfirmed)
         pubs = sorted(a.date_publication for a in acts if a.date_publication and a.date_publication <= t)
-        pubs = pubs or sorted(e.date for e in p.events if e.kind == EventKind.publication and e.date <= t)
+        pubs = pubs or sorted(e.date for e in p.events if e.kind == EventKind.publication and e.date <= t
+                              and e.id not in unconfirmed)  # fmt: skip
         published = pubs[0] if pubs else None
         adopts = _lazy("pipeline.analysis.status", "parliament_adopts")
         if adopts and adopts(p, acts):  # Parliament's decision after the Council's consent
@@ -4114,7 +4194,12 @@ class Builder:
 
     def council_dated(self, p: Procedure) -> Procedure:
         """For the status: OEIL's Council steps dated by the Council's own voting results (OEIL dates the
-        first-reading position by its publication, days after the vote), as the timeline shows them."""
+        first-reading position by its publication, days after the vote), as the timeline shows them; and the
+        Council's adopted votes on its first-reading position, on the act or on its consent that the procedure
+        record does not have yet, as the steps the timeline lists from them (council_vote_event). OEIL lags the
+        Council: 2025/0312(COD), OEIL "Awaiting Council's 1st reading position" (retrieved 22 October 2026), while
+        the Council's voting result ST 14961/26 records the act adopted on 26 October 2026, 27-0-0; without the
+        vote the status said the Council had still to approve an act whose adoption the timeline showed."""
         cvotes = [cv for cv in self.council_of.get(p.id, []) if cv["date"] <= self.today and cv["outcome"] == "adopted"]
         positions = sorted(cv["date"] for cv in cvotes if cv.get("vote_on") == "first_reading_position")
         acts = sorted(cv["date"] for cv in cvotes if cv.get("vote_on") == "act")
@@ -4123,6 +4208,23 @@ class Builder:
             dates = positions if e.kind == EventKind.council_position else acts if e.kind == EventKind.council_adoption else []
             earlier = [d for d in dates if d <= e.date and (date.fromisoformat(e.date) - date.fromisoformat(d)).days <= 31]
             events.append(e.model_copy(update={"date": earlier[-1]}) if earlier and e.institution == "Council" else e)
+        for cv in sorted(cvotes, key=lambda c: (c["date"], c.get("id") or "")):
+            kind = council_vote_kind(cv)
+            if kind == "other" or not cv.get("source"):
+                continue
+            # a Council step of that kind near the vote is the same decision, dated by the vote above when it follows
+            # it; OEIL's step can also precede the voting result (2021/0176(COD): OEIL 6 December 2022, ST 15798/22 of
+            # 8 December 2022; 2018/0114(COD): OEIL 17 October 2019, ST 14768/19 of 18 November 2019). 92 days, as in
+            # council_step_dated
+            k = EventKind(kind)
+            if any(e.kind == k and e.institution == "Council" and abs(_days_between(e.date, cv["date"])) <= 92
+                   for e in events):  # fmt: skip
+                continue
+            ev = council_vote_event(cv)
+            events.append(Event(
+                id=ev["id"], date=cv["date"], kind=k, raw_type=f"council_vote:{kind}",
+                institution="Council", title=ev["title"], source=SourceRef.model_validate(cv["source"]),
+            ))  # fmt: skip
         return p if events == p.events else p.model_copy(update={"events": events})
 
     def parts_proposal(self, pid: str) -> DocRef | None:
@@ -4727,7 +4829,9 @@ class Builder:
 
         snapshot = activity.snapshot_entries(self)
         record = os.environ.get("EU_INTEL_RECORD_ACTIVITY") == "1"
+        # as recorded, citing the record that gave a status, without what the current records no longer support
         recorded = activity.update_state(self, self.state_dir, record=record)
+        recorded = activity.supported(activity.recited(recorded, self), self)
         items = activity.merge(recorded, snapshot, today=self.today)
         self.activity_items = items
         self.files["activity.json"] = items
@@ -4974,9 +5078,26 @@ class Builder:
         self.files["search.json"] = build_search_docs(self)
 
     # ---------------------------------------------------------------- meta
+    # The source's name in the site's freshness note ("Not up to date: Legislative Train (last retrieved …)").
+    SOURCE_SHORT_NAMES: dict[str, str] = {
+        "ep_people": "MEPs and political groups",
+        "ep_procedures": "Parliament's procedure files",
+        "ep_votes": "Parliament votes",
+        "eurlex": "EUR-Lex legal acts",
+        "council": "Council votes",
+        "implementation": "National transposition and infringements",
+        "optouts": "Danish and Irish participation",
+        "train": "Legislative Train",
+    }
     def build_meta(self) -> None:
+        from pipeline.freshness import LABELS_EXPIRE_AFTER_DAYS, oldest_core_fetch, source_health
+
         s = self.s
         m = s.manifest
+        # Each source's health as the site judges it on the reader's date: the last successful retrieval, the last
+        # attempt and the threshold (pipeline/freshness.py), not whether it was stale on the day of the build
+        listed = {sid: m.get(sid) or {"status": "unavailable"} for sid in SOURCES}
+        health = {h["source"]: h for h in source_health(listed)}
         sources = []
         for sid, info in SOURCES.items():
             st = m.get(sid)
@@ -4984,19 +5105,29 @@ class Builder:
             if sid == "implementation" and s.indicators:  # named only in a release that has them (About page)
                 name = name.replace(" and infringements", ", infringements and indicators")
             sources.append({
-                "id": sid, "name": name, "institution": info["institution"], "url": info["url"],
+                "id": sid, "name": name, "short_name": self.SOURCE_SHORT_NAMES.get(sid, name),
+                "institution": info["institution"], "url": info["url"],
                 "licence": info["licence"], "status": st.status if st else "unavailable",
-                "fetched_at": st.fetched_at if st else None, "records": dict(sorted(st.records.items())) if st else {},
+                "fetched_at": st.fetched_at if st else None, "attempted_at": st.attempted_at if st else None,
+                "stale_after_days": health[sid]["stale_after_days"], "core": health[sid]["core"],
+                **({"labels_expire_after_days": LABELS_EXPIRE_AFTER_DAYS[sid]}
+                   if sid in LABELS_EXPIRE_AFTER_DAYS else {}),
+                "records": dict(sorted(st.records.items())) if st else {},
                 "note": st.note if st else "Not yet retrieved in this release.",
                 "summary": self.source_summary(sid, st),
             })  # fmt: skip
-        # only sources listed on the About page date "Data refreshed", so a reader can trace it to one of them
+        # only sources listed on the About page date a retrieval, so a reader can trace it to one of them
         fetched = [m[sid].fetched_at for sid in SOURCES if sid in m and m[sid].fetched_at]
         scope = self.coverage_scope()
         notes = self.coverage_notes(scope)
         self.files["meta.json"] = {
             "built_at": os.environ.get("EU_INTEL_BUILT_AT") or now_iso(),
+            # the latest successful retrieval of any listed source: it identifies the snapshot (docs/DEPLOYMENT.md,
+            # restoring data), but says nothing of the sources retrieved earlier
             "snapshot_at": max(fetched) if fetched else None,
+            # the date up to which statuses, votes and acts are all current: the oldest last successful retrieval of
+            # the core sources (pipeline/freshness.py), which home and the footer show
+            "core_data_at": oldest_core_fetch(listed),
             "sources": sources,
             "counts": {
                 "dossiers": len(self.dossier_summary),
@@ -5535,9 +5666,16 @@ def build(
     curated: Path | None = None,
     state: Path | None = None,
     today: str | None = None,
+    strict: bool | None = None,
 ) -> int:
+    """Build public/data. 0, or with `strict` (default: the environment's EU_INTEL_STRICT=1) 1 when the build had to
+    work around a problem (PROBLEMS: a feature whose code did not load, a curated file or entry not applied, a status
+    or assessment that fell back); the output is written either way, and every problem is listed at the end."""
     from pipeline.analysis import feeds
 
+    if strict is None:
+        strict = os.environ.get("EU_INTEL_STRICT", "").strip().lower() in ("1", "true", "yes")
+    PROBLEMS.clear()
     out = out or OUT
     snap = Snapshot(snapshot or SNAPSHOT)
     b = Builder(snap, today=today, curated=curated or CURATED, state=state or STATE)
@@ -5557,4 +5695,11 @@ def build(
     for k in ("dossiers/index.json", "search.json"):
         if sizes.get(k, 0) > 1_500_000:
             log.warning("%s exceeds 1.5 MB (%.2f MB)", k, sizes[k] / 1e6)
-    return 0
+    report = log.error if strict else log.warning
+    if PROBLEMS:
+        report("%s — %d problem(s) worked around:", "build --strict: FAILED" if strict else "build", len(PROBLEMS))
+        for p in PROBLEMS:
+            report("  - %s", p)
+    elif strict:
+        log.info("build --strict: OK — every feature loaded, every curated entry applied, no fallback")
+    return 1 if strict and PROBLEMS else 0

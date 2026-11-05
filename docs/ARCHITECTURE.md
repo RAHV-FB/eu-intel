@@ -101,6 +101,12 @@ the UI; every institutional fact on a page has a reachable origin.
   that has passed since, the dossier page says the status is as recorded at the last data refresh.
   `format.test.ts` checks every built next step, status explanation and dated timeline step with the clock moved
   forward, and fails on a dated wording it does not know.
+- How fresh the data is is judged on the visitor's date too (`src/lib/freshness.ts`), from `meta.json`: home and the
+  footer give the date to which procedures, votes and acts are current (`core_data_at`, the oldest core retrieval) and
+  name the sources whose last successful retrieval is older than their `stale_after_days` (thresholds in
+  `pipeline/freshness.py`, none in the app); About marks the same sources. Once the Legislative Train copy is older
+  than its `labels_expire_after_days`, no file is shown as officially blocked (badges, list tags, the `?blocked=1`
+  filter and sort, the home "Stalled" list), and the file's page says the classification is not shown and why.
 
 ## Operations
 

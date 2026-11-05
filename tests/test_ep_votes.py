@@ -10,6 +10,7 @@ import json
 import re
 import warnings
 from dataclasses import replace
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -1206,6 +1207,71 @@ def test_a_failing_sitting_stays_pending_without_blocking_its_chunk(fetch_env, m
     stored = _stored()
     assert "195361" in stored and "195775" not in stored  # 2026-07-08 kept, 2026-07-09 to be resumed
     assert ev.fetch(FixtureHttp()).status == "ok" and "195775" in _stored()
+
+
+def _sittings_read(http: FixtureHttp) -> set[str]:
+    return {p.split("/")[2] for p in http.requests if p.startswith("/meetings/MTG-PL-")}
+
+
+WINDOW = {"MTG-PL-2026-07-08", "MTG-PL-2026-07-09"}  # latest stored sitting 2026-07-09 - 60 days
+
+
+def test_older_sittings_are_re_read_on_their_rotation_week(fetch_env, monkeypatch):
+    from pipeline import snapshot
+
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    ev.fetch(FixtureHttp())  # 22 Oct 2026: empty snapshot -> full pass, which takes this week's rotation
+    before = _stored()
+    older = set(FixtureHttp().sittings) - WINDOW
+    seen: dict[str, int] = {}
+    for k in range(1, 9):
+        today = date(2026, 10, 22) + timedelta(weeks=k)
+        monkeypatch.setattr(ev, "_today", lambda today=today: today.isoformat())
+        http = FixtureHttp()
+        status = ev.fetch(http)
+        rotated = {s for s in older if ev.rotation_slot(s) == ev.week_number(today) % ev.ROTATION_WEEKS}
+        assert status.status == "ok" and _sittings_read(http) == WINDOW | rotated
+        assert (f"+ {len(rotated)} older sittings (rotation slots" in status.note) == bool(rotated)
+        assert _stored() == before  # unchanged answers -> identical records
+        assert snapshot.read_state(ev.SOURCE_ID)["rotation_week"] == ev.week_number(today)
+        for s in rotated:
+            seen[s] = seen.get(s, 0) + 1
+        again = FixtureHttp()
+        ev.fetch(again)  # a second run in the same week: the window only, and only this year's listing
+        assert _sittings_read(again) == WINDOW and [p for p in again.requests if p == "/meetings"] == ["/meetings"]
+    assert seen == dict.fromkeys(older, 1)  # every older sitting once in ROTATION_WEEKS weeks
+
+
+def test_parser_version_change_starts_a_full_pass_that_resumes(fetch_env, monkeypatch):
+    from pipeline import snapshot
+
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    ev.fetch(FixtureHttp())
+    old = snapshot.read_state(ev.SOURCE_ID)["parser"]
+    assert old == ev.PARSER_VERSION
+    before = _stored()
+    monkeypatch.setattr(ev, "PARSER_VERSION", "test-bump")
+    checks = iter([False, True])  # the budget runs out after the first chunk
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: next(checks, True))
+    first = FixtureHttp()
+    status = ev.fetch(first)
+    assert status.status == "partial"
+    assert status.note.startswith(f"full pass (parser test-bump; stored votes read with {old}): ")
+    state = snapshot.read_state(ev.SOURCE_ID)
+    assert (state["pass"], state["parser"], state["pass_parser"]) == ("full", old, "test-bump")
+    pending = set(state["pending"])
+    assert pending == set(first.sittings) - _sittings_read(first) and len(pending) == 12
+
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    second = FixtureHttp()
+    assert ev.fetch(second).status == "ok"
+    assert _sittings_read(second) == pending  # resumed, not started again
+    state = snapshot.read_state(ev.SOURCE_ID)
+    assert (state["parser"], state["pending"]) == ("test-bump", []) and "pass_parser" not in state
+    assert _stored() == before
+    third = FixtureHttp()
+    assert ev.fetch(third).note.startswith("window from 2026-05-10")
+    assert _sittings_read(third) == WINDOW
 
 
 def test_full_pass_procedure_list_halves_the_page_and_falls_back(fetch_env, monkeypatch):

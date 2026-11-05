@@ -27,6 +27,11 @@ STALE_AFTER_DAYS: dict[str, int] = {
 }
 DEFAULT_STALE_AFTER_DAYS = 14
 
+# Official classifications a source gives (the Legislative Train's "Blocked") are no longer shown as current once
+# the copy is older than this on the reader's date (src/lib/freshness.ts): about six weeks without a new one. Longer
+# than the source's staleness threshold above, so readers are first told the source is not up to date.
+LABELS_EXPIRE_AFTER_DAYS: dict[str, int] = {"train": 42}
+
 # Sources whose staleness makes the whole site's "data refreshed" date misleading: the status of a file, its votes
 # and its acts come from these. The others are shown with their own date where they are used.
 CORE_SOURCES: tuple[str, ...] = ("ep_procedures", "ep_votes", "eurlex", "council")

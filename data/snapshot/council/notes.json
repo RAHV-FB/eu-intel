@@ -307,6 +307,8 @@
 {"fingerprint":"2c342926dfe784f4a3e8795146137ecbf8b7c3ccbe709bdb3db3555a43f77cac","id":"ST-14999-2018","problem":null,"versions":["ST-14999-2018-INIT"],"vote_id":null},
 {"fingerprint":"ce6ea03b94f637f320b49d5c80daab950727b90b7516f7a3bc1ff4863653d14b","id":"ST-15000-2018","problem":null,"versions":["ST-15000-2018-INIT"],"vote_id":null},
 {"fingerprint":"1a795d3c647928cf2be4c640e1fa52ef39225b43da0c36f70ae96db1c78b99c5","id":"ST-15001-2018","problem":null,"versions":["ST-15001-2018-INIT"],"vote_id":null},
+{"fingerprint":"c76df77909ed68e41cbd03f87cf279e16e97be069812d7d640528f8ea47f635c","id":"ST-15152-2026","problem":null,"versions":["ST-15152-2026-INIT"],"vote_id":"ST-15152-2026"},
+{"fingerprint":"d6bdf33add942e6a0e833d7f7ec69058b8ef281a23eeab1099baa46aada23a10","id":"ST-15154-2026","problem":null,"versions":["ST-15154-2026-INIT"],"vote_id":"ST-15154-2026"},
 {"fingerprint":"312431b385b0474f6abe195e18e938888378a32222408302c6adefd6781533e1","id":"ST-15159-2018","problem":null,"versions":["ST-15159-2018-INIT"],"vote_id":null},
 {"fingerprint":"ebbed44d0d2d787ff607fb617f035c2c688a9e20bd98a8ac895ac5be0617bb4d","id":"ST-15160-2018","problem":null,"versions":["ST-15160-2018-INIT"],"vote_id":null},
 {"fingerprint":"e3aaedba9522947e96a673d1423c44902606d813b8c4cfaedb310a793712e379","id":"ST-15161-2018","problem":null,"versions":["ST-15161-2018-INIT"],"vote_id":null},

@@ -31545,6 +31545,7 @@
     "2023-0166-MEET-TRI1-2025-10-21",
     "2023-0166-MEET-TRI1-2025-11-25",
     "2023-0166-MEET-TRI1-2025-12-17",
+    "A-9-2024-0160-AM-001-001-DEPOT-2026-11-04+2",
     "ECON-PR-753665-DEPOT-2023-10-02",
     "OEIL-2023-0166-2023-05-24-legislative-proposal-published",
     "OEIL-2023-0166-2024-03-20-committee-decision-to-open-interinstitut",
@@ -31571,6 +31572,7 @@
     "2023-0167-MEET-TRI1-2025-10-21",
     "2023-0167-MEET-TRI1-2025-11-25",
     "2023-0167-MEET-TRI1-2025-12-17",
+    "A-9-2024-0162-AM-001-001-DEPOT-2026-11-04+1",
     "ECON-PR-753711-DEPOT-2023-10-09",
     "OEIL-2023-0167-2023-05-24-legislative-proposal-published",
     "OEIL-2023-0167-2024-03-20-committee-decision-to-open-interinstitut",
@@ -32051,7 +32053,9 @@
   },
   "2023-0209": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-15152-2026"
+   ],
    "events": [
     "2023-0209-ANPRO-2023-09-11",
     "2023-0209-DEC-ADCP-2024-02-14",
@@ -32068,6 +32072,7 @@
     "OEIL-2023-0209-2024-10-21-committee-decision-to-open-interinstitut",
     "OEIL-2023-0209-2024-11-13-committee-decision-to-enter-into-interin",
     "OEIL-2023-0209-2024-11-13-resumption-of-business-from-the-previous",
+    "council-ST-15152-2026",
     "vote-168337-ep_position"
    ],
    "label": "Early second-reading agreement reached",
@@ -32079,7 +32084,9 @@
   },
   "2023-0210": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-15154-2026"
+   ],
    "events": [
     "2023-0210-ANPRO-2023-09-11",
     "2023-0210-DEC-ADCP-2024-02-14",
@@ -32096,6 +32103,7 @@
     "OEIL-2023-0210-2024-10-21-committee-decision-to-open-interinstitut",
     "OEIL-2023-0210-2024-11-13-committee-decision-to-enter-into-interin",
     "OEIL-2023-0210-2024-11-13-resumption-of-business-from-the-previous",
+    "council-ST-15154-2026",
     "vote-168470-ep_position"
    ],
    "label": "Early second-reading agreement reached",
@@ -33555,8 +33563,8 @@
     "2023-0421-PUB-2026-10-30",
     "OEIL-2023-0421-2023-11-27-legislative-proposal-published"
    ],
-   "label": "Published in the Official Journal",
-   "stage": "published",
+   "label": "Proposal under examination",
+   "stage": "proposed",
    "title": "Protection of workers from the risks related to exposure to carcinogens, mutagens or reprotoxic substances at work (Sixth individual Directive within the meaning of Article 16(1) of Council Directive 89/391/EEC)",
    "votes": []
   },
@@ -34309,6 +34317,7 @@
     "2024-0035-DEC-ADCP-JURI-2024-11-18",
     "2024-0035-DEC-DCPL-2025-06-17",
     "2024-0035-DEC-REFBAK-2025-06-17",
+    "2024-0035-DEC-VOAGT-2026-11-04",
     "2024-0035-DEPOT-2025-05-26",
     "2024-0035-MEET-TRI1-2025-06-23",
     "2024-0035-MEET-TRI1-2026-03-03",
@@ -34324,8 +34333,8 @@
     "OEIL-2024-0035-2024-11-13-resumption-of-business-from-the-previous",
     "vote-177025-negotiation_mandate"
    ],
-   "label": "Negotiations with the Council",
-   "stage": "negotiations",
+   "label": "Provisional agreement reached",
+   "stage": "provisional_agreement",
    "title": "Combating the sexual abuse and sexual exploitation of children and child sexual abuse material and replacing Council Framework Decision 2004/68/JHA",
    "votes": [
     "177025"
@@ -34521,7 +34530,9 @@
    ]
   },
   "2024-0098": {
-   "acts": [],
+   "acts": [
+    "32026R2473"
+   ],
    "council": [
     "ST-14472-2026"
    ],
@@ -34532,6 +34543,7 @@
     "2024-0098-DEC-PLEIN1-2025-09-10",
     "2024-0098-DEC-VOAGT-2026-06-03",
     "2024-0098-DEPOT-2025-07-23",
+    "2024-0098-PUB-2026-11-04",
     "2024-0098-SIGN-2026-10-21",
     "A-10-2025-0150-AM-001-129-DEPOT-2026-09-15",
     "A-10-2025-0150-AM-130-130-DEPOT-2026-09-09",
@@ -34543,8 +34555,8 @@
     "council-ST-14472-2026",
     "vote-195835-ep_position"
    ],
-   "label": "Signed, awaiting publication",
-   "stage": "adopted",
+   "label": "Published, not yet in force",
+   "stage": "published",
    "title": "Amending Regulation (EU) No 2023/2124 on certain provisions for fishing in the GFCM (General Fisheries Commission for the Mediterranean) Agreement area",
    "votes": [
     "195835"
@@ -36180,7 +36192,9 @@
    "votes": []
   },
   "2025-0172": {
-   "acts": [],
+   "acts": [
+    "32026R2381"
+   ],
    "council": [
     "ST-14290-2026"
    ],
@@ -36195,6 +36209,7 @@
     "2025-0172-MEET-TRI1-2026-01-26",
     "2025-0172-MEET-TRI1-2026-03-23",
     "2025-0172-MEET-TRI1-2026-05-19",
+    "2025-0172-PUB-2026-11-03",
     "2025-0172-SIGN-2026-10-21",
     "A-10-2025-0271-AM-001-063-DEPOT-2026-09-11",
     "A-10-2025-0271-AM-064-064-DEPOT-2026-09-08",
@@ -36207,8 +36222,8 @@
     "council-ST-14290-2026",
     "vote-196114-ep_position"
    ],
-   "label": "Signed, awaiting publication",
-   "stage": "adopted",
+   "label": "Published, not yet in force",
+   "stage": "published",
    "title": "Acceleration of permit-granting for defence readiness projects",
    "votes": [
     "196114",
@@ -36216,7 +36231,9 @@
    ]
   },
   "2025-0176": {
-   "acts": [],
+   "acts": [
+    "32026R2382"
+   ],
    "council": [
     "ST-14294-2026"
    ],
@@ -36228,6 +36245,7 @@
     "2025-0176-DEC-VOAGT-2026-06-25",
     "2025-0176-DEPOT-2025-12-19",
     "2025-0176-MEET-TRI1-2026-05-19",
+    "2025-0176-PUB-2026-11-03",
     "2025-0176-SIGN-2026-10-21",
     "A-10-2025-0273-AM-001-001-DEPOT-2026-09-11",
     "A-10-2025-0273-AM-002-002-DEPOT-2026-09-08",
@@ -36240,8 +36258,8 @@
     "council-ST-14294-2026",
     "vote-196161-ep_position"
    ],
-   "label": "Signed, awaiting publication",
-   "stage": "adopted",
+   "label": "Published, not yet in force",
+   "stage": "published",
    "title": "Amending Regulations (EC) No 1907/2006, (EC) No 1272/2008, (EU) No 528/2012, (EU) 2019/1021 and (EU) 2021/697 as regards defence readiness and facilitating defence investments and conditions for defence industry",
    "votes": [
     "196161",
@@ -36250,7 +36268,8 @@
   },
   "2025-0177": {
    "acts": [
-    "32026D2402"
+    "32026D2402",
+    "32026L2383"
    ],
    "council": [
     "ST-14295-2026"
@@ -36268,6 +36287,7 @@
     "2025-0177-MEET-TRI1-2026-05-18",
     "2025-0177-MEET-TRI1-2026-06-10",
     "2025-0177-PUB-2026-10-28",
+    "2025-0177-PUB-2026-11-03",
     "2025-0177-SIGN-2026-10-21",
     "A-10-2025-0275-AM-001-068-DEPOT-2026-09-11",
     "A-10-2025-0275-AM-069-069-DEPOT-2026-09-09+2",
@@ -36386,6 +36406,7 @@
     "2025-0207-DEC-VOAGT-2026-09-10",
     "2025-0207-DEPOT-2026-04-16",
     "2025-0207-MEET-TRI1-2026-06-29",
+    "A-10-2026-0093-AM-117-117-DEPOT-2026-11-04+1",
     "ENVI-AM-784247-DEPOT-2026-02-04",
     "ENVI-PR-781186-DEPOT-2025-12-17",
     "OEIL-2025-0207-2025-07-08-legislative-proposal-published",
@@ -36503,6 +36524,7 @@
     "2025-0232-DEPOT-2026-04-17",
     "2025-0232-MEET-TRI1-2026-05-07",
     "2025-0232-MEET-TRI1-2026-06-23",
+    "2025-0232-PUB-2026-10-30",
     "2025-0232-SIGN-2026-10-21",
     "A-10-2026-0100-AM-001-045-DEPOT-2026-09-30+1",
     "EMPL-AM-782282-DEPOT-2026-01-30",
@@ -37239,6 +37261,7 @@
    "council": [],
    "events": [
     "2025-0360-ANPRO-2026-01-19",
+    "2025-0360-DEC-ADCP-JURI-2026-11-04",
     "CJ72-AM-786820-DEPOT-2026-07-27+8",
     "CJ72-PR-786818-DEPOT-2026-06-22",
     "OEIL-2025-0360-2025-11-19-legislative-proposal-published"
@@ -37313,6 +37336,7 @@
     "2025-0380-DEC-VOAGT-2026-07-06",
     "2025-0380-DEPOT-2026-04-17",
     "2025-0380-MEET-TRI1-2026-06-10",
+    "2025-0380-PUB-2026-10-28",
     "2025-0380-SIGN-2026-10-21",
     "A-10-2026-0098-AM-028-029-DEPOT-2026-09-08",
     "A-10-2026-0098-AM-030-030-DEPOT-2026-09-09+4",
@@ -37364,6 +37388,7 @@
    "council": [],
    "events": [
     "2025-0383-ANPRO-2026-01-27",
+    "2025-0383-DEC-ADCP-BUDG-2026-11-04",
     "ECON-AM-791103-DEPOT-2026-07-31+4",
     "ECON-PR-789866-DEPOT-2026-06-11",
     "OEIL-2025-0383-2025-12-04-legislative-proposal-published"
@@ -37378,11 +37403,12 @@
    "council": [],
    "events": [
     "2025-0384-ANPRO-2026-02-12",
+    "2025-0384-DEC-ADCP-2026-11-04",
     "CJ75-AM-790130-DEPOT-2026-06-23+1",
     "CJ75-PR-788848-DEPOT-2026-05-20",
     "OEIL-2025-0384-2025-12-03-legislative-proposal-published"
    ],
-   "label": "Proposal under examination",
+   "label": "Committee report adopted",
    "stage": "proposed",
    "title": "Monitoring and controlling drug precursors and repealing Regulations (EC) No 273/2004 and (EC) No 111/2005",
    "votes": []
@@ -37401,6 +37427,7 @@
     "2025-0385-DEC-REFBAK-2026-10-20",
     "2025-0385-DEPOT-2026-07-02",
     "2025-0385-DEPOT-2026-10-09",
+    "2025-0385-MEET-TRI1-2026-11-04",
     "A-10-2026-0265-AM-001-001-DEPOT-2026-10-19",
     "ITRE-AM-787752-DEPOT-2026-04-27",
     "ITRE-PR-785290-DEPOT-2026-03-20",
@@ -37410,7 +37437,7 @@
     "OEIL-2025-0385-2026-07-06-committee-decision-to-enter-into-interin",
     "vote-198425-negotiation_mandate"
    ],
-   "label": "Mandate to negotiate with the Council",
+   "label": "Negotiations with the Council",
    "stage": "negotiations",
    "title": "Amending Regulation (EU) 2024/1252",
    "votes": [
@@ -37447,11 +37474,12 @@
    "council": [],
    "events": [
     "2025-0391-ANPRO-2026-02-09",
+    "2025-0391-DEC-ADCP-2026-11-04",
     "ENVI-AM-790190-DEPOT-2026-06-24+1",
     "ENVI-PR-788874-DEPOT-2026-05-22",
     "OEIL-2025-0391-2025-12-10-legislative-proposal-published"
    ],
-   "label": "Proposal under examination",
+   "label": "Committee report adopted",
    "stage": "proposed",
    "title": "Speeding-up environmental assessments",
    "votes": []
@@ -37607,6 +37635,7 @@
    "council": [],
    "events": [
     "2025-0404-ANPRO-2026-03-25",
+    "2025-0404-DEC-ADCP-BUDG-2026-11-04",
     "OEIL-2025-0404-2025-12-16-legislative-proposal-published",
     "SANT-AM-791887-DEPOT-2026-07-28+2",
     "SANT-PR-787987-DEPOT-2026-06-30"
@@ -37734,6 +37763,7 @@
     "2025-0417-ANPRO-2026-01-27",
     "2025-0417-DEC-ADCP-2026-07-14",
     "2025-0417-DEC-PLEIN1-2026-09-16",
+    "2025-0417-DEC-VOAGT-2026-11-04",
     "2025-0417-DEPOT-2026-07-29",
     "2025-0417-MEET-TRI1-2026-10-20",
     "AGRI-AM-785380-DEPOT-2026-03-26",
@@ -37741,8 +37771,8 @@
     "OEIL-2025-0417-2026-07-14-committee-decision-to-open-interinstitut",
     "OEIL-2025-0417-2026-09-14-committee-decision-to-enter-into-interin"
    ],
-   "label": "Negotiations with the Council",
-   "stage": "negotiations",
+   "label": "Provisional agreement reached",
+   "stage": "provisional_agreement",
    "title": "Amending Regulation (EU) 2018/848 as regards certain production, labelling and certification rules and certain rules on trade with third countries",
    "votes": []
   },
@@ -37808,6 +37838,7 @@
    "council": [],
    "events": [
     "2025-0420-ANPRO-2026-02-09",
+    "2025-0420-DEC-ADCP-2026-11-04",
     "2025-0420-DEC-ADCP-ITRE-2026-10-22",
     "2025-0420-DEC-ADCP-TRAN-2026-10-22",
     "ENVI-AM-789910-DEPOT-2026-06-18+2",
@@ -37815,7 +37846,7 @@
     "ENVI-PR-787667-DEPOT-2026-04-17",
     "OEIL-2025-0420-2025-12-16-legislative-proposal-published"
    ],
-   "label": "Proposal under examination",
+   "label": "Committee report adopted",
    "stage": "proposed",
    "title": "CO2 standards for new cars and vans (2025 revision)",
    "votes": []
@@ -37825,12 +37856,13 @@
    "council": [],
    "events": [
     "2025-0421-ANPRO-2026-02-09",
+    "2025-0421-DEC-ADCP-2026-11-04",
     "CJ46-AM-789892-DEPOT-2026-06-19+1",
     "CJ46-AM-789893-DEPOT-2026-06-18",
     "CJ46-PR-787931-DEPOT-2026-05-11",
     "OEIL-2025-0421-2025-12-16-legislative-proposal-published"
    ],
-   "label": "Proposal under examination",
+   "label": "Committee report adopted",
    "stage": "proposed",
    "title": "Clean corporate vehicles",
    "votes": []
@@ -37840,12 +37872,13 @@
    "council": [],
    "events": [
     "2025-0422-ANPRO-2026-02-09",
+    "2025-0422-DEC-ADCP-2026-11-04",
     "2025-0422-DEC-ADCP-ITRE-2026-10-22",
     "CJ76-AM-789089-DEPOT-2026-06-26+1",
     "CJ76-AM-789167-DEPOT-2026-06-30",
     "OEIL-2025-0422-2025-12-16-legislative-proposal-published"
    ],
-   "label": "Proposal under examination",
+   "label": "Committee report adopted",
    "stage": "proposed",
    "title": "Amending Regulations (EC) No 561/2006, (EU) 2018/858, (EU) 2019/2144 and (EU) 2024/1257 of the European Parliament and of the Council as regards the simplification of technical requirements and testing procedures for motor vehicles and repealing Council Directive 70/157/EEC and Regulation No 540/2014 of the European Parliament and of the Council",
    "votes": []
@@ -37879,11 +37912,12 @@
    "council": [],
    "events": [
     "2025-0424-ANPRO-2026-02-09",
+    "2025-0424-DEC-ADCP-2026-11-04",
     "OEIL-2025-0424-2025-12-16-legislative-proposal-published",
     "TRAN-AM-789944-DEPOT-2026-06-11",
     "TRAN-PR-787908-DEPOT-2026-05-11"
    ],
-   "label": "Proposal under examination",
+   "label": "Committee report adopted",
    "stage": "proposed",
    "title": "Amending Directive 92/6/EEC to exempt certain N2 electric vehicles from the requirement to install and use a speed limitation device",
    "votes": []
@@ -38066,12 +38100,14 @@
    "council": [],
    "events": [
     "2025-0542-ANPRO-2025-10-23",
+    "2025-0542-DEC-ADCP-2026-11-04",
     "2025-0542-DEC-ADCP-BUDG-2026-07-15",
     "LIBE-AM-790119-DEPOT-2026-06-24+1",
     "LIBE-PR-788869-DEPOT-2026-05-19",
-    "OEIL-2025-0542-2025-07-16-legislative-proposal-published"
+    "OEIL-2025-0542-2025-07-16-legislative-proposal-published",
+    "OEIL-2025-0542-2026-11-04-committee-decision-to-open-interinstitut"
    ],
-   "label": "Proposal under examination",
+   "label": "Committee decided to negotiate with the Council",
    "stage": "proposed",
    "title": "Establishing the Union support for internal security for the period from 2028 to 2034",
    "votes": []
@@ -38127,6 +38163,7 @@
     "2025-0545-DEC-ADCP-PECH-2026-09-17",
     "2025-0545-DEC-ADCP-REGI-2026-09-01",
     "2025-0545-DEC-ADCP-TRAN-2026-09-02",
+    "CJ13-AM-797489-DEPOT-2026-11-03+5",
     "CJ13-PR-787767-DEPOT-2026-10-05",
     "OEIL-2025-0545-2025-07-16-legislative-proposal-published"
    ],
@@ -38569,6 +38606,7 @@
    "council": [],
    "events": [
     "2026-0013-ANPRO-2026-04-27",
+    "2026-0013-DEC-ADCP-LIBE-2026-11-04",
     "ITRE-PR-791994-DEPOT-2026-10-20",
     "OEIL-2026-0013-2026-01-21-legislative-proposal-published"
    ],
@@ -38587,6 +38625,7 @@
     "2026-0044-DEC-PLEIN1-2026-09-16",
     "2026-0044-DEC-VOAGT-2026-10-08",
     "2026-0044-DEPOT-2026-07-20",
+    "A-10-2026-0211-AM-001-035-DEPOT-2026-11-04+1",
     "JURI-AM-790209-DEPOT-2026-06-25",
     "JURI-PR-789976-DEPOT-2026-06-18",
     "OEIL-2026-0044-2026-02-12-legislative-proposal-published",
@@ -38631,7 +38670,9 @@
     "2026-0068-ANPRO-2026-04-30",
     "2026-0068-DEC-ADCP-ENVI-2026-10-05",
     "CJ80-AM-796435-DEPOT-2026-10-19+17",
+    "CJ80-AM-796436-DEPOT-2026-10-19+13",
     "CJ80-AM-796449-DEPOT-2026-10-13+2",
+    "CJ80-AM-796450-DEPOT-2026-10-13+1",
     "CJ80-PR-792067-DEPOT-2026-09-11",
     "OEIL-2026-0068-2026-03-04-legislative-proposal-published"
    ],
@@ -38657,7 +38698,9 @@
    "votes": []
   },
   "2026-0078": {
-   "acts": [],
+   "acts": [
+    "32026R2387"
+   ],
    "council": [
     "ST-14359-2026"
    ],
@@ -38669,6 +38712,7 @@
     "2026-0078-DEC-VOAGT-2026-09-02",
     "2026-0078-DEPOT-2026-06-29",
     "2026-0078-MEET-TRI1-2026-07-15",
+    "2026-0078-PUB-2026-11-03",
     "2026-0078-SIGN-2026-10-21",
     "A-10-2026-0188-AM-001-001-DEPOT-2026-10-05",
     "A-10-2026-0188-AM-002-002-DEPOT-2026-09-30+4",
@@ -38679,8 +38723,8 @@
     "council-ST-14359-2026",
     "vote-197360-ep_position"
    ],
-   "label": "Signed, awaiting publication",
-   "stage": "adopted",
+   "label": "In force",
+   "stage": "in_force",
    "title": "Establishing the Programme for agile and rapid defence innovation (AGILE)",
    "votes": [
     "197360",
@@ -38692,6 +38736,7 @@
    "council": [],
    "events": [
     "2026-0084-ANPRO-2026-06-15",
+    "2026-0084-DEC-ADCP-BUDG-2026-11-04",
     "ITRE-AM-796322-DEPOT-2026-10-02",
     "ITRE-PR-792131-DEPOT-2026-09-09",
     "OEIL-2026-0084-2026-04-07-legislative-proposal-published"
@@ -38709,6 +38754,7 @@
     "2026-0085-DEC-ADCP-2026-09-10",
     "2026-0085-DEC-DCPL-2026-09-15",
     "2026-0085-DEC-REFBAK-2026-09-15",
+    "2026-0085-DEC-VOAGT-2026-11-04",
     "2026-0085-DEPOT-2026-09-10",
     "A-10-2026-0230-AM-001-006-DEPOT-2026-09-15",
     "A-10-2026-0230-AM-007-007-DEPOT-2026-09-11+2",
@@ -38718,8 +38764,8 @@
     "OEIL-2026-0085-2026-04-01-legislative-proposal-published",
     "vote-196438-negotiation_mandate"
    ],
-   "label": "Mandate to negotiate with the Council",
-   "stage": "negotiations",
+   "label": "Provisional agreement reached",
+   "stage": "provisional_agreement",
    "title": "Amending Decision (EU) 2015/1814 as regards ceasing the invalidation of allowances in the market stability reserve",
    "votes": [
     "196438"
@@ -39239,9 +39285,10 @@
    "council": [],
    "events": [
     "ECON-PR-797362-DEPOT-2026-10-22",
-    "OEIL-2026-0292-2026-10-01-legislative-proposal-published"
+    "OEIL-2026-0292-2026-10-01-legislative-proposal-published",
+    "OEIL-2026-0292-2026-11-03-vote-in-committee"
    ],
-   "label": "Under examination in Parliament",
+   "label": "Committee report adopted",
    "stage": "proposed",
    "title": "VAT fraud: extension of the application period of the optional reverse charge mechanism and Quick Reaction Mechanism",
    "votes": []
@@ -39362,7 +39409,7 @@
    ],
    "label": "Proposal under examination",
    "stage": "proposed",
-   "title": "Asylum and Migration: digitalisation of case management in the area of return, readmission and reintegration",
+   "title": "Digitalisation of case management in the area of return, readmission and reintegration",
    "votes": []
   },
   "2026-0342": {

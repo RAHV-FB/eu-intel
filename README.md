@@ -46,9 +46,11 @@ npm run dev                      # http://localhost:5173/
 rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation optouts train`. A source
 that fails keeps its previous files; `data/snapshot/_manifest.json` records each source's status and last
 successful fetch. You rarely need this locally: the snapshot is committed and refreshed weekly by CI. The weekly
-refresh is incremental for EP procedures, EP votes and the Legislative Train (new, open and recently changed
-records are read again, the others reused); `EU_INTEL_FULL_REFRESH=1` re-reads every record (see
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "What a weekly run re-reads").
+refresh is incremental for EP procedures, EP votes and the Legislative Train: new, open and recently changed
+records are read again, and the others are reused, except for a weekly share of them that is read again on a
+rotation (every record at least every 8 weeks; Train files every 4). `EU_INTEL_FULL_REFRESH=1`, or a change of a
+source's `PARSER_VERSION`, re-reads every record (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "What a weekly run
+re-reads").
 
 ## Checks
 
@@ -56,7 +58,8 @@ records are read again, the others reused); `EU_INTEL_FULL_REFRESH=1` re-reads e
 | --- | --- |
 | `ruff check .` | Python lint |
 | `pytest` | Offline unit tests (network tests are deselected; run them with `pytest -m network`) |
-| `python -m pipeline validate` | Snapshot schema and invariants, and that no file is missing or emptied (against the manifest's record counts and minimum counts); once built, the claims in `public/data` against the rules and the files' own dates (`--built` fails if there is no build, or if it is incomplete: a missing or unreadable file, an empty list, a count of zero) |
+| `python -m pipeline validate` | Snapshot schema and invariants, and that no file is missing or emptied (against the manifest's record counts and minimum counts); once built, the claims in `public/data` against the rules and the files' own records (an act on two files, a file past adoption without Parliament's position, an adoption date on a file shown before adoption, a transposition deadline before its act, …). `--built` fails if there is no build, if it is incomplete (a missing or unreadable file, an empty list, a count of zero), or if it does not match `src/types/data.ts` (keys, nulls, types, enums; `pipeline/contract.py`). Warnings are by design (printed as INFO, not counted), integrity or backlog: it fails when an integrity class has more findings than `pipeline/validate_baseline.json` records (`--built --update-baseline` rewrites it once they are checked) |
+| `python -m pipeline build --strict` | Also `EU_INTEL_STRICT=1`: fails, listing every problem at the end, when the build had to work around one (an analysis module or function that did not load, a curated file or entry not applied, a status that fell back, a vote margin or Council assessment that failed) |
 | `npm run typecheck` · `npx vitest run` | TypeScript types · frontend unit tests |
 | `BASE_PATH=/eu-intel/ npm run build` | Production build under the Pages subpath, with prerendered route shells |
 | `node scripts/check_privacy.mjs` | No third-party loads, trackers, cookie writes or raw-HTML injection in `dist/` and `src/` |
