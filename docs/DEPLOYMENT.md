@@ -315,10 +315,10 @@ that source and its manifest entry (what the refresh does for a source that fail
 
 then commit and push as in step 3. The manifest entry is marked `partial` with the reason, and the About page shows its last
 successful retrieval. Then disable the schedule (step 1) and refresh by hand without that source, naming the others in the `sources`
-input of *Run workflow* (the names are `ep_people ep_procedures ep_votes eurlex council implementation optouts train`; those not
+input of *Run workflow* (the names are `ep_people ep_procedures ep_votes eurlex council implementation optouts train agenda`; those not
 listed are not fetched and keep their files and manifest entries):
 
-    gh workflow run refresh.yml -f sources="ep_people ep_procedures eurlex council implementation optouts train"
+    gh workflow run refresh.yml -f sources="ep_people ep_procedures eurlex council implementation optouts train agenda"
 
 (that holds back `ep_votes`). Sources read the files of earlier ones in that order, so a held-back `ep_people` or
 `ep_procedures` leaves the later sources working from its older records. To let the source go again, run it once by hand

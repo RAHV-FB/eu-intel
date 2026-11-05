@@ -1,0 +1,217 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-12-TF-1100",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-12",
+   "activity_end_date": "2026-11-12T13:00:00+01:00",
+   "activity_id": "MTG-PL-2026-11-12-TF-1100",
+   "activity_label": {
+    "en": "PLENARY SESSION VOTES",
+    "fr": "SÉANCE PLÉNIÈRE VOTES"
+   },
+   "activity_start_date": "2026-11-12T11:00:00+01:00",
+   "consists_of": [
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-5",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-D-3",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-52",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-35",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-14",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-39",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-45",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-48",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-28",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-13",
+    "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-46"
+   ],
+   "had_activity_type": "def/ep-activities/MEETING_PART",
+   "notation_periclesId": "024678-01",
+   "hasLocality": "http://publications.europa.eu/resource/authority/place/BEL_BRU",
+   "agendaLabel": {
+    "en": "VOTES followed by explanations of votes",
+    "fr": "VOTES suivis des explications de vote"
+   },
+   "hasRoom": {
+    "id": "room/PHS-PHSHEM",
+    "type": "Room",
+    "officeAddress": "PHSHEM",
+    "identifier": "PHS-PHSHEM",
+    "hasSite": "http://publications.europa.eu/resource/authority/site/PHS"
+   },
+   "inverse_was_scheduled_in": [
+    "eli/dl/event/MTG-PL-2026-11-12"
+   ]
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-D-3",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-12",
+   "activity_id": "MTG-PL-2026-11-12-OJ-ITM-D-3",
+   "activity_label": {
+    "fr": "Textes au sujet desquels le débat est clos",
+    "en": "Texts on which debate is closed"
+   },
+   "activity_order": "19.0",
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-12"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+   "notation_agendaPoint": "D-3"
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-D-51",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-12",
+   "activity_id": "MTG-PL-2026-11-12-OJ-ITM-D-51",
+   "activity_label": {
+    "fr": "Nouvelles sanctions de l'Union à l'encontre de la Russie en réaction à l'intensification des attaques contre l'Ukraine: couper les sources de financement de la guerre menée par la Russie",
+    "en": "Further EU sanctions against Russia in response to the escalating attacks against Ukraine: cutting of the sources financing the Russian war"
+   },
+   "activity_order": "8.0",
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-12"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+   "notation_agendaPoint": "D-51",
+   "structuredContent": {
+    "fr": "<item><type>Déclarations du Conseil et de la Commission</type><process><label typeof=\"proc\" resource=\"proc/2026-2949\">2026/2949(RSP)</label></process></item>",
+    "en": "<item><type>Council and Commission statements</type><process><label typeof=\"proc\" resource=\"proc/2026-2949\">2026/2949(RSP)</label></process></item>"
+   },
+   "inverse_was_scheduled_in": [
+    "eli/dl/proc/2026-2949"
+   ]
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-13",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-12",
+   "activity_id": "MTG-PL-2026-11-12-OJ-ITM-V-13",
+   "activity_label": {
+    "fr": "Règles de l'Union en matière de protection des investisseurs de détail",
+    "en": "Union retail investor protection rules"
+   },
+   "activity_order": "12.0",
+   "based_on_a_realization_of": [
+    "eli/dl/doc/C-9-2023-0182",
+    "eli/dl/doc/A-9-2024-0162"
+   ],
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-12"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+   "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "was_purpose_of": [
+    {
+     "id": "eli/dl/event/GMTG-PL-2026-11-11-DL-13-1",
+     "type": "eli-dl:Deadline",
+     "activity_end_date": "2026-11-04T13:00:00+01:00",
+     "activity_id": "GMTG-PL-2026-11-11-DL-13-1",
+     "activity_label": {
+      "fr": "Amendements; rejet",
+      "en": "Amendments; rejection"
+     },
+     "activity_order": "1.0",
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY"
+    }
+   ],
+   "notation_agendaPoint": "V-13",
+   "structuredContent": {
+    "en": "<item><title>Report on the proposal for a directive of the European Parliament and of the Council amending Directives (EU) 2009/65/EC, 2009/138/EC, 2011/61/EU, 2014/65/EU and (EU) 2016/97 as regards the Union retail investor protection rules</title><type>Report:</type><process><label typeof=\"symbol\">***I</label><label typeof=\"proc\" resource=\"proc/2023-0167\">2023/0167(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-9-2023-0182\">C9-0182/2023</label><label typeof=\"external\">COM(2023)0279</label></process><references><label typeof=\"def/ep-document-types/REPORT\" resource=\"doc/A-9-2024-0162\">A9-0162/2024</label></references><creators><label typeof=\"org\" resource=\"org/ECON\"/><label typeof=\"person\" resource=\"person/197581\">Stéphanie Yon-Courtin</label></creators></item>",
+    "fr": "<item><title>Rapport sur la proposition de directive du Parlement européen et du Conseil modifiant les directives 2009/65/CE, 2009/138/CE, 2011/61/UE, 2014/65/UE et (UE) 2016/97 en ce qui concerne les règles de l’Union en matière de protection des investisseurs de détail</title><type>Rapport:</type><process><label typeof=\"symbol\">***I</label><label typeof=\"proc\" resource=\"proc/2023-0167\">2023/0167(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-9-2023-0182\">C9-0182/2023</label><label typeof=\"external\">COM(2023)0279</label></process><references><label typeof=\"def/ep-document-types/REPORT\" resource=\"doc/A-9-2024-0162\">A9-0162/2024</label></references><creators><label typeof=\"org\" resource=\"org/ECON\"/><label typeof=\"person\" resource=\"person/197581\">Stéphanie Yon-Courtin</label></creators></item>"
+   },
+   "inverse_was_scheduled_in": [
+    "eli/dl/proc/2023-0167"
+   ]
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-14",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-12",
+   "activity_id": "MTG-PL-2026-11-12-OJ-ITM-V-14",
+   "activity_label": {
+    "en": "Modernisation of the key information document",
+    "fr": "Modernisation du document d'informations clés"
+   },
+   "activity_order": "11.0",
+   "based_on_a_realization_of": [
+    "eli/dl/doc/A-9-2024-0160",
+    "eli/dl/doc/C-9-2023-0180"
+   ],
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-12"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+   "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "was_purpose_of": [
+    {
+     "id": "eli/dl/event/GMTG-PL-2026-11-11-DL-14-1",
+     "type": "eli-dl:Deadline",
+     "activity_end_date": "2026-11-04T13:00:00+01:00",
+     "activity_id": "GMTG-PL-2026-11-11-DL-14-1",
+     "activity_label": {
+      "en": "Amendments; rejection",
+      "fr": "Amendements; rejet"
+     },
+     "activity_order": "1.0",
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY"
+    }
+   ],
+   "notation_agendaPoint": "V-14",
+   "structuredContent": {
+    "en": "<item><title>Report on the proposal for a Regulation of the European Parliament and of the Council amending Regulation (EU) No 1286/2014 as regards the modernisation of the key information document</title><type>Report:</type><process><label typeof=\"symbol\">***I</label><label typeof=\"proc\" resource=\"proc/2023-0166\">2023/0166(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-9-2023-0180\">C9-0180/2023</label><label typeof=\"external\">COM(2023)0278</label></process><references><label typeof=\"def/ep-document-types/REPORT\" resource=\"doc/A-9-2024-0160\">A9-0160/2024</label></references><creators><label typeof=\"org\" resource=\"org/ECON\"/><label typeof=\"person\" resource=\"person/197581\">Stéphanie Yon-Courtin</label></creators></item>",
+    "fr": "<item><title>Rapport sur la proposition de règlement du Parlement européen et du Conseil modifiant le règlement (UE) nº 1286/2014 en ce qui concerne la modernisation du document d’informations clés</title><type>Rapport:</type><process><label typeof=\"symbol\">***I</label><label typeof=\"proc\" resource=\"proc/2023-0166\">2023/0166(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-9-2023-0180\">C9-0180/2023</label><label typeof=\"external\">COM(2023)0278</label></process><references><label typeof=\"def/ep-document-types/REPORT\" resource=\"doc/A-9-2024-0160\">A9-0160/2024</label></references><creators><label typeof=\"org\" resource=\"org/ECON\"/><label typeof=\"person\" resource=\"person/197581\">Stéphanie Yon-Courtin</label></creators></item>"
+   },
+   "inverse_was_scheduled_in": [
+    "eli/dl/proc/2023-0166"
+   ]
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-12-OJ-ITM-V-39",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-12",
+   "activity_id": "MTG-PL-2026-11-12-OJ-ITM-V-39",
+   "activity_label": {
+    "en": "Association of the overseas countries and territories with the EU including EU/Greenland/Denmark relations",
+    "fr": "Association des pays et territoires d’outre-mer à l’Union européenne, y compris les relations UE/Groenland"
+   },
+   "activity_order": "15.0",
+   "based_on_a_realization_of": [
+    "eli/dl/doc/C-10-2025-0248",
+    "eli/dl/doc/A-10-2026-0275"
+   ],
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-12"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+   "was_purpose_of": [
+    {
+     "id": "eli/dl/event/GMTG-PL-2026-11-11-DL-39-1",
+     "type": "eli-dl:Deadline",
+     "activity_end_date": "2026-11-04T13:00:00+01:00",
+     "activity_id": "GMTG-PL-2026-11-11-DL-39-1",
+     "activity_label": {
+      "en": "Amendments",
+      "fr": "Amendements"
+     },
+     "activity_order": "1.0",
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY"
+    }
+   ],
+   "notation_agendaPoint": "V-39",
+   "structuredContent": {
+    "en": "<item><title>Report on the proposal for a Council decision amending Decision (EU) 2021/1764 on the Association of the Overseas Countries and Territories with the European Union including relations between the European Union on the one hand, and Greenland and the Kingdom of Denmark on the other</title><type>Report:</type><process><label typeof=\"symbol\">*</label><label typeof=\"proc\" resource=\"proc/2025-0264\">2025/0264(CNS)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2025-0248\">C10-0248/2025</label><label typeof=\"external\">COM(2025)0599</label></process><references><label typeof=\"def/ep-document-types/REPORT\" resource=\"doc/A-10-2026-0275\">A10-0275/2026</label></references><creators><label typeof=\"org\" resource=\"org/DEVE\"/><label typeof=\"person\" resource=\"person/204332\">Barry Andrews</label></creators></item>",
+    "fr": "<item><title>Rapport sur la proposition de décision du Conseil modifiant la décision (UE) 2021/1764 relative à l’association des pays et territoires d’outre-mer à l’Union européenne, y compris les relations entre l’Union européenne, d’une part, et le Groenland et le Royaume de Danemark, d’autre part</title><type>Rapport:</type><process><label typeof=\"symbol\">*</label><label typeof=\"proc\" resource=\"proc/2025-0264\">2025/0264(CNS)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2025-0248\">C10-0248/2025</label><label typeof=\"external\">COM(2025)0599</label></process><references><label typeof=\"def/ep-document-types/REPORT\" resource=\"doc/A-10-2026-0275\">A10-0275/2026</label></references><creators><label typeof=\"org\" resource=\"org/DEVE\"/><label typeof=\"person\" resource=\"person/204332\">Barry Andrews</label></creators></item>"
+   },
+   "inverse_was_scheduled_in": [
+    "eli/dl/proc/2025-0264"
+   ]
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

@@ -1,0 +1,193 @@
+{
+ "data": [
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-25-OJ-ITM-D-10",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-25",
+   "activity_id": "MTG-PL-2026-11-25-OJ-ITM-D-10",
+   "activity_label": {
+    "en": "Topical debate requested by a political group (The Left) (Rule 169)",
+    "fr": "Débat d’actualité demandé par un groupe politique (The Left) (article 169 du règlement intérieur)"
+   },
+   "activity_order": "36.0",
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-25"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_DEBATE",
+   "notation_agendaPoint": "D-10"
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-25-OJ-ITM-V-60",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-25",
+   "activity_id": "MTG-PL-2026-11-25-OJ-ITM-V-60",
+   "activity_label": {
+    "en": "Union code relating to medicinal products for human use",
+    "fr": "Code de l’Union relatif aux médicaments à usage humain"
+   },
+   "activity_order": "24.0",
+   "based_on_a_realization_of": [
+    "eli/dl/doc/C-10-2026-0244"
+   ],
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-25"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+   "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+   "was_purpose_of": [
+    {
+     "id": "eli/dl/event/GMTG-PL-2026-11-23-DL-60-1",
+     "type": "eli-dl:Deadline",
+     "activity_end_date": "2026-11-18T13:00:00+01:00",
+     "activity_id": "GMTG-PL-2026-11-23-DL-60-1",
+     "activity_label": {
+      "fr": "Amendements; rejet",
+      "en": "Amendments; rejection"
+     },
+     "activity_order": "1.0",
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY"
+    }
+   ],
+   "notation_agendaPoint": "V-60",
+   "structuredContent": {
+    "en": "<item><type>Recommendation for second reading:</type><process><label typeof=\"symbol\">***II</label><label typeof=\"proc\" resource=\"proc/2023-0132\">2023/0132(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2026-0244\">C10-0244/2026</label><label typeof=\"external\">07106/2/2026</label></process><references><label typeof=\"def/ep-document-types/REPORT\"/></references><creators><label typeof=\"org\" resource=\"org/SANT\"/><label typeof=\"person\" resource=\"person/197711\">Dolors Montserrat</label></creators></item>",
+    "fr": "<item><type>Recommandation pour la deuxième lecture:</type><process><label typeof=\"symbol\">***II</label><label typeof=\"proc\" resource=\"proc/2023-0132\">2023/0132(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2026-0244\">C10-0244/2026</label><label typeof=\"external\">07106/2/2026</label></process><references><label typeof=\"def/ep-document-types/REPORT\"/></references><creators><label typeof=\"org\" resource=\"org/SANT\"/><label typeof=\"person\" resource=\"person/197711\">Dolors Montserrat</label></creators></item>"
+   },
+   "inverse_was_scheduled_in": [
+    "eli/dl/proc/2023-0132"
+   ]
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-25-OJ-ITM-V-61",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-25",
+   "activity_id": "MTG-PL-2026-11-25-OJ-ITM-V-61",
+   "activity_label": {
+    "fr": "Établissement de procédures de l’Union pour l’autorisation et la surveillance des médicaments à usage humain et établissement de règles régissant l’Agence européenne des médicaments",
+    "en": "Union procedures for the authorisation and supervision of medicinal products for human use and rules governing the European Medicines Agency"
+   },
+   "activity_order": "23.0",
+   "based_on_a_realization_of": [
+    "eli/dl/doc/C-10-2026-0243"
+   ],
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-25"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+   "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG2",
+   "was_purpose_of": [
+    {
+     "id": "eli/dl/event/GMTG-PL-2026-11-23-DL-61-1",
+     "type": "eli-dl:Deadline",
+     "activity_end_date": "2026-11-18T13:00:00+01:00",
+     "activity_id": "GMTG-PL-2026-11-23-DL-61-1",
+     "activity_label": {
+      "en": "Amendments; rejection",
+      "fr": "Amendements; rejet"
+     },
+     "activity_order": "1.0",
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY"
+    }
+   ],
+   "notation_agendaPoint": "V-61",
+   "structuredContent": {
+    "fr": "<item><type>Recommandation pour la deuxième lecture:</type><process><label typeof=\"symbol\">***II</label><label typeof=\"proc\" resource=\"proc/2023-0131\">2023/0131(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2026-0243\">C10-0243/2026</label><label typeof=\"external\">07105/2/2026</label></process><references><label typeof=\"def/ep-document-types/REPORT\"/></references><creators><label typeof=\"org\" resource=\"org/SANT\"/><label typeof=\"person\" resource=\"person/185619\">Tiemo Wölken</label></creators></item>",
+    "en": "<item><type>Recommendation for second reading:</type><process><label typeof=\"symbol\">***II</label><label typeof=\"proc\" resource=\"proc/2023-0131\">2023/0131(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2026-0243\">C10-0243/2026</label><label typeof=\"external\">07105/2/2026</label></process><references><label typeof=\"def/ep-document-types/REPORT\"/></references><creators><label typeof=\"org\" resource=\"org/SANT\"/><label typeof=\"person\" resource=\"person/185619\">Tiemo Wölken</label></creators></item>"
+   },
+   "inverse_was_scheduled_in": [
+    "eli/dl/proc/2023-0131"
+   ]
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-25-OJ-ITM-V-71",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-25",
+   "activity_id": "MTG-PL-2026-11-25-OJ-ITM-V-71",
+   "activity_label": {
+    "fr": "La mise sur le marché de micro-organismes génétiquement modifiés et le reconditionnement des organes",
+    "en": "Placing on the market of genetically modified micro-organisms and the processing of organs"
+   },
+   "activity_order": "26.0",
+   "based_on_a_realization_of": [
+    "eli/dl/doc/C-10-2025-0358"
+   ],
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-25"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+   "occured_at_stage": "http://publications.europa.eu/resource/authority/procedure-phase/RDG1",
+   "was_purpose_of": [
+    {
+     "id": "eli/dl/event/GMTG-PL-2026-11-23-DL-71-1",
+     "type": "eli-dl:Deadline",
+     "activity_end_date": "2026-11-18T13:00:00+01:00",
+     "activity_id": "GMTG-PL-2026-11-23-DL-71-1",
+     "activity_label": {
+      "fr": "(éventuellement) Amendements; rejet",
+      "en": "(possibly) Amendments; rejection"
+     },
+     "activity_order": "1.0",
+     "had_activity_type": "def/ep-activities/TABLING_PLENARY"
+    }
+   ],
+   "notation_agendaPoint": "V-71",
+   "structuredContent": {
+    "en": "<item><type>Report:</type><process><label typeof=\"symbol\">***I</label><label typeof=\"proc\" resource=\"proc/2025-0405\">2025/0405(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2025-0358\">C10-0358/2025</label><label typeof=\"external\">COM(2025)1031</label></process><references><label typeof=\"def/ep-document-types/REPORT\"/></references><creators><label typeof=\"org\" resource=\"org/ENVI\"/><label typeof=\"org\" resource=\"org/SANT\"/><label typeof=\"person\" resource=\"person/210480\">Marta Temido</label><label typeof=\"person\" resource=\"person/197517\">Adam Jarubas</label></creators></item>",
+    "fr": "<item><type>Rapport:</type><process><label typeof=\"symbol\">***I</label><label typeof=\"proc\" resource=\"proc/2025-0405\">2025/0405(COD)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2025-0358\">C10-0358/2025</label><label typeof=\"external\">COM(2025)1031</label></process><references><label typeof=\"def/ep-document-types/REPORT\"/></references><creators><label typeof=\"org\" resource=\"org/ENVI\"/><label typeof=\"org\" resource=\"org/SANT\"/><label typeof=\"person\" resource=\"person/210480\">Marta Temido</label><label typeof=\"person\" resource=\"person/197517\">Adam Jarubas</label></creators></item>"
+   },
+   "inverse_was_scheduled_in": [
+    "eli/dl/proc/2025-0405"
+   ]
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-25-OJ-ITM-V-72",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-25",
+   "activity_id": "MTG-PL-2026-11-25-OJ-ITM-V-72",
+   "activity_label": {
+    "fr": "Paquet global d'accords UE-Suisse visant à consolider, à approfondir et à accroître leurs relations bilatérales",
+    "en": "EU-Switzerland broad package of agreements to consolidate, deepen and expand their bilateral relations"
+   },
+   "activity_order": "31.0",
+   "based_on_a_realization_of": [
+    "eli/dl/doc/C-10-2026-0075",
+    "eli/dl/doc/A-10-2026-0236"
+   ],
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-25"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+   "notation_agendaPoint": "V-72",
+   "structuredContent": {
+    "en": "<item><title>Recommendation on the draft Council decision on the conclusion of a broad package of agreements between the European Union, of the one part, and the Swiss Confederation, of the other part, to consolidate, deepen and expand the bilateral relations, and amending Decisions 2011/51/EU and 2011/738/EU</title><type>Recommendation:</type><process><label typeof=\"symbol\">***</label><label typeof=\"proc\" resource=\"proc/2025-0162\">2025/0162(NLE)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2026-0075\">C10-0075/2026</label><label typeof=\"external\">10643/2025</label><label typeof=\"external\">COM(2025)0309</label></process><references><label typeof=\"def/ep-document-types/REPORT\" resource=\"doc/A-10-2026-0236\">A10-0236/2026</label></references><creators><label typeof=\"org\" resource=\"org/AFET\"/><label typeof=\"person\" resource=\"person/197557\">Christophe Grudler</label></creators></item>",
+    "fr": "<item><title>Recommandation sur le projet de décision du Conseil relative à la conclusion d’un paquet global d’accords entre l’Union européenne, d’une part, et la Confédération suisse, d’autre part, visant à consolider, à approfondir et à accroître leurs relations bilatérales et modifiant les décisions 2011/51/UE et 2011/738/UE</title><type>Recommandation:</type><process><label typeof=\"symbol\">***</label><label typeof=\"proc\" resource=\"proc/2025-0162\">2025/0162(NLE)</label><label typeof=\"def/ep-document-types/DOCUMENT_C_REFERENCE\" resource=\"doc/C-10-2026-0075\">C10-0075/2026</label><label typeof=\"external\">10643/2025</label><label typeof=\"external\">COM(2025)0309</label></process><references><label typeof=\"def/ep-document-types/REPORT\" resource=\"doc/A-10-2026-0236\">A10-0236/2026</label></references><creators><label typeof=\"org\" resource=\"org/AFET\"/><label typeof=\"person\" resource=\"person/197557\">Christophe Grudler</label></creators></item>"
+   },
+   "inverse_was_scheduled_in": [
+    "eli/dl/proc/2025-0162"
+   ]
+  },
+  {
+   "id": "eli/dl/event/MTG-PL-2026-11-25-OJ-ITM-V-9",
+   "type": "ForeseenActivity",
+   "activity_date": "2026-11-25",
+   "activity_id": "MTG-PL-2026-11-25-OJ-ITM-V-9",
+   "activity_label": {
+    "en": "Texts on which debate is closed",
+    "fr": "Textes au sujet desquels le débat est clos"
+   },
+   "activity_order": "35.0",
+   "documented_by_a_realization_of": [
+    "eli/dl/doc/OJQ-10-2026-11-25"
+   ],
+   "had_activity_type": "def/ep-activities/PLENARY_VOTE",
+   "notation_agendaPoint": "V-9"
+  }
+ ],
+ "@context": [
+  {
+   "data": "@graph",
+   "@base": "https://data.europarl.europa.eu/"
+  },
+  "https://data.europarl.europa.eu/api/v2/context.jsonld"
+ ]
+}

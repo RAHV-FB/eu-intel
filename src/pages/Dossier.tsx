@@ -157,7 +157,7 @@ function DossierPage({ id }: { id: string }) {
 
       <div className="dz-layout">
         <div className="dz-main-top">
-          <DossierSummaryPanel d={d} today={today} />
+          <DossierSummaryPanel d={d} today={today} plansRetrieved={meta?.sources.find((s) => s.id === 'agenda')?.fetched_at} />
         </div>
 
         <aside className="dz-aside" aria-label="Key facts">

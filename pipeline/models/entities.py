@@ -520,6 +520,31 @@ class TrainFile(Model):
     source: SourceRef
 
 
+class PlannedStep(Model):
+    """A step an institution has scheduled for a procedure and published before it takes place
+    (pipeline/sources/agenda.py): a planned event that Cellar records on the procedure (`cdm:event_legal_projected`,
+    from the Council's file planning and Parliament's), or an item of Parliament's plenary agenda (EP Open Data API,
+    foreseen activities of a sitting). A plan, not a record that the step took place: its date can change."""
+
+    id: str  # "cellar:2023_167.2026-11-19_APR_R1_byCONSIL" | "ep:MTG-PL-2026-11-12-OJ-ITM-V-13:2023-0167"
+    reference: str  # the procedure, as the EP writes it: "2023/0167(COD)"
+    date: str  # the planned date
+    institution: Institution  # who takes the step: "Council", "EP" (or "Commission")
+    # code of the Publications Office's authority table "event" ("APR_R1_byCONSIL", "VOTE_byEP"); an item of
+    # Parliament's agenda takes the code of its kind (a vote VOTE_byEP, a debate DEBATE_byEP)
+    event_type: str
+    label: str  # the code's English label in that authority table, verbatim ("Vote in EP plenary")
+    phase_code: str | None = None  # authority table "procedure-phase": "RDG1", "RDG2", "PROC_END"
+    phase: str | None = None  # its English label there: "First reading", "Second reading", "End of procedure"
+    # the meeting, by the English title of its agenda in Cellar: "COUNCIL OF THE EUROPEAN UNION (General Affairs)"
+    meeting: str | None = None
+    item: str | None = None  # Parliament's agenda item as titled there ("Union retail investor protection rules")
+    # the documents the plan names: a Council agenda ("CM 4825/26", kind "agenda"), the act to adopt ("PE-CONS
+    # 34/26"), a Council note; Parliament's report. `url` only where a public copy answered when retrieved
+    documents: list[DocRef] = Field(default_factory=list)
+    source: SourceRef
+
+
 class SourceStatus(Model):
     """One entry of data/snapshot/_manifest.json."""
 

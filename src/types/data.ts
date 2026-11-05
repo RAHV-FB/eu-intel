@@ -290,6 +290,19 @@ export interface TimelineEvent {
   joint_with?: { id: string | null; ref: string | null; title: string | null; report: DocRef | null }[];
 }
 
+/** A step the Council or Parliament has scheduled on a file, as published before it takes place (pipeline/analysis/
+ * scheduled.py): a plan, not a record that it happened. The build gives only steps dated after its own date; the page
+ * compares the date with the reader's (a passed step "was scheduled"). */
+export interface ScheduledStep {
+  date: ISODate; // the planned date
+  institution: Institution; // 'Council' | 'EP'
+  label: string; // the step as the Publications Office's authority table names it ("Vote in EP plenary"), verbatim
+  phase?: string | null; // the reading, from the same tables ("Second reading")
+  meeting?: string | null; // the meeting, from its agenda's title ("Council of the European Union (General Affairs)")
+  documents: DocRef[]; // the Council agenda (kind 'agenda'), the act's text, Parliament's report; url only where public
+  sources: SourceRef[]; // Parliament's plenary agenda (EP Open Data API), the planned event recorded in Cellar
+}
+
 export interface LegalActSummary {
   celex: string;
   eli?: string | null;
@@ -344,6 +357,7 @@ export interface DossierDetail extends DossierSummary {
   next_step: NextStep;
   stall?: Stall | null;
   application?: ApplicationInfo | null;
+  scheduled?: ScheduledStep[]; // steps the Council and Parliament have scheduled, by date; absent when none
   timeline: TimelineEvent[]; // ascending by date
   // Acts EUR-Lex lists as amending the file's acts that are not in our data (no dated step), as on the home card
   // (FeaturedItem.latest_note): said under the latest step, which may be older than they are
@@ -871,7 +885,8 @@ export interface FeaturedItem {
 export interface HomeData {
   featured: FeaturedItem[];
   lists: {
-    id: 'recently_adopted' | 'under_debate' | 'close_votes' | 'rejected' | 'stalled' | 'upcoming';
+    // scheduled: steps planned in the next three weeks (badge "Planned"); upcoming: dates fixed in law
+    id: 'recently_adopted' | 'under_debate' | 'close_votes' | 'rejected' | 'stalled' | 'scheduled' | 'upcoming';
     title: string;
     description: string;
     items: HomeListItem[];

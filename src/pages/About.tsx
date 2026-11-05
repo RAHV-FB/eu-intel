@@ -45,6 +45,7 @@ const RECORD_LABEL: Record<string, Record<string, string>> = {
   council: { votes: 'voting results', votes_with_positions: 'with Member State positions' },
   implementation: { measures: 'national measures', infringements: 'infringement cases' },
   train: { files: 'files' },
+  agenda: { planned: 'planned events (EUR-Lex)', plenary: 'plenary agenda items' },
 };
 
 function recordsText(s: SourceStatusInfo): string | null {
@@ -290,7 +291,10 @@ export default function About() {
               Parliament voted down, and motions to reject a proposal or the Council’s position that it adopted, with what happened to the
               file next; then files recorded as rejected — never amendments, rejected objections or motions of censure, or decisions on
               discharge for the EU budget);{' '}
-              <em>Stalled</em> (see below); <em>Coming up</em> (legally fixed dates in the next 12 months).
+              <em>Stalled</em> (see below); <em>Scheduled in the next 3 weeks</em> (steps the Council and Parliament have
+              scheduled on a file, as they publish them: planned events recorded in EUR-Lex and Parliament’s plenary agenda;
+              planned dates can change, and a step is left out once its day is over); <em>Coming up</em> (legally fixed dates
+              in the next 12 months).
             </li>
           </ul>
         </section>

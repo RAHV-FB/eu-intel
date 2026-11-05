@@ -401,6 +401,62 @@
   line-height: var(--lh-snug);
 }
 
+/* "Scheduled next" (ScheduledNext.tsx): one planned step per row, its date beside it from 40rem */
+.dz-plan {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.dz-plan__step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px var(--sp-4);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--border);
+}
+
+.dz-plan__step:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+@media (min-width: 40rem) {
+  .dz-plan__step {
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+}
+
+.dz-plan__date {
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.dz-plan__what {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: var(--lh-snug);
+}
+
+.dz-plan__label {
+  overflow-wrap: anywhere;
+}
+
+/* a date passed since the data was built: said so, never shown as done */
+.dz-plan__passed {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-2);
+}
+
+.dz-plan__step.is-passed .dz-plan__date {
+  color: var(--text-2);
+}
+
 .dz-dates__note {
   margin: var(--sp-3) 0 0;
   max-width: var(--measure-wide);

@@ -322,8 +322,10 @@ def test_home_lists_only_from_real_data(out: Path):
         "close_votes",
         "rejected",
         "stalled",
+        "scheduled",
         "upcoming",
     }
+    assert lists["scheduled"]["items"] == []  # no planned steps retrieved in the fixture (tests/test_agenda.py)
     stalled = lists["stalled"]["items"]
     assert stalled and stalled[0]["dossier_id"] == "2099-0002"
     rejected_desc = lists["rejected"]["description"]
@@ -354,6 +356,7 @@ def test_meta_sources_and_counts(out: Path):
         "implementation",
         "optouts",
         "train",
+        "agenda",
     }
     assert all(s["licence"] for s in meta["sources"])
     assert meta["counts"]["dossiers"] == 4 and meta["counts"]["ep_votes"] == 3

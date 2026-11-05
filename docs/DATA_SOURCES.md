@@ -17,6 +17,9 @@ credentials). Details are refined from each ingestion module's findings.
 | Council "voting result" documents (ST notes) | Cellar SPARQL + PDF at data.consilium.europa.eu | ✅ | Member State positions, voting rule, outcome | Annex table is an image; parsed deterministically, fail-closed |
 | Single Market Scoreboard | HTML; indicators in Power BI embeds | ✅ since 2 Nov 2026 (403 on 22 and 26 Oct) | — | Indicators only in embedded Power BI reports, not machine-readable; a plain HTML table of overdue directives per Member State (`/enforcement-tools/transposition_en`) is not read yet. See the implementation section |
 | Commission infringement decisions | HTML / search | ⚠️ redirects to commission.europa.eu | Infringement cases | See implementation section below |
+| Cellar planned events (`cdm:event_legal_projected`) | SPARQL 1.1 | ✅ | Steps scheduled on a file, about three weeks ahead (`agenda`) | The Council's file planning and Parliament's; labels from the Publications Office's authority tables. See the scheduled-steps section |
+| EP Open Data API `/meetings/{sitting}/foreseen-activities` | JSON-LD REST | ✅ (204 until published) | Parliament's plenary agenda: votes and debates on a file (`agenda`) | Published about three weeks ahead of each sitting |
+| Council documents named by a plan (data.consilium.europa.eu) | PDF | ✅ public ones; 404 otherwise | Links to the meeting's agenda and the act's text | HEAD answers 405 and Range is ignored: each document is checked with one GET per run |
 
 ## Identifiers that connect the sources
 
@@ -1296,6 +1299,49 @@ the first week of each month is a full refresh, which re-reads every stored reco
   lacks (2017/0398(COD), 2018/0073(CNS) digital services tax, 2018/0226(COD), 2018/0245(CNS), 2018/0302(COD),
   2019/0197(COD), 2022/0430(CNS)). Files that only Cellar's own procedure list names (2018/0802(CNS)) are still
   not discovered.
+
+### Scheduled steps (`agenda`) — ok
+What happens next on a file, and when, as the institutions publish it before it happens (checked on 5 November 2026).
+Plans, not records: the site shows them as planned, judges their dates on the reader's clock, and records a step as
+taken only from the other sources.
+- **Cellar planned events** (`agenda/planned.json`). Cellar holds `cdm:event_legal_projected` events on a procedure
+  (status PROJECTED; `sender_transmission` "CONSIL:FilePlanning" for the Council's): a date, a type of the authority
+  table "event", the institution taking the step, a procedure phase and the documents named
+  (`event_legal_document_reference`). On 5 November: 35 dated from that day on (22 of the Council, up to 19 November;
+  13 of Parliament, up to 25 November). Cellar keeps some after their date (20 of Parliament's, back to 15 January
+  2024, and 5 of the Council's), so only those from the day of the run on are read. Types seen, with their English
+  labels in the authority table (shown verbatim): APR_R1_byCONSIL "Approval of the EP's first reading position by the
+  Council (adoption of the legislative act)", ADP_MAND_NGT_INST_COREPER_byCONSIL "Adoption of negotiating mandate by
+  Coreper", DELIB_COREPER_byCONSIL "Deliberations in Coreper", DELIB_byCONSIL "Deliberations in Council", VOTE_byEP
+  "Vote in EP plenary", DEBATE_byEP "Debate in EP plenary"; phases RDG1 "First reading", RDG2 "Second reading",
+  PROC_END "End of procedure" (not shown: the adoption's own label says it).
+- **The meeting and its documents.** A document named is looked up in Cellar: an agenda (resource type
+  AGENDA_DRAFT_CONSIL) gives the meeting by its title ("COUNCIL OF THE EUROPEAN UNION (General Affairs)" for CM 4825/26,
+  "PERMANENT REPRESENTATIVES COMMITTEE (Part 1)" for ST 15180/26), shown in sentence case; a step that names no agenda
+  has no meeting (never inferred from the date). Of the 7 Council documents named on 5 November, 4 had a public copy
+  (CM 4825/26, ST 15156/26, ST 15180/26 and PE-CONS 34/26, the act's text) and 3 Council notes answered 404; only public
+  copies are linked. Each planned step links its Cellar record (`resource/procedure-event/…`, a 303 to the event's
+  RDF), the machine-readable source: EUR-Lex's procedure pages answer scripts with a 202 bot challenge, so whether they
+  show planned events could not be checked.
+- **Parliament's plenary agenda** (`agenda/plenary.json`). `/meetings?year=Y` lists the sittings ahead (10 from 11
+  November to 17 December 2026); `/meetings/{sitting}/foreseen-activities` gives a sitting's draft agenda, HTTP 204 until
+  it is published (published for the 6 sittings to 26 November; 204 for 14–17 December). Vote and debate items name
+  their procedure in the structured content (`<label typeof="proc" …>2023/0167(COD)</label>`) and a phase
+  (`occured_at_stage`); 40 such items on 5 November, on 57 procedures with Cellar's, 37 of them files on this site
+  (the others own-initiative reports, resolutions, a budget and Parliament's internal files). An item takes the label
+  of the Publications Office's type of its kind (VOTE_byEP, DEBATE_byEP); its source is the API's agenda of the sitting,
+  as Parliament's agenda pages (www.europarl.europa.eu/doceo) answer scripts with 403.
+- **Both schedules.** Cellar's 13 steps of Parliament matched Parliament's agenda in date and kind; the agenda also
+  gave votes Cellar did not (2023/0166, 2025/0102, 2025/0130 and 2025/0134). A file's steps of the same date and type
+  are one step with both sources; steps that differ are each shown with their own.
+- **On the site.** A file gets the steps dated after the build's date (`scheduled`, "Scheduled next" next to "What
+  happens next"); the home page lists those of the next three weeks ("Scheduled in the next 3 weeks", badge
+  "Planned"). On the reader's date a step stays ahead on its day; after it, the file's page says it "was scheduled for
+  …; not yet recorded as done" and the home page leaves it out. Each run replaces both files, so a step moved or dropped
+  is not kept; a sitting whose agenda cannot be read keeps its earlier records, and a part that fails keeps its file
+  (the run is `partial`). Stale after 9 days (`pipeline/freshness.py`): planned dates of the next weeks.
+- Licence: Cellar under the EUR-Lex legal notice (Commission Decision 2011/833/EU); Parliament's agenda under the
+  European Parliament legal notice (each step links the sitting's agenda it comes from); see `build.SOURCES["agenda"]`.
 
 ### Licences
 - European Parliament (MEPs, procedures, votes, Legislative Train): "© European Union – Source: European
