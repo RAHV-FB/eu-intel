@@ -181,6 +181,7 @@ test.describe('Directives into national law (/legislation/transposition)', () =>
   test.skip(!tracker || !inWindow.length, 'no transposition.json, or no directive in its window, in this data');
 
   test('lists the directives in the window on the reader’s date, deadlines ahead then passed, with Member States by status', async ({ page }) => {
+    test.slow(); // axe over the whole list (some 80 directives), then a page change: past 30 s on a loaded runner
     await open(page, 'legislation/transposition/');
     await expect(page.locator('main h1')).toHaveText('Directives into national law');
     await expect(page).toHaveTitle(`Directives into national law – Legislation – ${SITE_NAME}`);
@@ -231,6 +232,7 @@ test.describe('Directives into national law (/legislation/transposition)', () =>
 
   test('a Member State’s view: its status on each directive, its open cases, its page and its feed', async ({ page, request }) => {
     test.skip(!passed || !withCase, 'no Member State with a case on a directive of the window');
+    test.slow(); // axe over the whole list, the feed, then a page change, as above
     const code = withCase!.country;
     await open(page, `legislation/transposition/?country=${code}`);
     await expect(page.locator('main h1')).toHaveText(`Directives into national law: ${name(code)}`);
