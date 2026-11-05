@@ -93,6 +93,13 @@ check, and the link check depends on third-party sites).
   its id when its wording or the site's address changes.
 - **OPML**: the Following page downloads the feeds of the files you follow as one OPML file, which feed readers import.
   It is made in your browser from the list kept there.
+- **Directives into national law** (`/legislation/transposition/`): each directive due in the last three years or the
+  next twelve months, with every Member State's status and the Commission's open non-communication cases; a Member
+  State's view of the same. Each directive's table has one address, `/legislation/<id>/#national`, with
+  `?country=FR` to highlight one Member State's row.
+- **A feed per Member State** (`data/feeds/countries/<CC>.xml`, linked from its country page): the national measures it
+  notified for the directives on this site, the Commission's infringement decisions on it and the transposition
+  deadlines it reached, each entry dated by its event.
 
 ## Data refresh and deployment
 

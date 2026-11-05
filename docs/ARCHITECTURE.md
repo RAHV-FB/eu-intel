@@ -34,7 +34,7 @@ data/curated/*.yaml ─────────────────┤ build
 | `sources/ep_votes.py` | Plenary decisions with roll-call ballots (EP Open Data API v2) |
 | `sources/eurlex.py` | Legal acts: CELEX, ELI, dates, procedure links, amendments; Commission withdrawals and replacements of proposals → `procedure_notices.json` (Cellar SPARQL) |
 | `sources/council.py` | Council voting results (see DATA_SOURCES.md for availability) |
-| `sources/implementation.py` | National implementing measures (Cellar), infringements, country indicators |
+| `sources/implementation.py` | National implementing measures (Cellar), infringements, country indicators: each Member State's overdue Single Market directives from the Single Market Scoreboard's transposition table (`indicators.json`; nothing is read from a table that fails its checks) |
 | `sources/optouts.py` | Treaty opt-outs (Protocols No 21 and 22: Denmark, Ireland) that a directive's recitals record, and later opt-ins confirmed by Commission decisions → `optouts/directives.json` (EUR-Lex texts via Cellar) |
 | `sources/lawcontext.py` | The law in context (Cellar): EUR-Lex's summaries of EU legislation (their opening section, read as plain text by content negotiation), judgments interpreting each act and cases pending on it, consolidated versions, EESC and CoR opinions on each file, actions against a proposal's withdrawal → `lawcontext/{acts,summaries,opinions,procedure_cases}.json` |
 | `sources/legislative_train.py` | EP Legislative Train status of major files |
@@ -44,6 +44,7 @@ data/curated/*.yaml ─────────────────┤ build
 | `analysis/ep_margin.py` | Vote margin relative to the legally applicable majority |
 | `analysis/council_qmv.py` | Council QMV/unanimity arithmetic |
 | `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds: all recent activity, one per topic, and one per file (`feeds/dossiers/<id>.xml`: its latest 10 entries of any date) |
+| `analysis/tracker.py` | The implementation tracker: `transposition.json` (the directives of the site's files whose general transposition deadline falls in the last 3 years or the next 12 months, a month more at each end; each Member State's status as on the directive's page, its measures, latest notification and open infringement cases), and one Atom feed per Member State (`feeds/countries/<CC>.xml`, its newest 100 entries, each dated by its event: the national measures it notified for the site's directives, one entry per directive and notification date; the Commission's infringement decisions on it, one per case, stage and date; the transposition deadlines reached of the directives that bind it). Ids are `feeds.TAG_BASE` tag URIs |
 | `analysis/changes.py` | How activity items read, for the What changed page and the feeds: what happened apart from the file's title (`event` in `activity.json`), the file's full title in a headline, and a status change paired with the item of the step that gave the status (`step_id`: the same file and day, the record it cites, else a step of a kind that dates the status). It never adds, drops or re-dates an item |
 | `analysis/scheduled.py` | Planned steps joined to files by procedure reference, those dated after the build only: each file's `scheduled` and the home page's "Scheduled in the next 3 weeks" |
 | `analysis/lawcontext.py` | A file's official summaries, court cases, consolidated texts and advisory opinions for its page, by the CELEX of its acts and its procedure reference (fields left out when there are none) |
@@ -92,7 +93,26 @@ the UI; every institutional fact on a page has a reachable origin.
   and delegated acts, non-legislative procedures, laws before the dataset, national law), and links the same words on
   EUR-Lex's own search (`src/components/OutOfScope.tsx`; a plain link, the words URL-encoded).
 - Each file's page links its Atom feed ("Follow in a feed reader") and announces it in `<head>` (`<link rel="alternate"
-  id="page-feed">`, written into the prerendered page and kept to the page shown by `useFeedLink`). The Following page
+  id="page-feed">`, written into the prerendered page and kept to the page shown by `useFeedLink`). So does each country
+  page, for its own feed (`feeds/countries/<CC>.xml`).
+- **One address per directive**: `/legislation/<id>/#national` lands on the directive's table of the 27 Member States
+  once the page has loaded (`useHashScroll`), on GitHub Pages too (the 301 to the trailing slash keeps the query and
+  the fragment); `?country=FR` highlights that Member State's row. The section gives the address to copy ("Link to this
+  table") with a Member State to highlight. A file with several directives has one table each, `#national-<CELEX>`.
+- **Directives into national law** (`/legislation/transposition`, `src/pages/Transposition.tsx`,
+  `src/features/transposition/`) reads `transposition.json`: the directives whose deadline falls in the last three years
+  or the next twelve months on the reader's date, deadlines ahead (soonest first) and passed (latest first); each with its
+  bound Member States counted by status, those not bound or exempted named apart, and its open non-communication cases;
+  filters by topic, deadline passed or ahead, and Member State (that country's status on each directive, its open
+  cases, its page, its feed and the Commission's count for it). Nothing is ranked, sorted by status or added up into a
+  score. A view of Legislation, linked from the explorer and the country pages, not from home.
+- **Time since a deadline** is told on the reader's date (`src/lib/deadline.ts`, as `freshness.ts` judges a source's
+  age): "2 years ago", "in 4 months", "15 months after the deadline". A Member State's status is restated on that date
+  (`statusOn`): no measures in the dataset reads "Deadline not yet reached" until the deadline's day is over, then "No
+  measures found in the available dataset".
+- The **Single Market Scoreboard**'s count of a Member State's overdue Single Market directives is shown on that
+  country's page only (and in the tracker's view of that country), as the Commission's count with its period and
+  source; the Countries table has no indicator columns, which would rank the Member States. The Following page
   downloads the feeds of the files followed as one OPML file, made in the browser (a `data:` link with `download`, which
   the Content-Security-Policy does not restrict; nothing is sent).
 - `src/types/data.ts` is the **public data contract**. Pages lazy-load only the JSON they need:
