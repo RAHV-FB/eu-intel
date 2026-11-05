@@ -28,6 +28,7 @@ SHELL = """<!doctype html>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>This site needs JavaScript to display legislative data (<a href="/eu-intel/data/meta.json">data/meta.json</a>).</noscript>
   </body>
 </html>
 """
@@ -125,12 +126,21 @@ def test_text_from_a_source_stays_text_in_every_page_shell(tmp_path, text):
         assert page.titles == [title], route
         if description:
             assert page.first("meta", name="description")["content"] == description, route
-        # nothing but the shell's elements, the canonical link and (a file's page) its feed link
+        # nothing but the shell's elements, the canonical link, a feed link (a file's or a country's page) and the link
+        # preview's tags (scripts/seo.mjs), whose values are the page's own title and description, as text
         added = [e for e in page.elements if e not in shell.elements and e[0] != "title" and e[1].get("name") != "description"]
         canonical = ("link", {"rel": "canonical", "href": f"https://example.org/eu-intel/{route}/"})
         feed = ("link", {"rel": "alternate", "type": "application/atom+xml", "id": "page-feed",
                          "title": f"2099/0001(COD) {text}: updates (Atom)", "href": "/eu-intel/data/feeds/dossiers/2099-0001.xml"})  # fmt: skip
-        assert added == ([canonical, feed] if route.startswith("legislation/") else [canonical]), (route, added)
+        preview = [e for e in added if e[0] == "meta" and (e[1].get("property", "").startswith("og:")
+                                                            or e[1].get("name", "").startswith("twitter:"))]  # fmt: skip
+        links = [e for e in added if e[0] == "link" and e[1].get("rel") in ("canonical", "alternate")]
+        assert sorted(map(repr, added)) == sorted(map(repr, preview + links)), (route, added)
+        assert canonical in links and (feed in links if route.startswith("legislation/") else True), (route, links)
+        og = {e[1]["property"]: e[1]["content"] for e in preview if "property" in e[1]}
+        assert og["og:title"] == title, route
+        if description:
+            assert og["og:description"] == description, route
     redirect = Page((dist / "topics" / "tech" / "index.html").read_text(encoding="utf-8"))
     assert redirect.titles == [f"Topic {text} – Legislation – {SITE}"]
     assert [t for t, _ in redirect.elements].count("script") == 0
