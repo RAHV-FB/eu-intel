@@ -1768,7 +1768,17 @@ def load_act_dates(curated: Path = CURATED) -> dict[str, dict]:
         if not ok or not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates):
             _problem("curated act_dates.yaml: entry %s has a malformed date; ignored", e["celex"])
             continue
-        n_src = max(len(e.get("sources") or []), 1)  # a date's own source: an index into sources
+        srcs = e.get("sources")
+        if not (isinstance(srcs, list) and srcs and all(
+            isinstance(x, dict) and isinstance(x.get("label"), str) and str(x.get("url") or "").startswith(("https://", "http://"))
+            for x in srcs
+        )):  # fmt: skip
+            _problem("curated act_dates.yaml: entry %s lists no texts it was checked against; ignored", e["celex"])
+            continue
+        if not all(isinstance(x.get("provisions"), str) and x["provisions"].strip() for x in app or []):
+            _problem("curated act_dates.yaml: entry %s has a date that cites no provision; ignored", e["celex"])
+            continue
+        n_src = len(srcs)  # a date's own source: an index into sources
         if not all(type(x.get("source", 0)) is int and 0 <= x.get("source", 0) < n_src for x in app or []):
             _problem("curated act_dates.yaml: entry %s cites a source it does not list; ignored", e["celex"])
             continue
