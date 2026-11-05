@@ -3,9 +3,9 @@
  * Used by the legislation explorer, the dossier page, the homepage and the watchlist.
  */
 import { useEffect } from 'react';
-import { NotFoundError, useData } from '../../lib/data';
+import { useData } from '../../lib/data';
 import { institutionLabel } from '../../components/ui';
-import type { DossierSummary, LegalInstrument, LifecycleStage, Topic, TranspositionStatus } from '../../types/data';
+import type { DossierDetail, DossierSummary, LegalInstrument, LifecycleStage, Topic, TranspositionStatus } from '../../types/data';
 
 export const SITE_TITLE = 'EU Legislative Intelligence';
 
@@ -127,6 +127,13 @@ export function dossierPath(id: string): string {
   return `/legislation/${encodeURIComponent(id)}`;
 }
 
+/** Whether a file read as dossiers/<id>.json is that file's own record. dossiers/index.json (the list of every file, read
+ * at the id "index", which a shared Following link can name) or another file's record is not, and is not rendered. */
+export function isDossierFile(raw: unknown, id: string): raw is DossierDetail {
+  const d = raw as Partial<DossierDetail> | null | undefined;
+  return !!d && typeof d === 'object' && !Array.isArray(d) && d.id === id && Array.isArray(d.timeline);
+}
+
 /** Proposal year: from the proposal date, else from the procedure reference ("2021/0106(COD)"). */
 export function dossierYear(d: Pick<DossierSummary, 'started' | 'ref'>): number | null {
   const y = Number((d.started ?? d.ref ?? '').slice(0, 4));
@@ -169,13 +176,8 @@ export function useTopics() {
 export const EURLEX_CELEX = (celex: string) =>
   `https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:${encodeURIComponent(celex)}`;
 
-/**
- * A missing data file is a 404 on GitHub Pages, but a dev/preview server may answer with the SPA's HTML
- * (which fails JSON parsing). Treat both as "not in our dataset".
- */
-export function isMissing(e: unknown): boolean {
-  return e instanceof NotFoundError || e instanceof SyntaxError;
-}
+/** Whether a data file does not exist (one definition for every page: src/features/guide/missing.ts). */
+export { isMissing } from '../guide/missing';
 
 /** Steps whose date the act itself sets (entry into force, application, transposition dates), or a repealing act or
  * the end of its validity does: EUR-Lex records them, it does not take them, so no institution is named after their

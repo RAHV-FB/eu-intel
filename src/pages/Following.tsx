@@ -19,7 +19,7 @@ import {
 } from '../lib/watchlist';
 import { EmptyState, Loading, PageHeader, StatusBadge } from '../components/ui';
 import { opml, opmlFileName, opmlHref } from '../lib/opml';
-import { dossierPath, institutionSuffix, isMissing, useDocumentTitle } from '../features/legislation/labels';
+import { dossierPath, institutionSuffix, isDossierFile, isMissing, useDocumentTitle } from '../features/legislation/labels';
 import { latestDone } from '../features/legislation/dossier/Summary';
 import { todayISO } from '../features/legislation/explorer';
 import '../features/legislation/common.css';
@@ -27,15 +27,16 @@ import '../features/watchlist/watchlist.css';
 
 type Loaded = { state: 'ok'; d: DossierDetail } | { state: 'missing' } | { state: 'error' };
 
-/** Load dossier details for the given ids (each file is small and cached by loadData). */
+/** Load dossier details for the given ids (each file is small and cached by loadData). A file that is not the record of
+ * its id (dossiers/index.json for the id "index") is not in the dataset. */
 function useDossiers(ids: string[]): Record<string, Loaded> {
   const [map, setMap] = useState<Record<string, Loaded>>({});
   const key = ids.join(',');
   useEffect(() => {
     let alive = true;
     for (const id of ids) {
-      loadData<DossierDetail>(`dossiers/${id}.json`).then(
-        (d) => alive && setMap((m) => ({ ...m, [id]: { state: 'ok', d } })),
+      loadData<unknown>(`dossiers/${id}.json`).then(
+        (d) => alive && setMap((m) => ({ ...m, [id]: isDossierFile(d, id) ? { state: 'ok', d } : { state: 'missing' } })),
         (e) => alive && setMap((m) => ({ ...m, [id]: isMissing(e) ? { state: 'missing' } : { state: 'error' } })),
       );
     }

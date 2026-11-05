@@ -119,10 +119,30 @@ function readRaw(): WatchEntry[] {
 
 let cache: WatchEntry[] | null = null;
 const listeners = new Set<() => void>();
+/** The window whose "storage" events keep `cache` current. */
+let watched: Window | null = null;
 
 function emit() {
   cache = null;
   listeners.forEach((l) => l());
+}
+
+/** A change made in another tab makes the copy read here out of date; the browser says so with a "storage" event. It is
+ * listened for from the first read on, whether or not a list is on screen: a page without one, then a page with one,
+ * showed the copy read before (until reloaded). */
+function watchOtherTabs() {
+  if (typeof window === 'undefined' || watched === window || typeof window.addEventListener !== 'function') return;
+  watched = window;
+  window.addEventListener('storage', (e: StorageEvent) => {
+    if (e.key === KEY || e.key === null) emit();
+  });
+}
+
+/** The list as stored now, which every change starts from: another tab may have changed it since this one read it (a
+ * change made from the copy read before undid the other tab's, e.g. a file followed there). */
+function stored(): WatchEntry[] {
+  watchOtherTabs();
+  return readRaw();
 }
 
 function write(items: WatchEntry[]): boolean {
@@ -139,6 +159,7 @@ function write(items: WatchEntry[]): boolean {
 }
 
 function getSnapshot(): WatchEntry[] {
+  watchOtherTabs();
   cache ??= readRaw();
   return cache;
 }
@@ -147,13 +168,8 @@ const EMPTY: WatchEntry[] = [];
 
 function subscribe(cb: () => void) {
   listeners.add(cb);
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY || e.key === null) emit();
-  };
-  window.addEventListener('storage', onStorage);
   return () => {
     listeners.delete(cb);
-    window.removeEventListener('storage', onStorage);
   };
 }
 
@@ -171,14 +187,14 @@ function seenFrom(d: Snapshot): SeenState {
 }
 
 export function follow(d: Snapshot): boolean {
-  const items = getSnapshot().filter((e) => e.id !== d.id);
+  const items = stored().filter((e) => e.id !== d.id);
   const now = new Date().toISOString();
   return write([{ id: d.id, added_at: now, seen_at: now, seen: seenFrom(d) }, ...items].slice(0, MAX_ITEMS));
 }
 
 /** Follow several dossiers at once (e.g. from a shared link); keeps existing entries untouched. */
 export function followMany(ds: Snapshot[]): boolean {
-  const existing = getSnapshot();
+  const existing = stored();
   const have = new Set(existing.map((e) => e.id));
   const now = new Date().toISOString();
   const added = ds.filter((d) => !have.has(d.id)).map((d) => ({ id: d.id, added_at: now, seen_at: now, seen: seenFrom(d) }));
@@ -186,7 +202,7 @@ export function followMany(ds: Snapshot[]): boolean {
 }
 
 export function unfollow(id: string): boolean {
-  return write(getSnapshot().filter((e) => e.id !== id));
+  return write(stored().filter((e) => e.id !== id));
 }
 
 export function clearWatchlist(): boolean {
@@ -195,7 +211,7 @@ export function clearWatchlist(): boolean {
 
 /** Record that the visitor has now seen the current state of a followed dossier. No-op if not followed. */
 export function markSeen(d: Snapshot): void {
-  const items = getSnapshot();
+  const items = stored();
   const i = items.findIndex((e) => e.id === d.id);
   if (i < 0) return;
   const prev = items[i];
