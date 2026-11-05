@@ -1141,10 +1141,13 @@ def _load[M: BaseModel](
     path = root / source / f"{name}.json"
     if not path.exists():
         return []
+    # A file or records left out are a degraded build (a strict build fails): an unreadable acts.json was built as
+    # no act at all, with a log line only
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
         issues.append(f"{source}/{name}.json unreadable: {e}")
+        _problem("snapshot %s/%s.json unreadable (%s); built without it", source, name, e)
         return []
     out: list[M] = []
     bad = 0
@@ -1155,7 +1158,7 @@ def _load[M: BaseModel](
             bad += 1
     if bad:
         issues.append(f"{source}/{name}.json: {bad} invalid records skipped")
-        log.warning("%s/%s: %d invalid records skipped", source, name, bad)
+        _problem("snapshot %s/%s.json: %d invalid records skipped", source, name, bad)
     return out
 
 
@@ -5940,8 +5943,7 @@ def build(
         log.info("%-22s %8.1f KB", k, sizes.get(k, 0) / 1024)
     total = sum(sizes.values())
     log.info("wrote %d files (%.1f MB) to %s", len(files) + len(extra), total / 1e6, out)
-    for i in snap.issues:
-        log.warning("snapshot issue: %s", i)
+    # (snap.issues: each is also among PROBLEMS, listed below)
     for k in ("dossiers/index.json", "search.json"):
         if sizes.get(k, 0) > 1_500_000:
             log.warning("%s exceeds 1.5 MB (%.2f MB)", k, sizes[k] / 1e6)
