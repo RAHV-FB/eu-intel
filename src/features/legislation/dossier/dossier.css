@@ -1291,6 +1291,11 @@
   box-shadow: inset 4px 0 0 var(--eu-blue);
 }
 
+/* muted text keeps 4.5:1 on the tint (--text-3 would fall to 4.2:1, --text-2 is 5.9:1) */
+.tp-table tr.tp-row--linked .meta {
+  color: var(--text-2);
+}
+
 .tp-linked {
   display: block;
   margin-top: 2px;
