@@ -26,6 +26,7 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.xml': 'application/xml; charset=utf-8',
+  '.ics': 'text/calendar; charset=utf-8', // as GitHub Pages serves a calendar (feeds/applies/*.ics)
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
