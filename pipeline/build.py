@@ -29,6 +29,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from pipeline.analysis.scheduled import home_items, scheduled_by_dossier
 from pipeline.analysis.transposition import (
     act_day,
     application_start,
@@ -54,6 +55,7 @@ from pipeline.models.entities import (
     Mep,
     NationalMeasure,
     Organization,
+    PlannedStep,
     Procedure,
     ProcedureNotice,
     RegulationOptIn,
@@ -150,6 +152,17 @@ SOURCES: dict[str, dict[str, str]] = {
         "licence": f"{EP_CREDIT} Under the European Parliament legal notice, reuse is authorised provided that the "
         "entire item is reproduced and the source is acknowledged; a partial reproduction must cite the URL of the "
         "complete item or of the web page it comes from (each file here links its Legislative Train page).",
+    },
+    "agenda": {
+        "name": "Council and Parliament – planned dates of next steps (planned events in EUR-Lex/Cellar, Parliament's "
+        "plenary agenda)",
+        "institution": "EUR-Lex",
+        "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+        "licence": "Planned events: © European Union, https://eur-lex.europa.eu. Reuse authorised under Commission "
+        f"Decision 2011/833/EU, with acknowledgement of the source. Parliament's plenary agenda: {EP_CREDIT} Under the "
+        "European Parliament legal notice, reuse is authorised provided that the entire item is reproduced and the "
+        "source is acknowledged; a partial reproduction must cite the URL of the complete item or of the web page it "
+        f"comes from (each planned step here links the agenda it comes from). {EP_ADAPTED}",
     },
 }
 
@@ -2030,6 +2043,9 @@ class Snapshot:
         self.notices = _load("eurlex", "procedure_notices", ProcedureNotice, i, root)
         self.optouts = _load("optouts", "directives", DirectiveOptOut, i, root)
         self.regulation_opt_ins = _load("optouts", "regulations", RegulationOptIn, i, root)
+        # planned steps (pipeline/sources/agenda.py): Cellar's planned events, Parliament's plenary agenda
+        self.planned = _load("agenda", "planned", PlannedStep, i, root)
+        self.plenary_agenda = _load("agenda", "plenary", PlannedStep, i, root)
 
     def _manifest(self) -> dict[str, SourceStatus]:
         if self.root == SNAPSHOT:
@@ -4246,6 +4262,14 @@ class Builder:
         relevant = _lazy("pipeline.analysis.status", "relevant_acts")
         self.dossier_acts: dict[str, list[LegalAct]] = {}
         self.proposed_type: set[str] = set()  # files whose type of act is the one proposed (no typed act linked)
+        # the steps the Council and Parliament have scheduled after the build's date, by file (analysis/scheduled.py),
+        # joined by the procedure's full reference only: not by its number alone, which a Parliament report shares
+        # ("2025/0162R(NLE)")
+        def file_of(ref: str) -> str | None:
+            found = self.proc_by_ref.get(norm_ref(ref))
+            return found.id if found and found.id in self.proc else None
+
+        self.scheduled = scheduled_by_dossier([*self.s.plenary_agenda, *self.s.planned], file_of, self.today)
         self.index_file_documents()
         for pid in self.dossier_ids:
             p = self.proc[pid] = self.with_recorded_events(self.proc[pid])
@@ -4360,6 +4384,8 @@ class Builder:
                 "known_as": self.known_as(p, acts),
                 "editorial": editorial,
                 **{k: st[k] for k in ("status", "next_step", "stall", "application")},
+                # steps the Council and Parliament have scheduled (planned dates, which can change), when there are any
+                **({"scheduled": self.scheduled[pid]} if pid in self.scheduled else {}),
                 "timeline": tl,
                 "acts": [self.act_summary(a) for a in acts],
                 "ep_votes": [self.vote_summary[v.id] for v in votes if v.id in self.vote_summary],
@@ -5042,6 +5068,7 @@ class Builder:
                                      "date": e["date"], "badge": "Deadline" if e["kind"] == "transposition_deadline"
                                      else "Applies"})  # fmt: skip
         upcoming.sort(key=lambda x: (x["date"], not summ[x["dossier_id"]]["featured"], x["dossier_id"]))
+        scheduled = home_items(self.scheduled, summ, today)  # the next three weeks (pipeline/analysis/scheduled.py)
         lists = [
             {"id": "recently_adopted", "title": "Recently adopted",
              "description": "Laws formally adopted, newest first, by date of adoption (by the Council, or by "
@@ -5067,6 +5094,10 @@ class Builder:
                             + ", then ordinary-procedure files with no recorded procedural update for a year or more. "
                             "Dates are each file's last recorded procedural step.",
              "items": stalled_items},
+            {"id": "scheduled", "title": "Scheduled in the next 3 weeks",
+             "description": "Steps the Council and Parliament have scheduled on these files, as they publish them: "
+                            "planned events in EUR-Lex and Parliament's plenary agenda. Planned dates can change.",
+             "items": scheduled},
             {"id": "upcoming", "title": "Coming up",
              "description": "Legally fixed dates in the next 12 months: provisions starting to apply and transposition deadlines.",
              "items": upcoming[:15]},
@@ -5088,6 +5119,7 @@ class Builder:
         "implementation": "National transposition and infringements",
         "optouts": "Danish and Irish participation",
         "train": "Legislative Train",
+        "agenda": "Planned dates of next steps",
     }
     def build_meta(self) -> None:
         from pipeline.freshness import LABELS_EXPIRE_AFTER_DAYS, oldest_core_fetch, source_health
@@ -5265,6 +5297,12 @@ class Builder:
             blocked = sum(1 for t in s.train if t.status.strip().lower() == "blocked")
             out.append(f"{len(s.train):,} files on Parliament's Legislative Train Schedule, {blocked:,} of them "
                        "labelled as blocked.")  # fmt: skip
+        elif sid == "agenda":
+            steps = sum(len(x) for x in self.scheduled.values())
+            out.append(f"The steps the Council and Parliament have scheduled, as they publish them: {len(s.planned):,} "
+                       f"planned events recorded in EUR-Lex and {len(s.plenary_agenda):,} items of Parliament's plenary "
+                       f"agenda naming a procedure. {len(self.scheduled):,} legislative files covered here have a step "
+                       f"scheduled after this release was built ({steps:,} steps in all). Planned dates can change.")  # fmt: skip
         if st.status == "partial" and not (sid == "implementation" and not s.indicators):
             out.append("The latest retrieval did not complete; records from earlier retrievals are kept, and the "
                        "rest is added at the next update.")  # fmt: skip
@@ -5385,6 +5423,14 @@ class Builder:
         else:
             notes.append("Legislative Train Schedule: not available in this release, so no file is labelled as "
                          "officially blocked; inactivity is shown only as days without a recorded update.")  # fmt: skip
+        if avail("agenda"):
+            notes.append("Scheduled steps: the dates the Council and Parliament have published for the next steps on a "
+                         "file (planned events recorded in EUR-Lex, Parliament's plenary agenda), about three weeks "
+                         "ahead. They are plans, shown as such, and can change; a step is shown as taken only once "
+                         "the procedure's records show it.")  # fmt: skip
+        else:
+            notes.append("Scheduled steps: the Council's and Parliament's planned dates were not retrieved for this "
+                         "release, so no scheduled step is shown.")  # fmt: skip
         return notes
 
 

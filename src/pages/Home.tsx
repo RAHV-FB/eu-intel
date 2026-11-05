@@ -53,13 +53,14 @@ export default function Home() {
   const topics = home.data?.topics?.length ? home.data.topics : (topicsFallback.data ?? []);
   const topicLabel = (slug: string) => topics.find((t) => t.slug === slug)?.label ?? slug;
 
-  // "Coming up" was computed when the data was built: dates that have passed since are left out; the days since a
-  // stalled file's last recorded step are counted on the visitor's date
+  // "Coming up" and the scheduled steps were computed when the data was built: dates that have passed since are left
+  // out (a deadline and a planned step only once their day is over); the days since a stalled file's last recorded step
+  // are counted on the visitor's date
   const today = todayISO();
   // the Legislative Train's "blocked" reports are shown as current only while our copy of it is (src/lib/freshness.ts)
   const train = classifications(meta.data, Date.now());
   const lists = (home.data?.lists ?? []).map((l) =>
-    l.id === 'upcoming'
+    l.id === 'upcoming' || l.id === 'scheduled'
       ? { ...l, items: stillAhead(l.items, today) }
       : l.id === 'stalled'
         ? stalledOn(

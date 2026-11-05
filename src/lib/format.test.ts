@@ -138,6 +138,9 @@ describe('dated statements on the visitor’s date', () => {
     expect(stillAhead([{ date: '2026-12-09', badge: 'Deadline' }, { date: '2026-12-09', badge: 'Applies' }], '2026-12-09')).toEqual([
       { date: '2026-12-09', badge: 'Deadline' },
     ]);
+    // a step the Council or Parliament scheduled for a day (the home page's "Planned" list) is kept on that day too
+    expect(stillAhead([{ date: '2026-11-19', badge: 'Planned' }], '2026-11-19')).toHaveLength(1);
+    expect(stillAhead([{ date: '2026-11-19', badge: 'Planned' }], '2026-11-20')).toEqual([]);
   });
 
   it('counts the days without a recorded procedural step on the visitor’s date, in the singular for one', () => {

@@ -27,7 +27,7 @@ data/curated/*.yaml ─────────────────┤ build
 | --- | --- |
 | `http.py` | Single HTTP client: timeouts, retries with backoff, Retry-After, per-host throttle, disk cache, Cellar SPARQL helper |
 | `snapshot.py` | Atomic, diff-friendly JSON writing (one record per line, sorted keys); manifest |
-| `models/entities.py` | **Snapshot contract** (pydantic): Procedure, Event, LegalAct (with its TranspositionDate, ValidityNote and CourtRuling sub-records), ProcedureNotice, EpVote, EpBallots, Mep, Organization, Membership, CouncilVote, NationalMeasure, InfringementCase, CountryIndicator, ImplementationCoverage, DirectiveOptOut, TrainFile, SourceRef, and SourceStatus (`_manifest.json`). CheckedTransposition is a build-only annotation (`exclude=True`, set by `build.py` from curated YAML), not part of the snapshot |
+| `models/entities.py` | **Snapshot contract** (pydantic): Procedure, Event, LegalAct (with its TranspositionDate, ValidityNote and CourtRuling sub-records), ProcedureNotice, EpVote, EpBallots, Mep, Organization, Membership, CouncilVote, NationalMeasure, InfringementCase, CountryIndicator, ImplementationCoverage, DirectiveOptOut, TrainFile, PlannedStep, SourceRef, and SourceStatus (`_manifest.json`). CheckedTransposition is a build-only annotation (`exclude=True`, set by `build.py` from curated YAML), not part of the snapshot |
 | `models/countries.py` | Member State table and code normalization (EU "EL" → ISO "GR") |
 | `sources/ep_people.py` | MEPs, groups, national parties, committees, dated memberships (EP Open Data API v2) |
 | `sources/ep_procedures.py` | Procedures and their events/documents (EP Open Data API v2) |
@@ -37,11 +37,13 @@ data/curated/*.yaml ─────────────────┤ build
 | `sources/implementation.py` | National implementing measures (Cellar), infringements, country indicators |
 | `sources/optouts.py` | Treaty opt-outs (Protocols No 21 and 22: Denmark, Ireland) that a directive's recitals record, and later opt-ins confirmed by Commission decisions → `optouts/directives.json` (EUR-Lex texts via Cellar) |
 | `sources/legislative_train.py` | EP Legislative Train status of major files |
+| `sources/agenda.py` | Steps the Council and Parliament have scheduled, as they publish them ahead: planned events in Cellar (`cdm:event_legal_projected`, with the meeting their Council agenda names) → `agenda/planned.json`; Parliament's plenary agenda (EP API foreseen activities) → `agenda/plenary.json`. Each run replaces both files |
 | `analysis/status.py` | Lifecycle stage, next step, inactivity vs official "blocked" |
 | `analysis/transposition.py` | Classifies each transposition date Cellar records as a deadline, an application date or another date; `data/curated/transposition.yaml` settles the cases its labels cannot |
 | `analysis/ep_margin.py` | Vote margin relative to the legally applicable majority |
 | `analysis/council_qmv.py` | Council QMV/unanimity arithmetic |
 | `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds |
+| `analysis/scheduled.py` | Planned steps joined to files by procedure reference, those dated after the build only: each file's `scheduled` and the home page's "Scheduled in the next 3 weeks" |
 | `build.py` | Joins everything by official identifiers → `public/data/**` per `src/types/data.ts`; `--strict` (`EU_INTEL_STRICT=1`) fails when it had to work around a problem |
 | `freshness.py` | How old each source's data may get before the site and the Data health issue call it stale; the core sources behind `core_data_at`; when the Legislative Train's "blocked" stops being shown |
 | `validate.py` | Schema + invariants (ballot totals, referential integrity, legal-type rules); on a build, the claims in `public/data` against the rules and the files' own records, and the contract (`contract.py`: the built JSON against `src/types/data.ts`). Errors fail; warnings are by design (not counted), integrity (fail above `validate_baseline.json`) or backlog |
@@ -101,7 +103,9 @@ the UI; every institutional fact on a page has a reachable origin.
   deadline passes only once its day is over. The status label stays as built; when its explanation states a date
   that has passed since, the dossier page says the status is as recorded at the last data refresh.
   `format.test.ts` checks every built next step, status explanation and dated timeline step with the clock moved
-  forward, and fails on a dated wording it does not know.
+  forward, and fails on a dated wording it does not know. A step the Council or Parliament has scheduled (a file's
+  "Scheduled next", the home page's "Scheduled in the next 3 weeks") stays ahead on its day; after it, the file's page
+  says it "was scheduled for …; not yet recorded as done" and the home page leaves it out (`ScheduledNext.tsx`).
 - How fresh the data is is judged on the visitor's date too (`src/lib/freshness.ts`), from `meta.json`: home and the
   footer give the date to which procedures, votes and acts are current (`core_data_at`, the oldest core retrieval) and
   name the sources whose last successful retrieval is older than their `stale_after_days` (thresholds in

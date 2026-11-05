@@ -1,8 +1,9 @@
-import type { ApplicationInfo, DossierDetail, ISODate, NamedAct, TimelineEvent, TranspositionDateInfo } from '../../../types/data';
+import type { ApplicationInfo, DossierDetail, ISODate, ISODateTime, NamedAct, TimelineEvent, TranspositionDateInfo } from '../../../types/data';
 import { Link } from 'react-router-dom';
 import { BasisNote, ExtLink, SourceLink, Term, institutionLabel } from '../../../components/ui';
 import { asOfToday, eventOn, formatDate, safeUrl } from '../../../lib/format';
 import { ADOPTED_STAGES, EURLEX_CELEX, dossierPath, institutionSuffix, isSameTitle } from '../labels';
+import { ScheduledNext } from './ScheduledNext';
 import { SplitParts, splitParts } from './Split';
 
 /**
@@ -333,8 +334,9 @@ function NoSummary({ d }: { d: DossierDetail }) {
   );
 }
 
-/** "In 15–30 seconds": what it is, why it matters, where it stands, what's next. The status itself heads the page. */
-export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISODate }) {
+/** "In 15–30 seconds": what it is, why it matters, where it stands, what's next. The status itself heads the page.
+ * `plansRetrieved`: when the Council's and Parliament's planned dates were last retrieved (meta.json), if known. */
+export function DossierSummaryPanel({ d, today, plansRetrieved }: { d: DossierDetail; today: ISODate; plansRetrieved?: ISODateTime | null }) {
   const ed = d.editorial;
   const latest = latestDone(d.timeline, today);
   // a status recorded when the data was built can state a date that has passed since (the label stays as recorded)
@@ -447,6 +449,14 @@ export function DossierSummaryPanel({ d, today }: { d: DossierDetail; today: ISO
             <NextStep d={d} today={today} whenId={when} />
           </dd>
         </div>
+        {d.scheduled && d.scheduled.length > 0 && (
+          <div className="dz-fact" id="scheduled-next">
+            <dt className="dz-label">Scheduled next</dt>
+            <dd>
+              <ScheduledNext steps={d.scheduled} today={today} retrieved={plansRetrieved} />
+            </dd>
+          </div>
+        )}
       </dl>
 
       {when && d.application && (

@@ -53,6 +53,7 @@ SOURCES: dict[str, str] = {
     "implementation": "pipeline.sources.implementation",
     "optouts": "pipeline.sources.optouts",
     "train": "pipeline.sources.legislative_train",
+    "agenda": "pipeline.sources.agenda",
 }
 SOURCE_NAME_RE = re.compile(r"^[a-z_]+$")
 

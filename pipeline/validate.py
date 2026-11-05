@@ -73,6 +73,7 @@ MIN_RECORDS: dict[tuple[str, str], int] = {
     ("implementation", "coverage"): 250,
     ("train", "files"): 700,
     ("optouts", "directives"): 150, ("optouts", "regulations"): 8,
+    # agenda (planned, plenary): none, a schedule is empty in a recess, and a file not yet fetched is absent
 }  # fmt: skip
 # Built lists that are never empty (activity.json can be, before the first recorded change).
 BUILT_LISTS = [
@@ -110,6 +111,8 @@ FILES: list[tuple[str, str, str, Callable[[Any], Any] | None]] = [
     ("train", "files", "TrainFile", lambda r: r.url),
     ("optouts", "directives", "DirectiveOptOut", lambda r: r.celex),
     ("optouts", "regulations", "RegulationOptIn", lambda r: r.decision),
+    ("agenda", "planned", "PlannedStep", lambda r: r.id),
+    ("agenda", "plenary", "PlannedStep", lambda r: r.id),
 ]
 
 

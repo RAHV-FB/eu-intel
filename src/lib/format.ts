@@ -63,10 +63,19 @@ export function aheadOn(date: ISODate, today: ISODate, deadline = false): boolea
   return deadline ? date >= today : date > today;
 }
 
-/** Items still ahead on `today` (the home page's "Coming up", computed when the data was built): a deadline is
- * kept on its day. */
+/** The badge of a step the Council or Parliament has scheduled, on the home page (pipeline/analysis/scheduled.py). */
+export const PLANNED_BADGE = 'Planned';
+
+/** Whether a step the Council or Parliament scheduled for `date` (a meeting, a vote) is still ahead on `today`: on its
+ * day too, as the meeting may not have taken place yet. */
+export function plannedAhead(date: ISODate, today: ISODate): boolean {
+  return aheadOn(date, today, true);
+}
+
+/** Items still ahead on `today` (the home page's "Coming up" and scheduled steps, computed when the data was built): a
+ * deadline and a planned step are kept on their day. */
 export function stillAhead<T extends { date?: ISODate | null; badge?: string | null }>(items: T[], today: ISODate): T[] {
-  return items.filter((it) => !!it.date && aheadOn(it.date, today, it.badge === 'Deadline'));
+  return items.filter((it) => !!it.date && aheadOn(it.date, today, it.badge === 'Deadline' || it.badge === PLANNED_BADGE));
 }
 
 const DATE = `\\d{1,2} (?:${MONTHS_LONG.join('|')}) \\d{4}`;

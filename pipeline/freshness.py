@@ -20,6 +20,8 @@ STALE_AFTER_DAYS: dict[str, int] = {
     "ep_procedures": 9,
     "eurlex": 9,
     "council": 9,
+    # planned dates of the next three weeks: a copy older than a week no longer gives the current plans
+    "agenda": 9,
     "ep_people": 14,
     "implementation": 35,
     "optouts": 35,
