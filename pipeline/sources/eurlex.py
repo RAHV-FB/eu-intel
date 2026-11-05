@@ -132,7 +132,16 @@ from pipeline.models.entities import (
     UnrecordedApplication,
     ValidityNote,
 )
-from pipeline.snapshot import CURATED, fetch_deadline, now_iso, past, read_records, write_records, write_state
+from pipeline.snapshot import (
+    CURATED,
+    attempt_time,
+    fetch_deadline,
+    now_iso,
+    past,
+    read_records,
+    write_records,
+    write_state,
+)
 
 log = logging.getLogger("pipeline.sources.eurlex")
 
@@ -1166,7 +1175,7 @@ def fetch(http: Any) -> SourceStatus:
     """Writes acts.json and procedure_notices.json, and in _state.json `unsettled`: the acts kept from the
     previous snapshot and the procedures whose notices were not refreshed (or lost one) in this run, for change
     detection (pipeline/analysis/activity.py)."""
-    attempted = now_iso()
+    attempted = attempt_time()  # as the manifest entry records it (see ep_procedures)
     deadline = fetch_deadline()
     scope, scope_gap = discover_scope(http)
     log.info(

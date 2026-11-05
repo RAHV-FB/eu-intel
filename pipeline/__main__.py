@@ -41,7 +41,7 @@ from pathlib import Path
 
 from pipeline.http import default_http
 from pipeline.models.entities import SourceStatus
-from pipeline.snapshot import global_deadline, not_refreshed, now_iso, past, update_manifest
+from pipeline.snapshot import global_deadline, not_refreshed, now_iso, past, set_attempt, update_manifest
 
 # Order matters: later sources may read earlier snapshot files (e.g. votes -> procedures).
 SOURCES: dict[str, str] = {
@@ -80,6 +80,7 @@ def cmd_fetch(names: list[str]) -> int:
     try:
         for name in names:
             attempted = now_iso()
+            set_attempt(attempted)  # the source stamps its records of this attempt with the same time (attempt_time)
             if past(hard):
                 status = not_refreshed(
                     name, attempted, "Not refreshed in this run: the fetch deadline passed before it started."
@@ -111,6 +112,7 @@ def cmd_fetch(names: list[str]) -> int:
             update_manifest(status)
             logging.info("%s: %s %s", name, status.status, status.records)
     finally:
+        set_attempt(None)
         if previous_handler is not None:
             signal.signal(signal.SIGINT, previous_handler)
     return 1 if failures else 0
