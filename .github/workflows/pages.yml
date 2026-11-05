@@ -9,8 +9,9 @@
 # After CI, if main (as of the run's event) had moved on since that commit only by data refresh commits (data/snapshot,
 # data/state), main is built instead: same code, newer data, so that a deploy never takes refreshed data off the site.
 # The build job runs the data gate again on what it deploys (snapshot validation, the strict data build, validation of
-# the built data, the dated-wording check, site build, privacy check, size check); any failure stops the run before
-# deploy, and the previous deployment stays live.
+# the built data, the dated-wording check, site build, privacy check, size check), then opens the built site in Chromium
+# on its own data (tests/e2e/live-smoke.spec.ts); any failure stops the run before deploy, and the previous deployment
+# stays live.
 #
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions" (docs/DEPLOYMENT.md).
 name: Deploy to GitHub Pages
@@ -49,8 +50,10 @@ jobs:
     if: >-
       ${{ inputs.ref != '' || github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Ubuntu 24.04: the release whose runner image is known to have the libraries Chromium needs for the smoke test
+    # below (CI's `playwright install --with-deps chromium` there added only fonts, 5 Nov 2026), so no apt step.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       # The commit to deploy, with every commit and tree of the history but no file contents beyond this commit's
       # (filter: blob:none, about 0.1 MB for the whole history): the next step only compares commits and trees.
@@ -147,6 +150,36 @@ jobs:
           # GitHub Pages sites may be at most 1 GB; fail well before that.
           if [ "$kb" -gt 900000 ]; then echo "::error::dist is ${kb} KB (Pages limit is 1 GB)"; exit 1; fi
           if [ "$kb" -gt 500000 ]; then echo "::warning::dist is ${kb} KB; Pages limit is 1 GB"; fi
+
+      # The browser tests in CI run on the frozen test data; this opens the site about to be published, on its own data,
+      # before anything is uploaded: tests/e2e/live-smoke.spec.ts picks the pages from dist/data (files of every stage,
+      # votes of every kind, MEPs, groups, parties, every country, search, the main pages), with the reader's clock, and
+      # fails on a console error, an uncaught exception, a failed request, the error page or an empty heading. Chromium
+      # only, without its apt packages (above); a few retries for the browser download.
+      - name: Install Chromium for the smoke test
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install chromium && exit 0
+            sleep $((attempt * 10))
+          done
+          exit 1
+
+      - name: Smoke-test the site on its own data (Chromium)
+        env:
+          E2E_LIVE: "1"
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+        run: npx playwright test --project=chromium
+
+      - name: Upload the smoke test's report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: live-smoke-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

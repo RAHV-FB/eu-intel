@@ -5,7 +5,7 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Four 
 | Workflow | Trigger | Does | Permissions |
 | --- | --- | --- | --- |
 | `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, typecheck; on the [frozen test data](#frozen-test-data): pytest (offline), data build, vitest, site build, Playwright e2e and accessibility tests in three engines; on the commit's own data: the [data gate](#the-data-gate) | `contents: read` |
-| `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`; called by *Data refresh* with the commit it pushed; manual | the data gate on the commit it deploys (data built with the Pages URL and base path) → upload → deploy → check the public URL | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
+| `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`; called by *Data refresh* with the commit it pushed; manual | the data gate on the commit it deploys (data built with the Pages URL and base path) → a browser smoke test of the built site on its own data → upload → deploy → check the public URL | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
 | `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC (a scheduled run is skipped if data was committed in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month) → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
 | `watchdog.yml` (Watchdog) | after each *Data refresh* and each *CI* run on `main`, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
 
@@ -151,7 +151,7 @@ open http://127.0.0.1:4174/eu-intel/).
 - **Push rejected** because `main` moved during the run: the job resets onto the new `main`, re-applies only the
   data files this run changed (this run's version wins for those; `_manifest.json` is merged per source) and
   pushes again, up to five times. Do not commit snapshot data by hand while a refresh is running.
-- **Deploy build fails** (the data gate on what it deploys): the deploy job does not run and the previous deployment
+- **Deploy build fails** (the data gate on what it deploys, or the browser smoke test): the deploy job does not run and the previous deployment
   stays live. Fix and push, or re-run the workflow.
 - Deploys are serialised (`concurrency: pages`, never cancelled mid-flight).
 - **Paths to production**, each deploying one known commit:
@@ -333,6 +333,16 @@ cancel the others). Each run reuses the site built by the `check` job (uploaded 
 installs its browser, runs `npx playwright test --project=<browser>` (`E2E_BROWSERS` adds the Firefox and WebKit
 projects to `playwright.config.ts`; locally only Chromium runs unless it is set), and uploads the HTML report and
 traces as the `playwright-report-<browser>` artifact.
+
+**The deploy's smoke test on the data it publishes.** These tests run on the frozen test data only, so every deploy
+(`pages.yml`, whichever way it starts) also opens the site it has just built, on that site's own data, before uploading
+it: `tests/e2e/live-smoke.spec.ts`, Chromium, with the reader's real clock. It picks the pages from `dist/data` when it
+runs (files of every stage plus an even sample, about 20; votes of every kind, 10; MEPs, groups and parties; every
+country; search by a procedure reference; the main pages), serves them as GitHub Pages does (`tests/e2e/pages-server.mjs`)
+and fails on a console error, an uncaught exception, a failed or third-party request, the error page, a "not found" page
+or an empty heading; then nothing is uploaded or deployed, and the report is kept as the `live-smoke-report` artifact.
+`E2E_LIVE=1` selects it (and only it); the other runs leave it out. Locally, after a build of the current data:
+`E2E_LIVE=1 npx playwright test --project=chromium` (about 1 minute).
 
 ## Data health
 

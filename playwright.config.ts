@@ -15,12 +15,19 @@ import { BASE_PATH, PAGES_ORIGIN, PREVIEW_ORIGIN } from './tests/e2e/env';
  * In CI the e2e job runs on every push to main and every pull request, on the site the check job built from the frozen
  * test data (tests/frozen-data.txt; each page's clock starts at its build time, tests/e2e/fixtures.ts); a manual
  * run can skip it by unticking its e2e option (see .github/workflows/ci.yml and docs/DEPLOYMENT.md).
+ *
+ * E2E_LIVE=1 runs tests/e2e/live-smoke.spec.ts instead, and only it: the deploy's smoke test of the site it is about to
+ * publish, on pages picked from that build's own data with the real clock (.github/workflows/pages.yml). The other runs
+ * leave it out.
  */
 const CI = !!process.env.CI;
+const LIVE = !!process.env.E2E_LIVE;
+const LIVE_SPEC = '**/live-smoke.spec.ts';
 
 export default defineConfig({
   testDir: 'tests/e2e',
-  testMatch: '**/*.spec.ts',
+  testMatch: LIVE ? LIVE_SPEC : '**/*.spec.ts',
+  testIgnore: LIVE ? [] : [LIVE_SPEC],
   outputDir: 'test-results/e2e',
   globalSetup: './tests/e2e/global-setup.ts',
   fullyParallel: true,

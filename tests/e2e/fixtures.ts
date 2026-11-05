@@ -25,16 +25,18 @@ function builtAt(): number | undefined {
   }
 }
 
-export const test = base.extend<{ guard: Guard; buildClock: void }, { builtAt: number | undefined }>({
+export const test = base.extend<{ guard: Guard; buildClock: void; clockAtBuild: boolean }, { builtAt: number | undefined }>({
   builtAt: [async ({}, use) => use(builtAt()), { scope: 'worker' }],
+  /** Whether each page's clock starts at the build time (below); `test.use({ clockAtBuild: false })` keeps the real one. */
+  clockAtBuild: [true, { option: true }],
   /**
    * The page's clock starts at the moment the data was built (meta.json `built_at`) and runs on from there, so that the
    * pages read as the build wrote them, whatever day the tests run: in CI the frozen test data, built as of the moment
    * in tests/frozen-data.txt. A test that installs its own clock (`page.clock.install`) replaces this one.
    */
   buildClock: [
-    async ({ page, builtAt }, use) => {
-      if (builtAt !== undefined) await page.clock.install({ time: builtAt });
+    async ({ page, builtAt, clockAtBuild }, use) => {
+      if (clockAtBuild && builtAt !== undefined) await page.clock.install({ time: builtAt });
       await use();
     },
     { auto: true },

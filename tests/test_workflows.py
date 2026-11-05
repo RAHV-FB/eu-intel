@@ -98,6 +98,45 @@ def test_the_refresh_commits_nothing_before_its_data_has_passed_the_gate():
     assert "TODO(quarantine" in (WORKFLOWS / "refresh.yml").read_text(encoding="utf-8")  # per-source quarantine
 
 
+def test_every_deploy_opens_the_site_on_its_own_data_before_the_upload():
+    # the browser tests ran only on the frozen test data, and the deploy's own check fetched six pages without running
+    # them: no browser ever rendered the data being published (assessment Plan 1.5)
+    job = workflow("pages.yml")["jobs"]["build"]
+    s = job["steps"]
+    smoke = named(s, "Smoke-test the site on its own data (Chromium)")
+    assert s[smoke]["run"] == "npx playwright test --project=chromium"
+    assert s[smoke]["env"] == {"E2E_LIVE": "1", "BASE_PATH": "${{ steps.pages.outputs.base_path }}/"}
+    assert "if" not in s[smoke]  # a failure stops the job, so nothing is uploaded or deployed
+    install = named(s, "Install Chromium for the smoke test")
+    assert "npx playwright install chromium" in s[install]["run"] and "--with-deps" not in s[install]["run"]
+    upload = next(i for i, x in enumerate(s) if x.get("uses", "").startswith("actions/upload-pages-artifact@"))
+    assert named(s, "Check Pages size limit") < install < smoke < upload and "if" not in s[upload]
+    assert job["runs-on"] == "ubuntu-24.04"  # Chromium's libraries are on that image: no apt step
+    report = s[named(s, "Upload the smoke test's report")]
+    assert report["if"] == "${{ failure() }}" and report["with"]["name"] == "live-smoke-report"
+
+
+def test_the_live_smoke_test_runs_only_when_asked_for():
+    # the browser tests on the frozen data leave it out (E2E_LIVE selects it, and only it)
+    config = (ROOT / "playwright.config.ts").read_text(encoding="utf-8")
+    assert "testMatch: LIVE ? LIVE_SPEC : '**/*.spec.ts'" in config and "testIgnore: LIVE ? [] : [LIVE_SPEC]" in config
+    spec = (ROOT / "tests" / "e2e" / "live-smoke.spec.ts").read_text(encoding="utf-8")
+    assert "test.use({ clockAtBuild: false })" in spec  # the reader's clock, not the build's
+    playwright = ROOT / "node_modules" / ".bin" / "playwright"
+    if not playwright.exists():
+        pytest.skip("node_modules not installed")
+
+    def listed(**env: str) -> list[str]:
+        environ = {k: v for k, v in os.environ.items() if k not in ("E2E_LIVE", "CI")}
+        out = subprocess.run([str(playwright), "test", "--list", "--project=chromium"], cwd=ROOT, check=True,
+                             capture_output=True, text=True, env={**environ, **env}).stdout  # fmt: skip
+        return sorted({m for m in re.findall(r"([\w-]+\.spec\.ts):\d+", out)})
+
+    assert listed(E2E_LIVE="1") == ["live-smoke.spec.ts"]
+    frozen_run = listed()
+    assert "live-smoke.spec.ts" not in frozen_run and "smoke.spec.ts" in frozen_run
+
+
 def test_vitest_fails_when_it_finds_no_tests():
     runs = [s["run"] for s in steps("ci.yml", "check") if "vitest" in (s.get("run") or "")]
     # with --passWithNoTests a broken include pattern was a green step
