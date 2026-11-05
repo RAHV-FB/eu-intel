@@ -4,16 +4,22 @@
 // the party files themselves: two parties without a recorded name are left out of parties.json).
 // SITE_URL (the Pages URL, as the data build takes it for the Atom feeds) gives each page its canonical address,
 // <SITE_URL><route>/; without it a page has none (a local or fork build must not point at another host).
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+// Every page written by page() also gets Open Graph and Twitter tags (its title and description; with SITE_URL, its
+// address and the site's image) and, with SITE_URL, a place in sitemap.xml; a legislative file's page gets its key facts
+// for readers without JavaScript (<noscript>) and its act as schema.org Legislation (JSON-LD). robots.txt names the
+// sitemap. See scripts/seo.mjs.
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { SITE, esc, formatDate, keyFacts, legislationJsonLd, robotsTxt, sitemapFiles, socialTags } from './seo.mjs';
 
 const DIST = 'dist';
-// (the home page's canonical link is written into dist/index.html below: a second run starts without it)
-const shell = readFileSync(join(DIST, 'index.html'), 'utf8').replace(/\s*<link rel="canonical"[^>]*>/g, '');
-const SITE = 'EU Legislative Intelligence';
+// (the home page's canonical link and preview tags are written into dist/index.html below: a second run starts without them)
+const shell = readFileSync(join(DIST, 'index.html'), 'utf8')
+  .replace(/\s*<link rel="canonical"[^>]*>/g, '')
+  .replace(/\s*<meta (?:property="og:|name="twitter:)[^>]*>/g, '');
 const SITE_URL = process.env.SITE_URL ? `${process.env.SITE_URL.replace(/\/+$/, '')}/` : null;
 
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const unesc = (s) => s.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 const readJson = (p) => {
   const f = join(DIST, 'data', p);
   return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : [];
@@ -31,12 +37,6 @@ const inCountry = (code) => (['NL', 'GB'].includes(code) ? `the ${countryName(co
 // "2019–2024 term" (as search subtitles and party pages name a party record's term)
 const termYears = (terms) =>
   terms?.length ? `${terms.map((t) => `${1979 + 5 * (t - 1)}–${1984 + 5 * (t - 1)}`).join(' and ')} term${terms.length > 1 ? 's' : ''}` : '';
-// "20 Nov 2019" (src/lib/format.ts formatDate)
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const formatDate = (d) => {
-  const [y, m, day] = d.slice(0, 10).split('-').map(Number);
-  return `${day} ${MONTHS[m - 1]} ${y}`;
-};
 // a party page's title, as partyRecordTitle (src/features/people/labels.ts) gives it: records of the same name and
 // country (the same party in other terms) are told apart by their term, and by their period when they share the term
 const partyTitle = (p) => {
@@ -63,8 +63,41 @@ const shortTitle = (title, max = TITLE_MAX) => {
 const documentTitle = (title, qualifier) => (title ? `${shortTitle(title)}${qualifier ? ` (${qualifier})` : ''} – ${SITE}` : SITE);
 
 // Replacement functions, not strings: `$&`, `$'` or a `$$` in a title or description is text, not a replacement pattern.
-const withHead = (html, tag) => (tag ? html.replace('</head>', () => `  ${tag}\n  </head>`) : html);
-const canonical = (route) => (SITE_URL ? `<link rel="canonical" href="${esc(SITE_URL + (route ? `${route.split('/').map(encodeURIComponent).join('/')}/` : ''))}" />` : '');
+const withHead = (html, ...tags) => {
+  const tag = tags.filter(Boolean).join('\n    ');
+  return tag ? html.replace('</head>', () => `  ${tag}\n  </head>`) : html;
+};
+// a page's absolute address, as its canonical link, og:url and the sitemap give it; null without SITE_URL
+const pageUrl = (route) => (SITE_URL ? SITE_URL + (route ? `${route.split('/').map(encodeURIComponent).join('/')}/` : '') : null);
+const canonical = (route) => (SITE_URL ? `<link rel="canonical" href="${esc(pageUrl(route))}" />` : '');
+// The image of every page's link preview, the site's icon (public/og-image.png, which Vite copies into the site; made by
+// scripts/render-og-image.mjs): only with SITE_URL, since its address must be absolute too; its size from the PNG itself
+const IMAGE = 'og-image.png';
+const png = SITE_URL && existsSync(join(DIST, IMAGE)) ? readFileSync(join(DIST, IMAGE)) : null;
+const image = png && { url: SITE_URL + IMAGE, width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
+// the shell's own title and description (the home page's), and its note for browsers without JavaScript
+const shellTitle = unesc(/<title>([^<]*)<\/title>/.exec(shell)?.[1] ?? SITE);
+const shellDescription = unesc(/<meta name="description" content="([^"]*)"/.exec(shell)?.[1] ?? '');
+const NOSCRIPT = /<noscript>([\s\S]*?)<\/noscript>/;
+const notice = NOSCRIPT.exec(shell)?.[1];
+if (!shellDescription || !notice) throw new Error('prerender-routes: no description or <noscript> note in dist/index.html');
+// The data's date: its texts (statuses, next steps) are written as of it, and the key facts are stated as of it
+const meta = readJson('meta.json');
+const today = (meta.built_at ?? new Date().toISOString()).slice(0, 10);
+// how current the data is, as the footer says it (src/components/Layout.tsx)
+const dataNote = !meta.built_at
+  ? null
+  : meta.core_data_at
+    ? `Procedures, votes and acts current to ${formatDate(meta.core_data_at)}`
+    : `Data built ${formatDate(meta.built_at)}`;
+// the date of a page's last change where the data gives one (the sitemap's lastmod), never after the data's date
+const changedOn = (...dates) =>
+  dates
+    .filter(Boolean)
+    .map((x) => x.slice(0, 10))
+    .filter((x) => x <= today)
+    .sort()
+    .pop();
 // The base path the site is built for, from the shell's link to the site-wide Atom feed ("/eu-intel/data/feeds/updates.xml").
 const BASE = /<link rel="alternate" type="application\/atom\+xml"[^>]*href="([^"]*)data\/feeds\/updates\.xml"/.exec(shell)?.[1];
 if (BASE == null) throw new Error('prerender-routes: no link to data/feeds/updates.xml in dist/index.html');
@@ -73,15 +106,25 @@ if (BASE == null) throw new Error('prerender-routes: no link to data/feeds/updat
 const feedLink = (d) =>
   `<link rel="alternate" type="application/atom+xml" id="page-feed" title="${esc(`${d.ref}: updates (Atom)`)}" href="${esc(`${BASE}data/feeds/dossiers/${encodeURIComponent(d.id)}.xml`)}" />`;
 
-function page(route, title, description, qualifier, head = '') {
-  let html = shell.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(documentTitle(title, qualifier))}</title>`);
+// The pages search engines may index, in the order written, each with the date of its last change where the data gives
+// one (the sitemap's entries): the home page (written last) and every page written by page(), but the visitor's own list
+// and the search form, which have nothing of their own to index.
+const listed = [['', undefined]];
+const UNLISTED = new Set(['following', 'search']);
+
+// `facts`: what the page's <noscript> block shows before the shell's note on JavaScript (scripts/seo.mjs keyFacts)
+function page(route, title, description, qualifier, head = '', { lastmod, facts } = {}) {
+  const pageTitle = documentTitle(title, qualifier);
+  let html = shell.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(pageTitle)}</title>`);
   if (description) {
     html = html.replace(/<meta name="description" content="[^"]*"\s*\/?>/, () => `<meta name="description" content="${esc(description)}" />`);
   }
-  html = withHead(withHead(html, canonical(route)), head);
+  html = withHead(html, canonical(route), socialTags(pageTitle, description || shellDescription, pageUrl(route), image), head);
+  if (facts) html = html.replace(NOSCRIPT, () => `<noscript>\n      <div class="container page">\n${facts}      </div>\n    </noscript>`);
   const out = join(DIST, route, 'index.html');
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, html);
+  if (!UNLISTED.has(route)) listed.push([route, lastmod]);
 }
 
 const routes = [
@@ -120,13 +163,21 @@ page(
 
 let n = routes.length + 1;
 for (const d of readJson('dossiers/index.json')) {
+  const route = `legislation/${d.id}`;
+  const data = readJson(`dossiers/${d.id}.json`);
+  const file = Array.isArray(data) ? null : data; // (readJson gives [] for a missing file: the page then has no key facts)
   // the procedure reference tells apart files of the same title (Energy performance of buildings: 2021/0426(COD), 2016/0381(COD))
   page(
-    `legislation/${d.id}`,
+    route,
     d.title,
     d.short || `${d.ref}: ${d.status_label}.${d.official_title ? ` ${d.official_title}` : ''}`.slice(0, 300),
     d.ref,
-    feedLink(d),
+    [feedLink(d), file && legislationJsonLd(file, pageUrl(route))].filter(Boolean).join('\n    '),
+    {
+      // its latest recorded step, or the latest change a refresh recorded on it (recorded days after the step, at times)
+      lastmod: changedOn(d.last_event, ...(file?.changes ?? []).map((c) => c.detected_at)),
+      facts: file && keyFacts(file, { base: BASE, today, dataNote, notice }),
+    },
   );
   n++;
 }
@@ -141,7 +192,9 @@ for (const v of readJson('votes/index.json')) {
     ? `${counts.map(([k, label]) => `${k} ${label}`).join(', ')}.`
     : `${v.outcome_note ?? `${v.kind_label}.`} No vote counts are recorded.`;
   // the date tells apart votes of the same title (a motion to reject on a file, voted twice)
-  page(`votes/${v.id}`, v.display_title, `European Parliament vote of ${formatDate(v.date)}: ${result}`, formatDate(v.date));
+  page(`votes/${v.id}`, v.display_title, `European Parliament vote of ${formatDate(v.date)}: ${result}`, formatDate(v.date), '', {
+    lastmod: changedOn(v.date),
+  });
   n++;
 }
 for (const m of readJson('people/meps.json')) {
@@ -210,6 +263,14 @@ for (const t of readJson('topics.json')) {
   n++;
 }
 // the home page keeps its address; the fallback for unknown addresses (served with status 404) is not for search engines
-writeFileSync(join(DIST, 'index.html'), withHead(shell, canonical('')));
-writeFileSync(join(DIST, '404.html'), withHead(shell, '<meta name="robots" content="noindex" />'));
-console.log(`prerender-routes: wrote ${n} route shells + 404.html`);
+writeFileSync(join(DIST, 'index.html'), withHead(shell, canonical(''), socialTags(shellTitle, shellDescription, pageUrl(''), image)));
+writeFileSync(join(DIST, '404.html'), withHead(shell, '<meta name="robots" content="noindex" />', socialTags(shellTitle, shellDescription, null, image)));
+// The sitemap, whose addresses must be absolute (only with SITE_URL), and robots.txt, which names it. Crawlers read
+// robots.txt only at the root of a host, so under a project site's path it applies once the site has a domain of its own
+// (docs/DEPLOYMENT.md, "Search engines and link previews"). A sitemap of an earlier run is removed first.
+for (const f of readdirSync(DIST)) if (/^sitemap(-\d+)?\.xml$/.test(f)) rmSync(join(DIST, f));
+const sitemaps = SITE_URL ? sitemapFiles(listed.map(([route, lastmod]) => ({ loc: pageUrl(route), lastmod })), SITE_URL) : [];
+for (const { name, xml } of sitemaps) writeFileSync(join(DIST, name), xml);
+writeFileSync(join(DIST, 'robots.txt'), robotsTxt(SITE_URL && `${SITE_URL}sitemap.xml`));
+const listing = SITE_URL ? `${listed.length} pages in ${sitemaps.length > 1 ? `${sitemaps.length - 1} sitemaps and their index` : 'sitemap.xml'}` : 'no sitemap (no SITE_URL)';
+console.log(`prerender-routes: wrote ${n} route shells + 404.html; ${listing}; robots.txt`);

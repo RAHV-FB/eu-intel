@@ -74,6 +74,28 @@ the UI; every institutional fact on a page has a reachable origin.
 - `scripts/prerender-routes.mjs` writes an `index.html` per known route (correct `<title>`, HTTP 200 on direct
   navigation; a file's page also links its Atom feed) plus `404.html` as SPA fallback — no server rewrites needed. The former topic addresses
   (`/topics/<slug>/`) get a static page that redirects to `/legislation/?topic=<slug>` without a script (`noindex`).
+- **Link previews, search engines and readers without JavaScript** (`scripts/seo.mjs`, used by the prerender; Plan 3.1).
+  Every page the prerender writes with `page()`, the home page and `404.html` carry Open Graph and Twitter tags: `og:title`
+  and `og:description` are the page's own title and description, `og:type` `website`, `og:site_name`, `og:locale`
+  `en_GB`, `twitter:card` `summary`, and, only with `SITE_URL` (their addresses are absolute), `og:url` (the canonical
+  address) and `og:image`, the site's icon as a 512 × 512 PNG (`public/og-image.png`, 6 KB, with `og:image:alt`), which
+  `scripts/render-og-image.mjs` renders from the icon in `index.html` with Chromium (shapes only, so the same Chromium
+  gives the same file; run it again when the icon changes). A
+  legislative file's page also carries, in its `<noscript>` block, the key facts its page states once loaded: title and
+  names, status and its explanation, the next step, procedure and type, the dates of proposal, adoption and publication,
+  the CELEX number and the official links, and "When it applies" (entry into force, application and transposition dates,
+  labelled without a tense); in the page's words (status labels and next steps as the data gives them, wording as
+  `Dossier.tsx` and `Summary.tsx` put it), as of the data's build date, ending with how current the data is. A browser
+  that runs scripts never renders a `<noscript>` block, so a reader with JavaScript never sees them, not even before the
+  app has loaded. A file with an act also describes it as schema.org `Legislation` in JSON-LD (its title, number, CELEX
+  number, type, date, publication, legal force from the status the page gives, EUR-Lex page, ELI and the page's
+  address); a `<script type="application/ld+json">` is a data block, never executed, so the CSP does not apply to it.
+  `tests/e2e/seo.spec.ts` compares the facts with the loaded page for files of each kind. With `SITE_URL` the prerender
+  writes `sitemap.xml`: every page written by `page()` (a new route is listed by being written there) and the home page,
+  but `/following/` and `/search/`, which have nothing of their own to index, with `lastmod` where the data dates a
+  change (a file's latest step or the latest change recorded on it, a vote's date); past 50,000 addresses or 50 MB it
+  becomes the index of `sitemap-<n>.xml` files. `robots.txt` allows every crawler everything and names the sitemap
+  (docs/DEPLOYMENT.md, "Search engines and link previews").
 - **What changed** (`/legislation/changes`, `src/pages/Changes.tsx`, `src/features/changes/`) reads `activity.json`: the
   changes grouped by the week our data refresh first recorded them (`detected_at`; a step already in the records when
   recording began has none, and is grouped by its own date), and within a week by the topics of each file

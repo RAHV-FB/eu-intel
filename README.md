@@ -61,7 +61,7 @@ weekly run re-reads").
 | `python -m pipeline validate` | Snapshot schema and invariants, and that no file is missing or emptied (against the manifest's record counts and minimum counts); once built, the claims in `public/data` against the rules and the files' own records (an act on two files, a file past adoption without Parliament's position, an adoption date on a file shown before adoption, a transposition deadline before its act, …). `--built` fails if there is no build, if it is incomplete (a missing or unreadable file, an empty list, a count of zero), or if it does not match `src/types/data.ts` (keys, nulls, types, enums; `pipeline/contract.py`, also for detail files no index lists). Warnings are by design (printed as INFO, not counted), integrity or backlog: it fails on any integrity finding that `pipeline/validate_baseline.json` does not accept, whatever the count (`--built --update-baseline` rewrites it once they are checked; it refuses while there are errors) |
 | `python -m pipeline build --strict` | Also `EU_INTEL_STRICT=1`: fails, listing every problem at the end, when the build had to work around one (an analysis module or function that did not load, a curated file or entry not applied, a status that fell back, a vote margin or Council assessment that failed) |
 | `npm run typecheck` · `npx vitest run` | TypeScript types · frontend unit tests |
-| `BASE_PATH=/eu-intel/ npm run build` | Production build under the Pages subpath, with prerendered route shells |
+| `BASE_PATH=/eu-intel/ npm run build` | Production build under the Pages subpath, with prerendered route shells (link-preview tags, a file's key facts for readers without JavaScript, `robots.txt`; with `SITE_URL=<Pages URL>`, as the deploy sets it, also canonical and preview addresses and `sitemap.xml`) |
 | `node scripts/check_privacy.mjs` | No third-party loads, trackers, cookie writes or raw-HTML injection in `dist/` and `src/` |
 | `npx playwright test` | End-to-end smoke, deep links, search, accessibility (axe-core) and privacy on the built site |
 | `scripts/test-frozen.sh` | pytest, vitest and the Playwright tests (Chromium) on the frozen test data, as CI runs them, in a temporary worktree |
@@ -138,7 +138,7 @@ data/curated/        editorial YAML: featured files, topics, search aliases, che
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
 src/                 React app: pages/, features/ (one folder per area, insights/ included), components/, lib/,
                      types/data.ts (public data contract)
-scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py, test-frozen.sh
+scripts/             prerender-routes.mjs (with seo.mjs), render-og-image.mjs, check_privacy.mjs, check_links.py, test-frozen.sh
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
 docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap, assessment
 .github/workflows/   ci.yml, pages.yml, refresh.yml, watchdog.yml

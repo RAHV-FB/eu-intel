@@ -92,6 +92,42 @@ fragment: one extra round trip, nothing breaks. The canonical links and the Atom
 Locally, `tests/e2e/pages-server.mjs` reproduces these semantics (`node tests/e2e/pages-server.mjs dist`, then
 open http://127.0.0.1:4174/eu-intel/).
 
+## Search engines and link previews
+
+The prerender (`scripts/prerender-routes.mjs` with `scripts/seo.mjs`; docs/ARCHITECTURE.md) gives every page Open Graph
+and Twitter tags, so that a link shared in Slack, X, LinkedIn or Mastodon previews with the page's own title and
+description, and a legislative file's page its key facts for crawlers and readers without JavaScript (`<noscript>`) and
+its act as schema.org `Legislation` (JSON-LD). With `SITE_URL`, which `pages.yml` sets to the Pages URL, it also writes
+`og:url` (the canonical address), `og:image` (the site's icon, `public/og-image.png`, made by
+`scripts/render-og-image.mjs`) and **`sitemap.xml`**, at `https://rahv-fb.github.io/eu-intel/sitemap.xml`: every page
+for search engines (about 6,400 addresses and 0.6 MB in November 2026; over 50,000 addresses or 50 MB it becomes an
+index of `sitemap-<n>.xml` files), with `lastmod` for legislative files and votes. Builds without `SITE_URL` (CI, local
+builds, forks) have none of these three, which need absolute addresses. **`robots.txt`** (always written) lets every crawler
+read every page and, with `SITE_URL`, names the sitemap. The data files must stay readable to crawlers: a search engine
+that runs the app (Google) loads them to render the pages.
+
+**Crawlers read `robots.txt` only at the root of a host.** On the project site that is
+`https://rahv-fb.github.io/robots.txt`, which this repository does not serve (it would be the user site, a repository
+named `RAHV-FB/rahv-fb.github.io`); `https://rahv-fb.github.io/eu-intel/robots.txt` is ignored. So the site's own
+`robots.txt` takes effect only once it has a custom domain (One-time setup, step 5: the base path becomes `/` and
+`SITE_URL` the domain, so the sitemap moves with it). Until then search engines learn of the sitemap only when it is
+submitted to them. That is the owner's action, in their own accounts; no workflow does it:
+
+1. **Google Search Console** (search.google.com/search-console): add a *URL prefix* property for
+   `https://rahv-fb.github.io/eu-intel/` (a *Domain* property needs a DNS record, which `github.io` does not allow).
+   Verify it with the *HTML tag* method: put the `<meta name="google-site-verification" content="…">` it gives into
+   `<head>` in `index.html`, which every prerendered page copies, and deploy. (The *HTML file* method would add a page
+   without the Content-Security-Policy meta, which the privacy check fails.) Then *Sitemaps* → add `sitemap.xml`.
+2. **Bing Webmaster Tools** (bing.com/webmasters): import the property from Search Console, or add the same URL and
+   verify with its meta tag (`msvalidate.01`) in the same way; then submit
+   `https://rahv-fb.github.io/eu-intel/sitemap.xml` under *Sitemaps*.
+3. Optionally, a user site (`RAHV-FB/rahv-fb.github.io`) with a `robots.txt` containing
+   `Sitemap: https://rahv-fb.github.io/eu-intel/sitemap.xml` lets every crawler find the sitemap without a submission.
+
+After a move to a custom domain, add a property for the new address and submit its sitemap there too. Search Console's
+*Pages* and *Sitemaps* reports show what was indexed and why pages were not. Platforms cache a link preview once they
+have fetched it; their own tools (for example LinkedIn's Post Inspector) show what they read and fetch it again.
+
 ## Schedule and failure behaviour
 
 - **Refresh** runs weekly on Monday at 05:17 UTC, and again at 22:37 UTC; a scheduled run is skipped when every core
@@ -384,7 +420,8 @@ it: `tests/e2e/live-smoke.spec.ts`, Chromium, with the reader's real clock. It p
 runs (files of every stage plus an even sample, about 20; votes of every kind, 10; MEPs, groups and parties; every
 country; search by a procedure reference; the main pages), serves them as GitHub Pages does (`tests/e2e/pages-server.mjs`)
 and fails on a console error, an uncaught exception, a failed or third-party request, the error page, a "not found" page
-or an empty heading; then nothing is uploaded or deployed, and the report is kept as the `live-smoke-report` artifact.
+or an empty heading, or when the sitemap (built with `SITE_URL` there only) is not well-formed or leaves out one of those
+pages; then nothing is uploaded or deployed, and the report is kept as the `live-smoke-report` artifact.
 `E2E_LIVE=1` selects it (and only it); the other runs leave it out. Locally, after a build of the current data:
 `E2E_LIVE=1 npx playwright test --project=chromium` (about 1 minute).
 
