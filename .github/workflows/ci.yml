@@ -225,6 +225,24 @@ jobs:
           key: apt-ubuntu-24.04-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
           restore-keys: apt-ubuntu-24.04-${{ matrix.browser }}-
 
+      # apt takes a .deb it finds in its archive directory for the version it wants when the size matches, without
+      # checking it against the signed index (apt 2.8, Ubuntu 24.04: a same-size tampered file was handed to dpkg, 5 Nov
+      # 2026), and that directory comes from the cache, which a step of an earlier run could have written. Each cached
+      # file is checked against the SHA256 the signed index gives for it; one that differs or is unknown is dropped.
+      - name: Check the cached OS packages against the signed index
+        run: |
+          sudo apt-get update -qq
+          shopt -s nullglob
+          for f in ~/apt-archives/*.deb; do
+            IFS=_ read -r pkg ver arch <<< "$(basename "$f" .deb)"
+            sum=$(sha256sum "$f" | cut -d' ' -f1)
+            if ! apt-cache show "$pkg:$arch=${ver//%3a/:}" 2>/dev/null | grep -qx "SHA256: $sum"; then
+              echo "::warning::$(basename "$f") is not the file the signed index lists: dropped from the cache"
+              rm -f "$f"
+            fi
+          done
+          rm -rf ~/apt-archives/partial
+
       - name: Install ${{ matrix.browser }} for Playwright
         # Each attempt is bounded, and a retry resumes from what apt kept. The time limit stops npx, but not the apt-get
         # it runs with sudo, which went on holding dpkg's lock (attempts 2 and 3 failed at once on 5 Nov 2026): it is

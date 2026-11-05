@@ -380,16 +380,28 @@ def search_cases(http: Http, **filters: Any) -> list[dict[str, Any]]:
     return out
 
 
+XLSX_MEMBER_MAX = 64 * 1024**2  # an export slice's sheet is a few MB; a zip member inflates to at most this
+
+
+def _xlsx_member(z: zipfile.ZipFile, name: str) -> bytes:
+    """A member of the export, refused before it is inflated when it says it is larger than any export (a zip bomb:
+    2 MB of zip inflate to 2 GB). zipfile inflates no more than the size a member declares (then its checksum fails)."""
+    size = z.getinfo(name).file_size
+    if size > XLSX_MEMBER_MAX:
+        raise ValueError(f"{name} is larger than {XLSX_MEMBER_MAX} bytes ({size}): not read")
+    return z.read(name)
+
+
 def read_xlsx_rows(content: bytes) -> list[dict[str, str | None]]:
     """Rows of the first worksheet of an .xlsx file as {header: value} (no external dependency)."""
     ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
     z = zipfile.ZipFile(io.BytesIO(content))
     shared: list[str] = []
     if "xl/sharedStrings.xml" in z.namelist():
-        root = etree.fromstring(z.read("xl/sharedStrings.xml"))
+        root = etree.fromstring(_xlsx_member(z, "xl/sharedStrings.xml"))
         shared = ["".join(si.itertext()) for si in root.findall(f"{ns}si")]
     rows: list[dict[str, str | None]] = []
-    for row in etree.fromstring(z.read("xl/worksheets/sheet1.xml")).iter(f"{ns}row"):
+    for row in etree.fromstring(_xlsx_member(z, "xl/worksheets/sheet1.xml")).iter(f"{ns}row"):
         cells: dict[str, str | None] = {}
         for c in row.findall(f"{ns}c"):
             col = re.match(r"[A-Z]+", c.get("r") or "")

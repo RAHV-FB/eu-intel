@@ -1378,3 +1378,30 @@ def test_dependabot_bumps_vite_with_its_react_plugin():
     vite = [g for g in groups if "vite" in g.get("patterns", [])]
     assert len(vite) == 1 and "@vitejs/plugin-react" in vite[0]["patterns"]
     assert groups.index(vite[0]) < next(i for i, g in enumerate(groups) if "dependency-type" in g)  # first match wins
+
+
+def test_cached_os_packages_are_checked_against_the_signed_index_before_apt_uses_them(tmp_path):
+    # apt takes a cached .deb of the right size without checking its hash (apt 2.8 on Ubuntu 24.04: a same-size tampered
+    # file was handed to dpkg), and ~/apt-archives is restored from the Actions cache: each file must match the index
+    import hashlib
+
+    s = steps("ci.yml", "e2e")
+    check = named(s, "Check the cached OS packages against the signed index")
+    assert named(s, "Restore the browsers' OS packages") < check < named(s, "Install ${{ matrix.browser }} for Playwright")
+    home, bin_ = tmp_path / "home", tmp_path / "bin"
+    (home / "apt-archives" / "partial").mkdir(parents=True)
+    bin_.mkdir()
+    debs = {"good_1.0-1_amd64.deb": b"good", "fonts_2%3a1.0_all.deb": b"fonts", "tampered_1.0_amd64.deb": b"evil",
+            "unknown_9_amd64.deb": b"x"}  # fmt: skip
+    for name, body in debs.items():
+        (home / "apt-archives" / name).write_bytes(body)
+    (home / "apt-archives" / "partial" / "half_1_amd64.deb").write_bytes(b"h")
+    index = {"good:amd64=1.0-1": b"good", "fonts:all=2:1.0": b"fonts", "tampered:amd64=1.0": b"the real file"}
+    cases = "\n".join(f'  "{k}") echo "Package: x"; echo "SHA256: {hashlib.sha256(v).hexdigest()}" ;;' for k, v in index.items())
+    (bin_ / "apt-cache").write_text(f'#!/bin/sh\ncase "$2" in\n{cases}\n  *) exit 100 ;;\nesac\n')
+    (bin_ / "sudo").write_text("#!/bin/sh\nexit 0\n")  # apt-get update: nothing to do here
+    for f in ("sudo", "apt-cache"):
+        (bin_ / f).chmod(0o755)
+    env = {**os.environ, "HOME": str(home), "PATH": f"{bin_}{os.pathsep}{os.environ['PATH']}"}
+    subprocess.run(["bash", "-e", "-c", s[check]["run"]], env=env, check=True, capture_output=True)
+    assert sorted(p.name for p in (home / "apt-archives").iterdir()) == ["fonts_2%3a1.0_all.deb", "good_1.0-1_amd64.deb"]
