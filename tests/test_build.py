@@ -1328,6 +1328,110 @@ def test_council_steps_dated_by_the_council_voting_result():
     assert Builder.council_dated(me, p).events[0].date == "2026-10-01"  # type: ignore[arg-type]
 
 
+def _council_vote(vid: str, day: str, vote_on: str, outcome: str = "adopted") -> dict:
+    """A Council voting result as build_council lists it on a file (constructed: 27 Member States in favour)."""
+    return {
+        "id": vid, "date": day, "vote_on": vote_on, "outcome": outcome, "stage": "Adoption of the legislative act",
+        "written_procedure": False, "positions": dict.fromkeys(("AT", "BE", "BG"), "for"),
+        "source": {"institution": "Council", "url": f"https://example.invalid/{vid}", "label": f"Voting result {vid}",
+                   "identifier": vid, "retrieved_at": "2026-11-02T00:00:00Z", "published": None},
+    }  # fmt: skip
+
+
+def _agreed_cod(pid: str, *extra) -> object:
+    """An ordinary procedure up to Parliament's first-reading position on the text agreed with the Council
+    (constructed; the shape of 2025/0312(COD) on 2 November 2026)."""
+    from pipeline.models.entities import Event, EventKind, Procedure, SourceRef
+
+    src = SourceRef(institution="EP", url="https://example.invalid/ep", retrieved_at="2026-10-22T00:00:00Z")
+    steps = [("2025-10-02", EventKind.proposal, "Commission"), ("2025-10-23", EventKind.referral, "EP"),
+             ("2026-07-15", EventKind.provisional_agreement, "EP"), ("2026-10-06", EventKind.ep_position, "EP"), *extra]
+    events = [Event(id=f"e{i}", date=d, kind=k, institution=inst, title=k.value, source=src,
+                    raw_type="def/ep-activities/PLENARY_ADOPT_POSITION" if k == EventKind.ep_position else None)
+              for i, (d, k, inst) in enumerate(steps)]  # fmt: skip
+    return Procedure(id=pid, reference=f"{pid.replace('-', '/')}(COD)", type="COD", title="t", oeil_url="u", source=src,
+                     events=events, stage_raw="Awaiting Council's 1st reading position")  # fmt: skip
+
+
+def test_a_council_vote_the_procedure_record_lacks_counts_for_the_status():
+    """2025/0312(COD) on 2 November 2026: the Council's voting result ST 14961/26 records the act adopted on 26 October
+    2026, 27-0-0, and the timeline listed it, but OEIL (retrieved 22 October) still awaited the Council: the status
+    said the Council had still to approve the act. The vote counts for the status, and is listed once."""
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import Builder
+    from pipeline.models.entities import EventKind
+
+    today = "2026-11-02"
+    p = _agreed_cod("2099-0312")
+    me = _builder(today=today, council_of={"2099-0312": [_council_vote("ST-1-2026", "2026-10-26", "act")]})
+    dated = Builder.council_dated(me, p)  # type: ignore[arg-type]
+    added = [e for e in dated.events if e.kind == EventKind.council_adoption]
+    assert [(e.date, e.institution, e.source.url) for e in added] == [
+        ("2026-10-26", "Council", "https://example.invalid/ST-1-2026")]  # fmt: skip
+    st = classify(dated, [], [], date.fromisoformat(today))
+    assert (st.stage, st.label, st.since) == ("adopted", "Adopted by Parliament and Council", "2026-10-26")
+    assert st.next_step.text.startswith("Signature by the Presidents of Parliament and the Council")
+    assert Builder.adoption_dates(me, p, []) == ("2026-10-26", None)  # type: ignore[arg-type]
+    tl = Builder.timeline(me, p, [], [])  # type: ignore[arg-type]
+    assert [(e["date"], e["title"]) for e in tl if e["kind"] == "council_adoption"] == [
+        ("2026-10-26", "Council adopted the act")]  # fmt: skip
+
+    # once OEIL records the step (dated by OEIL after the vote), the vote dates it and adds none
+    p = _agreed_cod("2099-0312", ("2026-10-29", EventKind.council_adoption, "Council"))
+    dated = Builder.council_dated(me, p)  # type: ignore[arg-type]
+    assert [e.date for e in dated.events if e.kind == EventKind.council_adoption] == ["2026-10-26"]
+    assert len([e for e in Builder.timeline(me, p, [], []) if e["kind"] == "council_adoption"]) == 1  # type: ignore[arg-type]
+
+    # a vote that did not adopt the act, or a vote on another item, adds nothing
+    for cv in (_council_vote("ST-2-2026", "2026-10-26", "act", "not_adopted"), _council_vote("ST-3-2026", "2026-10-26", "other")):
+        me = _builder(today=today, council_of={"2099-0312": [cv]})
+        st = classify(Builder.council_dated(me, _agreed_cod("2099-0312")), [], [], date.fromisoformat(today))  # type: ignore[arg-type]
+        assert (st.stage, st.label) == ("parliament_position", "Approved by Parliament")
+
+
+def test_a_council_first_reading_position_vote_the_procedure_record_lacks_counts_for_the_status():
+    """The Council's adopted first-reading position, recorded only by its voting result: the file is at second
+    reading in Parliament (Art. 294(5) and (7) TFEU), not still awaiting the Council."""
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import Builder
+    from pipeline.models.entities import EventKind
+
+    p = _agreed_cod("2099-0313")
+    p = p.model_copy(update={"events": [e for e in p.events if e.kind != EventKind.provisional_agreement]})  # type: ignore[attr-defined]
+    me = _builder(today="2026-11-02", council_of={
+        "2099-0313": [_council_vote("ST-4-2026", "2026-10-27", "first_reading_position")]})  # fmt: skip
+    st = classify(Builder.council_dated(me, p), [], [], date.fromisoformat("2026-11-02"))  # type: ignore[arg-type]
+    assert (st.stage, st.label, st.since) == ("negotiations", "Second reading in Parliament", "2026-10-27")
+
+
+def test_the_eps_unconfirmed_publication_is_shown_as_its_record():
+    """2023/0421(COD) on 2 November 2026: the EP's "Final act published in the Official Journal" of 30 October 2026,
+    with no act in Cellar, no position of Parliament and no Council adoption, was a key "publication" step labelled
+    EUR-Lex (sources.ep_procedures.ACTIVITY_INSTITUTION), and dated the file's publication. Constructed records."""
+    from pipeline.build import Builder
+    from pipeline.models.entities import Event, EventKind, Procedure, SourceRef
+
+    src = SourceRef(institution="EP", url="https://example.invalid/ep", retrieved_at="2026-11-02T13:33:44Z")
+    pub = Event(id="2099-0421-PUB-2026-10-30", date="2026-10-30", kind=EventKind.publication, institution="EUR-Lex",
+                raw_type="def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL", title="Final act published in the Official "
+                "Journal", source=src)  # fmt: skip
+    ref = Event(id="2099-0421-ANPRO-2023-12-14", date="2023-12-14", kind=EventKind.referral, institution="EP",
+                raw_type="def/ep-activities/REFERRAL", title="Announced in Parliament", source=src)  # fmt: skip
+    p = Procedure(id="2099-0421", reference="2099/0421(COD)", type="COD", title="t", oeil_url="u", source=src,
+                  events=[ref, pub])  # fmt: skip
+    me = _builder(today="2026-11-02")
+    step = next(e for e in Builder.timeline(me, p, [], []) if e["id"] == pub.id)  # type: ignore[arg-type]
+    assert (step["kind"], step["institution"], step["key"], step["title"]) == (
+        "other", "EP", False, "The European Parliament's record lists the final act as published in the Official Journal")
+    assert step["detail"].startswith("No act published under this procedure is recorded in our EUR-Lex data")
+    assert step["source"]["url"] == "https://example.invalid/ep"
+    assert Builder.adoption_dates(me, p, []) == (None, None)  # type: ignore[arg-type]
+
+
 # ------------------------------------------------------------------------------- EP vote labels
 # Labels exactly as Parliament published them (data/snapshot/ep_votes/votes.json, by vote id).
 LABEL_164581 = (
@@ -1726,6 +1830,36 @@ def test_transposition_dates_without_an_established_role_stay_off_the_timeline(t
     }
     assert "The national measures are to apply from 1 April 2027." in d["next_step"]["text"]
     assert d["implementation"]["deadline"] == "2027-03-30"
+
+
+def test_a_transposition_date_before_the_act_is_not_shown_as_its_deadline(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    # As Cellar records Directive (EU) 2015/412 of 11 March 2015 (2010/0208(COD)): one unlabelled date, 17 October
+    # 2002, the deadline of Directive 2001/18/EC it amends. The page said "The transposition deadline (17 October
+    # 2002) has passed" and every country row carried that deadline.
+    base = tmp_path / "b"
+    shutil.copytree(FIX / "snapshot", base / "snapshot")
+    path = base / "snapshot" / "eurlex" / "acts.json"
+    recs = json.loads(path.read_text(encoding="utf-8"))
+    a = next(r for r in recs if r["celex"] == "32099L0003")  # a directive of 15 January 2023
+    a["transposition_dates"] = [{"date": "2002-10-17", "labels": [], "articles": []}]
+    a["transposition_deadlines"] = ["2002-10-17"]
+    path.write_text(json.dumps(recs), encoding="utf-8")
+    o = base / "public"
+    with caplog.at_level("WARNING", logger="pipeline.build"):
+        assert build(out=o, snapshot=base / "snapshot", curated=FIX / "curated", state=base / "state", today=TODAY) == 0
+    assert "act 32099L0003: EUR-Lex records transposition date(s) 2002-10-17, earlier than the act itself (2023-01-15)" in (
+        caplog.text)  # fmt: skip
+    d = load(o, "dossiers/2099-0003.json")
+    assert [(x["date"], x["kind"]) for x in d["application"]["transposition"]] == [("2002-10-17", "other")]
+    assert d["application"]["transposition_deadlines"] == []
+    assert not [e for e in d["timeline"] if e["kind"].startswith("transposition")]
+    assert "has passed" not in d["next_step"]["text"] and "2002" not in d["next_step"]["text"]
+    assert "the transposition date it records is earlier than the directive itself" in d["next_step"]["text"]
+    assert d["implementation"]["deadline"] is None
+    assert {c["status"] for c in d["implementation"]["countries"]} <= {"measures_notified", "no_deadline"}
+    assert "no_deadline" in {c["status"] for c in d["implementation"]["countries"]}
 
 
 def test_next_step_names_the_deadlines_of_amending_directives():

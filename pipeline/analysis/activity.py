@@ -50,7 +50,7 @@ PUBLIC_LIMIT = 400
 # Version of the lifecycle-stage logic (pipeline/analysis/status.py and the inputs build.py gives it).
 # Bump it whenever the status logic changes: the next recorded run then re-baselines every stored stage
 # instead of reporting the reclassification as status changes.
-CLASSIFIER_VERSION = "2026-10-23.2"
+CLASSIFIER_VERSION = "2026-11-05.1"
 # Sources whose fetch must have been complete ("ok") for a stage difference to count as a change.
 STAGE_SOURCES = ("ep_procedures", "eurlex")
 SNAPSHOT_EVENT_KINDS = {
@@ -186,6 +186,99 @@ def _event_kind(kind: str) -> str:
     if kind in ("publication", "entry_into_force", "signature"):
         return "publication"
     return "milestone"
+
+
+# --------------------------------------------------------------------------------------- the source of a status
+# Stages that an act in our EUR-Lex data establishes (status._acts_stage), and the act's own steps that date them
+ACT_STAGES = {"published", "in_force", "takes_effect_on_notification", "no_longer_in_force"}
+ACT_STEP_KINDS = ("entry_into_force", "publication", "end_of_validity")
+# The kinds of the steps that date the other stages (status.py: the event whose date is the status's `since`), in the
+# order they are looked for on that day
+STAGE_STEP_KINDS: dict[str, tuple[str, ...]] = {
+    "adopted": ("signature", "council_adoption", "ep_position"),
+    "parliament_position": ("ep_position", "council_adoption", "provisional_agreement", "rejection", "plenary_vote",
+                            "negotiation_mandate", "proposal", "other"),
+    "negotiations": ("council_position", "negotiation_mandate", "other"),
+    "provisional_agreement": ("provisional_agreement",),
+    "proposed": ("negotiation_mandate", "committee_report", "plenary_vote", "referral", "proposal", "other"),
+    "withdrawn": ("withdrawal",),
+    "lapsed": ("lapsed",),
+    "rejected": ("rejection", "ep_position"),
+}  # fmt: skip
+
+
+def status_source(det: dict) -> dict | None:
+    """The source of the record that gave a file its status, which a status change cites: for a stage that the act
+    establishes, the act's step dated as the status (its EUR-Lex record, or the text a curated date was checked
+    against), else the act's EUR-Lex record; for another stage, the step that dates it (an EP or OEIL event, the
+    Council's voting result); else, as when the status follows OEIL's stage label (no date), the procedure file.
+    Every status change recorded on 2 November 2026 cited the OEIL page, also when EUR-Lex, the Council or the EP API
+    gave the status: 2023/0421(COD), "status now Published in the Official Journal" from an EP API event, cited the
+    OEIL page, which gave "Awaiting committee decision"."""
+    procedure = det["sources"][0] if det.get("sources") else None
+    since = (det.get("status") or {}).get("since")
+    if not since:
+        return procedure
+    stage = det.get("stage")
+    steps = [e for e in det.get("timeline") or [] if e["state"] == "done" and e["date"] == since and e.get("source")]
+    if stage in ACT_STAGES:
+        own = [e for e in steps if e["id"].startswith("act-") and e["kind"] in ACT_STEP_KINDS]
+        if own:
+            return own[0]["source"]
+        acts = sorted(det.get("acts") or [], key=lambda a: since not in (a.get("date_publication"), a.get("entry_into_force")))
+        for a in acts:
+            src = next((s for s in det.get("sources") or [] if s.get("institution") == "EUR-Lex" and (
+                s.get("identifier") == a["celex"] or s.get("url") == a.get("eurlex_url"))), None)  # fmt: skip
+            if src:
+                return src
+        return procedure
+    for kind in STAGE_STEP_KINDS.get(stage or "", ()):
+        found = sorted((e for e in steps if e["kind"] == kind), key=lambda e: not e.get("key"))
+        if found:
+            return found[0]["source"]
+    return procedure
+
+
+def supported(items: list[dict], b: Any) -> list[dict]:
+    """The recorded items that the current records still support, for publication (data/state/activity.json keeps
+    every item as recorded). Left out: a change of a file's status to adoption or a later stage while its status is now
+    an earlier stage of the procedure, a step that the file's timeline no longer lists as an item (is_listed), and a
+    step of an act that is no longer the file's (the act's link was corrected; build.Builder.build_dossier_links). On 2
+    November 2026 the EP's records of the latest publications made 2023/0421(COD) "Published in the Official Journal"
+    (30 October, with no position of Parliament, no Council adoption and no act in Cellar) and 2025/0177(COD)
+    "Published" (28 October); both records were deleted at source, and the status no longer counts such records
+    (status.unconfirmed_final_steps)."""
+    from pipeline.analysis.status import ACTIVE_STAGES, RANK
+
+    out = []
+    for it in items:
+        det = b.dossier_detail.get(it.get("dossier_id") or "")
+        m = re.match(r"chg:[^:]+:(stage|ev):(.+)$", it["id"]) if det else None
+        if m and m.group(1) == "stage":
+            was, now = m.group(2).split(":", 1)[0], det["stage"]
+            if RANK.get(was, 0) >= RANK["adopted"] and now in ACTIVE_STAGES | {"adopted"} and RANK[now] < RANK.get(was, 0):
+                continue
+        elif m:
+            step = next((e for e in det.get("timeline") or [] if e["id"] == m.group(2)), None)
+            if step is not None and not is_listed(step):
+                continue
+            if (act := _ACT_EVENT.match(m.group(2))) and act.group(1) not in (det.get("celex") or []):
+                continue  # a step of an act that is not the file's (2025/0177(COD): Decision (EU) 2026/2402, 2025/0380's)
+        out.append(it)
+    return out
+
+
+def recited(items: list[dict], b: Any) -> list[dict]:
+    """Recorded status changes citing the record that gave the status (status_source) while the file still has that
+    status (same stage, since the same day): the changes recorded before status_source cited the procedure file
+    (data/state/activity.json keeps them as recorded). Other items unchanged."""
+    out = []
+    for it in items:
+        det = b.dossier_detail.get(it.get("dossier_id") or "") if it.get("kind") == "status_change" else None
+        if det and it["id"] == f"chg:{det['id']}:stage:{det['stage']}:{(det.get('status') or {}).get('since') or b.today}":
+            it = {**it, "source": status_source(det)}
+        out.append(it)
+    return out
 
 
 # --------------------------------------------------------------------------------------- snapshot items
@@ -464,7 +557,7 @@ def diff(
             since = (det.get("status") or {}).get("since") or today
             items.append(_item(f"chg:{pid}:stage:{n['stage']}:{since}", since, "status_change",
                                f"{title}: status now “{n['label']}” (previously “{o.get('label', o.get('stage'))}”)",
-                               pid, None, src, detected_at))  # fmt: skip
+                               pid, None, status_source(det), detected_at))  # fmt: skip
         known = {f"{ns}:{x}" for ns, k in REF_LISTS.items() for x in o.get(k, [])}
         items += [recorded(it) for it, refs in of.get(pid, []) if not known.intersection(refs)]
     return items

@@ -29,7 +29,14 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from pipeline.analysis.transposition import application_start, article_label, articles_text, general_deadline
+from pipeline.analysis.transposition import (
+    act_day,
+    application_start,
+    article_label,
+    articles_text,
+    before_the_act,
+    general_deadline,
+)
 from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models import entities
 from pipeline.models.countries import FORMER_MEMBER_STATES, MEMBER_STATES
@@ -50,6 +57,7 @@ from pipeline.models.entities import (
     Procedure,
     ProcedureNotice,
     RegulationOptIn,
+    SourceRef,
     SourceStatus,
     TrainFile,
 )
@@ -1390,25 +1398,34 @@ def decision_vote_near(e: Event, votes_by_date: dict[str, list[EpVote]]) -> EpVo
     return pick[0] if len(pick) == 1 else None
 
 
+def council_vote_kind(cv: dict) -> str:
+    """The kind of step a Council vote is (council_vote_event): the Council's first-reading position; its adoption of
+    the act, or its consent to an act Parliament adopts (the step OEIL records as the Council's adoption), when it
+    adopted it; else "other"."""
+    on = cv.get("vote_on")
+    if on == "first_reading_position":
+        return "council_position"
+    if on == "act" or COUNCIL_CONSENT_RE.match(cv.get("stage") or ""):
+        return "council_adoption" if cv["outcome"] == "adopted" else "other"
+    return "other"
+
+
 def council_vote_event(cv: dict) -> dict:
     """Timeline event for a Council vote, dated and sourced by the Council's voting-result document."""
     on, outcome = cv.get("vote_on"), cv["outcome"]
-    kind = "other"
+    kind = council_vote_kind(cv)
     if on == "first_reading_position":
-        kind = "council_position"
         title = {
             "adopted": "Council adopted its position at first reading",
             "not_adopted": "Council did not adopt a position at first reading",
         }.get(outcome, "Council voted on its position at first reading")
     elif on == "act":
-        kind = "council_adoption" if outcome == "adopted" else "other"
         title = {
             "adopted": "Council adopted the act",
             "not_adopted": "Council did not adopt the act",
         }.get(outcome, "Council voted on adopting the act")
     elif COUNCIL_CONSENT_RE.match(cv.get("stage") or ""):
         # the Council's consent to an act Parliament adopts: the step OEIL records as the Council's adoption
-        kind = "council_adoption" if outcome == "adopted" else "other"
         title = {
             "adopted": "Council gave its consent",
             "not_adopted": "Council did not give its consent",
@@ -1424,7 +1441,7 @@ def council_vote_event(cv: dict) -> dict:
     if cv.get("written_procedure"):
         title += " (written procedure)"
     detail = None
-    if cv["positions"]:
+    if cv.get("positions"):
         n = Counter(cv["positions"].values())
         detail = f"{n['for']} Member States in favour, {n['against']} against, {n['abstain']} abstained"
         if n["not_participating"]:
@@ -2046,6 +2063,10 @@ class Builder:
         self.transposition_checks = load_transposition_checks(curated)
         if self.transposition_checks:
             snap.acts = [apply_transposition_checks(a, self.transposition_checks.get(a.celex)) for a in snap.acts]
+        for a in snap.acts:  # read as "other", not as the act's deadline (transposition.before_the_act)
+            if early := before_the_act(a):
+                log.warning("act %s: EUR-Lex records transposition date(s) %s, earlier than the act itself (%s); not "
+                            "read as its deadline", a.celex, ", ".join(early), act_day(a))  # fmt: skip
         self.council_dates = load_council_dates(curated)
         self.unlinked_acts = load_unlinked_acts(curated)
         self.denmark_schengen = load_denmark_schengen(curated)
@@ -3318,6 +3339,13 @@ class Builder:
         # EP gives that day to 2016/0074(COD), whose Regulation (EU) 2019/1241 is in OJ L 198, 25.7.2019)
         act_pubs = {a.date_publication for a in acts if a.date_publication}
         ep_pubs: set[str] = set()
+        # The EP's records of a publication or signature that no act or adoption in our data confirms (status.
+        # unconfirmed_final_steps) are shown as its records, not as the steps: the status does not count them
+        # (2023/0421(COD): "Final act published in the Official Journal", 30 October 2026, with no act in Cellar, no
+        # position of Parliament and no Council adoption; the EP later deleted it). The snapshot labels the EP's
+        # publication record "EUR-Lex" (sources.ep_procedures.ACTIVITY_INSTITUTION), which has no such record then
+        confirm = _lazy("pipeline.analysis.status", "unconfirmed_final_steps")
+        unconfirmed = {e.id for e in confirm(p.events, acts, act_adopted)} if confirm else set()
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
         # (kind, date, title, detail) -> the day's steps so far: position in `out`, documents other than the sitting's
@@ -3356,6 +3384,16 @@ class Builder:
                 continue
             inst = e.institution
             when, detail = e.date, e.detail
+            if e.id in unconfirmed:
+                if kind == "publication":
+                    title = "The European Parliament's record lists the final act as published in the Official Journal"
+                    detail = ("No act published under this procedure is recorded in our EUR-Lex data, so this page does "
+                              "not show the act as published.")  # fmt: skip
+                else:
+                    title = "The European Parliament's record lists the final act as signed"
+                    detail = ("Neither the Council's adoption of the act nor the act itself is recorded in our data, so "
+                              "this page does not show the act as adopted.")  # fmt: skip
+                kind, key, inst = "other", False, "EP"
             if kind == "signature" and p.type == "COD":
                 # "Legislative acts adopted under the ordinary legislative procedure shall be signed by the President
                 # of the European Parliament and by the President of the Council" (Art. 297(1) TFEU); the EP's date
@@ -4089,9 +4127,13 @@ class Builder:
                        if cv["date"] <= t and cv.get("vote_on") == "act" and cv["outcome"] == "adopted")  # fmt: skip
         council = sorted(e.date for e in p.events if e.kind == EventKind.council_adoption and e.date <= t)
         docs = sorted(a.date_document for a in acts if a.date_document and a.date_document <= t)
-        sigs = sorted(e.date for e in p.events if e.kind == EventKind.signature and e.date <= t)
+        # not the EP's records of a signature or publication that nothing confirms (status.unconfirmed_final_steps)
+        confirm = _lazy("pipeline.analysis.status", "unconfirmed_final_steps")
+        unconfirmed = {e.id for e in confirm(p.events, acts)} if confirm else set()
+        sigs = sorted(e.date for e in p.events if e.kind == EventKind.signature and e.date <= t and e.id not in unconfirmed)
         pubs = sorted(a.date_publication for a in acts if a.date_publication and a.date_publication <= t)
-        pubs = pubs or sorted(e.date for e in p.events if e.kind == EventKind.publication and e.date <= t)
+        pubs = pubs or sorted(e.date for e in p.events if e.kind == EventKind.publication and e.date <= t
+                              and e.id not in unconfirmed)  # fmt: skip
         published = pubs[0] if pubs else None
         adopts = _lazy("pipeline.analysis.status", "parliament_adopts")
         if adopts and adopts(p, acts):  # Parliament's decision after the Council's consent
@@ -4152,7 +4194,12 @@ class Builder:
 
     def council_dated(self, p: Procedure) -> Procedure:
         """For the status: OEIL's Council steps dated by the Council's own voting results (OEIL dates the
-        first-reading position by its publication, days after the vote), as the timeline shows them."""
+        first-reading position by its publication, days after the vote), as the timeline shows them; and the
+        Council's adopted votes on its first-reading position, on the act or on its consent that the procedure
+        record does not have yet, as the steps the timeline lists from them (council_vote_event). OEIL lags the
+        Council: 2025/0312(COD), OEIL "Awaiting Council's 1st reading position" (retrieved 22 October 2026), while
+        the Council's voting result ST 14961/26 records the act adopted on 26 October 2026, 27-0-0; without the
+        vote the status said the Council had still to approve an act whose adoption the timeline showed."""
         cvotes = [cv for cv in self.council_of.get(p.id, []) if cv["date"] <= self.today and cv["outcome"] == "adopted"]
         positions = sorted(cv["date"] for cv in cvotes if cv.get("vote_on") == "first_reading_position")
         acts = sorted(cv["date"] for cv in cvotes if cv.get("vote_on") == "act")
@@ -4161,6 +4208,23 @@ class Builder:
             dates = positions if e.kind == EventKind.council_position else acts if e.kind == EventKind.council_adoption else []
             earlier = [d for d in dates if d <= e.date and (date.fromisoformat(e.date) - date.fromisoformat(d)).days <= 31]
             events.append(e.model_copy(update={"date": earlier[-1]}) if earlier and e.institution == "Council" else e)
+        for cv in sorted(cvotes, key=lambda c: (c["date"], c.get("id") or "")):
+            kind = council_vote_kind(cv)
+            if kind == "other" or not cv.get("source"):
+                continue
+            # a Council step of that kind near the vote is the same decision, dated by the vote above when it follows
+            # it; OEIL's step can also precede the voting result (2021/0176(COD): OEIL 6 December 2022, ST 15798/22 of
+            # 8 December 2022; 2018/0114(COD): OEIL 17 October 2019, ST 14768/19 of 18 November 2019). 92 days, as in
+            # council_step_dated
+            k = EventKind(kind)
+            if any(e.kind == k and e.institution == "Council" and abs(_days_between(e.date, cv["date"])) <= 92
+                   for e in events):  # fmt: skip
+                continue
+            ev = council_vote_event(cv)
+            events.append(Event(
+                id=ev["id"], date=cv["date"], kind=k, raw_type=f"council_vote:{kind}",
+                institution="Council", title=ev["title"], source=SourceRef.model_validate(cv["source"]),
+            ))  # fmt: skip
         return p if events == p.events else p.model_copy(update={"events": events})
 
     def parts_proposal(self, pid: str) -> DocRef | None:
@@ -4765,7 +4829,9 @@ class Builder:
 
         snapshot = activity.snapshot_entries(self)
         record = os.environ.get("EU_INTEL_RECORD_ACTIVITY") == "1"
+        # as recorded, citing the record that gave a status, without what the current records no longer support
         recorded = activity.update_state(self, self.state_dir, record=record)
+        recorded = activity.supported(activity.recited(recorded, self), self)
         items = activity.merge(recorded, snapshot, today=self.today)
         self.activity_items = items
         self.files["activity.json"] = items

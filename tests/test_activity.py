@@ -157,6 +157,93 @@ def test_stage_change_is_recorded_after_a_complete_fetch(base: Path, monkeypatch
     changes = _status_changes(base)
     assert len(changes) == 1 and changes[0]["dossier_id"] == "2099-0003"
     assert _stage(base, "2099-0003") == "withdrawn" != before
+    # it cites the record that gave the status, the withdrawal step, not the procedure file
+    assert changes[0]["source"]["identifier"] == "2099-0003-ev9"
+
+
+def _src(institution: str, url: str) -> dict:
+    return {"institution": institution, "url": url, "label": None, "identifier": None, "retrieved_at": None,
+            "published": None}  # fmt: skip
+
+
+OEIL_FILE = _src("OEIL", "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2099/0001(COD)")
+ACT = _src("EUR-Lex", "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32099R0001") | {"identifier": "32099R0001"}
+COUNCIL_DOC = _src("Council", "https://data.consilium.europa.eu/doc/document/ST-1-2099-INIT/EN/pdf")
+EP_EVENT = _src("EP", "https://data.europarl.europa.eu/api/v2/events/2099-0001-DEC-DCPL-2026-10-06")
+
+
+def _det(stage: str, since: str | None, timeline: list[dict], acts: list[dict] = ()) -> dict:
+    return {"id": "2099-0001", "stage": stage, "status": {"since": since}, "timeline": timeline, "acts": list(acts),
+            "sources": [OEIL_FILE, ACT]}  # fmt: skip
+
+
+def _step(id: str, date: str, kind: str, source: dict, key: bool = True) -> dict:
+    return {**_ev(id, date, kind, kind, key), "source": source}
+
+
+def test_a_status_change_cites_the_record_that_gave_the_status():
+    """Every status change recorded on 2 November 2026 cited the OEIL page: 2023/0421(COD)'s "Published" came from an
+    EP API event (the OEIL page said "Awaiting committee decision"), 2025/0311(COD)'s "Adopted by Parliament and
+    Council" from the Council's voting result ST 14960/26, 2016/0397(COD)'s "In force" from EUR-Lex."""
+    from pipeline.analysis.activity import status_source
+
+    # the Council's adoption, from its voting result
+    tl = [_step("2099-0001-DEC-DCPL-2026-10-06", "2026-10-06", "ep_position", EP_EVENT),
+          _step("council-ST-1-2099", "2026-10-26", "council_adoption", COUNCIL_DOC)]  # fmt: skip
+    assert status_source(_det("adopted", "2026-10-26", tl)) == COUNCIL_DOC
+    assert status_source(_det("parliament_position", "2026-10-06", tl)) == EP_EVENT
+    # in force: the act's own step; published, with the EP's record of that day on the timeline: the act's record
+    act = {"celex": "32099R0001", "date_publication": "2026-10-27", "entry_into_force": "2026-11-01",
+           "eurlex_url": ACT["url"]}  # fmt: skip
+    tl += [_step("2099-0001-PUB-2026-10-27", "2026-10-27", "publication", EP_EVENT),
+           _step("act-32099R0001-entry_into_force-2026-11-01", "2026-11-01", "entry_into_force", ACT)]  # fmt: skip
+    assert status_source(_det("in_force", "2026-11-01", tl, [act])) == ACT
+    assert status_source(_det("published", "2026-10-27", tl, [act])) == ACT
+    # a status that OEIL's stage label gives (no date): the procedure file
+    assert status_source(_det("adopted", None, tl)) == OEIL_FILE
+
+
+def test_recorded_status_changes_cite_the_record_while_the_status_holds():
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import recited
+
+    tl = [_step("council-ST-1-2099", "2026-10-26", "council_adoption", COUNCIL_DOC)]
+    b = SimpleNamespace(today="2026-11-05", dossier_detail={"2099-0001": _det("adopted", "2026-10-26", tl)})
+    held = {"id": "chg:2099-0001:stage:adopted:2026-10-26", "kind": "status_change", "dossier_id": "2099-0001",
+            "source": OEIL_FILE}  # fmt: skip
+    gone = {**held, "id": "chg:2099-0001:stage:published:2026-10-30"}  # a status the file no longer has
+    other = {**held, "id": "chg:2099-0001:ev:x", "kind": "milestone"}
+    assert [x["source"] for x in recited([held, gone, other], b)] == [COUNCIL_DOC, OEIL_FILE, OEIL_FILE]
+
+
+def test_recorded_changes_the_records_no_longer_support_are_not_published():
+    """2023/0421(COD): recorded on 2 November 2026 as "status now Published in the Official Journal" and "Final act
+    published in the Official Journal" (30 October), from an EP record with no act, no Parliament position and no Council
+    adoption behind it; the file is now under examination, and the EP's record is no longer a listed step."""
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import supported
+
+    pub = {**_step("2099-0001-PUB-2026-10-30", "2026-10-30", "other", EP_EVENT, key=False)}
+    tl = [_step("2099-0001-ADCP-2023-12-14", "2023-12-14", "committee_report", EP_EVENT), pub]
+    b = SimpleNamespace(dossier_detail={"2099-0001": _det("proposed", "2023-12-14", tl)})
+    item = {"kind": "status_change", "dossier_id": "2099-0001", "source": OEIL_FILE}
+    published = {**item, "id": "chg:2099-0001:stage:published:2026-10-30"}
+    step = {**item, "id": "chg:2099-0001:ev:2099-0001-PUB-2026-10-30", "kind": "publication"}
+    report = {**item, "id": "chg:2099-0001:ev:2099-0001-ADCP-2023-12-14", "kind": "milestone"}
+    earlier = {**item, "id": "chg:2099-0001:stage:proposed:2023-12-14"}
+    assert supported([published, step, report, earlier], b) == [report, earlier]
+    # a step of an act that is no longer the file's (2025/0177(COD), recorded with Decision (EU) 2026/2402's signature,
+    # the act of 2025/0380(COD)), unlike one of the file's act
+    other_act = {**item, "id": "chg:2099-0001:ev:act-32099D0002-signature-2026-10-21", "kind": "publication"}
+    own_act = {**other_act, "id": "chg:2099-0001:ev:act-32099R0001-signature-2026-10-21"}
+    b.dossier_detail["2099-0001"]["celex"] = ["32099R0001"]
+    assert supported([other_act, own_act], b) == [own_act]
+    # a later stage than the one recorded (in force after "published"), or a negative one, keeps the record
+    for stage in ("in_force", "withdrawn", "unknown"):
+        b.dossier_detail["2099-0001"]["stage"] = stage
+        assert published in supported([published], b)
 
 
 @pytest.mark.parametrize("source", ["ep_procedures", "eurlex"])
