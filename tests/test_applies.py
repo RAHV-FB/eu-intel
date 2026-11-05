@@ -220,6 +220,14 @@ def test_without_a_record_of_their_participation_denmark_and_ireland_are_not_kno
     ec = _act(title="Council Regulation (EU) 2099/3 implementing enhanced cooperation in the area of testing")
     w = applies.where_of(ec, _stand_in([ec]))
     assert (w["bound"], w["unknown"], w["note"]) == ([], ALL, applies.ENHANCED_NOTE)
+    assert applies.where_text(w) == applies.ENHANCED_NOTE
+    # a voting result gives the positions of those taking part: they are bound, whether the others are is not known,
+    # and not because of Denmark's and Ireland's protocols
+    voters = {c: "for" for c in ALL[:22]}
+    w = applies.where_of(ec, _stand_in([ec], [_vote(voters)]))
+    assert (w["bound"], w["unknown"], w["note"]) == (ALL[:22], ALL[22:], applies.ENHANCED_NOTE)
+    assert applies.where_text(w) == (f"{applies.ENHANCED_NOTE} 22 Member States. Whether it binds Portugal, Romania, "
+                                     "Sweden, Slovenia and Slovakia is not known from our data.")  # fmt: skip
 
 
 def test_a_directive_s_recitals_and_its_own_exemptions_say_who_is_not_bound():

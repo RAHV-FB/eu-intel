@@ -80,8 +80,8 @@ DECISION_NOTE = (
     "whom this one names."
 )
 ENHANCED_NOTE = (
-    "It implements enhanced cooperation, so it binds only the Member States taking part in it (Article 20(4) TEU); "
-    "no Council voting result in our data says which they are."
+    "It implements enhanced cooperation, so it binds only the Member States taking part in it (Article 20(4) TEU); our "
+    "data record them only through a Council voting result with each country’s position."
 )
 
 
@@ -260,7 +260,7 @@ def where_of(a: LegalAct, b: Any) -> dict:
     out: dict[str, Any] = {"bound": bound, "not_bound": not_bound, "unknown": unknown}
     if addressees:
         out["note"] = DECISION_NOTE
-    elif enhanced and len(unknown) == len(MEMBER_STATES):
+    elif enhanced and unknown:  # not Denmark's and Ireland's protocols: whom the enhanced cooperation includes
         out["note"] = ENHANCED_NOTE
     if later:
         out["opted_in"] = [later[c] for c in sorted(later)]
@@ -335,7 +335,7 @@ def where_text(w: dict) -> str:
         parts.append(lead + ".")
     for x in not_bound:
         parts.append(f"{MEMBER_STATES[x['country']]}: {x['reason']}")
-    if unknown and not w.get("note"):
+    if unknown and bound:  # (none bound: the note says why none is known)
         parts.append(f"Whether it binds {_join([MEMBER_STATES[c] for c in unknown])} is not known from our data.")
     return " ".join(parts)
 
