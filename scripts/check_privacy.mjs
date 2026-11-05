@@ -7,12 +7,16 @@
 // source introduces tracking or unsafe HTML injection:
 //   dist/**/*.html  third-party URLs in resource-loading markup (script/link rel=stylesheet|icon|preload…/
 //                   img/srcset/iframe/source/video/audio/embed/object/track/form/base/meta refresh), inline
-//                   <style>/style="" url()s, a missing or non-'self' Content-Security-Policy meta or one with
-//                   'unsafe-inline', and inline <style>/style="" (which that CSP blocks).
+//                   <style>/style="" url()s, a missing or non-'self' Content-Security-Policy meta, one with
+//                   'unsafe-inline' or one placed after a resource it should cover, and what that CSP blocks:
+//                   inline <style>/style="", inline <script>, on…="" event handlers and javascript: URLs.
 //                   Plain <a href> links to official sources are fine and are NOT flagged.
 //   dist/**/*.css   third-party url(...) / @import (e.g. hosted web fonts).
-//   dist/**/*.js    network calls to literal third-party URLs (fetch/XHR/import()), sendBeacon, WebSocket,
-//                   EventSource, JSX resource elements with third-party src, known CDN/font/embed hosts.
+//   dist/**/*.js    network calls to literal third-party URLs (fetch/XHR/import(), fetch(new URL/Request)),
+//                   sendBeacon, WebSocket, EventSource, image beacons (.src = a third-party URL), react-dom
+//                   resource hints (preconnect/prefetchDNS/preload/preinit: the CSP does not govern preconnect
+//                   or dns-prefetch, so this check is all that stops them), JSX resource elements with a
+//                   third-party src, known CDN/font/embed hosts.
 //   dist/data/**    image-like fields (photo, image, logo…) pointing at third-party hosts.
 //   everywhere      analytics/tracking code (Google Analytics/gtag/GTM, Plausible, Umami, Hotjar, Meta
 //                   pixel, Matomo/Piwik, Clarity, Mixpanel, Segment, Cloudflare Insights, Sentry CDN) and
@@ -95,6 +99,8 @@ const CDN_HOSTS =
   /\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com|ajax\.googleapis\.com|cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|use\.typekit\.net|p\.typekit\.net|use\.fontawesome\.com|kit\.fontawesome\.com|code\.jquery\.com|stackpath\.bootstrapcdn\.com|maxcdn\.bootstrapcdn\.com|maps\.googleapis\.com|www\.youtube(?:-nocookie)?\.com\/embed|player\.vimeo\.com|www\.gravatar\.com|secure\.gravatar\.com|polyfill\.io|esm\.sh|cdn\.skypack\.dev)/i;
 const RESOURCE_RELS =
   /\b(?:stylesheet|icon|apple-touch-icon|mask-icon|preload|prefetch|modulepreload|preconnect|dns-prefetch|prerender|manifest)\b/i;
+// react-dom's resource hints (React 19), called with a literal absolute URL
+const RESOURCE_HINT = (abs) => new RegExp(`\\b(?:preconnect|prefetchDNS|preload|preloadModule|preinit|preinitModule)\\s*\\(\\s*${abs}`, 'g');
 
 function scanAll(file, text, label) {
   for (const [re, name] of ANALYTICS) {
@@ -134,6 +140,11 @@ function checkCsp(file, html) {
     add(file, 0, html, 'missing Content-Security-Policy <meta>', '(no CSP meta tag)');
     return;
   }
+  // a <meta> policy applies only to what the document loads after it
+  const early = new RegExp(`<(?:script|style|img|iframe|object|embed|video|audio|source)\\b|<link\\b[^>]*\\brel\\s*=\\s*["']?[^"'>]*${RESOURCE_RELS.source}`, 'i').exec(
+    html.slice(0, m.index),
+  );
+  if (early) add(file, early.index, html, 'Content-Security-Policy <meta> after a resource it must cover', html.slice(early.index, early.index + 80));
   const policy = attrs(m[0]).content ?? '';
   const directives = Object.fromEntries(
     policy
@@ -183,7 +194,27 @@ function scanHtml(file, html) {
   for (const m of html.matchAll(/\sstyle\s*=\s*("[^"]*"|'[^']*')/gi)) scanCssUrls(file, m[1], m.index, html);
   // the CSP has no 'unsafe-inline': a <style> element or style="" attribute in a page would not be applied
   for (const m of html.matchAll(/<style\b|<[a-z][^>]*?\sstyle\s*=/gi)) add(file, m.index, html, 'inline style (blocked by the CSP)', html.slice(m.index, m.index + 80));
+  // nor would a script in the page itself run: an inline <script> (a data block, e.g. JSON-LD, is not a script), an
+  // on…="" handler or a javascript: URL
+  for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+    const type = (attrs(m[1]).type ?? '').trim().toLowerCase();
+    if (m[2].trim() && (EXECUTED_SCRIPT_TYPES.has(type) || JS_MIME.test(type))) {
+      add(file, m.index, html, 'inline script (blocked by the CSP)', m[0]);
+    }
+  }
+  for (const m of html.matchAll(/<([a-z][a-z0-9-]*)\b[^>]*>/gi)) {
+    for (const [name, value] of Object.entries(attrs(m[0].slice(1 + m[1].length)))) {
+      if (/^on[a-z]+$/.test(name)) add(file, m.index, html, 'inline event handler (blocked by the CSP)', m[0]);
+      else if (/^(?:href|src|action|formaction|xlink:href|data)$/.test(name) && /^\s*javascript:/i.test(value)) {
+        add(file, m.index, html, 'javascript: URL (blocked by the CSP)', m[0]);
+      }
+    }
+  }
 }
+// <script> types the browser runs (or processes, with the CSP's script-src): JavaScript, a module, an import map,
+// speculation rules; any other type is a data block
+const EXECUTED_SCRIPT_TYPES = new Set(['', 'module', 'importmap', 'speculationrules']);
+const JS_MIME = /^(?:(?:text|application)\/(?:x-)?(?:java|ecma)script|text\/(?:jscript|livescript|javascript1\.[0-5]))$/;
 
 function scanJs(file, js) {
   scanAll(file, js, 'js');
@@ -191,8 +222,13 @@ function scanJs(file, js) {
   const ABS = `${Q}(?:https?:)?\\/\\/`;
   const rules = [
     [new RegExp(`\\bfetch\\s*\\(\\s*${ABS}`, 'g'), 'fetch() to a literal third-party URL'],
+    [new RegExp(`\\bfetch\\s*\\(\\s*new\\s+(?:URL|Request)\\s*\\(\\s*${ABS}`, 'g'), 'fetch() to a literal third-party URL'],
+    [new RegExp(`\\bnew\\s+Request\\s*\\(\\s*${ABS}`, 'g'), 'fetch() to a literal third-party URL (new Request)'],
     [new RegExp(`\\bimport\\s*\\(\\s*${ABS}`, 'g'), 'dynamic import() from a third-party URL'],
     [new RegExp(`\\.open\\s*\\(\\s*${Q}[A-Za-z]+${Q}\\s*,\\s*${ABS}`, 'g'), 'XMLHttpRequest to a third-party URL'],
+    [RESOURCE_HINT(ABS), 'resource hint to a third-party URL (react-dom preconnect/prefetchDNS/preload/preinit)'],
+    [new RegExp(`\\.(?:src|srcset|poster)\\s*=\\s*${ABS}`, 'g'), 'third-party URL assigned to .src (an image beacon)'],
+    [new RegExp(`\\bsetAttribute\\s*\\(\\s*${Q}(?:src|srcset|poster|data)${Q}\\s*,\\s*${ABS}`, 'g'), 'third-party URL assigned to .src (an image beacon)'],
     [/\bsendBeacon\s*\(/g, 'navigator.sendBeacon (beaconing)'],
     [/\bnew\s+WebSocket\s*\(/g, 'WebSocket connection'],
     [/\bnew\s+EventSource\s*\(/g, 'EventSource connection'],
@@ -251,7 +287,10 @@ function scanSrc(file, text) {
     [/\bcreateElement\s*\(\s*['"`](?:script|iframe)['"`]/g, 'dynamic <script>/<iframe> creation'],
     [/\bsendBeacon\s*\(|\bnew\s+(?:WebSocket|EventSource)\s*\(/g, 'beacon / socket connection'],
     [/<(?:img|script|iframe|source|video|audio|embed|object|track|link|image)\b[^>]*?\b(?:src|srcSet|href|data|poster)\s*=\s*\{?\s*[`'"](?:https?:)?\/\//g, 'third-party resource URL in JSX'],
-    [/\bfetch\s*\(\s*[`'"](?:https?:)?\/\//g, 'fetch() to a third-party URL (visitors must not contact external APIs)'],
+    [/\bfetch\s*\(\s*(?:new\s+(?:URL|Request)\s*\(\s*)?[`'"](?:https?:)?\/\//g, 'fetch() to a third-party URL (visitors must not contact external APIs)'],
+    [/\bnew\s+Request\s*\(\s*[`'"](?:https?:)?\/\//g, 'fetch() to a third-party URL (new Request)'],
+    [RESOURCE_HINT('[`\'"](?:https?:)?\\/\\/'), 'resource hint to a third-party URL (react-dom preconnect/prefetchDNS/preload/preinit)'],
+    [/\.(?:src|srcset|poster)\s*=\s*[`'"](?:https?:)?\/\//g, 'third-party URL assigned to .src (an image beacon)'],
   ];
   for (const [re, rule] of rules) {
     for (const m of text.matchAll(re)) add(file, m.index, text, rule, text.slice(Math.max(0, m.index - 30), m.index + 120));
