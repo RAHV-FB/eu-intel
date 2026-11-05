@@ -7,7 +7,8 @@
 #   whose core sources failed is retried, and a commit of other data (a partial manual refresh, a restore) does not
 #   count. A scheduled run in the first seven days of a month is a full refresh
 #   (EU_INTEL_FULL_REFRESH=1, decided in the plan job: cron would OR a day-of-month with the weekday). GitHub disables
-#   schedules in public repos after 60 days without repository activity; the daily watchdog (watchdog.yml) notices.
+#   schedules in public repos after 60 days without activity (a commit): this run's weekly commits keep the repository
+#   active. The watchdog's own daily run is disabled with it; it then reports overdue data after the next push to main.
 # - Each source is failure-isolated by `python -m pipeline fetch`: a failed source keeps its previous
 #   snapshot files and is recorded in data/snapshot/_manifest.json; the job carries on. A failed source alone does not
 #   fail the run (the Legislative Train fails on every runner): it goes into the "Data health" issue (watchdog.yml).

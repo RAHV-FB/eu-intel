@@ -24,7 +24,9 @@ they reach `main`. To regenerate the file (Python 3.12, as the workflows use): `
 
 The deploy job also makes an independent HTTP smoke check **against the public Pages URL**, including the
 homepage, Insights, legislation, votes, people, countries, and data/meta.json. A successful GitHub Pages
-publish that serves missing routes or empty data is treated as a failed release.
+publish that serves missing routes or empty data is treated as a failed release, and so is one the public URL does not
+serve: the check waits (up to 5 minutes) until `data/meta.json`, fetched with a query string past Pages' 10-minute
+cache, has the `built_at` of the build it deployed.
 
 ### The data gate
 
@@ -91,13 +93,18 @@ open http://127.0.0.1:4174/eu-intel/).
 
 - **Refresh** runs weekly on Monday at 05:17 UTC, and again at 22:37 UTC; a scheduled run is skipped when every core
   source (`CORE_SOURCES` in `pipeline/freshness.py`: EP procedures, EP votes, EUR-Lex, Council) was retrieved
-  successfully in the last 20 hours (`RECENT_HOURS`) by `main`'s `data/snapshot/_manifest.json`, so the second one
-  does not run after a first one that refreshed them, and does run after one whose core sources failed (an outage) or
-  that never came: GitHub runs schedules on a best-effort basis (the 05:17 run has started up to 8 hours late) and can
-  drop a run at busy times. A commit of other data (a manual refresh of one source, a restore) does not skip it. A scheduled run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`;
-  decided in the job, since cron would OR a day of the month with the weekday). A manual run is never skipped. GitHub
-  also disables scheduled workflows in a public repository after 60 days without repository activity; the watchdog then
-  reports the live data as overdue. Re-enable it under *Actions → Data refresh → Enable workflow*.
+  successfully in the last 20 hours (`RECENT_HOURS`) by `main`'s `data/snapshot/_manifest.json`, so the second one does
+  not run after a first one that refreshed them, and does run after one whose core sources failed (an outage) or that
+  never came: GitHub runs schedules on a best-effort basis (the 05:17 run has started up to 8 hours late) and can drop a
+  run at busy times. A commit of other data (a manual refresh of one source, a restore) does not skip it. A scheduled
+  run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`; decided in the job, since cron
+  would OR a day of the month with the weekday). A manual run is never skipped. GitHub also disables every scheduled
+  workflow of a public repository after 60 days without activity in it. A commit is activity: the refresh's weekly
+  commits keep the repository active as long as it commits. A scheduled run that commits nothing (the watchdog's) is
+  not. The watchdog's daily run is disabled together with the refresh's, so it cannot report this by itself: it then
+  runs only after a CI run for a push to `main` or a deploy, and the first of those reports the live data as overdue.
+  Re-enable each under *Actions → <workflow> → Enable workflow* (`gh workflow enable refresh.yml`, `gh workflow enable
+  watchdog.yml`).
 - **Time limits**: the fetch has a run-wide deadline (`EU_INTEL_FETCH_DEADLINE`, set by the workflow); after it
   no source starts and running sources start no new work. A request made after it gets a single short attempt
   (at most 30 s, no retries), and none starts at all 5 minutes after it. `timeout --signal=INT` then stops the
@@ -352,7 +359,8 @@ or an empty heading; then nothing is uploaded or deployed, and the report is kep
 ## Data health
 
 `watchdog.yml` keeps one issue titled "Data health" (label `data-health`) open while anything below is wrong, rewrites
-it with the current list on each run, comments when a problem is new (an edit alone notifies no one), and closes it once
+it with the current list on each run, comments when a problem is new (an edit alone notifies no one; a source that gets
+worse counts as new: failed, then stale, then its official labels withdrawn), and closes it once
 everything passes. It runs after each *Data refresh*, each *CI* run on `main` and each *Deploy to GitHub Pages* run, daily
 at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes nothing to the repository. It lists:
 

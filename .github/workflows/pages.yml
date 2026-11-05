@@ -54,6 +54,8 @@ jobs:
     # below (CI's `playwright install --with-deps chromium` there added only fonts, 5 Nov 2026), so no apt step.
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    outputs:
+      built_at: ${{ steps.record.outputs.built_at }}
     steps:
       # The commit to deploy, with every commit and tree of the history but no file contents beyond this commit's
       # (filter: blob:none, about 0.1 MB for the whole history): the next step only compares commits and trees.
@@ -181,6 +183,12 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      - name: Record what is deployed
+        id: record
+        run: |
+          built_at=$(python3 -c 'import json; print(json.load(open("dist/data/meta.json"))["built_at"])')
+          echo "built_at=$built_at" >> "$GITHUB_OUTPUT"
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
@@ -207,6 +215,7 @@ jobs:
       - name: Verify published site and deep links
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          BUILT_AT: ${{ needs.build.outputs.built_at }}
         run: |
           set -euo pipefail
           test -n "$PAGE_URL"
@@ -226,5 +235,24 @@ jobs:
                 grep -q 'Data insights' "$tmp"
               fi
             fi
+          done
+          # The deployment is live once data/meta.json says it was built when this run built it: Pages had served the
+          # previous one from its 10-minute cache (the query string gets past it), and new files take a while to reach
+          # every server. A deployment the public URL does not serve fails the release.
+          attempts=${VERIFY_ATTEMPTS:-30}
+          for attempt in $(seq 1 "$attempts"); do
+            live=$(curl --fail --silent --show-error --location \
+              "${base}data/meta.json?deploy=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${attempt}" |
+              python3 -c 'import json,sys; print(json.load(sys.stdin)["built_at"])' || true)
+            if [ "$live" = "$BUILT_AT" ]; then
+              echo "The public URL serves this deployment (data/meta.json built_at $live)."
+              break
+            fi
+            if [ "$attempt" -eq "$attempts" ]; then
+              echo "::error::The public URL does not serve this deployment: its data/meta.json says built_at ${live:-?}, not $BUILT_AT."
+              exit 1
+            fi
+            echo "data/meta.json says built_at ${live:-?}, not $BUILT_AT yet (attempt $attempt of $attempts)."
+            sleep "${VERIFY_SLEEP:-10}"
           done
           echo "Public site smoke checks passed."

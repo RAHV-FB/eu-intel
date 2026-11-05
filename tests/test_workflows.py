@@ -277,6 +277,60 @@ def test_code_is_deployed_only_after_ci_passes_on_main_and_a_refresh_deploys_its
     assert 'echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"' in s[named(s, "Commit and push snapshot")]["run"]
 
 
+FAKE_CURL = r"""#!/usr/bin/env python3
+# The public site: HTML for the routes, data/meta.json whose built_at becomes the new one after SWITCH_AFTER requests.
+import json, os, sys
+args, out = sys.argv[1:], None
+if "--output" in args:
+    out = args[args.index("--output") + 1]
+url = [a for a in args if a.startswith("http")][-1]
+with open(os.environ["CURL_LOG"], "a") as log:
+    log.write(url + "\n")
+if "data/meta.json" in url:
+    count_file = os.environ["CURL_LOG"] + ".meta"
+    n = int(open(count_file).read()) + 1 if os.path.exists(count_file) else 1
+    open(count_file, "w").write(str(n))
+    built = os.environ["NEW_BUILT_AT"] if n > int(os.environ["SWITCH_AFTER"]) else "2026-01-01T00:00:00Z"
+    body = json.dumps({"built_at": built, "counts": {"dossiers": 1, "ep_votes": 1}})
+else:
+    body = "<html><title>EU Legislative Intelligence</title>Data insights</html>"
+if out:
+    open(out, "w").write(body)
+else:
+    sys.stdout.write(body)
+"""
+
+
+def test_a_deploy_fails_unless_the_public_url_serves_what_it_built(tmp_path):
+    # the check passed on whatever the public URL served, the previous deployment included (Pages caches 10 minutes)
+    w = workflow("pages.yml")
+    assert w["jobs"]["build"]["outputs"]["built_at"] == "${{ steps.record.outputs.built_at }}"
+    build = w["jobs"]["build"]["steps"]
+    upload = next(i for i, x in enumerate(build) if x.get("uses", "").startswith("actions/upload-pages-artifact@"))
+    assert named(build, "Smoke-test the site on its own data (Chromium)") < named(build, "Record what is deployed") < upload
+    verify = steps("pages.yml", "deploy")[named(steps("pages.yml", "deploy"), "Verify published site and deep links")]
+    assert verify["env"]["BUILT_AT"] == "${{ needs.build.outputs.built_at }}"
+    bin_dir, log = tmp_path / "bin-curl", tmp_path / "curl.log"
+    bin_dir.mkdir()
+    (bin_dir / "curl").write_text(FAKE_CURL, encoding="utf-8")
+    (bin_dir / "curl").chmod(0o755)
+
+    def verify_with(switch_after: int) -> bool:
+        for f in (log, Path(f"{log}.meta")):
+            f.unlink(missing_ok=True)
+        log.write_text("", encoding="utf-8")
+        env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "CURL_LOG": str(log),
+               "PAGE_URL": "https://example.org/eu-intel/", "BUILT_AT": "2026-11-05T14:19:00Z",
+               "NEW_BUILT_AT": "2026-11-05T14:19:00Z", "SWITCH_AFTER": str(switch_after), "GITHUB_RUN_ID": "5",
+               "GITHUB_RUN_ATTEMPT": "1", "VERIFY_ATTEMPTS": "4", "VERIFY_SLEEP": "0"}  # fmt: skip
+        return subprocess.run(["bash", "-e", "-c", verify["run"]], cwd=tmp_path, env=env, capture_output=True).returncode == 0
+
+    assert verify_with(switch_after=3)  # the old deployment twice more (the routes' check fetched it once), then this one
+    urls = log.read_text(encoding="utf-8").splitlines()
+    assert "https://example.org/eu-intel/data/meta.json?deploy=5-1-2" in urls  # each attempt past the cache
+    assert not verify_with(switch_after=10)  # never served: the release fails
+
+
 def git_repo(path: Path):
     def git(*args: str) -> str:
         cmd = ["git", "-c", "user.name=t", "-c", "user.email=t@example.org", "-c", "commit.gpgsign=false", *args]
@@ -524,11 +578,11 @@ def test_the_health_check_lists_failed_and_stale_sources_and_the_workflows_probl
 
     assert main(["health", "--manifest", str(manifest), "--json"]) == 1
     report = json.loads(capsys.readouterr().out)
-    assert [p["key"] for p in report["problems"]] == ["source:council", "source:train"]  # stale; failed (not stale)
+    assert [p["key"] for p in report["problems"]] == ["source:council:stale", "source:train"]  # stale; failed, not stale
     assert main(["health", "--manifest", str(manifest), "--meta", str(meta), "--problem", "ci=CI fails", "--markdown"]) == 1
     body = capsys.readouterr().out
     # main's ep_votes (1 day old) is newer than the live site's (10 days): not deployed
-    assert body.startswith("<!-- data-health: ci,source:council,source:train,site,undeployed -->\n")
+    assert body.startswith("<!-- data-health: ci,source:council:stale,source:train,site,undeployed -->\n")
     assert "- CI fails" in body and "**The live site's data is overdue**" in body
     healthy = tmp_path / "healthy.json"
     healthy.write_text(json.dumps({"ep_votes": {"status": "partial", "fetched_at": iso(now)}}), encoding="utf-8")
@@ -611,6 +665,32 @@ def test_the_watchdog_judges_the_latest_run_that_did_its_work(tmp_path):
     data["runs"] = {}
     env, _ = gh_serving(tmp_path, data)
     assert latest("refresh.yml", "--job", refresh_job) == ""
+
+
+def test_a_source_getting_worse_gets_a_new_key_so_the_issue_notifies(tmp_path, capsys):
+    # the Train failing, then stale (the site says "not up to date"), then its "blocked" labels withdrawn: one key,
+    # source:train, throughout, so the issue was only edited and nobody was told
+    from pipeline.__main__ import main
+    from pipeline.freshness import LABELS_EXPIRE_AFTER_DAYS, STALE_AFTER_DAYS
+
+    now = datetime.now(UTC)
+    iso = lambda d: d.strftime("%Y-%m-%dT%H:%M:%SZ")  # noqa: E731
+
+    def key(days: float) -> list[str]:
+        manifest = tmp_path / "m.json"
+        entry = {"status": "failed", "fetched_at": iso(now - timedelta(days=days)), "attempted_at": iso(now)}
+        manifest.write_text(json.dumps({"train": entry}), encoding="utf-8")
+        main(["health", "--manifest", str(manifest), "--json"])
+        return [p["key"] for p in json.loads(capsys.readouterr().out)["problems"]]
+
+    stale, expire = STALE_AFTER_DAYS["train"], LABELS_EXPIRE_AFTER_DAYS["train"]
+    assert stale < expire
+    assert key(stale - 1) == ["source:train"]  # the key the live issue already lists: no comment on the upgrade
+    assert key(stale + 1) == ["source:train:stale"]
+    assert key(expire + 1) == ["source:train:labels-expired"]
+    # the watchdog comments on each key the issue did not list (watchdog.yml): each step is a new one
+    issue = steps("watchdog.yml", "health")[named(steps("watchdog.yml", "health"), "Open, update or close the issue")]["run"]
+    assert 'contains("," + $k + ",")' in issue
 
 
 def test_the_health_check_reports_data_on_main_the_live_site_lacks(tmp_path, capsys):

@@ -167,7 +167,7 @@ def cmd_health(
     markdown for the issue body, json) and returns 1 if there is any."""
     from datetime import UTC, datetime
 
-    from pipeline.freshness import source_health
+    from pipeline.freshness import LABELS_EXPIRE_AFTER_DAYS, source_health
     from pipeline.snapshot import MANIFEST
 
     now = datetime.now(UTC)
@@ -193,7 +193,14 @@ def cmd_health(
         if flags:
             last = f"{s['fetched_at'][:10]}, {s['age_days']:g} days ago" if s["fetched_at"] else "never"
             text = f"{', '.join(flags)}; last successful retrieval {last} (stale after {s['stale_after_days']} days)"
-            found.append({"key": f"source:{s['source']}", "text": f"**{s['source']}**: {text}"})
+            # The key names the worst state, so that the issue gets a comment (a notification) each time a source gets
+            # worse: failed -> stale (the site says "not up to date") -> its labels expired (the site withdraws them)
+            key = f"source:{s['source']}" + (":stale" if s["stale"] else "")
+            expire = LABELS_EXPIRE_AFTER_DAYS.get(s["source"])
+            if expire is not None and (s["age_days"] is None or s["age_days"] > expire):
+                key = f"source:{s['source']}:labels-expired"
+                text += f"; its classifications (the Legislative Train's “blocked”) are no longer shown, after {expire} days"
+            found.append({"key": key, "text": f"**{s['source']}**: {text}"})
     site = None
     if meta is not None:
         try:
@@ -205,7 +212,7 @@ def cmd_health(
                 found.append({"key": "site", "text": (
                     f"**The live site's data is overdue**: its newest data was retrieved on {newest[:10]}, {age:.1f} "
                     f"days ago (more than {max_age:g}). No refresh has reached the site since: the schedule may "
-                    "be late, dropped or disabled (GitHub disables it after 60 days without repository activity), or "
+                    "be late, dropped or disabled (GitHub disables it after 60 days without a commit), or "
                     "the refresh or its deploy fails."
                 )})  # fmt: skip
             # data on main the live site does not have: a core source retrieved on main after the live site's copy of
