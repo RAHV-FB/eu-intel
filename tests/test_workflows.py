@@ -776,10 +776,17 @@ data = json.load(open(os.environ["FAKE_GH_DATA"]))
 with open(os.environ["FAKE_GH_LOG"], "a") as log:
     log.write(" ".join(args) + "\n")
 jq = args[args.index("--jq") + 1] if "--jq" in args else None
+if args[0] in data.get("fail", []):  # an API error for this command (e.g. "run": the Actions API)
+    sys.stderr.write("HTTP 502: Server Error\n")
+    sys.exit(1)
 if args[:2] == ["run", "list"]:
     out = data["runs"].get(args[args.index("--workflow") + 1], [])
 elif args[:2] == ["run", "view"]:
     out = {"jobs": data["jobs"].get(args[2], [])}
+elif args[:2] == ["issue", "list"]:
+    out = data.get("issues", [])
+elif args[:2] == ["issue", "view"]:
+    out = data.get("issue", {})
 elif args[:1] == ["api"]:
     out = data.get("api", {})
 else:
@@ -903,10 +910,13 @@ def test_the_health_check_reports_data_on_main_the_live_site_lacks(tmp_path, cap
     assert keys(5) == []  # the site is newer than main's manifest (a deploy of a later commit)
 
 
-def watchdog_check(tmp_path: Path, data: dict, live_days: float) -> tuple[dict[str, str], list[dict], str]:
+def watchdog_check(
+    tmp_path: Path, data: dict, live_days: float, health_crashes: bool = False
+) -> tuple[dict[str, str], list[dict], str]:
     """The watchdog's Check step, as the job runs it: its sparse checkout (the pipeline, main's manifest with the core
     sources retrieved 10 h ago, the run picker), `gh` answering from `data`, `curl` serving a live meta.json whose
-    sources are `live_days` old. Returns its outputs, the problems it found and the URLs curl was asked for."""
+    sources are `live_days` old. Returns its outputs, the problems it found and the URLs curl was asked for.
+    `health_crashes`: `pipeline health` raises (a bug), as Python exits then: with 1."""
     if not shutil.which("jq"):
         pytest.skip("jq is not installed")
     from pipeline.freshness import CORE_SOURCES
@@ -914,6 +924,9 @@ def watchdog_check(tmp_path: Path, data: dict, live_days: float) -> tuple[dict[s
     s = steps("watchdog.yml", "health")
     work = tmp_path / "checkout"
     shutil.copytree(ROOT / "pipeline", work / "pipeline", ignore=shutil.ignore_patterns("__pycache__"))
+    if health_crashes:
+        with (work / "pipeline" / "freshness.py").open("a", encoding="utf-8") as f:
+            f.write("\n\ndef source_health(*args, **kwargs):\n    raise RuntimeError('a bug')\n")
     (work / "scripts").mkdir()
     shutil.copy(ROOT / "scripts" / "latest_run.py", work / "scripts" / "latest_run.py")
     now = datetime.now(UTC)
@@ -982,6 +995,60 @@ def test_red_ci_says_to_rerun_the_known_webkit_flake_once_and_that_refreshed_dat
     data["jobs"]["18"] = ran_job("Lint, test, build", "failure", "Pytest (offline; network tests deselected)")
     _, problems, _ = watchdog_check(tmp_path / "pytest", data, live_days=10 / 24)
     assert "re-run" not in problems[0]["text"] and "once CI has passed on main's code" in problems[0]["text"]
+
+
+def test_the_watchdog_does_not_pass_what_it_could_not_check(tmp_path):
+    # scripts/latest_run.py failed (an Actions API error, a rate limit, a change in gh's output) and printed nothing,
+    # which read as "no failed run": the watchdog said "All checks pass" and closed the issue while CI was red
+    data = {
+        "runs": {"refresh.yml": [run_(9, "success")], "ci.yml": [run_(18, "failure")], "pages.yml": []},
+        "jobs": {"9": ran_job("Fetch, validate, gate, commit", "success"), "18": ran_job("Lint, test, build", "failure")},
+        "api": {"size": 1000},
+        "fail": ["run"],
+    }  # fmt: skip
+    out, problems, _ = watchdog_check(tmp_path, data, live_days=10 / 24)
+    assert out == {"healthy": "false", "site_ok": "true"}  # the site was checked; the issue stays open
+    assert [p["key"] for p in problems] == ["watchdog"]
+    text = problems[0]["text"]
+    assert "could not read" in text and all(w in text for w in ("refresh.yml", "ci.yml", "pages.yml", "rebuild.yml"))
+    data["fail"] = ["api"]  # the repository's size could not be read
+    out, problems, _ = watchdog_check(tmp_path / "api", data, live_days=10 / 24)
+    assert [p["key"] for p in problems] == ["ci", "watchdog"] and "repository's size" in problems[1]["text"]
+    data["fail"] = []
+    _, problems, _ = watchdog_check(tmp_path / "ok", data, live_days=10 / 24)
+    assert [p["key"] for p in problems] == ["ci"]
+
+
+def test_a_watchdog_that_cannot_finish_its_check_fails_and_says_so_in_the_issue(tmp_path):
+    # `pipeline health` raised (a bug): Python exits 1, as it does for "problems found", so the step went on with empty
+    # outputs, the run was green, and the issue's body was replaced by its footer alone, without the problems it listed
+    data = {
+        "runs": {"refresh.yml": [run_(9, "success")], "ci.yml": [run_(18, "success")], "pages.yml": []},
+        "jobs": {"9": ran_job("Fetch, validate, gate, commit", "success")},
+        "api": {"size": 1000},
+    }  # fmt: skip
+    with pytest.raises(subprocess.CalledProcessError):
+        watchdog_check(tmp_path, data, live_days=10 / 24, health_crashes=True)
+    s = steps("watchdog.yml", "health")
+    assert s[named(s, "Check")]["id"] == "check"
+    report = s[named(s, "Report the watchdog's own failure")]
+    assert report["if"] == "${{ failure() && steps.check.outcome != 'success' }}"  # a crash, or a failed install
+    assert named(s, "Report the watchdog's own failure") == len(s) - 1
+    env = {k: str(v) for k, v in workflow("watchdog.yml")["env"].items()} | {"RUN_URL": "https://x/runs/77"}
+
+    def report_with(issue_data: dict) -> list[str]:
+        gh_env, log = gh_serving(tmp_path, issue_data)
+        run_step(report["run"], tmp_path, env | gh_env)
+        return [line for line in log.read_text(encoding="utf-8").splitlines() if line.startswith(("issue", "label"))]
+
+    calls = report_with({"issues": [{"number": 20}], "issue": {"comments": [{"body": "New since the last check"}]}})
+    assert calls[-1].startswith("issue comment 20 --body **The watchdog itself failed** ([watchdog run](https://x/runs/77))")
+    # a run that fails again says nothing new: one comment per spell of failures
+    again = {"issues": [{"number": 20}], "issue": {"comments": [{"body": calls[-1].split("--body ", 1)[1]}]}}
+    assert not [c for c in report_with(again) if c.startswith("issue comment")]
+    calls = report_with({"issues": []})  # no open issue: one is opened
+    assert any(c.startswith("label create data-health --force") for c in calls)
+    assert calls[-1].startswith("issue create --title Data health --label data-health --body **The watchdog itself failed**")
 
 
 # ---------------------------------------------------------------- supply chain

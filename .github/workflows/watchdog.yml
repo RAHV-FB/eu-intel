@@ -43,6 +43,7 @@ env:
   MAX_AGE_DAYS: "8"
   REPO_SIZE_WARN_MB: "750"
   LABEL: data-health
+  LABEL_DESCRIPTION: "Opened and closed by the watchdog: failing or stale sources, failed refresh, red CI, stale site"
   TITLE: Data health
 
 jobs:
@@ -94,10 +95,20 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
         run: |
           problems=()
-          # "<conclusion> <run id> <url> <commit>" of the latest completed run of a workflow on main that did its work:
-          # not cancelled or skipped, and not one in which --job was skipped (a scheduled refresh its plan skipped, which
-          # concludes "success" and would hide a failed one); see scripts/latest_run.py
-          latest() { python scripts/latest_run.py "$@"; }
+          # what could not be read (an API error, a rate limit, a change in gh's output): a problem, never a pass
+          unread=()
+          # conclusion, id, url and sha of the latest completed run of a workflow on main that did its work: not
+          # cancelled or skipped, and not one in which --job was skipped (a scheduled refresh its plan skipped, which
+          # concludes "success" and would hide a failed one); see scripts/latest_run.py. All empty if there is none.
+          latest() {
+            local line
+            conclusion="" id="" url="" sha=""
+            if line=$(python scripts/latest_run.py "$@"); then
+              read -r conclusion id url sha <<< "$line" || true
+            else
+              unread+=("the latest $1 run")
+            fi
+          }
           # the failed jobs of a run, each with its failed steps
           failed() {
             gh run view "$1" --json jobs --jq '[.jobs[] | select(.conclusion == "failure") | .name +
@@ -105,11 +116,11 @@ jobs:
               | join("; ")' || echo "see the run"
           }
 
-          read -r conclusion id url _ <<< "$(latest refresh.yml --job "Fetch, validate, gate, commit")" || true
+          latest refresh.yml --job "Fetch, validate, gate, commit"
           if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
             problems+=(--problem "refresh=**The latest Data refresh failed** ($conclusion, [run $id]($url)): $(failed "$id"). A refresh whose data fails the data gate commits and deploys nothing; the site keeps the last data that passed.")
           fi
-          read -r conclusion id url sha <<< "$(latest ci.yml --event push)" || true
+          latest ci.yml --event push
           if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
             detail=$(failed "$id")
             hint=""
@@ -124,7 +135,7 @@ jobs:
 
           # the latest deploy after CI or by hand (a refresh's own deploy is part of its run, above): failed, or
           # cancelled with no later deploy that replaced it
-          read -r conclusion id url sha <<< "$(latest pages.yml --job "Build site" --cancelled-if-last)" || true
+          latest pages.yml --job "Build site" --cancelled-if-last
           if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
             detail=$(failed "$id")
             problems+=(--problem "deploy=**The latest deploy did not finish** ($conclusion, [run $id]($url), commit ${sha:0:7})${detail:+: $detail}. The site still serves the deployment before it: fix the cause and re-run it, or push a fix.")
@@ -132,7 +143,7 @@ jobs:
 
           # the latest daily rebuild that deployed (or failed): one that skipped its deploy (CI not green, a refresh
           # running) did nothing
-          read -r conclusion id url _ <<< "$(latest rebuild.yml --job Deploy)" || true
+          latest rebuild.yml --job Deploy
           if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
             problems+=(--problem "rebuild=**The latest daily rebuild failed** ($conclusion, [run $id]($url)): $(failed "$id"). The site keeps its previous build, whose statuses and labels are as of the day it was built: fix the cause (e.g. a data gate that fails on today's date) and re-run it.")
           fi
@@ -146,9 +157,14 @@ jobs:
             problems+=(--problem "site=**The live site's data/meta.json could not be fetched** (${site%/}/data/meta.json).")
           fi
 
-          kb=$(gh api "repos/$GITHUB_REPOSITORY" --jq .size || echo 0)
-          if [ "$kb" -gt $(( REPO_SIZE_WARN_MB * 1024 )) ]; then
+          if ! kb=$(gh api "repos/$GITHUB_REPOSITORY" --jq .size); then
+            unread+=("the repository's size")
+          elif [ "$kb" -gt $(( REPO_SIZE_WARN_MB * 1024 )) ]; then
             problems+=(--problem "repo-size=**The repository is $(( kb / 1024 )) MB** (GitHub recommends under 1 GB; this warns from ${REPO_SIZE_WARN_MB} MB). Each data refresh commit adds to every clone.")
+          fi
+          if [ ${#unread[@]} -gt 0 ]; then
+            what=$(printf '%s; ' "${unread[@]}")
+            problems+=(--problem "watchdog=**The watchdog could not read** ${what%; } ([watchdog run]($RUN_URL)): GitHub's API failed, or its answer changed. A failure there is not listed here until it can be read; the issue stays open until then.")
           fi
 
           set +e
@@ -157,10 +173,17 @@ jobs:
           python -m pipeline health "${meta[@]}" "${problems[@]}" --markdown > "$RUNNER_TEMP/body.md"
           set -e
           if [ "$rc" -gt 1 ]; then exit "$rc"; fi
-          echo "Opened, updated and closed by the [watchdog]($RUN_URL) (.github/workflows/watchdog.yml) after each Data refresh and each CI run on main, and daily; it closes once every check passes. docs/DEPLOYMENT.md, \"Data health\", says what each check means." >> "$RUNNER_TEMP/body.md"
+          # An exception exits 1, as "problems found" does: a check that wrote no report fails here (the last step says
+          # so in the issue) instead of replacing the issue's list of problems with nothing.
+          healthy=$(jq -r .healthy "$RUNNER_TEMP/health.json")
+          if [[ "$healthy" != true && "$healthy" != false ]] || [[ "$(head -n 1 "$RUNNER_TEMP/body.md")" != "<!-- data-health: "* ]]; then
+            echo "::error::python -m pipeline health exited $rc without a report"
+            exit 1
+          fi
+          echo "Opened, updated and closed by the [watchdog]($RUN_URL) (.github/workflows/watchdog.yml) after each Data refresh, CI run on main, deploy and daily rebuild, and daily; it closes once every check passes. docs/DEPLOYMENT.md, \"Data health\", says what each check means." >> "$RUNNER_TEMP/body.md"
           cat "$RUNNER_TEMP/body.md" >> "$GITHUB_STEP_SUMMARY"
           {
-            echo "healthy=$(jq -r .healthy "$RUNNER_TEMP/health.json")"
+            echo "healthy=$healthy"
             echo "site_ok=$(jq -r '[.problems[].key] | index("site") == null' "$RUNNER_TEMP/health.json")"
           } >> "$GITHUB_OUTPUT"
 
@@ -168,8 +191,7 @@ jobs:
         env:
           HEALTHY: ${{ steps.check.outputs.healthy }}
         run: |
-          gh label create "$LABEL" --force --color D93F0B \
-            --description "Opened and closed by the watchdog: failing or stale sources, failed refresh, red CI, stale site"
+          gh label create "$LABEL" --force --color D93F0B --description "$LABEL_DESCRIPTION"
           number=$(gh issue list --label "$LABEL" --state open --limit 1 --json number --jq '.[0].number // empty')
           if [ "$HEALTHY" = true ]; then
             if [ -n "$number" ]; then
@@ -196,3 +218,20 @@ jobs:
         run: |
           echo "::error::The live site's data is overdue or unreadable: see the Data health issue."
           exit 1
+
+      # Nothing else reports here: when the watchdog cannot finish its own check (an exception, a failed install), the
+      # issue says so, once per spell of failures, instead of going on listing what its last complete run found.
+      - name: Report the watchdog's own failure
+        if: ${{ failure() && steps.check.outcome != 'success' }}
+        run: |
+          text="**The watchdog itself failed** ([watchdog run]($RUN_URL)): it could not check the data's health, so this issue lists what its last complete run found, nothing newer, until a run completes. See the run's log, fix the cause and run it again (*Actions → Watchdog → Run workflow*)."
+          number=$(gh issue list --label "$LABEL" --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            gh label create "$LABEL" --force --color D93F0B --description "$LABEL_DESCRIPTION"
+            gh issue create --title "$TITLE" --label "$LABEL" --body "$text"
+            exit 0
+          fi
+          last=$(gh issue view "$number" --json comments --jq '.comments[-1].body // ""')
+          if [[ "$last" != "**The watchdog itself failed**"* ]]; then
+            gh issue comment "$number" --body "$text"
+          fi
