@@ -57,6 +57,11 @@
   font-weight: var(--fw-semibold);
 }
 
+/* its links are separated as metadata are (.dot-list, base.css), which hangs each separator in the left margin */
+.lx-changes.dot-list {
+  margin-left: calc(-1 * var(--dot-w));
+}
+
 .lx-more {
   grid-column: 1 / -1;
   border-top: 1px solid var(--border);

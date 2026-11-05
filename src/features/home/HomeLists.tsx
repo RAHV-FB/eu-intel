@@ -13,7 +13,8 @@ const MORE: Partial<Record<HomeList['id'], { to: string; label: string }>> = {
   // the stuck view: files of the ordinary legislative procedure still being decided, the longest without a step first
   scheduled: { to: SCHEDULED_VIEW, label: 'All files with a planned step, soonest first' },
   stalled: { to: STUCK_VIEW, label: 'Ordinary-procedure files still being decided, longest without a recorded step first' },
-  upcoming: { to: '/legislation?sort=deadline', label: 'All upcoming dates' },
+  // the dates of the next 12 months, as the list holds them, by topic and Member State (When new rules apply)
+  upcoming: { to: '/legislation/applies?when=12m', label: 'All upcoming dates, by topic and Member State' },
   close_votes: { to: '/votes?kind=final&close=1', label: 'All close final votes' },
   rejected: { to: '/votes?kind=final&outcome=rejected', label: 'All final votes Parliament rejected' },
 };
