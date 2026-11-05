@@ -1,4 +1,15 @@
 {
+ "agenda": {
+  "attempted_at": "2026-11-05T17:37:05Z",
+  "fetched_at": "2026-11-05T17:38:00Z",
+  "note": "Cellar: 36 planned events from 2026-11-05 on (22 of the Council, 14 of Parliament); 4 of 7 Council documents named have a public copy; Parliament: 40 vote and debate items naming a procedure on the agendas of 6 of the 10 plenary sittings of the next 42 days (the others not yet published)",
+  "records": {
+   "planned": 36,
+   "plenary": 40
+  },
+  "source": "agenda",
+  "status": "ok"
+ },
  "council": {
   "attempted_at": "2026-11-05T14:08:34Z",
   "fetched_at": "2026-11-05T14:08:37Z",
@@ -74,6 +85,25 @@
   },
   "source": "implementation",
   "status": "partial"
+ },
+ "lawcontext": {
+  "attempted_at": "2026-11-05T17:38:00Z",
+  "fetched_at": "2026-11-05T17:43:02Z",
+  "note": "1279 acts: 535 with a summary of EU legislation (526 summaries not obsolete, 526 with their text read; 526 read this run, 0 unavailable), 551 with a consolidated version, 389 links to judgments or orders interpreting them, 219 cases before the Court with no recorded decision; 490 EESC and CoR opinions; 1 actions against the withdrawal of a proposal",
+  "records": {
+   "acts": 1279,
+   "acts_consolidated": 551,
+   "acts_with_summary": 535,
+   "interpretations": 389,
+   "opinions": 490,
+   "pending_cases": 219,
+   "procedure_cases": 1,
+   "summaries": 570,
+   "summaries_pending": 0,
+   "summaries_with_text": 526
+  },
+  "source": "lawcontext",
+  "status": "ok"
  },
  "optouts": {
   "attempted_at": "2026-11-05T14:16:32Z",
