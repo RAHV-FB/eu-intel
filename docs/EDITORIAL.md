@@ -169,6 +169,11 @@ an official subject fits more than one theme. Curated entries set their topics e
    - when the computed data show a material change, such as a new act amending it, adoption,
      withdrawal, or a new Legislative Train status; and
    - at least every three months.
+
+   `python -m pipeline validate` fails (`curated-review-stale`) while an entry of `featured.yaml`,
+   `act_dates.yaml` or `transposition.yaml` has no valid `reviewed` date or is dated before an act that
+   EUR-Lex records as amending or repealing its act: re-read it against the act's current text and update
+   `reviewed`.
    The homepage selection is reconsidered on the same schedule.
 5. **Corrections.** Factual errors are corrected as soon as they are found, and git history keeps
    the trail. Errors are reported as issues in the repository's issue tracker, which the About page links
