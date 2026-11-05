@@ -46,6 +46,17 @@
   margin: calc(-1 * var(--sp-2)) 0 0;
 }
 
+/* the What changed page, a view of the same files by week */
+.lx-changes {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.lx-changes a {
+  font-weight: var(--fw-semibold);
+}
+
 .lx-more {
   grid-column: 1 / -1;
   border-top: 1px solid var(--border);
@@ -252,6 +263,30 @@ a.drow__topic:hover {
 
 .drow__blocked {
   color: var(--st-alert);
+  font-weight: var(--fw-medium);
+}
+
+/* the latest recorded step, named: "Latest step: Council adopted the act · 26 Oct 2026" */
+.drow__step {
+  color: var(--text-2);
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.drow__step time {
+  color: var(--text);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.drow__step-label {
+  color: var(--text-3);
+}
+
+/* the stuck view: how long without a recorded step */
+.drow__stuck {
+  color: var(--text);
   font-weight: var(--fw-medium);
 }
 

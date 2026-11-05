@@ -241,8 +241,10 @@ test.describe('row links', () => {
 test('an empty list’s action stands apart from its hint', async ({ page }) => {
   await open(page, 'legislation/?q=zzzxqwv');
   const state = page.locator('main .state--empty');
-  const hint = (await state.locator('.meta p').boundingBox())!;
-  const button = (await state.getByRole('button', { name: 'Clear all filters' }).boundingBox())!;
+  const action = state.getByRole('button', { name: 'Clear all filters' });
+  // what is said just before it: the hint, then (words that find nothing) what the site covers
+  const hint = (await action.locator('xpath=preceding-sibling::*[1]').boundingBox())!;
+  const button = (await action.boundingBox())!;
   expect(button.y - (hint.y + hint.height)).toBeGreaterThanOrEqual(8);
 });
 

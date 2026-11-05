@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { HomeData, Meta, Topic } from '../types/data';
+import type { ActivityItem, HomeData, Meta, Topic } from '../types/data';
 import { useData } from '../lib/data';
 import { formatDate, formatNumber, noUpdateText, stillAhead } from '../lib/format';
 import { asRetrieved, classifications, expiredReason, freshness, staleNote, type Classifications } from '../lib/freshness';
@@ -9,6 +9,7 @@ import { ErrorState, Loading } from '../components/ui';
 import { FeaturedCard } from '../features/home/FeaturedCard';
 import { HomeLists } from '../features/home/HomeLists';
 import { TopicGrid } from '../features/home/TopicGrid';
+import { ThisWeek } from '../features/changes/ThisWeek';
 import { useDocumentTitle } from '../features/legislation/labels';
 import { todayISO } from '../features/legislation/explorer';
 import '../features/legislation/common.css';
@@ -45,7 +46,11 @@ const EXAMPLES = ['AI Act', 'Migration', 'GDPR', 'Spain', 'EPP', 'Agriculture', 
 
 export default function Home() {
   useDocumentTitle(null);
-  const home = useData<HomeData>('home.json');
+  const homeFile = useData<HomeData>('home.json');
+  // the latest changes (activity.json) open the page: its sections are shown once both files have been read (or the
+  // changes could not be), so that the strip does not push them down when it arrives
+  const activity = useData<ActivityItem[]>('activity.json');
+  const home = homeFile.data && activity.loading ? { data: undefined, error: undefined, loading: true } : homeFile;
   const meta = useData<Meta>('meta.json');
   // home.json carries topics; fall back to topics.json if it ever comes without them.
   const needTopics = !!home.data && !home.data.topics?.length;
@@ -117,6 +122,8 @@ export default function Home() {
       <div className="container">
         {home.loading && <Loading label="Loading the latest legislative data…" />}
         {home.error && <ErrorState error={home.error} title="The legislative data could not be loaded" />}
+        {/* what the latest refresh recorded, first: activity.json, read on the reader's date */}
+        {home.data && <ThisWeek items={activity.data} />}
         {home.data && (
           <Link to="/insights" className="home-insights-feature">
             <span className="home-insights-feature__label">Explore the evidence <span aria-hidden="true">/</span> Data insights</span>
@@ -181,7 +188,8 @@ export default function Home() {
                 <Link to="/about#selection">How these lists are built</Link>.
               </p>
             </div>
-            <HomeLists lists={lists} noMore={train?.current ? [] : ['stalled']} />
+            {/* "Stalled" leads to the stuck view, which does not depend on the Legislative Train's copy */}
+            <HomeLists lists={lists} />
           </section>
         )}
 

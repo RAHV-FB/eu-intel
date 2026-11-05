@@ -91,6 +91,26 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* under the status: officially blocked (while the Legislative Train's copy is current) and how long without a recorded
+   step; separators: .dot-list (base.css) */
+.dz-stuck {
+  margin-top: calc(-1 * var(--sp-2));
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.dz-stuck__blocked {
+  color: var(--st-alert);
+  font-weight: var(--fw-semibold);
+}
+
+/* the file's Atom feed, under the Follow button */
+.dz-feed {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-sm);
+}
+
 /* "On this page" below 64rem: the sections as a row of chips under the head (the sidebar's list is not shown) */
 .dz-jump {
   margin: 0 0 var(--sp-5);

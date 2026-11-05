@@ -1161,7 +1161,30 @@ def _truncate(text: str, n: int) -> str:
     return cut + "…"
 
 
-_OPTIONAL_SUMMARY = ("short", "started", "last_event", "adopted", "published", "next_date", "instrument")
+_OPTIONAL_SUMMARY = ("short", "started", "last_event", "last_step", "adopted", "published", "next_date", "instrument")
+# The steps dated in the law that a file summary lists ahead of the build (DossierSummary.steps_ahead): the data is read
+# for a week or more, and longer than this only when its sources are long out of date (pipeline/freshness.py)
+STEPS_AHEAD_DAYS = 60
+
+
+def last_step(done: list[dict]) -> dict | None:
+    """The latest recorded step of a file, as its page names it ("Latest recorded step", latestDone in
+    src/features/legislation/dossier/Summary.tsx), from its done steps in date order: of the steps of the latest day,
+    the key one, else the last listed. Its date is the file's `last_event`."""
+    if not done:
+        return None
+    same = [e for e in done if e["date"] == done[-1]["date"]]
+    e = next((x for x in reversed(same) if x.get("key")), same[-1])
+    return {"title": e["title"], "kind": e["kind"]}
+
+
+def steps_ahead(timeline: list[dict], today: str, days: int = STEPS_AHEAD_DAYS) -> list[dict]:
+    """The steps dated in the law (entry into force, application, transposition dates) that a timeline schedules in the
+    `days` after `today`: a list names one as the latest step once its date has passed on the reader's date, as the
+    file's page does (src/lib/format.ts eventOn)."""
+    end = _add_days(today, days)
+    return [{"date": e["date"], "kind": e["kind"], "title": e["title"], "key": bool(e.get("key"))} for e in timeline
+            if e["state"] == "scheduled" and e["date"] <= end and not e.get("after_end_of_validity")]  # fmt: skip
 
 
 def _index_entry(d: dict) -> dict:
@@ -4287,6 +4310,7 @@ class Builder:
             else:
                 blocked = any("block" in t.status.lower() for t in self.train_of.get(pid, []))
             from_parts = None if self.proposal_date(p) else self.parts_proposal(pid)
+            ahead = steps_ahead(tl, self.today)
             summ = {
                 "id": pid,
                 "ref": p.reference,
@@ -4303,6 +4327,8 @@ class Builder:
                 "status_label": st["status"].get("label") or STAGE_LABELS.get(st["status"].get("stage"), ""),
                 "started": self.proposal_date(p) or (from_parts.date if from_parts else None),
                 "last_event": done[-1]["date"] if done else None,
+                "last_step": last_step(done),
+                **({"steps_ahead": ahead} if ahead else {}),
                 "adopted": adopted,
                 "published": published,
                 "next_date": fut[0] if fut else None,
@@ -4825,14 +4851,17 @@ class Builder:
 
     # ---------------------------------------------------------------- activity
     def build_activity(self) -> None:
-        from pipeline.analysis import activity
+        from pipeline.analysis import activity, changes
 
         snapshot = activity.snapshot_entries(self)
         record = os.environ.get("EU_INTEL_RECORD_ACTIVITY") == "1"
         # as recorded, citing the record that gave a status, without what the current records no longer support
         recorded = activity.update_state(self, self.state_dir, record=record)
         recorded = activity.supported(activity.recited(recorded, self), self)
-        items = activity.merge(recorded, snapshot, today=self.today)
+        self.activity_recorded = recorded  # the files' own feeds (analysis/feeds.py)
+        # with what each says happened apart from the file's title, and a status change paired with its step (the What
+        # changed page and the feeds tell them as one)
+        items = changes.annotate(activity.merge(recorded, snapshot, today=self.today), self)
         self.activity_items = items
         self.files["activity.json"] = items
         by_dossier: dict[str, list[dict]] = defaultdict(list)
@@ -4942,7 +4971,8 @@ class Builder:
             key=lambda d: (d["last_event"], d["featured"], d["id"]), reverse=True,
         )[:12]  # fmt: skip
         under_debate = [{"dossier_id": d["id"], "title": d["title"], "subtitle": d["status_label"],
-                         "date": d["last_event"], "badge": HOME_PROCEDURE_BADGES.get(d["type"], d["type_label"])}
+                         "date": d["last_event"], "step": (d.get("last_step") or {}).get("title"),
+                         "badge": HOME_PROCEDURE_BADGES.get(d["type"], d["type_label"])}
                         for d in debate]  # fmt: skip
 
         def badge(v: dict, text: str) -> str:
@@ -4997,8 +5027,8 @@ class Builder:
                 sub = f"Legislative Train: {label}" if label else "Officially reported as blocked"
                 stalled_items.append({"dossier_id": d["id"], "title": d["title"],
                                       "subtitle": sub + (f" (information updated as of {_long_date(as_of)})" if as_of else ""),
-                                      "date": d["last_event"], "badge": "Officially blocked", "_o": 0,
-                                      "_as_of": as_of or ""})  # fmt: skip
+                                      "date": d["last_event"], "step": (d.get("last_step") or {}).get("title"),
+                                      "badge": "Officially blocked", "_o": 0, "_as_of": as_of or ""})  # fmt: skip
         # the most recently confirmed blockages first; of those, the longest without a recorded procedural step (the
         # date shown), as the inactive files below
         stalled_items.sort(key=lambda x: (x["date"] or "", x["dossier_id"]))
@@ -5023,7 +5053,7 @@ class Builder:
         for n, d in inactive[:n_inactive]:
             stalled_items.append({"dossier_id": d["id"], "title": d["title"],
                                   "subtitle": f"No recorded procedural update in {n} days", "date": d["last_event"],
-                                  "badge": d["status_label"], "_o": 1})  # fmt: skip
+                                  "step": (d.get("last_step") or {}).get("title"), "badge": d["status_label"], "_o": 1})  # fmt: skip
         for x in stalled_items:
             x.pop("_o", None)
             x.pop("_as_of", None)
@@ -5555,6 +5585,8 @@ def build_search_docs(b: Builder) -> list[dict]:
             # a split procedure's parent holds no act: its parts rank above it
             "w": 0.4 if pid in b.split_children else 3.0 if d["featured"] else (1.2 if d["type"] in LEGISLATIVE_TYPES else 0.8),
             "d": d["last_event"],
+            # the latest recorded step, dated `d`, and the steps dated in the law just ahead (DossierSummary.steps_ahead)
+            "e": (d.get("last_step") or {}).get("title"), "n": d.get("steps_ahead") or None,
         }  # fmt: skip
         docs.append(doc)
     # curated alias rules (data/curated/aliases.yaml): add `terms` as keywords to the documents whose
