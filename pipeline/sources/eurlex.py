@@ -165,7 +165,9 @@ PLACEHOLDER_DATES = {UNKNOWN_DATE, OPEN_END}
 BASE_CELEX_RE = re.compile(r"^3\d{4}[RLD]\d{4}$")  # in-scope acts
 FEATURED_CELEX_RE = re.compile(r"^3\d{4}[A-Z]\d{4}$")  # sector-3 base act, any type letter
 LINKED_CELEX_RE = re.compile(r"^[1-4]\d{4}[A-Z]{1,2}\d{4}(\(\d{2}\))?$")  # amends/repeals targets
-PROC_REF_RE = re.compile(r"^(\d{4})/(\d{4})(?:/([A-Z]{3})|\(([A-Z]{3})\))$")  # "2021/0106/COD" (or EP style)
+# "2021/0106/COD" (or EP style); a part of a split procedure keeps its letter, as in the EP's references: Cellar records
+# "2023/0077B/COD" (its first-reading vote, the Council's adoption on 21 May 2024), "2018/0152A/COD", "2011/0901A/COD"
+PROC_REF_RE = re.compile(r"^(\d{4})/(\d{4}[A-Z]?)(?:/([A-Z]{3})|\(([A-Z]{3})\))$")
 # Reference suffix -> procedure-type concepts (authority table "procedure") consistent with it. When the
 # dossier's type concept contradicts its reference (e.g. "2018/0359/COD" typed NLE), neither is trusted.
 SUFFIX_TYPES = {"COD": {"COD", "OLP"}, "CNS": {"CNS", "SLP"}}
@@ -1098,6 +1100,7 @@ def build_notices(rows: list[dict[str, str]], retrieved_at: str) -> list[Procedu
         key = (ref, kind, d)
         if key in out and (out[key].document or not doc):
             continue
+        num = ref[5 : ref.index("(")]  # "0106"; "0077B" for a part of a split procedure
         out[key] = ProcedureNotice(
             id=f"{ref}:{kind}:{d}",
             reference=ref,
@@ -1106,7 +1109,7 @@ def build_notices(rows: list[dict[str, str]], retrieved_at: str) -> list[Procedu
             document=doc,
             source=SourceRef(
                 institution="EUR-Lex",
-                url=f"https://eur-lex.europa.eu/procedure/EN/{ref[:4]}_{int(ref[5:9])}",
+                url=f"https://eur-lex.europa.eu/procedure/EN/{ref[:4]}_{int(num[:4])}{num[4:]}",
                 label=f"EUR-Lex procedure {ref}",
                 identifier=ref,
                 retrieved_at=retrieved_at,
