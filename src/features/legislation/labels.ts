@@ -5,7 +5,7 @@
 import { useEffect } from 'react';
 import { useData } from '../../lib/data';
 import { institutionLabel } from '../../components/ui';
-import type { DossierSummary, LegalInstrument, LifecycleStage, Topic, TranspositionStatus } from '../../types/data';
+import type { DossierDetail, DossierSummary, LegalInstrument, LifecycleStage, Topic, TranspositionStatus } from '../../types/data';
 
 export const SITE_TITLE = 'EU Legislative Intelligence';
 
@@ -125,6 +125,13 @@ export const TRANSPOSITION_LABEL: Record<TranspositionStatus, string> = {
 
 export function dossierPath(id: string): string {
   return `/legislation/${encodeURIComponent(id)}`;
+}
+
+/** Whether a file read as dossiers/<id>.json is that file's own record. dossiers/index.json (the list of every file, read
+ * at the id "index", which a shared Following link can name) or another file's record is not, and is not rendered. */
+export function isDossierFile(raw: unknown, id: string): raw is DossierDetail {
+  const d = raw as Partial<DossierDetail> | null | undefined;
+  return !!d && typeof d === 'object' && !Array.isArray(d) && d.id === id && Array.isArray(d.timeline);
 }
 
 /** Proposal year: from the proposal date, else from the procedure reference ("2021/0106(COD)"). */

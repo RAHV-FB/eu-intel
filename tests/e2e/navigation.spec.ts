@@ -391,6 +391,16 @@ test.describe('Following page wording', () => {
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('a shared list naming a list file rather than a legislative file says so, and shows the others', async ({ page }) => {
+    // "index" is a valid id in the address, and dossiers/index.json exists: the list of every file, which the page read
+    // as a file and failed on ("This page could not be displayed")
+    await open(page, `following/?ids=index,${AI_ACT_ID}`);
+    await expect(page.locator('main h1')).toHaveText('Shared list of legislation');
+    await expect(page.getByText('This page could not be displayed')).toHaveCount(0);
+    await expect(page.locator('.following__item').filter({ hasText: 'index' })).toContainText('This file is no longer in our dataset');
+    await expect(page.locator('.following__title a')).toHaveCount(1);
+  });
+
   test('a shared list does not offer "Clear all"; a list of one’s own does, with its share link', async ({ page }) => {
     await open(page, `following/?ids=${AI_ACT_ID},2022-0155`);
     await expect(page.locator('#about-storage')).not.toContainText('Clear all');
