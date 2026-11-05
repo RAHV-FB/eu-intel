@@ -188,6 +188,70 @@ def _event_kind(kind: str) -> str:
     return "milestone"
 
 
+# --------------------------------------------------------------------------------------- the source of a status
+# Stages that an act in our EUR-Lex data establishes (status._acts_stage), and the act's own steps that date them
+ACT_STAGES = {"published", "in_force", "takes_effect_on_notification", "no_longer_in_force"}
+ACT_STEP_KINDS = ("entry_into_force", "publication", "end_of_validity")
+# The kinds of the steps that date the other stages (status.py: the event whose date is the status's `since`), in the
+# order they are looked for on that day
+STAGE_STEP_KINDS: dict[str, tuple[str, ...]] = {
+    "adopted": ("signature", "council_adoption", "ep_position"),
+    "parliament_position": ("ep_position", "council_adoption", "provisional_agreement", "rejection", "plenary_vote",
+                            "negotiation_mandate", "proposal", "other"),
+    "negotiations": ("council_position", "negotiation_mandate", "other"),
+    "provisional_agreement": ("provisional_agreement",),
+    "proposed": ("negotiation_mandate", "committee_report", "plenary_vote", "referral", "proposal", "other"),
+    "withdrawn": ("withdrawal",),
+    "lapsed": ("lapsed",),
+    "rejected": ("rejection", "ep_position"),
+}  # fmt: skip
+
+
+def status_source(det: dict) -> dict | None:
+    """The source of the record that gave a file its status, which a status change cites: for a stage that the act
+    establishes, the act's step dated as the status (its EUR-Lex record, or the text a curated date was checked
+    against), else the act's EUR-Lex record; for another stage, the step that dates it (an EP or OEIL event, the
+    Council's voting result); else, as when the status follows OEIL's stage label (no date), the procedure file.
+    Every status change recorded on 2 November 2026 cited the OEIL page, also when EUR-Lex, the Council or the EP API
+    gave the status: 2023/0421(COD), "status now Published in the Official Journal" from an EP API event, cited the
+    OEIL page, which gave "Awaiting committee decision"."""
+    procedure = det["sources"][0] if det.get("sources") else None
+    since = (det.get("status") or {}).get("since")
+    if not since:
+        return procedure
+    stage = det.get("stage")
+    steps = [e for e in det.get("timeline") or [] if e["state"] == "done" and e["date"] == since and e.get("source")]
+    if stage in ACT_STAGES:
+        own = [e for e in steps if e["id"].startswith("act-") and e["kind"] in ACT_STEP_KINDS]
+        if own:
+            return own[0]["source"]
+        acts = sorted(det.get("acts") or [], key=lambda a: since not in (a.get("date_publication"), a.get("entry_into_force")))
+        for a in acts:
+            src = next((s for s in det.get("sources") or [] if s.get("institution") == "EUR-Lex" and (
+                s.get("identifier") == a["celex"] or s.get("url") == a.get("eurlex_url"))), None)  # fmt: skip
+            if src:
+                return src
+        return procedure
+    for kind in STAGE_STEP_KINDS.get(stage or "", ()):
+        found = sorted((e for e in steps if e["kind"] == kind), key=lambda e: not e.get("key"))
+        if found:
+            return found[0]["source"]
+    return procedure
+
+
+def recited(items: list[dict], b: Any) -> list[dict]:
+    """Recorded status changes citing the record that gave the status (status_source) while the file still has that
+    status (same stage, since the same day): the changes recorded before status_source cited the procedure file
+    (data/state/activity.json keeps them as recorded). Other items unchanged."""
+    out = []
+    for it in items:
+        det = b.dossier_detail.get(it.get("dossier_id") or "") if it.get("kind") == "status_change" else None
+        if det and it["id"] == f"chg:{det['id']}:stage:{det['stage']}:{(det.get('status') or {}).get('since') or b.today}":
+            it = {**it, "source": status_source(det)}
+        out.append(it)
+    return out
+
+
 # --------------------------------------------------------------------------------------- snapshot items
 # Parliament's decisions that build.with_recorded_events also builds from the vote that decided them ("vote-<id>-<kind>")
 # while its procedure record (EP API, OEIL) lacks them: the kind of vote that decides each
@@ -464,7 +528,7 @@ def diff(
             since = (det.get("status") or {}).get("since") or today
             items.append(_item(f"chg:{pid}:stage:{n['stage']}:{since}", since, "status_change",
                                f"{title}: status now “{n['label']}” (previously “{o.get('label', o.get('stage'))}”)",
-                               pid, None, src, detected_at))  # fmt: skip
+                               pid, None, status_source(det), detected_at))  # fmt: skip
         known = {f"{ns}:{x}" for ns, k in REF_LISTS.items() for x in o.get(k, [])}
         items += [recorded(it) for it, refs in of.get(pid, []) if not known.intersection(refs)]
     return items
