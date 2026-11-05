@@ -748,42 +748,34 @@ def test_the_health_check_reports_data_on_main_the_live_site_lacks(tmp_path, cap
     assert keys(5) == []  # the site is newer than main's manifest (a deploy of a later commit)
 
 
-def test_the_watchdog_check_reports_a_failed_deploy_and_undeployed_data(tmp_path):
-    # the Check step itself, as the job runs it: its checkout (pipeline, the manifest, the run picker), `gh`, `curl`
+def watchdog_check(tmp_path: Path, data: dict, live_days: float) -> tuple[dict[str, str], list[dict], str]:
+    """The watchdog's Check step, as the job runs it: its sparse checkout (the pipeline, main's manifest with the core
+    sources retrieved 10 h ago, the run picker), `gh` answering from `data`, `curl` serving a live meta.json whose
+    sources are `live_days` old. Returns its outputs, the problems it found and the URLs curl was asked for."""
     if not shutil.which("jq"):
         pytest.skip("jq is not installed")
+    from pipeline.freshness import CORE_SOURCES
+
     s = steps("watchdog.yml", "health")
-    check = s[named(s, "Check")]
     work = tmp_path / "checkout"
     shutil.copytree(ROOT / "pipeline", work / "pipeline", ignore=shutil.ignore_patterns("__pycache__"))
     (work / "scripts").mkdir()
     shutil.copy(ROOT / "scripts" / "latest_run.py", work / "scripts" / "latest_run.py")
     now = datetime.now(UTC)
     iso = lambda d: d.strftime("%Y-%m-%dT%H:%M:%SZ")  # noqa: E731
-    from pipeline.freshness import CORE_SOURCES
-
     fresh = {s: {"status": "ok", "fetched_at": iso(now - timedelta(hours=10))} for s in CORE_SOURCES}
     (work / "data" / "snapshot").mkdir(parents=True)
     (work / "data" / "snapshot" / "_manifest.json").write_text(json.dumps(fresh), encoding="utf-8")
-    live = {"built_at": iso(now - timedelta(days=3)),
-            "sources": [{"id": s, "fetched_at": iso(now - timedelta(days=3))} for s in CORE_SOURCES]}  # fmt: skip
-    meta_src = tmp_path / "live-meta.json"
+    live = {"built_at": iso(now - timedelta(days=live_days)),
+            "sources": [{"id": s, "fetched_at": iso(now - timedelta(days=live_days))} for s in CORE_SOURCES]}  # fmt: skip
+    meta_src, curl_log, bin_dir = tmp_path / "live-meta.json", tmp_path / "curl.log", tmp_path / "bin-curl"
     meta_src.write_text(json.dumps(live), encoding="utf-8")
-    curl_log = tmp_path / "curl.log"
-    bin_dir = tmp_path / "bin-curl"
     bin_dir.mkdir()
     (bin_dir / "curl").write_text(
         f'#!/bin/sh\nfor a; do echo "$a" >> "{curl_log}"; done\nwhile [ "$1" != -o ]; do shift; done\ncp "{meta_src}" "$2"\n',
         encoding="utf-8",
     )
     (bin_dir / "curl").chmod(0o755)
-    data = {
-        "runs": {"refresh.yml": [run_(9, "success")], "ci.yml": [run_(18, "success")], "pages.yml": [run_(28, "failure")]},
-        "jobs": {"9": [{"name": "Fetch, validate, gate, commit", "conclusion": "success"}],
-                 "28": [{"name": "Build site", "conclusion": "failure",
-                         "steps": [{"name": "Smoke-test the site on its own data (Chromium)", "conclusion": "failure"}]}]},
-        "api": {"size": 1000},
-    }  # fmt: skip
     env, _ = gh_serving(tmp_path, data)
     env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
     runner_temp = tmp_path / "runner-temp"
@@ -791,13 +783,50 @@ def test_the_watchdog_check_reports_a_failed_deploy_and_undeployed_data(tmp_path
     env |= {k: str(v) for k, v in workflow("watchdog.yml")["env"].items()} | {
         "RUNNER_TEMP": str(runner_temp), "GITHUB_RUN_ID": "77", "GITHUB_RUN_ATTEMPT": "1", "GITHUB_REPOSITORY": "o/r",
         "RUN_URL": "https://x/runs/77", "SITE_URL": ""}  # fmt: skip
-    out = run_step(check["run"], work, env)
-    assert out == {"healthy": "false", "site_ok": "true"}
+    out = run_step(s[named(s, "Check")]["run"], work, env)
     report = json.loads((runner_temp / "health.json").read_text(encoding="utf-8"))
-    assert [p["key"] for p in report["problems"]] == ["deploy", "undeployed"]
-    deploy = report["problems"][0]["text"]
-    assert "(failure, [run 28](https://x/runs/28)" in deploy and "Smoke-test the site on its own data (Chromium)" in deploy
-    assert "data/meta.json?watchdog=77-1" in curl_log.read_text(encoding="utf-8")  # past the CDN's 10-minute cache
+    return out, report["problems"], curl_log.read_text(encoding="utf-8")
+
+
+def ran_job(name: str, conclusion: str, *failed_steps: str) -> list[dict]:
+    return [{"name": name, "conclusion": conclusion, "steps": [{"name": f, "conclusion": "failure"} for f in failed_steps]}]
+
+
+def test_the_watchdog_check_reports_a_failed_deploy_and_undeployed_data(tmp_path):
+    data = {
+        "runs": {"refresh.yml": [run_(9, "success")], "ci.yml": [run_(18, "success")], "pages.yml": [run_(28, "failure")]},
+        "jobs": {"9": ran_job("Fetch, validate, gate, commit", "success"),
+                 "28": ran_job("Build site", "failure", "Smoke-test the site on its own data (Chromium)")},
+        "api": {"size": 1000},
+    }  # fmt: skip
+    out, problems, curl_log = watchdog_check(tmp_path, data, live_days=3)
+    assert out == {"healthy": "false", "site_ok": "true"}
+    assert [p["key"] for p in problems] == ["deploy", "undeployed"]
+    assert "(failure, [run 28](https://x/runs/28)" in problems[0]["text"]
+    assert "Smoke-test the site on its own data (Chromium)" in problems[0]["text"]
+    assert "data/meta.json?watchdog=77-1" in curl_log  # past the CDN's 10-minute cache
+    data["runs"]["pages.yml"] = [run_(29, "success"), run_(28, "failure")]
+    data["jobs"]["29"] = ran_job("Build site", "success")
+    out, problems, _ = watchdog_check(tmp_path / "again", data, live_days=10 / 24)
+    assert out == {"healthy": "true", "site_ok": "true"} and problems == []
+
+
+def test_red_ci_says_to_rerun_the_known_webkit_flake_once_and_that_refreshed_data_waits(tmp_path):
+    webkit = "E2E + accessibility (Playwright, webkit)"
+    data = {
+        "runs": {"refresh.yml": [], "ci.yml": [run_(18, "failure")], "pages.yml": []},
+        "jobs": {"18": ran_job(webkit, "failure", "Run Playwright")},
+        "api": {"size": 1000},
+    }
+    _, problems, _ = watchdog_check(tmp_path, data, live_days=10 / 24)
+    assert [p["key"] for p in problems] == ["ci"]
+    text = problems[0]["text"]
+    assert f"{webkit} (Run Playwright)" in text and "Refused to apply a stylesheet because its hash" in text
+    assert "re-run the failed jobs once" in text
+    assert "a refresh deploys its data only once CI has passed on main's code" in text
+    data["jobs"]["18"] = ran_job("Lint, test, build", "failure", "Pytest (offline; network tests deselected)")
+    _, problems, _ = watchdog_check(tmp_path / "pytest", data, live_days=10 / 24)
+    assert "re-run" not in problems[0]["text"] and "once CI has passed on main's code" in problems[0]["text"]
 
 
 # ---------------------------------------------------------------- supply chain

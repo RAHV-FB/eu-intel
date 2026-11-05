@@ -110,7 +110,15 @@ jobs:
           fi
           read -r conclusion id url sha <<< "$(latest ci.yml --event push)" || true
           if [ -n "$conclusion" ] && [ "$conclusion" != success ]; then
-            problems+=(--problem "ci=**CI fails on main** ($conclusion, [run $id]($url), commit ${sha:0:7}): $(failed "$id"). Nothing is deployed after it, and refreshed data waits for the next commit whose CI passes.")
+            detail=$(failed "$id")
+            hint=""
+            # The known WebKit flake (docs/ASSESSMENT_2026-11.md 4.5): WebKit sometimes refuses the site's stylesheet under
+            # its CSP ("Refused to apply a stylesheet because its hash ... does not appear in the style-src directive"),
+            # e.g. in tests/e2e/smoke.spec.ts "typing "AI Act" on the homepage", which then passes on a second run.
+            if [ "$detail" = "E2E + accessibility (Playwright, webkit) (Run Playwright)" ]; then
+              hint=" Only WebKit's browser tests failed: if the log shows the known WebKit CSP flake (\"Refused to apply a stylesheet because its hash…\"), re-run the failed jobs once (*Re-run failed jobs*); fix anything else."
+            fi
+            problems+=(--problem "ci=**CI fails on main** ($conclusion, [run $id]($url), commit ${sha:0:7}): ${detail:-see the run}.${hint} Nothing is deployed after it, and a refresh deploys its data only once CI has passed on main's code: the refreshed data waits on main until then.")
           fi
 
           # the latest deploy after CI or by hand (a refresh's own deploy is part of its run, above): failed, or

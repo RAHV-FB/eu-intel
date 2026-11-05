@@ -376,7 +376,9 @@ at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes n
 - a failed latest *Data refresh* (with its failed job and step: a failed data gate, push or deploy). The latest is the
   latest that ran: a scheduled run its plan skipped concludes "success" without doing anything and is passed over
   (`scripts/latest_run.py`), so it cannot hide a failure of the run before it;
-- red CI on `main` (the latest CI run for a push);
+- red CI on `main` (the latest CI run for a push): nothing deploys after it, and a refresh's data waits on `main` until CI
+  passes on its code. When only WebKit's browser tests failed, the issue says to re-run them once if the log shows the
+  known WebKit CSP flake ("Refused to apply a stylesheet because its hash…", docs/ASSESSMENT_2026-11.md 4.5);
 - a failed latest deploy after CI or by hand (*Deploy to GitHub Pages*), or one cancelled with no later deploy that replaced
   it; a refresh's own deploy is part of its run (above);
 - data on `main` that the live site lacks: a core source retrieved on `main` after the live site's copy of it, more than 6
