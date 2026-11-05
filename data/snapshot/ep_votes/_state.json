@@ -26769,6 +26769,7 @@
  },
  "last_full": "2026-10-23T00:10:04Z",
  "list_page": {},
+ "parser": "2026-11-05.1",
  "pass": "window",
  "pending": [],
  "proc_refs": {
@@ -29793,5 +29794,6 @@
   "2022-0134": "The status of third-country nationals who are long-term residents (recast)",
   "2023-0077": "Amending Regulations (EU) 2019/943 and (EU) 2019/942 as well as Directives (EU) 2018/2001 and (EU) 2019/944 to improve the Union’s electricity market design",
   "2023-0140": "Establishing the Act in Support of Ammunition Production"
- }
+ },
+ "rotation_week": 105703
 }
