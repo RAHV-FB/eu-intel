@@ -906,8 +906,9 @@ the first week of each month is a full refresh, which re-reads every stored reco
   "How it applies in the Member States" describes an adopted file by the type of a linked act only: a file signed
   or adopted with no act linked yet (11 on 23 October 2026) says so and names the type proposed, and a file still
   being decided says what the proposed type would mean "if adopted in that form".
-- OEIL has no procedure file for split parents (e.g. 2016/0224(COD)) or for 2020/3521(COD); those pages carry no
-  OEIL link (`oeil_url` null). Regulation 2015/2422 (2011/0901(COD) in EUR-Lex) links OEIL's 2011/0901B(COD).
+- OEIL has no procedure file for split parents (e.g. 2016/0224(COD)); those pages carry no OEIL link (`oeil_url`
+  null). Nor for 2020/3521(COD), the procedure Cellar gives Council Decision (EU) 2020/2059 (an Article 218(9) TFEU
+  position): `data/curated/act_links.yaml` drops that link, so no page is built for it. Regulation 2015/2422 (2011/0901(COD) in EUR-Lex) links OEIL's 2011/0901B(COD).
 - Timeline sources: a step whose source is an EP Open Data API record (`/api/v2/events/…`, `/procedures/…`:
   RDF/XML or JSON-LD) is labelled "Machine-readable record (EP Open Data API)"; the timeline introduction links
   the readable OEIL procedure file. `SourceRef.published` is the source's own date for a record: Cellar's

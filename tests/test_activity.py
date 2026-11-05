@@ -257,7 +257,7 @@ def test_recorded_changes_from_records_deleted_at_source_are_not_published():
 
     new_pub = _step("2099-0002-PUB-2026-11-03", "2026-11-03", "publication", EP_EVENT)
     council = _step("council-ST-9-2026", "2026-10-09", "council_adoption", COUNCIL_DOC)
-    det = _det("published", "2026-11-03", [council, new_pub])
+    det = _det("published", "2026-11-03", [council, new_pub]) | {"celex": ["32099R0001"]}  # published: an act backs it
     proc = SimpleNamespace(events=[SimpleNamespace(id="2099-0002-PUB-2026-11-03")])
     b = SimpleNamespace(dossier_detail={"2099-0002": det}, proc={"2099-0002": proc})
     item = {"kind": "publication", "dossier_id": "2099-0002", "source": EP_EVENT}
@@ -658,7 +658,7 @@ def test_a_recorded_refresh_records_each_item_once_as_the_snapshot_lists_it():
     # the motion as "New Parliament vote: … — motion to reject …", and the referral and urgent-procedure steps
     b = _bench(FILES, VOTES, COUNCIL)
     new = digest(b)
-    old = {pid: {**d, "events": [], "votes": [], "council": []} for pid, d in new.items()}  # seen, but empty
+    old = {pid: {**d, "events": [], "votes": [], "council": [], "sigs": []} for pid, d in new.items()}  # seen, but empty
     rec = diff(old, new, b, "2026-10-26T05:17:00Z", True)
     assert sorted(r["id"] for r in rec) == [
         "chg:2025-0232:ev:council-ST-14697-2026",
@@ -754,3 +754,160 @@ def test_two_motions_to_reject_on_one_file_that_day_are_told_apart():
         f"Parliament did not reject the Council's position: {t} (276 in favour, 286 against, 30 abstentions)",
         f"Parliament did not reject the Council's position: {t} (314 in favour, 276 against, 17 abstentions)",
     ]
+
+
+# ---------------------------------------------------------------- what supported() keeps and withdraws (audit of #17)
+def test_a_status_change_is_kept_when_a_later_step_of_its_stage_moves_the_date():
+    """2025/0311(COD): recorded on 2 Nov 2026 as "status now Adopted by Parliament and Council" (Council, 26 October).
+    Once the Presidents sign, the stage stays "adopted" but its date moves to the signature: the change is still true,
+    and no other is recorded (diff records a change only when the stage changes). A date that no step of the file
+    carries any more was the source's and is corrected (2025/0177(COD): "Published" on 28 October, from an EP record
+    deleted since)."""
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import supported
+
+    tl = [_step("council-ST-14960-2026", "2026-10-26", "council_adoption", COUNCIL_DOC),
+          _step("2025-0311-SIGN-2026-11-04", "2026-11-04", "signature", EP_EVENT)]  # fmt: skip
+    b = SimpleNamespace(today="2026-11-05", dossier_detail={"2099-0001": _det("adopted", "2026-11-04", tl)}, proc={})
+    adopted = {"id": "chg:2099-0001:stage:adopted:2026-10-26", "dossier_id": "2099-0001", "kind": "status_change",
+               "date": "2026-10-26", "detected_at": "2026-11-02T13:51:44Z", "source": COUNCIL_DOC}  # fmt: skip
+    assert supported([adopted], b) == [adopted]
+    redated = {**adopted, "id": "chg:2099-0001:stage:adopted:2026-10-28", "date": "2026-10-28"}  # no step that day
+    assert supported([redated], b) == []
+
+
+def test_a_status_change_that_only_reverses_a_withdrawn_one_is_not_published():
+    """2023/0421(COD): "status now Published in the Official Journal" (recorded 2 Nov 2026, withdrawn: the EP deleted
+    its record), then "status now Proposal under examination (previously Published in the Official Journal)" (5 Nov):
+    the second only takes back the first. A change recorded after a change that holds is kept."""
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import supported
+
+    tl = [_step("2099-0001-ANPRO-2023-12-14", "2023-12-14", "referral", EP_EVENT, key=False)]
+    b = SimpleNamespace(today="2026-11-05", dossier_detail={"2099-0001": _det("proposed", "2023-12-14", tl)}, proc={})
+    item = {"dossier_id": "2099-0001", "kind": "status_change", "source": EP_EVENT}
+    claimed = {**item, "id": "chg:2099-0001:stage:published:2026-10-30", "date": "2026-10-30",
+               "detected_at": "2026-11-02T13:51:44Z"}  # fmt: skip
+    reversal = {**item, "id": "chg:2099-0001:stage:proposed:2023-12-14", "date": "2023-12-14",
+                "detected_at": "2026-11-05T09:26:44Z"}  # fmt: skip
+    assert supported([claimed, reversal], b) == []  # recorded before `previous_stage`: the file's previous change
+    assert supported([claimed, {**reversal, "previous_stage": "published"}], b) == []
+    # a change from another status than the withdrawn one, or with no earlier change, stands
+    assert supported([claimed, {**reversal, "previous_stage": "parliament_position"}], b) == [
+        {**reversal, "previous_stage": "parliament_position"}]  # fmt: skip
+    assert supported([reversal], b) == [reversal]
+
+
+def test_a_status_change_records_the_stage_it_left():
+    from pipeline.analysis.activity import diff, digest, public_item
+
+    b = _bench(FILES, VOTES, COUNCIL)
+    new = digest(b)
+    old = {pid: {**d, "stage": "parliament_position", "label": "Approved by Parliament"} for pid, d in new.items()}
+    rec = [it for it in diff(old, new, b, "2026-10-26T05:17:00Z", True) if it["kind"] == "status_change"]
+    assert rec and all(it["previous_stage"] == "parliament_position" for it in rec)
+    assert "previous_stage" not in public_item(rec[0])  # recorded for the build only, not published
+
+
+# ---------------------------------------------------------------- one step, whichever record carries it
+def _bench_one(timeline: list[dict], acts: list[str] = (), events: list[tuple[str, str, str]] = ()):
+    """A one-file build stand-in (2025/0232(COD)-like): its timeline, its acts' CELEX and its procedure's events."""
+    from types import SimpleNamespace
+
+    b = _bench({"2025-0232": {"title": CARCINOGENS, "timeline": timeline}}, [], [])
+    b.dossier_detail["2025-0232"]["acts"] = [{"celex": c} for c in acts]
+    b.dossier_detail["2025-0232"]["celex"] = list(acts)
+    b.proc = {"2025-0232": SimpleNamespace(events=[SimpleNamespace(id=i, date=d, kind=k) for i, d, k in events])}
+    b.today = "2026-11-05"
+    return b
+
+
+def test_a_step_recorded_from_one_record_is_not_recorded_again_from_another(tmp_path: Path, monkeypatch):
+    """2025/0232(COD): "Published in the Official Journal of the EU" (the act's step, 30 October 2026, recorded 2 Nov),
+    then the EP's "Final act published in the Official Journal" of the same day, which the timeline shows instead
+    (recorded again on 5 Nov). 2023/0134(COD): OEIL's "Council adopted the act after Parliament's first reading" (26
+    October), then the Council's voting result ST 14946/26 of that day in its place."""
+    from pipeline.analysis.activity import merge, snapshot_entries, update_state
+
+    act_pub = _ev("act-32026L2450-publication-2026-10-30", "2026-10-30", "publication", "Published in the Official "
+                  "Journal of the EU")  # fmt: skip
+    ep_pub = _ev("2025-0232-PUB-2026-10-30", "2026-10-30", "publication", "Final act published in the Official Journal")
+    oeil = _ev("OEIL-2025-0232-2026-10-26-act-adopted", "2026-10-26", "council_adoption", "Council adopted the act after "
+               "Parliament's first reading")  # fmt: skip
+    council = _ev("council-ST-14946-2026", "2026-10-26", "council_adoption", "Council adopted the act")
+    oeil_event = ("OEIL-2025-0232-2026-10-26-act-adopted", "2026-10-26", "council_adoption")
+    runs = [  # (timeline, acts, events): baseline, then each record arrives, then the other source's record replaces it
+        ([], [], []),
+        ([oeil, act_pub], ["32026L2450"], [oeil_event]),
+        ([council, ep_pub], ["32026L2450"], [oeil_event, ("2025-0232-PUB-2026-10-30", "2026-10-30", "publication")]),
+    ]
+    state = tmp_path / "state"
+    for i, (tl, acts, events) in enumerate(runs):
+        b = _bench_one(tl, acts, events)
+        monkeypatch.setenv("EU_INTEL_NOW", f"2026-11-0{2 + i}T05:17:00Z")
+        rec = update_state(b, state, record=True)
+    assert sorted(r["id"] for r in rec) == ["chg:2025-0232:ev:OEIL-2025-0232-2026-10-26-act-adopted",
+                                            "chg:2025-0232:ev:act-32026L2450-publication-2026-10-30"]  # fmt: skip
+    # and the public list shows each step once: the snapshot's items of those days are the recorded steps
+    pub = merge(rec, snapshot_entries(b), b.today, b=b)
+    assert sorted((i["date"], i["id"]) for i in pub) == [
+        ("2026-10-26", "chg:2025-0232:ev:OEIL-2025-0232-2026-10-26-act-adopted"),
+        ("2026-10-30", "chg:2025-0232:ev:act-32026L2450-publication-2026-10-30")]  # fmt: skip
+
+
+def test_a_step_recorded_twice_from_two_records_is_published_once():
+    """Already recorded twice (9aba253, 5 Nov 2026): 2025/0232's and 2025/0380's publication (the act's step, then the
+    EP's record of the same day), 2023/0134's Council adoption (OEIL, then ST 14946/26). The first recorded is kept."""
+    from pipeline.analysis.activity import supported
+
+    b = _bench_one([_ev("council-ST-14946-2026", "2026-10-26", "council_adoption", "Council adopted the act"),
+                    _ev("2025-0232-PUB-2026-10-30", "2026-10-30", "publication", "Final act published")],
+                   ["32026L2450"], [("OEIL-2025-0232-2026-10-26-act-adopted", "2026-10-26", "council_adoption"),
+                                    ("2025-0232-PUB-2026-10-30", "2026-10-30", "publication")])  # fmt: skip
+    item = {"dossier_id": "2025-0232", "kind": "publication", "source": None}
+    act_pub = {**item, "id": "chg:2025-0232:ev:act-32026L2450-publication-2026-10-30", "date": "2026-10-30",
+               "detected_at": "2026-11-02T13:51:44Z"}  # fmt: skip
+    ep_pub = {**item, "id": "chg:2025-0232:ev:2025-0232-PUB-2026-10-30", "date": "2026-10-30",
+              "detected_at": "2026-11-05T09:26:44Z"}  # fmt: skip
+    oeil = {**item, "id": "chg:2025-0232:ev:OEIL-2025-0232-2026-10-26-act-adopted", "date": "2026-10-26",
+            "detected_at": "2026-11-02T13:51:44Z", "kind": "milestone"}  # fmt: skip
+    vote = {**oeil, "id": "chg:2025-0232:ev:council-ST-14946-2026", "detected_at": "2026-11-05T14:17:21Z"}
+    assert supported([act_pub, ep_pub, oeil, vote], b) == [act_pub, oeil]
+
+
+def test_an_older_step_under_a_new_id_is_not_a_change_detected_now(tmp_path: Path, monkeypatch):
+    """2020/0112(COD): its committee vote of 1 July 2021 was recorded on 5 November 2026 as a change, when OEIL's
+    record of it (OEIL-2020-0112-2021-07-01-vote-in-committee) gave way to the EP's (2020-0112-DEC-ADCP-2021-07-01)."""
+    from pipeline.analysis.activity import supported, update_state
+
+    oeil = _ev("OEIL-2020-0112-2021-07-01-vote-in-committee", "2021-07-01", "committee_report",
+               "Parliament committee adopted its report")  # fmt: skip
+    ep = {**oeil, "id": "2020-0112-DEC-ADCP-2021-07-01"}
+    state = tmp_path / "state"
+    for i, tl in enumerate([[oeil], [ep]]):
+        b = _bench_one(tl)
+        monkeypatch.setenv("EU_INTEL_NOW", f"2026-11-0{2 + i}T05:17:00Z")
+        assert update_state(b, state, record=True) == []
+    # as recorded on 5 November 2026: not published
+    item = {"id": "chg:2025-0232:ev:2020-0112-DEC-ADCP-2021-07-01", "dossier_id": "2025-0232", "date": "2021-07-01",
+            "kind": "milestone", "detected_at": "2026-11-05T14:17:21Z", "source": None}  # fmt: skip
+    assert supported([item], b) == []
+
+
+def test_recorded_items_cite_the_record_they_report():
+    """A status change the file has moved on from cites the record that dated it (the changes recorded on 2 November
+    2026 cited the OEIL page, and fell back to it once their status had passed); a step, the record of that step."""
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import recited
+
+    tl = [_step("council-ST-1-2099", "2026-10-26", "council_adoption", COUNCIL_DOC),
+          _step("2099-0001-SIGN-2026-11-04", "2026-11-04", "signature", EP_EVENT)]  # fmt: skip
+    b = SimpleNamespace(today="2026-11-05", dossier_detail={"2099-0001": _det("in_force", "2026-11-25", tl)})
+    item = {"dossier_id": "2099-0001", "kind": "status_change", "source": OEIL_FILE}
+    earlier = {**item, "id": "chg:2099-0001:stage:adopted:2026-10-26"}
+    step = {**item, "id": "chg:2099-0001:ev:2099-0001-SIGN-2026-11-04", "kind": "publication"}
+    gone = {**item, "id": "chg:2099-0001:stage:negotiations:2025-01-01"}  # no record of the file dates it: as recorded
+    assert [x["source"] for x in recited([earlier, step, gone], b)] == [COUNCIL_DOC, EP_EVENT, OEIL_FILE]

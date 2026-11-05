@@ -369,6 +369,7 @@ class Discovery:
     themes: dict[str, list[str]] = field(default_factory=dict)  # Commission term -> theme slugs
     notes: list[str] = field(default_factory=list)  # index mismatches (informational)
     problems: list[str] = field(default_factory=list)  # pages that could not be read (run is partial)
+    read: int = 0  # schedule and theme pages read (none: the site was not reached, see fetch)
 
 
 def discover_files(
@@ -390,6 +391,7 @@ def discover_files(
             if not rows:
                 raise RuntimeError(f"no themes found in Legislative Train schedule for {term}")
             themes = [(r.slug, sum(r.counts.values()) if r.counts else None) for r in rows]
+            d.read += 1
         except Exception as e:  # noqa: BLE001 - HTTP error, WAF or empty page
             stored = known_themes.get(term)
             if not stored:
@@ -415,6 +417,7 @@ def discover_files(
                         d.files[file_slug(u)] = (u, r.title)
                         d.carried[u] = r
                 continue
+            d.read += 1
             if expected is not None and expected != len(listed):
                 d.notes.append(f"{slug}: schedule counts {expected} files, theme page lists {len(listed)}")
             d.hints.update(parse_theme_hints(html))
@@ -549,9 +552,18 @@ def fetch(http: Http) -> SourceStatus:
     if disc.notes:
         note_parts.append("index mismatches: " + "; ".join(disc.notes[:5]))
     partial = bool(errors or unknown or pending or disc.problems)
+    # Nothing retrieved: no schedule or theme page could be read (the stored theme list and records were used), or
+    # every file page tried failed (the WAF's challenge, OUTAGE_STOP). Then the run is "failed", so that the manifest
+    # keeps the last retrieval (snapshot.update_manifest), the site shows the copy's age and withdraws its "blocked"
+    # labels in time (pipeline/freshness.py) and `pipeline health` reports it. A run that reads the index and needs
+    # no file page is not this: it retrieved the index, and every stored record was checked against it.
+    blocked = disc.read == 0 or (fetched == 0 and bool(errors))
+    if blocked:
+        note_parts.insert(0, "nothing retrieved: " + ("no schedule or theme page could be read" if disc.read == 0 else
+                                                      f"every file page tried failed ({len(errors)})"))  # fmt: skip
     return SourceStatus(
         source=SOURCE_ID,
-        status="partial" if partial else "ok",
+        status="failed" if blocked else "partial" if partial else "ok",
         fetched_at=now_iso(),
         attempted_at=attempted,
         records={"files": len(out), "fetched_this_run": fetched, "reused": reused, "pending": len(pending)},

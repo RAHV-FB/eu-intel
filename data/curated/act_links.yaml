@@ -1,0 +1,39 @@
+# Links between an act and a procedure that Cellar records but that the act's own text rules out.
+#
+# EUR-Lex (Cellar) links each act to the interinstitutional procedure that adopted it, and the site shows the act on
+# that procedure's file; an act linked to a procedure absent from the EP's data is shown on a file of its own, built
+# from its EUR-Lex record only. Where Cellar links an act to a procedure that cannot have adopted it, the entry here
+# drops that link in the build: the act is not shown on the file, and a file known only from that link is not shown.
+# The snapshot keeps Cellar's link (`python -m pipeline validate` reports an entry that Cellar no longer matches).
+#
+# Each entry names the act (`celex`) and the procedure (`procedure`), quotes verbatim the act's citation of its legal
+# basis (`quote`, from the act's text: "Having regard to the Treaty ..."), says why that basis rules the procedure out
+# (`why`), records what Cellar and the Legislative Observatory hold for the procedure (`cellar`, `oeil`), lists the
+# texts checked (`sources`) and gives a review date (`reviewed`). An entry that lacks any of them is skipped and the
+# strict build fails (pipeline/build.py load_act_links). See docs/EDITORIAL.md.
+
+- celex: "32020D2059"
+  procedure: "2020/3521(COD)"
+  quote: >-
+    Having regard to the Treaty on the Functioning of the European Union, and in particular the first subparagraph of
+    Article 207(4), in conjunction with Article 218(9) thereof,
+  why: >-
+    Council Decision (EU) 2020/2059 of 7 December 2020 establishes the position to be taken on behalf of the Union in
+    the Trade Committee of the Interim Partnership Agreement with the Pacific States (Protocol II, originating
+    products). A decision under Article 218(9) TFEU is adopted by the Council alone, on a proposal from the
+    Commission: it is not a legislative act, and no ordinary legislative procedure adopts it.
+  cellar: >-
+    Cellar records the act in the procedure dossier ceedf119-27eb-11eb-9d7e-01aa75ed71a1, reference "2020/3521/COD",
+    type OLP (ordinary legislative procedure); procedure numbers from 2000 up are not used for legislative procedures.
+    Queried with SPARQL on 5 November 2026.
+  oeil: >-
+    The Legislative Observatory has no procedure file 2020/3521(COD): its procedure-file page answers HTTP 404
+    (5 November 2026).
+  sources:
+    - label: "Council Decision (EU) 2020/2059, OJ L 424, 15.12.2020 (EUR-Lex)"
+      url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32020D2059"
+    - label: "Council Decision (EU) 2020/2059, English text (Cellar)"
+      url: "https://publications.europa.eu/resource/cellar/00be2bec-3e79-11eb-b27b-01aa75ed71a1.0006.03/DOC_1"
+    - label: "Legislative Observatory, procedure file 2020/3521(COD) (not found)"
+      url: "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2020/3521(COD)"
+  reviewed: "2026-11-05"

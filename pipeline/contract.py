@@ -478,6 +478,24 @@ class Contract:
             for e in entries if isinstance(entries, list) else []:
                 if isinstance(e, dict) and isinstance(e.get(key), str) and (public / folder / f"{e[key]}.json").exists():
                     yield pattern, f"{folder}/{e[key]}.json", type_name
+            for rel in self.unlisted(public, read, pattern):  # checked too: the site reaches them by a link
+                yield pattern, rel, type_name
+
+    def unlisted(self, public: Path, read: Callable[[str], Any], pattern: str) -> list[str]:
+        """The files of a `<key>` pattern's folder that its index does not list (people/parties/5500.json): the site
+        reaches them only by a link. Not the files the header lists by name (votes/titles.json)."""
+        m = re.fullmatch(r"(.+)/<(\w+)>\.json", pattern)
+        if not m:
+            return []
+        folder, key = m.groups()
+        index = next((f for f in (f"{folder}/index.json", f"{folder}.json") if f in self.files), None)
+        entries = read(index) if index else None
+        listed = {e[key] for e in entries if isinstance(e, dict) and isinstance(e.get(key), str)} if isinstance(
+            entries, list) else set()  # fmt: skip
+        return [
+            f"{folder}/{f.name}" for f in sorted((public / folder).glob("*.json"))
+            if f"{folder}/{f.name}" not in self.files and f.stem not in listed
+        ]  # fmt: skip
 
 
 def check_public(public: Path, contract: Contract | None = None, read: Callable[[str], Any] | None = None) -> Problems:

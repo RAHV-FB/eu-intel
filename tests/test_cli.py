@@ -163,7 +163,8 @@ def test_validate_list_failing(snap, monkeypatch, capsys):
 def test_validate_built_needs_the_built_output_and_fails_on_its_contradictions(snap, monkeypatch, tmp_path_factory, capsys):
     # The workflows validated only before `pipeline build`, when public/data (not committed) is missing, so the
     # built-output checks were skipped without a word. `--built` (run after the build) fails without it, and on a
-    # contradiction: vote 156022 (AI Act mandate, 14 Jun 2023) as built, then with its outcome turned to "rejected".
+    # contradiction: the fixture's final vote V1 as built (adopted, with its margin), then with its outcome turned to
+    # "rejected". (A detail file that no index lists is checked against its type too: no stand-in file here.)
     import pipeline.validate as val
 
     shutil.copytree(FIX, snap, dirs_exist_ok=True)
@@ -179,15 +180,15 @@ def test_validate_built_needs_the_built_output_and_fails_on_its_contradictions(s
     assert build(out=root / "public" / "data", snapshot=snap, curated=FIX.parent / "curated", state=root / "state",
                  today="2026-10-22") == 0  # fmt: skip
     votes = root / "public" / "data" / "votes"
-    margin = {"rule": "votes_cast", "threshold": 264, "distance": 235, "relative": 0.4459,
-              "label": "Majority reached: 235 votes more than needed"}  # fmt: skip
-    (votes / "156022.json").write_text(json.dumps({"id": "156022", "outcome": "adopted", "margin": margin}))
+    v1 = json.loads((votes / "V1.json").read_text())
+    assert v1["outcome"] == "adopted" and v1["margin"]
     assert cli.main(["validate", "--built"]) == 0
     out = capsys.readouterr().out
     assert "validate: OK" in out and "not checked" not in out
-    (votes / "156022.json").write_text(json.dumps({"id": "156022", "outcome": "rejected", "margin": margin}))
+    margin = {**v1["margin"], "distance": 235, "relative": 0.4459, "label": "Majority reached: 235 votes more than needed"}
+    (votes / "V1.json").write_text(json.dumps({**v1, "outcome": "rejected", "margin": margin}))
     assert cli.main(["validate", "--built"]) == 1
-    assert "ERROR public votes/156022.json: vote 156022: margin distance 235 contradicts outcome 'rejected'" in (
+    assert "ERROR public votes/V1.json: vote V1: margin distance 235 contradicts outcome 'rejected'" in (
         capsys.readouterr().out
     )
     with pytest.raises(SystemExit):  # the refresh's per-source check reads the snapshot only

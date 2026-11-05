@@ -254,27 +254,38 @@ def relevant_acts(proc: Procedure, acts: list[LegalAct], events: list[Event], to
     return out
 
 
+# How many days a recorded adoption may follow the EP's record of the act's signature and still confirm it: the EP and
+# OEIL can date the signature a day early (2017/0329(COD): 11 April 2018, the Council adopted the act on 12 April;
+# Directive (EU) 2018/597 is "of 18 April 2018"). An adoption weeks later is another decision than the one signed.
+SIGNATURE_ADOPTION_LAG_DAYS = 7
+
+
 def unconfirmed_final_steps(
-    events: Sequence[Event], acts: Sequence[LegalAct], council_adopted: bool = False
+    events: Sequence[Event], acts: Sequence[LegalAct], council_adoptions: Sequence[str] = ()
 ) -> list[Event]:
     """The European Parliament's records of the final act's publication or signature (EP Open Data API
     PUBLICATION_OFFICIAL_JOURNAL and SIGNATURE, which OEIL repeats) that no other record confirms: a publication while
     no act of the procedure is in our EUR-Lex data (`acts`, as relevant_acts gives them), a signature while neither
-    such an act nor the act's adoption is recorded (a Council adoption step, from OEIL or from the Council's voting
-    result, which `council_adopted` says when `events` lack it; or Parliament's approval of the Council's position at
-    second reading, Art. 294(7)(a) TFEU). They do not move the file to a later stage. The EP's records of the latest
-    publications and final acts are corrected at source within days: 2023/0421(COD) had only its proposal, its referral
-    and "Final act published in the Official Journal" on 30 October 2026 (2023-0421-PUB-2026-10-30), with no position
-    of Parliament, no adoption by the Council and no act in Cellar, and the EP later deleted the event; 2025/0177(COD)
-    had a publication on 28 October 2026 that the EP also deleted (the act was published on 3 November). A signature
-    recorded with the act's adoption counts, also on a day before it (2017/0329(COD): the EP and OEIL give 11 April
-    2018, the Council adopted the act on 12 April; Directive (EU) 2018/597 is "of 18 April 2018")."""
+    such an act nor the act's adoption on or before that day is recorded (a Council adoption step, from OEIL or from
+    the Council's voting result, whose dates `council_adoptions` gives when `events` lack it; or Parliament's approval
+    of the Council's position at second reading, Art. 294(7)(a) TFEU). They do not move the file to a later stage. The
+    EP's records of the latest publications and final acts are corrected at source within days: 2023/0421(COD) had only
+    its proposal, its referral and "Final act published in the Official Journal" on 30 October 2026
+    (2023-0421-PUB-2026-10-30), with no position of Parliament, no adoption by the Council and no act in Cellar, and the
+    EP later deleted the event; 2025/0177(COD) had a publication on 28 October 2026 that the EP also deleted (the act
+    was published on 3 November). An adoption up to SIGNATURE_ADOPTION_LAG_DAYS after the signature still confirms it
+    (the EP's date can be a day early); one recorded later does not: the act cannot be signed before it is adopted."""
     if acts:
         return []
-    adopted = council_adopted or any(
-        e.kind == EventKind.council_adoption or _code(e) == "PLENARY_APPROVE_COUNCIL_POSITION" for e in events
-    )
-    return [e for e in events if e.kind == EventKind.publication or (e.kind == EventKind.signature and not adopted)]
+    adoptions = [*council_adoptions, *(
+        e.date for e in events if e.kind == EventKind.council_adoption or _code(e) == "PLENARY_APPROVE_COUNCIL_POSITION"
+    )]  # fmt: skip
+
+    def confirmed(sig: Event) -> bool:
+        latest = (date.fromisoformat(sig.date) + timedelta(days=SIGNATURE_ADOPTION_LAG_DAYS)).isoformat()
+        return any(d <= latest for d in adoptions)
+
+    return [e for e in events if e.kind == EventKind.publication or (e.kind == EventKind.signature and not confirmed(e))]
 
 
 def unconfirmed_text(e: Event) -> str:
@@ -1605,7 +1616,8 @@ def classify(
         proc = proc.model_copy(update={"stage_raw": None})
     acts = relevant_acts(proc, acts, events, today)
     # the EP's records of the act's publication or signature that nothing else confirms do not move the file on: the
-    # status says what they list (the stall still counts them as recorded steps)
+    # status says what they list, and they are not the file's latest recorded step either (the stall: 2023/0421(COD),
+    # 2 Nov 2026, "No recorded procedural update in 3 days" from its deleted record of 30 October)
     unconfirmed = unconfirmed_final_steps(events, acts)
     recorded, events = events, [e for e in events if not any(e is u for u in unconfirmed)]
 
@@ -1773,7 +1785,7 @@ def classify(
         since=s.since,
         basis=s.basis,
         next_step=next_step,
-        stall=None if s.label == "Procedure completed" else _stall(s.stage, recorded, train, today),
+        stall=None if s.label == "Procedure completed" else _stall(s.stage, events, train, today),
         application=app,
         named_acts=s.named_acts,
     )

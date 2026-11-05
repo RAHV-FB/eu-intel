@@ -3,23 +3,26 @@
     python -m pipeline validate            # the snapshot, and the built output if there is one
     python -m pipeline validate --built    # the same, but a missing built output is an error (CI, deploy, refresh)
     python -m pipeline validate --built --update-baseline
-                                           # the same, then record its warning counts in validate_baseline.json
+                                           # the same, then record its warnings in validate_baseline.json (refused
+                                           # while there are errors)
 
 Exit code 1 on any error or ratchet breach. Errors are structural problems of the snapshot (unreadable files, records
 that do not match the schema in pipeline/models/entities.py, duplicate ids, malformed dates, a file missing or holding
 fewer records than the manifest records for it or than a complete snapshot can, a count of sitting MEPs that a
-complete list of current Members cannot give), and claims in the built output that contradict the rules or the
-files' own records (ERROR_CHECKS: an act shown on two files, a file past adoption without Parliament's position, an
-adoption date on a file shown before adoption, a transposition deadline before its act, a veto outside unanimity, a
-vote margin against its outcome, ...); with --built, also a built output that is incomplete or does not match the
-public data contract (src/types/data.ts, pipeline/contract.py).
+complete list of current Members cannot give, an act linked to a procedure that cannot have adopted it), and claims in
+the built output that contradict the rules or the files' own records (ERROR_CHECKS: an act shown on two files, a file
+past adoption without Parliament's position, a file published or in force without an act, an adoption date on a file
+shown before adoption, a transposition deadline before its act, a veto outside unanimity, a vote margin against its
+outcome, one step reported twice in the activity feed, an activity item not citing the record it reports, ...); with
+--built, also a built output that is incomplete or does not match the public data contract (src/types/data.ts,
+pipeline/contract.py).
 
 Every other finding has a class, and each class is one of three kinds:
 - by design (BY_DESIGN): what the dataset's scope makes expected, e.g. votes on procedures outside it. Printed as
   INFO and not counted as warnings.
 - integrity (INTEGRITY, and any class not classified): a fact on the site attached to the wrong record, or a join or
-  checked correction the build relies on that no longer holds. A ratchet: validate fails when a class has more
-  findings than pipeline/validate_baseline.json records for it (a class it does not list: any finding).
+  checked correction the build relies on that no longer holds. A ratchet: validate fails on any integrity finding
+  that pipeline/validate_baseline.json does not accept (`accepted`), whatever the count of its class.
 - backlog (BACKLOG): gaps and anomalies of the sources, shown as recorded, that curation works through (dates to
   check against an act's text, official totals that differ from the recorded votes, ...). Counted against the
   baseline, never failing.
@@ -131,7 +134,15 @@ ERROR_CHECKS = {
     "built-incomplete": "the built output is incomplete: a file missing or unreadable, a list empty, a count of zero "
     "or below the snapshot's",
     "contract": "built JSON that does not match the public data contract (src/types/data.ts)",
-    "activity-duplicate": "one step reported twice in the activity feed, once from a record the source has corrected",
+    "activity-duplicate": "one step of a file reported twice in the activity feed (the same day and title, or the same "
+    "day and kind of step from another source's record)",
+    "activity-source": "an activity item that does not cite the record it reports: a status change to a stage that an "
+    "act establishes without the act's EUR-Lex record, a current status change without the record that gave the "
+    "status, a step without the record of that step",
+    "stage-without-act": "a file shown as published, in force or no longer in force with no act linked to it",
+    "act-procedure-mismatch": "an act linked to a procedure of another kind or a number range no legislative "
+    "procedure uses: the file would show it as its law (Cellar tags Council Decision (EU) 2020/2059 with 2020/3521(COD); "
+    "drop such a link in data/curated/act_links.yaml, quoting the act's legal basis)",
 }
 # Findings that the dataset's scope makes expected: printed as INFO, not counted as warnings.
 BY_DESIGN = {
@@ -144,8 +155,6 @@ BY_DESIGN = {
 # Warning classes that gate (the ratchet): each means a fact on the site attached to the wrong record, or a join or a
 # checked correction that the build relies on no longer holding. Any class not classified here or in BACKLOG gates too.
 INTEGRITY = {
-    "act-procedure-mismatch": "an act linked to a procedure of another kind: the file shows it as its law (Cellar tags "
-    "Council Decision (EU) 2020/2059 with 2020/3521(COD))",
     "act-type": "an act whose type differs from its CELEX type letter: the site names the wrong kind of act",
     "amends-link-type": "an amendment link to an act that the title cites under another type (correct it in "
     "data/curated/act_relations.yaml)",
@@ -161,12 +170,16 @@ INTEGRITY = {
     "country-code": "a country code that is not a Member State's",
     "act-relation-stale": "a checked correction (data/curated/act_relations.yaml) that no longer matches EUR-Lex, so it "
     "is not applied and the link it corrected is shown again",
+    "act-link-stale": "a procedure link dropped in data/curated/act_links.yaml that EUR-Lex no longer records: the entry "
+    "has nothing left to correct",
     "transposition-check-stale": "a checked transposition deadline (data/curated/transposition.yaml) that EUR-Lex no "
     "longer records, so it is not applied",
     "denmark-schengen-stale": "a recorded decision of Denmark (data/curated/denmark_schengen.yaml) on a directive whose "
     "recitals no longer say that Denmark decides",
     "report-off-timeline": "a key report of a file that no step of its built timeline carries",
     "contract-unlisted": "a built JSON file that src/types/data.ts gives no type, so the contract check skips it",
+    "index-unlisted": "a built detail file that its folder's index does not list, which the site reaches only by a link "
+    "(checked against its type all the same)",
     "schema": "a snapshot file whose model is not defined",
 }
 # Warning classes counted against the baseline but never failing: gaps and anomalies of the sources, shown as recorded,
@@ -432,6 +445,7 @@ def check(
     from pipeline.build import (
         apply_transposition_checks,
         load_act_dates,
+        load_act_links,
         load_act_relations,
         load_denmark_schengen,
         load_transposition_checks,
@@ -525,6 +539,12 @@ def check(
         if f["act"] in acts and f["replace"] not in acts[f["act"]].amends:
             rep.warn("act-relation-stale", f"{f['act']}: data/curated/act_relations.yaml replaces its link to "
                      f"{f['replace']}, which EUR-Lex no longer records")  # fmt: skip
+    dropped_links = load_act_links()  # curated: procedure links that the act's own text rules out
+    for c, refs in sorted(dropped_links.items()):
+        for r in sorted(refs):
+            if c in acts and r not in {re.sub(r"\s+", "", x).upper() for x in acts[c].procedure_refs}:
+                rep.warn("act-link-stale", f"{c}: data/curated/act_links.yaml drops its link to {r}, which EUR-Lex no "
+                         "longer records")  # fmt: skip
     # Denmark decides under Protocol No 22, Art. 4, whether to implement a directive building upon the Schengen acquis
     # (its recitals: optouts schengen_art4); its decision, notified to the Council, is recorded once checked
     optouts = {r.celex: r for r in data.get(("optouts", "directives"), [])}
@@ -625,14 +645,16 @@ def check(
                 rep.warn("procedure-ref", f"{a.celex}: unusual procedure reference {r!r}")
                 continue
             ptype, num = rm.group(3), int(rm.group(2))
+            if re.sub(r"\s+", "", r).upper() in dropped_links.get(a.celex, set()):
+                continue  # the build drops the link (data/curated/act_links.yaml)
+            # an error of EUR-Lex's data: the refresh restores the source's last good files (validate --list-failing)
             if ptype in ("COD", "CNS") and num >= 2000:
-                rep.warn("act-procedure-mismatch", f"{a.celex} ({a.act_type}) linked to {r}: number range is "
-                         "not used for legislative procedures")  # fmt: skip
+                rep.error(f"eurlex/acts.json: {a.celex} ({a.act_type}) linked to {r}: number range is not used for "
+                          "legislative procedures", "eurlex", "act-procedure-mismatch")  # fmt: skip
             p = proc_by_ref.get(r)
             if p is not None and p.type != ptype:
-                rep.warn(
-                    "act-procedure-mismatch", f"{a.celex} linked to {r} but the procedure type is {p.type}"
-                )
+                rep.error(f"eurlex/acts.json: {a.celex} linked to {r} but the procedure type is {p.type}", "eurlex",
+                          "act-procedure-mismatch")  # fmt: skip
     # council
     for cv in data.get(("council", "votes"), []):
         for c in cv.positions:
@@ -683,8 +705,12 @@ def check(
                         "council-veto",
                     )  # fmt: skip
         if (public / "activity.json").exists():
-            for msg in activity_duplicates(_public_json(public, "activity.json", rep, docs) or []):
+            items = _public_json(public, "activity.json", rep, docs) or []
+            dossier, kind_of = _activity_context(public, rep, docs, data, today)
+            for msg in activity_duplicates(items, kind_of):
                 rep.error(f"public activity.json: {msg}", "public", "activity-duplicate")
+            for msg in activity_sources(items, dossier, today):
+                rep.error(f"public activity.json: {msg}", "public", "activity-source")
         owners: dict[str, list[str]] = {}
         for f in sorted((public / "dossiers").glob("*.json")):
             if f.name != "index.json":
@@ -721,6 +747,27 @@ def check(
                 for msg in margin_contradictions(v):
                     rep.error(f"public votes/{f.name}: {msg}", "public", "vote-margin")
     return rep
+
+
+def _activity_context(
+    public: Path, rep: Report, docs: dict[str, Any], data: dict[tuple[str, str], list[Any]], today: str
+) -> tuple[Callable[[str | None], dict | None], Callable[[dict], str | None]]:
+    """For the activity checks: the built file of a dossier id, and the kind of the step an activity item reports (on
+    the file's timeline, else as its id or its procedure's event of that id gives it: activity.step_kind)."""
+    from pipeline.analysis.activity import step_key, step_kind
+
+    events = {p.id: {e.id: e.kind.value for e in p.events} for p in data.get(("ep_procedures", "procedures"), [])}
+
+    def dossier(pid: str | None) -> dict | None:
+        rel = f"dossiers/{pid}.json"
+        return _public_json(public, rel, rep, docs) if pid and (public / rel).exists() else None
+
+    def kind_of(it: dict) -> str | None:
+        key = step_key(it.get("id") or "")
+        pid = it.get("dossier_id")
+        return step_kind(key, dossier(pid), today, events.get(pid or "")) if key else None
+
+    return dossier, kind_of
 
 
 def _public_json(public: Path, rel: str, rep: Report, cache: dict[str, Any] | None = None) -> Any:
@@ -830,6 +877,9 @@ def check_contract(public: Path, rep: Report, docs: dict[str, Any]) -> None:
         return
     for line in problems.lines():
         rep.error(f"public {line}", "public", "contract")
+    for pattern in contract.files:  # checked against their type above, but which no index lists
+        for rel in contract.unlisted(public, read, pattern):
+            rep.warn("index-unlisted", f"public/data/{rel}: not listed in its folder's index ({pattern})")
     covered = re.compile("(?:" + "|".join(re.sub(r"<\w+>", "[^/]+", re.escape(p)) for p in contract.files) + ")")
     for f in sorted(public.rglob("*.json")):
         rel = f.relative_to(public).as_posix()
@@ -886,6 +936,8 @@ def dossier_contradictions(d: dict) -> list[str]:
 
 
 POST_ADOPTION = ("adopted", "published", "in_force", "takes_effect_on_notification", "no_longer_in_force")
+# The stages that an act in our EUR-Lex data establishes (status._acts_stage; activity.ACT_STAGES)
+ACT_ESTABLISHED = ("published", "in_force", "takes_effect_on_notification", "no_longer_in_force")
 # Procedures whose act cannot be adopted without Parliament: its position (Art. 294 TFEU) or its consent. Consultation
 # files are not held to it: OEIL lists as CNS some acts whose legal basis requires no opinion (2020/0209(CNS), tariff
 # quotas under Art. 31 TFEU, adopted with none), and NLE files are shown only because EUR-Lex gives them as CNS/APP.
@@ -893,19 +945,61 @@ NEEDS_PARLIAMENT = ("COD", "APP")
 DEADLINE_KINDS = ("deadline", "further_deadline")
 
 
-def activity_duplicates(items: list[dict]) -> list[str]:
-    """Published activity items that repeat another's date and title: the same step reported twice, once from a record
-    the source has since corrected (2025/0177(COD), 5 Nov 2026: its signature on 21 October recorded with Decision (EU)
-    2026/2402, another file's act, and again with Directive (EU) 2026/2383). Checked on the data that is deployed; the
-    data tests run on frozen data (tests/frozen-data.txt)."""
-    seen: dict[tuple[str, str], str] = {}
+def activity_duplicates(items: list[dict], kind_of: Callable[[dict], str | None] | None = None) -> list[str]:
+    """Published activity items that report one step of a file twice: the same file, day and title (2025/0177(COD), 5
+    Nov 2026: its signature on 21 October recorded with Decision (EU) 2026/2402, another file's act, and again with
+    Directive (EU) 2026/2383), or the same file, day and kind of step (`kind_of`: the kind of the step a step item
+    reports), the step reported again from another source's record (2025/0232(COD): the act's publication on 30
+    October and the EP's record of it; 2023/0134(COD): OEIL's Council adoption on 26 October and the Council's voting
+    result ST 14946/26). Never across files: twin files share their titles and move together (2021/0068 and
+    2021/0071(COD), the EU Digital COVID Certificate for citizens and for third-country nationals). Checked on the data
+    that is deployed; the data tests run on frozen data (tests/frozen-data.txt)."""
+    from pipeline.analysis.activity import SNAPSHOT_EVENT_KINDS
+
+    seen: dict[tuple[str, ...], str] = {}
     out: list[str] = []
     for it in items:
-        key = (it.get("date") or "", it.get("title") or "")
-        if key in seen:
-            out.append(f"{it.get('id')} repeats {seen[key]} ({key[0]}: {key[1][:80]})")
-        else:
-            seen[key] = it.get("id") or ""
+        pid, day = it.get("dossier_id") or "", it.get("date") or ""
+        keys = [("title", pid, day, it.get("title") or "")]
+        if kind_of is not None and pid and (kind := kind_of(it)) in SNAPSHOT_EVENT_KINDS:
+            keys.append(("step", pid, day, kind))
+        hit = next((k for k in keys if k in seen), None)
+        if hit:
+            out.append(f"{it.get('id')} repeats {seen[hit]} ({day}: {hit[3][:80]})")
+        for k in keys:
+            seen.setdefault(k, it.get("id") or "")
+    return out
+
+
+def activity_sources(items: list[dict], dossier: Callable[[str | None], dict | None], today: str) -> list[str]:
+    """Activity items that do not cite the record they report (plan 1.2(d), docs/ASSESSMENT_2026-11.md): a status
+    change to a stage that an act establishes (published, in force, ...) must cite the act's EUR-Lex record; a status
+    change to the file's current status, the record that gave it (activity.status_source); a step on the file's
+    timeline, that step's record. 2023/0421(COD), 2 Nov 2026: "status now Published in the Official Journal" cited the
+    OEIL page, which gave "Awaiting committee decision". `dossier`: the built file of a dossier id."""
+    from pipeline.analysis.activity import ACT_STAGES, event_keys, stage_item, status_source, step_key
+
+    out: list[str] = []
+    for it in items:
+        det = dossier(it.get("dossier_id"))
+        if det is None:
+            continue
+        src = it.get("source") or {}
+        if (st := stage_item(it.get("id") or "")) is not None:
+            _, stage, since = st
+            if stage in ACT_STAGES and src.get("institution") != "EUR-Lex":
+                out.append(f"{it['id']}: a status change to {stage!r} cites {src.get('institution')!r}, not the act's "
+                           "EUR-Lex record")  # fmt: skip
+            elif stage == det.get("stage") and since and since == (det.get("status") or {}).get("since"):
+                want = status_source(det) or {}
+                if src.get("url") != want.get("url"):
+                    out.append(f"{it['id']}: cites {src.get('url')}, not the record that gave the status "
+                               f"({want.get('url')})")  # fmt: skip
+        elif (key := step_key(it.get("id") or "")) is not None:
+            keys = event_keys(det, today)
+            step = next((e for e in det.get("timeline") or [] if e["id"] == key or keys.get(e["id"]) == key), None)
+            if step is not None and step.get("source") and src.get("url") != step["source"].get("url"):
+                out.append(f"{it['id']}: cites {src.get('url')}, not the record of its step ({step['source'].get('url')})")
     return out
 
 
@@ -918,9 +1012,15 @@ def dossier_invariants(d: dict) -> list[tuple[str, str]]:
     - adopted-stage-behind: an adoption date on a file shown at an earlier stage (2025/0312(COD): adopted 26 Oct 2026
       by the Council, still "the Council must still formally approve it");
     - deadline-before-act: a transposition deadline shown that is earlier than the act's adoption (2010/0208(COD),
-      Directive (EU) 2015/412: 17 October 2002, carried over by Cellar from Directive 2001/18/EC)."""
+      Directive (EU) 2015/412: 17 October 2002, carried over by Cellar from Directive 2001/18/EC);
+    - stage-without-act: a file shown as published, in force or no longer in force (a stage that the act establishes,
+      status._acts_stage) with no act linked to it (2025/0177(COD), 2 Nov 2026: "Published in the Official Journal"
+      from the EP's record of a publication on 28 October that the EP then deleted, no act in our EUR-Lex data)."""
     out: list[tuple[str, str]] = []
     stage, tl = d.get("stage"), d.get("timeline") or []
+    if stage in ACT_ESTABLISHED and not d.get("celex"):
+        out.append(("stage-without-act", f"shown as {stage!r} ({d.get('status_label')!r}), but no act is linked to the "
+                    "file"))  # fmt: skip
     if stage in POST_ADOPTION and d.get("type") in NEEDS_PARLIAMENT and not d.get("eurlex_only"):
         decided = (
             any(e.get("kind") == "ep_position" for e in tl)
@@ -1013,11 +1113,11 @@ def write_baseline(rep: Report, path: Path | None = None) -> tuple[dict[str, int
     counts = {k: len(v) for k, v in sorted(rep.warnings.items()) if v}
     accepted = {k: sorted(v) for k, v in sorted(rep.warnings.items()) if v and warning_kind(k) == "integrity"}
     doc = {
-        "about": "Warning counts of `python -m pipeline validate --built` on the committed snapshot. validate fails when "
-        "an integrity class (pipeline/validate.py INTEGRITY, and any class not classified) has more; backlog classes "
-        "never fail. `accepted`: the integrity findings counted, so that one replaced by another is told. Rewrite "
-        "with `python -m pipeline validate --built --update-baseline` once new findings are checked and accepted, or "
-        "when a count fell.",
+        "about": "Warnings of `python -m pipeline validate --built` on the committed snapshot. `accepted`: the integrity "
+        "findings checked and accepted (pipeline/validate.py INTEGRITY, and any class not classified); validate fails "
+        "on any other integrity finding, whatever the count. `counts`: every class's count; backlog classes never "
+        "fail. Rewrite with `python -m pipeline validate --built --update-baseline` once new findings are checked and "
+        "accepted, or when a count fell (refused while validate reports errors).",
         "counts": counts,
         "accepted": accepted,
     }
@@ -1028,22 +1128,26 @@ def write_baseline(rep: Report, path: Path | None = None) -> tuple[dict[str, int
 def apply_baseline(
     rep: Report, baseline: dict[str, int], complete: bool = True, accepted: dict[str, list[str]] | None = None
 ) -> None:
-    """The ratchet: an integrity class with more findings than its baseline (or with findings and none recorded) is a
-    breach. `complete`: the built output was checked too, so a class below its baseline can be told (without it, the
-    classes of the built output count none). `accepted`: the integrity findings of the baseline; one that is not
-    among them within the count (another fixed meanwhile) is noted, not failed."""
+    """The ratchet: an integrity finding that the baseline does not accept (`accepted`: its integrity findings, by
+    class) is a breach, also while its class has no more findings than the baseline counts: a new wrong link must not
+    pass because another one was fixed. Backlog classes are counted (`baseline`) and never fail. `complete`: the built
+    output was checked too, so a class below its baseline can be told (without it, the classes of the built output
+    count none)."""
     rep.baseline = baseline
     for check, items in sorted(rep.warnings.items()):
-        n, base = len(items), baseline.get(check)
-        if warning_kind(check) != "integrity" or not n:
+        if warning_kind(check) != "integrity" or not items:
             continue
         why = INTEGRITY.get(check, "a warning class not classified in pipeline/validate.py: classify it")
-        if base is None or n > base:
-            rep.breaches.append(f"[{check}] {n}, above its baseline of {base}: {why}" if base is not None else
-                                f"[{check}] {n}, a new integrity class (none in the baseline): {why}")  # fmt: skip
-        elif accepted is not None:
-            rep.ratchet_notes += [f"[{check}] not in the baseline, within its count: {m}" for m in items
-                          if m not in accepted.get(check, [])]  # fmt: skip
+        left = Counter((accepted or {}).get(check, []))
+        new = []
+        for m in items:
+            if left[m] > 0:
+                left[m] -= 1
+            else:
+                new.append(m)
+        if new:
+            rep.breaches.append(f"[{check}] {len(new)} finding{'s' if len(new) > 1 else ''} not in the baseline "
+                                f"(e.g. {new[0][:160]}): {why}")  # fmt: skip
     if complete:
         for check, base in sorted(baseline.items()):
             n = len(rep.warnings.get(check, []))
@@ -1064,7 +1168,11 @@ def validate(built: bool = False, update_baseline: bool = False) -> int:
     if built and not public.exists():
         rep.error(f"no built output in {public}: run `python -m pipeline build` first", "public", "built-incomplete")
     old, accepted = load_baseline()
-    if update_baseline and public.exists():
+    if update_baseline and public.exists() and rep.errors:
+        # the baseline accepts warnings only: errors are fixed, never recorded
+        print(f"validate: baseline not written: {len(rep.errors)} error{'s' if len(rep.errors) > 1 else ''} (fix them "
+              "first)")  # fmt: skip
+    elif update_baseline and public.exists():
         new, accepted = write_baseline(rep)
         changed = [f"{k} {old.get(k, 0)} -> {new.get(k, 0)}" for k in sorted(set(old) | set(new)) if old.get(k) != new.get(k)]
         print(f"validate: baseline written to {BASELINE.relative_to(ROOT) if BASELINE.is_relative_to(ROOT) else BASELINE}"

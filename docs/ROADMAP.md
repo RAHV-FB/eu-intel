@@ -10,7 +10,8 @@ so that nobody reads a gap as a fact about EU law.
   Non-legislative procedures and acts (NLE, delegated and implementing acts, budget procedures) are out of
   scope, except a few files that Parliament classes as non-legislative (NLE) but whose act EUR-Lex records
   under the consultation or consent procedure: these are shown, labelled "Non-legislative act" (the About page
-  gives their number).
+  gives their number). A non-legislative act that EUR-Lex links to a legislative procedure that cannot have adopted
+  it is not shown (Council Decision (EU) 2020/2059 and 2020/3521(COD): `data/curated/act_links.yaml`).
 - **Parliament votes**: plenary votes from 18 July 2019 (9th and 10th terms). Votes on whole texts,
   resolutions, motions, final and negotiating-mandate votes and votes on entering negotiations are listed;
   how each MEP voted is shown only for those votes, not for amendments or split votes.

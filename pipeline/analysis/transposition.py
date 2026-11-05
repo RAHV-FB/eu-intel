@@ -133,9 +133,14 @@ def _classify(act: LegalAct) -> tuple[list[Dated], Basis | None]:
         return "APPLICATION" in labels[d] and "ADOPTION" not in labels[d]
 
     early = set(before_the_act(act))  # "other": not dates the act sets
-    deadlines = [d for d in dates if not is_application(d) and d not in early]
-    if not deadlines and all(is_application(d) for d in dates):
-        deadlines = [d for d in dates if d not in early]  # the labels do not separate the dates
+    rest = [d for d in dates if d not in early]
+    deadlines = [d for d in rest if not is_application(d)]
+    if not deadlines and all(is_application(d) for d in rest):
+        # the labels do not separate the dates the act can set, also once a wrong earlier one is set aside (an
+        # unlabelled date before the act and the deadline labelled APPLICATION only): the deadline is among those not
+        # before the act
+        day = act_day(act)
+        deadlines = [d for d in rest if not day or d >= day]
     if not deadlines:  # no deadline the act sets is recorded
         return [Dated(d, "application" if is_application(d) and d not in early else "other", arts[d], labels[d])
                 for d in dates], None  # fmt: skip
@@ -144,7 +149,7 @@ def _classify(act: LegalAct) -> tuple[list[Dated], Basis | None]:
     other = set(chk.other) | early if chk else early
     general_articles = {_article(r) for r in arts[general]}
     # paragraphs that set a deadline (a general deadline may be labelled APPLICATION only)
-    setting_deadlines = {general} | {d for d in dates if not is_application(d)}
+    setting_deadlines = {general} | {d for d in rest if not is_application(d)}
     deadline_paragraphs = {_paragraph(r) for d in setting_deadlines for r in arts[d]}
     out = []
     for d in dates:
