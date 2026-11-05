@@ -239,6 +239,35 @@ def status_source(det: dict) -> dict | None:
     return procedure
 
 
+def supported(items: list[dict], b: Any) -> list[dict]:
+    """The recorded items that the current records still support, for publication (data/state/activity.json keeps
+    every item as recorded). Left out: a change of a file's status to adoption or a later stage while its status is now
+    an earlier stage of the procedure, a step that the file's timeline no longer lists as an item (is_listed), and a
+    step of an act that is no longer the file's (the act's link was corrected; build.Builder.build_dossier_links). On 2
+    November 2026 the EP's records of the latest publications made 2023/0421(COD) "Published in the Official Journal"
+    (30 October, with no position of Parliament, no Council adoption and no act in Cellar) and 2025/0177(COD)
+    "Published" (28 October); both records were deleted at source, and the status no longer counts such records
+    (status.unconfirmed_final_steps)."""
+    from pipeline.analysis.status import ACTIVE_STAGES, RANK
+
+    out = []
+    for it in items:
+        det = b.dossier_detail.get(it.get("dossier_id") or "")
+        m = re.match(r"chg:[^:]+:(stage|ev):(.+)$", it["id"]) if det else None
+        if m and m.group(1) == "stage":
+            was, now = m.group(2).split(":", 1)[0], det["stage"]
+            if RANK.get(was, 0) >= RANK["adopted"] and now in ACTIVE_STAGES | {"adopted"} and RANK[now] < RANK.get(was, 0):
+                continue
+        elif m:
+            step = next((e for e in det.get("timeline") or [] if e["id"] == m.group(2)), None)
+            if step is not None and not is_listed(step):
+                continue
+            if (act := _ACT_EVENT.match(m.group(2))) and act.group(1) not in (det.get("celex") or []):
+                continue  # a step of an act that is not the file's (2025/0177(COD): Decision (EU) 2026/2402, 2025/0380's)
+        out.append(it)
+    return out
+
+
 def recited(items: list[dict], b: Any) -> list[dict]:
     """Recorded status changes citing the record that gave the status (status_source) while the file still has that
     status (same stage, since the same day): the changes recorded before status_source cited the procedure file

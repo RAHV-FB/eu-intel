@@ -4791,8 +4791,9 @@ class Builder:
 
         snapshot = activity.snapshot_entries(self)
         record = os.environ.get("EU_INTEL_RECORD_ACTIVITY") == "1"
-        # as recorded, citing the record that gave a status
-        recorded = activity.recited(activity.update_state(self, self.state_dir, record=record), self)
+        # as recorded, citing the record that gave a status, without what the current records no longer support
+        recorded = activity.update_state(self, self.state_dir, record=record)
+        recorded = activity.supported(activity.recited(recorded, self), self)
         items = activity.merge(recorded, snapshot, today=self.today)
         self.activity_items = items
         self.files["activity.json"] = items

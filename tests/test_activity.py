@@ -217,6 +217,35 @@ def test_recorded_status_changes_cite_the_record_while_the_status_holds():
     assert [x["source"] for x in recited([held, gone, other], b)] == [COUNCIL_DOC, OEIL_FILE, OEIL_FILE]
 
 
+def test_recorded_changes_the_records_no_longer_support_are_not_published():
+    """2023/0421(COD): recorded on 2 November 2026 as "status now Published in the Official Journal" and "Final act
+    published in the Official Journal" (30 October), from an EP record with no act, no Parliament position and no Council
+    adoption behind it; the file is now under examination, and the EP's record is no longer a listed step."""
+    from types import SimpleNamespace
+
+    from pipeline.analysis.activity import supported
+
+    pub = {**_step("2099-0001-PUB-2026-10-30", "2026-10-30", "other", EP_EVENT, key=False)}
+    tl = [_step("2099-0001-ADCP-2023-12-14", "2023-12-14", "committee_report", EP_EVENT), pub]
+    b = SimpleNamespace(dossier_detail={"2099-0001": _det("proposed", "2023-12-14", tl)})
+    item = {"kind": "status_change", "dossier_id": "2099-0001", "source": OEIL_FILE}
+    published = {**item, "id": "chg:2099-0001:stage:published:2026-10-30"}
+    step = {**item, "id": "chg:2099-0001:ev:2099-0001-PUB-2026-10-30", "kind": "publication"}
+    report = {**item, "id": "chg:2099-0001:ev:2099-0001-ADCP-2023-12-14", "kind": "milestone"}
+    earlier = {**item, "id": "chg:2099-0001:stage:proposed:2023-12-14"}
+    assert supported([published, step, report, earlier], b) == [report, earlier]
+    # a step of an act that is no longer the file's (2025/0177(COD), recorded with Decision (EU) 2026/2402's signature,
+    # the act of 2025/0380(COD)), unlike one of the file's act
+    other_act = {**item, "id": "chg:2099-0001:ev:act-32099D0002-signature-2026-10-21", "kind": "publication"}
+    own_act = {**other_act, "id": "chg:2099-0001:ev:act-32099R0001-signature-2026-10-21"}
+    b.dossier_detail["2099-0001"]["celex"] = ["32099R0001"]
+    assert supported([other_act, own_act], b) == [own_act]
+    # a later stage than the one recorded (in force after "published"), or a negative one, keeps the record
+    for stage in ("in_force", "withdrawn", "unknown"):
+        b.dossier_detail["2099-0001"]["stage"] = stage
+        assert published in supported([published], b)
+
+
 @pytest.mark.parametrize("source", ["ep_procedures", "eurlex"])
 @pytest.mark.parametrize("status", ["partial", "failed"])
 def test_no_status_change_from_an_incomplete_fetch(
