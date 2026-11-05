@@ -5236,7 +5236,10 @@ class Builder:
                        f"directives ({with_m:,} with at least one measure) and {len(s.infringements):,} "
                        "infringement cases.")  # fmt: skip
             if not s.indicators:
-                out.append("Country indicators (Single Market Scoreboard) could not be retrieved.")
+                # Its host answers scripted requests again since 2 Nov 2026, but the indicators are published only in
+                # embedded Power BI reports (pipeline/sources/implementation.py), so none are read
+                out.append("Country indicators (Single Market Scoreboard) are not published in a machine-readable form, "
+                           "so none are shown.")  # fmt: skip
         elif sid == "optouts":
             read = list(self.optouts.values())
 
