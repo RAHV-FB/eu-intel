@@ -4,7 +4,7 @@ import { useData } from '../lib/data';
 import { formatDate, formatNumber } from '../lib/format';
 import { EmptyState, ErrorState, ExtLink, Loading, PageHeader, Term } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
-import { CountryTable, indicatorColumns } from '../features/countries/CountryTable';
+import { CountryTable } from '../features/countries/CountryTable';
 
 export default function Countries() {
   useDocumentTitle('Countries');
@@ -14,7 +14,8 @@ export default function Countries() {
   const rows = data ?? [];
   const councilAvailable = rows.some((r) => r.council_positions.for + r.council_positions.against + r.council_positions.abstain > 0);
   const infringementsAvailable = rows.some((r) => r.open_infringements != null);
-  const inds = indicatorColumns(rows);
+  // the Single Market Scoreboard's count of overdue directives: on each country's page only, never side by side
+  const scoreboard = rows.some((r) => r.indicators.length > 0);
   const councilSource = meta.data?.sources.find((s) => s.id === 'council');
   // the Council votes counted: each row adds up every vote with that country's recorded position, so all rows give the
   // same total when every vote lists all the Member States; the dates are those of the first and last vote listed
@@ -95,32 +96,13 @@ export default function Countries() {
                 ) : (
                   <>Infringement data is unavailable in this release.</>
                 )}{' '}
-                {inds.length === 0 && 'No published implementation indicators are available in this release.'}
+                {scoreboard &&
+                  'Each country’s page gives the Commission’s count of its overdue Single Market directives, from the Single Market Scoreboard; the counts are not listed side by side here.'}{' '}
+                <Link to="/legislation/transposition">Directives into national law</Link>: each directive due in the last
+                three years or the next twelve months, with every Member State’s status.
               </p>
             </div>
           </div>
-
-          {inds.length > 0 && (
-            <section className="section" aria-labelledby="ind-h">
-              <h2 id="ind-h">About the indicators</h2>
-              <dl className="stack">
-                {inds.map((i) => (
-                  <div key={i.id}>
-                    <dt>
-                      <strong>{i.label}</strong> <span className="meta">({i.period})</span>
-                    </dt>
-                    <dd style={{ margin: 0 }} className="note">
-                      {i.definition}{' '}
-                      {i.source && (
-                        <ExtLink href={i.source.url}>{i.source.label || 'Source'}</ExtLink>
-                      )}
-                      {i.source?.published && <> · published {formatDate(i.source.published)}</>}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          )}
 
           <p className="note section">
             Figures come from official sources listed on the <Link to="/about#sources">About page</Link>. There is no overall score: these

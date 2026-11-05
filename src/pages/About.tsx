@@ -448,10 +448,31 @@ export default function About() {
               published. An open case is not a court ruling.
             </li>
             <li>
+              <strong>Time since a deadline</strong> (“2 years after the deadline”, “in 4 months”) is counted on your date, not the
+              date the data was built; a transposition deadline passes once its day is over, and a country without measures in the
+              dataset reads “Deadline not yet reached” until then.
+            </li>
+            <li>
+              <Link to="/legislation/transposition">Directives into national law</Link> lists the directives whose general
+              transposition deadline falls in the last three years or the next twelve months, with each Member State’s status as
+              the directive’s own page gives it. Member States a directive does not bind (opt-outs, exemptions in its text) are
+              named apart, never counted. A directive’s table can be linked with one Member State’s row highlighted
+              (<span className="mono">?country=FR</span>).
+            </li>
+            <li>
+              Each country page links an <strong>Atom feed</strong> of the national measures the country notified for the directives
+              on this site (one entry per directive and notification date), the Commission’s infringement decisions on it (each case’s
+              latest decision, as the register publishes it, so a new decision is a new entry) and the transposition deadlines of the
+              directives that bind it. Each entry is dated by the event it reports; a feed keeps its latest 100 entries.
+            </li>
+            <li>
+              The <strong>Single Market Scoreboard</strong>’s count of each Member State’s overdue Single Market directives is read
+              from the Commission’s table of the directives each Member State has not fully notified
               {hasIndicators
-                ? 'Published indicators are shown with their period, definition and source.'
-                : 'Country indicators (Single Market Scoreboard) are not published in a machine-readable form, so none are shown.'}{' '}
-              We never combine different measures into a single score or ranking.
+                ? ', and shown on that country’s page alone, with its period, definition and source.'
+                : '. No data refresh has retrieved it yet, so none is shown.'}{' '}
+              The Scoreboard’s other indicators are published only in embedded Power BI reports and are not read. We never combine
+              different measures into a single score or ranking, and never set Member States’ figures side by side.
             </li>
           </ul>
 

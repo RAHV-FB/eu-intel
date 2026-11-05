@@ -91,6 +91,11 @@ const routes = [
     'What changed – Legislation',
     'Steps, votes and status changes recorded on EU legislative files, week by week and by topic, each linked to its official record.',
   ],
+  [
+    'legislation/transposition',
+    'Directives into national law – Legislation',
+    'Each directive due in the last three years or the next twelve months, with every Member State’s notified national measures and the Commission’s open cases.',
+  ],
   ['insights', 'Data insights', 'Evidence-led analysis of tracked EU legislative files, Parliament votes and Council positions, with careful limitations.'],
   ['votes', 'Parliament votes', 'How the European Parliament voted: final votes, close votes, political groups and countries.'],
   ['people', 'MEPs', 'Members of the European Parliament, political groups and national parties.'],
@@ -158,7 +163,9 @@ for (const f of existsSync(partyDir) ? readdirSync(partyDir).filter((x) => x.end
   n++;
 }
 for (const c of readJson('countries/index.json')) {
-  page(`countries/${c.code}`, c.name, `${c.name} in the EU: MEPs, Council votes and implementation of EU law.`);
+  // its own Atom feed (data/feeds/countries/<code>.xml), as the page announces it once loaded (src/pages/Country.tsx)
+  const countryFeed = `<link rel="alternate" type="application/atom+xml" id="page-feed" title="${esc(`${c.name}: applying EU directives (Atom)`)}" href="${esc(`${BASE}data/feeds/countries/${encodeURIComponent(c.code)}.xml`)}" />`;
+  page(`countries/${c.code}`, c.name, `${c.name} in the EU: MEPs, Council votes and implementation of EU law.`, undefined, countryFeed);
   n++;
 }
 // Former topic addresses (/topics/<slug>/, now /legislation/?topic=<slug>): a page with status 200 that redirects without

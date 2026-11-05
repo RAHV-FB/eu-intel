@@ -244,6 +244,14 @@ export default function Legislation() {
             What changed recently{currentTopic ? ` in ${currentTopic.label}` : ''}, week by week
           </Link>
         </p>
+        <p className="lx-changes">
+          <Link
+            to={currentTopic ? `/legislation/transposition?topic=${encodeURIComponent(currentTopic.slug)}` : '/legislation/transposition'}
+          >
+            Directives into national law
+          </Link>
+          : each Member State’s measures for the directives due in the last three years or the next twelve months
+        </p>
       </PageHeader>
 
       <form className="lx-filters" role="search" aria-label="Filter legislation" onSubmit={(e) => e.preventDefault()}>
