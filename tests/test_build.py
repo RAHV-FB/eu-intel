@@ -2165,6 +2165,44 @@ def test_strict_build_fails_on_an_unreadable_or_skipped_curated_entry(tmp_path: 
     assert any(p.startswith("curated topics.yaml unreadable: ") for p in B.PROBLEMS)
 
 
+def test_a_checked_transposition_deadline_must_be_a_date_its_quote_gives(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """docs/EDITORIAL.md: a correction entry whose quote does not give its date is skipped, and a strict build fails.
+    transposition.yaml names which of the dates EUR-Lex records is the general deadline, so a slip to another recorded
+    date (Directive (EU) 2024/1640's derogation of 10 July 2025 for its 10 July 2027) passes every other check."""
+    import pipeline.build as B
+
+    monkeypatch.setattr(B, "PROBLEMS", [])
+    cur = tmp_path / "curated"
+    cur.mkdir()
+    (cur / "transposition.yaml").write_text(
+        """
+- celex: "32099L0009"
+  deadline: "2025-07-10"
+  provision: "Art. 78(1), first subparagraph"
+  quote: "Member States shall bring into force the laws [...] necessary to comply with this Directive by 10 July 2027."
+  reviewed: "2026-10-23"
+- celex: "32099L0003"
+  deadline: "2027-07-10"
+  applies_from: "2028-07-01"
+  provision: "Art. 4(1) and (2)"
+  quote: "Member States shall adopt and publish, by 10 July 2027, the laws [...]. They shall apply those measures from 1 July 2028."
+  reviewed: "2026-10-23"
+- celex: "32099L0011"
+  deadline: "2027-07-10"
+  applies_from: "2028-07-10"
+  provision: "Art. 4(1) and (2)"
+  quote: "Member States shall adopt and publish, by 10 July 2027, the laws [...]. They shall apply those measures from 1 July 2028."
+  reviewed: "2026-10-23"
+""",
+        encoding="utf-8",
+    )
+    assert sorted(B.load_transposition_checks(cur)) == ["32099L0003"]
+    assert B.PROBLEMS == [
+        "curated transposition.yaml: entry 32099L0009 does not quote its date 2025-07-10 (10 July 2025); ignored",
+        "curated transposition.yaml: entry 32099L0011 does not quote its date 2028-07-10 (10 July 2028); ignored",
+    ]
+
+
 def test_strict_build_fails_when_a_status_or_an_assessment_falls_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     import pipeline.analysis.council_qmv as council_qmv
     import pipeline.analysis.ep_margin as ep_margin

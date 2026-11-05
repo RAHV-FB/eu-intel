@@ -1955,6 +1955,13 @@ def load_transposition_checks(curated: Path = CURATED) -> dict[str, dict]:
         if not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates):
             _problem("curated transposition.yaml: entry %s has a malformed date; ignored", e["celex"])
             continue
+        # the quoted provision sets the general deadline (and the date the measures apply from): it must give them,
+        # else a slip to another recorded date (a derogation's) would pass as checked
+        unquoted = [d for d in (e["deadline"], e.get("applies_from")) if d and _long_date(d) not in _squash(e.get("quote"))]
+        if unquoted:
+            _problem("curated transposition.yaml: entry %s does not quote its date %s (%s); ignored", e["celex"],
+                     unquoted[0], _long_date(unquoted[0]))  # fmt: skip
+            continue
         if e.get("amends") is not None and not _amends_ok(e["amends"]):
             _problem("curated transposition.yaml: entry %s has a malformed amends list; ignored", e["celex"])
             e = {k: v for k, v in e.items() if k != "amends"}
