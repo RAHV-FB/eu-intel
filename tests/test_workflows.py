@@ -407,10 +407,50 @@ def test_a_deploy_fails_unless_the_public_url_serves_what_it_built(tmp_path):
                "GITHUB_STEP_SUMMARY": os.devnull}  # fmt: skip
         return subprocess.run(["bash", "-e", "-c", verify["run"]], cwd=tmp_path, env=env, capture_output=True).returncode == 0
 
-    assert verify_with(switch_after=3)  # the old deployment twice more (the routes' check fetched it once), then this one
+    assert verify_with(switch_after=3)  # the old deployment three times, then this one (then its routes)
     urls = log.read_text(encoding="utf-8").splitlines()
     assert "https://example.org/eu-intel/data/meta.json?deploy=5-1-2" in urls  # each attempt past the cache
     assert not verify_with(switch_after=10)  # never served: the release fails
+
+
+CACHED_CURL = r"""#!/usr/bin/env python3
+# The public site right after a deploy: a URL with a query string reaches the new deployment, which lacks MISSING; one
+# without is answered from the CDN's copy of the previous deployment (Pages: Cache-Control max-age=600), which has it.
+import json, os, sys
+args = sys.argv[1:]
+out = args[args.index("--output") + 1] if "--output" in args else None
+url = [a for a in args if a.startswith("http")][-1]
+path, _, query = url.partition("?")
+route = path.split("/eu-intel/", 1)[1]
+if query and route == os.environ["MISSING"]:
+    sys.stderr.write("curl: (22) The requested URL returned error: 404\n")
+    sys.exit(22)
+built = os.environ["NEW_BUILT_AT"] if query else "2026-01-01T00:00:00Z"
+body = json.dumps({"built_at": built, "counts": {"dossiers": 1, "ep_votes": 1}}) if route == "data/meta.json" else (
+    "<html><title>EU Legislative Intelligence</title>Data insights</html>")
+open(out, "w").write(body) if out else sys.stdout.write(body)
+"""
+
+
+def test_the_deploy_checks_the_routes_of_the_new_deployment_not_the_cached_one(tmp_path):
+    # the routes were fetched without a query string, before the wait for the new deployment: the CDN could answer them
+    # from the previous deployment, so a route missing from the new one passed
+    verify = steps("pages.yml", "deploy")[named(steps("pages.yml", "deploy"), "Verify published site and deep links")]
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "curl").write_text(CACHED_CURL, encoding="utf-8")
+    (bin_dir / "curl").chmod(0o755)
+
+    def verify_with(missing: str) -> bool:
+        env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "MISSING": missing,
+               "PAGE_URL": "https://example.org/eu-intel/", "BUILT_AT": "2026-11-05T14:19:00Z",
+               "NEW_BUILT_AT": "2026-11-05T14:19:00Z", "GITHUB_RUN_ID": "5", "GITHUB_RUN_ATTEMPT": "1",
+               "VERIFY_ATTEMPTS": "2", "VERIFY_SLEEP": "0", "COMMIT": "9" * 40, "GITHUB_STEP_SUMMARY": os.devnull}  # fmt: skip
+        return subprocess.run(["bash", "-e", "-c", verify["run"]], cwd=tmp_path, env=env, capture_output=True).returncode == 0
+
+    assert verify_with(missing="none")
+    assert not verify_with(missing="insights/")
+    assert not verify_with(missing="")  # the home page
 
 
 def test_the_deployed_site_names_the_commit_it_was_built_from(tmp_path):
