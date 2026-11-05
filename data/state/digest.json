@@ -1,5 +1,5 @@
 {
- "classifier": "2026-10-23.2",
+ "classifier": "2026-11-05.1",
  "dossiers": {
   "2005-0214": {
    "acts": [
@@ -20806,6 +20806,8 @@
    ],
    "events": [
     "2020-0112-ANPRO-2021-07-05",
+    "2020-0112-DEC-ADCP-2021-07-01",
+    "2020-0112-DEC-ADCP-FEMM-2021-02-01",
     "2020-0112-DEC-DCPL-2021-07-06",
     "OEIL-2020-0112-2020-06-05-preparatory-document",
     "OEIL-2020-0112-2021-06-25-legislative-proposal-published",
@@ -31105,7 +31107,9 @@
   },
   "2023-0134": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-14946-2026"
+   ],
    "events": [
     "2023-0134-ANPRO-2023-05-08",
     "2023-0134-DEC-ADCP-2026-05-05",
@@ -31125,6 +31129,7 @@
     "OEIL-2023-0134-2026-10-26-act-adopted-by-council-after-parliament-",
     "TRAN-AM-786740-DEPOT-2026-03-26",
     "TRAN-PR-784241-DEPOT-2026-02-26",
+    "council-ST-14946-2026",
     "vote-197486-ep_position"
    ],
    "label": "Adopted by Parliament and Council",
@@ -31546,6 +31551,8 @@
     "2023-0166-MEET-TRI1-2025-11-25",
     "2023-0166-MEET-TRI1-2025-12-17",
     "A-9-2024-0160-AM-001-001-DEPOT-2026-11-04+2",
+    "A-9-2024-0160-AM-001-001-DEPOT-2026-11-05",
+    "A-9-2024-0160-AM-002-002-DEPOT-2026-11-04+1",
     "ECON-PR-753665-DEPOT-2023-10-02",
     "OEIL-2023-0166-2023-05-24-legislative-proposal-published",
     "OEIL-2023-0166-2024-03-20-committee-decision-to-open-interinstitut",
@@ -31573,6 +31580,8 @@
     "2023-0167-MEET-TRI1-2025-11-25",
     "2023-0167-MEET-TRI1-2025-12-17",
     "A-9-2024-0162-AM-001-001-DEPOT-2026-11-04+1",
+    "A-9-2024-0162-AM-001-001-DEPOT-2026-11-05",
+    "A-9-2024-0162-AM-002-002-DEPOT-2026-11-04",
     "ECON-PR-753711-DEPOT-2023-10-09",
     "OEIL-2023-0167-2023-05-24-legislative-proposal-published",
     "OEIL-2023-0167-2024-03-20-committee-decision-to-open-interinstitut",
@@ -32075,8 +32084,8 @@
     "council-ST-15152-2026",
     "vote-168337-ep_position"
    ],
-   "label": "Early second-reading agreement reached",
-   "stage": "parliament_position",
+   "label": "Second reading in Parliament",
+   "stage": "negotiations",
    "title": "Payment services and electronic money services in the Internal Market amending Directive 98/26/EC and repealing Directives 2015/2366/EU and 2009/110/EC",
    "votes": [
     "168337"
@@ -32106,8 +32115,8 @@
     "council-ST-15154-2026",
     "vote-168470-ep_position"
    ],
-   "label": "Early second-reading agreement reached",
-   "stage": "parliament_position",
+   "label": "Second reading in Parliament",
+   "stage": "negotiations",
    "title": "Payment services in the internal market and amending Regulation (EU) No 1093/2010",
    "votes": [
     "168470"
@@ -37025,8 +37034,8 @@
     "council-ST-14961-2026",
     "vote-197352-ep_position"
    ],
-   "label": "Approved by Parliament",
-   "stage": "parliament_position",
+   "label": "Adopted by Parliament and Council",
+   "stage": "adopted",
    "title": "Amending Regulation (EU) No 472/2013 as regards the economic and budgetary surveillance of Member States in the euro area experiencing or threatened with serious difficulties with respect to their financial stability",
    "votes": [
     "197352"
@@ -38164,6 +38173,7 @@
     "2025-0545-DEC-ADCP-REGI-2026-09-01",
     "2025-0545-DEC-ADCP-TRAN-2026-09-02",
     "CJ13-AM-797489-DEPOT-2026-11-03+5",
+    "CJ13-AM-797489-DEPOT-2026-11-03+6",
     "CJ13-PR-787767-DEPOT-2026-10-05",
     "OEIL-2025-0545-2025-07-16-legislative-proposal-published"
    ],
@@ -38626,6 +38636,8 @@
     "2026-0044-DEC-VOAGT-2026-10-08",
     "2026-0044-DEPOT-2026-07-20",
     "A-10-2026-0211-AM-001-035-DEPOT-2026-11-04+1",
+    "A-10-2026-0211-AM-001-035-DEPOT-2026-11-05",
+    "A-10-2026-0211-AM-036-036-DEPOT-2026-11-04",
     "JURI-AM-790209-DEPOT-2026-06-25",
     "JURI-PR-789976-DEPOT-2026-06-18",
     "OEIL-2026-0044-2026-02-12-legislative-proposal-published",
