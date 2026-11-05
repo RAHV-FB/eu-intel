@@ -4985,12 +4985,8 @@ class Builder:
         "optouts": "Danish and Irish participation",
         "train": "Legislative Train",
     }
-    # Official classifications from a source (the Legislative Train's "Blocked") are no longer shown as current once
-    # the copy is older than this on the reader's date (src/lib/freshness.ts): about six weeks without a new one.
-    LABELS_EXPIRE_AFTER_DAYS: dict[str, int] = {"train": 42}
-
     def build_meta(self) -> None:
-        from pipeline.freshness import oldest_core_fetch, source_health
+        from pipeline.freshness import LABELS_EXPIRE_AFTER_DAYS, oldest_core_fetch, source_health
 
         s = self.s
         m = s.manifest
@@ -5010,8 +5006,8 @@ class Builder:
                 "licence": info["licence"], "status": st.status if st else "unavailable",
                 "fetched_at": st.fetched_at if st else None, "attempted_at": st.attempted_at if st else None,
                 "stale_after_days": health[sid]["stale_after_days"], "core": health[sid]["core"],
-                **({"labels_expire_after_days": self.LABELS_EXPIRE_AFTER_DAYS[sid]}
-                   if sid in self.LABELS_EXPIRE_AFTER_DAYS else {}),
+                **({"labels_expire_after_days": LABELS_EXPIRE_AFTER_DAYS[sid]}
+                   if sid in LABELS_EXPIRE_AFTER_DAYS else {}),
                 "records": dict(sorted(st.records.items())) if st else {},
                 "note": st.note if st else "Not yet retrieved in this release.",
                 "summary": self.source_summary(sid, st),
