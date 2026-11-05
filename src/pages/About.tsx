@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import type { CountrySummary, Meta, SourceStatusInfo } from '../types/data';
-import { useData } from '../lib/data';
+import type { CountrySummary, DataPackage, Meta, SourceStatusInfo } from '../types/data';
+import { DATA_BASE, useData } from '../lib/data';
 import { formatDate, formatDateTime, formatNumber, plural } from '../lib/format';
 import { classifications, isStale } from '../lib/freshness';
 import { legislationScope, votesPeriod } from '../lib/scope';
@@ -126,6 +126,8 @@ export default function About() {
   const train = classifications(meta, now);
   const countries = useData<CountrySummary[]>('countries/index.json');
   const hasIndicators = !!countries.data?.some((c) => c.indicators.length > 0);
+  // the open dataset of this version: its tables, from its descriptor (pipeline/analysis/opendata.py)
+  const openData = useData<DataPackage>('open/datapackage.json');
   useHashScroll(!loading);
 
   return (
@@ -248,6 +250,100 @@ export default function About() {
           )}
         </section>
 
+        <section id="reuse" aria-labelledby="reuse-h">
+          <h2 id="reuse-h">Reuse the data</h2>
+          <p>
+            <strong>Open dataset.</strong> The data of this site is published as CSV tables with a schema: legislative files,
+            adopted acts, Parliament and Council votes, the transposition of directives with the national measures notified,
+            infringement cases, and a crosswalk of the official identifiers that join them. Its{' '}
+            <a href={`${DATA_BASE}open/README.md`}>README</a> and{' '}
+            <a href={`${DATA_BASE}open/datapackage.json`}>datapackage.json</a> (a Frictionless Data Package) give each
+            column’s type and meaning. In each week the data changes, it is also released as a zip tagged data-YYYY-MM-DD
+            among the repository’s <ExtLink href={`${REPOSITORY}/releases`} official={false}>releases</ExtLink>; cite a
+            release by its tag, as the repository’s{' '}
+            <ExtLink href={`${REPOSITORY}/blob/main/CITATION.cff`} official={false}>citation file</ExtLink> says.
+          </p>
+          {openData.data ? (
+            <div className="table-wrap table-card">
+              <table className="table">
+                <caption>
+                  The open dataset in this version: statuses as of {formatDate(openData.data.as_of)}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">File</th>
+                    <th scope="col">Contents</th>
+                    <th scope="col" className="num">
+                      Rows
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {openData.data.resources.map((r) => (
+                    <tr key={r.name}>
+                      <th scope="row" style={{ fontWeight: 400 }}>
+                        <a href={`${DATA_BASE}open/${r.path}`} className="mono">
+                          {r.path}
+                        </a>
+                      </th>
+                      <td>{r.title}</td>
+                      <td className="num">{formatNumber(r.rows)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            openData.error && <p className="meta">The list of the dataset’s tables could not be loaded; its README lists them.</p>
+          )}
+          <p>
+            <strong>The site’s JSON files.</strong> Each page reads static JSON files under{' '}
+            <span className="mono">data/</span>, shaped for the pages: they can change with the site, and their current form
+            is in <ExtLink href={`${REPOSITORY}/blob/main/src/types/data.ts`} official={false}>src/types/data.ts</ExtLink>.
+            The open dataset is the stable form, with its columns documented in each release.
+          </p>
+          <ul>
+            <li>
+              <a href={`${DATA_BASE}meta.json`} className="mono">meta.json</a>: the sources, their last retrieval and reuse terms,
+              the record counts and the coverage;
+            </li>
+            <li>
+              <span className="mono">dossiers/index.json</span>, <span className="mono">dossiers/&lt;id&gt;.json</span>: the
+              legislative files, each with its steps, acts, votes and transposition;
+            </li>
+            <li>
+              <span className="mono">votes/index.json</span>, <span className="mono">votes/&lt;id&gt;.json</span>: the
+              Parliament votes listed, each with every MEP’s recorded vote;
+            </li>
+            <li>
+              <span className="mono">council/index.json</span>: Council votes, with each Member State’s position;
+            </li>
+            <li>
+              <span className="mono">people/</span>, <span className="mono">countries/</span>: MEPs, political groups and
+              national parties; for each Member State its MEPs, Council positions, transposition and infringement cases;
+            </li>
+            <li>
+              <span className="mono">activity.json</span>: the steps recorded between weekly updates.
+            </li>
+          </ul>
+          <p>
+            <strong>Feeds.</strong> An <a href={`${DATA_BASE}feeds/updates.xml`}>Atom feed of all recorded steps</a>, and one for
+            each topic, linked from its list of files. Their entries keep their ids if the site moves.
+          </p>
+          <p>
+            <strong>CSV downloads.</strong> The tables of a vote page and the list of legislative files have a “Download CSV”
+            button: the file is made in your browser from what the page shows, and nothing is sent.
+          </p>
+          <p>
+            <strong>Licence.</strong> The dataset as compiled here (the selection, the structure, the derived fields and the
+            checked corrections) is offered under{' '}
+            <ExtLink href="https://creativecommons.org/licenses/by/4.0/" official={false}>CC BY 4.0</ExtLink>: credit
+            “EU Legislative Intelligence (RAHV-FB)” with a link to this site. The official records in it keep their
+            publishers’ terms, which also require acknowledging the source: see{' '}
+            <a href="#sources">Data sources and licences</a>.
+          </p>
+        </section>
+
         <section id="selection" aria-labelledby="selection-h">
           <h2 id="selection-h">How featured files are selected</h2>
           <p>
@@ -324,7 +420,8 @@ export default function About() {
             <ul>
               <li>
                 <strong>Dates of entry into force and application</strong>, where EUR-Lex’s record differs from the text of the act or of
-                the act that amended it. The file’s page says “Dates checked against the act’s text” and links the texts.
+                the act that amended it, and, for some acts, which provisions apply from each date, as the act’s text says. The file’s
+                page says “Dates checked against the act’s text” and links the texts.
               </li>
               <li>
                 <strong>The day the Council adopted an act</strong>, where the date in our sources differs from the one in the act’s own
@@ -448,12 +545,54 @@ export default function About() {
               published. An open case is not a court ruling.
             </li>
             <li>
+              <strong>Time since a deadline</strong> (“2 years after the deadline”, “in 4 months”) is counted on your date, not the
+              date the data was built; a transposition deadline passes once its day is over, and a country without measures in the
+              dataset reads “Deadline not yet reached” until then.
+            </li>
+            <li>
+              <Link to="/legislation/transposition">Directives into national law</Link> lists the directives whose general
+              transposition deadline falls in the last three years or the next twelve months, with each Member State’s status as
+              the directive’s own page gives it. Member States a directive does not bind (opt-outs, exemptions in its text) are
+              named apart, never counted. A directive’s table can be linked with one Member State’s row highlighted
+              (<span className="mono">?country=FR</span>).
+            </li>
+            <li>
+              Each country page links an <strong>Atom feed</strong> of the national measures the country notified for the directives
+              on this site (one entry per directive and notification date), the Commission’s infringement decisions on it (each case’s
+              latest decision, as the register publishes it, so a new decision is a new entry) and the transposition deadlines of the
+              directives that bind it. Each entry is dated by the event it reports; a feed keeps its latest 100 entries.
+            </li>
+            <li>
+              The <strong>Single Market Scoreboard</strong>’s count of each Member State’s overdue Single Market directives is read
+              from the Commission’s table of the directives each Member State has not fully notified
               {hasIndicators
-                ? 'Published indicators are shown with their period, definition and source.'
-                : 'Country indicators (Single Market Scoreboard) are not published in a machine-readable form, so none are shown.'}{' '}
-              We never combine different measures into a single score or ranking.
+                ? ', and shown on that country’s page alone, with its period, definition and source.'
+                : '. No data refresh has retrieved it yet, so none is shown.'}{' '}
+              The Scoreboard’s other indicators are published only in embedded Power BI reports and are not read. We never combine
+              different measures into a single score or ranking, and never set Member States’ figures side by side.
             </li>
           </ul>
+
+          <h3 id="applies">When new rules apply</h3>
+          <p>
+            <Link to="/legislation/applies">When new rules apply</Link> lists the dates fixed in law from which an adopted act enters
+            into force or applies (in general, or only some of its provisions), a directive’s transposition deadlines, and the dates from
+            which the national measures transposing it apply: the dates each file’s page gives, as EUR-Lex records them or as we checked
+            them against the act’s text, with the provisions each covers (see <a href="#corrections">Corrections</a>). A transposition
+            date whose role EUR-Lex’s data do not establish, and a date after the end of an act’s validity, are left out. Which dates
+            are ahead is judged on the day you read the page.
+          </p>
+          <p>
+            Where: a regulation binds every Member State, and a directive each Member State to which it is addressed, except a Member
+            State that the act’s recitals or the Council’s voting result record as not taking part in its adoption (Denmark and Ireland,
+            under Protocols No 21 and 22 to the Treaties), unless a Commission decision confirms that it took part later, and one that a
+            directive’s own text does not require to transpose it. Where no record in our data says whether Denmark or Ireland took part,
+            the page says so. A decision binds those to whom it is addressed, which our data do not record.
+          </p>
+          <p>
+            For every date, each topic and each Member State there is an Atom feed of the next 90 days and a calendar (iCalendar) of
+            every date ahead. An entry keeps its identifier and its date from one data refresh to the next.
+          </p>
 
           <h3>Official summaries, court cases and opinions</h3>
           <p>

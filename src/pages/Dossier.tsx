@@ -7,7 +7,7 @@ import { daysSince, formatDate, noUpdateText } from '../lib/format';
 import { blockedNow, classifications } from '../lib/freshness';
 import { changeSince, getWatchlist, markSeen, type ChangeInfo } from '../lib/watchlist';
 import { ExtLink, LoadFailed, Loading, LookupNotice, NotFound, PageHeader, StatusBadge, Term } from '../components/ui';
-import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, dossierPath, isMissing, isSameTitle, useDocumentTitle, useTopics } from '../features/legislation/labels';
+import { ACTIVE_STAGES, EURLEX_CELEX, INSTRUMENT_LABEL, dossierPath, isDossierFile, isMissing, isSameTitle, useDocumentTitle, useTopics } from '../features/legislation/labels';
 import { todayISO } from '../features/legislation/explorer';
 import { DossierSummaryPanel, commissionProposal } from '../features/legislation/dossier/Summary';
 import { WhereIsIt } from '../features/legislation/dossier/WhereIsIt';
@@ -45,7 +45,7 @@ function DossierPage({ id }: { id: string }) {
   const valid = DOSSIER_ID.test(id);
   const { data: raw, error, loading } = useData<DossierDetail>(valid ? `dossiers/${id}.json` : null);
   // A file without the basic parts of a dossier (e.g. a list file) is treated as not found rather than rendered.
-  const d = raw && raw.id === id && Array.isArray(raw.timeline) ? raw : undefined;
+  const d = isDossierFile(raw, id) ? raw : undefined;
   const malformed = !!raw && !d;
   const { data: meta } = useData<Meta>('meta.json');
   const { topics, failed: topicsFailed } = useTopics();

@@ -158,20 +158,29 @@
   border-radius: var(--radius-lg);
   padding: var(--sp-4);
 }
-.indicator__value {
-  font-size: var(--fs-xl);
-  font-weight: var(--fw-semibold);
-  font-variant-numeric: tabular-nums;
-  margin: var(--sp-1) 0;
-}
-.indicator__label {
-  font-weight: var(--fw-semibold);
-  margin: 0;
-}
 .indicator p {
   font-size: var(--fs-sm);
   color: var(--text-2);
   margin: 0 0 var(--sp-2);
+}
+/* after `.indicator p`, and as specific as it plus one class, so that the figure and its label keep their size */
+.indicator p.indicator__value {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  margin: var(--sp-1) 0;
+}
+.indicator p.indicator__label {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  margin: 0;
+}
+/* one country's own figure (the Single Market Scoreboard's count): one card, as wide as running text */
+.indicators--own {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: var(--measure);
 }
 
 .status-open {

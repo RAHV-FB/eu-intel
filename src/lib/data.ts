@@ -17,7 +17,11 @@ export function loadData<T>(path: string): Promise<T> {
       if (!(r.headers.get('content-type') ?? '').includes('json')) throw new NotFoundError(path);
       return (await r.json()) as T;
     });
-    p.catch(() => cache.delete(path)); // allow retry after failure
+    // allow retry after failure; a file that is not there stays so, and is not asked for again (a page's data is
+    // requested both from its address, src/lib/routeData.ts, and by the page)
+    p.catch((e) => {
+      if (!(e instanceof NotFoundError)) cache.delete(path);
+    });
     cache.set(path, p);
   }
   return p;
@@ -29,23 +33,37 @@ export interface DataState<T> {
   loading: boolean;
 }
 
+/** The outcome of loading one file: its data or the error, for the path it was loaded from. */
+export interface Loaded<T> {
+  path: string;
+  data: T | undefined;
+  error: Error | undefined;
+}
+
+/** What `useData(path)` returns, given the outcome it last stored: only an outcome for `path` itself. A page that moves
+ * on to another record of the same kind (one law's page to another's) is loading until that record's file arrives; it
+ * never gets the previous record's data, which it would show under the new address, or take for a malformed file. */
+export function dataStateFor<T>(path: string | null, last: Loaded<T> | null): DataState<T> {
+  if (!path) return { data: undefined, error: undefined, loading: false };
+  if (!last || last.path !== path) return { data: undefined, error: undefined, loading: true };
+  return { data: last.data, error: last.error, loading: false };
+}
+
 /** Load a static JSON file; pass `null` to skip. */
 export function useData<T>(path: string | null): DataState<T> {
-  const [state, setState] = useState<DataState<T>>({ data: undefined, error: undefined, loading: !!path });
+  const [last, setLast] = useState<Loaded<T> | null>(null);
   useEffect(() => {
-    if (!path) {
-      setState({ data: undefined, error: undefined, loading: false });
-      return;
-    }
+    if (!path) return;
     let alive = true;
-    setState((s) => ({ data: s.data, error: undefined, loading: true }));
+    // a file that failed is tried again, loading meanwhile; one already loaded from this path stays shown
+    setLast((l) => (l && l.path === path && l.error ? null : l));
     loadData<T>(path).then(
-      (data) => alive && setState({ data, error: undefined, loading: false }),
-      (error: Error) => alive && setState({ data: undefined, error, loading: false }),
+      (data) => alive && setLast({ path, data, error: undefined }),
+      (error: Error) => alive && setLast({ path, data: undefined, error }),
     );
     return () => {
       alive = false;
     };
   }, [path]);
-  return state;
+  return dataStateFor(path, last);
 }

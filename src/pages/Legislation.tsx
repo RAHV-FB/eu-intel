@@ -9,6 +9,8 @@ import { loadSearch, similarWords, type SearchEngine } from '../lib/search';
 import { useWatchlist } from '../lib/watchlist';
 import { clearAllParams, useParamState, useParamText, type ParamPatch } from '../lib/urlState';
 import { EmptyState, ErrorState, ExtLink, Loading, LookupNotice, PageHeader } from '../components/ui';
+import { CsvButton } from '../components/CsvButton';
+import { csvFileName, type CsvCell } from '../lib/csv';
 import { useMediaQuery } from '../components/useMediaQuery';
 import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 import { ResultCount } from '../components/ResultCount';
@@ -47,6 +49,12 @@ import '../features/legislation/common.css';
 import '../features/legislation/legislation.css';
 
 const INSTRUMENTS: LegalInstrument[] = ['regulation', 'directive', 'decision', 'recommendation', 'other'];
+/** The columns of "Download CSV": what a row shows, in words, with the file's ids and dates (ISO 8601). */
+const CSV_HEADER = [
+  'Title', 'Description', 'Procedure reference', 'File ID', 'Procedure type', 'Type of act', 'Status',
+  'Officially reported as blocked', 'Proposed', 'Latest recorded step', 'Adopted', 'Published', 'Next legal date',
+  'Topics', 'CELEX', 'Page',
+];
 const NO_TOPIC_LABEL = 'No topic assigned';
 // longest first: the longest that fits the field is shown, so that phones keep a reference-format example
 const Q_PLACEHOLDERS = [
@@ -189,6 +197,26 @@ export default function Legislation() {
   const more = useFocusRevealed<HTMLOListElement>(visible.length, '.drow__title a');
 
   const ids = useId();
+  // "Download CSV": every file the list holds, in its order (not only the rows shown so far), as each row words it
+  const csvRows = (): CsvCell[][] =>
+    sorted.map((d) => [
+      d.title,
+      d.short ?? null,
+      d.ref,
+      d.id,
+      d.type_label || d.type,
+      d.instrument ? `${INSTRUMENT_LABEL[d.instrument]}${d.celex.length === 0 ? ' (as proposed)' : ''}` : null,
+      d.status_label,
+      trainCurrent ? (d.officially_blocked ? 'Yes' : 'No') : null, // not given while the Train's copy is not current
+      d.started ?? null,
+      d.last_event ?? null,
+      d.adopted ?? null,
+      d.published ?? null,
+      d.next_date && d.next_date >= today ? d.next_date : null,
+      d.topics.map(topicLabel).join('; '),
+      d.celex.join('; '),
+      `${window.location.origin}${import.meta.env.BASE_URL}legislation/${encodeURIComponent(d.id)}/`,
+    ]);
   // "Copy link to this view": the button says how it went, and so does a status message for screen readers
   const [copied, setCopied] = useState<'' | 'yes' | 'no'>('');
   const copyLink = async () => {
@@ -239,10 +267,27 @@ export default function Legislation() {
             {scopeText} <Link to="/about#coverage">What’s covered</Link>
           </p>
         )}
+        {/* the views of the same files by week and by the dates their rules apply (a wrapped line never starts with
+            the separator: .dot-list) */}
+        <p className="lx-changes dot-list">
+          <span>
+            <Link to={currentTopic ? `/legislation/changes?topic=${encodeURIComponent(currentTopic.slug)}` : '/legislation/changes'}>
+              What changed recently{currentTopic ? ` in ${currentTopic.label}` : ''}, week by week
+            </Link>
+          </span>
+          <span>
+            <Link to={currentTopic ? `/legislation/applies?topic=${encodeURIComponent(currentTopic.slug)}` : '/legislation/applies'}>
+              When new rules apply{currentTopic ? ` in ${currentTopic.label}` : ''}, by Member State
+            </Link>
+          </span>
+        </p>
         <p className="lx-changes">
-          <Link to={currentTopic ? `/legislation/changes?topic=${encodeURIComponent(currentTopic.slug)}` : '/legislation/changes'}>
-            What changed recently{currentTopic ? ` in ${currentTopic.label}` : ''}, week by week
+          <Link
+            to={currentTopic ? `/legislation/transposition?topic=${encodeURIComponent(currentTopic.slug)}` : '/legislation/transposition'}
+          >
+            Directives into national law
           </Link>
+          : each Member State’s measures for the directives due in the last three years or the next twelve months
         </p>
       </PageHeader>
 
@@ -486,6 +531,14 @@ export default function Legislation() {
                 <button type="button" className="lx-linkbtn" onClick={copyLink}>
                   {copied === 'yes' ? 'Link copied' : copied === 'no' ? 'Could not copy the link' : 'Copy link to this view'}
                 </button>
+              )}
+              {sorted.length > 0 && (
+                <CsvButton
+                  filename={csvFileName('legislation', ...(currentTopic ? [currentTopic.slug] : noTopic ? ['no-topic'] : []))}
+                  header={CSV_HEADER}
+                  rows={csvRows}
+                  of={`the ${formatNumber(sorted.length)} ${sorted.length === 1 ? 'file' : 'files'} listed`}
+                />
               )}
               <p className="visually-hidden" role="status">
                 {copied === 'yes'

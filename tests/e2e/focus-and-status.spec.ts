@@ -112,10 +112,13 @@ test('"Copy link to this view" on the legislation list says in a status message 
   await open(page, 'legislation/?topic=tech');
   const status = page.locator('.lx-results-tools [role="status"]');
   await expect(status).toHaveText('');
-  await page.getByRole('button', { name: 'Copy link to this view' }).click();
+  // the copy button (the toolbar also has the list's CSV download): it keeps its place while its label changes
+  const copy = page.locator('.lx-results-tools button.lx-linkbtn');
+  await expect(copy).toHaveText('Copy link to this view');
+  await copy.click();
   await expect(status).toHaveText(COPIED_OR_NOT('Copy it from the browser’s address bar\\.'));
   const copied = (await status.textContent())!.startsWith('Link copied');
-  await expect(page.locator('.lx-results-tools button')).toHaveText(copied ? 'Link copied' : 'Could not copy the link');
+  await expect(copy).toHaveText(copied ? 'Link copied' : 'Could not copy the link');
   await expectNoSeriousA11yViolations(page);
 });
 

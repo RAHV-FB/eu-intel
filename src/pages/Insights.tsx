@@ -5,7 +5,7 @@ import { useData } from '../lib/data';
 import { formatDateTime, formatNumber } from '../lib/format';
 import { ErrorState, Loading } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
-import { councilPatterns, legislativePatterns, parliamentPatterns } from '../features/insights/analysis';
+import { CLOSE_FINAL_VOTES, councilPatterns, legislativePatterns, notCountedText, parliamentPatterns } from '../features/insights/analysis';
 import '../features/insights/insights.css';
 
 const percentage = (part: number, total: number) => total ? `${(100 * part / total).toFixed(1)}%` : '—';
@@ -76,13 +76,13 @@ export default function Insights() {
                   {legislative.stages.map((s) => (
                     <div className="insights-bar-row" key={s.id}>
                       <div className="insights-bar-row__label"><span>{s.label}</span><strong>{formatNumber(s.count)}</strong></div>
-                      <div className="insights-track" role="img" aria-label={`${s.label}: ${s.count} files, ${percentage(s.count, legislative.total)} of tracked files`}>
+                      <div className="insights-track" role="img" aria-label={`${s.label}: ${s.count} files, ${percentage(s.count, legislative.counted)} of the files counted`}>
                         <div className={`insights-fill insights-fill--${s.id}`} style={{ width: barWidth(s.count, legislative.stages[0]?.count || 1) }} />
                       </div>
                     </div>
                   ))}
                 </div>
-                <p className="insights-panel__footnote">Stages are based on official procedural and legal-act records. “Not determinable” is retained rather than assigned an assumed result.</p>
+                <p className="insights-panel__footnote">Stages are based on official procedural and legal-act records. “Not determinable” is retained rather than assigned an assumed result. {notCountedText(legislative)}</p>
               </div>
             </section>
 
@@ -109,7 +109,7 @@ export default function Insights() {
                     ))}
                   </div>
                 ) : <p>No dated proposal or adoption records in this snapshot.</p>}
-                <p className="insights-panel__footnote">The first number in each row is proposals; the second is adoptions. Only files for which the corresponding date is recorded contribute to that series.</p>
+                <p className="insights-panel__footnote">The first number in each row is proposals; the second is adoptions. Only files for which the corresponding date is recorded contribute to that series. A proposal split into separate procedures counts once for each of them.</p>
               </div>
             </section>
 
@@ -131,7 +131,7 @@ export default function Insights() {
                 <div className="insights-proportion" role="img" aria-label={`${parliament.close} close decisions out of ${recordedDecisions} final-text votes with known margins`}>
                   <span style={{ width: barWidth(parliament.close, recordedDecisions) }} />
                 </div>
-                <p className="insights-proportion__caption"><strong>{percentage(parliament.close, recordedDecisions)}</strong> of final-text votes with an established margin meet the site's <Link to="/votes?close=1">close-vote criterion</Link>.</p>
+                <p className="insights-proportion__caption"><strong>{percentage(parliament.close, recordedDecisions)}</strong> of final-text votes with an established margin meet the site's <Link to={CLOSE_FINAL_VOTES}>close-vote criterion</Link>.</p>
                 <p className="insights-panel__footnote">The denominator excludes votes with no determinable margin. Votes without recorded outcomes are not treated as defeats. A close vote is not evidence of political controversy or a particular policy's merit.</p>
               </div>
             </section>

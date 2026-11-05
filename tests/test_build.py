@@ -206,6 +206,17 @@ def test_dossier_linking_by_identifier_only(out: Path):
     assert idx["2099-0002"]["topics"] == ["migration"]
 
 
+def test_a_files_index_entry_is_its_own_files_summary(out: Path):
+    """DossierDetail extends DossierSummary: each field of a file's entry in dossiers/index.json is in the file's own
+    JSON with the same value (titles there in full). `names` was set on the summary after the file's JSON had copied
+    it, so on 5 Nov 2026 the files of 42 entries with names (the AI Act's "AI Act") had none."""
+    for e in load(out, "dossiers/index.json"):
+        det = load(out, f"dossiers/{e['id']}.json")
+        assert {k: det.get(k) for k in e if k not in ("title", "official_title", "short")} == {
+            k: v for k, v in e.items() if k not in ("title", "official_title", "short")}, e["id"]  # fmt: skip
+    assert load(out, "dossiers/2099-0003.json")["names"] == ["Thingamajig rules"]
+
+
 def test_timeline_marks_scheduled_dates_and_links_votes(out: Path):
     tl = load(out, "dossiers/2099-0001.json")["timeline"]
     assert [e["date"] for e in tl] == sorted(e["date"] for e in tl)
@@ -289,6 +300,24 @@ def test_groups_merge_across_terms_and_people_files(out: Path):
     assert party["members_total"] == 2 and party["members_active"] == 1
 
 
+def test_a_party_counts_the_same_sitting_members_on_every_page(tmp_path: Path):
+    """A sitting MEP whose party record has ended and who has no current one (Antoni Comín i Oliveres, 5 Nov 2026:
+    non-attached again from 22 Oct 2026, his 2019-2024 Junts record closed) is not a sitting member of that record: the
+    Spain page and the non-attached group's page counted him in it, beside the record's own page saying 0."""
+    shutil.copytree(FIX / "snapshot", tmp_path / "snapshot")
+    path = tmp_path / "snapshot" / "ep_people" / "meps.json"
+    meps = json.loads(path.read_text(encoding="utf-8"))
+    t4 = next(m for m in meps if m["id"] == "T4")  # ES, EPP, sitting; P1 open since 16 Jul 2024
+    next(x for x in t4["memberships"] if x["kind"] == "party")["end"] = "2025-01-31"
+    path.write_text(json.dumps(meps), encoding="utf-8")
+    o = tmp_path / "public"
+    build(out=o, snapshot=tmp_path / "snapshot", curated=FIX / "curated", state=tmp_path / "state", today=TODAY)
+    assert load(o, "people/parties/P1.json")["members_active"] == 1  # T1 only
+    assert {p["id"]: p["members_active"] for p in load(o, "countries/ES.json")["parties"]} == {"P1": 1}
+    assert all(p["id"] != "P1" for p in load(o, "people/groups/epp.json")["parties"])  # T4 has no current party
+    assert load(o, "people/meps/T4.json")["party"] == "P1"  # the MEP's last party record, as its page dates it
+
+
 def test_countries_and_transposition_status(out: Path):
     es = load(out, "countries/ES.json")
     tr = {t["celex"]: t for t in es["transposition"]}
@@ -368,8 +397,9 @@ def test_meta_sources_and_counts(out: Path):
     # the About page's count is the number of Council votes listed (curated records included: 746 against 747)
     assert meta["counts"]["council_votes"] == len(load(out, "council/index.json"))
     assert meta["snapshot_at"] == "2099-01-01T00:00:00Z"
-    assert any("Country indicators" in n for n in meta["coverage_notes"])
-    # no indicators in this release: the country pages' source does not name them
+    # no Scoreboard figures in this release (the fixture has no indicators.json): the notes say so, and the country
+    # pages' source does not name them
+    assert any(n.startswith("Single Market Scoreboard:") and "not in this release" in n for n in meta["coverage_notes"])
     impl = next(s for s in meta["sources"] if s["id"] == "implementation")
     assert impl["name"] == "European Commission / EUR-Lex – national transposition measures and infringements"
 
@@ -690,7 +720,8 @@ def test_output_matches_data_ts_contract(out: Path):
 
     contract = Contract.load(DATA_TS)
     checked = {pattern for pattern, _, _ in contract.files_to_check(out, lambda rel: load(out, rel))}
-    assert checked == set(contract.files) and len(checked) == 19  # every listed file, and one of each detail kind
+    assert checked == set(contract.files) and len(checked) == 22  # every listed file, and one of each detail kind
+    assert "open/datapackage.json" in checked  # the open dataset's descriptor (pipeline/analysis/opendata.py)
     assert check_public(out, contract).lines() == []
 
 
@@ -2163,6 +2194,94 @@ def test_strict_build_fails_on_an_unreadable_or_skipped_curated_entry(tmp_path: 
     assert "curated act_dates.yaml: entry 'not an entry' has no CELEX; ignored" in B.PROBLEMS
     assert "curated council_dates.yaml: expected a list of entries, found dict; ignored" in B.PROBLEMS
     assert any(p.startswith("curated topics.yaml unreadable: ") for p in B.PROBLEMS)
+
+
+def test_a_checked_transposition_deadline_must_be_a_date_its_quote_gives(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """docs/EDITORIAL.md: a correction entry whose quote does not give its date is skipped, and a strict build fails.
+    transposition.yaml names which of the dates EUR-Lex records is the general deadline, so a slip to another recorded
+    date (Directive (EU) 2024/1640's derogation of 10 July 2025 for its 10 July 2027) passes every other check."""
+    import pipeline.build as B
+
+    monkeypatch.setattr(B, "PROBLEMS", [])
+    cur = tmp_path / "curated"
+    cur.mkdir()
+    (cur / "transposition.yaml").write_text(
+        """
+- celex: "32099L0009"
+  deadline: "2025-07-10"
+  provision: "Art. 78(1), first subparagraph"
+  quote: "Member States shall bring into force the laws [...] necessary to comply with this Directive by 10 July 2027."
+  reviewed: "2026-10-23"
+- celex: "32099L0003"
+  deadline: "2027-07-10"
+  applies_from: "2028-07-01"
+  provision: "Art. 4(1) and (2)"
+  quote: "Member States shall adopt and publish, by 10 July 2027, the laws [...]. They shall apply those measures from 1 July 2028."
+  reviewed: "2026-10-23"
+- celex: "32099L0011"
+  deadline: "2027-07-10"
+  applies_from: "2028-07-10"
+  provision: "Art. 4(1) and (2)"
+  quote: "Member States shall adopt and publish, by 10 July 2027, the laws [...]. They shall apply those measures from 1 July 2028."
+  reviewed: "2026-10-23"
+""",
+        encoding="utf-8",
+    )
+    assert sorted(B.load_transposition_checks(cur)) == ["32099L0003"]
+    assert B.PROBLEMS == [
+        "curated transposition.yaml: entry 32099L0009 does not quote its date 2025-07-10 (10 July 2025); ignored",
+        "curated transposition.yaml: entry 32099L0011 does not quote its date 2028-07-10 (10 July 2028); ignored",
+    ]
+
+
+def test_a_checked_act_date_must_cite_its_provision_and_the_texts_checked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """docs/EDITORIAL.md: each date in act_dates.yaml cites the provision that sets it, and the entry lists the official
+    texts it was checked against; an entry without them ("no texts listed") is skipped and a strict build fails. The
+    build puts these dates in place of EUR-Lex's, so an unsourced one would replace official data on nobody's word."""
+    import pipeline.build as B
+
+    monkeypatch.setattr(B, "PROBLEMS", [])
+    cur = tmp_path / "curated"
+    cur.mkdir()
+    (cur / "act_dates.yaml").write_text(
+        """
+- celex: "32099R0001"
+  application: [{date: "2026-06-01", partial: false, provisions: "The Regulation (Art. 99)"}]
+  reviewed: "2026-10-23"
+- celex: "32099R0002"
+  application: [{date: "2026-06-01", partial: false}]
+  sources: [{label: "Regulation 2099/2, Article 9", url: "https://eur-lex.europa.eu/eli/reg/2099/2/oj"}]
+  reviewed: "2026-10-23"
+- celex: "32099R0003"
+  application: [{date: "2026-06-01", partial: false, provisions: "The Regulation (Art. 9)"}]
+  sources: [{label: "Regulation 2099/3, Article 9", url: "https://eur-lex.europa.eu/eli/reg/2099/3/oj"}]
+  reviewed: "2026-10-23"
+""",
+        encoding="utf-8",
+    )
+    assert sorted(B.load_act_dates(cur)) == ["32099R0003"]
+    assert B.PROBLEMS == [
+        "curated act_dates.yaml: entry 32099R0001 lists no texts it was checked against; ignored",
+        "curated act_dates.yaml: entry 32099R0002 has a date that cites no provision; ignored",
+    ]
+
+
+def test_strict_build_fails_when_snapshot_records_are_left_out(tmp_path: Path):
+    """A snapshot file that cannot be read was built as an empty source, and records that fail validation were dropped,
+    each with a log line only: `build --strict` said "OK" with every act gone."""
+    import pipeline.build as B
+
+    snap = tmp_path / "snapshot"
+    shutil.copytree(FIX / "snapshot", snap)
+    votes = json.loads((snap / "ep_votes" / "votes.json").read_text(encoding="utf-8"))
+    votes[0]["date"] = None  # a required field
+    (snap / "ep_votes" / "votes.json").write_text(json.dumps(votes), encoding="utf-8")
+    (snap / "eurlex" / "acts.json").write_text('[{"celex": "32099R0001",', encoding="utf-8")  # cut short
+    assert _fixture_build(tmp_path) == 0  # not strict: built without them, as before
+    assert _fixture_build(tmp_path, strict=True) == 1
+    assert len(B.PROBLEMS) == 2, B.PROBLEMS
+    assert "snapshot ep_votes/votes.json: 1 invalid records skipped" in B.PROBLEMS
+    assert any(p.startswith("snapshot eurlex/acts.json unreadable (") for p in B.PROBLEMS)
 
 
 def test_strict_build_fails_when_a_status_or_an_assessment_falls_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

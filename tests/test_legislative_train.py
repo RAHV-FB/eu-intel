@@ -241,6 +241,20 @@ def test_recheck_rotation_covers_every_file():
     assert weeks == set(range(lt.RECHECK_WEEKS))
 
 
+def test_a_recheck_week_runs_from_monday_to_sunday():
+    """The weeks started on Sundays (`toordinal() // 7`), not on Mondays as documented and as the EP sources' rotation
+    counts them (ep_procedures.week_number): a run on Sunday 8 November 2026 took the files of the week from 9 November."""
+    from datetime import timedelta
+
+    from pipeline.sources.ep_procedures import week_number
+
+    monday = date(2026, 11, 2)
+    week = [monday + timedelta(days=i) for i in range(7)]  # Monday 2 to Sunday 8 November 2026
+    assert {lt.week_slot(d) for d in week} == {lt.week_slot(monday)}
+    assert lt.week_slot(monday + timedelta(days=7)) != lt.week_slot(monday)
+    assert all(lt.week_slot(d) == week_number(d) % lt.RECHECK_WEEKS for d in week)
+
+
 @pytest.mark.parametrize(
     "failure",
     [lt.HttpError("u", 403, "Request blocked"), b"", b"<html><body>Please wait</body></html>"],

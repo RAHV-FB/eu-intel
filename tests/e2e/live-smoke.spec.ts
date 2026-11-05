@@ -4,7 +4,8 @@
  * other browser tests run on the frozen test data (tests/frozen-data.txt) as of its build time; this one checks that the
  * data being deployed renders: legislative files of every stage, votes of every kind, MEPs, groups and parties, every
  * country, search and the main pages. A page fails on a console error, an uncaught exception, a failed or third-party
- * request (the guard of tests/e2e/fixtures.ts), the error page, a "not found" page or an empty heading.
+ * request (the guard of tests/e2e/fixtures.ts), the error page, a "not found" page or an empty heading. The sitemap,
+ * which only the deploy's build (with SITE_URL) has, must list those pages.
  *
  *   python -m pipeline build && BASE_PATH=/eu-intel/ npm run build && E2E_LIVE=1 npx playwright test --project=chromium
  *
@@ -49,6 +50,7 @@ const data = {
 const PAGES: [name: string, path: string][] = [
   ['home', ''],
   ['legislation', 'legislation/'],
+  ['when new rules apply', 'legislation/applies/'], // applies.json, read on the real clock
   ['votes', 'votes/'],
   ['people', 'people/'],
   ['countries', 'countries/'],
@@ -87,6 +89,31 @@ for (const [name, path] of PAGES) {
     await expectRendered(page);
   });
 }
+
+test('the sitemap lists the pages opened above, and robots.txt names it', async ({ page, request }) => {
+  // only a build with SITE_URL (the deploy's) has a sitemap: its addresses are absolute, from the canonical links
+  const site = /<link rel="canonical" href="([^"]+)"/.exec(readFileSync('dist/index.html', 'utf8'))?.[1];
+  test.skip(!site, 'built without SITE_URL: no sitemap');
+  const get = async (path: string) => {
+    const res = await request.get(`${PAGES_ORIGIN}${BASE_PATH}${path}`);
+    expect(res.status(), path).toBe(200);
+    return res.text();
+  };
+  expect(await get('robots.txt')).toContain(`Sitemap: ${site}sitemap.xml`);
+  // the addresses of a sitemap file, or of the files a sitemap index lists; null when it is not well-formed XML
+  const locs = (xml: string) =>
+    page.evaluate((x) => {
+      const doc = new DOMParser().parseFromString(x, 'application/xml');
+      if (doc.getElementsByTagName('parsererror').length) return null;
+      return { index: doc.documentElement.localName === 'sitemapindex', locs: [...doc.getElementsByTagName('loc')].map((l) => l.textContent ?? '') };
+    }, xml);
+  const top = await locs(await get('sitemap.xml'));
+  expect(top, 'sitemap.xml is well-formed').not.toBeNull();
+  const listed: string[] = [];
+  for (const f of top!.index ? top!.locs : []) listed.push(...((await locs(await get(f.slice(site!.length))))?.locs ?? []));
+  if (!top!.index) listed.push(...top!.locs);
+  for (const [name, path] of PAGES) expect(listed, name).toContain(site + path);
+});
 
 test('search finds a file by its procedure reference', async ({ page }) => {
   const d = data.dossiers.find((x) => typeof x.ref === 'string');

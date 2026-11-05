@@ -4,6 +4,18 @@ import { useLocation } from 'react-router-dom';
 /** Input by which a visitor scrolls or moves on themselves: the page stops keeping the target in place. */
 const INTENT = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
 
+/** The element id a URL fragment names: "#council" -> "council", percent-decoded as the address bar encodes it; a
+ * fragment that is not valid percent-encoding ("#100%") is taken as written, as browsers take it (decodeURIComponent
+ * throws on it, which took the whole page down). */
+export function fragmentId(hash: string): string {
+  const raw = hash.startsWith('#') ? hash.slice(1) : hash;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 /**
  * Scroll to the element named by the URL fragment (e.g. /how-the-eu-works#council) once the page has
  * rendered, and whenever the fragment changes through in-app links. Pass `ready` = false while data loads.
@@ -14,7 +26,7 @@ export function useHashScroll(ready = true) {
   const { hash } = useLocation();
   useEffect(() => {
     if (!ready || !hash) return;
-    const id = decodeURIComponent(hash.slice(1));
+    const id = fragmentId(hash);
     let frame = 0;
     const stop = () => {
       window.cancelAnimationFrame(frame);

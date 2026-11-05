@@ -14,6 +14,8 @@ const Legislation = lazy(() => import('./pages/Legislation'));
 const Insights = lazy(() => import('./pages/Insights'));
 const Dossier = lazy(() => import('./pages/Dossier'));
 const Changes = lazy(() => import('./pages/Changes'));
+const Applies = lazy(() => import('./pages/Applies'));
+const Transposition = lazy(() => import('./pages/Transposition'));
 const Search = lazy(() => import('./pages/Search'));
 const Following = lazy(() => import('./pages/Following'));
 const Votes = lazy(() => import('./pages/Votes'));
@@ -48,8 +50,11 @@ export function App() {
             <Route index element={<Home />} />
             <Route path="legislation" element={<Legislation />} />
             <Route path="insights" element={<Insights />} />
-            {/* What changed: a view of Legislation, not a primary destination (src/components/nav.ts) */}
+            {/* What changed and When new rules apply: views of Legislation, not primary destinations (src/components/nav.ts) */}
             <Route path="legislation/changes" element={<Changes />} />
+            <Route path="legislation/applies" element={<Applies />} />
+            {/* the implementation tracker: a view of Legislation, reached from the explorer and the country pages */}
+            <Route path="legislation/transposition" element={<Transposition />} />
             <Route path="legislation/:id" element={<Dossier />} />
             <Route path="topics/:slug" element={<TopicRedirect />} />
             <Route path="search" element={<Search />} />

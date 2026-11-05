@@ -15,6 +15,10 @@
     python -m pipeline health [--meta FILE] [--problem KEY=TEXT ...] [--markdown | --json]
                                             # failed or stale sources (pipeline/freshness.py), the age of the
                                             # live site's data and the workflow's own findings; exit 1 if any
+    python -m pipeline opendata content-hash  # the content hash of the built open dataset (public/data/open)
+    python -m pipeline opendata package --tag data-YYYY-MM-DD --out DIR [--commit SHA]
+                                            # its release: DIR/eu-intel-<tag>.zip, datapackage.json, notes.md
+                                            # (pipeline/analysis/opendata.py; exit 1 if the dataset is inconsistent)
 
 Each source module in pipeline/sources/ exposes:
     SOURCE_ID: str
@@ -41,7 +45,7 @@ from pathlib import Path
 
 from pipeline.http import default_http
 from pipeline.models.entities import SourceStatus
-from pipeline.snapshot import global_deadline, not_refreshed, now_iso, past, update_manifest
+from pipeline.snapshot import global_deadline, not_refreshed, now_iso, past, set_attempt, update_manifest
 
 # Order matters: later sources may read earlier snapshot files (e.g. votes -> procedures).
 SOURCES: dict[str, str] = {
@@ -80,6 +84,7 @@ def cmd_fetch(names: list[str]) -> int:
     try:
         for name in names:
             attempted = now_iso()
+            set_attempt(attempted)  # the source stamps its records of this attempt with the same time (attempt_time)
             if past(hard):
                 status = not_refreshed(
                     name, attempted, "Not refreshed in this run: the fetch deadline passed before it started."
@@ -111,6 +116,7 @@ def cmd_fetch(names: list[str]) -> int:
             update_manifest(status)
             logging.info("%s: %s %s", name, status.status, status.records)
     finally:
+        set_attempt(None)
         if previous_handler is not None:
             signal.signal(signal.SIGINT, previous_handler)
     return 1 if failures else 0
@@ -271,6 +277,12 @@ def cmd_health(
 
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    args = sys.argv[1:] if argv is None else argv
+    if args[:1] == ["opendata"]:  # its own subcommands (content-hash, package)
+        from pipeline.analysis.opendata import main as opendata_main
+        from pipeline.build import OUT
+
+        return opendata_main(args[1:], OUT / "open")
     p = argparse.ArgumentParser(prog="pipeline")
     sub = p.add_subparsers(dest="cmd", required=True)
     f = sub.add_parser("fetch")

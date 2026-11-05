@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CountryDetail, InfringementInfo, TranspositionStatus } from '../../types/data';
+import { fromToday, statusOn } from '../../lib/deadline';
 import { formatDate, formatNumber } from '../../lib/format';
+import { todayISO } from '../legislation/explorer';
 import { shownParam, useParamState, useParamText } from '../../lib/urlState';
 import { dossierScores, loadSearch, type SearchEngine } from '../../lib/search';
 import { EmptyState, ExtLink, Term } from '../../components/ui';
@@ -40,7 +42,7 @@ const TR_RESET = ['tr-show'];
 const INF_RESET = ['inf-show'];
 
 export function TranspositionTable({
-  rows,
+  rows: built,
   countryName,
   infringements = NO_CASES,
 }: {
@@ -48,6 +50,10 @@ export function TranspositionTable({
   countryName: string;
   infringements?: InfringementInfo[];
 }) {
+  // each status on the reader's date (the build states it on its own: src/lib/deadline.ts statusOn), and each deadline
+  // told from it ("2 years ago", "in 4 months")
+  const today = todayISO();
+  const rows = useMemo(() => built.map((r) => ({ ...r, status: statusOn(r.status, r.deadline, today) })), [built, today]);
   // filters, order and rows shown are kept in the address (tr-…), so that Back from a file returns to the same list
   const [params, patch] = useParamState();
   // directives this country is in an open non-communication case for, said under the status as the law page's table
@@ -193,12 +199,19 @@ export function TranspositionTable({
                       {r.status_note && <StatusNote r={r} />}
                       {nonComm.has(r.celex) && <NonCommunicationCase />}
                       <span className="meta as-block">
-                        Deadline: {r.deadline ? formatDate(r.deadline) : 'not recorded'}
+                        Deadline: {r.deadline ? `${formatDate(r.deadline)} (${fromToday(r.deadline, today)})` : 'not recorded'}
                       </span>
                     </span>
                   </td>
                   <td className="nowrap hide-narrow">
-                    {r.deadline ? formatDate(r.deadline) : <span className="muted">Not recorded</span>}
+                    {r.deadline ? (
+                      <>
+                        {formatDate(r.deadline)}
+                        <span className="meta as-block">{fromToday(r.deadline, today)}</span>
+                      </>
+                    ) : (
+                      <span className="muted">Not recorded</span>
+                    )}
                   </td>
                   <td className="num">
                     {r.status === 'unavailable' ? (

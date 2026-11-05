@@ -39,6 +39,12 @@ describe('the OPML of the files a reader follows', () => {
     expect(xml).not.toMatch(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/);
   });
 
+  it('can be offered whatever a title holds (a lone surrogate made encodeURIComponent throw and the page fail)', () => {
+    const odd = opml([{ id: '2099-0002', title: 'Half an emoji \ud83d and \udc4d', ref: '2099/0002(COD)' }], SITE, NOW);
+    expect(() => opmlHref(odd)).not.toThrow();
+    expect(odd).toContain('text="Half an emoji  and  (2099/0002(COD))"');
+  });
+
   it('is offered as a data: link the browser saves, named by the day', () => {
     const href = opmlHref(xml);
     expect(href.startsWith('data:text/x-opml;charset=utf-8,')).toBe(true);

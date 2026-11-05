@@ -1,0 +1,47 @@
+{
+  "upload_type": "dataset",
+  "title": "EU Legislative Intelligence – open dataset",
+  "creators": [
+    {
+      "name": "RAHV-FB"
+    }
+  ],
+  "description": "<p>Legislative files of the European Union with their status and dates, the acts adopted in them, European Parliament and Council votes, the transposition of directives by Member State with the national measures notified, infringement cases, and a crosswalk of the official identifiers that join them (procedure reference, CELEX, ELI, Parliament vote, Council voting result and document, national measure, infringement case). Built only from official EU records (European Parliament, EUR-Lex, Council of the EU, European Commission) by the pipeline of EU Legislative Intelligence, an independent, nonpartisan site that is not an official EU website.</p><p>Each data release (tag data-YYYY-MM-DD) is published on GitHub with the dataset as CSV tables, a Frictionless Data Package descriptor (datapackage.json) and a README that documents every table, the identifiers, the caveats (a notified national measure is not an assessment of transposition; “no measures found” is not proof that a directive was not transposed) and the attribution each source requires.</p>",
+  "access_right": "open",
+  "license": "cc-by-4.0",
+  "language": "eng",
+  "keywords": [
+    "European Union",
+    "legislation",
+    "European Parliament",
+    "Council of the European Union",
+    "EUR-Lex",
+    "votes",
+    "transposition",
+    "infringements",
+    "open data"
+  ],
+  "notes": "This record archives the repository at the release's tag: the committed snapshot of official records (data/snapshot), the checked corrections (data/curated) and the pipeline that builds the dataset from them (EU_INTEL_TODAY=<as_of> python -m pipeline build writes it to public/data/open; as_of is in the release's datapackage.json). The CSV tables, datapackage.json and README are attached to the GitHub release of the same tag. The dataset is licensed CC BY 4.0; the code is under the MIT License (LICENSE); the official records remain subject to their publishers' reuse terms. Contains information © European Union from the European Parliament, EUR-Lex (Publications Office of the European Union), the Council of the European Union and the European Commission.",
+  "related_identifiers": [
+    {
+      "identifier": "https://rahv-fb.github.io/eu-intel/",
+      "relation": "isSupplementTo",
+      "resource_type": "other"
+    },
+    {
+      "identifier": "https://rahv-fb.github.io/eu-intel/about/#reuse",
+      "relation": "isDocumentedBy",
+      "resource_type": "other"
+    },
+    {
+      "identifier": "https://github.com/RAHV-FB/eu-intel/releases",
+      "relation": "isSupplementedBy",
+      "resource_type": "dataset"
+    },
+    {
+      "identifier": "https://github.com/RAHV-FB/eu-intel",
+      "relation": "isCompiledBy",
+      "resource_type": "software"
+    }
+  ]
+}

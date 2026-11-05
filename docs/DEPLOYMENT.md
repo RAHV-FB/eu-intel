@@ -1,6 +1,6 @@
 # Deployment and operations
 
-The site is a static build deployed to **GitHub Pages** by GitHub Actions. Five workflows:
+The site is a static build deployed to **GitHub Pages** by GitHub Actions. Six workflows:
 
 | Workflow | Trigger | Does | Permissions |
 | --- | --- | --- | --- |
@@ -9,6 +9,7 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Five 
 | `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC, Fridays 05:17 UTC (a scheduled run is skipped if every core source on `main` was retrieved in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month); on Fridays the core sources and `agenda` only → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
 | `rebuild.yml` (Daily rebuild) | daily 01:23 UTC, manual | no fetch, no commit: deploys `main` (its committed data built with today's date) through `pages.yml` once CI has passed on its code, unless a refresh is running | `contents: read`, `actions: read`; its deploy job: as `pages.yml` |
 | `watchdog.yml` (Watchdog) | after each *Data refresh*, *CI* run on `main`, deploy and *Daily rebuild*, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
+| `release-data.yml` (Data release) | Tuesdays 10:41 UTC, manual | the [open dataset](#open-data-releases) of `main`, once CI has passed on its code: validate, strict build, `validate --built` → a GitHub release tagged `data-YYYY-MM-DD` with the zip and `datapackage.json`, only when its content changed since the latest one | plan: `contents: read`, `actions: read`; build: `contents: read`; the release job only: `contents: write` |
 
 All actions are pinned to full commit SHAs (with the version in a comment); Dependabot
 (`.github/dependabot.yml`) proposes weekly grouped updates. The Python runtime dependencies in `pyproject.toml` have a
@@ -52,7 +53,11 @@ check → size check (fails over 900 MB; Pages allows 1 GB).
 3. **If `main` is protected** by a ruleset or branch protection that blocks direct pushes, add
    `github-actions[bot]` (or the "GitHub Actions" app) to the bypass list, or the refresh commit will be rejected.
    Required status checks on `main` also block bot pushes unless bypassed. (The deploy waits for CI by itself, see
-   "Paths to production" below; protection is not needed for that.)
+   "Paths to production" below; protection is not needed for that.) As of 5 Nov 2026 `main` has no branch protection
+   and no ruleset (`gh api repos/RAHV-FB/eu-intel/branches/main/protection`: 404 "Branch not protected"; `…/rules/branches/main`:
+   `[]`), so no check is required to merge a pull request: a red CI run (or one still running, or the WebKit job alone
+   failing) does not block the merge button. What it blocks is the deploy, which runs only after CI passes on the push
+   to `main`.
 4. **Environment**: enabling Pages creates the `github-pages` environment, which by default only accepts
    deployments from `main`. Keep it that way (manual runs from other branches will build but not deploy; a refresh
    started from another branch commits to `main` but does not deploy).
@@ -63,6 +68,14 @@ check → size check (fails over 900 MB; Pages allows 1 GB).
    the new address, for the watchdog's check of the live site.
 6. **Issues** must stay enabled (*Settings → General → Features*): the watchdog reports in a "Data health" issue. Watch
    the repository (at least *Issues*) to be notified when it opens or lists a new problem.
+7. **A DOI for each data release (Zenodo)**, once: sign in at <https://zenodo.org> with the GitHub account that owns the
+   repository (*Log in → GitHub*), open *Account → GitHub* (<https://zenodo.org/account/settings/github/>), and switch
+   `RAHV-FB/eu-intel` on (*Sync now* if it is not listed). Nothing else is needed in the repository: from then on Zenodo
+   archives every **published** release (the weekly `data-YYYY-MM-DD` ones, and any other) and gives it a DOI, with the
+   metadata of `.zenodo.json` (title, description, creators, licence, related identifiers); releases published before
+   the switch are not archived. The first archived release also gets a *concept DOI* that always resolves to the latest
+   version: add it to `CITATION.cff` (`doi:`) and to the README, so that citations use it. What a record holds, and how
+   to archive the CSV files themselves, is under [Open-data releases](#open-data-releases).
 
 The site will be at `https://rahv-fb.github.io/eu-intel/`.
 
@@ -71,12 +84,13 @@ The site will be at `https://rahv-fb.github.io/eu-intel/`.
 GitHub Pages serves a project site under `/<repo>/`. `pages.yml` takes the path from
 `actions/configure-pages` (`steps.pages.outputs.base_path`, e.g. `/eu-intel`, or empty for a custom domain) and
 builds with `BASE_PATH=<base_path>/`. `vite.config.ts` uses it as Vite's `base`, the router uses it as its
-`basename`, and data is loaded from `${BASE_URL}data/`. The Atom feeds (`data/feeds/*.xml`, and one per file in
-`data/feeds/dossiers/`) need absolute links:
+`basename`, and data is loaded from `${BASE_URL}data/`. The Atom feeds (`data/feeds/*.xml`, one per file in
+`data/feeds/dossiers/`, and those of When new rules apply in `data/feeds/applies/`, with its calendars) need absolute links:
 the data build takes them from `SITE_URL`, which `pages.yml` sets to the Pages URL
 (`steps.pages.outputs.base_url`, e.g. `https://rahv-fb.github.io/eu-intel` or the custom domain); without it
 (CI, local builds) they point at `https://rahv-fb.github.io/eu-intel/`. `SITE_URL` sets the links only: the ids
-(`feeds.TAG_BASE`) never change with it, as an Atom id must not when a feed moves (RFC 4287, section 4.2.6). `pages.yml` gives
+(`feeds.TAG_BASE`, and the calendars' UIDs built from it) never change with it, as an Atom id must not when a feed moves
+(RFC 4287, section 4.2.6). GitHub Pages serves the calendars (`.ics`) as `text/calendar`. `pages.yml` gives
 the site build the same `SITE_URL`, from which `scripts/prerender-routes.mjs` writes each page's `<link rel="canonical">`
 (`<SITE_URL><route>/`, the address of the prerendered page, which is also the address the Atom entries link to); without it
 (CI, local builds, forks) the pages have none, so that they do not point at another host. `404.html` carries `noindex`.
@@ -90,6 +104,42 @@ new tab, a shared or bookmarked link) gets a 301 from Pages to the address with 
 fragment: one extra round trip, nothing breaks. The canonical links and the Atom entries use the address with the slash.
 Locally, `tests/e2e/pages-server.mjs` reproduces these semantics (`node tests/e2e/pages-server.mjs dist`, then
 open http://127.0.0.1:4174/eu-intel/).
+
+## Search engines and link previews
+
+The prerender (`scripts/prerender-routes.mjs` with `scripts/seo.mjs`; docs/ARCHITECTURE.md) gives every page Open Graph
+and Twitter tags, so that a link shared in Slack, X, LinkedIn or Mastodon previews with the page's own title and
+description, and a legislative file's page its key facts for crawlers and readers without JavaScript (`<noscript>`) and
+its act as schema.org `Legislation` (JSON-LD). With `SITE_URL`, which `pages.yml` sets to the Pages URL, it also writes
+`og:url` (the canonical address), `og:image` (the site's icon, `public/og-image.png`, made by
+`scripts/render-og-image.mjs`) and **`sitemap.xml`**, at `https://rahv-fb.github.io/eu-intel/sitemap.xml`: every page
+for search engines (about 6,400 addresses and 0.6 MB in November 2026; over 50,000 addresses or 50 MB it becomes an
+index of `sitemap-<n>.xml` files), with `lastmod` for legislative files and votes. Builds without `SITE_URL` (CI, local
+builds, forks) have none of these three, which need absolute addresses. **`robots.txt`** (always written) lets every crawler
+read every page and, with `SITE_URL`, names the sitemap. The data files must stay readable to crawlers: a search engine
+that runs the app (Google) loads them to render the pages.
+
+**Crawlers read `robots.txt` only at the root of a host.** On the project site that is
+`https://rahv-fb.github.io/robots.txt`, which this repository does not serve (it would be the user site, a repository
+named `RAHV-FB/rahv-fb.github.io`); `https://rahv-fb.github.io/eu-intel/robots.txt` is ignored. So the site's own
+`robots.txt` takes effect only once it has a custom domain (One-time setup, step 5: the base path becomes `/` and
+`SITE_URL` the domain, so the sitemap moves with it). Until then search engines learn of the sitemap only when it is
+submitted to them. That is the owner's action, in their own accounts; no workflow does it:
+
+1. **Google Search Console** (search.google.com/search-console): add a *URL prefix* property for
+   `https://rahv-fb.github.io/eu-intel/` (a *Domain* property needs a DNS record, which `github.io` does not allow).
+   Verify it with the *HTML tag* method: put the `<meta name="google-site-verification" content="…">` it gives into
+   `<head>` in `index.html`, which every prerendered page copies, and deploy. (The *HTML file* method would add a page
+   without the Content-Security-Policy meta, which the privacy check fails.) Then *Sitemaps* → add `sitemap.xml`.
+2. **Bing Webmaster Tools** (bing.com/webmasters): import the property from Search Console, or add the same URL and
+   verify with its meta tag (`msvalidate.01`) in the same way; then submit
+   `https://rahv-fb.github.io/eu-intel/sitemap.xml` under *Sitemaps*.
+3. Optionally, a user site (`RAHV-FB/rahv-fb.github.io`) with a `robots.txt` containing
+   `Sitemap: https://rahv-fb.github.io/eu-intel/sitemap.xml` lets every crawler find the sitemap without a submission.
+
+After a move to a custom domain, add a property for the new address and submit its sitemap there too. Search Console's
+*Pages* and *Sitemaps* reports show what was indexed and why pages were not. Platforms cache a link preview once they
+have fetched it; their own tools (for example LinkedIn's Post Inspector) show what they read and fetch it again.
 
 ## Schedule and failure behaviour
 
@@ -107,13 +157,17 @@ open http://127.0.0.1:4174/eu-intel/).
   average; with this run, after about 2. The Council's and Parliament's plans for the coming weeks (`agenda`) are
   published during the week, and `agenda`'s 9-day threshold assumes a weekly copy at least. Its incremental reads take
   no rotation share: the Monday run of the same week took it ("What a weekly run re-reads"). If it is dropped or fails,
-  the Monday run covers it. GitHub also disables every scheduled
-  workflow of a public repository after 60 days without activity in it. A commit is activity: the refresh's weekly
-  commits keep the repository active as long as it commits. A scheduled run that commits nothing (the watchdog's, the
-  daily rebuild's) is not. The watchdog's daily run is disabled together with the refresh's, so it cannot report this by
-  itself: it then runs only after a CI run for a push to `main` or a deploy, and the first of those reports the live
-  data as overdue. Re-enable each under *Actions → <workflow> → Enable workflow* (`gh workflow enable refresh.yml`, `gh
-  workflow enable watchdog.yml`).
+  the Monday run covers it.
+- **Schedules switched off after 60 days without a commit**: GitHub disables every scheduled workflow of a public
+  repository after 60 days without activity in it, all four here at once (the refresh, the daily rebuild, the watchdog
+  and the weekly data release). A commit is activity: a refresh whose data passes the gate always commits (`_manifest.json` records each
+  run's attempt), so the repository stays active as long as refreshes pass. A scheduled run that commits nothing (the
+  watchdog's, the daily rebuild's, the data release's) is not activity. Sixty days without a commit are sixty days of refreshes that failed
+  or did not run, and from the eighth the watchdog reports the live data as overdue (`MAX_AGE_DAYS`). Once the schedules
+  are off, so is the watchdog's daily run: it then runs only after a CI run for a push to `main` or a deploy, and the
+  first of those reports the live data as overdue. Re-enable each under *Actions → <workflow> → Enable workflow* (`gh
+  workflow enable refresh.yml`, `gh workflow enable rebuild.yml`, `gh workflow enable watchdog.yml`, `gh workflow enable
+  release-data.yml`).
 - **Daily rebuild** (`rebuild.yml`, 01:23 UTC): the site is built again from `main`'s committed data with that day's date
   and deployed, without fetching or committing anything. Statuses and labels are written when the site is built, while
   the explanations beside them follow the reader's date (`src/lib/format.ts`): between weekly refreshes a file published
@@ -266,11 +320,13 @@ For data on the site that is wrong because of a refresh (a commit "Data refresh 
 changes only `data/snapshot/` and `data/state/`). Fixing the cause and rolling back are two jobs: the next scheduled refresh
 starts from whatever `main` holds and fetches again, so a rollback alone does not last.
 
-1. **Stop the refresh from moving `main`.** Cancel a run that is going (*Actions → Data refresh → the run → Cancel workflow*, or
-   `gh run list --workflow refresh.yml --status in_progress`, then `gh run cancel <run-id>`; likewise for `--status queued`): when
-   its push is rejected, a refresh re-applies its own data files on top of `main`, and it would overwrite your restore. Then
-   disable the schedule: `gh workflow disable refresh.yml` (or *Actions → Data refresh → ⋯ → Disable workflow*), which does not stop a
-   run that is already going.
+1. **Stop the refresh from moving `main`, and the daily rebuild from publishing it.** Cancel a run that is going (*Actions → Data
+   refresh → the run → Cancel workflow*, or `gh run list --workflow refresh.yml --status in_progress`, then `gh run cancel
+   <run-id>`; likewise for `--status queued`): when its push is rejected, a refresh re-applies its own data files on top of
+   `main`, and it would overwrite your restore. Then disable the schedule: `gh workflow disable refresh.yml` (or *Actions → Data
+   refresh → ⋯ → Disable workflow*), which does not stop a run that is already going. Disable the daily rebuild too, `gh workflow
+   disable rebuild.yml`: it deploys `main` every night at 01:23 UTC, the bad data included until step 3 is pushed, which would
+   undo step 5.
 2. **Find the last good commit.** `git log --format='%h %ad %s' --date=short -- data/snapshot data/state` lists the commits that
    changed data; take the one before the bad refresh (`data/snapshot/_manifest.json` in it has each source's `fetched_at`).
 3. **Put that commit's data back in a new commit on `main`.**
@@ -291,7 +347,8 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
    `https://rahv-fb.github.io/eu-intel/data/meta.json` (the latest retrieval of any source) is that of the restored data, and
    the footer's "Procedures, votes and acts current to" date (`core_data_at`, the oldest retrieval of the core sources) is too,
    and `commit` is the commit the deploy built (`git log -1 <commit>`: your restore, or a later commit with the same data).
-   `built_at` moves with every deploy, so it does not show that the data is the good one.
+   `built_at` moves with every deploy, so it does not show that the data is the good one. Then switch the daily rebuild back
+   on (`gh workflow enable rebuild.yml`): `main` has the good data again, and the rebuild keeps statuses on the day's date.
 5. **While you prepare that, an earlier version can be deployed again.** Each deploy's job summary names the commit it built
    (*Built commit … / Deployed commit …*), and so does the live `data/meta.json` (`commit`). Deploys after CI or by hand are
    *Deploy to GitHub Pages* runs; a refresh's deploy is the *Deploy* jobs of its *Data refresh* run, and GitHub's Pages
@@ -301,9 +358,9 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
    (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`, then `gh run rerun
    <run-id>`), or, for the data of an earlier refresh, the *Deploy / Build site* job of that *Data refresh* run (*Re-run this
    job*, which also re-runs the jobs that depend on it). A re-run builds what the original run built (a re-run keeps the
-   original event, commit and job outputs), so it deploys that commit's data; GitHub allows re-runs for 30 days. It changes what is published only: `main`
-   still has the bad data, and the next deploy (after CI passes on a push to `main`, or after the next refresh) publishes `main` again. Step 3 must
-   follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).
+   original event, commit and job outputs), so it deploys that commit's data; GitHub allows re-runs for 30 days. It changes
+   what is published only: `main` still has the bad data, and the next deploy publishes `main` again (the daily rebuild, unless
+   it is disabled as in step 1; after CI passes on a push to `main`; or after the next refresh). Step 3 must follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).
 6. **Fix the cause.** The next refresh starts from the restored data and fetches again. If the cause is at the source, the same
    data comes back: hold that source back (below), and keep the schedule disabled until it is corrected. If the cause was how
    the pipeline reads or derives a source, fix the code and bump that source's `PARSER_VERSION` (EP procedures, EP votes,
@@ -322,16 +379,17 @@ that source and its manifest entry (what the refresh does for a source that fail
     python -m pipeline validate
 
 then commit and push as in step 3. The manifest entry is marked `partial` with the reason, and the About page shows its last
-successful retrieval. Then disable the schedule (step 1) and refresh by hand without that source, naming the others in the `sources`
-input of *Run workflow* (the names are `ep_people ep_procedures ep_votes eurlex council implementation optouts train agenda`; those not
-listed are not fetched and keep their files and manifest entries):
+successful retrieval. Then disable the refresh's schedule (`gh workflow disable refresh.yml`, as in step 1; the daily rebuild can
+stay on, since `main` has the data you want) and refresh by hand without that source, naming the others in the `sources`
+input of *Run workflow* (the names are `ep_people ep_procedures ep_votes eurlex council implementation optouts lawcontext train
+agenda`, in the order the fetch should take them; those not listed are not fetched and keep their files and manifest entries):
 
-    gh workflow run refresh.yml -f sources="ep_people ep_procedures eurlex council implementation optouts train agenda"
+    gh workflow run refresh.yml -f sources="ep_people ep_procedures eurlex council implementation optouts lawcontext train agenda"
 
 (that holds back `ep_votes`). Sources read the files of earlier ones in that order, so a held-back `ep_people` or
 `ep_procedures` leaves the later sources working from its older records. To let the source go again, run it once by hand
 (`-f sources=ep_votes`, with `-f full_refresh=true` for `ep_procedures`, `ep_votes` or `train` after a change to how they are
-derived), check the result, and enable the schedule.
+derived), check the result, and enable the schedule (`gh workflow enable refresh.yml`).
 
 ## Frozen test data
 
@@ -383,7 +441,8 @@ it: `tests/e2e/live-smoke.spec.ts`, Chromium, with the reader's real clock. It p
 runs (files of every stage plus an even sample, about 20; votes of every kind, 10; MEPs, groups and parties; every
 country; search by a procedure reference; the main pages), serves them as GitHub Pages does (`tests/e2e/pages-server.mjs`)
 and fails on a console error, an uncaught exception, a failed or third-party request, the error page, a "not found" page
-or an empty heading; then nothing is uploaded or deployed, and the report is kept as the `live-smoke-report` artifact.
+or an empty heading, or when the sitemap (built with `SITE_URL` there only) is not well-formed or leaves out one of those
+pages; then nothing is uploaded or deployed, and the report is kept as the `live-smoke-report` artifact.
 `E2E_LIVE=1` selects it (and only it); the other runs leave it out. Locally, after a build of the current data:
 `E2E_LIVE=1 npx playwright test --project=chromium` (about 1 minute).
 
@@ -392,8 +451,9 @@ or an empty heading; then nothing is uploaded or deployed, and the report is kep
 `watchdog.yml` keeps one issue titled "Data health" (label `data-health`) open while anything below is wrong, rewrites
 it with the current list on each run, comments when a problem is new (an edit alone notifies no one; a source that gets
 worse counts as new: failed, then stale, then its official labels withdrawn), and closes it once
-everything passes. It runs after each *Data refresh*, each *CI* run on `main` and each *Deploy to GitHub Pages* run, daily
-at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes nothing to the repository. It lists:
+everything passes. It runs after each *Data refresh*, each *CI* run on `main`, each *Deploy to GitHub Pages* run and each
+*Daily rebuild*, daily at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes nothing to the repository.
+It lists:
 
 - each source that failed in its last run or is stale: its last successful retrieval is older than its threshold in
   `pipeline/freshness.py` (EP votes and procedures, EUR-Lex, Council 9 days; MEPs 14; the others 35), as
@@ -413,10 +473,54 @@ at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes n
 - the live site's data overdue: the newest retrieval in `https://rahv-fb.github.io/eu-intel/data/meta.json` (or the
   repository variable `SITE_URL`; fetched with a query string, past Pages' 10-minute cache) is older than 8 days, whether the schedule was late, dropped or disabled or the refresh
   or its deploy failed. This also fails the watchdog run, so GitHub sends its own notification;
-- the repository past 750 MB (GitHub recommends under 1 GB; each refresh commit adds to every clone).
+- the repository past 750 MB (GitHub recommends under 1 GB; each refresh commit adds to every clone);
+- what it could not read (the latest runs of a workflow, the repository's size: GitHub's API failed, or its answer
+  changed): never taken as a pass, so the issue stays open until it can read them.
+
+If the watchdog cannot finish its own check (an exception in `pipeline health`, a failed install), its run fails and its last
+step comments on the issue, once per spell of failures (or opens the issue): the list is then that of its last complete run.
 
 `python -m pipeline health` runs the source and site checks locally (`--meta FILE` for a downloaded `meta.json`,
 `--markdown` for the issue body, `--json`); it exits 1 when anything is wrong.
+
+## Open-data releases
+
+Every data build also writes the **open dataset** to `public/data/open/` (`pipeline/analysis/opendata.py`): nine CSV
+tables (files, acts, EP votes, Council votes and positions, transposition, national measures, infringements, the
+identifier crosswalk), `datapackage.json` (a Frictionless Tabular Data Package: each field's type and description, the
+keys, the sources with their attribution, the licence) and a `README.md`. The site serves them under `data/open/`
+(about 28 MB of the Pages budget), and `validate --built` checks them against their descriptor (`open-data`: sizes and
+hashes, headers, types and enumerations, primary and foreign keys, every crosswalk identifier in its table).
+
+`release-data.yml` publishes them weekly as a GitHub release, Tuesdays at 10:41 UTC (after Monday's refresh and its
+second try, and the daily rebuild) and by hand (*Actions → Data release → Run workflow*, on `main`):
+
+1. **Plan**: `main`'s commit, released only if CI has passed on its code (`scripts/ci-passed.sh <sha> release`, as the
+   refresh's deploy) and only from `main`'s workflow.
+2. **Build** (read-only): `pipeline validate`, the strict data build, `pipeline validate --built`, then
+   `python -m pipeline opendata content-hash`: a SHA-256 of `datapackage.json` without the values that change while no
+   row does (`as_of`, the day statuses are computed for, and the sources' retrieval times), which lists each table's
+   SHA-256. It is compared with the hash in the notes of the latest `data-*` release (`<!-- content-sha256: … -->`): the
+   same hash ends the run without a release. Otherwise `python -m pipeline opendata package` writes the zip
+   (`eu-intel-<tag>.zip`, the same bytes for the same files), `datapackage.json` and the notes (the snapshot's dates,
+   each table's rows, the caveats, the licence, the hash).
+3. **Release** (the only job with `contents: write`, running nothing but `gh`): `gh release create data-YYYY-MM-DD
+   --target <sha>` with the zip and `datapackage.json`. A second release the same day is `data-YYYY-MM-DD.2`.
+
+A failed run publishes nothing and changes nothing; GitHub notifies the account that last changed the schedule (the
+watchdog does not watch this workflow). Re-run it, or run it by hand once the cause is fixed.
+
+**What Zenodo archives.** Once the repository is switched on at Zenodo (one-time setup, point 7), each published release
+gets a DOI. Zenodo's GitHub integration archives the source tree of the release's tag, not the files attached to the
+release (zenodo/zenodo#1235, still open in July 2026). A record therefore holds the code and the committed snapshot
+from which the dataset is built, reproducibly: `EU_INTEL_TODAY=<as_of> python -m pipeline build` (with `as_of` from the
+release's `datapackage.json`); the CSV files are on the GitHub release, which `.zenodo.json` links. To have Zenodo
+hold the CSV files themselves, the release would tag a commit whose tree is the dataset (a commit outside `main`,
+e.g. on an `open-data` branch, about 5 MB compressed at first and the changed rows after), or upload the zip through
+Zenodo's API with a token; both are left to the owner's decision.
+
+Locally, after a build: `python -m pipeline opendata content-hash`, and `python -m pipeline opendata package --tag
+data-YYYY-MM-DD --out DIR` for the release's files (each exits 1 if the dataset does not match its descriptor).
 
 ## Known limitations
 
@@ -435,9 +539,18 @@ at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes n
 ## Free-plan limits
 
 Public repositories get unlimited standard GitHub-hosted runner minutes. Every job has a `timeout-minutes` cap
-(CI: check 30, e2e 25; deploy: build 25, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
-watchdog 10; daily rebuild: plan 5, its deploy as above). Pages limits: published site ≤ 1 GB (checked at build time), soft bandwidth limit 100 GB/month. Artifacts
-are kept 1–7 days.
+(CI: check 30, e2e 40; deploy: build 25, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
+watchdog 10; daily rebuild: plan 5, its deploy as above; data release: plan 5, build 20, release 10). Pages limits: published site ≤ 1 GB (checked at build time), soft
+bandwidth limit 100 GB/month. Artifacts are kept 1–7 days.
+
+**Site size.** The size check (CI, the refresh's data gate, the deploy) measures `dist` with `du -sk`, which counts disk
+blocks and so a little more than the files hold: a warning from 500,000 KB, a failure from 900,000 KB. A failure fails CI on
+every push and every refresh's gate (nothing is committed), and stops every deploy before the upload: the site keeps its last
+version and the watchdog reports the failed runs. On 5 Nov 2026 the site was 418,456 KB by that measure (360,658 KB of file
+contents, 14,552 files). It grows with the Parliament votes it lists, each about 101 KB (the vote's file with its ballots, its
+page, a line on each of its MEPs' pages), about 430 a year: about 42 MB a year, so the warning comes in about 2 years, the
+failure in about 11 and 1 GB in about 14. Ballots for every roll-call vote (26,267) would be about 2.7 GB, which is why votes
+on amendments and on parts of texts have none here (docs/ASSESSMENT_2026-11.md, section 6).
 
 ## Optional link check
 

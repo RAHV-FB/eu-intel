@@ -1,6 +1,7 @@
 /** The primary destinations: the header navigation, and the links offered on a page that was not found. Seven, as
  * docs/PRODUCT.md sets them; views of one of them stay under it (What changed, /legislation/changes, is reached from the
- * home page, Legislation and the footer). */
+ * home page, Legislation and the footer; When new rules apply, /legislation/applies, from the home page's "Coming up",
+ * Legislation and a file's "When it applies"). */
 export const NAV = [
   { to: '/', label: 'Discover', end: true },
   { to: '/legislation', label: 'Legislation' },

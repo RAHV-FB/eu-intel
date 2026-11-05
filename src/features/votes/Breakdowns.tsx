@@ -4,8 +4,10 @@ import type { Ballot, BallotPosition, CountryBreakdown, GroupBreakdown, Position
 import { countryName, formatNumber, pct } from '../../lib/format';
 import { filterKey } from '../../lib/search';
 import { shownParam, useParamState, useParamText } from '../../lib/urlState';
+import { CsvButton } from '../../components/CsvButton';
 import { ResultCount } from '../../components/ResultCount';
 import { useFocusRevealed } from '../../components/useFocusRevealed';
+import { csvFileName, type CsvCell } from '../../lib/csv';
 import { SortTh, useSortable } from './sortable';
 import { POSITION_LABEL, cohesionPercent, cohesionText } from './labels';
 import './votes.css';
@@ -50,7 +52,24 @@ function ShortOnNarrow({ full, short }: { full: string; short: string }) {
 
 type GroupKey = 'group' | 'for' | 'against' | 'abstain' | 'total' | 'cohesion';
 
-export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown[]; groupNames?: Map<string, string> }) {
+const NOT_A_GROUP = 'Not a group: non-attached MEPs do not act together';
+
+/** A group's majority as the table words it: its position, "None (tie)", or nothing without a recorded vote. */
+function majorityText(c: PositionCounts, majority: BallotPosition | null | undefined): string | null {
+  if (majority) return POSITION_LABEL[majority];
+  return c.for + c.against + c.abstain > 0 ? 'None (tie)' : null;
+}
+
+/** `csvName` (e.g. "ep-vote-166051"): a "Download CSV" of the rows as shown, above the table. */
+export function GroupBreakdownTable({
+  rows,
+  groupNames,
+  csvName,
+}: {
+  rows: GroupBreakdown[];
+  groupNames?: Map<string, string>;
+  csvName?: string;
+}) {
   const { sorted, sort, toggle } = useSortable<GroupBreakdown, GroupKey>(
     rows,
     {
@@ -65,99 +84,127 @@ export function GroupBreakdownTable({ rows, groupNames }: { rows: GroupBreakdown
     { for: 'desc', against: 'desc', abstain: 'desc', total: 'desc', cohesion: 'desc' },
   );
   const idBase = useId();
+  const csvRows = (): CsvCell[][] =>
+    sorted.map((r) => {
+      const pctWith = cohesionPercent(r, r.majority);
+      const ni = r.group === 'ni';
+      return [
+        r.group_code,
+        groupNames?.get(r.group) ?? null,
+        r.for,
+        r.against,
+        r.abstain,
+        r.for + r.against + r.abstain,
+        ni ? NOT_A_GROUP : majorityText(r, r.majority),
+        ni || pctWith == null ? null : `${pctWith}%`,
+      ];
+    });
   // Phones (below 40rem): Group, For, Against and Abstained stay in columns; the other columns are hidden and their
   // content is shown on a second line under the row (tr.row-more), so no column is cut off.
   return (
-    <div className="table-wrap table-card">
-      <table className="table table--breakdown">
-        <caption className="visually-hidden">Recorded votes of MEPs by political group (membership on the day of the vote). Select a column heading to sort.</caption>
-        <thead>
-          <tr>
-            <SortTh k="group" sort={sort} onSort={toggle}>
-              Group
-            </SortTh>
-            <SortTh k="for" sort={sort} onSort={toggle} num>
-              For
-            </SortTh>
-            <SortTh k="against" sort={sort} onSort={toggle} num>
-              Against
-            </SortTh>
-            <SortTh k="abstain" sort={sort} onSort={toggle} num>
-              <ShortOnNarrow full="Abstained" short="Abst." />
-            </SortTh>
-            <SortTh k="total" sort={sort} onSort={toggle} num className="hide-narrow">
-              Recorded
-            </SortTh>
-            <th scope="col" className="hide-narrow">
-              Split
-            </th>
-            <th scope="col" className="hide-narrow">
-              Group majority
-            </th>
-            <SortTh k="cohesion" sort={sort} onSort={toggle} className="hide-narrow">
-              Cohesion
-            </SortTh>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((r) => {
-            const th = `${idBase}-${r.group}`;
-            const majority = <GroupMajority c={r} majority={r.majority} />;
-            const pctWith = cohesionPercent(r, r.majority);
-            const cohesion = pctWith != null ? cohesionText(pctWith) : <span className="muted">—</span>;
-            return (
-              <Fragment key={r.group}>
-                <tr className="has-more">
-                  <th scope="row" id={th}>
-                    <Link to={`/people/groups/${encodeURIComponent(r.group)}`}>{r.group_code}</Link>
-                    {groupNames?.get(r.group) && <span className="meta hide-sm">{groupNames.get(r.group)}</span>}
-                  </th>
-                  <td className="num">{formatNumber(r.for)}</td>
-                  <td className="num">{formatNumber(r.against)}</td>
-                  <td className="num">{formatNumber(r.abstain)}</td>
-                  <td className="num hide-narrow">{formatNumber(r.for + r.against + r.abstain)}</td>
-                  <td className="hide-narrow">
-                    <MiniBar c={r} />
-                  </td>
-                  {r.group === 'ni' ? (
-                    <td colSpan={2} className="muted hide-narrow">
-                      Not a group: non-attached MEPs do not act together
-                    </td>
-                  ) : (
-                    <>
-                      <td className="hide-narrow">{majority}</td>
-                      <td className="hide-narrow">{cohesion}</td>
-                    </>
-                  )}
-                </tr>
-                <tr className="row-more">
-                  <td colSpan={4} headers={th}>
-                    <div className="row-more__items">
+    <>
+      {csvName && (
+        <div className="table-tools">
+          <CsvButton
+            filename={csvFileName(csvName, 'groups')}
+            header={['Group', 'Group name', 'For', 'Against', 'Abstained', 'Recorded', 'Group majority', 'Cohesion']}
+            rows={csvRows}
+            of="the votes by political group"
+          />
+        </div>
+      )}
+      <div className="table-wrap table-card">
+        <table className="table table--breakdown">
+          <caption className="visually-hidden">Recorded votes of MEPs by political group (membership on the day of the vote). Select a column heading to sort.</caption>
+          <thead>
+            <tr>
+              <SortTh k="group" sort={sort} onSort={toggle}>
+                Group
+              </SortTh>
+              <SortTh k="for" sort={sort} onSort={toggle} num>
+                For
+              </SortTh>
+              <SortTh k="against" sort={sort} onSort={toggle} num>
+                Against
+              </SortTh>
+              <SortTh k="abstain" sort={sort} onSort={toggle} num>
+                <ShortOnNarrow full="Abstained" short="Abst." />
+              </SortTh>
+              <SortTh k="total" sort={sort} onSort={toggle} num className="hide-narrow">
+                Recorded
+              </SortTh>
+              <th scope="col" className="hide-narrow">
+                Split
+              </th>
+              <th scope="col" className="hide-narrow">
+                Group majority
+              </th>
+              <SortTh k="cohesion" sort={sort} onSort={toggle} className="hide-narrow">
+                Cohesion
+              </SortTh>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r) => {
+              const th = `${idBase}-${r.group}`;
+              const majority = <GroupMajority c={r} majority={r.majority} />;
+              const pctWith = cohesionPercent(r, r.majority);
+              const cohesion = pctWith != null ? cohesionText(pctWith) : <span className="muted">—</span>;
+              return (
+                <Fragment key={r.group}>
+                  <tr className="has-more">
+                    <th scope="row" id={th}>
+                      <Link to={`/people/groups/${encodeURIComponent(r.group)}`}>{r.group_code}</Link>
+                      {groupNames?.get(r.group) && <span className="meta hide-sm">{groupNames.get(r.group)}</span>}
+                    </th>
+                    <td className="num">{formatNumber(r.for)}</td>
+                    <td className="num">{formatNumber(r.against)}</td>
+                    <td className="num">{formatNumber(r.abstain)}</td>
+                    <td className="num hide-narrow">{formatNumber(r.for + r.against + r.abstain)}</td>
+                    <td className="hide-narrow">
                       <MiniBar c={r} />
-                      <span>Recorded: {formatNumber(r.for + r.against + r.abstain)}</span>
-                      {r.group === 'ni' ? (
-                        <span className="muted">Not a group: non-attached MEPs do not act together</span>
-                      ) : (
-                        <>
-                          <span>Group majority: {majority}</span>
-                          {pctWith != null && <span>Cohesion: {pctWith}%</span>}
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                    </td>
+                    {r.group === 'ni' ? (
+                      <td colSpan={2} className="muted hide-narrow">
+                        {NOT_A_GROUP}
+                      </td>
+                    ) : (
+                      <>
+                        <td className="hide-narrow">{majority}</td>
+                        <td className="hide-narrow">{cohesion}</td>
+                      </>
+                    )}
+                  </tr>
+                  <tr className="row-more">
+                    <td colSpan={4} headers={th}>
+                      <div className="row-more__items">
+                        <MiniBar c={r} />
+                        <span>Recorded: {formatNumber(r.for + r.against + r.abstain)}</span>
+                        {r.group === 'ni' ? (
+                          <span className="muted">{NOT_A_GROUP}</span>
+                        ) : (
+                          <>
+                            <span>Group majority: {majority}</span>
+                            {pctWith != null && <span>Cohesion: {pctWith}%</span>}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
 type CountryKey = 'country' | 'for' | 'against' | 'abstain' | 'total' | 'share';
 
-export function CountryBreakdownTable({ rows }: { rows: CountryBreakdown[] }) {
+/** `csvName` (e.g. "ep-vote-166051"): a "Download CSV" of the rows as shown, above the table. */
+export function CountryBreakdownTable({ rows, csvName }: { rows: CountryBreakdown[]; csvName?: string }) {
   const { sorted, sort, toggle } = useSortable<CountryBreakdown, CountryKey>(
     rows,
     {
@@ -175,70 +222,87 @@ export function CountryBreakdownTable({ rows }: { rows: CountryBreakdown[] }) {
     { for: 'desc', against: 'desc', abstain: 'desc', total: 'desc', share: 'desc' },
   );
   const idBase = useId();
+  const csvRows = (): CsvCell[][] =>
+    sorted.map((r) => {
+      const t = r.for + r.against + r.abstain;
+      return [countryName(r.country), r.country, r.for, r.against, r.abstain, t, t ? pct(r.for, t) : null];
+    });
   // Phones: as in the group table, Recorded, Share for and Split move to a second line under the row.
   return (
-    <div className="table-wrap table-card">
-      <table className="table table--breakdown">
-        <caption className="visually-hidden">Recorded votes of MEPs by the country they represent. Select a column heading to sort.</caption>
-        <thead>
-          <tr>
-            <SortTh k="country" sort={sort} onSort={toggle}>
-              MEPs from
-            </SortTh>
-            <SortTh k="for" sort={sort} onSort={toggle} num>
-              For
-            </SortTh>
-            <SortTh k="against" sort={sort} onSort={toggle} num>
-              Against
-            </SortTh>
-            <SortTh k="abstain" sort={sort} onSort={toggle} num>
-              <ShortOnNarrow full="Abstained" short="Abst." />
-            </SortTh>
-            <SortTh k="total" sort={sort} onSort={toggle} num className="hide-narrow">
-              Recorded
-            </SortTh>
-            <SortTh k="share" sort={sort} onSort={toggle} num className="hide-narrow">
-              Share for
-            </SortTh>
-            <th scope="col" className="hide-narrow">
-              Split
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((r) => {
-            const t = r.for + r.against + r.abstain;
-            const th = `${idBase}-${r.country}`;
-            return (
-              <Fragment key={r.country}>
-                <tr className="has-more">
-                  <th scope="row" id={th}>
-                    <Link to={`/countries/${r.country}`}>{countryName(r.country)}</Link>
-                  </th>
-                  <td className="num">{formatNumber(r.for)}</td>
-                  <td className="num">{formatNumber(r.against)}</td>
-                  <td className="num">{formatNumber(r.abstain)}</td>
-                  <td className="num hide-narrow">{formatNumber(t)}</td>
-                  <td className="num hide-narrow">{pct(r.for, t)}</td>
-                  <td className="hide-narrow">
-                    <MiniBar c={r} />
-                  </td>
-                </tr>
-                <tr className="row-more">
-                  <td colSpan={4} headers={th}>
-                    <div className="row-more__items">
+    <>
+      {csvName && (
+        <div className="table-tools">
+          <CsvButton
+            filename={csvFileName(csvName, 'countries')}
+            header={['MEPs from', 'Country code', 'For', 'Against', 'Abstained', 'Recorded', 'Share for']}
+            rows={csvRows}
+            of="the votes by MEPs’ country"
+          />
+        </div>
+      )}
+      <div className="table-wrap table-card">
+        <table className="table table--breakdown">
+          <caption className="visually-hidden">Recorded votes of MEPs by the country they represent. Select a column heading to sort.</caption>
+          <thead>
+            <tr>
+              <SortTh k="country" sort={sort} onSort={toggle}>
+                MEPs from
+              </SortTh>
+              <SortTh k="for" sort={sort} onSort={toggle} num>
+                For
+              </SortTh>
+              <SortTh k="against" sort={sort} onSort={toggle} num>
+                Against
+              </SortTh>
+              <SortTh k="abstain" sort={sort} onSort={toggle} num>
+                <ShortOnNarrow full="Abstained" short="Abst." />
+              </SortTh>
+              <SortTh k="total" sort={sort} onSort={toggle} num className="hide-narrow">
+                Recorded
+              </SortTh>
+              <SortTh k="share" sort={sort} onSort={toggle} num className="hide-narrow">
+                Share for
+              </SortTh>
+              <th scope="col" className="hide-narrow">
+                Split
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r) => {
+              const t = r.for + r.against + r.abstain;
+              const th = `${idBase}-${r.country}`;
+              return (
+                <Fragment key={r.country}>
+                  <tr className="has-more">
+                    <th scope="row" id={th}>
+                      <Link to={`/countries/${r.country}`}>{countryName(r.country)}</Link>
+                    </th>
+                    <td className="num">{formatNumber(r.for)}</td>
+                    <td className="num">{formatNumber(r.against)}</td>
+                    <td className="num">{formatNumber(r.abstain)}</td>
+                    <td className="num hide-narrow">{formatNumber(t)}</td>
+                    <td className="num hide-narrow">{pct(r.for, t)}</td>
+                    <td className="hide-narrow">
                       <MiniBar c={r} />
-                      <span>Recorded: {formatNumber(t)}</span>
-                      <span>Share for: {pct(r.for, t)}</span>
-                    </div>
-                  </td>
-                </tr>
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                    </td>
+                  </tr>
+                  <tr className="row-more">
+                    <td colSpan={4} headers={th}>
+                      <div className="row-more__items">
+                        <MiniBar c={r} />
+                        <span>Recorded: {formatNumber(t)}</span>
+                        <span>Share for: {pct(r.for, t)}</span>
+                      </div>
+                    </td>
+                  </tr>
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -247,14 +311,18 @@ const BALLOT_RESET = ['bl-show']; // a new search starts from the first page
 type BallotKey = 'name' | 'group' | 'country' | 'pos';
 const POS_RANK: Record<BallotPosition, number> = { for: 0, against: 1, abstain: 2 };
 
+/** `csvName` (e.g. "ep-vote-166051"): a "Download CSV" of the MEPs that the filters keep, in the order shown, beside the
+ * count (all of them, not only the rows shown so far). */
 export function BallotList({
   ballots,
   names,
   groupCodes,
+  csvName,
 }: {
   ballots: Ballot[];
   names: Record<string, string>;
   groupCodes: Map<string, string>;
+  csvName?: string;
 }) {
   // filters, order and rows shown are kept in the address (bl-…), so that Back from an MEP returns to the same list
   const [params, patch] = useParamState();
@@ -343,11 +411,31 @@ export function BallotList({
           </select>
         </div>
       </form>
-      <ResultCount className="results-bar__count" style={{ marginBottom: 'var(--sp-2)' }}>
-        {filtered.length === ballots.length
-          ? `${formatNumber(ballots.length)} MEPs with a recorded vote`
-          : `${formatNumber(filtered.length)} of ${formatNumber(ballots.length)} MEPs with a recorded vote`}
-      </ResultCount>
+      <div className="results-bar results-bar--table">
+        <ResultCount className="results-bar__count">
+          {filtered.length === ballots.length
+            ? `${formatNumber(ballots.length)} MEPs with a recorded vote`
+            : `${formatNumber(filtered.length)} of ${formatNumber(ballots.length)} MEPs with a recorded vote`}
+        </ResultCount>
+        {csvName && filtered.length > 0 && (
+          <CsvButton
+            filename={csvFileName(csvName, 'meps')}
+            header={['MEP', 'MEP ID', 'Group', 'Country', 'Country code', 'Recorded vote', 'Later stated intention']}
+            rows={() =>
+              sorted.map((b) => [
+                names[b.mep] ?? `MEP ${b.mep}`,
+                b.mep,
+                b.group ? groupCodes.get(b.group) ?? b.group : null,
+                b.country ? countryName(b.country) : null,
+                b.country ?? null,
+                POSITION_LABEL[b.pos],
+                b.intended && b.intended !== b.pos ? POSITION_LABEL[b.intended] : null,
+              ])
+            }
+            of={`the ${formatNumber(filtered.length)} MEPs listed`}
+          />
+        )}
+      </div>
       {filtered.length > 0 && (
         <div className="table-wrap table-card">
           <table className="table">

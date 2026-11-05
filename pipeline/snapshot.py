@@ -28,6 +28,24 @@ def now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+# The start of the source fetch in progress, as `pipeline fetch` records it in the manifest (set_attempt). A source that
+# stamps its own records of the attempt (_state.json `unsettled`, which activity.unsettled_record ties to the manifest
+# entry by this time) takes it from attempt_time(), so that the two agree also when the fetch is interrupted and the
+# entry is not_refreshed(): two calls of now_iso() fell in different seconds when the source's module took a while to
+# import between them.
+_attempt: str | None = None
+
+
+def set_attempt(at: str | None) -> None:
+    global _attempt
+    _attempt = at
+
+
+def attempt_time() -> str:
+    """When the current source's fetch started: as `pipeline fetch` recorded it, else (a source called directly) now."""
+    return _attempt or now_iso()
+
+
 def _dump(obj: BaseModel) -> str:
     return json.dumps(obj.model_dump(mode="json"), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 

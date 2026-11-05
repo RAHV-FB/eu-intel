@@ -518,6 +518,12 @@ export function DossierSummaryPanel({ d, today, plansRetrieved }: { d: DossierDe
               . See “When it applies” on that page.
             </p>
           ))}
+          {d.application.future && (
+            <p className="meta dz-amended-note">
+              <Link to="/legislation/applies">When new rules apply</Link> lists these dates with those of other EU acts, by
+              topic and Member State, with feeds and calendars to subscribe to.
+            </p>
+          )}
         </div>
       )}
 

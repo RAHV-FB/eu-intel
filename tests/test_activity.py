@@ -911,3 +911,41 @@ def test_recorded_items_cite_the_record_they_report():
     step = {**item, "id": "chg:2099-0001:ev:2099-0001-SIGN-2026-11-04", "kind": "publication"}
     gone = {**item, "id": "chg:2099-0001:stage:negotiations:2025-01-01"}  # no record of the file dates it: as recorded
     assert [x["source"] for x in recited([earlier, step, gone], b)] == [COUNCIL_DOC, EP_EVENT, OEIL_FILE]
+
+
+def test_a_damaged_history_is_an_error_and_is_never_written_over(base: Path, monkeypatch: pytest.MonkeyPatch):
+    """data/state/activity.json is the append-only record of when each change was seen, which no later run can rebuild.
+    A damaged copy (here the conflict marker of a merge) was read as an empty history: the next recorded run wrote its
+    own change over every change recorded before, and a strict build passed. A damaged digest.json was read as no
+    digest: a new baseline, without the ids ever seen."""
+
+    def add_event(eid: str, day: str, kind: str) -> None:
+        def edit(recs):
+            p = next(r for r in recs if r["id"] == "2099-0003")
+            p["events"].append({**p["events"][-1], "id": eid, "date": day, "kind": kind, "title": f"TEST {kind}"})
+
+        _edit(base / "snapshot" / "ep_procedures" / "procedures.json", edit)
+
+    _run(base, monkeypatch, record=True, now="2026-10-22T10:00:00Z")
+    add_event("2099-0003-ev9", "2026-10-20", "council_position")
+    _run(base, monkeypatch, record=True, now="2026-10-23T10:00:00Z")
+    act, dig = base / "state" / "activity.json", base / "state" / "digest.json"
+    assert [x["id"] for x in json.loads(act.read_text(encoding="utf-8"))] == ["chg:2099-0003:ev:2099-0003-ev9"]
+    marker = "<" * 7 + " HEAD\n"
+    damaged = marker + act.read_text(encoding="utf-8")
+    act.write_text(damaged, encoding="utf-8")
+    add_event("2099-0003-ev10", "2026-10-21", "council_adoption")
+    monkeypatch.setenv("EU_INTEL_STRICT", "1")
+    for record in (True, False):  # nor is a site built without the recorded changes
+        with pytest.raises(RuntimeError, match=r"activity\.json cannot be read"):
+            _run(base, monkeypatch, record=record, now="2026-10-24T10:00:00Z")
+    assert act.read_text(encoding="utf-8") == damaged  # nothing written over it
+    act.write_text(damaged.removeprefix(marker), encoding="utf-8")  # restored
+    digest = dig.read_text(encoding="utf-8")
+    dig.write_text(digest[: len(digest) // 2], encoding="utf-8")  # cut short
+    with pytest.raises(RuntimeError, match=r"digest\.json cannot be read"):
+        _run(base, monkeypatch, record=True, now="2026-10-24T10:00:00Z")
+    dig.write_text(digest, encoding="utf-8")
+    _run(base, monkeypatch, record=True, now="2026-10-24T10:00:00Z")
+    assert [x["id"] for x in json.loads(act.read_text(encoding="utf-8"))] == [
+        "chg:2099-0003:ev:2099-0003-ev9", "chg:2099-0003:ev:2099-0003-ev10"]  # fmt: skip

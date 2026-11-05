@@ -21,9 +21,9 @@ so that nobody reads a gap as a fact about EU law.
   Council's open-data datasets were discontinued in 2025 and its web pages are bot-protected).
 - **National implementation**: measures notified to the Commission and listed by EUR-Lex, and the
   Commission's infringement decisions. A notified measure is not proof of complete or correct transposition,
-  and the absence of one is not proof of non-compliance. The Single Market Scoreboard indicators are not shown:
-  they are published only in embedded Power BI reports, not in a machine-readable form (the Scoreboard's HTML table
-  of overdue directives per Member State is not read yet).
+  and the absence of one is not proof of non-compliance. Of the Single Market Scoreboard, only each Member State's
+  count of overdue Single Market directives is shown, on its own country page, read from the Scoreboard's HTML table;
+  its headline indicators are published only in embedded Power BI reports, not in a machine-readable form.
 
 ## Known gaps
 

@@ -53,7 +53,8 @@ export default function Privacy() {
             </ExtLink>.
           </p>
           <p>
-            The same applies if you subscribe to one of our Atom feeds: your feed reader fetches the feed file from GitHub Pages.
+            The same applies if you subscribe to one of our Atom feeds or calendars: your feed reader or calendar app fetches the file
+            from GitHub Pages.
           </p>
           <p>
             Search terms and filters are written into the page address (for example <span className="mono">/search?q=climate</span>) so

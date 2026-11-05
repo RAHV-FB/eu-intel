@@ -30,12 +30,15 @@ Three independent sub-sources; each output file is written only if its sub-sourc
 
 3. Country indicators (Single Market Scoreboard) -> indicators.json
    single-market-scoreboard.ec.europa.eu refused scripted access (CloudFront 403) on 22 and 26 October
-   2026 and has answered since 2 November 2026, but it publishes the indicators only in embedded Power BI
-   reports. Its plain HTML table of overdue Single Market directives by sector and Member State
-   (/enforcement-tools/transposition_en) is not read. No other official machine-readable distribution
-   of the current figures was found (data.europa.eu only links 2019 HTML/PDF; Eurostat tsdgo220 was
-   discontinued in 2018). We probe the host and record the result; nothing is written until an official
-   machine-readable source is available. We never compute a compliance score ourselves.
+   2026 and has answered since 2 November 2026. Its headline indicators (transposition deficit, delays,
+   conformity) are published only in embedded Power BI reports and are not read. Its transposition page
+   (/enforcement-tools/transposition_en) has a plain HTML table, "for each Member State, the total number of
+   Single Market directives not fully notified, broken down by sector, as on <date>": each Member State's
+   total is read (parse_scoreboard_transposition), with the date the table states and the reporting period
+   the page states. The parser checks the table's shape (27 Member States, each once; whole numbers; sector
+   figures adding up to the total) and reads nothing from a table that fails a check, so the stored file
+   is kept. The figures are the Commission's count, shown on each country's own page with their period;
+   the site never ranks them and never computes a compliance score of its own.
 """
 
 from __future__ import annotations
@@ -377,16 +380,28 @@ def search_cases(http: Http, **filters: Any) -> list[dict[str, Any]]:
     return out
 
 
+XLSX_MEMBER_MAX = 64 * 1024**2  # an export slice's sheet is a few MB; a zip member inflates to at most this
+
+
+def _xlsx_member(z: zipfile.ZipFile, name: str) -> bytes:
+    """A member of the export, refused before it is inflated when it says it is larger than any export (a zip bomb:
+    2 MB of zip inflate to 2 GB). zipfile inflates no more than the size a member declares (then its checksum fails)."""
+    size = z.getinfo(name).file_size
+    if size > XLSX_MEMBER_MAX:
+        raise ValueError(f"{name} is larger than {XLSX_MEMBER_MAX} bytes ({size}): not read")
+    return z.read(name)
+
+
 def read_xlsx_rows(content: bytes) -> list[dict[str, str | None]]:
     """Rows of the first worksheet of an .xlsx file as {header: value} (no external dependency)."""
     ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
     z = zipfile.ZipFile(io.BytesIO(content))
     shared: list[str] = []
     if "xl/sharedStrings.xml" in z.namelist():
-        root = etree.fromstring(z.read("xl/sharedStrings.xml"))
+        root = etree.fromstring(_xlsx_member(z, "xl/sharedStrings.xml"))
         shared = ["".join(si.itertext()) for si in root.findall(f"{ns}si")]
     rows: list[dict[str, str | None]] = []
-    for row in etree.fromstring(z.read("xl/worksheets/sheet1.xml")).iter(f"{ns}row"):
+    for row in etree.fromstring(_xlsx_member(z, "xl/worksheets/sheet1.xml")).iter(f"{ns}row"):
         cells: dict[str, str | None] = {}
         for c in row.findall(f"{ns}c"):
             col = re.match(r"[A-Z]+", c.get("r") or "")
@@ -600,15 +615,156 @@ def fetch_infringements(
 
 # ---------------------------------------------------------------------------- indicators
 SCOREBOARD_URL = "https://single-market-scoreboard.ec.europa.eu/"
+SCOREBOARD_TRANSPOSITION_URL = SCOREBOARD_URL + "enforcement-tools/transposition_en"
+SCOREBOARD_LABEL = "European Commission – Single Market Scoreboard, transposition of Single Market directives"
+OVERDUE_INDICATOR = "sm_directives_not_notified"
+OVERDUE_LABEL = "Overdue Single Market directives"
+OVERDUE_DEFINITION = (
+    "The Commission’s count of Single Market directives whose transposition deadline had passed without the Member "
+    "State notifying complete transposition measures: directives with no measures notified, directives considered "
+    "partially transposed, and directives the Member State considers transposed but on which the Commission has "
+    "opened a non-communication case with no new measures notified since its latest step. Single Market directives "
+    "are those considered to have an impact on the functioning of the Single Market (Article 26(2) TFEU); other "
+    "directives are not counted."
+)
+_MONTHS = ("january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
+           "november", "december")  # fmt: skip
+_LONG_DATE = r"(\d{1,2})\s+(" + "|".join(_MONTHS) + r")\s+(\d{4})"
+# the table's own statement: "… the total number of Single Market directives not fully notified, … as on 5 December 2025"
+_TABLE_DATE_RE = re.compile(r"not fully notified.*?\bas on\s+" + _LONG_DATE, re.I | re.S)
+# the page's reporting period: "… all transposition notifications made by 5 December 2025 for directives with a
+# transposition deadline on or before 30 November 2025"
+_PERIOD_RE = re.compile(
+    r"notifications made by\s+" + _LONG_DATE + r"\s+for directives with a transposition deadline on or before\s+"
+    + _LONG_DATE,
+    re.I,
+)
+
+
+class ScoreboardError(ValueError):
+    """The Scoreboard's transposition table is not as the parser checks it: nothing is read from it."""
+
+
+def _iso_from_long(day: str, month: str, year: str) -> str:
+    try:
+        return datetime(int(year), _MONTHS.index(month.lower()) + 1, int(day), tzinfo=UTC).date().isoformat()
+    except ValueError as e:
+        raise ScoreboardError(f"not a date: {day} {month} {year}") from e
+
+
+def _long(iso: str) -> str:
+    d = datetime.fromisoformat(iso)
+    return f"{d.day} {_MONTHS[d.month - 1].capitalize()} {d.year}"
+
+
+def _text(el: Any) -> str:
+    return " ".join(el.text_content().split())
+
+
+def _count(cell: Any) -> int:
+    """A cell's whole number; an empty cell (a non-breaking space) is 0."""
+    t = _text(cell).replace("\xa0", "")
+    if not t:
+        return 0
+    if not re.fullmatch(r"\d{1,4}", t):
+        raise ScoreboardError(f"not a whole number: {t!r}")
+    return int(t)
+
+
+def parse_scoreboard_transposition(page: bytes | str, retrieved_at: str) -> list[CountryIndicator]:
+    """Each Member State's number of overdue Single Market directives, from the Scoreboard's transposition page: the
+    TOTAL column of its table of directives "not fully notified", by sector and Member State.
+
+    Raises ScoreboardError unless the table is as checked: one such table, stating the date it is "as on"; a header
+    from "Member State" to "TOTAL"; one row for each of the 27 Member States (by the country code in the row's class,
+    the EU's "EL" for Greece, else by name), each once; whole numbers in every cell; and each row's sector figures
+    adding up to its total. The rows are listed by total on the page; the records are not (they are written sorted
+    by country), and the site never lists them side by side."""
+    from lxml import html as lxml_html  # lxml.etree is imported above; the HTML parser only here
+
+    try:
+        doc = lxml_html.fromstring(page)
+    except (etree.ParserError, ValueError) as e:
+        raise ScoreboardError(f"unreadable page: {e}") from e
+    tables = doc.xpath("//table[contains(concat(' ', normalize-space(@class), ' '), ' heatmap-table ')]")
+    if len(tables) != 1:
+        raise ScoreboardError(f"{len(tables)} tables of overdue directives on the page, expected 1")
+    table = tables[0]
+    # the statement of what the table shows and as on which date: the text before it in its figure
+    before = table.itersiblings(preceding=True)
+    intro = " ".join(_text(el) for el in reversed(list(before)))
+    m = _TABLE_DATE_RE.search(intro)
+    if not m:
+        raise ScoreboardError("the table does not state the date it is as on")
+    as_on = _iso_from_long(*m.groups())
+    header = [_text(th) for th in table.xpath("./thead/tr[1]/th")]
+    if len(header) < 3 or header[0].lower() != "member state" or not header[-1].upper().startswith("TOTAL"):
+        raise ScoreboardError(f"unexpected header: {header[:2]} … {header[-1:]}")
+    names = {v.lower(): k for k, v in MEMBER_STATES.items()} | {"czech republic": "CZ"}
+    out: list[CountryIndicator] = []
+    seen: set[str] = set()
+    period = f"As on {_long(as_on)}"
+    pm = _PERIOD_RE.search(" ".join(doc.text_content().split()))
+    if pm:
+        made_by, due_by = _iso_from_long(*pm.groups()[:3]), _iso_from_long(*pm.groups()[3:])
+        if made_by == as_on:  # the page's reporting period is the table's
+            period = (f"Notifications made by {_long(made_by)}, for directives with a transposition deadline on or "
+                      f"before {_long(due_by)}")  # fmt: skip
+    for tr in table.xpath("./tbody/tr"):
+        th = tr.xpath("./th")
+        cells = tr.xpath("./td")
+        if len(th) != 1 or len(cells) != len(header) - 1:
+            raise ScoreboardError(f"a row with {len(th)} heading(s) and {len(cells)} cells, not 1 and {len(header) - 1}")
+        code = None
+        for cls in th[0].xpath(".//@class"):
+            cm = re.search(r"\bCountry_([A-Z]{2})\b", cls)
+            if cm:
+                code = normalize_country(cm.group(1))
+        code = code or names.get(_text(th[0]).lower())
+        if code not in MEMBER_STATES:
+            raise ScoreboardError(f"a row that names no Member State: {_text(th[0])!r}")
+        if code in seen:
+            raise ScoreboardError(f"{code} listed twice")
+        seen.add(code)
+        *sectors, total = (_count(c) for c in cells)
+        if sum(sectors) != total:
+            raise ScoreboardError(f"{code}: the sectors add up to {sum(sectors)}, the total says {total}")
+        out.append(
+            CountryIndicator(
+                country=code,
+                indicator=OVERDUE_INDICATOR,
+                label=OVERDUE_LABEL,
+                value=float(total),
+                unit="directives",
+                period=period,
+                definition=OVERDUE_DEFINITION,
+                source=SourceRef(
+                    institution="Commission",
+                    url=SCOREBOARD_TRANSPOSITION_URL,
+                    label=SCOREBOARD_LABEL,
+                    identifier=f"{OVERDUE_INDICATOR}:{code}:{as_on}",
+                    retrieved_at=retrieved_at,
+                ),
+            )
+        )
+    if seen != set(MEMBER_STATES):
+        missing = sorted(set(MEMBER_STATES) - seen)
+        raise ScoreboardError(f"{len(seen)} Member States in the table; missing {', '.join(missing)}")
+    return sorted(out, key=lambda i: i.country)
 
 
 def fetch_indicators(http: Http) -> tuple[list[CountryIndicator] | None, str]:
-    """No official machine-readable distribution is reachable yet; probe and report."""
+    """Each Member State's overdue Single Market directives from the Scoreboard's transposition table; (None, why)
+    when the page cannot be retrieved or its table fails a check (the stored file is then kept)."""
     try:
-        http.get(SCOREBOARD_URL, headers={"Accept": "text/html"}, use_cache=False)
+        page = http.get(SCOREBOARD_TRANSPOSITION_URL, headers={"Accept": "text/html"}, use_cache=False)
     except HttpError as e:
         return None, f"Single Market Scoreboard unreachable (HTTP {e.status or 'error'})"
-    return None, "Single Market Scoreboard reachable, but no machine-readable data parser is implemented"
+    try:
+        records = parse_scoreboard_transposition(page, snapshot.now_iso())
+    except ScoreboardError as e:
+        return None, f"Single Market Scoreboard transposition table not read ({e})"
+    return records, f"Single Market Scoreboard: overdue directives of {len(records)} Member States ({records[0].period})"
 
 
 # ---------------------------------------------------------------------------- entry point

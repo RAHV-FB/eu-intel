@@ -165,6 +165,50 @@ def test_dates_and_links_that_cellars_own_record_contradicts_are_warnings(tmp_pa
     ]
 
 
+def test_a_curated_entry_reviewed_before_an_act_amending_its_act_is_an_integrity_finding(tmp_path: Path):
+    """docs/EDITORIAL.md, Re-review: a curated entry is re-read when the data show a new act amending its act. The AI
+    Act's checked dates (data/curated/act_dates.yaml) replace EUR-Lex's in the build, so had they been reviewed before
+    Regulation (EU) 2026/1744 moved the high-risk dates, the site would have kept the old ones. An entry reviewed before
+    an act that EUR-Lex records as amending or repealing its act gates until it is re-read; an amending act the snapshot
+    does not hold counts by its CELEX year only."""
+    from pipeline.validate import warning_kind
+
+    snap = _copy(tmp_path)
+    cur = tmp_path / "curated"
+    shutil.copytree(FIX.parent / "curated", cur)  # featured 2099/0001(COD): 32099R0001, reviewed 2099-01-01
+    # 32099R0001 (of 2024-11-20, published 2024-12-01) amends 32099L0009; 32099R0077 (2099, not in the snapshot)
+    # amends 32099R0001
+    _edit(snap / "eurlex" / "acts.json", lambda r: r[2].update(amended_by=["32099R0001"]))
+    entries = """
+- celex: "32099L0009"
+  reason: "Article 9 sets the dates."
+  application: [{date: "2026-01-01", partial: false, provisions: "The Directive (Art. 9)"}]
+  sources: [{label: "Directive 2099/9, Article 9", url: "https://eur-lex.europa.eu/eli/dir/2099/9/oj"}]
+  reviewed: "{reviewed}"
+"""
+    (cur / "act_dates.yaml").write_text(entries.replace("{reviewed}", "2024-11-25"), encoding="utf-8")
+    assert check(snap, today=TODAY, curated=cur).warnings["curated-review-stale"] == [
+        "data/curated/act_dates.yaml 32099L0009: reviewed 2024-11-25, before 32099R0001 (2024-12-01), which amends "
+        "32099L0009; re-read the entry against the act's current text and update `reviewed`"
+    ]
+    assert warning_kind("curated-review-stale") == "integrity"
+    # re-read on the day the amending act was published: nothing to report
+    (cur / "act_dates.yaml").write_text(entries.replace("{reviewed}", "2024-12-01"), encoding="utf-8")
+    assert not check(snap, today=TODAY, curated=cur).warnings["curated-review-stale"]
+    # an amending act outside the snapshot (a delegated act) is dated by its CELEX year: 32099R0077 counts from 2099
+    featured = (cur / "featured.yaml").read_text(encoding="utf-8")
+    (cur / "featured.yaml").write_text(featured.replace('reviewed: "2099-01-01"', 'reviewed: "2098-12-31"'), encoding="utf-8")
+    assert check(snap, today=TODAY, curated=cur).warnings["curated-review-stale"] == [
+        "data/curated/featured.yaml 2099/0001(COD): reviewed 2098-12-31, before 32099R0077 (2099-01-01), which amends "
+        "32099R0001; re-read the entry against the act's current text and update `reviewed`"
+    ]
+    # an entry about an act with no valid review date cannot have been re-read
+    (cur / "featured.yaml").write_text(featured.replace('  reviewed: "2099-01-01"\n', ""), encoding="utf-8")
+    assert check(snap, today=TODAY, curated=cur).warnings["curated-review-stale"] == [
+        "data/curated/featured.yaml 2099/0001(COD): no valid review date (None); review the entry and date it"
+    ]
+
+
 def test_errors_are_attributed_to_their_source(tmp_path: Path):
     from pipeline.validate import validate_by_source
 
@@ -896,3 +940,21 @@ def test_a_built_file_no_index_lists_is_checked_and_reported(built: Path, tmp_pa
     assert any(e.startswith("public people/parties/<id>.json: PartyDetail.") and "people/parties/9999.json" in e
                for e in rep.errors)  # and checked against its type  # fmt: skip
     assert party.name != "9999.json"
+
+
+def test_a_files_index_entry_that_its_own_file_contradicts_is_an_error(built: Path, tmp_path: Path):
+    """The explorer reads a file's stage, status and dates from dossiers/index.json, its page from dossiers/<id>.json:
+    the two must agree (titles only shortened in the index). Nothing checked it: on 5 Nov 2026 the files of 42
+    entries lacked the entries' `names`."""
+    from pipeline.validate import summary_mismatches
+
+    pub = _built_copy(built, tmp_path)
+    entry = json.loads((pub / "dossiers" / "index.json").read_text(encoding="utf-8"))[0]
+    path = pub / "dossiers" / f"{entry['id']}.json"
+    d = json.loads(path.read_text(encoding="utf-8"))
+    assert summary_mismatches(entry, d) == [] and summary_mismatches({**entry, "title": d["title"][:4] + "…"}, d) == []
+    assert summary_mismatches({**entry, "names": ["AI Act"]}, d) == ['names: the index gives ["AI Act"], the file null']
+    path.write_text(json.dumps({**d, "status_label": "Proposal under examination"}), encoding="utf-8")
+    errors = check(FIX, public=pub, today=TODAY, built=True).errors
+    assert errors == [f'public dossiers/{entry["id"]}.json: status_label: the index gives "{entry["status_label"]}", '
+                      'the file "Proposal under examination"']  # fmt: skip

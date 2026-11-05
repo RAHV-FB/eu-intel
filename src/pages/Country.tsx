@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { CountryDetail, MepSummary, Meta } from '../types/data';
-import { useData } from '../lib/data';
+import { DATA_BASE, useData } from '../lib/data';
+import { useFeedLink } from '../components/useFeedLink';
 import { isMissing } from '../features/guide/missing';
 import { useHashScroll } from '../features/guide/useHashScroll';
 import { COUNTRY_NAMES, formatDate, formatNumber, pct } from '../lib/format';
@@ -113,6 +114,10 @@ export default function Country() {
   }, [allVotes]);
   // a link to a section (/countries/IE#implementation) lands on it once the country has loaded
   useHashScroll(!loading && !!c);
+  // the country's own Atom feed (national measures, infringement decisions, transposition deadlines), announced in
+  // <head> as its prerendered page does (scripts/prerender-routes.mjs)
+  const feed = `${DATA_BASE}feeds/countries/${encodeURIComponent(upper)}.xml`;
+  useFeedLink(valid && c ? feed : null, c ? `${c.name}: applying EU directives (Atom)` : '');
 
   if (FORMER_MEMBER_STATES.has(upper)) return <FormerMemberState code={upper} />;
   if (!valid) return <NotFound what="country" />;
@@ -402,16 +407,29 @@ export default function Country() {
         <p className="csection__kicker">3 · National application of EU law</p>
         <h2 id="imp-h">Implementation</h2>
         <p className="section-intro">
-          What official records show about how {c.name} applies EU law: {c.indicators.length > 0 && 'published indicators, '}national
+          What official records show about how {c.name} applies EU law: {c.indicators.length > 0 && 'the Commission’s count of overdue directives, '}national
           measures notified for <Term id="directive">directives</Term>, and <Term id="infringement">infringement cases</Term> opened by
           the European Commission.
         </p>
+        <p className="note country-impl-links">
+          <Link to={`/legislation/transposition?country=${encodeURIComponent(c.code)}`}>Directives into national law</Link>:{' '}
+          {c.name}’s status on each directive due in the last three years or the next twelve months.{' '}
+          <a href={feed} type="application/atom+xml">
+            Follow in a feed reader
+          </a>{' '}
+          <span className="meta">
+            (the Atom feed of the measures {c.name} notifies, the Commission’s infringement decisions on it and the
+            transposition deadlines it reaches)
+          </span>
+        </p>
 
-        {/* Country indicators (Single Market Scoreboard) are not published in a machine-readable form, so no release has had them yet (see About) */}
+        {/* The Single Market Scoreboard's count of this country's overdue Single Market directives, read from its
+            transposition table once a data refresh has retrieved it (pipeline/sources/implementation.py): this country's
+            own figure, with its period and source; the figures are never set side by side (no ranking) */}
         {c.indicators.length > 0 && (
           <>
-            <h3>Published indicators</h3>
-            <div className="indicators">
+            <h3>The Commission’s count of overdue directives</h3>
+            <div className="indicators indicators--own">
               {c.indicators.map((i) => (
                 <div className="indicator" key={i.indicator}>
                   <p className="indicator__label">{i.label}</p>
@@ -424,6 +442,10 @@ export default function Country() {
                 </div>
               ))}
             </div>
+            <p className="note mt-3">
+              The figure is the Commission’s own, for {c.name}, as its Single Market Scoreboard publishes it. It covers
+              Single Market directives only, and is not the count of the directives listed below.
+            </p>
           </>
         )}
 

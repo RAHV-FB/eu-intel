@@ -218,6 +218,15 @@ test.describe('section links', () => {
       });
     }
   }
+
+  // a fragment that is not valid percent-encoding (a link cut short, "#100%") made the page fail with a URIError
+  for (const path of [`legislation/${AI_ACT_ID}/#%E0%A4%A`, 'how-the-eu-works/#100%', 'votes/166051/#%']) {
+    test(`${path} shows the page`, async ({ page }) => {
+      await open(page, path);
+      await expect(page.getByText('This page could not be displayed')).toHaveCount(0);
+      await expect(page.locator('main h1').first()).not.toBeEmpty();
+    });
+  }
 });
 
 test.describe('phone menu on short screens', () => {
@@ -295,6 +304,57 @@ test.describe('a page whose own data could not be loaded', () => {
   }
 });
 
+test.describe('a page whose own data file cannot be read', () => {
+  for (const [path, file] of [
+    [`legislation/${AI_ACT_ID}/`, `dossiers/${AI_ACT_ID}.json`],
+    ['votes/166051/', 'votes/166051.json'],
+    ['people/meps/197400/', 'people/meps/197400.json'],
+    ['countries/ES/', 'countries/ES.json'],
+  ]) {
+    test(`${path}: a file cut short says it could not be loaded, not that the record does not exist`, async ({ page }) => {
+      await page.route(`**/data/${file}`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"id": "2021-0106", "ti' }));
+      await open(page, path);
+      await expect(page.locator('main h1')).toHaveText(/could not be loaded/);
+      await expect(page).toHaveTitle(/could not be loaded/);
+      await expect(page.getByText(/We couldn.t find this/)).toHaveCount(0);
+      await page.unroute(`**/data/${file}`);
+      await page.getByRole('button', { name: 'Reload the page' }).click();
+      await settle(page);
+      await expect(page.locator('main h1')).not.toHaveText(/could not be loaded/);
+    });
+  }
+});
+
+test.describe('a law page opened from another law page', () => {
+  test('says it is loading the new file until it has, not that the file does not exist', async ({ page }) => {
+    await open(page, `legislation/${AI_ACT_ID}/`);
+    // a visible link to another file's page (the AI Act's page names the act amending it under "What is it?")
+    const hrefs = await page
+      .locator('main a:visible')
+      .evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
+    const href = hrefs.find((h) => /\/legislation\/\d{4}-\d{4}[A-Z]{0,2}$/.test(h) && !h.endsWith(`/${AI_ACT_ID}`));
+    expect(href, 'a link to another legislative file').toBeTruthy();
+    const other = href!.split('/').pop()!;
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    await page.route(`**/data/dossiers/${other}.json`, async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.locator(`main a[href="${href}"]:visible`).first().click();
+    await expect(page).toHaveURL(new RegExp(`/legislation/${other}$`));
+    // while its file loads: the loading state, under a neutral tab title (the previous file's page was taken for a
+    // malformed file: "We couldn’t find this legislative file", "Legislative file not found")
+    await expect(page.locator('main .state--loading')).toBeVisible();
+    await expect(page.getByText(/We couldn.t find this/)).toHaveCount(0);
+    await expect(page).not.toHaveTitle(/not found/i);
+    release();
+    await settle(page);
+    await expect(page.getByText(/We couldn.t find this/)).toHaveCount(0);
+    await expect(page.locator('.dz-keyfacts .ref').first()).toHaveText(new RegExp(`^${other.slice(0, 4)}/${other.slice(5, 9)}`));
+  });
+});
+
 test.describe('secondary data that fails to load', () => {
   test('an MEP page says the vote details could not be loaded, rather than showing them as not recorded', async ({ page, guard }) => {
     guard.ignore(/votes\/titles\.json/);
@@ -329,6 +389,16 @@ test.describe('Following page wording', () => {
     await expect(privacy).not.toContainText('copy the share link');
     await expect(page.getByRole('button', { name: 'Clear all' })).toHaveCount(0);
     await expectNoSeriousA11yViolations(page);
+  });
+
+  test('a shared list naming a list file rather than a legislative file says so, and shows the others', async ({ page }) => {
+    // "index" is a valid id in the address, and dossiers/index.json exists: the list of every file, which the page read
+    // as a file and failed on ("This page could not be displayed")
+    await open(page, `following/?ids=index,${AI_ACT_ID}`);
+    await expect(page.locator('main h1')).toHaveText('Shared list of legislation');
+    await expect(page.getByText('This page could not be displayed')).toHaveCount(0);
+    await expect(page.locator('.following__item').filter({ hasText: 'index' })).toContainText('This file is no longer in our dataset');
+    await expect(page.locator('.following__title a')).toHaveCount(1);
   });
 
   test('a shared list does not offer "Clear all"; a list of one’s own does, with its share link', async ({ page }) => {

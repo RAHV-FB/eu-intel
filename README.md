@@ -61,7 +61,7 @@ weekly run re-reads").
 | `python -m pipeline validate` | Snapshot schema and invariants, and that no file is missing or emptied (against the manifest's record counts and minimum counts); once built, the claims in `public/data` against the rules and the files' own records (an act on two files, a file past adoption without Parliament's position, an adoption date on a file shown before adoption, a transposition deadline before its act, …). `--built` fails if there is no build, if it is incomplete (a missing or unreadable file, an empty list, a count of zero), or if it does not match `src/types/data.ts` (keys, nulls, types, enums; `pipeline/contract.py`, also for detail files no index lists). Warnings are by design (printed as INFO, not counted), integrity or backlog: it fails on any integrity finding that `pipeline/validate_baseline.json` does not accept, whatever the count (`--built --update-baseline` rewrites it once they are checked; it refuses while there are errors) |
 | `python -m pipeline build --strict` | Also `EU_INTEL_STRICT=1`: fails, listing every problem at the end, when the build had to work around one (an analysis module or function that did not load, a curated file or entry not applied, a status that fell back, a vote margin or Council assessment that failed) |
 | `npm run typecheck` · `npx vitest run` | TypeScript types · frontend unit tests |
-| `BASE_PATH=/eu-intel/ npm run build` | Production build under the Pages subpath, with prerendered route shells |
+| `BASE_PATH=/eu-intel/ npm run build` | Production build under the Pages subpath, with prerendered route shells (link-preview tags, a file's key facts for readers without JavaScript, `robots.txt`; with `SITE_URL=<Pages URL>`, as the deploy sets it, also canonical and preview addresses and `sitemap.xml`) |
 | `node scripts/check_privacy.mjs` | No third-party loads, trackers, cookie writes or raw-HTML injection in `dist/` and `src/` |
 | `npx playwright test` | End-to-end smoke, deep links, search, accessibility (axe-core) and privacy on the built site |
 | `scripts/test-frozen.sh` | pytest, vitest and the Playwright tests (Chromium) on the frozen test data, as CI runs them, in a temporary worktree |
@@ -93,11 +93,24 @@ check, and the link check depends on third-party sites).
   its id when its wording or the site's address changes.
 - **OPML**: the Following page downloads the feeds of the files you follow as one OPML file, which feed readers import.
   It is made in your browser from the list kept there.
+- **When new rules apply** (`/legislation/applies/`): the dates fixed in law from which rules start to apply (entry into
+  force, application, transposition deadlines, national measures), by month, topic and Member State, each saying where
+  it applies. For every date, each topic and each Member State there is an Atom feed of the next 90 days
+  (`data/feeds/applies/{all,topics/<topic>,countries/<code>}.xml`) and a calendar of every date ahead (`.ics`, the same
+  names), whose entries and events keep their ids from one refresh to the next.
+- **Directives into national law** (`/legislation/transposition/`): each directive due in the last three years or the
+  next twelve months, with every Member State's status and the Commission's open non-communication cases; a Member
+  State's view of the same. Each directive's table has one address, `/legislation/<id>/#national`, with
+  `?country=FR` to highlight one Member State's row.
+- **A feed per Member State** (`data/feeds/countries/<CC>.xml`, linked from its country page): the national measures it
+  notified for the directives on this site, the Commission's infringement decisions on it and the transposition
+  deadlines it reached, each entry dated by its event.
 
 ## Data refresh and deployment
 
 - **Weekly refresh** ([refresh.yml](.github/workflows/refresh.yml)): Mondays 05:17 UTC, a second try at 22:37 UTC
-  unless data was committed in the last 20 hours (schedules are best effort), a full refresh in the first week of each
+  unless EP procedures, EP votes, EUR-Lex and Council were all retrieved in the last 20 hours (schedules are best
+  effort), a full refresh in the first week of each
   month, a light refresh on Fridays at 05:17 UTC (EP procedures, EP votes, EUR-Lex, Council and the planned dates:
   Parliament votes Tuesday to Thursday), and on demand from the Actions tab. Fetch → validate per source → the data gate (strict build recording
   verified activity, validation of the built data, its dated wording, site build, privacy, size) → commit
@@ -106,9 +119,27 @@ check, and the link check depends on third-party sites).
 - **Deploy** ([pages.yml](.github/workflows/pages.yml)): once CI has passed on a push to `main`; the commit a refresh
   pushed, once CI has passed on its code; and on demand. It runs the data gate again on what it deploys; a failure
   never deploys, and the previous version stays online.
-- **Data health** ([watchdog.yml](.github/workflows/watchdog.yml)): after each refresh and each CI run on `main`, and
-  daily, it opens, updates or closes one "Data health" issue listing failed or stale sources, a failed refresh, red CI on
-  `main` and live data more than 8 days old.
+- **Daily rebuild** ([rebuild.yml](.github/workflows/rebuild.yml)): daily at 01:23 UTC, `main` is built again with the
+  day's date and deployed, without fetching or committing anything (once CI has passed on its code, and not while a
+  refresh runs), so that statuses and labels move on with the calendar between refreshes.
+- **Data health** ([watchdog.yml](.github/workflows/watchdog.yml)): after each refresh, CI run on `main`, deploy and
+  daily rebuild, and daily, it opens, updates or closes one "Data health" issue listing failed or stale sources, a failed
+  refresh, deploy or rebuild, red CI on `main` and live data more than 8 days old.
+- **Data release** ([release-data.yml](.github/workflows/release-data.yml)): Tuesdays, and on demand, the open dataset
+  of `main` (below) as a GitHub release tagged `data-YYYY-MM-DD`, only when its content changed since the latest one.
+
+## Reuse the data
+
+- **Open dataset**: CSV tables of the legislative files, adopted acts, Parliament and Council votes, transposition by
+  Member State with the national measures notified, infringement cases, and a crosswalk of the official identifiers
+  that join them, with a [Frictionless](https://specs.frictionlessdata.io/tabular-data-package/) `datapackage.json`
+  that documents every field and a README. Each data build writes it to `public/data/open/`, the site serves it under
+  [`data/open/`](https://rahv-fb.github.io/eu-intel/data/open/README.md), and the
+  [releases](https://github.com/RAHV-FB/eu-intel/releases) tagged `data-YYYY-MM-DD` carry it as a zip. Cite a release
+  as [`CITATION.cff`](CITATION.cff) says; Zenodo archives each release with a DOI once the owner has enabled it
+  ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "Open-data releases").
+- **The site's JSON** under `data/` is shaped for its pages and can change with them (types in `src/types/data.ts`);
+  the **Atom feeds** are under `data/feeds/`. The About page lists them ("Reuse the data").
 
 Repository owners: see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the one-time Pages setup.
 
@@ -126,15 +157,20 @@ data/curated/        editorial YAML: featured files, topics, search aliases, che
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
 src/                 React app: pages/, features/ (one folder per area, insights/ included), components/, lib/,
                      types/data.ts (public data contract)
-scripts/             prerender-routes.mjs, check_privacy.mjs, check_links.py, test-frozen.sh
+scripts/             prerender-routes.mjs (with seo.mjs), render-og-image.mjs, check_privacy.mjs, check_links.py, test-frozen.sh,
+                     ci-passed.sh, latest_run.py
 tests/               pytest (offline, fixtures in tests/fixtures/) and tests/e2e/ (Playwright)
 docs/                product, editorial policy, architecture, data sources, deployment, plan, roadmap, assessment
-.github/workflows/   ci.yml, pages.yml, refresh.yml, watchdog.yml
+.github/workflows/   ci.yml, pages.yml, refresh.yml, rebuild.yml, watchdog.yml, release-data.yml
+CITATION.cff         how to cite the open dataset; .zenodo.json: its Zenodo record's metadata
 ```
 
 ## Licences
 
 - **Code**: MIT — see [LICENSE](LICENSE).
+- **Open dataset** (`data/open/`, the data releases): the compilation is offered under
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), credited as its `datapackage.json` says (`attribution`);
+  the official records it contains keep their publishers' terms, below.
 - **Data** remains subject to the reuse terms of its publishers, with attribution:
   European Parliament — © European Union – Source: European Parliament. The EP Open Data Portal publishes its
   datasets of MEPs, of EU procedures involving the Parliament and of results of votes (2024 and 2025) under

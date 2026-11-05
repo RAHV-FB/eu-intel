@@ -489,3 +489,111 @@
     - {label: "Commission Delegated Regulation (EU) 2026/2102, Annex", url: "https://eur-lex.europa.eu/eli/reg_del/2026/2102/oj",
        celex: "32026R2102"}
   reviewed: "2026-10-23"
+
+# What applies from each date, as the act's text sets it: EUR-Lex records these dates, not the provisions each covers.
+# The featured and other curated files (data/curated/featured.yaml) with a date in the next 12 months (Plan 2.4); every
+# date EUR-Lex records for the act is listed, since an entry's `application` replaces them all. An article's heading is
+# given where it says plainly what the article is about.
+
+- celex: "32024R1083"  # European Media Freedom Act
+  reason: >-
+    EUR-Lex records the dates from which the Regulation applies, not the provisions each covers. Article 29, second
+    paragraph, sets them: the Regulation in general from 8 August 2025, and the provisions its points (a) to (d) list
+    from the dates given there.
+  application:
+    - date: "2024-11-08"
+      partial: true
+      provisions: "Article 3, on the right of recipients of media services (Art. 29, second paragraph, point (a))"
+    - date: "2025-02-08"
+      partial: true
+      provisions: >-
+        Article 4(1) and (2) and Article 6(3), on the rights and duties of media service providers, Articles 7 to 13, on
+        the national regulatory authorities and the European Board for Media Services, and Article 28, amending Directive
+        2010/13/EU (Art. 29, second paragraph, point (b))
+    - date: "2025-05-08"
+      partial: true
+      provisions: "Articles 14 to 17 (Art. 29, second paragraph, point (c))"
+    - date: "2025-08-08"
+      partial: false
+      provisions: "The Regulation in general (Art. 29, second paragraph)"
+    - date: "2027-05-08"
+      partial: true
+      provisions: "Article 20, on the right to customise the media offering (Art. 29, second paragraph, point (d))"
+  sources:
+    - {label: "Regulation (EU) 2024/1083, Article 29", url: "https://eur-lex.europa.eu/eli/reg/2024/1083/oj"}
+  reviewed: "2026-11-05"
+
+- celex: "32023R0956"  # Carbon Border Adjustment Mechanism
+  reason: >-
+    EUR-Lex records the dates from which the Regulation applies, not the provisions each covers. Article 36(2) sets them;
+    Regulation (EU) 2025/2083 replaced its point (b) and added points (c) and (d), for 1 January and 1 February 2027.
+  application:
+    - date: "2023-10-01"
+      partial: false
+      provisions: "The Regulation, except the provisions its points (a) to (d) list (Art. 36(2))"
+    - date: "2024-12-31"
+      partial: true
+      provisions: >-
+        Articles 5, 10, 14, 16 and 17, on authorisation as a CBAM declarant, the registration of operators and
+        installations in third countries, and the CBAM registry (Art. 36(2), point (a))
+    - date: "2026-01-01"
+      partial: true
+      provisions: >-
+        Article 2(2) and Articles 2a, 4, 6 to 9, 10a, 15, 19 and 21, Article 22(1) and (3) and Articles 23 to 27 and 31
+        (Art. 36(2), point (b), as replaced by Regulation (EU) 2025/2083)
+      source: 1
+    - date: "2027-01-01"
+      partial: true
+      provisions: >-
+        Article 22(2), on the CBAM certificates an authorised CBAM declarant must hold on its account at the end of each
+        quarter (Art. 36(2), point (c), added by Regulation (EU) 2025/2083)
+      source: 1
+    - date: "2027-02-01"
+      partial: true
+      provisions: >-
+        Article 20(1), (3), (4) and (5), on the sale of CBAM certificates (Art. 36(2), point (d), added by Regulation (EU)
+        2025/2083)
+      source: 1
+  sources:
+    - {label: "Regulation (EU) 2023/956, Article 36", url: "https://eur-lex.europa.eu/eli/reg/2023/956/oj"}
+    - {label: "Regulation (EU) 2025/2083, Article 1, point (27)", url: "https://eur-lex.europa.eu/eli/reg/2025/2083/oj",
+       celex: "32025R2083"}
+  reviewed: "2026-11-05"
+
+- celex: "32025R0327"  # European Health Data Space
+  reason: >-
+    EUR-Lex records the dates from which the Regulation applies, not the provisions each covers; Article 105 sets them. Its
+    third paragraph, point (c), also applies some provisions from one year after a date that a delegated act under Article
+    14(2) sets: not a fixed date, so not listed.
+  application:
+    - date: "2027-03-26"
+      partial: false
+      provisions: >-
+        The Regulation in general (Art. 105, second paragraph), except the provisions its third to seventh paragraphs apply
+        from later dates; of Chapter IV (secondary use), Article 55(6), Article 70, Article 73(5), Article 75(1) and (12),
+        Article 77(4) and Article 78(6) apply from this date (fifth paragraph)
+    - date: "2029-03-26"
+      partial: true
+      provisions: >-
+        Articles 3 to 15, Article 23(2) to (6) and Articles 25, 26, 27, 47, 48 and 49, for patient summaries, electronic
+        prescriptions and electronic dispensations (Article 14(1), points (a) to (c)) and the EHR systems intended to
+        process them (Art. 105, third paragraph, point (a)), with the implementing acts referred to in Articles 13(4),
+        15(1), 23(4) and 36(1) for them (sixth paragraph); Chapter IV (secondary use), except the provisions the fifth
+        paragraph applies from other dates (fifth paragraph); the implementing acts referred to in Article 70, Article
+        73(5), Article 75(12), Article 77(4) and Article 78(6) (seventh paragraph)
+    - date: "2031-03-26"
+      partial: true
+      provisions: >-
+        The same Articles, for medical imaging studies and related imaging reports, medical test results and discharge
+        reports (Article 14(1), points (d) to (f)) and the EHR systems intended to process them (Art. 105, third paragraph,
+        point (b)), with the implementing acts referred to in Articles 13(4), 15(1), 23(4) and 36(1) for them (sixth
+        paragraph); Chapter III, for the EHR systems put into service in the Union referred to in Article 26(2) (fourth
+        paragraph); Article 51(1), points (b), (f), (g), (m) and (p) (fifth paragraph)
+    - date: "2035-03-26"
+      partial: true
+      provisions: >-
+        Article 75(5), on third countries and international organisations becoming authorised participants in
+        HealthData@EU (Art. 105, fifth paragraph)
+  sources:
+    - {label: "Regulation (EU) 2025/327, Article 105", url: "https://eur-lex.europa.eu/eli/reg/2025/327/oj"}
+  reviewed: "2026-11-05"

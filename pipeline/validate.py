@@ -99,7 +99,8 @@ SAME_SIZE_COUNTS = ("legal_acts", "meps", "national_measures", "infringements")
 PUBLIC_FILES = [
     "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json",
     "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
-    "topics.json", "search.json", "activity.json", "feeds/updates.xml",
+    "topics.json", "search.json", "activity.json", "applies.json", "feeds/updates.xml", "feeds/applies/all.xml",
+    "transposition.json", "feeds/countries/DE.xml", "open/datapackage.json",  # the implementation tracker; one of the 27 country feeds
 ]  # fmt: skip
 
 # (source, file, model name, id function)
@@ -151,9 +152,17 @@ ERROR_CHECKS = {
     "act establishes without the act's EUR-Lex record, a current status change without the record that gave the "
     "status, a step without the record of that step",
     "stage-without-act": "a file shown as published, in force or no longer in force with no act linked to it",
+    "index-detail": "a file's entry in dossiers/index.json (the explorer, search) that its own dossiers/<id>.json (its "
+    "page) contradicts: stage, status, dates, acts or names",
     "act-procedure-mismatch": "an act linked to a procedure of another kind or a number range no legislative "
     "procedure uses: the file would show it as its law (Cellar tags Council Decision (EU) 2020/2059 with 2020/3521(COD); "
     "drop such a link in data/curated/act_links.yaml, quoting the act's legal basis)",
+    "applies": "a date of applies.json that its file's own record contradicts: not a date of the file's act of that "
+    "kind, a transposition date whose role is not established, a date after the act's validity ended, a row listed "
+    "twice, or Member States not each listed once in its `where`",
+    "open-data": "the open dataset (public/data/open) does not match its datapackage.json: a table's size or hash, its "
+    "header, a value's type, a required value or an enumeration, a primary or foreign key, or a crosswalk identifier "
+    "that its table does not list",
 }
 # Findings that the dataset's scope makes expected: printed as INFO, not counted as warnings.
 BY_DESIGN = {
@@ -187,6 +196,10 @@ INTEGRITY = {
     "longer records, so it is not applied",
     "denmark-schengen-stale": "a recorded decision of Denmark (data/curated/denmark_schengen.yaml) on a directive whose "
     "recitals no longer say that Denmark decides",
+    "curated-review-stale": "a curated entry about an act (featured.yaml, act_dates.yaml, transposition.yaml) reviewed "
+    "before a later act that EUR-Lex records as amending or repealing it, or not dated: its summary, or the dates the "
+    "build puts in place of EUR-Lex's, may no longer hold (docs/EDITORIAL.md, Re-review); re-read it and update "
+    "`reviewed`",
     "report-off-timeline": "a key report of a file that no step of its built timeline carries",
     "contract-unlisted": "a built JSON file that src/types/data.ts gives no type, so the contract check skips it",
     "index-unlisted": "a built detail file that its folder's index does not list, which the site reaches only by a link "
@@ -300,6 +313,41 @@ def cited_acts(title: str) -> dict[tuple[int, int], set[str]]:
     return out
 
 
+def stale_reviews(
+    acts: dict[str, E.LegalAct], featured: dict[str, dict], act_dates: dict[str, dict], tr_checks: dict[str, dict]
+) -> list[str]:
+    """The curated entries about an act (featured.yaml `celex`, act_dates.yaml, transposition.yaml) whose `reviewed`
+    date is before an act that EUR-Lex records as amending or repealing that act, or that have no valid review date.
+    An amending act is dated by the latest of its own date, signature and publication (the text a review can read);
+    one the snapshot does not hold (a delegated or implementing act) only by its CELEX year, so it counts only from
+    a year after the review."""
+    def when(c: str) -> str:
+        a = acts.get(c)
+        dates = [d for d in (a.date_document, a.date_signature, a.date_publication) if d] if a else []
+        return max(dates) if dates else f"{c[1:5]}-01-01"
+
+    entries = [(f"featured.yaml {ref}", e.get("celex"), e.get("reviewed")) for ref, e in featured.items()]
+    entries += [(f"act_dates.yaml {c}", [c], e.get("reviewed")) for c, e in act_dates.items()]
+    entries += [(f"transposition.yaml {c}", [c], e.get("reviewed")) for c, e in tr_checks.items()]
+    out = []
+    for label, celexes, reviewed in entries:
+        celexes = [c for c in celexes or [] if isinstance(c, str) and c in acts]
+        if not celexes:
+            continue
+        if not _valid_date(str(reviewed or "")):
+            out.append(f"data/curated/{label}: no valid review date ({reviewed!r}); review the entry and date it")
+            continue
+        reviewed = str(reviewed)
+        for c in celexes:
+            a = acts[c]
+            for how, others in (("amends", a.amended_by), ("repeals", a.repealed_by), ("partly repeals", a.partly_repealed_by)):
+                for x in sorted(others):
+                    if when(x) > reviewed:
+                        out.append(f"data/curated/{label}: reviewed {reviewed}, before {x} ({when(x)}), which {how} "
+                                   f"{c}; re-read the entry against the act's current text and update `reviewed`")  # fmt: skip
+    return out
+
+
 def _valid_date(s: str) -> bool:
     if not DATE_RE.match(s):
         return False
@@ -402,9 +450,11 @@ def check(
     today: str | None = None,
     built: bool = False,
     min_records: dict[tuple[str, str], int] | None = None,
+    curated: Path | None = None,
 ) -> Report:
     """`built`: the built output must be complete (see check_built). `min_records`: the fewest records per
-    (source, file); MIN_RECORDS for the committed snapshot, none for a test fixture."""
+    (source, file); MIN_RECORDS for the committed snapshot, none for a test fixture. `curated`: the curated layer
+    (data/curated by default)."""
     rep = Report()
     today = today or date.today().isoformat()
     data: dict[tuple[str, str], list[Any]] = {}
@@ -456,16 +506,19 @@ def check(
     from pipeline.analysis.transposition import article_label, general_deadline_basis
     from pipeline.analysis.transposition import classify as classify_transposition
     from pipeline.build import (
+        CURATED,
         apply_transposition_checks,
         load_act_dates,
         load_act_links,
         load_act_relations,
+        load_curated,
         load_denmark_schengen,
         load_transposition_checks,
     )
 
-    act_dates = load_act_dates()  # curated, checked corrections of act dates
-    tr_checks = load_transposition_checks()  # curated, checked general transposition deadlines
+    curated = curated or CURATED
+    act_dates = load_act_dates(curated)  # curated, checked corrections of act dates
+    tr_checks = load_transposition_checks(curated)  # curated, checked general transposition deadlines
 
     # people
     for m in meps.values():
@@ -547,12 +600,12 @@ def check(
             if procs and r not in proc_refs:
                 rep.warn("ref-procedure", f"vote {v.id}: procedure {r} not in procedures.json")
     # acts
-    relation_fixes = {(f["act"], f["replace"]) for f in load_act_relations()}  # curated, checked amendment links
-    for f in load_act_relations():
+    relation_fixes = {(f["act"], f["replace"]) for f in load_act_relations(curated)}  # curated, checked amendment links
+    for f in load_act_relations(curated):
         if f["act"] in acts and f["replace"] not in acts[f["act"]].amends:
             rep.warn("act-relation-stale", f"{f['act']}: data/curated/act_relations.yaml replaces its link to "
                      f"{f['replace']}, which EUR-Lex no longer records")  # fmt: skip
-    dropped_links = load_act_links()  # curated: procedure links that the act's own text rules out
+    dropped_links = load_act_links(curated)  # curated: procedure links that the act's own text rules out
     for c, refs in sorted(dropped_links.items()):
         for r in sorted(refs):
             if c in acts and r not in {re.sub(r"\s+", "", x).upper() for x in acts[c].procedure_refs}:
@@ -561,11 +614,16 @@ def check(
     # Denmark decides under Protocol No 22, Art. 4, whether to implement a directive building upon the Schengen acquis
     # (its recitals: optouts schengen_art4); its decision, notified to the Council, is recorded once checked
     optouts = {r.celex: r for r in data.get(("optouts", "directives"), [])}
-    decisions = load_denmark_schengen()
+    decisions = load_denmark_schengen(curated)
     for c in sorted(decisions):
         if c in optouts and "DK" not in optouts[c].schengen_art4:
             rep.warn("denmark-schengen-stale", f"{c}: data/curated/denmark_schengen.yaml records Denmark's decision, "
                      "but the directive's recitals as read do not say that Denmark decides under Protocol No 22, Art. 4")  # fmt: skip
+    # A curated entry is re-read against its act when the data show a new act amending it (docs/EDITORIAL.md, Re-review):
+    # an entry reviewed before such an act may now state what the act no longer says, or put dates that the act no
+    # longer sets in place of EUR-Lex's
+    for m in stale_reviews(acts, load_curated(curated)[0], act_dates, tr_checks):
+        rep.warn("curated-review-stale", m)
     for r in optouts.values():
         if "DK" in r.schengen_art4 and r.celex not in decisions:
             rep.warn("denmark-schengen-unchecked", f"{r.celex}: Denmark decides under Protocol No 22, Art. 4, whether to "
@@ -724,12 +782,27 @@ def check(
                 rep.error(f"public activity.json: {msg}", "public", "activity-duplicate")
             for msg in activity_sources(items, dossier, today):
                 rep.error(f"public activity.json: {msg}", "public", "activity-source")
+        if (public / "applies.json").exists():
+            files: dict[str, Any] = {}
+
+            def file_of(pid: str) -> dict | None:
+                if pid not in files:
+                    p = public / "dossiers" / f"{pid}.json"
+                    files[pid] = _public_json(public, f"dossiers/{pid}.json", rep) if p.exists() else None
+                return files[pid]
+
+            for msg in applies_problems(_public_json(public, "applies.json", rep, docs), file_of):
+                rep.error(f"public applies.json: {msg}", "public", "applies")
         owners: dict[str, list[str]] = {}
+        listed = _public_json(public, "dossiers/index.json", rep, docs) if (public / "dossiers" / "index.json").exists() else None
+        entries = {e.get("id"): e for e in listed if isinstance(e, dict)} if isinstance(listed, list) else {}
         for f in sorted((public / "dossiers").glob("*.json")):
             if f.name != "index.json":
                 d = _public_json(public, f"dossiers/{f.name}", rep)
                 if d is None:
                     continue
+                for msg in summary_mismatches(entries.get(d.get("id")), d):
+                    rep.error(f"public dossiers/{f.name}: {msg}", "public", "index-detail")
                 for msg in dossier_contradictions(d):
                     rep.error(f"public dossiers/{f.name}: {msg}", "public", "dossier-dates")
                 for msg in rapporteur_problems(d, public):
@@ -859,6 +932,11 @@ def check_built(public: Path, data: dict[tuple[str, str], list[Any]], rep: Repor
             if missing:
                 incomplete(f"public {index}: {len(missing)} of {len(entries)} listed files not written (e.g. {missing[:3]})")
     check_contract(public, rep, docs)
+    if (public / "open" / "datapackage.json").exists():  # missing: reported above (PUBLIC_FILES)
+        from pipeline.analysis.opendata import check as check_open_data
+
+        for msg in check_open_data(public / "open"):
+            rep.error(f"public open/{msg}", "public", "open-data")
 
 
 # The detail files that an index lists: (index, folder, key of the file name)
@@ -1016,6 +1094,57 @@ def activity_sources(items: list[dict], dossier: Callable[[str | None], dict | N
     return out
 
 
+def applies_problems(doc: Any, file_of: Callable[[str], dict | None]) -> list[str]:
+    """Rows of applies.json (pipeline/analysis/applies.py) that their file's built record contradicts: the act is not
+    the file's, the date is not one the act has for that kind (or before the list's first day), a transposition date
+    is one the file's page gives as "other" or of another kind, the date is after the end of the act's validity (not
+    a retroactive one), the row is listed twice, or its `where` does not list each Member State exactly once."""
+    if not isinstance(doc, dict):
+        return []  # the contract check reports it
+    out: list[str] = []
+    seen: set[str] = set()
+    for r in doc.get("rows") or []:
+        rid, day, kind = r.get("id"), r.get("date") or "", r.get("kind")
+        if rid in seen:
+            out.append(f"{rid}: listed twice")
+            continue
+        seen.add(rid)
+        d = file_of(r.get("dossier_id") or "")
+        if d is None:  # its page is missing or unreadable: reported by the checks of the built files
+            continue
+        acts = d.get("acts") or []
+        act = next((a for a in acts if a.get("celex") == (r.get("act") or {}).get("celex")), None)
+        if act is None:
+            out.append(f"{rid}: not an act of file {r.get('dossier_id')}")
+            continue
+        eif = act.get("entry_into_force")
+        if kind == "entry_into_force":
+            ok = day == eif
+        elif kind == "applies":  # from the entry into force for some provisions, as the act's text or EUR-Lex says
+            ok = day in (act.get("other_application_dates") or []) or day == eif
+        else:
+            ok = day in (act.get("transposition_deadlines") or [])
+            # the classified dates on the file's page are those of its first directive with transposition dates
+            first = next((a for a in acts if a.get("act_type") == "directive" and a.get("transposition_deadlines")), None)
+            given = {x["date"]: x["kind"] for x in (d.get("application") or {}).get("transposition") or []}
+            if first is act and day in given:
+                want = ("deadline", "further_deadline") if kind == "transposition_deadline" else ("application",)
+                if given[day] not in want:
+                    out.append(f"{rid}: the file's page gives {day} as a transposition date of kind {given[day]!r}")
+        if not ok:
+            out.append(f"{rid}: {day} is not a date of {act['celex']} of kind {kind}")
+        if day < (doc.get("from") or ""):
+            out.append(f"{rid}: before the first day listed ({doc.get('from')})")
+        eov, made = act.get("end_of_validity"), act.get("date_document") or act.get("date_publication") or ""
+        if eov and eov >= made and day > eov:
+            out.append(f"{rid}: after the end of the act's validity ({eov})")
+        w = r.get("where") or {}
+        listed = [*w.get("bound", []), *w.get("unknown", []), *(x.get("country") for x in w.get("not_bound", []))]
+        if sorted(listed) != sorted(MEMBER_STATES):
+            out.append(f"{rid}: where does not list each Member State once ({len(listed)} entries)")
+    return out
+
+
 def dossier_invariants(d: dict) -> list[tuple[str, str]]:
     """(check, message) for each claim of a built dossier that its own records rule out:
     - stage-without-parliament: an ordinary or consent procedure shown as adopted or later with no position or decision
@@ -1081,6 +1210,20 @@ def rapporteur_problems(d: dict, public: Path) -> list[str]:
         if r.get("mep_id"):
             seen[(r["mep_id"], r.get("role"), r.get("committee"))] += 1
     out += [f"MEP {i} listed {n} times as {role}" + (f" ({c})" if c else "") for (i, role, c), n in seen.items() if n > 1]
+    return out
+
+
+def summary_mismatches(entry: dict | None, d: dict) -> list[str]:
+    """The fields of a file's dossiers/index.json entry that its own dossiers/<id>.json contradicts (DossierDetail
+    extends DossierSummary; the index only shortens titles, ending them with "…")."""
+    out = []
+    for k, v in (entry or {}).items():
+        dv = d.get(k)
+        if v == dv or (k in ("title", "official_title", "short") and isinstance(v, str) and isinstance(dv, str)
+                       and v.endswith("…") and dv.startswith(v[:-1])):  # fmt: skip
+            continue
+        out.append(f"{k}: the index gives {json.dumps(v, ensure_ascii=False)[:80]}, the file "
+                   f"{json.dumps(dv, ensure_ascii=False)[:80]}")  # fmt: skip
     return out
 
 

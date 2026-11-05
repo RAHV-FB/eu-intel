@@ -83,6 +83,35 @@ def test_the_data_that_is_deployed_passes_the_whole_data_gate(name, job):
     assert index(s, "node scripts/check_privacy.mjs") < size and "900000" in s[size]["run"]
 
 
+@pytest.mark.parametrize(("name", "job"), [("ci.yml", "check"), ("pages.yml", "build"), ("refresh.yml", "refresh")])
+def test_the_size_check_warns_from_500_mb_and_fails_from_900_mb(tmp_path, name, job):
+    # Pages publishes at most 1 GB. On 5 Nov 2026 `du -sk dist` was 418,456 KB, growing about 42 MB a year (each listed
+    # Parliament vote adds about 101 KB): the warning in about 2 years, the failure in about 11 (docs/DEPLOYMENT.md)
+    s = steps(name, job)
+    script = s[named(s, "Check Pages size limit")]["run"]
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "du").write_text('#!/bin/sh\n[ "$1" = -sk ] && printf "%s\\tdist\\n" "$DIST_KB" || echo "1G dist"\n')
+    (bin_dir / "du").chmod(0o755)
+    (tmp_path / "dist").mkdir()
+
+    def check(kb: int) -> subprocess.CompletedProcess:
+        env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "DIST_KB": str(kb)}
+        return subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=env, capture_output=True, text=True)
+
+    for kb, passes, said in [(418_456, True, []), (500_001, True, ["::warning::"]), (900_001, False, ["::error::"])]:
+        r = check(kb)
+        assert (r.returncode == 0) == passes, kb
+        assert re.findall(r"::\w+::", r.stdout) == said, kb
+    # a failure stops what comes after: the upload (pages.yml) and the commit (refresh.yml) run only once it has passed
+    size = named(s, "Check Pages size limit")
+    if name == "pages.yml":
+        upload = next(i for i, x in enumerate(s) if x.get("uses", "").startswith("actions/upload-pages-artifact@"))
+        assert size < upload and "if" not in s[size] and "if" not in s[upload]
+    if name == "refresh.yml":
+        assert s[named(s, "Commit and push snapshot")]["if"] == "${{ !cancelled() && steps.size.outcome == 'success' }}"
+
+
 def test_the_refresh_commits_nothing_before_its_data_has_passed_the_gate():
     # the refresh pushed to main after `validate --built` alone (the other checks ran later, in CI, as reports), so
     # data that failed them was live before anyone knew; it also committed the snapshot of a run whose build failed
@@ -189,6 +218,15 @@ def test_the_browser_tests_install_their_browser_with_bounded_retries(tmp_path):
     count.write_text("")
     (bin_ / "npx").write_text("#!/bin/sh\nexit 1\n")
     assert run().returncode == 1
+
+
+def test_the_docs_give_the_ci_jobs_time_limits_that_ci_sets():
+    # the e2e limit went from 25 to 40 minutes (a slow apt mirror) while docs/DEPLOYMENT.md kept "e2e 25"
+    text = " ".join((ROOT / "docs" / "DEPLOYMENT.md").read_text(encoding="utf-8").split())
+    stated = re.search(r"\(CI: check (\d+), e2e (\d+);", text)
+    assert stated, "docs/DEPLOYMENT.md, Free-plan limits: (CI: check N, e2e N; ..."
+    jobs = workflow("ci.yml")["jobs"]
+    assert (int(stated[1]), int(stated[2])) == (jobs["check"]["timeout-minutes"], jobs["e2e"]["timeout-minutes"])
 
 
 def test_vitest_fails_when_it_finds_no_tests():
@@ -378,10 +416,50 @@ def test_a_deploy_fails_unless_the_public_url_serves_what_it_built(tmp_path):
                "GITHUB_STEP_SUMMARY": os.devnull}  # fmt: skip
         return subprocess.run(["bash", "-e", "-c", verify["run"]], cwd=tmp_path, env=env, capture_output=True).returncode == 0
 
-    assert verify_with(switch_after=3)  # the old deployment twice more (the routes' check fetched it once), then this one
+    assert verify_with(switch_after=3)  # the old deployment three times, then this one (then its routes)
     urls = log.read_text(encoding="utf-8").splitlines()
     assert "https://example.org/eu-intel/data/meta.json?deploy=5-1-2" in urls  # each attempt past the cache
     assert not verify_with(switch_after=10)  # never served: the release fails
+
+
+CACHED_CURL = r"""#!/usr/bin/env python3
+# The public site right after a deploy: a URL with a query string reaches the new deployment, which lacks MISSING; one
+# without is answered from the CDN's copy of the previous deployment (Pages: Cache-Control max-age=600), which has it.
+import json, os, sys
+args = sys.argv[1:]
+out = args[args.index("--output") + 1] if "--output" in args else None
+url = [a for a in args if a.startswith("http")][-1]
+path, _, query = url.partition("?")
+route = path.split("/eu-intel/", 1)[1]
+if query and route == os.environ["MISSING"]:
+    sys.stderr.write("curl: (22) The requested URL returned error: 404\n")
+    sys.exit(22)
+built = os.environ["NEW_BUILT_AT"] if query else "2026-01-01T00:00:00Z"
+body = json.dumps({"built_at": built, "counts": {"dossiers": 1, "ep_votes": 1}}) if route == "data/meta.json" else (
+    "<html><title>EU Legislative Intelligence</title>Data insights</html>")
+open(out, "w").write(body) if out else sys.stdout.write(body)
+"""
+
+
+def test_the_deploy_checks_the_routes_of_the_new_deployment_not_the_cached_one(tmp_path):
+    # the routes were fetched without a query string, before the wait for the new deployment: the CDN could answer them
+    # from the previous deployment, so a route missing from the new one passed
+    verify = steps("pages.yml", "deploy")[named(steps("pages.yml", "deploy"), "Verify published site and deep links")]
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "curl").write_text(CACHED_CURL, encoding="utf-8")
+    (bin_dir / "curl").chmod(0o755)
+
+    def verify_with(missing: str) -> bool:
+        env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "MISSING": missing,
+               "PAGE_URL": "https://example.org/eu-intel/", "BUILT_AT": "2026-11-05T14:19:00Z",
+               "NEW_BUILT_AT": "2026-11-05T14:19:00Z", "GITHUB_RUN_ID": "5", "GITHUB_RUN_ATTEMPT": "1",
+               "VERIFY_ATTEMPTS": "2", "VERIFY_SLEEP": "0", "COMMIT": "9" * 40, "GITHUB_STEP_SUMMARY": os.devnull}  # fmt: skip
+        return subprocess.run(["bash", "-e", "-c", verify["run"]], cwd=tmp_path, env=env, capture_output=True).returncode == 0
+
+    assert verify_with(missing="none")
+    assert not verify_with(missing="insights/")
+    assert not verify_with(missing="")  # the home page
 
 
 def test_the_deployed_site_names_the_commit_it_was_built_from(tmp_path):
@@ -776,10 +854,17 @@ data = json.load(open(os.environ["FAKE_GH_DATA"]))
 with open(os.environ["FAKE_GH_LOG"], "a") as log:
     log.write(" ".join(args) + "\n")
 jq = args[args.index("--jq") + 1] if "--jq" in args else None
+if args[0] in data.get("fail", []):  # an API error for this command (e.g. "run": the Actions API)
+    sys.stderr.write("HTTP 502: Server Error\n")
+    sys.exit(1)
 if args[:2] == ["run", "list"]:
     out = data["runs"].get(args[args.index("--workflow") + 1], [])
 elif args[:2] == ["run", "view"]:
     out = {"jobs": data["jobs"].get(args[2], [])}
+elif args[:2] == ["issue", "list"]:
+    out = data.get("issues", [])
+elif args[:2] == ["issue", "view"]:
+    out = data.get("issue", {})
 elif args[:1] == ["api"]:
     out = data.get("api", {})
 else:
@@ -903,10 +988,13 @@ def test_the_health_check_reports_data_on_main_the_live_site_lacks(tmp_path, cap
     assert keys(5) == []  # the site is newer than main's manifest (a deploy of a later commit)
 
 
-def watchdog_check(tmp_path: Path, data: dict, live_days: float) -> tuple[dict[str, str], list[dict], str]:
+def watchdog_check(
+    tmp_path: Path, data: dict, live_days: float, health_crashes: bool = False
+) -> tuple[dict[str, str], list[dict], str]:
     """The watchdog's Check step, as the job runs it: its sparse checkout (the pipeline, main's manifest with the core
     sources retrieved 10 h ago, the run picker), `gh` answering from `data`, `curl` serving a live meta.json whose
-    sources are `live_days` old. Returns its outputs, the problems it found and the URLs curl was asked for."""
+    sources are `live_days` old. Returns its outputs, the problems it found and the URLs curl was asked for.
+    `health_crashes`: `pipeline health` raises (a bug), as Python exits then: with 1."""
     if not shutil.which("jq"):
         pytest.skip("jq is not installed")
     from pipeline.freshness import CORE_SOURCES
@@ -914,6 +1002,9 @@ def watchdog_check(tmp_path: Path, data: dict, live_days: float) -> tuple[dict[s
     s = steps("watchdog.yml", "health")
     work = tmp_path / "checkout"
     shutil.copytree(ROOT / "pipeline", work / "pipeline", ignore=shutil.ignore_patterns("__pycache__"))
+    if health_crashes:
+        with (work / "pipeline" / "freshness.py").open("a", encoding="utf-8") as f:
+            f.write("\n\ndef source_health(*args, **kwargs):\n    raise RuntimeError('a bug')\n")
     (work / "scripts").mkdir()
     shutil.copy(ROOT / "scripts" / "latest_run.py", work / "scripts" / "latest_run.py")
     now = datetime.now(UTC)
@@ -984,6 +1075,250 @@ def test_red_ci_says_to_rerun_the_known_webkit_flake_once_and_that_refreshed_dat
     assert "re-run" not in problems[0]["text"] and "once CI has passed on main's code" in problems[0]["text"]
 
 
+def test_the_watchdog_does_not_pass_what_it_could_not_check(tmp_path):
+    # scripts/latest_run.py failed (an Actions API error, a rate limit, a change in gh's output) and printed nothing,
+    # which read as "no failed run": the watchdog said "All checks pass" and closed the issue while CI was red
+    data = {
+        "runs": {"refresh.yml": [run_(9, "success")], "ci.yml": [run_(18, "failure")], "pages.yml": []},
+        "jobs": {"9": ran_job("Fetch, validate, gate, commit", "success"), "18": ran_job("Lint, test, build", "failure")},
+        "api": {"size": 1000},
+        "fail": ["run"],
+    }  # fmt: skip
+    out, problems, _ = watchdog_check(tmp_path, data, live_days=10 / 24)
+    assert out == {"healthy": "false", "site_ok": "true"}  # the site was checked; the issue stays open
+    assert [p["key"] for p in problems] == ["watchdog"]
+    text = problems[0]["text"]
+    assert "could not read" in text and all(w in text for w in ("refresh.yml", "ci.yml", "pages.yml", "rebuild.yml"))
+    data["fail"] = ["api"]  # the repository's size could not be read
+    out, problems, _ = watchdog_check(tmp_path / "api", data, live_days=10 / 24)
+    assert [p["key"] for p in problems] == ["ci", "watchdog"] and "repository's size" in problems[1]["text"]
+    data["fail"] = []
+    _, problems, _ = watchdog_check(tmp_path / "ok", data, live_days=10 / 24)
+    assert [p["key"] for p in problems] == ["ci"]
+
+
+def test_a_watchdog_that_cannot_finish_its_check_fails_and_says_so_in_the_issue(tmp_path):
+    # `pipeline health` raised (a bug): Python exits 1, as it does for "problems found", so the step went on with empty
+    # outputs, the run was green, and the issue's body was replaced by its footer alone, without the problems it listed
+    data = {
+        "runs": {"refresh.yml": [run_(9, "success")], "ci.yml": [run_(18, "success")], "pages.yml": []},
+        "jobs": {"9": ran_job("Fetch, validate, gate, commit", "success")},
+        "api": {"size": 1000},
+    }  # fmt: skip
+    with pytest.raises(subprocess.CalledProcessError):
+        watchdog_check(tmp_path, data, live_days=10 / 24, health_crashes=True)
+    s = steps("watchdog.yml", "health")
+    assert s[named(s, "Check")]["id"] == "check"
+    report = s[named(s, "Report the watchdog's own failure")]
+    assert report["if"] == "${{ failure() && steps.check.outcome != 'success' }}"  # a crash, or a failed install
+    assert named(s, "Report the watchdog's own failure") == len(s) - 1
+    env = {k: str(v) for k, v in workflow("watchdog.yml")["env"].items()} | {"RUN_URL": "https://x/runs/77"}
+
+    def report_with(issue_data: dict) -> list[str]:
+        gh_env, log = gh_serving(tmp_path, issue_data)
+        run_step(report["run"], tmp_path, env | gh_env)
+        return [line for line in log.read_text(encoding="utf-8").splitlines() if line.startswith(("issue", "label"))]
+
+    calls = report_with({"issues": [{"number": 20}], "issue": {"comments": [{"body": "New since the last check"}]}})
+    assert calls[-1].startswith("issue comment 20 --body **The watchdog itself failed** ([watchdog run](https://x/runs/77))")
+    # a run that fails again says nothing new: one comment per spell of failures
+    again = {"issues": [{"number": 20}], "issue": {"comments": [{"body": calls[-1].split("--body ", 1)[1]}]}}
+    assert not [c for c in report_with(again) if c.startswith("issue comment")]
+    calls = report_with({"issues": []})  # no open issue: one is opened
+    assert any(c.startswith("label create data-health --force") for c in calls)
+    assert calls[-1].startswith("issue create --title Data health --label data-health --body **The watchdog itself failed**")
+
+
+# ---------------------------------------------------------------- the runbook (docs/DEPLOYMENT.md)
+
+DEPLOYMENT = ROOT / "docs" / "DEPLOYMENT.md"
+
+
+def runbook(heading: str | None = None) -> str:
+    """docs/DEPLOYMENT.md, or its section under `heading` up to the next heading, with its whitespace collapsed (a
+    command in the text can wrap over two lines)."""
+    text = DEPLOYMENT.read_text(encoding="utf-8")
+    if heading is not None:
+        start = re.search(rf"^#+ {re.escape(heading)}\n", text, re.M).end()
+        end = re.compile(r"^#", re.M).search(text, start)
+        text = text[start : end.start() if end else None]
+    return " ".join(text.split())
+
+
+def code_spans(text: str, prefix: str) -> list[str]:
+    """The `code` of `text` that starts with `prefix`."""
+    return [c for c in re.findall(r"`([^`]+)`", text) if c.startswith(prefix)]
+
+
+def test_the_runbook_lists_every_workflow():
+    rows = re.findall(r"^\| `([\w.-]+\.yml)` \(", DEPLOYMENT.read_text(encoding="utf-8"), re.M)
+    assert sorted(rows) == sorted(p.name for p in WORKFLOWS.glob("*.yml"))
+
+
+def test_the_runbook_and_the_manual_refresh_name_every_source_in_fetch_order():
+    # lawcontext (5 Nov 2026) was missing from the runbook's list of names, so its command to hold back ep_votes, which
+    # lists the sources to fetch, held lawcontext back too; the fetch takes the sources in the order they are given
+    from pipeline.__main__ import SOURCES
+
+    hold = runbook("Holding one source back")
+    assert re.search(r"the names are `([a-z_ ]+)`", hold).group(1).split() == list(SOURCES)
+    example = re.search(r'gh workflow run refresh\.yml -f sources="([a-z_ ]+)"', hold).group(1).split()
+    assert example == [s for s in SOURCES if s != "ep_votes"] and "(that holds back `ep_votes`)" in hold
+    described = triggers("refresh.yml")["workflow_dispatch"]["inputs"]["sources"]["description"]
+    assert described.split(": ", 1)[1].split() == list(SOURCES)
+
+
+def test_the_runbook_commands_name_workflows_jobs_and_inputs_that_exist():
+    text = runbook()
+    gh = code_spans(text, "gh ")
+    assert len(gh) >= 10
+    for command in gh:
+        m = re.match(r"gh (?:workflow (?:run|enable|disable)|run list --workflow) ([\w.-]+)", command)
+        if not m:
+            continue
+        assert (WORKFLOWS / m.group(1)).exists(), command
+        if command.startswith("gh workflow run "):
+            inputs = (triggers(m.group(1))["workflow_dispatch"] or {}).get("inputs", {})
+            assert all(name in inputs for name in re.findall(r"-f (\w+)=", command)), command
+    # the job a rollback re-runs to deploy an earlier refresh's data (step 5)
+    called = workflow("refresh.yml")["jobs"]["deploy"]
+    assert called["uses"] == "./.github/workflows/pages.yml"
+    assert f"*{called['name']} / {workflow('pages.yml')['jobs']['build']['name']}*" in runbook(
+        "Rolling back a bad data refresh"
+    )
+
+
+def scheduled_workflows() -> set[str]:
+    return {p.name for p in WORKFLOWS.glob("*.yml") if "schedule" in triggers(p.name)}
+
+
+def test_a_rollback_stops_every_scheduled_run_that_would_publish_main_again():
+    # step 1 disabled the refresh only: the daily rebuild deploys main every night (rebuild.yml), bad data included, so
+    # it undid step 5 (an earlier deployment published again) within a day
+    deploys = {
+        name for name in scheduled_workflows()
+        if any(j.get("uses") == "./.github/workflows/pages.yml" for j in workflow(name)["jobs"].values())
+    }  # fmt: skip
+    assert deploys == {"refresh.yml", "rebuild.yml"}
+    steps_ = re.split(r" (?=[1-9]\. \*\*)", runbook("Rolling back a bad data refresh"))[1:]
+    assert [s[:2] for s in steps_] == ["1.", "2.", "3.", "4.", "5.", "6."]
+    disabled = {c.split()[-1] for c in code_spans(steps_[0], "gh workflow disable ")}
+    assert disabled == deploys
+    later = " ".join(steps_[1:])
+    assert {c.split()[-1] for c in code_spans(later, "gh workflow enable ")} == deploys  # and back on
+    assert "rebuild" in steps_[4]  # step 5 says what publishes main again
+
+
+def test_after_60_days_without_a_commit_the_runbook_switches_every_schedule_back_on():
+    # GitHub disables every scheduled workflow of the repository; the runbook re-enabled the refresh and the watchdog,
+    # and left the daily rebuild off
+    text = runbook("Schedule and failure behaviour")
+    assert "60 days" in text
+    assert {c.split()[-1] for c in code_spans(text, "gh workflow enable ")} == scheduled_workflows()
+
+
+def test_the_time_limits_the_runbook_states_are_the_workflows():
+    # it said e2e 25 after the job's limit was raised to 40
+    def t(name: str, job: str) -> int:
+        return workflow(name)["jobs"][job]["timeout-minutes"]
+
+    refresh = steps("refresh.yml", "refresh")
+    fetch = refresh[named(refresh, "Fetch official sources")]["timeout-minutes"]
+    stated = (
+        f"(CI: check {t('ci.yml', 'check')}, e2e {t('ci.yml', 'e2e')}; deploy: build {t('pages.yml', 'build')}, deploy "
+        f"{t('pages.yml', 'deploy')}; refresh: plan {t('refresh.yml', 'plan')}, refresh {t('refresh.yml', 'refresh')}, "
+        f"with the fetch step capped at {fetch}; watchdog {t('watchdog.yml', 'health')}; daily rebuild: plan "
+        f"{t('rebuild.yml', 'plan')}, its deploy as above; data release: plan {t('release-data.yml', 'plan')}, build "
+        f"{t('release-data.yml', 'build')}, release {t('release-data.yml', 'release')})"
+    )
+    assert stated in runbook("Free-plan limits")
+    assert f"The job may run {t('ci.yml', 'e2e')} minutes." in runbook("End-to-end tests in CI")
+
+
+def test_the_runbook_rollback_restore_and_hold_back_work_as_written(tmp_path):
+    # its git commands, run as written on a history like main's: a first commit without data/state, refreshes that each
+    # rewrite _manifest.json and data/state, a code commit between them (checked on the real history on 5 Nov 2026 too)
+    rollback, hold = runbook("Rolling back a bad data refresh"), DEPLOYMENT.read_text(encoding="utf-8")
+    newest, = code_spans(rollback, "git log -1 --format=%h ")
+    revert, = code_spans(rollback, "git revert ")
+    restore, = code_spans(rollback, "git restore --source=<good-sha>")
+    checkout, = code_spans(rollback, "git checkout <good-sha>")
+    diff, = code_spans(rollback, "git diff <good-sha> HEAD")
+    commit_, = code_spans(rollback, "git commit ")
+    held = re.search(r"\n\n((?: {4}\S.*\n)+)\nthen commit and push as in step 3", hold).group(1).splitlines()
+    assert [line.split()[:3] for line in held] == [
+        ["git", "show", "<good-sha>:data/snapshot/_manifest.json"], ["git", "restore", "--source=<good-sha>"],
+        ["python", "-m", "pipeline"], ["python", "-m", "pipeline"],
+    ]  # fmt: skip
+
+    def history(path: Path):
+        path.mkdir()
+        git, commit = git_repo(path)
+        shutil.copytree(ROOT / "pipeline", path / "pipeline", ignore=shutil.ignore_patterns("__pycache__"))
+        (path / ".gitignore").write_text("pipeline/\n", encoding="utf-8")
+
+        def manifest(n: int) -> str:
+            entry = lambda s: {"source": s, "status": "ok", "fetched_at": f"2026-10-0{n}T05:00:00Z",  # noqa: E731
+                               "attempted_at": f"2026-10-0{n}T05:00:00Z", "records": {"votes": n}, "note": f"run {n}"}  # fmt: skip
+            return json.dumps({s: entry(s) for s in ("council", "ep_votes")}, indent=1, sort_keys=True)
+
+        shas = [commit({"data/snapshot/_manifest.json": manifest(1), "data/snapshot/ep_votes/votes.json": "[1]",
+                        "data/snapshot/council/votes.json": "[1]", "src/app.ts": "1", ".gitignore": "pipeline/\n"},
+                       "first release, before data/state")]  # fmt: skip
+        for n in (2, 3, 4):
+            if n == 3:
+                commit({"src/app.ts": "3"}, "a code commit")
+            files = {"data/snapshot/_manifest.json": manifest(n), "data/snapshot/ep_votes/votes.json": f"[{n}]",
+                     "data/snapshot/council/votes.json": f"[{n}]", "data/state/digest.json": f"{{\"run\": {n}}}"}  # fmt: skip
+            if n == 3:
+                files["data/snapshot/ep_votes/_state.json"] = "{}"  # a file the bad refresh added
+            shas.append(commit(files, f"Data refresh 2026-10-0{n}"))
+        return git, shas  # first, refresh 2 (good), refresh 3 (bad), refresh 4
+
+    def run(command: str, cwd: Path, **subs: str) -> subprocess.CompletedProcess:
+        for key, value in subs.items():
+            command = command.replace(f"<{key}>", value)
+        env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.org", "GIT_COMMITTER_NAME": "t",
+               "GIT_COMMITTER_EMAIL": "t@example.org", "GIT_EDITOR": "true"}  # the default message  # fmt: skip
+        return subprocess.run(["bash", "-c", command], cwd=cwd, env=env, capture_output=True, text=True)
+
+    # the bad refresh is the newest commit that changed data: a revert applies cleanly
+    git, (_, good, bad, newer) = history(tmp_path / "revert")
+    assert run(newest, tmp_path / "revert").stdout.strip() == git("rev-parse", "--short", newer)
+    assert run(revert, tmp_path / "revert", **{"bad-sha": newer}).returncode == 0
+    assert run(diff, tmp_path / "revert", **{"good-sha": bad}).stdout == ""
+    # an older one: the revert stops with conflicts; the restore puts the good commit's data back, files added since
+    # removed, in one commit
+    git, (_, good, bad, newer) = history(tmp_path / "restore")
+    reverted = run(revert, tmp_path / "restore", **{"bad-sha": bad})
+    assert reverted.returncode != 0 and "CONFLICT" in reverted.stdout + reverted.stderr
+    git("revert", "--abort")
+    assert run(restore, tmp_path / "restore", **{"good-sha": good}).returncode == 0
+    assert run(commit_, tmp_path / "restore", **{"good-sha": good[:7]}).returncode == 0
+    assert run(diff, tmp_path / "restore", **{"good-sha": good}).stdout == ""
+    assert not (tmp_path / "restore" / "data/snapshot/ep_votes/_state.json").exists() and git("status", "--porcelain") == ""
+    # a good commit from before the first refresh: checkout stops on data/state, restore removes it
+    git, (first, *_) = history(tmp_path / "first")
+    assert "pathspec 'data/state' did not match" in run(checkout, tmp_path / "first", **{"good-sha": first}).stderr
+    assert run(restore, tmp_path / "first", **{"good-sha": first}).returncode == 0
+    assert not (tmp_path / "first" / "data" / "state").exists()
+    assert run(commit_, tmp_path / "first", **{"good-sha": first[:7]}).returncode == 0
+    assert run(diff, tmp_path / "first", **{"good-sha": first}).stdout == ""
+    # holding one source back: its files and manifest entry as of the good commit, marked partial with the reason; the
+    # other sources keep this refresh's (`python -m pipeline validate`, the last line, needs a whole snapshot)
+    git, (_, good, bad, newer) = history(tmp_path / "hold")
+    subs = {"good-sha": good, "source": "ep_votes", "date": "2 Oct 2026", "why": "a test"}
+    for line in held[:-1]:
+        result = run(line.strip().replace("/tmp/manifest_good.json", str(tmp_path / "manifest_good.json")), tmp_path / "hold", **subs)
+        assert result.returncode == 0, (line, result.stderr)
+    m = json.loads((tmp_path / "hold" / "data/snapshot/_manifest.json").read_text(encoding="utf-8"))
+    assert m["ep_votes"]["status"] == "partial" and m["ep_votes"]["fetched_at"] == "2026-10-02T05:00:00Z"
+    assert m["ep_votes"]["note"] == "Held at the data of 2 Oct 2026: a test. Previous note: run 2"
+    assert m["council"]["fetched_at"] == "2026-10-04T05:00:00Z"  # not held back
+    assert git("diff", "--stat", good, "--", "data/snapshot/ep_votes") == ""
+    assert git("diff", "--stat", "HEAD", "--", "data/snapshot/council") == ""
+
+
 # ---------------------------------------------------------------- supply chain
 
 
@@ -1007,8 +1342,10 @@ def test_the_site_build_gets_the_pages_url_for_the_canonical_links():
 
 
 @pytest.mark.parametrize(
-    ("name", "job"), [("refresh.yml", "refresh"), ("pages.yml", "build"), ("ci.yml", "check"), ("watchdog.yml", "health")]
-)
+    ("name", "job"),
+    [("refresh.yml", "refresh"), ("pages.yml", "build"), ("ci.yml", "check"), ("watchdog.yml", "health"),
+     ("release-data.yml", "build")],
+)  # fmt: skip
 def test_python_packages_are_installed_from_the_hashed_requirements(name, job):
     # the refresh holds a token that can push to main: it installs only the pinned files, as the deploy and CI do
     s = steps(name, job)
@@ -1044,3 +1381,192 @@ def test_dependabot_bumps_vite_with_its_react_plugin():
     vite = [g for g in groups if "vite" in g.get("patterns", [])]
     assert len(vite) == 1 and "@vitejs/plugin-react" in vite[0]["patterns"]
     assert groups.index(vite[0]) < next(i for i, g in enumerate(groups) if "dependency-type" in g)  # first match wins
+
+
+def test_cached_os_packages_are_checked_against_the_signed_index_before_apt_uses_them(tmp_path):
+    # apt takes a cached .deb of the right size without checking its hash (apt 2.8 on Ubuntu 24.04: a same-size tampered
+    # file was handed to dpkg), and ~/apt-archives is restored from the Actions cache: each file must match the index
+    import hashlib
+
+    s = steps("ci.yml", "e2e")
+    check = named(s, "Check the cached OS packages against the signed index")
+    assert named(s, "Restore the browsers' OS packages") < check < named(s, "Install ${{ matrix.browser }} for Playwright")
+    home, bin_ = tmp_path / "home", tmp_path / "bin"
+    (home / "apt-archives" / "partial").mkdir(parents=True)
+    bin_.mkdir()
+    debs = {"good_1.0-1_amd64.deb": b"good", "fonts_2%3a1.0_all.deb": b"fonts", "tampered_1.0_amd64.deb": b"evil",
+            "unknown_9_amd64.deb": b"x"}  # fmt: skip
+    for name, body in debs.items():
+        (home / "apt-archives" / name).write_bytes(body)
+    (home / "apt-archives" / "partial" / "half_1_amd64.deb").write_bytes(b"h")
+    index = {"good:amd64=1.0-1": b"good", "fonts:all=2:1.0": b"fonts", "tampered:amd64=1.0": b"the real file"}
+    cases = "\n".join(f'  "{k}") echo "Package: x"; echo "SHA256: {hashlib.sha256(v).hexdigest()}" ;;' for k, v in index.items())
+    (bin_ / "apt-cache").write_text(f'#!/bin/sh\ncase "$2" in\n{cases}\n  *) exit 100 ;;\nesac\n')
+    (bin_ / "sudo").write_text("#!/bin/sh\nexit 0\n")  # apt-get update: nothing to do here
+    for f in ("sudo", "apt-cache"):
+        (bin_ / f).chmod(0o755)
+    env = {**os.environ, "HOME": str(home), "PATH": f"{bin_}{os.pathsep}{os.environ['PATH']}"}
+    subprocess.run(["bash", "-e", "-c", s[check]["run"]], env=env, check=True, capture_output=True)
+    assert sorted(p.name for p in (home / "apt-archives").iterdir()) == ["fonts_2%3a1.0_all.deb", "good_1.0-1_amd64.deb"]
+
+
+# ---------------------------------------------------------------- the open-data release (release-data.yml)
+
+
+def test_the_data_release_runs_weekly_after_the_refresh_and_by_hand():
+    w = workflow("release-data.yml")
+    on = triggers("release-data.yml")
+    assert w["name"] == "Data release" and "workflow_dispatch" in on
+    [schedule] = on["schedule"]
+    minute, hour, *rest = schedule["cron"].split()
+    # Tuesdays: after Monday's refresh, whose second try (22:37) can run past midnight, and the 01:23 daily rebuild
+    assert rest == ["*", "*", "2"] and minute.isdigit() and int(minute) not in (0, 30)
+    assert 2 <= int(hour) < 13  # not 13-17 UTC (06-09 in the Pacific), when GitHub delays scheduled runs most
+    assert w["concurrency"] == {"group": "release-data", "cancel-in-progress": False}
+    # scheduled runs only in the canonical repository; a fork can still run it by hand
+    assert w["jobs"]["plan"]["if"] == "${{ github.event_name == 'workflow_dispatch' || github.repository == 'rahv-fb/eu-intel' }}"
+
+
+def test_only_the_job_that_creates_the_release_can_write_and_it_runs_no_repository_code():
+    w = workflow("release-data.yml")
+    jobs = w["jobs"]
+    assert w["permissions"] == {"contents": "read"}
+    assert jobs["plan"]["permissions"] == {"contents": "read", "actions": "read"}
+    assert jobs["build"]["permissions"] == {"contents": "read"}
+    assert jobs["release"]["permissions"] == {"contents": "write"} and set(jobs) == {"plan", "build", "release"}
+    # the job that can write runs gh on the files built, nothing of the repository's or a package's
+    rel = jobs["release"]["steps"]
+    assert not any(s.get("uses", "").startswith("actions/checkout@") for s in rel)
+    assert not any(re.search(r"\b(?:python|pip|npm|npx|node)\b", s.get("run") or "") for s in rel)
+    assert rel[0]["uses"].startswith("actions/download-artifact@") and rel[0]["with"]["name"] == "open-data"
+    create = rel[named(rel, "Create the release")]
+    assert 'gh release create "$TAG" --target "$SHA"' in create["run"] and "--notes-file release/notes.md" in create["run"]
+    assert '"release/eu-intel-$TAG.zip" release/datapackage.json' in create["run"]
+    assert create["env"] == {"GH_TOKEN": "${{ github.token }}", "GH_REPO": "${{ github.repository }}",
+                             "TAG": "${{ needs.build.outputs.tag }}", "SHA": "${{ needs.plan.outputs.sha }}"}  # fmt: skip
+    # no credentials in .git/config, and the token only in the steps that call gh
+    checkouts = [s for j in jobs.values() for s in j["steps"] if s.get("uses", "").startswith("actions/checkout@")]
+    assert len(checkouts) == 2 and all(s["with"]["persist-credentials"] is False for s in checkouts)
+    with_token = sorted(s["name"] for j in jobs.values() for s in j["steps"] if "GH_TOKEN" in (s.get("env") or {}))
+    assert with_token == ["Compare with the latest data release", "Create the release", "Release only code that CI has passed"]
+
+
+def test_the_release_is_the_strict_data_build_checked_then_compared_then_packaged():
+    jobs = workflow("release-data.yml")["jobs"]
+    s = jobs["build"]["steps"]
+    assert s[0]["uses"].startswith("actions/checkout@") and s[0]["with"]["ref"] == "${{ needs.plan.outputs.sha }}"
+    chain = [
+        index(s, "python -m pip install --require-hashes -r requirements.txt"),
+        index(s, "python -m pipeline validate"),
+        strict_build(s),
+        index(s, "python -m pipeline validate --built"),  # checks the open dataset against its descriptor (open-data)
+        named(s, "Content hash of the open dataset"),
+        named(s, "Compare with the latest data release"),
+        named(s, "Package the release"),
+        named(s, "Upload the release's files"),
+    ]
+    assert chain == sorted(chain)
+    assert "$(python -m pipeline opendata content-hash)" in s[chain[4]]["run"]
+    assert s[chain[5]]["env"]["HASH"] == "${{ steps.hash.outputs.hash }}"
+    assert s[chain[6]]["run"] == 'python -m pipeline opendata package --tag "$TAG" --out release --commit "$SHA"'
+    for i in chain[6:]:
+        assert s[i]["if"] == "${{ steps.compare.outputs.release == 'true' }}"
+    assert s[chain[7]]["with"]["name"] == "open-data" and s[chain[7]]["with"]["path"] == "release/"
+    # each job runs only once the one before has said to go on
+    assert jobs["build"]["needs"] == "plan" and jobs["build"]["if"] == "${{ needs.plan.outputs.release == 'true' }}"
+    assert jobs["release"]["needs"] == ["plan", "build"]
+    assert jobs["release"]["if"] == "${{ needs.build.outputs.release == 'true' }}"
+    assert jobs["build"]["outputs"] == {"release": "${{ steps.compare.outputs.release }}", "tag": "${{ steps.compare.outputs.tag }}"}
+    plan = jobs["plan"]["steps"]
+    assert plan[named(plan, "Release only code that CI has passed")]["run"] == 'scripts/ci-passed.sh "$SHA" release'
+
+
+FAKE_GH_RELEASES = r"""#!/usr/bin/env python3
+# `gh release list` and `gh release view` answered from FAKE_GH_DATA ({"releases": [{tagName, createdAt, body, draft}]})
+import json, os, subprocess, sys
+args = sys.argv[1:]
+releases = json.load(open(os.environ["FAKE_GH_DATA"]))["releases"]
+jq = args[args.index("--jq") + 1] if "--jq" in args else None
+if args[:2] == ["release", "list"]:
+    out = [{"tagName": r["tagName"], "createdAt": r["createdAt"]} for r in releases
+           if not ("--exclude-drafts" in args and r.get("draft"))]
+elif args[:2] == ["release", "view"]:
+    out = {"body": next(r["body"] for r in releases if r["tagName"] == args[2])}
+else:
+    sys.exit(f"unexpected: gh {' '.join(args)}")
+text = json.dumps(out)
+if jq:
+    text = subprocess.run(["jq", "-r", jq], input=text, capture_output=True, text=True, check=True).stdout
+sys.stdout.write(text if text.endswith("\n") else text + "\n")
+"""
+
+
+def test_the_release_compares_its_content_hash_with_the_notes_of_the_latest_data_release(tmp_path):
+    from pipeline.analysis.opendata import content_hash, release_notes
+
+    if not shutil.which("jq"):
+        pytest.skip("jq is not installed")
+    s = steps("release-data.yml", "build")
+    script = s[named(s, "Compare with the latest data release")]["run"]
+    # the repository, with an origin holding the tags of earlier releases
+    origin, work = tmp_path / "origin.git", tmp_path / "work"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
+    work.mkdir()
+    git, commit = git_repo(work)
+    commit({"README.md": "x"}, "code")
+    git("remote", "add", "origin", str(origin))
+    git("push", "-q", "origin", "HEAD:main")
+    # gh answering from a list of releases, and today's date
+    bin_dir, data = tmp_path / "bin", tmp_path / "releases.json"
+    bin_dir.mkdir()
+    (bin_dir / "gh").write_text(FAKE_GH_RELEASES, encoding="utf-8")
+    (bin_dir / "date").write_text("#!/bin/sh\necho 2026-11-10\n", encoding="utf-8")
+    for f in ("gh", "date"):
+        (bin_dir / f).chmod(0o755)
+    env = {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "FAKE_GH_DATA": str(data), "GH_REPO": "o/r"}
+
+    def compare(releases: list[dict], digest: str) -> dict[str, str]:
+        data.write_text(json.dumps({"releases": releases}), encoding="utf-8")
+        return run_step(script, work, {**env, "HASH": digest})
+
+    # the notes the release job publishes (pipeline/analysis/opendata.py) carry the hash this step reads
+    dp = {"title": "t", "as_of": "2026-11-03", "core_data_at": "2026-11-02T14:00:00Z", "snapshot_at": "2026-11-02T14:16:00Z",
+          "attribution": "a", "sources": [], "resources": [{"path": "files.csv", "rows": 2, "title": "Legislative files"}]}  # fmt: skip
+    digest = content_hash(dp)
+    releases = [
+        {"tagName": "v1.0", "createdAt": "2026-11-05T09:00:00Z", "body": "A release of the code."},
+        {"tagName": "data-2026-11-03", "createdAt": "2026-11-03T10:52:00Z", "body": release_notes(dp, "data-2026-11-03")},
+        {"tagName": "data-2026-10-27", "createdAt": "2026-10-27T10:50:00Z", "body": f"<!-- content-sha256: {'1' * 64} -->"},
+    ]
+    assert compare(releases, digest) == {"release": "false"}  # unchanged since the latest data release
+    assert compare(releases, "2" * 64) == {"release": "true", "tag": "data-2026-11-10"}
+    assert compare(releases[:1], digest) == {"release": "true", "tag": "data-2026-11-10"}  # the first data release
+    # a draft is not a release; an older data release's hash does not count
+    draft = {"tagName": "data-2026-11-09", "createdAt": "2026-11-09T12:00:00Z", "body": "<!-- content-sha256: x -->", "draft": True}
+    assert compare([draft, *releases], digest) == {"release": "false"}
+    assert compare(releases[::-1], "1" * 64)["release"] == "true"
+    # a second release the same day takes the next free tag
+    git("tag", "data-2026-11-10")
+    git("push", "-q", "origin", "data-2026-11-10")
+    assert compare(releases, "2" * 64) == {"release": "true", "tag": "data-2026-11-10.2"}
+    with pytest.raises(subprocess.CalledProcessError):  # no hash (the export failed): no release
+        compare(releases, "")
+
+
+def test_a_data_release_is_made_only_of_code_that_ci_has_passed(tmp_path):
+    work = tmp_path / "repo"
+    work.mkdir()
+    git, commit = git_repo(work)
+    with_ci_passed_script(work)
+    tested = commit({"src/app.ts": "1"}, "code")
+    data = commit({"data/snapshot/x.json": "[1]"}, "Data refresh")
+
+    def release(ci_passed_on: list[str], ref: str = "refs/heads/main") -> dict[str, str]:
+        env = {**fake_gh(tmp_path, "\n".join(ci_passed_on)), "GITHUB_REF": ref}
+        return run_step(f'scripts/ci-passed.sh "{data}" release', work, env)
+
+    assert release([tested]) == {"release": "true"}  # main's code is the code CI passed, with newer data
+    assert release([]) == {"release": "false"}
+    assert release([tested], ref="refs/heads/other") == {"release": "false"}  # main's workflow only
+    with pytest.raises(subprocess.CalledProcessError):
+        run_step(f'scripts/ci-passed.sh "{data}" publish', work, fake_gh(tmp_path, tested))

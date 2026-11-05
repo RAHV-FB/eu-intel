@@ -23,7 +23,7 @@ import re
 from collections import defaultdict
 from datetime import date
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from xml.sax.saxutils import escape, quoteattr
 
 from pipeline.analysis import activity, changes
@@ -50,6 +50,19 @@ def _x(s: Any) -> str:
 
 def _xa(s: Any) -> str:
     return quoteattr(_NOT_XML.sub("", str(s)))
+
+
+def _web_url(u: Any) -> str | None:
+    """A source's address if it is a web address (http or https, with a host), else None: a feed reader opens an entry's
+    links as they are, so a javascript: or data: address from a source must not become one (the site applies the same
+    rule, src/lib/format.ts safeUrl)."""
+    if not isinstance(u, str):
+        return None
+    try:
+        p = urlsplit(u)  # strips the spaces and control characters a browser ignores around a URL, as a browser does
+    except ValueError:
+        return None
+    return u.strip() if p.scheme in ("http", "https") and p.hostname else None
 
 
 def _long_date(d: str) -> str:
@@ -147,7 +160,7 @@ def atom(
     ]
     for n, (it, step) in enumerate(told):
         # an item with no page on the site (a Council vote on no tracked file) links to its official document
-        route, src_url = _route(it), (it.get("source") or (step or {}).get("source") or {}).get("url")
+        route, src_url = _route(it), _web_url((it.get("source") or (step or {}).get("source") or {}).get("url"))
         link = site + route if route or not src_url else src_url
         file = (files or {}).get(it.get("dossier_id") or "")
         summary = entry_summary(it, step, file, as_of, state=not state_on_latest or n == 0)

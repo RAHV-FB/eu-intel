@@ -107,6 +107,24 @@ export function Layout() {
           setMenuOpen(false);
           menuToggleRef.current?.focus();
         }}
+        onBlur={(e) => {
+          // Tabbing out of the open phone menu closes it: on a short screen (a phone held sideways, 400% zoom) the open
+          // menu fills the screen, and the element focused next would be hidden below it (WCAG 2.4.11)
+          const to = e.relatedTarget as Node | null;
+          if (!menuOpen || !to || e.currentTarget.contains(to)) return;
+          setMenuOpen(false);
+          // The browser scrolled the newly focused element into view while the open menu still pushed the page down;
+          // once the menu has collapsed (this update is applied before the next frame) the page has moved up under it.
+          // Firefox leaves the element there, off screen: bring it back below the sticky header.
+          const header = e.currentTarget;
+          requestAnimationFrame(() => {
+            if (document.activeElement !== to || !(to instanceof HTMLElement)) return;
+            const r = to.getBoundingClientRect();
+            const top = header.getBoundingClientRect().bottom;
+            if (r.top < top) window.scrollBy(0, r.top - top - 8);
+            else if (r.bottom > window.innerHeight) window.scrollBy(0, r.bottom - window.innerHeight + 8);
+          });
+        }}
       >
         <div className="container site-header__inner">
           <Link to="/" className="brand" aria-label={`${SITE_NAME} — home`}>
@@ -123,7 +141,7 @@ export function Layout() {
           {!isHome && (
             <>
               <div className="site-header__search">
-                <SearchBox compact />
+                <SearchBox compact label="Quick search" />
               </div>
               {/* Phones and narrow tablets: the search field above is hidden, so offer it behind a button. */}
               <button
@@ -185,7 +203,7 @@ export function Layout() {
               searchToggleRef.current?.focus();
             }}
           >
-            <div className="container">{searchOpen && <SearchBox compact autoFocus />}</div>
+            <div className="container">{searchOpen && <SearchBox compact autoFocus label="Quick search" />}</div>
           </div>
         )}
         <nav id="primary-nav" className={`primary-nav${menuOpen ? ' is-open' : ''}`} aria-label="Primary">

@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: >-
+  If you use the open dataset of EU Legislative Intelligence, please cite it as below, with the release you used
+  (tags data-YYYY-MM-DD). The code that builds it is under the MIT License (LICENSE).
+type: dataset
+title: "EU Legislative Intelligence – open dataset"
+abstract: >-
+  Legislative files of the European Union with their status and dates, the acts adopted in them, European Parliament
+  and Council votes, the transposition of directives by Member State with the national measures notified,
+  infringement cases, and a crosswalk of the official identifiers that join them (procedure reference, CELEX, ELI,
+  Parliament vote, Council voting result and document, national measure, infringement case). Built only from
+  official EU records (European Parliament, EUR-Lex, Council of the EU, European Commission) and released weekly as
+  CSV tables with a Frictionless Data Package descriptor. Independent and not official.
+authors:
+  - name: RAHV-FB
+    website: "https://github.com/RAHV-FB"
+license: CC-BY-4.0
+url: "https://rahv-fb.github.io/eu-intel/"
+repository-code: "https://github.com/RAHV-FB/eu-intel"
+repository-artifact: "https://github.com/RAHV-FB/eu-intel/releases"
+keywords:
+  - European Union
+  - legislation
+  - European Parliament
+  - Council of the European Union
+  - EUR-Lex
+  - votes
+  - transposition
+  - infringements
+  - open data

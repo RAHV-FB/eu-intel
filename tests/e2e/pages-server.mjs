@@ -26,6 +26,7 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.xml': 'application/xml; charset=utf-8',
+  '.ics': 'text/calendar; charset=utf-8', // as GitHub Pages serves a calendar (feeds/applies/*.ics)
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -33,6 +34,8 @@ const TYPES = {
   '.webp': 'image/webp',
   '.ico': 'image/x-icon',
   '.txt': 'text/plain; charset=utf-8',
+  '.csv': 'text/csv; charset=utf-8', // the open dataset (data/open/), as Pages serves it
+  '.md': 'text/markdown; charset=utf-8',
   '.webmanifest': 'application/manifest+json',
   '.woff2': 'font/woff2',
   '.map': 'application/json',

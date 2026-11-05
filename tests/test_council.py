@@ -514,11 +514,23 @@ def test_fetch_changed_note_with_transient_error_keeps_previous_and_retries(tmp_
     from pipeline.models.entities import CouncilVote
 
     snapshot, ai_rows, prev = _seed(tmp_path, monkeypatch, lambda versions: "stale-fingerprint")
-    http = FakeHttp(ai_rows, error=HttpError("u", 503, "unavailable"))
-    st = C.fetch(http)
-    assert len(http.gets) == 1 and st.status == "partial"
-    assert snapshot.read_records("council", "votes", CouncilVote) == [prev]
-    assert snapshot.read_records("council", "notes", C.CouncilNoteState) == []  # retried next run
+    # another note, unchanged: the runs write their files (a run that reads no vote at all writes nothing)
+    other_rows = [r for r in rows() if r["docid"] == "consil:ST_9552_2024_INIT"]
+    other = prev.model_copy(update={"id": "ST-9552-2024", "date": "2024-02-28"})
+    fp = C.note_fingerprint(C._versions_from_rows(other_rows)["ST-9552-2024"])
+    other_state = C.CouncilNoteState(id=other.id, fingerprint=fp, versions=["ST-9552-2024-INIT"], vote_id=other.id)
+    snapshot.write_records("council", "votes", [prev, other])
+    snapshot.write_records("council", "notes", [*snapshot.read_records("council", "notes", C.CouncilNoteState),
+                                                other_state])  # fmt: skip
+    # The note's entry was dropped on a transient failure, so that it was read again; but its vote then no longer had a
+    # note, and a second failure in a row dropped the vote too (the AI Act's Council vote, in a "partial" run)
+    for _ in range(2):
+        http = FakeHttp(ai_rows + other_rows, error=HttpError("u", 503, "unavailable"))
+        st = C.fetch(http)
+        assert len(http.gets) == 1 and st.status == "partial"  # read again (and only it)
+        assert snapshot.read_records("council", "votes", CouncilVote) == [other, prev]
+        states = {s.id: s for s in snapshot.read_records("council", "notes", C.CouncilNoteState)}
+        assert states[prev.id].vote_id == prev.id and states[prev.id].fingerprint == C.DEFERRED_FINGERPRINT
 
 
 def test_fetch_after_deadline_defers_changed_notes_and_keeps_them_linked(tmp_path, monkeypatch):

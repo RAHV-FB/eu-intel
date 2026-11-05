@@ -1,28 +1,13 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import type { CountryIndicatorValue, CountrySummary } from '../../types/data';
+import type { CountrySummary } from '../../types/data';
 import { formatNumber } from '../../lib/format';
 import { SortTh, useSortable } from '../votes/sortable';
 import './countries.css';
 
-export interface IndicatorColumn {
-  id: string;
-  label: string;
-  unit: string;
-  period: string;
-  definition: string;
-  source: CountryIndicatorValue['source'];
-}
-
-/** Indicator columns present in the data, in first-seen order. */
-export function indicatorColumns(rows: CountrySummary[]): IndicatorColumn[] {
-  const seen = new Map<string, IndicatorColumn>();
-  for (const r of rows)
-    for (const i of r.indicators)
-      if (!seen.has(i.indicator))
-        seen.set(i.indicator, { id: i.indicator, label: i.label, unit: i.unit, period: i.period, definition: i.definition, source: i.source });
-  return [...seen.values()];
-}
+// Published indicators (the Single Market Scoreboard's count of each Member State's overdue Single Market directives)
+// are shown on each country's own page only, never as a column here: side by side and sortable, they would be a
+// ranking of the Member States.
 
 /** The political groups a country's current MEPs sit in, from its MEPs by group: the non-attached members (NI) are
  * not a group. */
@@ -48,9 +33,8 @@ export function CountryTable({
   infringementsAvailable: boolean;
   councilPeriod?: string | null; // "2019–2026": the years of the Council votes counted
 }) {
-  const inds = useMemo(() => indicatorColumns(rows), [rows]);
-  const accessors = useMemo(() => {
-    const a: Record<string, (r: CountrySummary) => string | number | null | undefined> = {
+  const accessors = useMemo(
+    (): Record<string, (r: CountrySummary) => string | number | null | undefined> => ({
       name: (r) => r.name,
       meps: (r) => r.meps_active,
       groups: (r) => politicalGroupCount(r.groups),
@@ -59,10 +43,9 @@ export function CountryTable({
       cabstain: (r) => r.council_positions.abstain,
       cnp: (r) => r.council_positions.not_participating,
       infr: (r) => r.open_infringements ?? null,
-    };
-    for (const i of inds) a[`ind:${i.id}`] = (r) => r.indicators.find((x) => x.indicator === i.id)?.value ?? null;
-    return a;
-  }, [inds]);
+    }),
+    [],
+  );
   const { sorted, sort, toggle } = useSortable<CountrySummary, string>(rows, accessors, { key: 'name', dir: 'asc' }, {
     meps: 'desc',
     groups: 'desc',
@@ -74,7 +57,7 @@ export function CountryTable({
   });
   const hasNp = rows.some((r) => r.council_positions.not_participating > 0);
   const councilCols = councilAvailable ? (hasNp ? 4 : 3) : 1;
-  const implCols = inds.length + 1;
+  const implCols = 1;
 
   return (
     <>
@@ -142,12 +125,7 @@ export function CountryTable({
                 Positions
               </th>
             )}
-            {inds.map((i, n) => (
-              <SortTh key={i.id} k={`ind:${i.id}`} sort={sort} onSort={toggle} num className={`grp-impl${n === 0 ? ' grp-start' : ''}`}>
-                {i.label} ({i.period})
-              </SortTh>
-            ))}
-            <SortTh k="infr" sort={sort} onSort={toggle} num className={`grp-impl${inds.length === 0 ? ' grp-start' : ''}`}>
+            <SortTh k="infr" sort={sort} onSort={toggle} num className="grp-impl grp-start">
               Open infringement cases
             </SortTh>
           </tr>
@@ -170,15 +148,7 @@ export function CountryTable({
               ) : (
                 <td className="grp-start unavail">Unavailable</td>
               )}
-              {inds.map((i, n) => {
-                const v = r.indicators.find((x) => x.indicator === i.id);
-                return (
-                  <td key={i.id} className={`num${n === 0 ? ' grp-start' : ''}`}>
-                    {v ? formatIndicator(v.value, v.unit) : <span className="unavail">—</span>}
-                  </td>
-                );
-              })}
-              <td className={`num${inds.length === 0 ? ' grp-start' : ''}`}>
+              <td className="num grp-start">
                 {infringementsAvailable && r.open_infringements != null ? formatNumber(r.open_infringements) : <span className="unavail">Unavailable</span>}
               </td>
             </tr>

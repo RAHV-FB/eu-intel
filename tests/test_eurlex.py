@@ -77,6 +77,27 @@ def test_format_procedure_ref():
     assert E.format_procedure_ref("COD 2013/0162") is None
 
 
+def test_a_part_of_a_split_procedure_keeps_its_letter():
+    """Cellar records the parts of a split procedure as "2023/0077B/COD" (on 5 November 2026: 2011/0901A, 2018/0152A
+    and 2023/0077B, with their votes, Council adoptions and signatures). They were not recognised, so an act, a notice or
+    a planned step recorded on a part was dropped; the EP's references keep the letter ("2023/0077B(COD)")."""
+    assert E.format_procedure_ref("2023/0077B/COD", E.AUTH + "procedure/OLP") == "2023/0077B(COD)"
+    assert E.format_procedure_ref("2016/0224A(COD)") == "2016/0224A(COD)"
+    assert E.format_procedure_ref("2023/0077BB/COD") is None
+    rows = [{"w": "http://publications.europa.eu/resource/cellar/x", "celex": "32024L1711", "ref": "2023/0077B/COD",
+             "ptype": E.AUTH + "procedure/OLP"}]  # fmt: skip
+
+    class Scope:
+        def sparql(self, query: str) -> list[dict[str, str]]:
+            return [{"n": "1"}] if "COUNT" in query else rows
+
+    assert E.discover_scope(Scope()) == ({rows[0]["w"]: "32024L1711"}, None)
+    (notice,) = E.build_notices(
+        [{"ref": "2023/0077B/COD", "type": E.AUTH + "event/WDW_byCOM", "date": "2024-01-02"}], RETRIEVED
+    )
+    assert notice.reference == "2023/0077B(COD)" and notice.source.url.endswith("/procedure/EN/2023_77B")
+
+
 def test_split_eif_uses_date_type_annotations():
     ev, ma = {"EV"}, {"MA"}
     # retroactive application date and the 1001-01-01 placeholder are not the entry into force

@@ -16,7 +16,7 @@ credentials). Details are refined from each ingestion module's findings.
 | Summaries of EU legislation (Cellar SPARQL + content negotiation `publications.europa.eu/resource/legissum/{id}`); case law, consolidated versions, EESC/CoR opinions (Cellar SPARQL) | SPARQL, XHTML | ✅ | Official summary, court cases, consolidated text and advisory opinions on a law's page (`lawcontext`) | A summary's text is read again only when its date changes; see the law context section |
 | Council voting results (consilium.europa.eu pages) | HTML | ❌ 403 "Browser check" | — | Not used; see Council section |
 | Council "voting result" documents (ST notes) | Cellar SPARQL + PDF at data.consilium.europa.eu | ✅ | Member State positions, voting rule, outcome | Annex table is an image; parsed deterministically, fail-closed |
-| Single Market Scoreboard | HTML; indicators in Power BI embeds | ✅ since 2 Nov 2026 (403 on 22 and 26 Oct) | — | Indicators only in embedded Power BI reports, not machine-readable; a plain HTML table of overdue directives per Member State (`/enforcement-tools/transposition_en`) is not read yet. See the implementation section |
+| Single Market Scoreboard | HTML; indicators in Power BI embeds | ✅ since 2 Nov 2026 (403 on 22 and 26 Oct) | Each Member State's overdue Single Market directives, on its own country page | Read from the plain HTML table of `/enforcement-tools/transposition_en`, with its stated period; the headline indicators are only in embedded Power BI reports and are not read. See the implementation section |
 | Commission infringement decisions | HTML / search | ⚠️ redirects to commission.europa.eu | Infringement cases | See implementation section below |
 | Cellar planned events (`cdm:event_legal_projected`) | SPARQL 1.1 | ✅ | Steps scheduled on a file, about three weeks ahead (`agenda`) | The Council's file planning and Parliament's; labels from the Publications Office's authority tables. See the scheduled-steps section |
 | EP Open Data API `/meetings/{sitting}/foreseen-activities` | JSON-LD REST | ✅ (204 until published) | Parliament's plenary agenda: votes and debates on a file (`agenda`) | Published about three weeks ahead of each sitting |
@@ -40,6 +40,13 @@ credentials). Details are refined from each ingestion module's findings.
 - EUR-Lex / Publications Office: reuse authorised under Commission Decision 2011/833/EU, with attribution. EUR-Lex's
   summaries of EU legislation are quoted unchanged, in part, labelled with their date and linked (law context section).
 - Council and Commission websites: reuse authorised with acknowledgement of the source, unless stated otherwise.
+- The open dataset (`data/open/`, released weekly; docs/DEPLOYMENT.md, "Open-data releases"): the compilation (the
+  selection, the structure, the derived fields and the checked corrections) is offered under CC BY 4.0 (proposed, for
+  the owner to confirm), with the credit line in its `datapackage.json` (`attribution`); the official records it
+  contains keep the terms above, which `datapackage.json` (`sources`) and its README repeat per source. Its rows keep
+  the address of the record they come from where the table has one (a procedure file, a vote's minutes, a Legislative
+  Train page, a voting result, an act on EUR-Lex, an infringement case), as the Parliament's legal notice asks of a
+  partial reproduction.
 
 The site footer and About page credit each source. MEP portraits are not used (avoids hot-linking third-party
 images that would expose visitors' IP addresses to another host). Home and the footer date the data by
@@ -1089,15 +1096,22 @@ the first week of each month is a full refresh, which re-reads every stored reco
   One that exempts named countries from some articles only (Directive (EU) 2016/797, Art. 57(5): Cyprus and Malta,
   Article 13 and others; `named`) is quoted with those countries named, and their rows are not marked: they must
   still transpose the rest.
-- Country indicators (Single Market Scoreboard): **not read**. The host answered scripts with a CloudFront 403 on
-  22 and 26 October 2026 and has answered them since 2 November 2026 (each refresh records its probe in the manifest
-  note), but the indicators are published only in embedded Power BI reports. Its plain HTML table of overdue Single
-  Market directives by sector and Member State
-  (`https://single-market-scoreboard.ec.europa.eu/enforcement-tools/transposition_en`) is not read yet.
-  data.europa.eu only links 2019 HTML/PDF pages; the Eurostat table was discontinued. Not bypassed. Country
-  pages show an indicators section only when a release has indicators, and the source is named "national
-  transposition measures and infringements" (meta.json, under the country pages' Implementation section), with
-  "and indicators" only then.
+- Country indicators (Single Market Scoreboard): **each Member State's overdue Single Market directives**, from 5
+  November 2026. The host answered scripts with a CloudFront 403 on 22 and 26 October 2026 and has answered them since
+  2 November 2026. Its headline indicators (transposition and conformity deficits, delays, durations) are published
+  only in embedded Power BI reports and are not read. Its transposition page
+  (`https://single-market-scoreboard.ec.europa.eu/enforcement-tools/transposition_en`) has a plain HTML table
+  (`table.heatmap-table`) of "the total number of Single Market directives not fully notified, broken down by sector,
+  as on 5 December 2025", one row per Member State, and states the reporting period ("all transposition notifications
+  made by 5 December 2025 for directives with a transposition deadline on or before 30 November 2025"). Each Member
+  State's total is read (`parse_scoreboard_transposition`, indicator `sm_directives_not_notified`), with that period;
+  the sectors are only checked. Nothing is read from a table that fails a check (one such table, its date, a header
+  from "Member State" to "TOTAL", the 27 Member States once each, whole numbers, sector figures adding up to each
+  total): the stored file is kept and the source is partial. The page lists the rows by total; the site shows each
+  figure on its own country's page only, as the Commission's count, never side by side (no ranking), and computes no
+  score of its own. Until a refresh has retrieved it, no country page shows it. The source is named "national
+  transposition measures, infringements and indicators" (meta.json, under the country pages' Implementation section)
+  only in a release that has it.
 - Country pages' directive rows (`countries/<cc>.json` `transposition`) carry the directive's own number as its
   official title cites it (`act`: "Directive (EU) 2022/2555", "Directive 2014/35/EU"; read also from a title that
   Cellar records without the space after the act type, "Directive2014/63/EU"; from the CELEX id only when the

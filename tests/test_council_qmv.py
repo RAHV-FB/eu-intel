@@ -136,6 +136,66 @@ def test_qmv_eu28_requires_16_states():
     assert a.population_source_celex == "32018D2076"
 
 
+def test_qmv_decided_by_population_hand_computed():
+    # 2026 figures (Council Decision (EU, Euratom) 2025/2427): EU 452,162,974; 65 % = 293,905,933.1.
+    # Germany 83,502,300 + Spain 49,093,546 + Netherlands 18,191,086 = 150,786,932.
+    # With Bulgaria (6,437,360) against: 157,224,292 against, 294,938,682 for = 65.23 % -> adopted.
+    # With Austria (9,180,000) instead: 159,966,932 against, 292,196,042 for = 64.62 % -> not adopted, although
+    # 23 of the 15 Member States needed are in favour and 4 (the minimum of a blocking minority) are against.
+    pos = dict(all_("for"), DE="against", ES="against", NL="against", BG="against")
+    a = assess(pos, "qmv", year=2026)
+    assert (a.states_for, a.states_required, a.population_for, a.population_participating) == (
+        23, 15, 294_938_682, 452_162_974,
+    )  # fmt: skip
+    assert (a.population_for_pct, a.adopted_by_rule, a.blocking_minority_formed) == (65.23, True, False)
+    pos["BG"], pos["AT"] = "for", "against"
+    a = assess(pos, "qmv", year=2026)
+    assert (a.states_for, a.population_for, a.population_for_pct) == (23, 292_196_042, 64.62)
+    assert (a.adopted_by_rule, a.blocking_minority_formed, a.deemed_attained) == (False, True, False)
+    assert a.margin_states == 8 and a.margin_population_pct == -0.38
+
+
+def test_qmv_four_state_blocking_minority_edge_hand_computed():
+    # Germany 83,502,300 + France 68,635,943 + Italy 59,635,202 = 211,773,445 against (46.84 % > 35 %): 240,389,529
+    # for (53.16 %). Three Member States are not a blocking minority (TEU Art. 16(4)): QM deemed attained. Malta
+    # (574,250) joining them makes four: 239,815,279 for (53.04 %), and the act is not adopted.
+    pos = dict(all_("for"), DE="against", FR="against", IT="against")
+    a = assess(pos, "qmv", year=2026)
+    assert (a.population_for, a.population_for_pct) == (240_389_529, 53.16)
+    assert (a.adopted_by_rule, a.deemed_attained, a.blocking_minority_formed) == (True, True, False)
+    assert a.states_needed_to_block == 1  # any one of the 24 in favour joining the three makes four
+    pos["MT"] = "against"
+    a = assess(pos, "qmv", year=2026)
+    assert (a.population_for, a.population_for_pct) == (239_815_279, 53.04)
+    assert (a.adopted_by_rule, a.deemed_attained, a.blocking_minority_formed) == (False, False, True)
+    pos["MT"] = "abstain"  # an abstention counts as not in favour, as a vote against does
+    assert assess(pos, "qmv", year=2026).adopted_by_rule is False
+
+
+def test_population_share_short_of_65_is_never_shown_as_65():
+    # 2026: Germany 83,502,300, Greece 10,409,547, Croatia 3,874,350, Hungary 9,539,502, Lithuania 2,890,664, Poland
+    # 37,475,594 and Sweden 10,583,000 against: 158,274,957. The 20 in favour: 293,888,017 of 452,162,974 = 64.996 %,
+    # 17,916 people short of 65 % (293,905,933.1). Rounded to two decimals that is 65.00, next to "at least 65 % was
+    # needed" and "not met"; the share is given as 64.99 instead.
+    against = ("DE", "GR", "HR", "HU", "LT", "PL", "SE")
+    a = assess(dict(all_("for"), **dict.fromkeys(against, "against")), "qmv", year=2026)
+    assert (a.states_for, a.population_for, a.adopted_by_rule) == (20, 293_888_017, False)
+    assert (a.population_for_pct, a.margin_population_pct) == (64.99, -0.01)
+    # a share at or above 65 % keeps its ordinary rounding (Eurodac, ST 9841/24: the sheet's 85,52 %)
+    assert assess(all_("for"), "qmv", year=2026).population_for_pct == 100.0
+
+
+def test_build_passes_on_a_qualified_majority_deemed_attained():
+    # the page must not say that both thresholds were met when the population criterion was not (council_assessment)
+    from pipeline.build import _as_dict, council_assessment
+
+    pos = dict(all_("for"), DE="against", FR="against", IT="against")
+    a = council_assessment(_as_dict(assess(pos, "qmv", year=2026)))
+    assert (a["adopted_by_rule"], a["population_for_pct"], a["deemed_attained"]) == (True, 53.16, True)
+    assert council_assessment(_as_dict(assess(all_("for"), "qmv", year=2026)))["deemed_attained"] is False
+    assert council_assessment(_as_dict(assess(pos, "unanimity", year=2026)))["deemed_attained"] is False
+
+
 # ------------------------------------------------------------------ participation (TFEU 238(3))
 def test_not_participating_is_not_abstention():
     base = sheet("YYAYYYYYYYYYYY", "YYNYYYNYYYAYY")

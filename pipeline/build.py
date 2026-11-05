@@ -1141,10 +1141,13 @@ def _load[M: BaseModel](
     path = root / source / f"{name}.json"
     if not path.exists():
         return []
+    # A file or records left out are a degraded build (a strict build fails): an unreadable acts.json was built as
+    # no act at all, with a log line only
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
         issues.append(f"{source}/{name}.json unreadable: {e}")
+        _problem("snapshot %s/%s.json unreadable (%s); built without it", source, name, e)
         return []
     out: list[M] = []
     bad = 0
@@ -1155,7 +1158,7 @@ def _load[M: BaseModel](
             bad += 1
     if bad:
         issues.append(f"{source}/{name}.json: {bad} invalid records skipped")
-        log.warning("%s/%s: %d invalid records skipped", source, name, bad)
+        _problem("snapshot %s/%s.json: %d invalid records skipped", source, name, bad)
     return out
 
 
@@ -1180,8 +1183,17 @@ def _curated_list(name: str, curated: Path) -> list:
     return raw if isinstance(raw, list) else []
 
 
+def _inside(root: Path, rel: str) -> Path:
+    """`root / rel` for a name built from a source's id (votes/<id>.json): an id "../x" or an absolute path would write
+    outside the output, or over another of its files, so the build stops instead."""
+    p = Path(rel)
+    if not p.parts or p.is_absolute() or ".." in p.parts:
+        raise ValueError(f"{rel!r} is not a path inside the built data (an id from a source?)")
+    return root / p
+
+
 def _write(rel: str, data: Any, root: Path) -> None:
-    path = root / rel
+    path = _inside(root, rel)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
@@ -1589,6 +1601,9 @@ def council_assessment(a: dict | None) -> dict | None:
         "population_for_pct": a.get("population_for_pct"),
         "population_required_pct": a.get("population_required_pct"),
         "adopted_by_rule": a.get("adopted_by_rule"),
+        # QMV: the population criterion is not met, but too few Member States did not vote in favour to form a
+        # blocking minority, so the qualified majority is deemed attained (TEU Art. 16(4), TFEU Art. 238(3)(a))
+        "deemed_attained": bool(a.get("deemed_attained")),
         "blocking_minority_existed": a.get("blocking_minority_formed", a.get("blocking_minority_existed")),
         "single_state_veto_possible": bool(a.get("single_state_veto_possible"))
         and a.get("rule") == "unanimity",
@@ -1768,7 +1783,17 @@ def load_act_dates(curated: Path = CURATED) -> dict[str, dict]:
         if not ok or not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates):
             _problem("curated act_dates.yaml: entry %s has a malformed date; ignored", e["celex"])
             continue
-        n_src = max(len(e.get("sources") or []), 1)  # a date's own source: an index into sources
+        srcs = e.get("sources")
+        if not (isinstance(srcs, list) and srcs and all(
+            isinstance(x, dict) and isinstance(x.get("label"), str) and str(x.get("url") or "").startswith(("https://", "http://"))
+            for x in srcs
+        )):  # fmt: skip
+            _problem("curated act_dates.yaml: entry %s lists no texts it was checked against; ignored", e["celex"])
+            continue
+        if not all(isinstance(x.get("provisions"), str) and x["provisions"].strip() for x in app or []):
+            _problem("curated act_dates.yaml: entry %s has a date that cites no provision; ignored", e["celex"])
+            continue
+        n_src = len(srcs)  # a date's own source: an index into sources
         if not all(type(x.get("source", 0)) is int and 0 <= x.get("source", 0) < n_src for x in app or []):
             _problem("curated act_dates.yaml: entry %s cites a source it does not list; ignored", e["celex"])
             continue
@@ -1954,6 +1979,13 @@ def load_transposition_checks(curated: Path = CURATED) -> dict[str, dict]:
         dates = [e.get("deadline")] + ([e["applies_from"]] if e.get("applies_from") else []) + list(e.get("other") or [])
         if not all(isinstance(d, str) and ISO_DATE_RE.match(d) for d in dates):
             _problem("curated transposition.yaml: entry %s has a malformed date; ignored", e["celex"])
+            continue
+        # the quoted provision sets the general deadline (and the date the measures apply from): it must give them,
+        # else a slip to another recorded date (a derogation's) would pass as checked
+        unquoted = [d for d in (e["deadline"], e.get("applies_from")) if d and _long_date(d) not in _squash(e.get("quote"))]
+        if unquoted:
+            _problem("curated transposition.yaml: entry %s does not quote its date %s (%s); ignored", e["celex"],
+                     unquoted[0], _long_date(unquoted[0]))  # fmt: skip
             continue
         if e.get("amends") is not None and not _amends_ok(e["amends"]):
             _problem("curated transposition.yaml: entry %s has a malformed amends list; ignored", e["celex"])
@@ -2168,6 +2200,13 @@ class Builder:
         if self.act_links:  # procedure links that the act's own text rules out (2020/3521(COD), Decision (EU) 2020/2059)
             snap.acts = apply_act_links(snap.acts, self.act_links)
         self.act_dates = load_act_dates(curated)
+        # the dates EUR-Lex itself records for the acts whose dates were checked, before the checked ones replace them:
+        # whether EUR-Lex records a checked date (pipeline/analysis/applies.py)
+        self.eurlex_dates = {
+            a.celex: {"entry_into_force": a.entry_into_force, "application": list(a.other_application_dates),
+                      "partial_on_entry_into_force": a.partial_on_entry_into_force}
+            for a in snap.acts if a.celex in self.act_dates
+        }  # fmt: skip
         if self.act_dates:
             snap.acts = [apply_act_dates(a, self.act_dates.get(a.celex)) for a in snap.acts]
         self.checked_act_types = checked_act_types(self.act_dates)
@@ -2378,6 +2417,13 @@ class Builder:
             return max(ongoing, key=lambda t: t[0] or "")[2]
         return max(spans, key=lambda t: t[1] or "")[2]
 
+    def current_party(self, mep_id: str) -> str | None:
+        """The party record an MEP is in now (an open membership), else None: the sitting members a country or group
+        page counts in a party are those its own page counts (`members_active`), not those whose last record has ended
+        (Antoni Comín i Oliveres, sitting again from 22 Oct 2026 with no current party record)."""
+        ongoing = [s for s in self.mep_parties.get(mep_id, []) if s[1] is None]
+        return max(ongoing, key=lambda t: t[0] or "")[2] if ongoing else None
+
     def rapporteur_entries(self, p: Procedure) -> list[dict]:
         """A file's rapporteurs with the political group they held in that role, never their current group:
         their group membership on the date the EP API gives for the appointment, else the group the OEIL file
@@ -2444,9 +2490,11 @@ class Builder:
         self.build_dossiers()
         self.build_people()
         self.build_countries()
+        self.build_tracker()
         self.build_topics()
         self.build_activity()
         self.build_home()
+        self.build_applies()
         self.build_search()
         self.build_meta()
         return self.files
@@ -4588,7 +4636,8 @@ class Builder:
             if law:  # EUR-Lex summaries, court cases, consolidated texts, advisory opinions (analysis/lawcontext.py)
                 det.update(law.for_dossier(p.reference, acts, act_label))
             if det["known_as"] and det["known_as"]["names"]:  # list rows give the names under the title too
-                summ["names"] = det["known_as"]["names"]
+                # in the file's own JSON as well, which copied the summary above (DossierDetail extends it)
+                summ["names"] = det["names"] = det["known_as"]["names"]
             self.dossier_detail[pid] = det
             # said under "Latest recorded step" on the law page (2021/0366(COD): Delegated Regulation (EU)
             # 2026/2102 "of 13 July 2026", in force on 18 September 2026 as Cellar records, after the file's latest
@@ -4799,7 +4848,7 @@ class Builder:
             groups.append(summ)
             parties: Counter = Counter()
             for m in members:
-                pid = self.current_or_last(self.mep_parties.get(m.id, []))
+                pid = self.current_party(m.id)
                 if pid:
                     parties[pid] += 1
             gv = sorted(self.group_votes.get(slug, []), key=lambda x: (x["_d"], x["vote_id"]), reverse=True)
@@ -4916,26 +4965,36 @@ class Builder:
             f["now_parties"] = [ref(t) | {"meps": n} for t, n in sorted(now.items(), key=lambda kv: (-kv[1], kv[0]))]
 
     # ---------------------------------------------------------------- countries
+    def site_directives(self) -> list[LegalAct]:
+        """The directives of the files on this site, by CELEX: those the country pages list, the implementation
+        tracker (transposition.json) and the country feeds (pipeline/analysis/tracker.py)."""
+        return sorted(
+            {a.celex: a for d in self.dossier_ids for a in self.acts_of.get(d, []) if a.act_type == "directive"}.values(),
+            key=lambda a: a.celex,
+        )
+
+    def directive_info(self, a: LegalAct) -> dict:
+        """How a country page and the tracker name a directive: its file's title (with the directive's number when the
+        file has several directives: 2013/0400(CNS) has two), its own number as its official title cites it
+        ("Directive (EU) 2022/2555", "Directive 2014/35/EU") and the names its file is known by, so that it can be
+        searched by them; its file, and its general transposition deadline."""
+        ds = sorted(self.act_dossiers.get(a.celex, ()))
+        known = self.known_as(self.proc[ds[0]], self.acts_of.get(ds[0], [])) if len(ds) == 1 else None
+        names = (known or {}).get("names") or ([n] if (n := act_short_name(a.title)) else [])
+        title = self.dossier_summary[ds[0]]["title"] if len(ds) == 1 else a.title
+        if len(ds) == 1 and sum(x.act_type == "directive" for x in self.dossier_acts.get(ds[0], [])) > 1:
+            title = f"{act_label(a)}: {title}"
+        return {
+            "celex": a.celex, "title": title,
+            "act": act_label(a) if act_label(a) != a.celex else celex_act_label(a.celex), "names": names,
+            "dossier_id": ds[0] if len(ds) == 1 else None, "deadline": general_deadline(a),
+        }  # fmt: skip
+
     def build_countries(self) -> None:
         s = self.s
         infr_available = s.file_exists("implementation", "infringements")
-        directives = sorted(
-            {
-                a.celex: a
-                for d in self.dossier_ids
-                for a in self.acts_of.get(d, [])
-                if a.act_type == "directive"
-            }.values(),
-            key=lambda a: a.celex,
-        )
-        # each directive's own number as its official title cites it ("Directive (EU) 2022/2555", "Directive
-        # 2014/35/EU") and the names its file is known by, so that a country page can be searched by them
-        act_names: dict[str, tuple[str | None, list[str]]] = {}
-        for a in directives:
-            ds = sorted(self.act_dossiers.get(a.celex, ()))
-            known = self.known_as(self.proc[ds[0]], self.acts_of.get(ds[0], [])) if len(ds) == 1 else None
-            names = (known or {}).get("names") or ([n] if (n := act_short_name(a.title)) else [])
-            act_names[a.celex] = (act_label(a) if act_label(a) != a.celex else celex_act_label(a.celex), names)
+        directives = self.site_directives()
+        info = {a.celex: self.directive_info(a) for a in directives}
         index = []
         for code, name in sorted(MEMBER_STATES.items()):
             active = sorted(
@@ -4968,21 +5027,15 @@ class Builder:
                 "open_infringements": sum(1 for i in infr if i.status == "open") if infr_available else None,
             }  # fmt: skip
             index.append(summ)
-            party_counts: Counter = Counter(self.mep_summary[m.id]["party"] for m in active
-                                            if self.mep_summary[m.id]["party"])  # fmt: skip
+            party_counts: Counter = Counter(p for m in active if (p := self.current_party(m.id)))
             trans = []
             for a in directives:
-                deadline = general_deadline(a)
-                ds = sorted(self.act_dossiers.get(a.celex, ()))
-                title = self.dossier_summary[ds[0]]["title"] if len(ds) == 1 else a.title
-                if len(ds) == 1 and sum(x.act_type == "directive" for x in self.dossier_acts.get(ds[0], [])) > 1:
-                    title = f"{act_label(a)}: {title}"  # one of the file's directives (2013/0400(CNS) has two)
-                status = self.transposition_status(a.celex, code, deadline)
+                d = info[a.celex]
+                status = self.transposition_status(a.celex, code, d["deadline"])
                 schengen = self.schengen_note(a.celex, code) if status == "not_participating" else None
                 trans.append({
-                    "celex": a.celex, "title": title,
-                    "act": act_names[a.celex][0], "names": act_names[a.celex][1],
-                    "dossier_id": ds[0] if len(ds) == 1 else None, "deadline": deadline,
+                    "celex": a.celex, "title": d["title"], "act": d["act"], "names": d["names"],
+                    "dossier_id": d["dossier_id"], "deadline": d["deadline"],
                     "measures": len(self.measures_by.get((a.celex, code), [])),
                     "status": status,
                     # the exemption and its condition (Directive (EU) 2016/798, Art. 33(4)), not the bare label
@@ -5010,6 +5063,12 @@ class Builder:
                 "infringements": [self.infr_info(i) for i in infr],
             }
         self.files["countries/index.json"] = index
+
+    def build_tracker(self) -> None:
+        """transposition.json: the implementation tracker's directives (pipeline/analysis/tracker.py)."""
+        from pipeline.analysis import tracker
+
+        self.files["transposition.json"] = tracker.tracker_data(self)
 
     # ---------------------------------------------------------------- topics
     def build_topics(self) -> None:
@@ -5160,7 +5219,7 @@ class Builder:
         from pipeline.analysis.activity import is_discharge_vote
 
         # close final votes as the /votes page defines them (CLOSE_RELATIVE), newest first; over all the votes
-        # covered, as few final votes are that close (one in the 12 months to October 2026)
+        # covered, as few final votes are that close (two in the 12 months to October 2026: 181828 and 193557)
         close = [
             v for v in self.vote_summary.values()
             if v["kind"] == "final" and v.get("margin") and v["outcome"] in ("adopted", "rejected")
@@ -5281,6 +5340,14 @@ class Builder:
              "items": upcoming[:15]},
         ]  # fmt: skip
         self.files["home.json"] = {"featured": featured, "lists": lists, "topics": self.topic_list}
+
+    # ---------------------------------------------------------------- when new rules apply
+    def build_applies(self) -> None:
+        """applies.json: the dates fixed in law from which rules start to apply, by act, date and kind, with where
+        (pipeline/analysis/applies.py); its feeds are written by build()."""
+        from pipeline.analysis import applies
+
+        self.files["applies.json"] = applies.rows(self)
 
     # ---------------------------------------------------------------- search
     def build_search(self) -> None:
@@ -5450,11 +5517,17 @@ class Builder:
             out.append(f"{len(s.measures):,} national transposition measures for {len(self.measure_celexes):,} "
                        f"directives ({with_m:,} with at least one measure) and {len(s.infringements):,} "
                        "infringement cases.")  # fmt: skip
-            if not s.indicators:
-                # Its host answers scripted requests again since 2 Nov 2026, but the indicators are published only in
-                # embedded Power BI reports (pipeline/sources/implementation.py), so none are read
-                out.append("Country indicators (Single Market Scoreboard) are not published in a machine-readable form, "
-                           "so none are shown.")  # fmt: skip
+            # the Scoreboard's table of overdue Single Market directives per Member State; its other indicators are
+            # published only in embedded Power BI reports (pipeline/sources/implementation.py), so none of those is read
+            if s.indicators:
+                out.append(f"The Single Market Scoreboard's count of overdue Single Market directives for each Member "
+                           f"State ({s.indicators[0].period[:1].lower()}{s.indicators[0].period[1:]}), shown on each "
+                           "country's page; its other indicators are published only in embedded Power BI reports and "
+                           "are not read.")  # fmt: skip
+            else:
+                out.append("The Single Market Scoreboard's count of overdue Single Market directives per Member State "
+                           "has not been retrieved for this release; its other indicators are published only in "
+                           "embedded Power BI reports and are not read.")  # fmt: skip
         elif sid == "optouts":
             read = list(self.optouts.values())
 
@@ -5612,9 +5685,17 @@ class Builder:
                          "legal basis.")  # fmt: skip
         else:
             notes.append("Infringement cases: not available in this release.")
-        if not s.indicators:
-            notes.append("Country indicators (e.g. Single Market Scoreboard transposition deficit): not available "
-                         "from an accessible official machine-readable source in this release.")  # fmt: skip
+        if s.indicators:
+            notes.append("Single Market Scoreboard: each Member State's count of overdue Single Market directives, as "
+                         "the Commission publishes it with its period, on that country's page only. It is the "
+                         "Commission's count, not a ranking, and the site computes no compliance score of its own; "
+                         "the Scoreboard's other indicators are published only in embedded Power BI reports and are "
+                         "not shown.")  # fmt: skip
+        else:
+            notes.append("Single Market Scoreboard: the Commission's count of overdue Single Market directives per "
+                         "Member State is not in this release (it is read from the Scoreboard's transposition page "
+                         "once a data refresh has retrieved it); its other indicators are published only in embedded "
+                         "Power BI reports and are not shown.")  # fmt: skip
         if avail("train"):
             notes.append("'Officially blocked' labels come only from the European Parliament's Legislative Train "
                          "Schedule; other inactivity is shown as the number of days without a recorded procedural update.")  # fmt: skip
@@ -5889,9 +5970,10 @@ def build_search_docs(b: Builder) -> list[dict]:
 
 
 # ------------------------------------------------------------------------------------------- feeds/out
-def write_output(files: dict[str, Any], extra: dict[str, str], out: Path = OUT) -> None:
+def write_output(files: dict[str, Any], extra: dict[str, str | bytes], out: Path = OUT) -> None:
     """Write into a private temp dir, then swap it in (old dir renamed away first, deleted last), so
-    readers and concurrent builds see either the old or the new tree, never a half-written one."""
+    readers and concurrent builds see either the old or the new tree, never a half-written one. `extra`: files
+    written as they are (text as UTF-8; bytes unchanged, e.g. the open dataset's CSV with its CRLF line ends)."""
     tmp = out.with_name(f"{out.name}.tmp-{os.getpid()}")
     if tmp.exists():
         shutil.rmtree(tmp)
@@ -5899,9 +5981,12 @@ def write_output(files: dict[str, Any], extra: dict[str, str], out: Path = OUT) 
     for rel in sorted(files):
         _write(rel, files[rel], tmp)
     for rel, text in sorted(extra.items()):
-        p = tmp / rel
+        p = _inside(tmp, rel)
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8")
+        if isinstance(text, bytes):
+            p.write_bytes(text)
+        else:
+            p.write_text(text, encoding="utf-8", newline="")  # as given: a calendar's lines end in CRLF (RFC 5545)
     old = out.with_name(f"{out.name}.old-{os.getpid()}")
     if out.exists():
         out.rename(old)
@@ -5921,7 +6006,7 @@ def build(
     """Build public/data. 0, or with `strict` (default: the environment's EU_INTEL_STRICT=1) 1 when the build had to
     work around a problem (PROBLEMS: a feature whose code did not load, a curated file or entry not applied, a status
     or assessment that fell back); the output is written either way, and every problem is listed at the end."""
-    from pipeline.analysis import feeds
+    from pipeline.analysis import applies, feeds, tracker
 
     if strict is None:
         strict = os.environ.get("EU_INTEL_STRICT", "").strip().lower() in ("1", "true", "yes")
@@ -5931,17 +6016,29 @@ def build(
     b = Builder(snap, today=today, curated=curated or CURATED, state=state or STATE)
     files = b.run()
     site = os.environ.get("SITE_URL") or DEFAULT_SITE_URL
-    extra = feeds.build_feeds(b, site_url=site)
+    extra: dict[str, str | bytes] = dict(feeds.build_feeds(b, site_url=site))
+    extra |= applies.build_feeds(b, files["applies.json"], site_url=site)  # when new rules apply: Atom and iCalendar
+    extra.update(tracker.country_feeds(b, site_url=site))  # feeds/countries/<CC>.xml
+    # the open dataset (public/data/open: CSV tables, datapackage.json, README), from the files just built
+    build_open_data = _lazy("pipeline.analysis.opendata", "build_open_data")
+    if build_open_data is not None:
+        try:
+            extra |= build_open_data(b, files, site_url=site)
+        except Exception as e:  # noqa: BLE001 - the site is built without it; --strict fails
+            _problem("open dataset (pipeline/analysis/opendata.py) not written: %r", e)
     write_output(files, extra, out)
     sizes = {
         k: len(json.dumps(v, ensure_ascii=False, separators=(",", ":")).encode()) for k, v in files.items()
     }
-    for k in ("dossiers/index.json", "votes/index.json", "votes/titles.json", "search.json", "home.json", "people/meps.json"):
+    for k in ("dossiers/index.json", "votes/index.json", "votes/titles.json", "search.json", "home.json", "people/meps.json",
+              "applies.json"):  # fmt: skip
         log.info("%-22s %8.1f KB", k, sizes.get(k, 0) / 1024)
     total = sum(sizes.values())
     log.info("wrote %d files (%.1f MB) to %s", len(files) + len(extra), total / 1e6, out)
-    for i in snap.issues:
-        log.warning("snapshot issue: %s", i)
+    opened = [len(v) for k, v in extra.items() if k.startswith("open/")]
+    if opened:
+        log.info("open dataset: %d files (%.1f MB) in %s", len(opened), sum(opened) / 1e6, out / "open")
+    # (snap.issues: each is also among PROBLEMS, listed below)
     for k in ("dossiers/index.json", "search.json"):
         if sizes.get(k, 0) > 1_500_000:
             log.warning("%s exceeds 1.5 MB (%.2f MB)", k, sizes[k] / 1e6)
