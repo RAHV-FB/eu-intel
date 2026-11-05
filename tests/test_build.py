@@ -1809,6 +1809,36 @@ def test_transposition_dates_without_an_established_role_stay_off_the_timeline(t
     assert d["implementation"]["deadline"] == "2027-03-30"
 
 
+def test_a_transposition_date_before_the_act_is_not_shown_as_its_deadline(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+):
+    # As Cellar records Directive (EU) 2015/412 of 11 March 2015 (2010/0208(COD)): one unlabelled date, 17 October
+    # 2002, the deadline of Directive 2001/18/EC it amends. The page said "The transposition deadline (17 October
+    # 2002) has passed" and every country row carried that deadline.
+    base = tmp_path / "b"
+    shutil.copytree(FIX / "snapshot", base / "snapshot")
+    path = base / "snapshot" / "eurlex" / "acts.json"
+    recs = json.loads(path.read_text(encoding="utf-8"))
+    a = next(r for r in recs if r["celex"] == "32099L0003")  # a directive of 15 January 2023
+    a["transposition_dates"] = [{"date": "2002-10-17", "labels": [], "articles": []}]
+    a["transposition_deadlines"] = ["2002-10-17"]
+    path.write_text(json.dumps(recs), encoding="utf-8")
+    o = base / "public"
+    with caplog.at_level("WARNING", logger="pipeline.build"):
+        assert build(out=o, snapshot=base / "snapshot", curated=FIX / "curated", state=base / "state", today=TODAY) == 0
+    assert "act 32099L0003: EUR-Lex records transposition date(s) 2002-10-17, earlier than the act itself (2023-01-15)" in (
+        caplog.text)  # fmt: skip
+    d = load(o, "dossiers/2099-0003.json")
+    assert [(x["date"], x["kind"]) for x in d["application"]["transposition"]] == [("2002-10-17", "other")]
+    assert d["application"]["transposition_deadlines"] == []
+    assert not [e for e in d["timeline"] if e["kind"].startswith("transposition")]
+    assert "has passed" not in d["next_step"]["text"] and "2002" not in d["next_step"]["text"]
+    assert "the transposition date it records is earlier than the directive itself" in d["next_step"]["text"]
+    assert d["implementation"]["deadline"] is None
+    assert {c["status"] for c in d["implementation"]["countries"]} <= {"measures_notified", "no_deadline"}
+    assert "no_deadline" in {c["status"] for c in d["implementation"]["countries"]}
+
+
 def test_next_step_names_the_deadlines_of_amending_directives():
     # Only the deadline that covers the changes to this directive (data/curated/transposition.yaml `amends`, real
     # records). Directive (EU) 2026/470, Art. 5(1): "comply with Articles 1, 2 and 3 by 19 March 2027" (Article 3

@@ -30,7 +30,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from pipeline.analysis.transposition import Dated, application_start, article_label
+from pipeline.analysis.transposition import Dated, application_start, article_label, before_the_act
 from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models.entities import (
     EpVote,
@@ -1386,6 +1386,15 @@ def _next_step(proc: Procedure, s: _S, events: list[Event], acts: list[LegalAct]
                 parts.append(
                     "This directive is a codification of earlier directives. EUR-Lex records no transposition "
                     "deadline for it."
+                )
+            elif dr and (early := before_the_act(dr)):
+                # Directive (EU) 2015/412: 17 October 2002, the deadline of Directive 2001/18/EC (transposition.py)
+                many = len(early) > 1
+                parts.append(
+                    f"EUR-Lex records no transposition deadline for this directive: the transposition "
+                    f"{'dates' if many else 'date'} it records {'are' if many else 'is'} earlier than the directive "
+                    f"itself, so the directive does not set {'them' if many else 'it'}. Its text says whether, and by "
+                    "when, national measures are needed."
                 )
             else:
                 parts.append(

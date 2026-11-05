@@ -91,6 +91,36 @@ def _general(act: LegalAct, deadlines: list[str], arts: dict[str, tuple[str, ...
     return deadlines[0], "date_order"
 
 
+def act_day(act: LegalAct) -> str | None:
+    """The date of the act itself: its date (that of its adoption or signature, in its title), else its signature."""
+    return act.date_document or act.date_signature
+
+
+def before_the_act(act: LegalAct) -> list[str]:
+    """Recorded transposition dates earlier than the act itself that would otherwise be read as deadlines (labelled
+    ADOPTION, AU+TARD or nothing; or any label when every date is APPLICATION only, see the module docstring): no
+    act can require national measures by a day before it existed, so the date is not one the act sets. Directive (EU)
+    2015/412 of 11 March 2015 (2010/0208(COD), GMOs): Cellar records 17 October 2002, unlabelled, the transposition
+    deadline of Directive 2001/18/EC that it amends, which the site gave as its own deadline. A date the curated check
+    gives (data/curated/transposition.yaml, checked against the act's text) is kept. An APPLICATION date before the
+    act stays an application date: national measures can apply retroactively (Directive (EU) 2022/642 of 12 April
+    2022, Art. 3(1): 1 January 2022)."""
+    day = act_day(act)
+    if act.act_type != "directive" or not day:
+        return []
+    labels = {t.date: t.labels for t in act.transposition_dates}
+    dates = sorted(set(act.transposition_deadlines))
+    only_application = all("APPLICATION" in labels.get(d, ()) and "ADOPTION" not in labels.get(d, ()) for d in dates)
+    chk = act.transposition_checked
+    kept = {chk.deadline, chk.applies_from, *chk.other} if chk else set()
+    return [
+        d
+        for d in dates
+        if d < day and d not in kept
+        and (only_application or "APPLICATION" not in labels.get(d, ()) or "ADOPTION" in labels.get(d, ()))
+    ]
+
+
 def _classify(act: LegalAct) -> tuple[list[Dated], Basis | None]:
     if act.act_type != "directive" or not act.transposition_deadlines:
         return [], None
@@ -102,10 +132,16 @@ def _classify(act: LegalAct) -> tuple[list[Dated], Basis | None]:
     def is_application(d: str) -> bool:
         return "APPLICATION" in labels[d] and "ADOPTION" not in labels[d]
 
-    deadlines = [d for d in dates if not is_application(d)] or dates
+    early = set(before_the_act(act))  # "other": not dates the act sets
+    deadlines = [d for d in dates if not is_application(d) and d not in early]
+    if not deadlines and all(is_application(d) for d in dates):
+        deadlines = [d for d in dates if d not in early]  # the labels do not separate the dates
+    if not deadlines:  # no deadline the act sets is recorded
+        return [Dated(d, "application" if is_application(d) and d not in early else "other", arts[d], labels[d])
+                for d in dates], None  # fmt: skip
     general, basis = _general(act, deadlines, arts)
     chk = act.transposition_checked
-    other = set(chk.other) if chk else set()
+    other = set(chk.other) | early if chk else early
     general_articles = {_article(r) for r in arts[general]}
     # paragraphs that set a deadline (a general deadline may be labelled APPLICATION only)
     setting_deadlines = {general} | {d for d in dates if not is_application(d)}

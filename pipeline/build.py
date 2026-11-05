@@ -29,7 +29,14 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from pipeline.analysis.transposition import application_start, article_label, articles_text, general_deadline
+from pipeline.analysis.transposition import (
+    act_day,
+    application_start,
+    article_label,
+    articles_text,
+    before_the_act,
+    general_deadline,
+)
 from pipeline.analysis.transposition import classify as classify_transposition
 from pipeline.models import entities
 from pipeline.models.countries import FORMER_MEMBER_STATES, MEMBER_STATES
@@ -2021,6 +2028,10 @@ class Builder:
         self.transposition_checks = load_transposition_checks(curated)
         if self.transposition_checks:
             snap.acts = [apply_transposition_checks(a, self.transposition_checks.get(a.celex)) for a in snap.acts]
+        for a in snap.acts:  # read as "other", not as the act's deadline (transposition.before_the_act)
+            if early := before_the_act(a):
+                log.warning("act %s: EUR-Lex records transposition date(s) %s, earlier than the act itself (%s); not "
+                            "read as its deadline", a.celex, ", ".join(early), act_day(a))  # fmt: skip
         self.council_dates = load_council_dates(curated)
         self.unlinked_acts = load_unlinked_acts(curated)
         self.denmark_schengen = load_denmark_schengen(curated)

@@ -427,7 +427,9 @@ def _directive_step(celex: str, today: date = TODAY) -> str:
     r = apply_transposition_checks(
         LegalAct.model_validate(next(x for x in recs if x["celex"] == celex)), load_transposition_checks().get(celex)
     )
-    keep = ("title", "transposition_deadlines", "transposition_dates", "transposition_checked")
+    # with the act's own date, which a transposition date is compared with (transposition.before_the_act)
+    keep = ("title", "date_document", "date_signature", "transposition_deadlines", "transposition_dates",
+            "transposition_checked")  # fmt: skip
     p = proc("2021-0104")
     acts = [a.model_copy(update={k: getattr(r, k) for k in keep}) for a in acts_for(p)]
     return classify(p, acts, [], today).next_step.text
