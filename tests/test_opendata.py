@@ -335,3 +335,28 @@ def test_validate_built_fails_on_an_open_dataset_that_does_not_match_its_descrip
     assert validate_check(FIX, public=pub, today=TODAY, built=True).errors == [
         "public/data/open/datapackage.json is missing (run `python -m pipeline build`)"
     ]
+
+
+# ---------------------------------------------------------------- citation
+
+
+def test_the_citation_files_name_the_licence_holder_the_licence_and_the_site():
+    import yaml
+
+    from pipeline.build import DEFAULT_SITE_URL
+
+    holder = re.search(r"Copyright \(c\) \d{4} (.+)", (ROOT / "LICENSE").read_text(encoding="utf-8")).group(1).strip()
+    cff = yaml.safe_load((ROOT / "CITATION.cff").read_text(encoding="utf-8"))
+    assert cff["cff-version"] == "1.2.0" and cff["type"] == "dataset" and cff["title"] == opendata.TITLE
+    assert [a["name"] for a in cff["authors"]] == [holder] == [opendata.PUBLISHER]
+    assert cff["license"] == opendata.LICENSE["name"] == "CC-BY-4.0"
+    assert cff["url"] == DEFAULT_SITE_URL and cff["repository-code"] == opendata.REPOSITORY
+    assert cff["repository-artifact"] == opendata.RELEASES and "MIT License" in cff["message"]
+    zenodo = json.loads((ROOT / ".zenodo.json").read_text(encoding="utf-8"))
+    assert zenodo["upload_type"] == "dataset" and zenodo["license"] == "cc-by-4.0" and zenodo["access_right"] == "open"
+    assert zenodo["creators"] == [{"name": holder}] and zenodo["title"] == opendata.TITLE
+    related = {r["identifier"]: r["relation"] for r in zenodo["related_identifiers"]}
+    assert related[DEFAULT_SITE_URL] == "isSupplementTo" and related[opendata.REPOSITORY] == "isCompiledBy"
+    assert related[f"{DEFAULT_SITE_URL}about/#reuse"] == "isDocumentedBy"
+    # what Zenodo archives (the tagged tree, not the release's assets) is said in the record
+    assert "attached to the GitHub release of the same tag" in zenodo["notes"] and "MIT License" in zenodo["notes"]
