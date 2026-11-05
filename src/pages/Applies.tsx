@@ -9,7 +9,7 @@ import { useFeedLink } from '../components/useFeedLink';
 import { useDocumentTitle, useTopics } from '../features/legislation/labels';
 import { todayISO } from '../features/legislation/explorer';
 import { AppliesItem } from '../features/applies/AppliesItem';
-import { WINDOWS, byMonth, concerns, feedPath, inWindow, monthLabel, windowKey } from '../features/applies/applies';
+import { DEFAULT_WINDOW, WINDOWS, byMonth, concerns, feedPath, inWindow, monthLabel, windowKey } from '../features/applies/applies';
 import '../features/legislation/common.css';
 import '../features/legislation/legislation.css';
 import '../features/changes/changes.css';
@@ -65,8 +65,7 @@ export default function Applies() {
   const countryCounts = new Map(MEMBER_STATES.map((c) => [c, inWin.filter((r) => matchesTopic(r, topic) && matchesCountry(r, c)).length]));
   const phrase = WINDOWS.find((w) => w.key === when)!.phrase;
 
-  const set = (p: Record<string, string | null>) => patch(p);
-  const filtered = !!(topic || country || when !== '90');
+  const filtered = !!(topic || country || when !== DEFAULT_WINDOW);
 
   return (
     <div className="container page chg ap-page">
@@ -106,7 +105,7 @@ export default function Applies() {
       <form className="lx-filters ap__filters" aria-label="Filter the dates" onSubmit={(e) => e.preventDefault()}>
         <div className="lx-field">
           <label htmlFor={`${ids}-when`}>When</label>
-          <select id={`${ids}-when`} className="select lx-select" value={when} onChange={(e) => set({ when: e.target.value === '90' ? null : e.target.value })}>
+          <select id={`${ids}-when`} className="select lx-select" value={when} onChange={(e) => patch({ when: e.target.value === DEFAULT_WINDOW ? null : e.target.value })}>
             {WINDOWS.map((w) => (
               <option key={w.key} value={w.key}>
                 {w.label} ({formatNumber(windowCounts.get(w.key) ?? 0)})
@@ -116,7 +115,7 @@ export default function Applies() {
         </div>
         <div className="lx-field">
           <label htmlFor={`${ids}-topic`}>Topic</label>
-          <select id={`${ids}-topic`} className="select lx-select" value={topic ?? ''} onChange={(e) => set({ topic: e.target.value || null })}>
+          <select id={`${ids}-topic`} className="select lx-select" value={topic ?? ''} onChange={(e) => patch({ topic: e.target.value || null })}>
             <option value="">All topics</option>
             {topics.map((t) => (
               <option key={t.slug} value={t.slug}>
@@ -127,7 +126,7 @@ export default function Applies() {
         </div>
         <div className="lx-field">
           <label htmlFor={`${ids}-country`}>Member State</label>
-          <select id={`${ids}-country`} className="select lx-select" value={country ?? ''} onChange={(e) => set({ country: e.target.value || null })}>
+          <select id={`${ids}-country`} className="select lx-select" value={country ?? ''} onChange={(e) => patch({ country: e.target.value || null })}>
             <option value="">All Member States</option>
             {MEMBER_STATES.map((c) => (
               <option key={c} value={c}>
@@ -155,7 +154,7 @@ export default function Applies() {
               <>
                 {' '}
                 ·{' '}
-                <button type="button" className="lx-linkbtn" onClick={() => set({ when: null, topic: null, country: null })}>
+                <button type="button" className="lx-linkbtn" onClick={() => patch({ when: null, topic: null, country: null })}>
                   Next 90 days, every topic and Member State
                 </button>
               </>

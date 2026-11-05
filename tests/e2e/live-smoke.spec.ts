@@ -49,6 +49,7 @@ const data = {
 const PAGES: [name: string, path: string][] = [
   ['home', ''],
   ['legislation', 'legislation/'],
+  ['when new rules apply', 'legislation/applies/'], // applies.json, read on the real clock
   ['votes', 'votes/'],
   ['people', 'people/'],
   ['countries', 'countries/'],
