@@ -72,7 +72,9 @@ def test_referential_and_semantic_issues_are_warnings(tmp_path: Path):
     _edit(snap / "council" / "votes.json", veto)
     rep = check(snap, today=TODAY)
     assert rep.errors == []
-    assert rep.warnings["ref-mep"] and rep.warnings["ref-procedure"]
+    assert rep.warnings["ballot-mep"] == ["vote V1: 1 ballot MEP ids not in meps.json (e.g. NOPE)"]
+    assert "2099/0777(COD)" in " ".join(rep.by_design["ref-procedure"])  # by design: info, not a warning
+    assert "ref-procedure" not in rep.warnings
     assert rep.warnings["transposition-non-directive"]
     assert rep.warnings["veto-wording"]
 
@@ -552,3 +554,201 @@ def test_an_unreadable_built_file_is_an_error_not_a_crash(built: Path, tmp_path:
     errors = check(FIX, public=pub, today=TODAY, built=True).errors
     assert sum(e.startswith(f"public dossiers/{some.name}: unreadable JSON") for e in errors) == 1
     assert sum(e.startswith("public council/index.json: unreadable JSON") for e in errors) == 1  # reported once
+
+
+# ------------------------------------------------------------------------------ classes: by design, integrity, backlog
+def test_every_warning_class_is_classified_once():
+    """A class that is not classified gates as integrity (fail-safe); every class the checks use is classified."""
+    import re
+
+    from pipeline import validate as val
+
+    used = set(re.findall(r'rep\.warn\(\s*"([\w-]+)"', Path(val.__file__).read_text(encoding="utf-8")))
+    kinds = [set(val.BY_DESIGN), set(val.INTEGRITY), set(val.BACKLOG)]
+    assert not (kinds[0] & kinds[1] or kinds[0] & kinds[2] or kinds[1] & kinds[2])
+    assert used and used - set().union(*kinds) == set()
+    assert {"ref-procedure", "ref-mep", "procedure-ref"} == kinds[0]
+    assert "act-procedure-mismatch" in kinds[1] and "application-not-recorded" in kinds[2]
+    assert val.warning_kind("a-new-check") == "integrity"
+
+
+def test_by_design_findings_are_info_and_not_counted():
+    rep = check(FIX, today=TODAY)
+    assert rep.by_design["ref-procedure"] and "ref-procedure" not in rep.warnings
+    out = io.StringIO()
+    rep.print(out)
+    text = out.getvalue()
+    assert "INFO [ref-procedure] 1 by design: votes on procedures outside the dataset" in text
+    assert "WARNING [ballot-totals] 1 (backlog)" in text
+    assert "validate: OK — 0 errors, 1 warnings (0 integrity, 1 backlog); 1 by-design findings not counted" in text
+
+
+def test_ratchet_fails_when_an_integrity_class_rises_or_appears_never_for_backlog():
+    from pipeline.validate import Report, apply_baseline
+
+    def run(warnings: dict[str, int], baseline: dict[str, int], accepted=None) -> Report:
+        rep = Report()
+        for k, n in warnings.items():
+            for i in range(n):
+                rep.warn(k, f"{k} finding {i}")
+        apply_baseline(rep, baseline, accepted=accepted)
+        return rep
+
+    base = {"act-procedure-mismatch": 1, "application-not-recorded": 19}
+    assert run({"act-procedure-mismatch": 1, "application-not-recorded": 25}, base).breaches == []  # backlog: never
+    rose = run({"act-procedure-mismatch": 2}, base)
+    assert len(rose.breaches) == 1 and rose.breaches[0].startswith("[act-procedure-mismatch] 2, above its baseline of 1: ")
+    new = run({"amends-link-type": 1, "a-new-check": 1, "ref-mep": 9}, base)  # by design: not a warning at all
+    assert [b.split(":")[0] for b in new.breaches] == [
+        "[a-new-check] 1, a new integrity class (none in the baseline)",
+        "[amends-link-type] 1, a new integrity class (none in the baseline)",
+    ]
+    assert "classify it" in new.breaches[0]
+    lower = run({}, base)
+    assert lower.breaches == [] and lower.ratchet_notes == [
+        "[act-procedure-mismatch] 0, below its baseline of 1: lower it with --update-baseline",
+        "[application-not-recorded] 0, below its baseline of 19: lower it with --update-baseline",
+    ]
+    # one accepted finding fixed and another of the class appeared: within the count, told
+    swapped = run({"act-procedure-mismatch": 1}, base, accepted={"act-procedure-mismatch": ["an older finding"]})
+    assert swapped.breaches == [] and swapped.ratchet_notes[0] == (
+        "[act-procedure-mismatch] not in the baseline, within its count: act-procedure-mismatch finding 0")
+    out = io.StringIO()
+    rose.print(out)
+    assert "validate: FAILED — 0 errors, 1 ratchet breaches" in out.getvalue()
+    assert "  failed: ratchet [act-procedure-mismatch] 2, above its baseline of 1: an act linked to a procedure" in out.getvalue()
+
+
+def test_the_committed_baseline_is_readable_and_accepts_only_known_classes():
+    from pipeline import validate as val
+
+    counts, accepted = val.load_baseline()
+    assert counts and all(val.warning_kind(k) != "by design" for k in counts)
+    assert counts["act-procedure-mismatch"] == 1 and accepted["act-procedure-mismatch"] == [
+        "32020D2059 (decision) linked to 2020/3521(COD): number range is not used for legislative procedures"]  # fmt: skip
+    assert set(accepted) == {k for k in counts if val.warning_kind(k) == "integrity"}
+    assert all(len(accepted[k]) == counts[k] for k in accepted)
+
+
+def test_validate_cli_ratchet_and_update_baseline(built: Path, tmp_path: Path, monkeypatch, capsys):
+    import pipeline.__main__ as cli
+    from pipeline import snapshot
+    from pipeline import validate as val
+
+    snap = _copy(tmp_path)
+    root = tmp_path / "root"
+    shutil.copytree(built, root / "public" / "data")
+    monkeypatch.setattr(snapshot, "SNAPSHOT", snap)
+    monkeypatch.setattr(val, "ROOT", root)
+    monkeypatch.setattr(val, "BASELINE", tmp_path / "baseline.json")  # none yet: every integrity class is new
+    assert cli.main(["validate", "--built"]) == 0  # the fixture: backlog and by-design findings only
+    assert "0 ratchet breaches" in capsys.readouterr().out
+    _edit(snap / "eurlex" / "acts.json", lambda r: r[0].update(procedure_refs=["2099/3521(COD)"]))
+    assert cli.main(["validate", "--built"]) == 1
+    out = capsys.readouterr().out
+    assert "RATCHET [act-procedure-mismatch] 1, a new integrity class (none in the baseline)" in out
+    assert "validate: FAILED — 0 errors, 1 ratchet breaches" in out
+    assert cli.main(["validate", "--built", "--update-baseline"]) == 0
+    assert "(act-procedure-mismatch 0 -> 1; ballot-totals 0 -> 1)" in capsys.readouterr().out
+    counts, accepted = val.load_baseline()
+    assert counts == {"act-procedure-mismatch": 1, "ballot-totals": 1} and list(accepted) == ["act-procedure-mismatch"]
+    assert cli.main(["validate", "--built"]) == 0
+    _edit(snap / "eurlex" / "acts.json", lambda r: r[1].update(procedure_refs=["2099/3522(COD)"]))
+    assert cli.main(["validate", "--built"]) == 1
+    assert "failed: ratchet [act-procedure-mismatch] 2, above its baseline of 1" in capsys.readouterr().out
+    assert cli.main(["validate"]) == 1  # the gate holds without --built as well
+    with pytest.raises(SystemExit):
+        cli.main(["validate", "--update-baseline"])  # needs --built
+
+
+# ------------------------------------------------------------------------------ invariants of the built output
+def _dossier(**kw) -> dict:
+    return {"id": "2099-0001", "type": "COD", "stage": "in_force", "status_label": "In force", "celex": [], "timeline": [],
+            "acts": [], "ep_votes": [], **kw}  # fmt: skip
+
+
+def test_an_act_shown_on_two_files_is_an_error(tmp_path: Path):
+    """2 Nov 2026: `validate --built` warned "32026D2402 is shown on 2025-0177, 2025-0380", said OK and deployed."""
+    pub = tmp_path / "public"
+    (pub / "dossiers").mkdir(parents=True)
+    for i in ("2025-0177", "2025-0380"):
+        d = _dossier(id=i, celex=["32026D2402"], timeline=[{"kind": "ep_position", "date": "2026-10-08"}])
+        (pub / "dossiers" / f"{i}.json").write_text(json.dumps(d), encoding="utf-8")
+    rep = check(FIX, public=pub, today=TODAY)
+    assert rep.errors == ["public dossiers: 32026D2402 is shown on 2025-0177, 2025-0380; check which procedure adopted it"]
+    assert rep.errors_by_check == {"act-on-two-dossiers": 1} and "act-on-two-dossiers" not in rep.warnings
+
+
+def test_a_file_past_adoption_needs_parliaments_position():
+    """2023/0421(COD) on 2 Nov 2026: "Published in the Official Journal" from one EP publication event, with no
+    Parliament position, Council adoption or act."""
+    from pipeline.validate import dossier_invariants
+
+    published = _dossier(id="2023-0421", stage="published", status_label="Published in the Official Journal",
+                         timeline=[{"kind": "proposal", "date": "2023-11-27"}, {"kind": "publication", "date": "2026-10-30"}])  # fmt: skip
+    assert dossier_invariants(published) == [("stage-without-parliament", "COD file shown as 'published' ('Published in "
+                                              "the Official Journal'), but no position or decision of Parliament is recorded")]  # fmt: skip
+    position = {"kind": "ep_position", "date": "2024-04-24"}
+    assert dossier_invariants({**published, "timeline": [*published["timeline"], position]}) == []
+    assert dossier_invariants({**published, "ep_approval_without_vote": {"date": "2026-01-20"}}) == []  # second reading
+    assert dossier_invariants({**published, "ep_votes": [{"kind": "final", "outcome": "adopted"}]}) == []
+    assert dossier_invariants({**published, "ep_votes": [{"kind": "amendment", "outcome": "adopted"}]}) != []
+    assert dossier_invariants({**published, "type": "APP"}) != []  # consent is required too
+    assert dossier_invariants({**published, "eurlex_only": True}) == []  # its steps are not in the data
+    assert dossier_invariants({**published, "type": "CNS"}) == []  # 2020/0209(CNS): Art. 31 TFEU, no opinion needed
+    assert dossier_invariants({**published, "stage": "provisional_agreement"}) == []
+
+
+def test_an_adoption_date_needs_a_stage_of_adoption_or_later():
+    """2025/0312(COD) on 2 Nov 2026: adopted 26 Oct by the Council (27-0-0), still "Approved by Parliament … the
+    Council must still formally approve it"."""
+    from pipeline.validate import dossier_invariants
+
+    d = _dossier(id="2025-0312", stage="parliament_position", status_label="Approved by Parliament", adopted="2026-10-26",
+                 timeline=[{"kind": "ep_position", "date": "2026-10-08"}])  # fmt: skip
+    assert dossier_invariants(d) == [("adopted-stage-behind", "adopted on 2026-10-26, but shown at stage "
+                                      "'parliament_position' ('Approved by Parliament')")]  # fmt: skip
+    for stage in ("adopted", "published", "in_force", "no_longer_in_force", "withdrawn"):  # withdrawn: dossier-dates
+        assert dossier_invariants({**d, "stage": stage}) == []
+    assert dossier_invariants({**d, "adopted": None}) == []
+
+
+def test_a_transposition_deadline_before_its_act_is_an_error():
+    """2010/0208(COD), Directive (EU) 2015/412 of 11 March 2015: "the transposition deadline (17 October 2002) has
+    passed", a date Cellar carried over from Directive 2001/18/EC, on the application dates, the timeline and the 27
+    country rows of the implementation table."""
+    from pipeline.validate import dossier_invariants
+
+    act = {"celex": "32015L0412", "act_type": "directive", "date_document": "2015-03-11"}
+    d = _dossier(id="2010-0208", adopted="2015-03-02", acts=[act], timeline=[
+        {"kind": "ep_position", "date": "2015-01-13"}, {"kind": "transposition_deadline", "date": "2002-10-17"}],
+        application={"transposition_deadlines": ["2002-10-17"], "transposition": [
+            {"date": "2002-10-17", "kind": "deadline"}, {"date": "2014-01-01", "kind": "application"}]},
+        implementation={"celex": "32015L0412", "deadline": "2002-10-17"})  # fmt: skip
+    assert dossier_invariants(d) == [("deadline-before-act", "transposition deadline 2002-10-17 (application dates, "
+                                      "implementation of 32015L0412, timeline) is before the adoption of its act on 2015-03-11")]  # fmt: skip
+    # the fix: the date shown as another date, not as a deadline; an application date before the act is no deadline
+    d["application"]["transposition"][0]["kind"] = "other"
+    d["implementation"]["deadline"] = None
+    d["timeline"] = d["timeline"][:1]
+    assert dossier_invariants(d) == []
+    d["application"] = {"transposition_deadlines": ["2015-01-01"]}  # no classified list: the deadlines themselves
+    assert dossier_invariants(d)[0][1].startswith("transposition deadline 2015-01-01 (application dates)")
+
+
+def test_the_contract_check_runs_with_built_and_reports_each_kind_of_drift_once(built: Path, tmp_path: Path):
+    pub = _built_copy(built, tmp_path)
+    council = json.loads((pub / "council" / "index.json").read_text())
+    for cv in council:
+        cv["voting_rule"] = "bogus"
+    (pub / "council" / "index.json").write_text(json.dumps(council), encoding="utf-8")
+    (pub / "extra.json").write_text("[]", encoding="utf-8")
+    rep = check(FIX, public=pub, today=TODAY, built=True)
+    n = len(council)
+    assert rep.errors == [
+        'public council/index.json: CouncilVote[].voting_rule: "bogus" where "qmv" | "simple_majority" | "unanimity" | '
+        f'"unknown" expected ({n} time{"s" if n > 1 else ""}, e.g. council/index.json)'
+    ]
+    assert rep.errors_by_check == {"contract": 1}
+    assert rep.warnings["contract-unlisted"] == ["public/data/extra.json: no type in the file list of src/types/data.ts"]
+    assert check(FIX, public=pub, today=TODAY).errors == []  # without --built: not checked
