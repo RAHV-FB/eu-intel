@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -362,6 +363,64 @@ def test_a_refresh_deploys_only_code_that_ci_has_passed(tmp_path):
     git("checkout", "-q", "-b", "side", tested)
     other = commit({"src/app.ts": "2"}, "other code")
     assert deploy([other]) == "false"
+
+
+def test_the_refresh_pushes_with_a_token_it_never_stores_and_reapplies_its_data_on_a_moved_main(tmp_path):
+    # the checkout kept the push token in .git/config for the whole job, which runs npm packages (npm ci, vitest, the
+    # site build) since the data gate moved into it
+    s = steps("refresh.yml", "refresh")
+    assert s[0]["uses"].startswith("actions/checkout@") and s[0]["with"]["persist-credentials"] is False
+    step = s[named(s, "Commit and push snapshot")]
+    assert step["env"] == {"PUSH_TOKEN": "${{ github.token }}"}
+    assert all("PUSH_TOKEN" not in str(x.get("env", {})) for x in s if x is not step)
+
+    def sh(*args: str, cwd: Path = tmp_path) -> str:
+        cmd = ["git", "-c", "user.name=t", "-c", "user.email=t@example.org", "-c", "commit.gpgsign=false", *args]
+        return subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+
+    origin = tmp_path / "origin.git"
+    sh("init", "-q", "--bare", "-b", "main", str(origin))
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    _, commit = git_repo(seed)
+    manifest = {"a": {"fetched_at": "1"}, "b": {"fetched_at": "1"}}
+    commit({"data/snapshot/_manifest.json": json.dumps(manifest), "data/snapshot/a/x.json": "1",
+            "data/snapshot/b/y.json": "1", "src/app.ts": "1"}, "base")  # fmt: skip
+    sh("push", "-q", str(origin), "HEAD:main", cwd=seed)
+    job, other = tmp_path / "job", tmp_path / "other"
+    for clone in (job, other):
+        sh("clone", "-q", str(origin), str(clone))
+    # this run refreshed source a
+    (job / "data/snapshot/a/x.json").write_text("2", encoding="utf-8")
+    (job / "data/snapshot/_manifest.json").write_text(json.dumps(manifest | {"a": {"fetched_at": "2"}}), encoding="utf-8")
+    # meanwhile main moved: source b by hand, and code
+    (other / "data/snapshot/b/y.json").write_text("3", encoding="utf-8")
+    (other / "data/snapshot/_manifest.json").write_text(json.dumps(manifest | {"b": {"fetched_at": "3"}}), encoding="utf-8")
+    (other / "src/app.ts").write_text("3", encoding="utf-8")
+    sh("commit", "-q", "-am", "moved", cwd=other)
+    sh("push", "-q", "origin", "HEAD:main", cwd=other)
+    # a `git` that logs its arguments, then runs git
+    shim, log = tmp_path / "shim", tmp_path / "git.log"
+    shim.mkdir()
+    real = subprocess.run(["sh", "-c", "command -v git"], capture_output=True, text=True, check=True).stdout.strip()
+    (shim / "git").write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" >> "{log}"\nexec {real} "$@"\n', encoding="utf-8")
+    (shim / "git").chmod(0o755)
+    env = {"PUSH_TOKEN": "t0ken", "GITHUB_SERVER_URL": "https://github.com", "GITHUB_REPOSITORY": "o/r",
+           "GITHUB_RUN_ID": "1", "PATH": f"{shim}{os.pathsep}{os.environ['PATH']}"}  # fmt: skip
+
+    pushed = run_step(step["run"], job, env)["sha"]
+
+    show = lambda path: sh("show", f"main:{path}", cwd=origin)  # noqa: E731
+    assert sh("rev-parse", "main", cwd=origin) == pushed
+    assert (show("data/snapshot/a/x.json"), show("data/snapshot/b/y.json"), show("src/app.ts")) == ("2", "3", "3")
+    assert json.loads(show("data/snapshot/_manifest.json")) == {"a": {"fetched_at": "2"}, "b": {"fetched_at": "3"}}
+    header = "http.https://github.com/.extraheader=AUTHORIZATION: basic " + base64.b64encode(b"x-access-token:t0ken").decode()
+    calls = log.read_text(encoding="utf-8").splitlines()
+    subcommand = lambda call: call.replace(f"-c {header}", "").split()[0]  # noqa: E731
+    with_token = sorted({subcommand(c) for c in calls if header in c})
+    assert with_token == ["fetch", "push", "reset"]  # the push, and the re-apply's fetch and reset
+    assert {subcommand(c) for c in calls if header not in c} >= {"add", "commit", "config"}
+    assert "t0ken" not in (job / ".git" / "config").read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------- schedules

@@ -16,7 +16,9 @@ API, does not reach the unattended refresh and deploy before CI has run on it; D
 once a release passes it. Within those ranges the versions are pinned, with the sha256 hashes of their files, in
 `requirements.txt`, which the refresh, the deploy and CI install with `pip install --require-hashes -r requirements.txt`
 (the pipeline runs from the checkout, `python -m pipeline`): the refresh job holds a token that can push to `main`, and
-an unattended run installs only the files CI has tested. Dependabot proposes updates of the pins; CI runs on them before
+an unattended run installs only the files CI has tested. That token is not kept in the refresh's checkout
+(`persist-credentials: false`): only its push step gets it, so the npm packages the job also runs (`npm ci`, vitest, the
+site build) cannot read it. Dependabot proposes updates of the pins; CI runs on them before
 they reach `main`. To regenerate the file (Python 3.12, as the workflows use): `uv pip compile pyproject.toml
 --python-version 3.12 --generate-hashes -o requirements.txt` (or `pip-compile --generate-hashes`).
 

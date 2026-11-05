@@ -154,12 +154,15 @@ jobs:
       deploy: ${{ steps.tested.outputs.deploy }}
     steps:
       # main with every commit and tree of its history but only the current files (filter: blob:none): the push's
-      # re-apply and the check that CI passed on the pushed code compare commits and trees
+      # re-apply and the check that CI passed on the pushed code compare commits and trees. No credentials are kept in
+      # .git/config: this job runs npm packages (npm ci, vitest, the site build), and only the push step gets the token.
+      # Other fetches (git's lazy fetch of a file's contents) need none: the repository is public.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
           filter: blob:none
+          persist-credentials: false
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -320,7 +323,14 @@ jobs:
       - name: Commit and push snapshot
         id: push
         if: ${{ !cancelled() && steps.size.outcome == 'success' }}
+        env:
+          PUSH_TOKEN: ${{ github.token }}
         run: |
+          # The token for the push and the re-apply's fetch only, in the header actions/checkout would have stored
+          # (persist-credentials: false above); git passes -c settings on to the lazy fetches it starts itself.
+          basic=$(printf 'x-access-token:%s' "$PUSH_TOKEN" | base64 -w0)
+          echo "::add-mask::$basic"
+          authgit() { git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic" "$@"; }
           paths=(data/snapshot)
           [ -d data/state ] && paths+=(data/state)
           git add -A -- "${paths[@]}"
@@ -343,8 +353,8 @@ jobs:
             local ours base f
             ours=$(git rev-parse HEAD) || return 1
             base=$(git rev-parse HEAD~1) || return 1
-            git fetch -q origin main || return 1
-            git reset -q --hard FETCH_HEAD || return 1
+            authgit fetch -q origin main || return 1
+            authgit reset -q --hard FETCH_HEAD || return 1
             mapfile -d '' -t changed < <(git diff --name-only --no-renames -z "$base" "$ours" -- data/snapshot data/state)
             for f in "${changed[@]}"; do
               if git cat-file -e "$ours:$f" 2>/dev/null; then
@@ -384,7 +394,7 @@ jobs:
           }
 
           for attempt in 1 2 3 4 5; do
-            if git push origin HEAD:main; then
+            if authgit push origin HEAD:main; then
               echo "Pushed $(git rev-parse --short HEAD)." | tee -a "$GITHUB_STEP_SUMMARY"
               echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
               exit 0
