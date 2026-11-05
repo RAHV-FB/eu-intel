@@ -391,6 +391,20 @@ at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes n
 `python -m pipeline health` runs the source and site checks locally (`--meta FILE` for a downloaded `meta.json`,
 `--markdown` for the issue body, `--json`); it exits 1 when anything is wrong.
 
+## Known limitations
+
+- **Re-apply onto new code**: a refresh whose push is rejected because a code commit reached `main` re-applies its data on
+  that code without running the data gate again; the deploy runs the gate (the site is safe), but `main` can hold data
+  that fails its own code's gate until the next refresh.
+- **Pending deploys are replaced**: deploys share one concurrency group (`pages`) and GitHub keeps one pending run per
+  group, so a newer deploy cancels a pending one; a refresh whose deploy was replaced ends `cancelled` (the watchdog skips
+  it), and the replacement publishes its data only if it builds a commit that contains it (the "undeployed" check says so).
+- **Before `meta.json` loads**, the pages treat the Legislative Train's "blocked" as not current (a dossier's status badge
+  and official-status box, the home page's Stalled rows and featured badges), then switch: a brief flash, never a label
+  shown past its expiry.
+- **The home page's Stalled list** drops expired "blocked" rows by matching the build's wording (`badge: "Officially
+  blocked"` and the list's description, `src/pages/Home.tsx`); a change of that wording in `build_home` must change both.
+
 ## Free-plan limits
 
 Public repositories get unlimited standard GitHub-hosted runner minutes. Every job has a `timeout-minutes` cap
