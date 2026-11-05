@@ -353,16 +353,22 @@ or an empty heading; then nothing is uploaded or deployed, and the report is kep
 
 `watchdog.yml` keeps one issue titled "Data health" (label `data-health`) open while anything below is wrong, rewrites
 it with the current list on each run, comments when a problem is new (an edit alone notifies no one), and closes it once
-everything passes. It runs after each *Data refresh* and each *CI* run on `main`, daily at 19:41 UTC, and by hand
-(*Actions → Watchdog → Run workflow*). It writes nothing to the repository. It lists:
+everything passes. It runs after each *Data refresh*, each *CI* run on `main` and each *Deploy to GitHub Pages* run, daily
+at 19:41 UTC, and by hand (*Actions → Watchdog → Run workflow*). It writes nothing to the repository. It lists:
 
 - each source that failed in its last run or is stale: its last successful retrieval is older than its threshold in
   `pipeline/freshness.py` (EP votes and procedures, EUR-Lex, Council 9 days; MEPs 14; the others 35), as
   `python -m pipeline health` reports from `main`'s `_manifest.json`;
-- a failed latest *Data refresh* (with its failed job and step: a failed data gate, push or deploy);
+- a failed latest *Data refresh* (with its failed job and step: a failed data gate, push or deploy). The latest is the
+  latest that ran: a scheduled run its plan skipped concludes "success" without doing anything and is passed over
+  (`scripts/latest_run.py`), so it cannot hide a failure of the run before it;
 - red CI on `main` (the latest CI run for a push);
+- a failed latest deploy after CI or by hand (*Deploy to GitHub Pages*), or one cancelled with no later deploy that replaced
+  it; a refresh's own deploy is part of its run (above);
+- data on `main` that the live site lacks: a core source retrieved on `main` after the live site's copy of it, more than 6
+  hours ago (`--deploy-grace-hours`): the refresh's deploy did not run (it waits for CI to pass on `main`'s code) or failed;
 - the live site's data overdue: the newest retrieval in `https://rahv-fb.github.io/eu-intel/data/meta.json` (or the
-  repository variable `SITE_URL`) is older than 8 days, whether the schedule was late, dropped or disabled or the refresh
+  repository variable `SITE_URL`; fetched with a query string, past Pages' 10-minute cache) is older than 8 days, whether the schedule was late, dropped or disabled or the refresh
   or its deploy failed. This also fails the watchdog run, so GitHub sends its own notification;
 - the repository past 750 MB (GitHub recommends under 1 GB; each refresh commit adds to every clone).
 

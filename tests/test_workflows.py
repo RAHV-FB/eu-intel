@@ -6,6 +6,7 @@ import base64
 import json
 import os
 import re
+import shutil
 import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -494,11 +495,14 @@ def test_only_the_watchdog_writes_issues_and_it_writes_nothing_else():
     on = triggers("watchdog.yml")
     minute, hour, *rest = on["schedule"][0]["cron"].split()
     assert rest == ["*", "*", "*"] and minute not in ("0", "00", "30") and hour.isdigit()  # daily, off the hour
-    assert on["workflow_run"] == {"workflows": ["CI", "Data refresh"], "types": ["completed"], "branches": ["main"]}
+    assert on["workflow_run"]["workflows"] == ["CI", "Data refresh", "Deploy to GitHub Pages"]
+    assert on["workflow_run"]["types"] == ["completed"] and on["workflow_run"]["branches"] == ["main"]
     s = steps("watchdog.yml", "health")
     check = s[named(s, "Check")]["run"]
-    assert '"${site%/}/data/meta.json"' in check and "python -m pipeline health" in check
-    assert "latest refresh.yml" in check and "latest ci.yml push" in check
+    assert '"${site%/}/data/meta.json?watchdog=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"' in check
+    assert "python -m pipeline health" in check
+    assert 'latest refresh.yml --job "Fetch, validate, gate, commit"' in check and "latest ci.yml --event push" in check
+    assert 'latest pages.yml --job "Build site" --cancelled-if-last' in check
     issue = s[named(s, "Open, update or close the issue")]["run"]
     for command in ("gh issue create", "gh issue edit", "gh issue close", 'gh label create "$LABEL"'):
         assert command in issue
@@ -523,12 +527,165 @@ def test_the_health_check_lists_failed_and_stale_sources_and_the_workflows_probl
     assert [p["key"] for p in report["problems"]] == ["source:council", "source:train"]  # stale; failed (not stale)
     assert main(["health", "--manifest", str(manifest), "--meta", str(meta), "--problem", "ci=CI fails", "--markdown"]) == 1
     body = capsys.readouterr().out
-    assert body.startswith("<!-- data-health: ci,source:council,source:train,site -->\n")
+    # main's ep_votes (1 day old) is newer than the live site's (10 days): not deployed
+    assert body.startswith("<!-- data-health: ci,source:council,source:train,site,undeployed -->\n")
     assert "- CI fails" in body and "**The live site's data is overdue**" in body
     healthy = tmp_path / "healthy.json"
     healthy.write_text(json.dumps({"ep_votes": {"status": "partial", "fetched_at": iso(now)}}), encoding="utf-8")
     assert main(["health", "--manifest", str(healthy), "--meta", str(meta), "--max-age-days", "11"]) == 0
     assert main(["health", "--manifest", str(healthy), "--problem", "not a key=x"]) == 2
+
+
+FAKE_GH = r"""#!/usr/bin/env python3
+import json, os, subprocess, sys
+args = sys.argv[1:]
+data = json.load(open(os.environ["FAKE_GH_DATA"]))
+with open(os.environ["FAKE_GH_LOG"], "a") as log:
+    log.write(" ".join(args) + "\n")
+jq = args[args.index("--jq") + 1] if "--jq" in args else None
+if args[:2] == ["run", "list"]:
+    out = data["runs"].get(args[args.index("--workflow") + 1], [])
+elif args[:2] == ["run", "view"]:
+    out = {"jobs": data["jobs"].get(args[2], [])}
+elif args[:1] == ["api"]:
+    out = data.get("api", {})
+else:
+    out = {}
+text = json.dumps(out)
+if jq:
+    text = subprocess.run(["jq", "-r", jq], input=text, capture_output=True, text=True, check=True).stdout
+sys.stdout.write(text if text.endswith("\n") else text + "\n")
+"""
+
+
+def gh_serving(tmp_path: Path, data: dict) -> tuple[dict[str, str], Path]:
+    """A `gh` on PATH that answers `run list`, `run view` and `api` from `data` (applying --jq with jq); and its log."""
+    bin_dir, log, fixture = tmp_path / "bin-gh", tmp_path / "gh.log", tmp_path / "gh.json"
+    bin_dir.mkdir(exist_ok=True)
+    (bin_dir / "gh").write_text(FAKE_GH, encoding="utf-8")
+    (bin_dir / "gh").chmod(0o755)
+    fixture.write_text(json.dumps(data), encoding="utf-8")
+    log.write_text("", encoding="utf-8")
+    env = {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "FAKE_GH_DATA": str(fixture), "FAKE_GH_LOG": str(log)}
+    return env, log
+
+
+def run_(i: int, conclusion: str, status: str = "completed") -> dict:
+    return {"databaseId": i, "status": status, "conclusion": conclusion, "url": f"https://x/runs/{i}", "headSha": f"{i:040d}"}
+
+
+def test_the_watchdog_judges_the_latest_run_that_did_its_work(tmp_path):
+    # the 22:37 run its plan skips concludes "success" and hid a failed 05:17 run; deploys after CI were not watched
+    refresh_job, build_job = "Fetch, validate, gate, commit", "Build site"
+    skipped = lambda name: [{"name": "Plan", "conclusion": "success"}, {"name": name, "conclusion": "skipped"}]  # noqa: E731
+    ran = lambda name, c="failure": [{"name": "Plan", "conclusion": "success"}, {"name": name, "conclusion": c}]  # noqa: E731
+    data = {
+        "runs": {
+            "refresh.yml": [run_(9, "success"), run_(8, "cancelled"), run_(7, "failure"), run_(6, "success")],
+            "ci.yml": [run_(19, "cancelled"), run_(18, "failure")],
+            "pages.yml": [run_(29, "", "in_progress"), run_(28, "cancelled"), run_(27, "success")],
+        },
+        "jobs": {"9": skipped(refresh_job), "7": ran(refresh_job), "28": ran(build_job, "cancelled"), "27": ran(build_job, "success")},
+    }
+    env, log = gh_serving(tmp_path, data)
+
+    def latest(*args: str) -> str:
+        cmd = ["python", str(ROOT / "scripts" / "latest_run.py"), *args]
+        return subprocess.run(cmd, env={**os.environ, **env}, check=True, capture_output=True, text=True).stdout.strip()
+
+    assert latest("refresh.yml", "--job", refresh_job).split()[:2] == ["failure", "7"]  # not 9 (skipped), not 8
+    assert latest("ci.yml", "--event", "push").split()[:2] == ["failure", "18"]
+    assert "--event push" in log.read_text(encoding="utf-8")
+    # a deploy replaced by a later one (29, still running) is not a failure; the last word is the success before it
+    assert latest("pages.yml", "--job", build_job, "--cancelled-if-last").split()[:2] == ["success", "27"]
+    data["runs"]["pages.yml"] = data["runs"]["pages.yml"][1:]  # nothing came after the cancelled deploy
+    env, _ = gh_serving(tmp_path, data)
+    assert latest("pages.yml", "--job", build_job, "--cancelled-if-last").split()[:2] == ["cancelled", "28"]
+    data["jobs"]["28"] = skipped(build_job)  # a deploy after a CI run that deploys nothing did nothing
+    env, _ = gh_serving(tmp_path, data)
+    assert latest("pages.yml", "--job", build_job, "--cancelled-if-last").split()[:2] == ["success", "27"]
+    data["runs"]["refresh.yml"] = [run_(5, "success")]
+    data["jobs"]["5"] = ran(refresh_job, "success")
+    env, _ = gh_serving(tmp_path, data)
+    assert latest("refresh.yml", "--job", refresh_job).split()[:2] == ["success", "5"]
+    data["runs"] = {}
+    env, _ = gh_serving(tmp_path, data)
+    assert latest("refresh.yml", "--job", refresh_job) == ""
+
+
+def test_the_health_check_reports_data_on_main_the_live_site_lacks(tmp_path, capsys):
+    from pipeline.__main__ import main
+    from pipeline.freshness import CORE_SOURCES
+
+    now = datetime.now(UTC)
+    iso = lambda d: d.strftime("%Y-%m-%dT%H:%M:%SZ")  # noqa: E731
+    on_main = {s: {"status": "ok", "fetched_at": iso(now - timedelta(hours=10))} for s in CORE_SOURCES}
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps(on_main), encoding="utf-8")
+
+    def keys(live_hours: float, *args: str) -> list[str]:
+        sources = [{"id": s, "fetched_at": iso(now - timedelta(hours=live_hours))} for s in CORE_SOURCES]
+        meta = tmp_path / "meta.json"
+        meta.write_text(json.dumps({"built_at": iso(now), "sources": sources}), encoding="utf-8")
+        main(["health", "--manifest", str(manifest), "--meta", str(meta), "--json", *args])
+        return [p["key"] for p in json.loads(capsys.readouterr().out)["problems"]]
+
+    assert keys(10) == []  # the live site has main's data
+    assert keys(7 * 24) == ["undeployed"]  # main refreshed 10 h ago, the site still has last week's
+    assert keys(7 * 24, "--deploy-grace-hours", "12") == []  # within the grace period
+    assert keys(5) == []  # the site is newer than main's manifest (a deploy of a later commit)
+
+
+def test_the_watchdog_check_reports_a_failed_deploy_and_undeployed_data(tmp_path):
+    # the Check step itself, as the job runs it: its checkout (pipeline, the manifest, the run picker), `gh`, `curl`
+    if not shutil.which("jq"):
+        pytest.skip("jq is not installed")
+    s = steps("watchdog.yml", "health")
+    check = s[named(s, "Check")]
+    work = tmp_path / "checkout"
+    shutil.copytree(ROOT / "pipeline", work / "pipeline", ignore=shutil.ignore_patterns("__pycache__"))
+    (work / "scripts").mkdir()
+    shutil.copy(ROOT / "scripts" / "latest_run.py", work / "scripts" / "latest_run.py")
+    now = datetime.now(UTC)
+    iso = lambda d: d.strftime("%Y-%m-%dT%H:%M:%SZ")  # noqa: E731
+    from pipeline.freshness import CORE_SOURCES
+
+    fresh = {s: {"status": "ok", "fetched_at": iso(now - timedelta(hours=10))} for s in CORE_SOURCES}
+    (work / "data" / "snapshot").mkdir(parents=True)
+    (work / "data" / "snapshot" / "_manifest.json").write_text(json.dumps(fresh), encoding="utf-8")
+    live = {"built_at": iso(now - timedelta(days=3)),
+            "sources": [{"id": s, "fetched_at": iso(now - timedelta(days=3))} for s in CORE_SOURCES]}  # fmt: skip
+    meta_src = tmp_path / "live-meta.json"
+    meta_src.write_text(json.dumps(live), encoding="utf-8")
+    curl_log = tmp_path / "curl.log"
+    bin_dir = tmp_path / "bin-curl"
+    bin_dir.mkdir()
+    (bin_dir / "curl").write_text(
+        f'#!/bin/sh\nfor a; do echo "$a" >> "{curl_log}"; done\nwhile [ "$1" != -o ]; do shift; done\ncp "{meta_src}" "$2"\n',
+        encoding="utf-8",
+    )
+    (bin_dir / "curl").chmod(0o755)
+    data = {
+        "runs": {"refresh.yml": [run_(9, "success")], "ci.yml": [run_(18, "success")], "pages.yml": [run_(28, "failure")]},
+        "jobs": {"9": [{"name": "Fetch, validate, gate, commit", "conclusion": "success"}],
+                 "28": [{"name": "Build site", "conclusion": "failure",
+                         "steps": [{"name": "Smoke-test the site on its own data (Chromium)", "conclusion": "failure"}]}]},
+        "api": {"size": 1000},
+    }  # fmt: skip
+    env, _ = gh_serving(tmp_path, data)
+    env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+    runner_temp = tmp_path / "runner-temp"
+    runner_temp.mkdir()
+    env |= {k: str(v) for k, v in workflow("watchdog.yml")["env"].items()} | {
+        "RUNNER_TEMP": str(runner_temp), "GITHUB_RUN_ID": "77", "GITHUB_RUN_ATTEMPT": "1", "GITHUB_REPOSITORY": "o/r",
+        "RUN_URL": "https://x/runs/77", "SITE_URL": ""}  # fmt: skip
+    out = run_step(check["run"], work, env)
+    assert out == {"healthy": "false", "site_ok": "true"}
+    report = json.loads((runner_temp / "health.json").read_text(encoding="utf-8"))
+    assert [p["key"] for p in report["problems"]] == ["deploy", "undeployed"]
+    deploy = report["problems"][0]["text"]
+    assert "(failure, [run 28](https://x/runs/28)" in deploy and "Smoke-test the site on its own data (Chromium)" in deploy
+    assert "data/meta.json?watchdog=77-1" in curl_log.read_text(encoding="utf-8")  # past the CDN's 10-minute cache
 
 
 # ---------------------------------------------------------------- supply chain
