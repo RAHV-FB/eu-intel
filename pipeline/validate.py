@@ -988,8 +988,10 @@ def margin_contradictions(v: dict) -> list[str]:
 
 
 def _floors(snapshot: Path) -> dict[tuple[str, str], int] | None:
-    """MIN_RECORDS for the committed snapshot; a snapshot somewhere else (a test fixture) has none."""
-    return MIN_RECORDS if snapshot == SNAPSHOT else None
+    """MIN_RECORDS for the committed snapshot; a snapshot somewhere else (a test fixture) has none. Compared with the
+    repository's own data/snapshot (ROOT), not with the SNAPSHOT name bound when this module was imported: tests point
+    pipeline.snapshot.SNAPSHOT at a fixture, and a first import inside such a test bound that fixture as "committed"."""
+    return MIN_RECORDS if snapshot.resolve() == (ROOT / "data" / "snapshot").resolve() else None
 
 
 def load_baseline(path: Path | None = None) -> tuple[dict[str, int], dict[str, list[str]]]:
