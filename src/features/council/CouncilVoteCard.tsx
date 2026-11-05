@@ -110,10 +110,11 @@ function blockingRule(a: CouncilAssessment, notParticipating: number, participat
   return null;
 }
 
-/** Percentages may arrive as 0–100 or as 0–1 fractions; normalise for display. */
+/** Percentages may arrive as 0–100 or as 0–1 fractions; normalise for display. To 0.01, as the Council's voting results
+ * print them ("85,52 %") and as the build gives them: rounding again to 0.1 would show a share of 64.96% as 65%. */
 function pctValue(v: number | null | undefined, scale: number): string | null {
   if (v == null) return null;
-  return `${(v * scale).toLocaleString('en-GB', { maximumFractionDigits: 1 })}%`;
+  return `${(v * scale).toLocaleString('en-GB', { maximumFractionDigits: 2 })}%`;
 }
 
 export function CouncilVoteCard({
@@ -290,7 +291,13 @@ export function CouncilVoteCard({
                     Member States (TFEU Art. 238(3)).
                   </li>
                 )}
-                {a.adopted_by_rule === true && <li>On these figures, both qualified-majority thresholds were met.</li>}
+                {a.adopted_by_rule === true && a.deemed_attained && (
+                  <li>
+                    The population threshold was not met, but the Member States not voting in favour were too few to form a blocking
+                    minority, so the qualified majority is deemed attained{a.legal_basis ? ` (${a.legal_basis})` : ''}.
+                  </li>
+                )}
+                {a.adopted_by_rule === true && !a.deemed_attained && <li>On these figures, both qualified-majority thresholds were met.</li>}
                 {a.adopted_by_rule === false && <li>On these figures, the qualified-majority thresholds were not met.</li>}
                 {a.blocking_minority_existed === true && (
                   <li>The Member States not voting in favour formed a blocking minority{bmRule ? ` (${bmRule})` : ''}.</li>

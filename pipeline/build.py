@@ -1589,6 +1589,9 @@ def council_assessment(a: dict | None) -> dict | None:
         "population_for_pct": a.get("population_for_pct"),
         "population_required_pct": a.get("population_required_pct"),
         "adopted_by_rule": a.get("adopted_by_rule"),
+        # QMV: the population criterion is not met, but too few Member States did not vote in favour to form a
+        # blocking minority, so the qualified majority is deemed attained (TEU Art. 16(4), TFEU Art. 238(3)(a))
+        "deemed_attained": bool(a.get("deemed_attained")),
         "blocking_minority_existed": a.get("blocking_minority_formed", a.get("blocking_minority_existed")),
         "single_state_veto_possible": bool(a.get("single_state_veto_possible"))
         and a.get("rule") == "unanimity",
@@ -5197,7 +5200,7 @@ class Builder:
         from pipeline.analysis.activity import is_discharge_vote
 
         # close final votes as the /votes page defines them (CLOSE_RELATIVE), newest first; over all the votes
-        # covered, as few final votes are that close (one in the 12 months to October 2026)
+        # covered, as few final votes are that close (two in the 12 months to October 2026: 181828 and 193557)
         close = [
             v for v in self.vote_summary.values()
             if v["kind"] == "final" and v.get("margin") and v["outcome"] in ("adopted", "rejected")

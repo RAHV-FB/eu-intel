@@ -12,7 +12,7 @@ import { CloseVoteMethod, MarginText, OutcomeBadge } from '../features/votes/com
 import { BallotList, CountryBreakdownTable, GroupBreakdownTable } from '../features/votes/Breakdowns';
 import { PartyBreakdown } from '../features/votes/PartyBreakdown';
 import { LangText, VoteTitle } from '../features/votes/VoteTitle';
-import { DETAIL_EXPLAINER, FINAL_ROLE_EXPLAINER, KIND_EXPLAINER, KIND_LABEL, POSITION_LABEL } from '../features/votes/labels';
+import { DETAIL_EXPLAINER, FINAL_ROLE_EXPLAINER, KIND_EXPLAINER, KIND_LABEL, POSITION_LABEL, noMarginText } from '../features/votes/labels';
 
 const OUTCOME_BASIS_TEXT: Record<string, string> = {
   published: 'Outcome as published in Parliament’s open data',
@@ -172,7 +172,7 @@ export default function Vote() {
               </span>
             </>
           ) : decided ? (
-            <MarginText margin={null} />
+            <span className="meta">{noMarginText(v)}</span>
           ) : (
             <span className="meta">No margin is shown because the outcome is not established.</span>
           )}

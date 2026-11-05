@@ -711,6 +711,9 @@ export interface CouncilAssessment {
   population_for_pct?: number | null;
   population_required_pct?: number | null; // percentage 0–100, e.g. 65
   adopted_by_rule?: boolean | null;
+  // QMV: adopted although the population criterion was not met, because the Member States not in favour were too few to
+  // form a blocking minority (at least four under TEU Art. 16(4)): the qualified majority is "deemed attained"
+  deemed_attained?: boolean;
   blocking_minority_existed?: boolean | null;
   single_state_veto_possible: boolean; // true only under unanimity
   note: string;

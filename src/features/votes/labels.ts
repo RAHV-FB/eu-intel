@@ -1,4 +1,6 @@
-import type { BallotPosition, EpVoteSummary, FinalRole, PositionCounts, VoteKind, VoteKindDetail, VoteOutcome } from '../../types/data';
+import type { BallotPosition, EpVoteDetail, EpVoteSummary, FinalRole, PositionCounts, VoteKind, VoteKindDetail, VoteOutcome } from '../../types/data';
+
+type MajorityRule = NonNullable<EpVoteDetail['majority_rule']>;
 
 export const OUTCOME_LABEL: Record<VoteOutcome, string> = {
   adopted: 'Adopted',
@@ -98,6 +100,21 @@ export const CLOSE_RELATIVE = 0.05;
 
 export function isClose(v: Pick<EpVoteSummary, 'margin' | 'outcome'>): boolean {
   return !!v.margin && (v.outcome === 'adopted' || v.outcome === 'rejected') && Math.abs(v.margin.relative) <= CLOSE_RELATIVE;
+}
+
+/** Why a vote with an established outcome shows no margin (pipeline/analysis/ep_margin.py computes one only from the
+ * counts for and against, the rule, and, for a rule counting Parliament's component Members, their number that day). */
+export const NO_MARGIN = {
+  counts: 'No margin shown: the numbers of votes for and against are not recorded.',
+  members:
+    'No margin shown: this vote needed a majority of Parliament’s component Members, and Parliament’s membership data do not establish how many Members were in office on its day.',
+  rule: 'No margin shown: we have not established which majority this vote required.',
+} as const;
+
+export function noMarginText(v: { for: number | null; against: number | null; majority_rule?: MajorityRule | null }): string {
+  if (v.for == null || v.against == null) return NO_MARGIN.counts;
+  if (v.majority_rule === 'component_members' || v.majority_rule === 'two_thirds_cast') return NO_MARGIN.members;
+  return NO_MARGIN.rule;
 }
 
 export function outcomeTone(o: VoteOutcome): string {
