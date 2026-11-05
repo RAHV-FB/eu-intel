@@ -484,8 +484,9 @@ export default function About() {
               Our membership and voting data covers the parliamentary terms listed under coverage; earlier periods are not fully included.
             </li>
             <li>
-              The data is refreshed about once a week; a refresh can be late or skipped. The homepage and the footer give the date to
-              which procedures, votes and acts are current, and name any source that is not up to date. The site is not a live feed.
+              Procedures, votes, adopted acts and planned dates are refreshed twice a week (Mondays and Fridays), the other sources
+              weekly; a refresh can be late or skipped. The homepage and the footer give the date to which procedures, votes and acts
+              are current, and name any source that is not up to date. The site is not a live feed.
             </li>
           </ul>
           <p>

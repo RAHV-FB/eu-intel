@@ -54,8 +54,9 @@ lists (`SOURCES` in `build.py`, one per manifest entry), identifies the snapshot
 ## Update frequency and refresh
 
 EP data changes after each plenary session and committee meeting; Cellar is updated daily; the Legislative Train
-monthly. A weekly scheduled refresh is sufficient for v1 and stays well within the free GitHub Actions allowance.
-Scheduled runs are best-effort (a second Monday run is skipped if data was committed in the last 20 hours); the
+monthly. A weekly scheduled refresh of every source (Mondays), plus a light one on Fridays (EP procedures, EP votes,
+EUR-Lex, Council and the planned dates, since Parliament votes Tuesday to Thursday), stays well within the free GitHub
+Actions allowance. Scheduled runs are best-effort (a run is skipped if the core sources were retrieved in the last 20 hours); the
 site shows the real retrieval timestamp per source. The weekly run is incremental for EP procedures, EP votes and
 the Legislative Train, and re-reads each of their stored records at least every 8 weeks on a rotation; the run in
 the first week of each month is a full refresh, which re-reads every stored record, as does a change of a source's

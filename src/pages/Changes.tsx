@@ -114,8 +114,8 @@ export default function Changes() {
         <p className="meta chg__scope">
           {firstRecorded ? (
             <>
-              Changes are recorded when the data is refreshed, weekly, since {formatDate(firstRecorded)}. Steps already in the
-              records before then are listed by their own date.
+              Changes are recorded when the data is refreshed (twice a week), since {formatDate(firstRecorded)}. Steps already in
+              the records before then are listed by their own date.
             </>
           ) : (
             <>Steps are listed by their own date: when they appeared in the official records is not tracked.</>
@@ -197,7 +197,7 @@ export default function Changes() {
 
           {selected.length === 0 ? (
             <EmptyState title="No changes recorded for these filters">
-              <p>Try another topic or kind of change. Changes are recorded when the data is refreshed, weekly.</p>
+              <p>Try another topic or kind of change. Changes are recorded when the data is refreshed, twice a week.</p>
             </EmptyState>
           ) : (
             shown.map((w) => (

@@ -43,7 +43,7 @@ npm run dev                      # http://localhost:5173/
 ```
 
 `python -m pipeline fetch [source …]` refreshes `data/snapshot/` from the official APIs (network; slow; polite
-rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation optouts train agenda`. A source
+rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation optouts lawcontext train agenda`. A source
 that fails keeps its previous files; `data/snapshot/_manifest.json` records each source's status and last
 successful fetch. You rarely need this locally: the snapshot is committed and refreshed weekly by the *Data refresh*
 workflow (below). The weekly refresh is incremental for EP procedures, EP votes and the Legislative Train: new, open
@@ -98,7 +98,8 @@ check, and the link check depends on third-party sites).
 
 - **Weekly refresh** ([refresh.yml](.github/workflows/refresh.yml)): Mondays 05:17 UTC, a second try at 22:37 UTC
   unless data was committed in the last 20 hours (schedules are best effort), a full refresh in the first week of each
-  month, and on demand from the Actions tab. Fetch → validate per source → the data gate (strict build recording
+  month, a light refresh on Fridays at 05:17 UTC (EP procedures, EP votes, EUR-Lex, Council and the planned dates:
+  Parliament votes Tuesday to Thursday), and on demand from the Actions tab. Fetch → validate per source → the data gate (strict build recording
   verified activity, validation of the built data, its dated wording, site build, privacy, size) → commit
   `data/snapshot/` and `data/state/` → deploy that commit. A source whose new data fails validation gets its previous
   files and manifest entry back from the last commit; if the data then fails the gate, nothing is committed or deployed.
