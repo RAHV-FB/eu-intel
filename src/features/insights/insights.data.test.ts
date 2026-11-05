@@ -4,8 +4,9 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { DossierSummary } from '../../types/data';
-import { legislativePatterns } from './analysis';
+import type { DossierSummary, EpVoteSummary } from '../../types/data';
+import { isClose } from '../votes/labels';
+import { CLOSE_FINAL_VOTES, legislativePatterns, parliamentPatterns } from './analysis';
 
 const DATA = new URL('../../../public/data/', import.meta.url);
 const built = existsSync(new URL('dossiers/index.json', DATA));
@@ -38,5 +39,13 @@ describe.skipIf(!built)('Insights on the built index', () => {
     for (const f of files)
       if (f.started && !left.has(f.id)) byYear.set(Number(f.started.slice(0, 4)), (byYear.get(Number(f.started.slice(0, 4))) ?? 0) + 1);
     for (const t of x.timeline) expect(t.introduced, String(t.year)).toBe(byYear.get(t.year) ?? 0);
+  });
+
+  it('links the count of close final votes to a list of the same votes', () => {
+    const votes = read<EpVoteSummary[]>('votes/index.json');
+    const q = new URL(CLOSE_FINAL_VOTES, 'https://example.org').searchParams;
+    const listed = votes.filter((v) => (!q.get('kind') || v.kind === q.get('kind')) && (q.get('close') !== '1' || isClose(v)));
+    expect(listed.length).toBe(parliamentPatterns(votes).close);
+    expect(votes.filter(isClose).length).toBeGreaterThan(listed.length); // close votes of other kinds exist
   });
 });

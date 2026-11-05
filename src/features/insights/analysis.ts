@@ -86,6 +86,9 @@ export function notCountedText(x: Pick<ReturnType<typeof legislativePatterns>, '
   return `The bars count ${n(x.counted)} of the ${n(x.total)} files listed: ${why.join('; ')}.`;
 }
 
+/** The /votes list of the votes `parliamentPatterns` counts as close: final votes only, as the home page's list. */
+export const CLOSE_FINAL_VOTES = '/votes?kind=final&close=1';
+
 export function parliamentPatterns(votes: Vote[]) {
   // 'Final' is a type of Parliament vote; it is not identical to the adoption of EU law.
   const final = votes.filter((v) => v.kind === 'final');

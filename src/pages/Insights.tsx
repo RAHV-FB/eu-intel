@@ -5,7 +5,7 @@ import { useData } from '../lib/data';
 import { formatDateTime, formatNumber } from '../lib/format';
 import { ErrorState, Loading } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
-import { councilPatterns, legislativePatterns, notCountedText, parliamentPatterns } from '../features/insights/analysis';
+import { CLOSE_FINAL_VOTES, councilPatterns, legislativePatterns, notCountedText, parliamentPatterns } from '../features/insights/analysis';
 import '../features/insights/insights.css';
 
 const percentage = (part: number, total: number) => total ? `${(100 * part / total).toFixed(1)}%` : '—';
@@ -131,7 +131,7 @@ export default function Insights() {
                 <div className="insights-proportion" role="img" aria-label={`${parliament.close} close decisions out of ${recordedDecisions} final-text votes with known margins`}>
                   <span style={{ width: barWidth(parliament.close, recordedDecisions) }} />
                 </div>
-                <p className="insights-proportion__caption"><strong>{percentage(parliament.close, recordedDecisions)}</strong> of final-text votes with an established margin meet the site's <Link to="/votes?close=1">close-vote criterion</Link>.</p>
+                <p className="insights-proportion__caption"><strong>{percentage(parliament.close, recordedDecisions)}</strong> of final-text votes with an established margin meet the site's <Link to={CLOSE_FINAL_VOTES}>close-vote criterion</Link>.</p>
                 <p className="insights-panel__footnote">The denominator excludes votes with no determinable margin. Votes without recorded outcomes are not treated as defeats. A close vote is not evidence of political controversy or a particular policy's merit.</p>
               </div>
             </section>

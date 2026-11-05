@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { councilPatterns, legislativePatterns, notCountedText, parliamentPatterns } from './analysis';
+import { isClose } from '../votes/labels';
+import { CLOSE_FINAL_VOTES, councilPatterns, legislativePatterns, notCountedText, parliamentPatterns } from './analysis';
 
 describe('Insights: counts from source fields, no inferred outcomes', () => {
   it('keeps withdrawn, repealed and unknown legislation separate', () => {
@@ -67,6 +68,21 @@ describe('Insights: counts from source fields, no inferred outcomes', () => {
     expect(x.withMargin).toBe(0);
     expect(x.close).toBe(0);
     expect(x.years[0]).toEqual({ year: '2025', count: 2 });
+  });
+
+  it('links its count of close final votes to the list of exactly those votes', () => {
+    const margin = (relative: number) => ({ rule: 'votes_cast', rule_label: '', threshold: 301, distance: 1, relative, label: '' }) as const;
+    const votes = [
+      { kind: 'final', outcome: 'adopted', margin: margin(0.01), date: '2025-01-01', has_ballots: true, id: '1', display_title: 'Text' },
+      { kind: 'final', outcome: 'adopted', margin: margin(0.2), date: '2025-01-02', has_ballots: true, id: '2', display_title: 'Text' },
+      { kind: 'motion', outcome: 'rejected', margin: margin(-0.01), date: '2025-01-03', has_ballots: true, id: '3', display_title: 'Motion' },
+    ] as const;
+    const x = parliamentPatterns([...votes]);
+    expect([x.withMargin, x.close]).toEqual([2, 1]);
+    // the /votes page's kind and close filters (src/pages/Votes.tsx), applied to the link's address
+    const q = new URL(CLOSE_FINAL_VOTES, 'https://example.org').searchParams;
+    const listed = votes.filter((v) => (!q.get('kind') || v.kind === q.get('kind')) && (q.get('close') !== '1' || isClose(v)));
+    expect(listed.map((v) => v.id)).toEqual(['1']);
   });
 
   it('uses recorded positions as denominator, excluding non-participation', () => {
