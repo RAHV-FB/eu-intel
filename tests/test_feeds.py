@@ -187,6 +187,28 @@ def test_text_a_feed_cannot_hold_is_left_out():
     assert root.find(f"{ATOM}entry/{ATOM}title").text == "Union support for internal security: Parliament <committee> & co"
 
 
+def test_a_feed_links_only_to_web_addresses_and_text_never_leaves_its_element():
+    # The site opens a source's address only if it is http(s) (src/lib/format.ts safeUrl); the feeds linked whatever a
+    # record gave: an item with no page on the site linked its source's address as the entry's own link, so a
+    # javascript: or data: address from a source was a link in every feed reader.
+    breakout = '</title></entry><entry><title>forged</title>"><script>alert(1)</script>'
+    no_page = {**OTHER_FILE, "id": "ev:council-x", "dossier_id": None, "title": f"Council vote {breakout}",
+               "source": {"institution": "Council", "url": "javascript:alert(document.domain)"}}  # fmt: skip
+    via = {**PUB, "source": {**EP_PUB, "url": " JaVa\tScRiPt:alert(1)"}}
+    data = {**OTHER_FILE, "source": {"institution": "EP", "url": "data:text/html,<script>alert(1)</script>"}}
+    quoted = {**ENTRY, "source": {**EUR_LEX, "url": 'https://eur-lex.europa.eu/x?a="><script>alert(1)</script>'}}
+    root = ET.fromstring(_atom([no_page, via, data, quoted]))  # well-formed: nothing broke out of its element
+    entries = root.findall(f"{ATOM}entry")
+    assert len(entries) == 4 and [e.findtext(f"{ATOM}title") for e in entries].count("forged") == 0
+    assert entries[0].findtext(f"{ATOM}title").endswith(breakout)  # the crafted title is text, as given
+    hrefs = [link.get("href") for link in root.iter(f"{ATOM}link")]
+    assert all(h.startswith(("https://", "http://")) for h in hrefs), hrefs
+    # the entry with no page and no web address links the site; an attribute keeps its quotes and brackets as text
+    assert entries[0].find(f"{ATOM}link[@rel='alternate']").get("href") == SITE
+    assert entries[0].find(f"{ATOM}link[@rel='via']") is None
+    assert entries[3].find(f"{ATOM}link[@rel='via']").get("href") == quoted["source"]["url"]
+
+
 # ------------------------------------------------------------------------------- the built feeds
 @pytest.fixture(scope="module")
 def out(tmp_path_factory: pytest.TempPathFactory) -> Path:
