@@ -27,7 +27,9 @@ publish that serves missing routes or empty data is treated as a failed release.
 ### The data gate
 
 What data must pass before it reaches `main` (the refresh) or the site (the deploy), and what CI checks on each commit's
-data: `pipeline validate` (the snapshot) → the strict data build (`EU_INTEL_STRICT=1`) → `pipeline validate --built` →
+data: `pipeline validate` (the snapshot) → the strict data build (`EU_INTEL_STRICT=1`) → `pipeline validate --built` (exit 1
+on any error class of `pipeline/validate.py`, `activity-duplicate` among them: one step reported twice in the activity feed,
+once from a record the source has corrected; and on an integrity warning class above `pipeline/validate_baseline.json`) →
 `src/lib/format.test.ts` on that build (every date a next step, status explanation or timeline step states as still ahead
 is restated correctly once it has passed, and no dated wording is unknown to `src/lib/format.ts`) → site build → privacy
 check → size check (fails over 900 MB; Pages allows 1 GB).
@@ -260,8 +262,9 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
    `built_at` moves with every deploy, so it does not show that the data is the good one.
 5. **While you prepare that, an earlier version can be deployed again.** *Actions → Deploy to GitHub Pages*, an earlier successful
    run, *Re-run all jobs* (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`,
-   then `gh run rerun <run-id>`). A re-run builds the commit of the original run (a re-run keeps the original event and commit),
-   so it deploys that commit's data; GitHub allows re-runs for 30 days. It changes what is published only: `main`
+   then `gh run rerun <run-id>`), or, for the data of an earlier refresh, the *deploy / Build site* job of that *Data refresh* run
+   (*Re-run this job*, which also re-runs the jobs that depend on it). A re-run builds what the original run built (a re-run keeps the
+   original event, commit and job outputs), so it deploys that commit's data; GitHub allows re-runs for 30 days. It changes what is published only: `main`
    still has the bad data, and the next deploy (after CI passes on a push to `main`, or after the next refresh) publishes `main` again. Step 3 must
    follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).
 6. **Fix the cause.** The next refresh starts from the restored data and fetches again. If the cause is at the source, the same

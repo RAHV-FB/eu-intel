@@ -76,10 +76,11 @@ The tests that read real data pin ids, counts and dates of it. CI runs them on t
 the commit named in `tests/frozen-data.txt`, built as of the moment it names, so a data refresh cannot turn them red.
 `scripts/test-frozen.sh` does the same locally without touching the working tree; to move the tests to newer data, see
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "Frozen test data". The commit's own data goes through the data gate instead:
-`validate`, the strict build (`EU_INTEL_STRICT=1`), `validate --built`, `npx vitest run src/lib/format.test.ts`, the site
-build, the privacy check and the size limit. CI runs both on every push to `main`, every pull request and on manual
-runs ([.github/workflows/ci.yml](.github/workflows/ci.yml)): every check above but the last two (the watchdog runs the
-health check, and the link check depends on third-party sites).
+`validate`, the strict build (`EU_INTEL_STRICT=1`), `validate --built` (its error checks, `activity-duplicate` among them,
+and the warning ratchet), `npx vitest run src/lib/format.test.ts`, the site build, the privacy check and the size limit.
+CI runs both on every push to `main`, every pull request and on manual runs
+([.github/workflows/ci.yml](.github/workflows/ci.yml)): every check above but the last two (the watchdog runs the health
+check, and the link check depends on third-party sites).
 
 ## Data refresh and deployment
 

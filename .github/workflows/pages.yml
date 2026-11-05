@@ -65,12 +65,17 @@ jobs:
       - name: Build the newest data on the tested code
         id: commit
         if: ${{ inputs.ref != '' || github.event_name == 'workflow_run' }}
+        env:
+          # main when this run's event happened (after CI: when CI finished; called by a refresh: when the refresh
+          # started, before its push). A re-run keeps it, so it builds what the first run built (docs/DEPLOYMENT.md,
+          # "Rolling back a bad data refresh", step 5).
+          MAIN_SHA: ${{ github.sha }}
         run: |
-          # If main has moved on since this commit only by data refresh commits (data/snapshot, data/state), build main:
-          # its code is the code tested here, and this deploy must not take the newer data off the site. Otherwise
+          # If main had moved on since this commit only by data refresh commits (data/snapshot, data/state), build that
+          # main: its code is the code tested here, and this deploy must not take the newer data off the site. Otherwise
           # build this commit (a newer code commit is deployed after CI passes on it). Checking out main fetches its
           # files without credentials, which a public repository allows.
-          main=$(git rev-parse origin/main)
+          main=$MAIN_SHA
           if [ "$main" != "$(git rev-parse HEAD)" ] && git merge-base --is-ancestor HEAD "$main" &&
             git diff --quiet --no-renames HEAD "$main" -- . ':(exclude)data/snapshot' ':(exclude)data/state'; then
             echo "Building main ($main): the commits after $(git rev-parse HEAD) change only data/snapshot and data/state."

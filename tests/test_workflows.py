@@ -253,10 +253,11 @@ def test_a_deploy_builds_main_only_when_main_added_nothing_but_data(tmp_path):
     work.mkdir()
     git, commit = git_repo(work)
 
-    def build(target: str, main: str) -> str:  # checkout of the commit to deploy, with origin/main fetched
-        git("update-ref", "refs/remotes/origin/main", main)
+    assert s[named(s, "Build the newest data on the tested code")]["env"] == {"MAIN_SHA": "${{ github.sha }}"}
+
+    def build(target: str, main: str) -> str:  # checkout of the commit to deploy; main as of the run's event
         git("checkout", "-q", "--detach", target)
-        built = run_step(script, work, {})["sha"]
+        built = run_step(script, work, {"MAIN_SHA": main})["sha"]
         assert built == git("rev-parse", "HEAD")
         return built
 
