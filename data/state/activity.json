@@ -1086,5 +1086,39 @@
   },
   "title": "VAT fraud: extension of the application period of the optional reverse charge mechanism and Quick Reaction…: Parliament committee voted on its report",
   "vote_id": null
+ },
+ {
+  "date": "2021-07-01",
+  "detected_at": "2026-11-05T14:17:21Z",
+  "dossier_id": "2020-0112",
+  "id": "chg:2020-0112:ev:2020-0112-DEC-ADCP-2021-07-01",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2020-0112-DEC-ADCP-2021-07-01",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T13:54:04Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2020-0112-DEC-ADCP-2021-07-01"
+  },
+  "title": "Amending Regulation (EC) No 168/2007 establishing a European Union Agency for Fundamental Rights: Parliament committee adopted its report",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-26",
+  "detected_at": "2026-11-05T14:17:21Z",
+  "dossier_id": "2023-0134",
+  "id": "chg:2023-0134:ev:council-ST-14946-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 14946/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 14946/26",
+   "published": "2026-10-26",
+   "retrieved_at": "2026-11-05T14:08:37Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-14946-2026-INIT/EN/pdf"
+  },
+  "title": "Amending Directive 1999/62/EC, Council Directive 1999/37/EC and Directive (EU) 2019/520 as regards the CO2…: Council adopted the act",
+  "vote_id": null
  }
 ]
