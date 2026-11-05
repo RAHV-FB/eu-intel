@@ -152,20 +152,43 @@ def test_the_browser_tests_install_their_browser_with_bounded_retries(tmp_path):
     assert step["env"]["BROWSER"] == "${{ matrix.browser }}"
     assert "timeout 600 npx playwright install --with-deps \"$BROWSER\"" in step["run"]
     assert named(s, "Install ${{ matrix.browser }} for Playwright") < named(s, "Run Playwright")
-    # the attempts: a stand-in npx that fails twice, then succeeds, is tried three times; one that always fails, fails
+    # the packages apt downloaded are kept between runs (the mirror once served WebKit's 114 MB at about 50 KB/s)
+    cache = s[named(s, "Restore the browsers' OS packages")]
+    assert re.fullmatch(r"actions/cache@[0-9a-f]{40}", cache["uses"])  # pinned, like every action here
+    assert cache["with"]["path"] == "~/apt-archives" and "${{ matrix.browser }}" in cache["with"]["key"]
+    assert "hashFiles('package-lock.json')" in cache["with"]["key"]
+    assert named(s, "Restore the browsers' OS packages") < named(s, "Install ${{ matrix.browser }} for Playwright")
+
+    # the attempts, with stand-ins: an npx that fails twice, then succeeds, is tried three times; one that always fails,
+    # fails. A `sudo` that only logs: the step must not touch this machine's apt.
     bin_ = tmp_path / "bin"
     bin_.mkdir()
-    count = tmp_path / "count"
-    (bin_ / "npx").write_text(f"#!/bin/sh\necho x >> {count}\n[ $(wc -l < {count}) -ge 3 ]\n")
-    (bin_ / "npx").chmod(0o755)
+    count, log, home = tmp_path / "count", tmp_path / "log", tmp_path / "home"
+    home.mkdir()
+    (bin_ / "npx").write_text(f"#!/bin/sh\necho npx >> {log}\necho x >> {count}\n[ $(wc -l < {count}) -ge 3 ]\n")
     (bin_ / "sleep").write_text("#!/bin/sh\nexit 0\n")
-    (bin_ / "sleep").chmod(0o755)
-    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}", "BROWSER": "webkit"}
-    assert subprocess.run(["bash", "-c", step["run"]], env=env, capture_output=True).returncode == 0
+    (bin_ / "sudo").write_text(f'#!/bin/sh\necho "sudo $*" >> {log}\n[ "$1" = tee ] && cat > "{tmp_path}/apt.conf"\nexit 0\n')
+    for f in ("npx", "sleep", "sudo"):
+        (bin_ / f).chmod(0o755)
+    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}", "HOME": str(home), "BROWSER": "webkit",
+           "APT_CONF": step["env"]["APT_CONF"]}  # fmt: skip
+    run = lambda: subprocess.run(["bash", "-eo", "pipefail", "-c", step["run"]], env=env, capture_output=True)  # noqa: E731
+    assert run().returncode == 0
     assert count.read_text().count("x") == 3
+    conf = (tmp_path / "apt.conf").read_text()
+    assert f'Dir::Cache::Archives "{home}/apt-archives/";' in conf and "Acquire::Retries" in conf
+    assert (home / "apt-archives" / "partial").is_dir()
+    calls = log.read_text().splitlines()
+    # a timed-out attempt's apt-get (run with sudo) kept dpkg's lock, so the next attempts failed at once (5 Nov 2026):
+    # before each retry it is stopped and dpkg finishes its work
+    first, second = calls.index("npx"), calls.index("npx", calls.index("npx") + 1)
+    between = calls[first + 1 : second]
+    assert "sudo pkill -x apt-get" in between and "sudo dpkg --configure -a" in between
+    assert between.index("sudo pkill -x apt-get") < between.index("sudo dpkg --configure -a")
+    assert calls[-1].startswith("sudo chown -R ") and calls[-1].endswith(f"{home}/apt-archives")  # the cache can read them
     count.write_text("")
     (bin_ / "npx").write_text("#!/bin/sh\nexit 1\n")
-    assert subprocess.run(["bash", "-c", step["run"]], env=env, capture_output=True).returncode == 1
+    assert run().returncode == 1
 
 
 def test_vitest_fails_when_it_finds_no_tests():

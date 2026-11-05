@@ -215,15 +215,38 @@ jobs:
           name: site-dist
           path: dist
 
+      # The browsers' OS packages come from the runner's Ubuntu mirror, which is at times very slow (on 5 Nov 2026 it
+      # served WebKit's 114 MB at about 50 KB/s). apt downloads them into ~/apt-archives (APT_CONF below), which this
+      # cache keeps between runs: only packages that changed are downloaded again.
+      - name: Restore the browsers' OS packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-ubuntu-24.04-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: apt-ubuntu-24.04-${{ matrix.browser }}-
+
       - name: Install ${{ matrix.browser }} for Playwright
-        # the OS packages come from the Ubuntu mirror, which is at times very slow: each attempt is bounded, and apt keeps
-        # what it has downloaded, so a retry resumes
+        # Each attempt is bounded, and a retry resumes from what apt kept. The time limit stops npx, but not the apt-get
+        # it runs with sudo, which went on holding dpkg's lock (attempts 2 and 3 failed at once on 5 Nov 2026): it is
+        # stopped and dpkg finishes its work before the next attempt.
         env:
           BROWSER: ${{ matrix.browser }}
+          APT_CONF: /etc/apt/apt.conf.d/80-ci-browsers
         run: |
+          mkdir -p ~/apt-archives/partial
+          printf 'Dir::Cache::Archives "%s/apt-archives/";\nAcquire::Retries "3";\nAcquire::http::Timeout "60";\n' "$HOME" |
+            sudo tee "$APT_CONF" > /dev/null
           for attempt in 1 2 3; do
-            if timeout 600 npx playwright install --with-deps "$BROWSER"; then exit 0; fi
+            if timeout 600 npx playwright install --with-deps "$BROWSER"; then
+              sudo apt-get autoclean -qq || true # drop the versions the mirror no longer has, so the cache does not grow
+              # apt wrote them as root: readable by the cache step, which saves them after the job
+              sudo chown -R "$(id -u):$(id -g)" ~/apt-archives
+              exit 0
+            fi
             echo "::warning::installing $BROWSER failed or took over 10 minutes (attempt $attempt of 3)"
+            sudo pkill -x apt-get || true
+            for _ in $(seq 30); do sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock > /dev/null 2>&1 || break; sleep 2; done
+            sudo dpkg --configure -a || true
             sleep 15
           done
           exit 1

@@ -366,8 +366,11 @@ e2e + accessibility tests".
 It runs once per browser engine (Chromium, Firefox and WebKit, the engine of Safari; one failing engine does not
 cancel the others), on the `ubuntu-24.04` runner image, whose fonts the layout and accessibility checks were set
 against. It installs its browser with `playwright install --with-deps`; the OS packages come from the Ubuntu mirror, which
-is at times very slow, so each install attempt is bounded at 10 minutes, a failed attempt is retried (up to three, and
-apt keeps what it downloaded), and the job may run 40 minutes. (The official Playwright image skips the install but
+is at times very slow (on 5 Nov 2026 it served WebKit's 114 MB at about 50 KB/s). apt downloads them into
+`~/apt-archives`, which an Actions cache keeps between runs (per browser and `package-lock.json`), so only packages that
+changed are downloaded again. Each install attempt is bounded at 10 minutes; before a retry (up to three, resuming from
+what apt kept) the timed-out attempt's `apt-get`, which the time limit does not stop and which holds dpkg's lock, is
+stopped and dpkg finishes its work. The job may run 40 minutes. (The official Playwright image skips the install but
 resolves the site's font stack to narrower fonts: lines of 81 characters and Firefox target-size findings, Plan 4.6 of
 docs/ASSESSMENT_2026-11.md.) Each run reuses the site built by the `check` job (uploaded
 as the `site-dist` artifact), runs `npx playwright test --project=<browser>` (`E2E_BROWSERS` adds the Firefox and WebKit
