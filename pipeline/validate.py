@@ -187,6 +187,10 @@ INTEGRITY = {
     "longer records, so it is not applied",
     "denmark-schengen-stale": "a recorded decision of Denmark (data/curated/denmark_schengen.yaml) on a directive whose "
     "recitals no longer say that Denmark decides",
+    "curated-review-stale": "a curated entry about an act (featured.yaml, act_dates.yaml, transposition.yaml) reviewed "
+    "before a later act that EUR-Lex records as amending or repealing it, or not dated: its summary, or the dates the "
+    "build puts in place of EUR-Lex's, may no longer hold (docs/EDITORIAL.md, Re-review); re-read it and update "
+    "`reviewed`",
     "report-off-timeline": "a key report of a file that no step of its built timeline carries",
     "contract-unlisted": "a built JSON file that src/types/data.ts gives no type, so the contract check skips it",
     "index-unlisted": "a built detail file that its folder's index does not list, which the site reaches only by a link "
@@ -300,6 +304,41 @@ def cited_acts(title: str) -> dict[tuple[int, int], set[str]]:
     return out
 
 
+def stale_reviews(
+    acts: dict[str, E.LegalAct], featured: dict[str, dict], act_dates: dict[str, dict], tr_checks: dict[str, dict]
+) -> list[str]:
+    """The curated entries about an act (featured.yaml `celex`, act_dates.yaml, transposition.yaml) whose `reviewed`
+    date is before an act that EUR-Lex records as amending or repealing that act, or that have no valid review date.
+    An amending act is dated by the latest of its own date, signature and publication (the text a review can read);
+    one the snapshot does not hold (a delegated or implementing act) only by its CELEX year, so it counts only from
+    a year after the review."""
+    def when(c: str) -> str:
+        a = acts.get(c)
+        dates = [d for d in (a.date_document, a.date_signature, a.date_publication) if d] if a else []
+        return max(dates) if dates else f"{c[1:5]}-01-01"
+
+    entries = [(f"featured.yaml {ref}", e.get("celex"), e.get("reviewed")) for ref, e in featured.items()]
+    entries += [(f"act_dates.yaml {c}", [c], e.get("reviewed")) for c, e in act_dates.items()]
+    entries += [(f"transposition.yaml {c}", [c], e.get("reviewed")) for c, e in tr_checks.items()]
+    out = []
+    for label, celexes, reviewed in entries:
+        celexes = [c for c in celexes or [] if isinstance(c, str) and c in acts]
+        if not celexes:
+            continue
+        if not _valid_date(str(reviewed or "")):
+            out.append(f"data/curated/{label}: no valid review date ({reviewed!r}); review the entry and date it")
+            continue
+        reviewed = str(reviewed)
+        for c in celexes:
+            a = acts[c]
+            for how, others in (("amends", a.amended_by), ("repeals", a.repealed_by), ("partly repeals", a.partly_repealed_by)):
+                for x in sorted(others):
+                    if when(x) > reviewed:
+                        out.append(f"data/curated/{label}: reviewed {reviewed}, before {x} ({when(x)}), which {how} "
+                                   f"{c}; re-read the entry against the act's current text and update `reviewed`")  # fmt: skip
+    return out
+
+
 def _valid_date(s: str) -> bool:
     if not DATE_RE.match(s):
         return False
@@ -402,9 +441,11 @@ def check(
     today: str | None = None,
     built: bool = False,
     min_records: dict[tuple[str, str], int] | None = None,
+    curated: Path | None = None,
 ) -> Report:
     """`built`: the built output must be complete (see check_built). `min_records`: the fewest records per
-    (source, file); MIN_RECORDS for the committed snapshot, none for a test fixture."""
+    (source, file); MIN_RECORDS for the committed snapshot, none for a test fixture. `curated`: the curated layer
+    (data/curated by default)."""
     rep = Report()
     today = today or date.today().isoformat()
     data: dict[tuple[str, str], list[Any]] = {}
@@ -456,16 +497,19 @@ def check(
     from pipeline.analysis.transposition import article_label, general_deadline_basis
     from pipeline.analysis.transposition import classify as classify_transposition
     from pipeline.build import (
+        CURATED,
         apply_transposition_checks,
         load_act_dates,
         load_act_links,
         load_act_relations,
+        load_curated,
         load_denmark_schengen,
         load_transposition_checks,
     )
 
-    act_dates = load_act_dates()  # curated, checked corrections of act dates
-    tr_checks = load_transposition_checks()  # curated, checked general transposition deadlines
+    curated = curated or CURATED
+    act_dates = load_act_dates(curated)  # curated, checked corrections of act dates
+    tr_checks = load_transposition_checks(curated)  # curated, checked general transposition deadlines
 
     # people
     for m in meps.values():
@@ -547,12 +591,12 @@ def check(
             if procs and r not in proc_refs:
                 rep.warn("ref-procedure", f"vote {v.id}: procedure {r} not in procedures.json")
     # acts
-    relation_fixes = {(f["act"], f["replace"]) for f in load_act_relations()}  # curated, checked amendment links
-    for f in load_act_relations():
+    relation_fixes = {(f["act"], f["replace"]) for f in load_act_relations(curated)}  # curated, checked amendment links
+    for f in load_act_relations(curated):
         if f["act"] in acts and f["replace"] not in acts[f["act"]].amends:
             rep.warn("act-relation-stale", f"{f['act']}: data/curated/act_relations.yaml replaces its link to "
                      f"{f['replace']}, which EUR-Lex no longer records")  # fmt: skip
-    dropped_links = load_act_links()  # curated: procedure links that the act's own text rules out
+    dropped_links = load_act_links(curated)  # curated: procedure links that the act's own text rules out
     for c, refs in sorted(dropped_links.items()):
         for r in sorted(refs):
             if c in acts and r not in {re.sub(r"\s+", "", x).upper() for x in acts[c].procedure_refs}:
@@ -561,11 +605,16 @@ def check(
     # Denmark decides under Protocol No 22, Art. 4, whether to implement a directive building upon the Schengen acquis
     # (its recitals: optouts schengen_art4); its decision, notified to the Council, is recorded once checked
     optouts = {r.celex: r for r in data.get(("optouts", "directives"), [])}
-    decisions = load_denmark_schengen()
+    decisions = load_denmark_schengen(curated)
     for c in sorted(decisions):
         if c in optouts and "DK" not in optouts[c].schengen_art4:
             rep.warn("denmark-schengen-stale", f"{c}: data/curated/denmark_schengen.yaml records Denmark's decision, "
                      "but the directive's recitals as read do not say that Denmark decides under Protocol No 22, Art. 4")  # fmt: skip
+    # A curated entry is re-read against its act when the data show a new act amending it (docs/EDITORIAL.md, Re-review):
+    # an entry reviewed before such an act may now state what the act no longer says, or put dates that the act no
+    # longer sets in place of EUR-Lex's
+    for m in stale_reviews(acts, load_curated(curated)[0], act_dates, tr_checks):
+        rep.warn("curated-review-stale", m)
     for r in optouts.values():
         if "DK" in r.schengen_art4 and r.celex not in decisions:
             rep.warn("denmark-schengen-unchecked", f"{r.celex}: Denmark decides under Protocol No 22, Art. 4, whether to "
