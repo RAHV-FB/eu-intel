@@ -123,6 +123,7 @@ from pipeline.analysis.ep_margin import statutory_seats
 from pipeline.http import EP_API, Http, HttpError
 from pipeline.models.entities import EpBallots, EpVote, KindDetail, SourceRef, SourceStatus, VoteKind
 from pipeline.snapshot import fetch_deadline, now_iso, read_records, read_state, write_records, write_state
+from pipeline.sources.ep_procedures import ROTATION_WEEKS, rotation_slot, rotation_slots, week_number
 
 log = logging.getLogger("pipeline.sources.ep_votes")
 
@@ -133,6 +134,10 @@ RICH_FORMAT_FROM = "2024-01-15"  # first sitting whose decisions carry outcome, 
 WORKERS = 2  # the API is shared with other sources and allows 500 requests / 5 min per endpoint
 MIN_GAP_S = 2.5  # per worker, between two requests that actually hit the network (<= 0.8 req/s)
 FRESH_DAYS = 30  # sittings this recent are always re-fetched (late corrections, newly published votes)
+# Bump when the parsing or derivation of a vote changes (draft, classify, kind_detail, majority_rule, resolve_procs,
+# resolve_outcome, ...): the next runs then re-read every sitting, as EU_INTEL_FULL_REFRESH=1 does (in chunks,
+# resumable over several runs), and _state.json `parser` takes the new value once that pass is complete.
+PARSER_VERSION = "2026-11-05.1"
 PROCESS_TYPES = (
     "ACI APP AVC BUD CNS COD DEC NLE SYN BUI COS DEA DCE IMM INI INL INS REG RPS RSO RSP GBD".split()
 )
@@ -1999,19 +2004,30 @@ def ballot_key(b: EpBallots) -> tuple:
 # ================================================================================ incremental fetching
 # The committed snapshot is the checkpoint (no HTTP cache needed). A run re-fetches the sittings on or after
 # (latest sitting in the snapshot - WINDOW_DAYS), the window in which intended-vote corrections and late
-# results are published, plus the sittings still pending from an interrupted run; older votes are kept.
-# Sittings are processed oldest first in chunks of CHUNK; after each chunk votes.json / ballots.json and
-# _state.json are written, so an interruption loses at most one chunk. After fetch_deadline() (from
-# EU_INTEL_FETCH_BUDGET_S) no new chunk is started and the run ends "partial". EU_INTEL_FULL_REFRESH=1 (or
-# an empty snapshot) makes every sitting of the 9th and 10th terms pending.
+# results are published, plus the sittings still pending from an interrupted run, plus a rotation of the older
+# sittings: those whose rotation_slot(sitting id) is due this week (rotation_slots, shared with ep_procedures), so
+# every sitting is re-read at least every ROTATION_WEEKS weeks (on 2 Nov 2026: 347 older sittings, 33 to 52 per
+# slot, 2 requests each plus the minutes of the sittings before RICH_FORMAT_FROM, plus 7 listings of the earlier
+# years and a few /procedures batches: about 100 to 160 requests, 2 to 3 minutes at MIN_GAP_S). A re-read
+# sitting keeps its stored votes when the new answer is far smaller (_shrunk_sittings) and is linked with the
+# documents and procedures known from every earlier run (_state.json), as in a full pass. The window and pending
+# sittings are processed first (oldest first), then the rotation's, in chunks of CHUNK; after each chunk
+# votes.json / ballots.json and _state.json are written, so an interruption loses at most one chunk. After
+# fetch_deadline() (from EU_INTEL_FETCH_BUDGET_S) no new chunk is started and the run ends "partial".
+# EU_INTEL_FULL_REFRESH=1, an empty snapshot, or a PARSER_VERSION other than `parser` makes every sitting of the
+# 9th and 10th terms pending (a full pass).
 #
 # _state.json:
-#   pending      sitting ids still to fetch in the current pass
-#   doc_links    {document id: [process ids]} from /plenary-documents (never re-requested; [] = no link)
-#   item_docs    {document id: {"procs": [...], "symbols": [...]}} from the vote items of all fetched sittings
-#   proc_refs    {process id: reference} for every procedure linked so far
-#   proc_titles  {process id: English title} of the procedures that give a vote its subject (procedure_subject)
-#   last_full    time of the last completed full pass
+#   pending        sitting ids still to fetch in the current pass
+#   pass           "full" or "window": the kind of the pass the pending sittings belong to
+#   doc_links      {document id: [process ids]} from /plenary-documents (never re-requested; [] = no link)
+#   item_docs      {document id: {"procs": [...], "symbols": [...]}} from the vote items of all fetched sittings
+#   proc_refs      {process id: reference} for every procedure linked so far
+#   proc_titles    {process id: English title} of the procedures that give a vote its subject (procedure_subject)
+#   last_full      time of the last completed full pass
+#   parser         PARSER_VERSION of the last completed full pass (absent: the current one)
+#   pass_parser    PARSER_VERSION of the full pass in progress: an interrupted pass for another version starts again
+#   rotation_week  week_number() of the last run that took its rotation slots
 CHUNK = 20
 WINDOW_DAYS = 60
 
@@ -2140,14 +2156,30 @@ def fetch(http: Http) -> SourceStatus:
     deadline = fetch_deadline()
     state = read_state(SOURCE_ID)
     existing = read_records(SOURCE_ID, "votes", EpVote)
-    full = os.environ.get("EU_INTEL_FULL_REFRESH") == "1" or not existing
     pending_before = set(state.get("pending", []))
+    resuming_full = bool(pending_before) and state.get("pass") == "full"
+    # `parser`: the PARSER_VERSION of the last complete full pass (a state written before there was one counts as
+    # the current version). Another version starts a full pass, unless one for this version is in progress.
+    parser_done = state.get("parser", PARSER_VERSION)
+    upgrade = (state.get("pass_parser", parser_done) if resuming_full else parser_done) != PARSER_VERSION
+    full = os.environ.get("EU_INTEL_FULL_REFRESH") == "1" or not existing or upgrade
+    pass_kind = "full" if full or resuming_full else "window"
     if full:
         start = FIRST_SITTING
     else:
         latest = max(v.date for v in existing)
         start = max(FIRST_SITTING, (date.fromisoformat(latest) - timedelta(days=WINDOW_DAYS)).isoformat())
+    # older sittings due in the rotation (none in a full pass, which reads them all)
+    last_week = state.get("rotation_week")
+    slots = (
+        set()
+        if pass_kind == "full"
+        else rotation_slots(date.fromisoformat(today), last_week if isinstance(last_week, int) else None)
+    )
+    rotation_week = week_number(date.fromisoformat(today))
     years = {int(start[:4])} | {int(sid[7:11]) for sid in pending_before}
+    if slots:
+        years.add(int(FIRST_SITTING[:4]))
     try:
         sittings = list_sittings(http, today, from_year=min(years))
     except HttpError as e:
@@ -2158,10 +2190,13 @@ def fetch(http: Http) -> SourceStatus:
         sittings = [
             {"id": sid, "date": sid[7:17], "term": term_of(sid[7:17])} for sid in sorted(pending_before)
         ]
+        slots, rotation_week = set(), last_week  # the rotation needs the listing: its slots wait for the next run
     if not sittings:
         raise RuntimeError("no plenary sittings listed")
     targets = [s for s in sittings if full or s["date"] >= start or s["id"] in pending_before]
-    pass_kind = "full" if full or (pending_before and state.get("pass") == "full") else "window"
+    primary = {s["id"] for s in targets}
+    rotation = [s for s in sittings if s["id"] not in primary and rotation_slot(s["id"]) in slots]
+    targets += rotation  # after the window: the budget goes to recent sittings first
 
     proc_refs = _procedure_refs(state, existing)
     list_page = {  # process type -> page size of the procedure list that worked in the last full pass
@@ -2180,6 +2215,7 @@ def fetch(http: Http) -> SourceStatus:
     def save() -> None:
         used = linked_ids | {p for ps in doc_links.values() for p in ps}
         used |= {p for e in known_docs.values() for p in e.get("procs", [])}
+        in_pass = {"pass_parser": PARSER_VERSION} if pass_kind == "full" and pending else {}
         write_state(
             SOURCE_ID,
             {
@@ -2191,6 +2227,10 @@ def fetch(http: Http) -> SourceStatus:
                 "proc_titles": dict(sorted(proc_titles.items())),
                 "last_full": last_full,
                 "list_page": dict(sorted(list_page.items())),
+                # a complete full pass read every sitting with this code; otherwise the version of the last one
+                "parser": PARSER_VERSION if pass_kind == "full" and not pending else parser_done,
+                "rotation_week": rotation_week,
+                **in_pass,
             },
         )
 
@@ -2234,6 +2274,10 @@ def fetch(http: Http) -> SourceStatus:
     rollcalls = sum(1 for v in votes if v.method == ROLLCALL)
     linked = sum(1 for v in votes if v.procedure_refs)
     mode = "full pass" if pass_kind == "full" else f"window from {start}"
+    if pass_kind == "full" and parser_done != PARSER_VERSION:
+        mode += f" (parser {PARSER_VERSION}; stored votes read with {parser_done})"
+    if rotation:
+        mode += f" + {len(rotation)} older sittings (rotation slots {sorted(slots)} of {ROTATION_WEEKS})"
     note = (
         f"{mode}: {counts['sittings']}/{len(targets)} sittings fetched ({counts['votes']} votes, "
         f"{counts['lookups']} document lookups, {counts['proc_by_id']} procedures by id)"

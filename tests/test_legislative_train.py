@@ -350,6 +350,83 @@ def test_deadline_stops_reading_and_resumes(train_dir, monkeypatch):
     assert st.status == "ok" and train_state(train_dir)["pending"] == []
 
 
+def test_parser_version_change_reads_every_page_and_resumes(train_dir, monkeypatch):
+    lt.fetch(FakeTrain(make_site()))
+    old = train_state(train_dir)["parser"]
+    assert old == lt.PARSER_VERSION
+    before = stored(train_dir)
+    monkeypatch.setattr(lt, "PARSER_VERSION", "test-bump")
+    real_deadline, real_past = lt.fetch_deadline, lt.past
+    http = FakeTrain(make_site())
+    monkeypatch.setattr(lt, "fetch_deadline", lambda: 0.0)  # the budget runs out after two file pages
+    monkeypatch.setattr(lt, "past", lambda d: d is not None and len(http.file_pages()) >= 2)
+    st = lt.fetch(http)
+    state = train_state(train_dir)
+    assert st.status == "partial" and f"full pass (parser test-bump; stored records read with {old})" in st.note
+    assert "parser change 2" in st.note and len(http.file_pages()) == 2
+    assert set(state["pending"]) == ALL - set(http.file_pages())  # quiet files included
+    assert (state["parser"], state["pass_parser"]) == (old, "test-bump")
+    assert stored(train_dir) == before
+    monkeypatch.setattr(lt, "fetch_deadline", real_deadline)
+    monkeypatch.setattr(lt, "past", real_past)
+    again = FakeTrain(make_site())
+    st = lt.fetch(again)
+    # the pending files first; then only what an incremental run reads (not every page again)
+    assert set(again.file_pages()[: len(state["pending"])]) == set(state["pending"])
+    assert set(again.file_pages()) == set(state["pending"]) | (ALL - QUIET)
+    state = train_state(train_dir)
+    assert st.status == "ok" and "complete" in st.note
+    assert (state["parser"], state["pending"]) == ("test-bump", []) and "pass_parser" not in state
+    assert stored(train_dir) == before
+    third = FakeTrain(make_site())
+    lt.fetch(third)
+    assert set(third.file_pages()) == ALL - QUIET  # incremental again
+
+
+class Blocked(FakeTrain):
+    """The site's WAF answers every request with its challenge (HTTP 202), as it does to GitHub's runners."""
+
+    def get(self, url: str, headers=None, **kw) -> bytes:
+        self.calls.append(url)
+        raise lt.HttpError(url, 202, "<!DOCTYPE html> ... window.awsWafCookieDomainList")
+
+
+def test_parser_change_while_the_site_is_blocked_destroys_nothing(train_dir, monkeypatch):
+    lt.fetch(FakeTrain(make_site()))
+    before, old = stored(train_dir), lt.PARSER_VERSION
+    monkeypatch.setattr(lt, "PARSER_VERSION", "test-bump")
+    # without a stored theme list (the committed snapshot has none): the source fails before writing anything
+    state_file = train_dir / "train" / "_state.json"
+    saved = state_file.read_text()
+    state_file.unlink()
+    with pytest.raises(RuntimeError, match="unavailable"):
+        lt.fetch(Blocked(make_site()))
+    assert stored(train_dir) == before and not state_file.exists()
+    # with one: every stored record is kept, the pass waits for the site; `parser` is not moved on
+    state_file.write_text(saved)
+    http = Blocked(make_site())
+    st = lt.fetch(http)
+    state = train_state(train_dir)
+    assert st.status == "partial" and http.file_pages() == [] and stored(train_dir) == before
+    assert (state["parser"], state["pass_parser"], set(state["pending"])) == (old, "test-bump", ALL)
+    again = FakeTrain(make_site())  # the site answers again: the pass reads every file page and completes
+    assert lt.fetch(again).status == "ok" and set(again.file_pages()) == ALL
+    assert train_state(train_dir)["parser"] == "test-bump" and stored(train_dir) == before
+
+
+def test_file_pages_failing_in_a_row_stop_the_run(train_dir, monkeypatch):
+    lt.fetch(FakeTrain(make_site()))
+    before = stored(train_dir)
+    monkeypatch.setattr(lt, "OUTAGE_STOP", 3)
+    monkeypatch.setattr(lt, "PARSER_VERSION", "test-bump")
+    blocked = {u: lt.HttpError(u, 202, "challenge") for u in ALL}
+    http = FakeTrain(make_site(), fail=blocked)  # theme pages answer, file pages are blocked
+    st = lt.fetch(http)
+    assert len(http.file_pages()) == 3 and set(train_state(train_dir)["pending"]) == ALL
+    assert st.status == "partial" and "stopped reading file pages after 3 failures in a row" in st.note
+    assert stored(train_dir) == before and train_state(train_dir)["parser"] != "test-bump"
+
+
 def test_snapshot_statuses_in_vocabulary():
     # Invariant on the committed snapshot (skipped until `python -m pipeline fetch train` has run).
     path = Path(__file__).resolve().parent.parent / "data" / "snapshot" / "train" / "files.json"

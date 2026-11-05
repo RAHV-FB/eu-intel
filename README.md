@@ -46,9 +46,11 @@ npm run dev                      # http://localhost:5173/
 rate limits). Sources: `ep_people ep_procedures ep_votes eurlex council implementation optouts train`. A source
 that fails keeps its previous files; `data/snapshot/_manifest.json` records each source's status and last
 successful fetch. You rarely need this locally: the snapshot is committed and refreshed weekly by CI. The weekly
-refresh is incremental for EP procedures, EP votes and the Legislative Train (new, open and recently changed
-records are read again, the others reused); `EU_INTEL_FULL_REFRESH=1` re-reads every record (see
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "What a weekly run re-reads").
+refresh is incremental for EP procedures, EP votes and the Legislative Train: new, open and recently changed
+records are read again, and the others are reused, except for a weekly share of them that is read again on a
+rotation (every record at least every 8 weeks; Train files every 4). `EU_INTEL_FULL_REFRESH=1`, or a change of a
+source's `PARSER_VERSION`, re-reads every record (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), "What a weekly run
+re-reads").
 
 ## Checks
 

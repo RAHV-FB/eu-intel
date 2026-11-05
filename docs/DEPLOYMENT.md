@@ -159,25 +159,44 @@ open http://127.0.0.1:4174/eu-intel/).
 
 ## What a weekly run re-reads
 
-A scheduled refresh is incremental for three sources; a stored record that is not re-read keeps the data and the
-derivation of the run that last read it:
+A scheduled refresh is incremental for three sources. A stored record that is not re-read keeps the data and the
+derivation of the run that last read it, but a rotation re-reads each one at least every 8 weeks, as long as the
+source answers:
 
-- **EP procedures**: files new to the list, still open (not adopted, published, in force, withdrawn, rejected or
-  lapsed), with a recorded step in the last 120 days, without OEIL data, featured, or pending from the last run.
-  Ids the EP API cannot serve because the procedure was split or merged are retried only by a full refresh;
-  other unusable ids every run.
-- **EP votes**: the sittings from 60 days before the latest stored sitting, and the sittings still pending.
+- **EP procedures**: files new to the list, still open (not adopted, published, in force, no longer in force,
+  taking effect on notification, withdrawn, rejected or lapsed), with a recorded step in the last 120 days,
+  without OEIL data, featured, or pending from the last run. The run also re-reads the closed files whose rotation
+  slot (a SHA-256 hash of the id, modulo 8) is due that week, so every stored file is re-read at least every
+  8 weeks. Stored files and the ids pending from the last run stay in scope when the EP's paged list misses them,
+  which happens because the list repeats rows between pages. Ids the EP API cannot serve because the procedure was
+  split or merged are retried only by a full pass; other unusable ids are retried every run.
+- **EP votes**: the sittings from 60 days before the latest stored sitting, the sittings still pending, and the
+  older sittings whose rotation slot (the same hash of the sitting id, modulo 8) is due that week.
 - **Legislative Train**: new files, and file pages whose status changed or that are marked "Recently updated" on
   the theme page, were updated in the last 90 days, are pending, or are due in a four-week rotation of the quiet
   files.
 
+The weeks of the 8-week rotation run from Monday to Sunday, like ISO weeks, but they are counted without starting
+again in January, so 8 weekly runs in a row take each slot once, also across a new year. After a missed or failed
+run, the next run also takes the slots of the weeks that had no run. A second run in the same week takes none. On
+the snapshot of 2 Nov 2026, EP procedures re-read 425 to 450 stored files a run, plus the new ones (about 900
+requests in all), against 420 to 430 before. The 152 files no longer in force or taking effect on notification
+were re-read every week; the rotation's 150 to 180 closed files take their place. EP votes read 33 to 52 older
+sittings on top of the window, which adds about 100 to 160 requests, or 2 to 3 minutes.
+
 The other sources read their whole scope each run, except that Council notes whose Cellar record and parser are
 unchanged are reused and opt-outs read each directive's text once (again when the recital matcher changes).
 
-A **full refresh** (`EU_INTEL_FULL_REFRESH=1`) re-reads every stored record of those three sources: run one after
-a change to how a source reads or derives its records, so that reused records do not keep the old derivation, and
-from time to time to pick up late corrections at source. It is chunked and resumable like any run: one interrupted
-by its time budget stays a full refresh in the next runs until it completes.
+A **full pass** re-reads every stored record of one of those three sources. It runs with a full refresh
+(`EU_INTEL_FULL_REFRESH=1`, see "Manual operations"). It also runs by itself when the source's `PARSER_VERSION`
+(in `pipeline/sources/ep_procedures.py`, `ep_votes.py` or `legislative_train.py`) differs from the `parser`
+recorded in its `_state.json`. Bump that version with any change to how the source reads or derives its records,
+so that reused records do not keep the old derivation. A full refresh is still useful from time to time, to pick
+up late corrections at source. A full pass is chunked and resumable like any run. One interrupted by its time
+budget stays a full pass in the next runs until it completes (`pass_parser` in `_state.json`); only then does
+`parser` take the new version. A pass started for another version starts again. A source that cannot be reached
+keeps its records and its old `parser`, and its pass waits until the source answers. This is the case of the
+Legislative Train, which the EP's WAF blocks on GitHub's runners.
 
 ## Manual operations
 
