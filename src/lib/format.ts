@@ -277,8 +277,12 @@ export function eventOn(e: TimelineEvent, today: ISODate): TimelineEvent {
   return state === e.state ? e : { ...e, state, title: stepTitle(e.title, state === 'done') };
 }
 
+// One formatter for every number: n.toLocaleString('en-GB') sets up a new one on each call, about 20 times slower, which a
+// page of tables (a vote's, about 1,300 numbers) spends 25 ms on.
+const NUMBER = new Intl.NumberFormat('en-GB');
+
 export function formatNumber(n: number | null | undefined): string {
-  return n == null ? '—' : n.toLocaleString('en-GB');
+  return n == null ? '—' : NUMBER.format(n);
 }
 
 export function pct(n: number, total: number, digits = 0): string {
