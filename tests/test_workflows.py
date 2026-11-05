@@ -376,21 +376,48 @@ def test_the_refresh_schedule_retries_and_runs_a_monthly_full_refresh(tmp_path):
     assert w["jobs"]["refresh"]["needs"] == "plan" and w["jobs"]["refresh"]["if"] == "${{ needs.plan.outputs.run == 'true' }}"
     fetch = steps("refresh.yml", "refresh")[named(steps("refresh.yml", "refresh"), "Fetch official sources")]
     assert fetch["env"]["EU_INTEL_FULL_REFRESH"] == "${{ needs.plan.outputs.full }}"
-    script = steps("refresh.yml", "plan")[0]["run"]
-    now = datetime.now(UTC)
+    plan_step = steps("refresh.yml", "plan")[0]
+    script = plan_step["run"]
+    from pipeline.freshness import CORE_SOURCES
 
-    def plan(event: str, last_change: datetime | None, full_input: str = "") -> dict[str, str]:
-        stamp = last_change.strftime("%Y-%m-%dT%H:%M:%SZ") if last_change else ""
-        env = {**fake_gh(tmp_path, stamp), "EVENT": event, "FULL_INPUT": full_input, "RECENT_HOURS": "20",
-               "GITHUB_REPOSITORY": "o/r"}  # fmt: skip
+    assert plan_step["env"]["CORE_SOURCES"].split() == list(CORE_SOURCES)
+    now = datetime.now(UTC)
+    iso = lambda d: d.strftime("%Y-%m-%dT%H:%M:%SZ")  # noqa: E731
+
+    def plan(event: str, manifest: dict | None, full_input: str = "") -> dict[str, str]:
+        # `gh api` answers with main's manifest; None: it fails
+        env = fake_gh(tmp_path, json.dumps(manifest)) if manifest is not None else failing_gh(tmp_path)
+        env |= {"EVENT": event, "FULL_INPUT": full_input, "RECENT_HOURS": "20", "GITHUB_REPOSITORY": "o/r",
+                "CORE_SOURCES": plan_step["env"]["CORE_SOURCES"]}  # fmt: skip
         return run_step(script, tmp_path, env)
 
+    def manifest(core_hours: float, **other_hours: float) -> dict:
+        ages = {s: core_hours for s in CORE_SOURCES} | other_hours
+        return {s: {"status": "ok", "fetched_at": iso(now - timedelta(hours=h))} for s, h in ages.items()}
+
     first_week = "1" if now.day <= 7 else ""
-    assert plan("schedule", now - timedelta(hours=3)) == {"run": "false"}
-    assert plan("schedule", now - timedelta(hours=30)) == {"run": "true", "full": first_week}
-    assert plan("schedule", None) == {"run": "true", "full": first_week}
-    assert plan("workflow_dispatch", now - timedelta(hours=1)) == {"run": "true", "full": ""}
-    assert plan("workflow_dispatch", now, full_input="true") == {"run": "true", "full": "1"}
+    assert plan("schedule", manifest(3)) == {"run": "false"}
+    assert plan("schedule", manifest(30)) == {"run": "true", "full": first_week}
+    # a commit of other data (a manual refresh of one source, a restore) no longer stops the weekly run
+    assert plan("schedule", manifest(30, train=1, optouts=1)) == {"run": "true", "full": first_week}
+    assert plan("schedule", manifest(3, train=24 * 14)) == {"run": "false"}  # the Train failing does not keep it going
+    # one core source that failed in the first run (it keeps its old retrieval): the second run retries
+    retry = manifest(3) | {"council": {"status": "failed", "fetched_at": iso(now - timedelta(days=7))}}
+    assert plan("schedule", retry) == {"run": "true", "full": first_week}
+    assert plan("schedule", manifest(3) | {"eurlex": {"status": "failed", "fetched_at": None}})["run"] == "true"
+    assert plan("schedule", {}) == {"run": "true", "full": first_week}
+    assert plan("schedule", None) == {"run": "true", "full": first_week}  # the API failed: run rather than skip a week
+    assert plan("workflow_dispatch", manifest(1)) == {"run": "true", "full": ""}
+    assert plan("workflow_dispatch", manifest(0), full_input="true") == {"run": "true", "full": "1"}
+
+
+def failing_gh(tmp_path: Path) -> dict[str, str]:
+    """A `gh` on PATH that fails whatever it is asked (an API error)."""
+    bin_dir = tmp_path / "bin-failing"
+    bin_dir.mkdir(exist_ok=True)
+    (bin_dir / "gh").write_text("#!/bin/sh\necho 'HTTP 502' >&2\nexit 1\n", encoding="utf-8")
+    (bin_dir / "gh").chmod(0o755)
+    return {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
 
 
 # ---------------------------------------------------------------- alerting

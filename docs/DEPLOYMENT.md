@@ -6,7 +6,7 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Four 
 | --- | --- | --- | --- |
 | `ci.yml` (CI) | push to `main`, pull requests, manual | ruff, typecheck; on the [frozen test data](#frozen-test-data): pytest (offline), data build, vitest, site build, Playwright e2e and accessibility tests in three engines; on the commit's own data: the [data gate](#the-data-gate) | `contents: read` |
 | `pages.yml` (Deploy to GitHub Pages) | after *CI* passes on a push to `main`; called by *Data refresh* with the commit it pushed; manual | the data gate on the commit it deploys (data built with the Pages URL and base path) → a browser smoke test of the built site on its own data → upload → deploy → check the public URL | build: `contents: read`; deploy: `pages: write`, `id-token: write` |
-| `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC (a scheduled run is skipped if data was committed in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month) → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
+| `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC (a scheduled run is skipped if every core source on `main` was retrieved in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month) → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
 | `watchdog.yml` (Watchdog) | after each *Data refresh* and each *CI* run on `main`, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
 
 All actions are pinned to full commit SHAs (with the version in a comment); Dependabot
@@ -87,10 +87,12 @@ open http://127.0.0.1:4174/eu-intel/).
 
 ## Schedule and failure behaviour
 
-- **Refresh** runs weekly on Monday at 05:17 UTC, and again at 22:37 UTC; a scheduled run is skipped when a commit
-  changed `data/snapshot` on `main` in the last 20 hours (`RECENT_HOURS`), so the second one does not run after the
-  first committed data: GitHub runs schedules on a best-effort basis (the 05:17 run has started up to 8 hours late) and
-  can drop a run at busy times. A scheduled run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`;
+- **Refresh** runs weekly on Monday at 05:17 UTC, and again at 22:37 UTC; a scheduled run is skipped when every core
+  source (`CORE_SOURCES` in `pipeline/freshness.py`: EP procedures, EP votes, EUR-Lex, Council) was retrieved
+  successfully in the last 20 hours (`RECENT_HOURS`) by `main`'s `data/snapshot/_manifest.json`, so the second one
+  does not run after a first one that refreshed them, and does run after one whose core sources failed (an outage) or
+  that never came: GitHub runs schedules on a best-effort basis (the 05:17 run has started up to 8 hours late) and can
+  drop a run at busy times. A commit of other data (a manual refresh of one source, a restore) does not skip it. A scheduled run in the first seven days of a month is a full refresh (`EU_INTEL_FULL_REFRESH=1`;
   decided in the job, since cron would OR a day of the month with the weekday). A manual run is never skipped. GitHub
   also disables scheduled workflows in a public repository after 60 days without repository activity; the watchdog then
   reports the live data as overdue. Re-enable it under *Actions → Data refresh → Enable workflow*.
