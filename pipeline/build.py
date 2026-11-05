@@ -2168,6 +2168,13 @@ class Builder:
         if self.act_links:  # procedure links that the act's own text rules out (2020/3521(COD), Decision (EU) 2020/2059)
             snap.acts = apply_act_links(snap.acts, self.act_links)
         self.act_dates = load_act_dates(curated)
+        # the dates EUR-Lex itself records for the acts whose dates were checked, before the checked ones replace them:
+        # whether EUR-Lex records a checked date (pipeline/analysis/applies.py)
+        self.eurlex_dates = {
+            a.celex: {"entry_into_force": a.entry_into_force, "application": list(a.other_application_dates),
+                      "partial_on_entry_into_force": a.partial_on_entry_into_force}
+            for a in snap.acts if a.celex in self.act_dates
+        }  # fmt: skip
         if self.act_dates:
             snap.acts = [apply_act_dates(a, self.act_dates.get(a.celex)) for a in snap.acts]
         self.checked_act_types = checked_act_types(self.act_dates)
@@ -2447,6 +2454,7 @@ class Builder:
         self.build_topics()
         self.build_activity()
         self.build_home()
+        self.build_applies()
         self.build_search()
         self.build_meta()
         return self.files
@@ -5282,6 +5290,14 @@ class Builder:
         ]  # fmt: skip
         self.files["home.json"] = {"featured": featured, "lists": lists, "topics": self.topic_list}
 
+    # ---------------------------------------------------------------- when new rules apply
+    def build_applies(self) -> None:
+        """applies.json: the dates fixed in law from which rules start to apply, by act, date and kind, with where
+        (pipeline/analysis/applies.py); its feeds are written by build()."""
+        from pipeline.analysis import applies
+
+        self.files["applies.json"] = applies.rows(self)
+
     # ---------------------------------------------------------------- search
     def build_search(self) -> None:
         self.files["search.json"] = build_search_docs(self)
@@ -5901,7 +5917,7 @@ def write_output(files: dict[str, Any], extra: dict[str, str], out: Path = OUT) 
     for rel, text in sorted(extra.items()):
         p = tmp / rel
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8")
+        p.write_text(text, encoding="utf-8", newline="")  # as given: a calendar's lines end in CRLF (RFC 5545)
     old = out.with_name(f"{out.name}.old-{os.getpid()}")
     if out.exists():
         out.rename(old)
@@ -5921,7 +5937,7 @@ def build(
     """Build public/data. 0, or with `strict` (default: the environment's EU_INTEL_STRICT=1) 1 when the build had to
     work around a problem (PROBLEMS: a feature whose code did not load, a curated file or entry not applied, a status
     or assessment that fell back); the output is written either way, and every problem is listed at the end."""
-    from pipeline.analysis import feeds
+    from pipeline.analysis import applies, feeds
 
     if strict is None:
         strict = os.environ.get("EU_INTEL_STRICT", "").strip().lower() in ("1", "true", "yes")
@@ -5932,11 +5948,13 @@ def build(
     files = b.run()
     site = os.environ.get("SITE_URL") or DEFAULT_SITE_URL
     extra = feeds.build_feeds(b, site_url=site)
+    extra |= applies.build_feeds(b, files["applies.json"], site_url=site)  # when new rules apply: Atom and iCalendar
     write_output(files, extra, out)
     sizes = {
         k: len(json.dumps(v, ensure_ascii=False, separators=(",", ":")).encode()) for k, v in files.items()
     }
-    for k in ("dossiers/index.json", "votes/index.json", "votes/titles.json", "search.json", "home.json", "people/meps.json"):
+    for k in ("dossiers/index.json", "votes/index.json", "votes/titles.json", "search.json", "home.json", "people/meps.json",
+              "applies.json"):  # fmt: skip
         log.info("%-22s %8.1f KB", k, sizes.get(k, 0) / 1024)
     total = sum(sizes.values())
     log.info("wrote %d files (%.1f MB) to %s", len(files) + len(extra), total / 1e6, out)
