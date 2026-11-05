@@ -290,7 +290,13 @@ export function CouncilVoteCard({
                     Member States (TFEU Art. 238(3)).
                   </li>
                 )}
-                {a.adopted_by_rule === true && <li>On these figures, both qualified-majority thresholds were met.</li>}
+                {a.adopted_by_rule === true && a.deemed_attained && (
+                  <li>
+                    The population threshold was not met, but the Member States not voting in favour were too few to form a blocking
+                    minority, so the qualified majority is deemed attained{a.legal_basis ? ` (${a.legal_basis})` : ''}.
+                  </li>
+                )}
+                {a.adopted_by_rule === true && !a.deemed_attained && <li>On these figures, both qualified-majority thresholds were met.</li>}
                 {a.adopted_by_rule === false && <li>On these figures, the qualified-majority thresholds were not met.</li>}
                 {a.blocking_minority_existed === true && (
                   <li>The Member States not voting in favour formed a blocking minority{bmRule ? ` (${bmRule})` : ''}.</li>
