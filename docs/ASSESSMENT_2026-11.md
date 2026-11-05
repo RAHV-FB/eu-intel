@@ -322,6 +322,7 @@ EP votes fall Tue–Thu, so this cuts the average lag from about 5 days to about
 | 4.3 | **One source registry** (replace the six parallel lists) and one table of term dates. Move the code special cases above into curated YAML with evidence. | M |
 | 4.4 | Extract the pure sections of `build.py` (search docs, curated loaders, labels) when next touched; leave `Builder` until the stand-in tests are gone (after 1.4). | M |
 | 4.5 | Merge #13 and #5 together. Fix the WebKit CSP stylesheet-hash failure so #2 can land. Group vite with its plugin in `dependabot.yml`. | S |
+| 4.6 | **Layout that holds across fonts.** The site uses the reader's system fonts, and text width is set in `em`, so the characters per line depend on the font: on the AI Act's page, 70 (DejaVu Sans), 73 (Inter), 79 (Liberation Sans, metric-compatible with Arial), 87 (FreeSans), against the design's 65–75 and WCAG 1.4.8's 80. In the Playwright image, Firefox also reports target-size findings (inline glossary buttons). Set the measures to hold for narrow fonts, make inline targets meet 2.5.8 or its inline exception, then run e2e in the Playwright image (no OS-package install). | M |
 
 ---
 
@@ -430,7 +431,8 @@ Fixed in the follow-up PR (each with a test that fails without it):
   - the refresh job exposed its push token to npm install scripts;
   - a deploy did not record the commit it built (GitHub labels a refresh's deploy with the caller's commit): it is now
     in `meta.json` and the job summary;
-  - e2e jobs were cancelled while installing OS packages from a slow apt mirror (now run in the Playwright image).
+  - e2e jobs were cancelled while installing OS packages from a slow apt mirror (bounded, retried install; a longer
+    limit). Running them in the Playwright image instead exposed font-dependent layout findings: Plan 4.6.
 - **Status labels were fixed at build time** while explanations follow the reader's date ("Published, not yet in
   force" beside "It entered into force on 17 November"). A daily rebuild without fetching now keeps them within a day.
 - **Docs**: 20 statements that #17 had made false (deploy paths, schedules, the Scoreboard, the Train), and the

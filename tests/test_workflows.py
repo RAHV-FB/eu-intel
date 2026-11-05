@@ -139,32 +139,33 @@ def test_the_live_smoke_test_runs_only_when_asked_for():
     assert "live-smoke.spec.ts" not in frozen_run and "smoke.spec.ts" in frozen_run
 
 
-def test_the_browser_tests_run_in_the_playwright_image_of_the_locked_version(tmp_path):
-    # `playwright install --with-deps` downloaded the browsers' OS packages from the Ubuntu mirror (WebKit: 181); on
-    # 5 Nov 2026 e2e jobs ran past their time limit and were cancelled, and a refresh deploys only after a green CI run
+def test_the_browser_tests_install_their_browser_with_bounded_retries(tmp_path):
+    # `playwright install --with-deps` downloads the browsers' OS packages from the Ubuntu mirror (WebKit: 181); on 5 Nov
+    # 2026 two e2e jobs were cancelled at their 20-minute limit mid-install, and a refresh deploys only after a green CI
+    # run. The Playwright image avoided the install but resolved the site's fonts differently (81-character lines,
+    # Firefox target-size findings), so the job stays on the runner image: bounded attempts that resume, a longer limit.
     w = workflow("ci.yml")
     e2e = w["jobs"]["e2e"]
-    assert e2e["container"]["image"] == "mcr.microsoft.com/playwright:v${{ needs.check.outputs.playwright }}-noble"
-    assert e2e["container"]["options"].split() == ["--user", "1001", "--ipc=host"]  # the runner's user owns $HOME
-    assert not any("playwright install" in (x.get("run") or "") for x in e2e["steps"]) and e2e["needs"] == "check"
-    assert w["jobs"]["check"]["outputs"] == {"playwright": "${{ steps.playwright.outputs.version }}"}
-    s = w["jobs"]["check"]["steps"]
-    step = s[named(s, "The Playwright version of package-lock.json (the e2e job's image)")]
-    assert step["id"] == "playwright"
-    work = tmp_path / "repo"
-    work.mkdir()
-    shutil.copy(ROOT / "package-lock.json", work / "package-lock.json")
-    version = run_step(step["run"], work, {})["version"]
-    lock = json.loads((ROOT / "package-lock.json").read_text(encoding="utf-8"))["packages"]
-    deps = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["devDependencies"]
-    # exact pins, and the browsers' package with them, so that the image has the browsers the tests expect
-    assert version == lock["node_modules/@playwright/test"]["version"] == lock["node_modules/playwright-core"]["version"]
-    assert deps["@playwright/test"] == deps["playwright-core"] == version
-    npm = next(u for u in yaml.safe_load((ROOT / ".github" / "dependabot.yml").read_text())["updates"] if u["package-ecosystem"] == "npm")
-    assert {"@playwright/test", "playwright-core"} <= set(npm["groups"]["playwright"]["patterns"])  # bumped together
-    (work / "package-lock.json").write_text(json.dumps({"packages": {"node_modules/@playwright/test": {"version": "1.56.1; x"}}}))
-    with pytest.raises(subprocess.CalledProcessError):  # nothing but a version reaches the image name
-        run_step(step["run"], work, {})
+    assert "container" not in e2e and e2e["runs-on"] == "ubuntu-24.04" and e2e["timeout-minutes"] >= 40
+    s = e2e["steps"]
+    step = s[named(s, "Install ${{ matrix.browser }} for Playwright")]
+    assert step["env"]["BROWSER"] == "${{ matrix.browser }}"
+    assert "timeout 600 npx playwright install --with-deps \"$BROWSER\"" in step["run"]
+    assert named(s, "Install ${{ matrix.browser }} for Playwright") < named(s, "Run Playwright")
+    # the attempts: a stand-in npx that fails twice, then succeeds, is tried three times; one that always fails, fails
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    count = tmp_path / "count"
+    (bin_ / "npx").write_text(f"#!/bin/sh\necho x >> {count}\n[ $(wc -l < {count}) -ge 3 ]\n")
+    (bin_ / "npx").chmod(0o755)
+    (bin_ / "sleep").write_text("#!/bin/sh\nexit 0\n")
+    (bin_ / "sleep").chmod(0o755)
+    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}", "BROWSER": "webkit"}
+    assert subprocess.run(["bash", "-c", step["run"]], env=env, capture_output=True).returncode == 0
+    assert count.read_text().count("x") == 3
+    count.write_text("")
+    (bin_ / "npx").write_text("#!/bin/sh\nexit 1\n")
+    assert subprocess.run(["bash", "-c", step["run"]], env=env, capture_output=True).returncode == 1
 
 
 def test_vitest_fails_when_it_finds_no_tests():

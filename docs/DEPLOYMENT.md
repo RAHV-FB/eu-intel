@@ -356,10 +356,12 @@ The `e2e` job in `ci.yml` (Playwright + axe-core on the site built from the froz
 e2e + accessibility tests".
 
 It runs once per browser engine (Chromium, Firefox and WebKit, the engine of Safari; one failing engine does not
-cancel the others), in the official Playwright image of the version `package-lock.json` pins
-(`mcr.microsoft.com/playwright:v<version>-noble`; the `check` job reads the version, so a Dependabot bump of the playwright
-group moves the image with it): the browsers and their OS packages are in the image, so nothing is installed (installing
-them from the Ubuntu mirror kept jobs past their time limit). Each run reuses the site built by the `check` job (uploaded
+cancel the others), on the `ubuntu-24.04` runner image, whose fonts the layout and accessibility checks were set
+against. It installs its browser with `playwright install --with-deps`; the OS packages come from the Ubuntu mirror, which
+is at times very slow, so each install attempt is bounded at 10 minutes, a failed attempt is retried (up to three, and
+apt keeps what it downloaded), and the job may run 40 minutes. (The official Playwright image skips the install but
+resolves the site's font stack to narrower fonts: lines of 81 characters and Firefox target-size findings, Plan 4.6 of
+docs/ASSESSMENT_2026-11.md.) Each run reuses the site built by the `check` job (uploaded
 as the `site-dist` artifact), runs `npx playwright test --project=<browser>` (`E2E_BROWSERS` adds the Firefox and WebKit
 projects to `playwright.config.ts`; locally only Chromium runs unless it is set), and uploads the HTML report and
 traces as the `playwright-report-<browser>` artifact.
