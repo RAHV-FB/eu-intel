@@ -13,8 +13,9 @@ export interface OpmlFile {
 }
 
 const XML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
-// characters XML 1.0 does not allow (a control character in a title would make the file unreadable)
-const NOT_XML = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g;
+// characters XML 1.0 does not allow (a control character in a title would make the file unreadable), and a lone
+// surrogate (half of a character, which encodeURIComponent refuses: the page failed)
+const NOT_XML = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g;
 
 export function xmlEscape(s: string): string {
   return s.replace(NOT_XML, '').replace(/[&<>"']/g, (c) => XML_ESCAPES[c]);
