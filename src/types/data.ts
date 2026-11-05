@@ -539,7 +539,7 @@ export type CouncilPosition = 'for' | 'against' | 'abstain' | 'not_participating
 export interface CouncilAssessment {
   rule: 'qmv' | 'unanimity' | 'simple_majority';
   states_for: number;
-  states_required: number;
+  states_required: number | null; // null under unanimity: no number of Member States in favour is required
   // Only when legal_basis is null under QMV: Member States needed if the Council did NOT act on a Commission
   // proposal (72%, TFEU Art. 238(2)); states_required is then the figure for a Commission proposal (55%)
   states_required_alt?: number | null;
