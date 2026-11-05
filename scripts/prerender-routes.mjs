@@ -14,6 +14,15 @@ const SITE = 'EU Legislative Intelligence';
 const SITE_URL = process.env.SITE_URL ? `${process.env.SITE_URL.replace(/\/+$/, '')}/` : null;
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// A directory name taken from the data (an id, a slug, a country code) must be one plain name inside dist/, whatever a
+// source sends: an id "../x" would write outside it, ".." over another page. Anything else stops the build.
+const segment = (s) => {
+  const v = String(s);
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(v) || v.includes('..')) {
+    throw new Error(`prerender-routes: ${JSON.stringify(v)} is not a safe path segment for a page address`);
+  }
+  return v;
+};
 const readJson = (p) => {
   const f = join(DIST, 'data', p);
   return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : [];
@@ -108,7 +117,7 @@ let n = routes.length;
 for (const d of readJson('dossiers/index.json')) {
   // the procedure reference tells apart files of the same title (Energy performance of buildings: 2021/0426(COD), 2016/0381(COD))
   page(
-    `legislation/${d.id}`,
+    `legislation/${segment(d.id)}`,
     d.title,
     d.short || `${d.ref}: ${d.status_label}.${d.official_title ? ` ${d.official_title}` : ''}`.slice(0, 300),
     d.ref,
@@ -127,11 +136,11 @@ for (const v of readJson('votes/index.json')) {
     ? `${counts.map(([k, label]) => `${k} ${label}`).join(', ')}.`
     : `${v.outcome_note ?? `${v.kind_label}.`} No vote counts are recorded.`;
   // the date tells apart votes of the same title (a motion to reject on a file, voted twice)
-  page(`votes/${v.id}`, v.display_title, `European Parliament vote of ${formatDate(v.date)}: ${result}`, formatDate(v.date));
+  page(`votes/${segment(v.id)}`, v.display_title, `European Parliament vote of ${formatDate(v.date)}: ${result}`, formatDate(v.date));
   n++;
 }
 for (const m of readJson('people/meps.json')) {
-  page(`people/meps/${m.id}`, m.name, `${m.active ? 'Member' : 'Former Member'} of the European Parliament elected in ${inCountry(m.country)}.`);
+  page(`people/meps/${segment(m.id)}`, m.name, `${m.active ? 'Member' : 'Former Member'} of the European Parliament elected in ${inCountry(m.country)}.`);
   n++;
 }
 for (const g of readJson('people/groups.json')) {
@@ -143,7 +152,7 @@ for (const g of readJson('people/groups.json')) {
       : g.active
         ? `Political group in the European Parliament${terms ? ` (${terms})` : ''}: its members by country and national party, and how they voted.`
         : `Political group in the European Parliament${terms ? ` in the ${terms}` : ''}, not a group in the current term: how its members voted.`;
-  page(`people/groups/${g.id}`, `${g.code} – ${g.name}`, description);
+  page(`people/groups/${segment(g.id)}`, `${g.code} – ${g.name}`, description);
   n++;
 }
 const partyDir = join(DIST, 'data', 'people', 'parties');
@@ -151,14 +160,14 @@ for (const f of existsSync(partyDir) ? readdirSync(partyDir).filter((x) => x.end
   const p = JSON.parse(readFileSync(join(partyDir, f), 'utf8'));
   const term = termYears(p.terms);
   page(
-    `people/parties/${p.id}`,
+    `people/parties/${segment(p.id)}`,
     partyTitle(p),
     `National party from ${countryName(p.country)} as recorded in the European Parliament's membership data${term ? ` (record for the ${term})` : ''}: its MEPs and political groups.`,
   );
   n++;
 }
 for (const c of readJson('countries/index.json')) {
-  page(`countries/${c.code}`, c.name, `${c.name} in the EU: MEPs, Council votes and implementation of EU law.`);
+  page(`countries/${segment(c.code)}`, c.name, `${c.name} in the EU: MEPs, Council votes and implementation of EU law.`);
   n++;
 }
 // Former topic addresses (/topics/<slug>/, now /legislation/?topic=<slug>): a page with status 200 that redirects without
@@ -170,7 +179,7 @@ const icon = /<link rel="icon"[^>]*>/.exec(shell)?.[0];
 if (!csp || !icon) throw new Error('prerender-routes: no Content-Security-Policy meta or icon link in dist/index.html');
 for (const t of readJson('topics.json')) {
   const target = `legislation/?topic=${encodeURIComponent(t.slug)}`;
-  const out = join(DIST, 'topics', t.slug, 'index.html');
+  const out = join(DIST, 'topics', segment(t.slug), 'index.html');
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(
     out,

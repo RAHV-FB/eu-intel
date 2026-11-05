@@ -1180,8 +1180,17 @@ def _curated_list(name: str, curated: Path) -> list:
     return raw if isinstance(raw, list) else []
 
 
+def _inside(root: Path, rel: str) -> Path:
+    """`root / rel` for a name built from a source's id (votes/<id>.json): an id "../x" or an absolute path would write
+    outside the output, or over another of its files, so the build stops instead."""
+    p = Path(rel)
+    if not p.parts or p.is_absolute() or ".." in p.parts:
+        raise ValueError(f"{rel!r} is not a path inside the built data (an id from a source?)")
+    return root / p
+
+
 def _write(rel: str, data: Any, root: Path) -> None:
-    path = root / rel
+    path = _inside(root, rel)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
@@ -5899,7 +5908,7 @@ def write_output(files: dict[str, Any], extra: dict[str, str], out: Path = OUT) 
     for rel in sorted(files):
         _write(rel, files[rel], tmp)
     for rel, text in sorted(extra.items()):
-        p = tmp / rel
+        p = _inside(tmp, rel)
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text, encoding="utf-8")
     old = out.with_name(f"{out.name}.old-{os.getpid()}")
