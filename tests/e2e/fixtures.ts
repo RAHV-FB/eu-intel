@@ -15,6 +15,47 @@ export interface Guard {
   ignore(re: RegExp): void;
 }
 
+/**
+ * What the guard fails a test for, recorded while `running()`: requests to other origins than the site's, and console
+ * errors, uncaught exceptions and failed same-origin requests.
+ *
+ * Once a test has failed, Playwright takes its failure screenshot (`screenshot: 'only-on-failure'`) before the guard's
+ * checks run, and in WebKit the screenshot appends `<style>body {}</style>` to the page (to restart its animations), which
+ * the site's CSP refuses with a console error: "Refused to apply a stylesheet because its hash, its nonce, or
+ * 'unsafe-inline' does not appear in the style-src directive". That is Playwright's doing, not the page's, and listed
+ * beside the real failure it made every failure in WebKit look like a CSP flake. What the page does after the test has
+ * failed is therefore not recorded (tests/e2e/guard.spec.ts).
+ */
+export function watchPage(page: Page, running: () => boolean): { errors: string[]; external: string[] } {
+  const errors: string[] = [];
+  const external: string[] = [];
+  let siteOrigin: string | null = null;
+  const skip = (u: URL) => !running() || u.protocol === 'data:' || u.protocol === 'blob:' || u.protocol === 'about:';
+
+  page.on('request', (req) => {
+    const u = new URL(req.url());
+    if (skip(u)) return;
+    if (siteOrigin === null && req.isNavigationRequest() && req.frame() === page.mainFrame()) siteOrigin = u.origin;
+    if (u.origin !== siteOrigin) external.push(`${req.resourceType()} ${req.url()}`);
+  });
+  page.on('response', (res) => {
+    const u = new URL(res.url());
+    if (skip(u) || u.origin !== siteOrigin) return;
+    if (res.status() >= 400) errors.push(`HTTP ${res.status()} ${res.url()}`);
+    // `vite preview` answers a missing data file with index.html (SPA fallback, 200): catch that too.
+    else if (/\.json$/.test(u.pathname) && (res.headers()['content-type'] ?? '').includes('text/html')) {
+      errors.push(`HTML served for missing data file ${res.url()}`);
+    }
+  });
+  page.on('console', (msg) => {
+    if (running() && msg.type() === 'error') errors.push(`console.error: ${msg.text()} (${msg.location().url})`);
+  });
+  page.on('pageerror', (err) => {
+    if (running()) errors.push(`uncaught: ${err.message}`);
+  });
+  return { errors, external };
+}
+
 /** `built_at` of the site under test (dist/data/meta.json), in ms; undefined if it cannot be read. */
 function builtAt(): number | undefined {
   try {
@@ -42,32 +83,10 @@ export const test = base.extend<{ guard: Guard; buildClock: void; clockAtBuild: 
     { auto: true },
   ],
   guard: [
-    async ({ page }, use) => {
-      const errors: string[] = [];
-      const external: string[] = [];
+    async ({ page }, use, testInfo) => {
       const ignored: RegExp[] = [];
-      let siteOrigin: string | null = null;
-      const skip = (u: URL) => u.protocol === 'data:' || u.protocol === 'blob:' || u.protocol === 'about:';
-
-      page.on('request', (req) => {
-        const u = new URL(req.url());
-        if (skip(u)) return;
-        if (siteOrigin === null && req.isNavigationRequest() && req.frame() === page.mainFrame()) siteOrigin = u.origin;
-        if (u.origin !== siteOrigin) external.push(`${req.resourceType()} ${req.url()}`);
-      });
-      page.on('response', (res) => {
-        const u = new URL(res.url());
-        if (skip(u) || u.origin !== siteOrigin) return;
-        if (res.status() >= 400) errors.push(`HTTP ${res.status()} ${res.url()}`);
-        // `vite preview` answers a missing data file with index.html (SPA fallback, 200): catch that too.
-        else if (/\.json$/.test(u.pathname) && (res.headers()['content-type'] ?? '').includes('text/html')) {
-          errors.push(`HTML served for missing data file ${res.url()}`);
-        }
-      });
-      page.on('console', (msg) => {
-        if (msg.type() === 'error') errors.push(`console.error: ${msg.text()} (${msg.location().url})`);
-      });
-      page.on('pageerror', (err) => errors.push(`uncaught: ${err.message}`));
+      // a test's status is "passed" while it runs, and changes as soon as it fails (or is skipped)
+      const { errors, external } = watchPage(page, () => testInfo.status === 'passed');
 
       await use({ ignore: (re) => ignored.push(re) });
 

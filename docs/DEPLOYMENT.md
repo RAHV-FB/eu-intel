@@ -52,7 +52,11 @@ check → size check (fails over 900 MB; Pages allows 1 GB).
 3. **If `main` is protected** by a ruleset or branch protection that blocks direct pushes, add
    `github-actions[bot]` (or the "GitHub Actions" app) to the bypass list, or the refresh commit will be rejected.
    Required status checks on `main` also block bot pushes unless bypassed. (The deploy waits for CI by itself, see
-   "Paths to production" below; protection is not needed for that.)
+   "Paths to production" below; protection is not needed for that.) As of 5 Nov 2026 `main` has no branch protection
+   and no ruleset (`gh api repos/RAHV-FB/eu-intel/branches/main/protection`: 404 "Branch not protected"; `…/rules/branches/main`:
+   `[]`), so no check is required to merge a pull request: a red CI run (or one still running, or the WebKit job alone
+   failing) does not block the merge button. What it blocks is the deploy, which runs only after CI passes on the push
+   to `main`.
 4. **Environment**: enabling Pages creates the `github-pages` environment, which by default only accepts
    deployments from `main`. Keep it that way (manual runs from other branches will build but not deploy; a refresh
    started from another branch commits to `main` but does not deploy).
