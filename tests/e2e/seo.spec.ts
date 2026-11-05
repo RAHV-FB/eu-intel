@@ -6,8 +6,8 @@
  * Legislation; the sitemap and robots.txt.
  *
  * The pages are picked from the build's own data when the tests run (dist/data), so the tests hold on the frozen test
- * data and on live data. Absolute addresses (og:url, the sitemap) need a build with SITE_URL; on one without (CI's), the
- * tests check that there are none.
+ * data and on live data; nothing is read before a test runs (listing the tests needs no build). Absolute addresses
+ * (og:url, og:image, the sitemap) need a build with SITE_URL; on one without (CI's), the tests check that there are none.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,36 +20,48 @@ import { expect, settle, test } from './fixtures';
 type Row = Record<string, unknown>;
 const read = <T,>(rel: string): T => JSON.parse(readFileSync(`dist/data/${rel}`, 'utf8')) as T;
 const pagesUrl = (path: string) => `${PAGES_ORIGIN}${BASE_PATH}${path}`;
-/** The site's address in a build with SITE_URL (the home page's canonical link); null in a build without. */
-const SITE_URL = /<link rel="canonical" href="([^"]+)"/.exec(readFileSync('dist/index.html', 'utf8'))?.[1] ?? null;
-const today = read<Meta>('meta.json').built_at.slice(0, 10);
 
-const index = read<DossierSummary[]>('dossiers/index.json');
-const detail = (id: string) => read<DossierDetail>(`dossiers/${id}.json`);
-const firstDetail = (pred: (d: DossierDetail) => boolean, from: DossierSummary[] = index) => {
-  for (const s of from) {
-    const d = detail(s.id);
-    if (pred(d)) return d;
-  }
-  return undefined;
-};
-const withStage = (...stages: string[]) => index.filter((d) => stages.includes(d.stage));
-/** Files of each kind the page states differently, the first of each in the data. */
-const FILES: [kind: string, file: DossierDetail | undefined][] = [
+/** Files of each kind the page states differently, and how to find the first of each in the data (`first`: the first
+ * file of these stages, or of any, whose page data passes the test). */
+type First = (pred: (d: DossierDetail) => boolean, ...stages: string[]) => DossierDetail | undefined;
+const KINDS: [kind: string, pick: (first: First) => DossierDetail | undefined][] = [
   // a regulation with dates still to come: its next step is led by them (Summary.tsx regulationNextStep)
-  ['a regulation in force', firstDetail((d) => d.instrument === 'regulation' && !!d.next_date && /^The regulation applies/.test(d.next_step.text), withStage('in_force'))],
-  ['a directive in force', firstDetail((d) => d.instrument === 'directive', withStage('in_force'))],
-  ['an act published, not yet in force', firstDetail(() => true, withStage('published'))],
-  ['an act no longer in force', firstDetail(() => true, withStage('no_longer_in_force'))],
-  ['a decision taking effect on notification', firstDetail(() => true, withStage('takes_effect_on_notification'))],
-  ['a proposal', firstDetail(() => true, withStage('proposed'))],
-  ['a file being negotiated', firstDetail(() => true, withStage('negotiations', 'provisional_agreement'))],
-  ['a withdrawn proposal', firstDetail(() => true, withStage('withdrawn'))],
-  ['a split proposal', firstDetail((d) => d.related.some((r) => r.relation === 'Split into'), withStage('unknown'))],
-  ['a file whose next step is not determined', firstDetail((d) => d.next_step.basis === 'unknown')],
+  ['a regulation in force', (first) => first((d) => d.instrument === 'regulation' && !!d.next_date && /^The regulation applies/.test(d.next_step.text), 'in_force')],
+  ['a directive in force', (first) => first((d) => d.instrument === 'directive', 'in_force')],
+  ['an act published, not yet in force', (first) => first(() => true, 'published')],
+  ['an act no longer in force', (first) => first(() => true, 'no_longer_in_force')],
+  ['a decision taking effect on notification', (first) => first(() => true, 'takes_effect_on_notification')],
+  ['a proposal', (first) => first(() => true, 'proposed')],
+  ['a file being negotiated', (first) => first(() => true, 'negotiations', 'provisional_agreement')],
+  ['a withdrawn proposal', (first) => first(() => true, 'withdrawn')],
+  ['a split proposal', (first) => first((d) => d.related.some((r) => r.relation === 'Split into'), 'unknown')],
+  ['a file whose next step is not determined', (first) => first((d) => d.next_step.basis === 'unknown')],
 ];
-const ACT = FILES[0][1] ?? firstDetail((d) => d.acts.length > 0, withStage('in_force'))!;
-const PROPOSAL = FILES[5][1]!;
+
+/** The build under test, read when a test first needs it. */
+function load() {
+  const index = read<DossierSummary[]>('dossiers/index.json');
+  const first: First = (pred, ...stages) => {
+    for (const s of index) {
+      if (stages.length && !stages.includes(s.stage)) continue;
+      const d = read<DossierDetail>(`dossiers/${s.id}.json`);
+      if (pred(d)) return d;
+    }
+    return undefined;
+  };
+  const files = new Map(KINDS.map(([kind, pick]) => [kind, pick(first)]));
+  return {
+    /** The site's address in a build with SITE_URL (the home page's canonical link); null in a build without. */
+    siteUrl: /<link rel="canonical" href="([^"]+)"/.exec(readFileSync('dist/index.html', 'utf8'))?.[1] ?? null,
+    today: read<Meta>('meta.json').built_at.slice(0, 10),
+    index,
+    files,
+    act: files.get('a regulation in force') ?? first((d) => d.acts.length > 0, 'in_force')!,
+    proposal: files.get('a proposal')!,
+  };
+}
+let built: ReturnType<typeof load> | undefined;
+const site = () => (built ??= load());
 
 const unescape = (s: string) => s.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 /** The page's title, description, canonical address and its meta tags by property or name: every value of each. */
@@ -70,22 +82,24 @@ async function shell(request: APIRequestContext, path: string) {
 const jsonLd = (html: string) => [...html.matchAll(/<script type="application\/ld\+json">([^<]*)<\/script>/g)].map((m) => JSON.parse(m[1]) as Row);
 
 test.describe('link previews', () => {
-  const rows = (rel: string) => read<Row[]>(rel);
-  const routes: [kind: string, path: string, status?: number][] = [
-    ['the home page', ''],
-    ['the legislation list', 'legislation/'],
-    ['About', 'about/'],
-    ['an act', `legislation/${ACT.id}/`],
-    ['a proposal', `legislation/${PROPOSAL.id}/`],
-    ['a vote', `votes/${rows('votes/index.json')[0].id}/`],
-    ['an MEP', `people/meps/${rows('people/meps.json')[0].id}/`],
-    ['a political group', `people/groups/${rows('people/groups.json')[0].id}/`],
-    ['a national party', `people/parties/${rows('people/parties.json')[0].id}/`],
-    ['a country', `countries/${rows('countries/index.json')[0].code}/`],
-    ['the page for unknown addresses', 'no-such-page/', 404],
+  const firstRow = (rel: string, key: string) => String(read<Row[]>(rel)[0][key]);
+  const routes: [kind: string, path: () => string, status?: number][] = [
+    ['the home page', () => ''],
+    ['the legislation list', () => 'legislation/'],
+    ['About', () => 'about/'],
+    ['an act', () => `legislation/${site().act.id}/`],
+    ['a proposal', () => `legislation/${site().proposal.id}/`],
+    ['a vote', () => `votes/${firstRow('votes/index.json', 'id')}/`],
+    ['an MEP', () => `people/meps/${firstRow('people/meps.json', 'id')}/`],
+    ['a political group', () => `people/groups/${firstRow('people/groups.json', 'id')}/`],
+    ['a national party', () => `people/parties/${firstRow('people/parties.json', 'id')}/`],
+    ['a country', () => `countries/${firstRow('countries/index.json', 'code')}/`],
+    ['the page for unknown addresses', () => 'no-such-page/', 404],
   ];
-  for (const [kind, path, status = 200] of routes) {
+  for (const [kind, pathOf, status = 200] of routes) {
     test(`${kind} previews with its own title and description`, async ({ request }) => {
+      const { siteUrl } = site();
+      const path = pathOf();
       const res = await shell(request, path);
       expect(res.status).toBe(status);
       const { title, description, canonical, tags } = head(res.html);
@@ -97,13 +111,13 @@ test.describe('link previews', () => {
       expect(tags['og:locale']).toEqual(['en_GB']);
       expect(tags['twitter:card']).toEqual(['summary']);
       // the page's absolute address, as its canonical link gives it: only in a build with SITE_URL, never on the 404 page
-      if (SITE_URL && status === 200) {
-        expect(canonical).toBe(SITE_URL + path);
+      if (siteUrl && status === 200) {
+        expect(canonical).toBe(siteUrl + path);
         expect(tags['og:url']).toEqual([canonical]);
       } else expect(tags['og:url']).toBeUndefined();
       // the site's image (its address is absolute too), with what it shows
-      expect(tags['og:image']).toEqual(SITE_URL ? [`${SITE_URL}og-image.png`] : undefined);
-      expect(tags['og:image:alt']).toEqual(SITE_URL ? [expect.stringContaining(SITE_NAME)] : undefined);
+      expect(tags['og:image']).toEqual(siteUrl ? [`${siteUrl}og-image.png`] : undefined);
+      expect(tags['og:image:alt']).toEqual(siteUrl ? [expect.stringContaining(SITE_NAME)] : undefined);
     });
   }
 
@@ -114,7 +128,7 @@ test.describe('link previews', () => {
     const png = await res.body();
     expect(png.length).toBeLessThanOrEqual(100 * 1024);
     const { tags } = head((await shell(request, '')).html);
-    if (SITE_URL) expect(tags['og:image:width']).toEqual([String(png.readUInt32BE(16))]);
+    if (site().siteUrl) expect(tags['og:image:width']).toEqual([String(png.readUInt32BE(16))]);
   });
 });
 
@@ -174,11 +188,11 @@ async function factsOnThePage(page: Page) {
 }
 
 test.describe('a legislative file’s key facts, for readers and crawlers without JavaScript', () => {
-  for (const [kind, d] of FILES) {
+  for (const [kind] of KINDS) {
     test(`${kind}: the page without JavaScript states what the page states once loaded, from the file’s data`, async ({ page, browser }) => {
-      test.skip(!d, `no such file in this data`);
-      const file = d!;
-      const path = `legislation/${file.id}/`;
+      const file = site().files.get(kind);
+      test.skip(!file, 'no such file in this data');
+      const path = `legislation/${file!.id}/`;
       const ctx = await browser.newContext({ javaScriptEnabled: false });
       const bare = await ctx.newPage();
       await bare.goto(pagesUrl(path));
@@ -188,25 +202,26 @@ test.describe('a legislative file’s key facts, for readers and crawlers withou
       expect(facts, 'a <noscript> block with the key facts').not.toBeNull();
 
       // from the file's data, with its labels and wording
-      const summary = index.find((s) => s.id === file.id)!;
-      expect(facts.title).toBe(file.title);
+      const d = file!;
+      const summary = site().index.find((s) => s.id === d.id)!;
+      expect(facts.title).toBe(d.title);
       expect(facts.headings[0]).toBe('H1');
-      expect(facts.status).toBe(file.status.label);
+      expect(facts.status).toBe(d.status.label);
       expect(facts.status).toBe(summary.status_label);
-      expect(facts.since).toBe(file.status.since ?? null);
-      expect(facts.rows['Procedure'].text).toEqual([file.ref]);
+      expect(facts.since).toBe(d.status.since ?? null);
+      expect(facts.rows['Procedure'].text).toEqual([d.ref]);
       const proposed = Object.keys(facts.rows).find((k) => k.startsWith('Proposed'));
-      expect(proposed ? facts.rows[proposed].dates : []).toEqual(file.started ? [file.started] : []);
-      expect(facts.rows['Adopted']?.dates ?? []).toEqual(file.adopted ? [file.adopted] : []);
-      expect(facts.rows['Published in the Official Journal']?.dates ?? []).toEqual(file.published ? [file.published] : []);
-      const act = file.acts[0];
+      expect(proposed ? facts.rows[proposed].dates : []).toEqual(d.started ? [d.started] : []);
+      expect(facts.rows['Adopted']?.dates ?? []).toEqual(d.adopted ? [d.adopted] : []);
+      expect(facts.rows['Published in the Official Journal']?.dates ?? []).toEqual(d.published ? [d.published] : []);
+      const act = d.acts[0];
       if (act) {
         expect(facts.rows['CELEX'].text).toEqual([act.celex]);
         expect(facts.links).toContainEqual({ text: 'Legal text (EUR-Lex)', href: act.eurlex_url });
-        if (file.application?.entry_into_force) expect(facts.rows['Entry into force'].dates).toEqual([file.application.entry_into_force]);
+        if (d.application?.entry_into_force) expect(facts.rows['Entry into force'].dates).toEqual([d.application.entry_into_force]);
       } else expect(facts.rows['CELEX']).toBeUndefined();
-      const ns = file.next_step;
-      const split = file.related.some((r) => r.relation === 'Split into');
+      const ns = d.next_step;
+      const split = d.related.some((r) => r.relation === 'Split into');
       if (!split && ns.basis !== 'unknown' && !/^The regulation applies directly/.test(ns.text))
         expect(facts.rows['What happens next'].paras[0]).toBe(`${ns.text}${ns.basis === 'derived' ? ' Derived from recorded events' : ''}`);
       expect(facts.note).toContain('This site needs JavaScript');
@@ -236,14 +251,16 @@ test.describe('a legislative file’s key facts, for readers and crawlers withou
   }
 
   test('a reader with JavaScript never sees them, even before the app has loaded', async ({ page, guard }) => {
-    // the app's script does not load: the page stays empty (a <noscript> block is not rendered while scripts run)
-    guard.ignore(/ERR_FAILED|Failed to load/);
+    const path = `legislation/${site().act.id}/`;
+    // the app's script does not load: the page stays empty (a <noscript> block is not rendered while scripts run); each
+    // engine reports the blocked script in its own words
+    guard.ignore(/ERR_FAILED|Failed to load|Loading failed|assets\/[^ ]*\.js/i);
     await page.route('**/assets/*.js', (route) => route.abort());
-    await page.goto(pagesUrl(`legislation/${ACT.id}/`));
+    await page.goto(pagesUrl(path));
     expect(await page.evaluate(() => document.body.innerText.trim())).toBe('');
     await page.unroute('**/assets/*.js');
     // once it has loaded: the page's own heading only
-    await page.goto(pagesUrl(`legislation/${ACT.id}/`));
+    await page.goto(pagesUrl(path));
     await settle(page);
     await expect(page.locator('h1')).toHaveCount(1);
     expect(await page.evaluate(() => [...document.querySelectorAll('noscript')].every((n) => n.children.length === 0))).toBe(true);
@@ -251,7 +268,7 @@ test.describe('a legislative file’s key facts, for readers and crawlers withou
 
   test('they are accessible as a browser without JavaScript renders them', async ({ browser }) => {
     // axe-core needs scripts: the <noscript> block's markup is shown as the page's content, under the same style sheet
-    for (const d of [ACT, PROPOSAL]) {
+    for (const d of [site().act, site().proposal]) {
       const ctx = await browser.newContext();
       const page = await ctx.newPage();
       const url = pagesUrl(`legislation/${d.id}/`);
@@ -269,8 +286,9 @@ test.describe('a legislative file’s key facts, for readers and crawlers withou
 
 test.describe('structured data', () => {
   test('a file’s act is schema.org Legislation, as its page states it; a proposal has none', async ({ request }) => {
-    const act = ACT.acts[0];
-    const [ld, ...more] = jsonLd((await shell(request, `legislation/${ACT.id}/`)).html);
+    const { act: file, proposal, siteUrl, files } = site();
+    const act = file.acts[0];
+    const [ld, ...more] = jsonLd((await shell(request, `legislation/${file.id}/`)).html);
     expect(more).toEqual([]);
     expect(ld['@context']).toBe('https://schema.org');
     expect(ld['@type']).toBe('Legislation');
@@ -280,10 +298,11 @@ test.describe('structured data', () => {
     expect(ld.datePublished).toBe(act.date_publication ?? undefined);
     expect(ld.legislationLegalForce).toEqual({ '@id': 'https://schema.org/InForce' }); // its status: In force
     expect(ld.url).toBe(act.eurlex_url);
-    expect(ld.mainEntityOfPage).toBe(SITE_URL ? `${SITE_URL}legislation/${ACT.id}/` : undefined);
-    expect(jsonLd((await shell(request, `legislation/${PROPOSAL.id}/`)).html)).toEqual([]);
+    expect(ld.mainEntityOfPage).toBe(siteUrl ? `${siteUrl}legislation/${file.id}/` : undefined);
+    expect(jsonLd((await shell(request, `legislation/${proposal.id}/`)).html)).toEqual([]);
     // every file page's structured data parses
-    for (const [, d] of FILES.filter(([, f]) => f)) for (const x of jsonLd((await shell(request, `legislation/${d!.id}/`)).html)) expect(x['@type']).toBe('Legislation');
+    for (const d of files.values())
+      if (d) for (const x of jsonLd((await shell(request, `legislation/${d.id}/`)).html)) expect(x['@type']).toBe('Legislation');
   });
 
   test('is a data block, which the Content-Security-Policy does not block or report', async ({ page }) => {
@@ -292,7 +311,7 @@ test.describe('structured data', () => {
       w.cspViolations = [];
       window.addEventListener('securitypolicyviolation', (e) => w.cspViolations.push(`${e.violatedDirective} ${e.blockedURI}`), true);
     });
-    await page.goto(pagesUrl(`legislation/${ACT.id}/`));
+    await page.goto(pagesUrl(`legislation/${site().act.id}/`));
     await settle(page);
     await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
     expect(await page.evaluate(() => (window as unknown as { cspViolations: string[] }).cspViolations)).toEqual([]);
@@ -314,17 +333,19 @@ function shells() {
 
 test.describe('search engines', () => {
   test('robots.txt lets every crawler read every page, and names the sitemap when there is one', async ({ request }) => {
+    const { siteUrl } = site();
     const res = await request.get(pagesUrl('robots.txt'));
     expect(res.status()).toBe(200);
     expect(res.headers()['content-type']).toContain('text/plain');
     const lines = (await res.text()).split('\n').filter(Boolean);
     expect(lines.slice(0, 2)).toEqual(['User-agent: *', 'Allow: /']);
-    expect(lines.filter((l) => l.startsWith('Sitemap:'))).toEqual(SITE_URL ? [`Sitemap: ${SITE_URL}sitemap.xml`] : []);
+    expect(lines.filter((l) => l.startsWith('Sitemap:'))).toEqual(siteUrl ? [`Sitemap: ${siteUrl}sitemap.xml`] : []);
   });
 
   test('the sitemap lists every page for search engines at its canonical address, with the date of its last change', async ({ page, request }) => {
+    const { siteUrl, today, act, proposal } = site();
     const res = await request.get(pagesUrl('sitemap.xml'));
-    if (!SITE_URL) {
+    if (!siteUrl) {
       expect(res.status(), 'no sitemap without SITE_URL: its addresses must be absolute').toBe(404);
       return;
     }
@@ -348,11 +369,11 @@ test.describe('search engines', () => {
     const top = await parse(body);
     expect(top.error).toBe(false);
     expect(top.ns).toBe('http://www.sitemaps.org/schemas/sitemap/0.9');
-    const files = top.root === 'sitemapindex' ? top.urls.map((u) => u.loc) : [`${SITE_URL}sitemap.xml`];
+    const files = top.root === 'sitemapindex' ? top.urls.map((u) => u.loc) : [`${siteUrl}sitemap.xml`];
     const urls: { loc: string; lastmod: string | null }[] = [];
     for (const f of files) {
-      expect(f.startsWith(SITE_URL)).toBe(true);
-      const xml = top.root === 'sitemapindex' ? await (await request.get(pagesUrl(f.slice(SITE_URL.length)))).text() : body;
+      expect(f.startsWith(siteUrl)).toBe(true);
+      const xml = top.root === 'sitemapindex' ? await (await request.get(pagesUrl(f.slice(siteUrl.length)))).text() : body;
       expect(Buffer.byteLength(xml)).toBeLessThanOrEqual(50 * 1024 * 1024);
       const one = await parse(xml);
       expect(one.error).toBe(false);
@@ -365,9 +386,9 @@ test.describe('search engines', () => {
     // every prerendered page not marked noindex, but the visitor's own list and the search form; nothing else
     const expected = shells()
       .filter((s) => !s.noindex && !['following/', 'search/'].includes(s.path))
-      .map((s) => SITE_URL + s.path);
+      .map((s) => siteUrl + s.path);
     expect([...locs].sort(), 'the sitemap lists the pages for search engines (scripts/prerender-routes.mjs page())').toEqual(expected.sort());
-    expect(locs[0]).toBe(SITE_URL);
+    expect(locs[0]).toBe(siteUrl);
     // the date of the last change where the data gives one: a file's latest step or recorded change, a vote's date
     const lastmod = new Map(urls.map((u) => [u.loc, u.lastmod]));
     const changedOn = (...dates: (string | null | undefined)[]) =>
@@ -377,15 +398,15 @@ test.describe('search engines', () => {
         .filter((x) => x <= today)
         .sort()
         .pop() ?? null;
-    for (const d of [ACT, PROPOSAL])
-      expect(lastmod.get(`${SITE_URL}legislation/${d.id}/`), d.id).toBe(changedOn(d.last_event, ...d.changes.map((c) => c.detected_at)));
+    for (const d of [act, proposal])
+      expect(lastmod.get(`${siteUrl}legislation/${d.id}/`), d.id).toBe(changedOn(d.last_event, ...d.changes.map((c) => c.detected_at)));
     const vote = read<Row[]>('votes/index.json')[0];
-    expect(lastmod.get(`${SITE_URL}votes/${vote.id}/`)).toBe(changedOn(vote.date as string));
-    expect(lastmod.get(SITE_URL)).toBeNull();
+    expect(lastmod.get(`${siteUrl}votes/${vote.id}/`)).toBe(changedOn(vote.date as string));
+    expect(lastmod.get(siteUrl)).toBeNull();
     for (const m of urls.filter((u) => u.lastmod)) expect(m.lastmod! <= today && /^\d{4}-\d{2}-\d{2}$/.test(m.lastmod!), m.loc).toBe(true);
     // listed pages answer as they are listed
-    for (const loc of [SITE_URL, `${SITE_URL}legislation/${ACT.id}/`, locs[locs.length - 1]]) {
-      const listed = await request.get(pagesUrl(loc.slice(SITE_URL.length)), { maxRedirects: 0 });
+    for (const loc of [siteUrl, `${siteUrl}legislation/${act.id}/`, locs[locs.length - 1]]) {
+      const listed = await request.get(pagesUrl(loc.slice(siteUrl.length)), { maxRedirects: 0 });
       expect(listed.status(), loc).toBe(200);
     }
   });
