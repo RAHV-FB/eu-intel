@@ -5450,11 +5450,17 @@ class Builder:
             out.append(f"{len(s.measures):,} national transposition measures for {len(self.measure_celexes):,} "
                        f"directives ({with_m:,} with at least one measure) and {len(s.infringements):,} "
                        "infringement cases.")  # fmt: skip
-            if not s.indicators:
-                # Its host answers scripted requests again since 2 Nov 2026, but the indicators are published only in
-                # embedded Power BI reports (pipeline/sources/implementation.py), so none are read
-                out.append("Country indicators (Single Market Scoreboard) are not published in a machine-readable form, "
-                           "so none are shown.")  # fmt: skip
+            # the Scoreboard's table of overdue Single Market directives per Member State; its other indicators are
+            # published only in embedded Power BI reports (pipeline/sources/implementation.py), so none of those is read
+            if s.indicators:
+                out.append(f"The Single Market Scoreboard's count of overdue Single Market directives for each Member "
+                           f"State ({s.indicators[0].period[:1].lower()}{s.indicators[0].period[1:]}), shown on each "
+                           "country's page; its other indicators are published only in embedded Power BI reports and "
+                           "are not read.")  # fmt: skip
+            else:
+                out.append("The Single Market Scoreboard's count of overdue Single Market directives per Member State "
+                           "has not been retrieved for this release; its other indicators are published only in "
+                           "embedded Power BI reports and are not read.")  # fmt: skip
         elif sid == "optouts":
             read = list(self.optouts.values())
 
@@ -5612,9 +5618,17 @@ class Builder:
                          "legal basis.")  # fmt: skip
         else:
             notes.append("Infringement cases: not available in this release.")
-        if not s.indicators:
-            notes.append("Country indicators (e.g. Single Market Scoreboard transposition deficit): not available "
-                         "from an accessible official machine-readable source in this release.")  # fmt: skip
+        if s.indicators:
+            notes.append("Single Market Scoreboard: each Member State's count of overdue Single Market directives, as "
+                         "the Commission publishes it with its period, on that country's page only. It is the "
+                         "Commission's count, not a ranking, and the site computes no compliance score of its own; "
+                         "the Scoreboard's other indicators are published only in embedded Power BI reports and are "
+                         "not shown.")  # fmt: skip
+        else:
+            notes.append("Single Market Scoreboard: the Commission's count of overdue Single Market directives per "
+                         "Member State is not in this release (it is read from the Scoreboard's transposition page "
+                         "once a data refresh has retrieved it); its other indicators are published only in embedded "
+                         "Power BI reports and are not shown.")  # fmt: skip
         if avail("train"):
             notes.append("'Officially blocked' labels come only from the European Parliament's Legislative Train "
                          "Schedule; other inactivity is shown as the number of days without a recorded procedural update.")  # fmt: skip

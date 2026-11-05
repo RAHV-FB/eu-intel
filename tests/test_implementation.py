@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -10,7 +11,12 @@ import pytest
 
 from pipeline import snapshot
 from pipeline.http import HttpError
-from pipeline.models.entities import ImplementationCoverage, InfringementCase, NationalMeasure
+from pipeline.models.entities import (
+    CountryIndicator,
+    ImplementationCoverage,
+    InfringementCase,
+    NationalMeasure,
+)
 from pipeline.sources import implementation as imp
 
 FX = Path(__file__).parent / "fixtures" / "implementation"
@@ -177,6 +183,73 @@ def test_ddmmyyyy():
     assert imp._ddmmyyyy("29/01/2026") == "2026-01-29"
     assert imp._ddmmyyyy("31/02/2026") is None
     assert imp._ddmmyyyy(None) is None
+
+
+# ------------------------------------------------------------------- Single Market Scoreboard
+# The Scoreboard's transposition page as retrieved on 5 November 2026: its table of Single Market directives "not fully
+# notified" by sector and Member State, "as on 5 December 2025", rows ordered by total (Spain 27 … Slovakia 5)
+SCOREBOARD = FX / "scoreboard_transposition_en.html"
+
+
+def scoreboard_page() -> str:
+    return SCOREBOARD.read_text(encoding="utf-8")
+
+
+def test_scoreboard_table_gives_each_member_state_its_total_with_the_period():
+    recs = imp.parse_scoreboard_transposition(scoreboard_page(), NOW)
+    by = {r.country: r for r in recs}
+    assert sorted(by) == sorted(imp.MEMBER_STATES)  # each Member State once
+    assert by["ES"].value == 27 and by["DK"].value == 5 and by["SK"].value == 5
+    assert by["GR"].value == 10  # the row's class names Greece by the EU's code, "EL"
+    assert sum(r.value or 0 for r in recs) == 316  # the page's "TOTAL (316)"
+    r = by["DE"]
+    assert (r.indicator, r.label, r.unit) == (imp.OVERDUE_INDICATOR, "Overdue Single Market directives", "directives")
+    # the page's reporting period, which is the table's date ("as on 5 December 2025")
+    assert r.period == ("Notifications made by 5 December 2025, for directives with a transposition deadline on or "
+                        "before 30 November 2025")  # fmt: skip
+    assert r.source.institution == "Commission" and r.source.url == imp.SCOREBOARD_TRANSPOSITION_URL
+    assert r.source.identifier == "sm_directives_not_notified:DE:2025-12-05"
+    assert "not fully" not in r.label and "Commission’s count" in r.definition
+
+
+def test_scoreboard_records_are_by_country_not_by_the_pages_order():
+    assert [r.country for r in imp.parse_scoreboard_transposition(scoreboard_page(), NOW)] == sorted(imp.MEMBER_STATES)
+
+
+def test_scoreboard_period_falls_back_to_the_tables_date():
+    page = scoreboard_page().replace("notifications made by 5&nbsp;December", "notifications made by 4&nbsp;December")
+    assert page != scoreboard_page()
+    recs = imp.parse_scoreboard_transposition(page, NOW)
+    assert {r.period for r in recs} == {"As on 5 December 2025"}  # the reporting period is another date: not used
+
+
+@pytest.mark.parametrize(
+    "change, why",
+    [
+        # a Member State's row dropped: 26 rows
+        (lambda p: re.sub(r'<tr><th[^>]*><span class="Country_SK">.*?</tr>', "", p, count=1, flags=re.S),
+         "26 Member States in the table; missing SK"),
+        # a row that names another country
+        (lambda p: p.replace('<tr><th style="white-space:nowrap;"><span class="Country_SK">Slovakia</span></th>',
+                             '<tr class="x"><th>Iceland</th>', 1), "names no Member State"),
+        # a total that its sectors do not add up to
+        (lambda p: p.replace('data-col="Total">27<', 'data-col="Total">28<', 1), "add up"),
+        # a figure that is not a whole number
+        (lambda p: p.replace('data-col="Total">21<', 'data-col="Total">2.1<', 1), "whole number"),
+        # the date the table is as on, gone
+        (lambda p: p.replace("as on 5 December 2025", "as on a date to be confirmed", 1), "date"),
+        # a second table of the same kind
+        (lambda p: p.replace('<table class="reference">', '<table class="heatmap-table">', 1), "tables"),
+        # Spain's row twice
+        (lambda p: p.replace('<span class="Country_PL">Poland</span>', '<span class="Country_ES">Spain</span>', 1),
+         "twice"),
+    ],
+)
+def test_a_scoreboard_table_that_fails_a_check_is_not_read(change, why):
+    page = change(scoreboard_page())
+    assert page != scoreboard_page()
+    with pytest.raises(imp.ScoreboardError, match=why):
+        imp.parse_scoreboard_transposition(page, NOW)
 
 
 # ------------------------------------------------------------------------------ fetch() wiring
@@ -385,6 +458,44 @@ def test_run_deadline_passed_keeps_everything(imp_dir, monkeypatch):
     assert st.records["measures"] == 11  # previous facts kept
 
 
+class ScoreboardUp(FakeHttp):
+    """The Scoreboard's transposition page answers, as it has since 2 November 2026."""
+
+    page: str | None = None
+
+    def get(self, url: str, **kw):
+        assert url == imp.SCOREBOARD_TRANSPOSITION_URL
+        return (self.page or scoreboard_page()).encode()
+
+
+def test_fetch_writes_the_scoreboard_figures(imp_dir):
+    class AllUp(ScoreboardUp):  # no directive query fails: every sub-source is read
+        def sparql(self, query: str, **kw):
+            if "measure_national_implementing_implements_resource_legal" not in query:
+                return [{"celex": NIS2}, {"celex": NO_MEASURES}]
+            return super().sparql(query, **kw)
+
+    st = imp.fetch(AllUp())  # type: ignore[arg-type]
+    recs = snapshot.read_records(imp.SOURCE_ID, "indicators", CountryIndicator)
+    assert len(recs) == 27 and st.records["indicators"] == 27
+    assert st.status == "ok"  # every sub-source read: no longer "partial" for want of indicators
+    assert "Single Market Scoreboard: overdue directives of 27 Member States (Notifications made by 5 December" in (
+        st.note or ""
+    )
+
+
+def test_a_scoreboard_table_that_changed_shape_keeps_the_stored_figures(imp_dir):
+    imp.fetch(ScoreboardUp())  # type: ignore[arg-type]
+    before = (imp_dir / imp.SOURCE_ID / "indicators.json").read_text()
+
+    class Changed(ScoreboardUp):
+        page = scoreboard_page().replace("heatmap-table", "heatmap")
+
+    st = imp.fetch(Changed())  # type: ignore[arg-type]
+    assert (imp_dir / imp.SOURCE_ID / "indicators.json").read_text() == before
+    assert st.status == "partial" and "transposition table not read (0 tables" in (st.note or "")
+
+
 # ------------------------------------------------------------------------------- live checks
 @pytest.mark.network
 def test_live_nis2_measures():
@@ -400,3 +511,12 @@ def test_live_register_search():
 
     recs = imp.search_cases(default_http(), refId="INFR(2021)0330")
     assert recs and recs[0]["infringementNumber"] == "INFR(2021)0330"
+
+
+@pytest.mark.network
+def test_live_scoreboard_transposition_table():
+    from pipeline.http import default_http
+
+    recs, note = imp.fetch_indicators(default_http())
+    assert recs is not None, note
+    assert len(recs) == 27
