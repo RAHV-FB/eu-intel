@@ -491,5 +491,600 @@
   },
   "title": "European Border and Coast Guard: Commission published its legislative proposal",
   "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2023-0209",
+  "id": "chg:2023-0209:ev:council-ST-15152-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 15152/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 15152/26",
+   "published": "2026-10-30",
+   "retrieved_at": "2026-11-05T09:17:35Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-15152-2026-INIT/EN/pdf"
+  },
+  "title": "Payment services and electronic money services in the Internal Market amending Directive 98/26/EC and…: Council adopted its position at first reading",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2023-0210",
+  "id": "chg:2023-0210:ev:council-ST-15154-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 15154/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 15154/26",
+   "published": "2026-10-30",
+   "retrieved_at": "2026-11-05T09:17:35Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-15154-2026-INIT/EN/pdf"
+  },
+  "title": "Payment services in the internal market and amending Regulation (EU) No 1093/2010: Council adopted its position at first reading",
+  "vote_id": null
+ },
+ {
+  "date": "2023-12-14",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2023-0421",
+  "id": "chg:2023-0421:stage:proposed:2023-12-14",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2023-0421",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2023/0421(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:04:58Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2023/0421(COD)"
+  },
+  "title": "Protection of workers from the risks related to exposure to carcinogens, mutagens or reprotoxic substances…: status now “Proposal under examination” (previously “Published in the Official Journal”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2024-0035",
+  "id": "chg:2024-0035:stage:provisional_agreement:2026-11-04",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2024-0035",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2024/0035(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:45Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2024/0035(COD)"
+  },
+  "title": "Combating the sexual abuse and sexual exploitation of children and child sexual abuse material and replacing…: status now “Provisional agreement reached” (previously “Negotiations with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2024-0035",
+  "id": "chg:2024-0035:ev:2024-0035-DEC-VOAGT-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2024-0035-DEC-VOAGT-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:45Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2024-0035-DEC-VOAGT-2026-11-04"
+  },
+  "title": "Combating the sexual abuse and sexual exploitation of children and child sexual abuse material and replacing…: Parliament committee approved the provisional agreement with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2024-0098",
+  "id": "chg:2024-0098:stage:published:2026-11-04",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2024-0098",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2024/0098(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:37Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2024/0098(COD)"
+  },
+  "title": "Amending Regulation (EU) No 2023/2124 on certain provisions for fishing in the GFCM (General Fisheries…: status now “Published, not yet in force” (previously “Signed, awaiting publication”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-21",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2024-0098",
+  "id": "chg:2024-0098:ev:act-32026R2473-signature-2026-10-21",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026R2473",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2473",
+   "published": "2026-11-05",
+   "retrieved_at": "2026-11-05T09:14:21Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2473"
+  },
+  "title": "Amending Regulation (EU) No 2023/2124 on certain provisions for fishing in the GFCM (General Fisheries…: Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2024-0098",
+  "id": "chg:2024-0098:ev:2024-0098-PUB-2026-11-04",
+  "kind": "publication",
+  "source": {
+   "identifier": "2024-0098-PUB-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:37Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2024-0098-PUB-2026-11-04"
+  },
+  "title": "Amending Regulation (EU) No 2023/2124 on certain provisions for fishing in the GFCM (General Fisheries…: Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-03",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0172",
+  "id": "chg:2025-0172:stage:published:2026-11-03",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2025-0172",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2025/0172(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:18Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0172(COD)"
+  },
+  "title": "Acceleration of permit-granting for defence readiness projects: status now “Published, not yet in force” (previously “Signed, awaiting publication”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-21",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0172",
+  "id": "chg:2025-0172:ev:act-32026R2381-signature-2026-10-21",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026R2381",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2381",
+   "published": "2026-11-03",
+   "retrieved_at": "2026-11-05T09:14:21Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2381"
+  },
+  "title": "Acceleration of permit-granting for defence readiness projects: Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-03",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0172",
+  "id": "chg:2025-0172:ev:2025-0172-PUB-2026-11-03",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0172-PUB-2026-11-03",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:18Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0172-PUB-2026-11-03"
+  },
+  "title": "Acceleration of permit-granting for defence readiness projects: Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-03",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0176",
+  "id": "chg:2025-0176:stage:published:2026-11-03",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2025-0176",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2025/0176(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:16Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0176(COD)"
+  },
+  "title": "Amending Regulations (EC) No 1907/2006, (EC) No 1272/2008, (EU) No 528/2012, (EU) 2019/1021 and (EU)…: status now “Published, not yet in force” (previously “Signed, awaiting publication”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-21",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0176",
+  "id": "chg:2025-0176:ev:act-32026R2382-signature-2026-10-21",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026R2382",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2382",
+   "published": "2026-11-03",
+   "retrieved_at": "2026-11-05T09:14:21Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2382"
+  },
+  "title": "Amending Regulations (EC) No 1907/2006, (EC) No 1272/2008, (EU) No 528/2012, (EU) 2019/1021 and (EU)…: Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-03",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0176",
+  "id": "chg:2025-0176:ev:2025-0176-PUB-2026-11-03",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0176-PUB-2026-11-03",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:16Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0176-PUB-2026-11-03"
+  },
+  "title": "Amending Regulations (EC) No 1907/2006, (EC) No 1272/2008, (EU) No 528/2012, (EU) 2019/1021 and (EU)…: Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-21",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0177",
+  "id": "chg:2025-0177:ev:act-32026L2383-signature-2026-10-21",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026L2383",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L2383",
+   "published": "2026-11-03",
+   "retrieved_at": "2026-11-05T09:14:21Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L2383"
+  },
+  "title": "Amending Directives 2009/43/EC and 2009/81/EC, as regards the simplification of intra-EU transfers of…: Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-03",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0177",
+  "id": "chg:2025-0177:ev:2025-0177-PUB-2026-11-03",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0177-PUB-2026-11-03",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:16Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0177-PUB-2026-11-03"
+  },
+  "title": "Amending Directives 2009/43/EC and 2009/81/EC, as regards the simplification of intra-EU transfers of…: Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-30",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0232",
+  "id": "chg:2025-0232:ev:2025-0232-PUB-2026-10-30",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0232-PUB-2026-10-30",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:03:09Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0232-PUB-2026-10-30"
+  },
+  "title": "Amending Directive 2004/37/EC as regards the addition of substances and setting limit values in its Annexes…: Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-28",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0380",
+  "id": "chg:2025-0380:ev:2025-0380-PUB-2026-10-28",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0380-PUB-2026-10-28",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:02:36Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0380-PUB-2026-10-28"
+  },
+  "title": "Amending Decision (EU) 2015/1814 as regards the market stability reserve for the buildings, road transport…: Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0384",
+  "id": "chg:2025-0384:ev:2025-0384-DEC-ADCP-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0384-DEC-ADCP-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:02:36Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0384-DEC-ADCP-2026-11-04"
+  },
+  "title": "Monitoring and controlling drug precursors and repealing Regulations (EC) No 273/2004 and (EC) No 111/2005: Parliament committee adopted its report",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0391",
+  "id": "chg:2025-0391:ev:2025-0391-DEC-ADCP-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0391-DEC-ADCP-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:02:22Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0391-DEC-ADCP-2026-11-04"
+  },
+  "title": "Speeding-up environmental assessments: Parliament committee adopted its report",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0417",
+  "id": "chg:2025-0417:stage:provisional_agreement:2026-11-04",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2025-0417",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2025/0417(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:01:42Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0417(COD)"
+  },
+  "title": "Amending Regulation (EU) 2018/848 as regards certain production, labelling and certification rules and…: status now “Provisional agreement reached” (previously “Negotiations with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0417",
+  "id": "chg:2025-0417:ev:2025-0417-DEC-VOAGT-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0417-DEC-VOAGT-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:01:42Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0417-DEC-VOAGT-2026-11-04"
+  },
+  "title": "Amending Regulation (EU) 2018/848 as regards certain production, labelling and certification rules and…: Parliament committee approved the provisional agreement with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0420",
+  "id": "chg:2025-0420:ev:2025-0420-DEC-ADCP-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0420-DEC-ADCP-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:01:30Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0420-DEC-ADCP-2026-11-04"
+  },
+  "title": "CO2 standards for new cars and vans (2025 revision): Parliament committee adopted its report",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0421",
+  "id": "chg:2025-0421:ev:2025-0421-DEC-ADCP-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0421-DEC-ADCP-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:01:41Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0421-DEC-ADCP-2026-11-04"
+  },
+  "title": "Clean corporate vehicles: Parliament committee adopted its report",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0422",
+  "id": "chg:2025-0422:ev:2025-0422-DEC-ADCP-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0422-DEC-ADCP-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:01:31Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0422-DEC-ADCP-2026-11-04"
+  },
+  "title": "Amending Regulations (EC) No 561/2006, (EU) 2018/858, (EU) 2019/2144 and (EU) 2024/1257 of the European…: Parliament committee adopted its report",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0424",
+  "id": "chg:2025-0424:ev:2025-0424-DEC-ADCP-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0424-DEC-ADCP-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:01:10Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0424-DEC-ADCP-2026-11-04"
+  },
+  "title": "Amending Directive 92/6/EEC to exempt certain N2 electric vehicles from the requirement to install and use a…: Parliament committee adopted its report",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0542",
+  "id": "chg:2025-0542:ev:2025-0542-DEC-ADCP-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0542-DEC-ADCP-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:01:05Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0542-DEC-ADCP-2026-11-04"
+  },
+  "title": "Establishing the Union support for internal security for the period from 2028 to 2034: Parliament committee adopted its report",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2025-0542",
+  "id": "chg:2025-0542:ev:OEIL-2025-0542-2026-11-04-committee-decision-to-open-interinstitut",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025/0542(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:01:05Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0542(COD)"
+  },
+  "title": "Establishing the Union support for internal security for the period from 2028 to 2034: Parliament committee decided to open negotiations with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2026-0078",
+  "id": "chg:2026-0078:stage:in_force:2026-11-04",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2026-0078",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2026/0078(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:00:29Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0078(COD)"
+  },
+  "title": "Establishing the Programme for agile and rapid defence innovation (AGILE): status now “In force” (previously “Signed, awaiting publication”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-21",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2026-0078",
+  "id": "chg:2026-0078:ev:act-32026R2387-signature-2026-10-21",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026R2387",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2387",
+   "published": "2026-11-04",
+   "retrieved_at": "2026-11-05T09:14:21Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2387"
+  },
+  "title": "Establishing the Programme for agile and rapid defence innovation (AGILE): Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-03",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2026-0078",
+  "id": "chg:2026-0078:ev:2026-0078-PUB-2026-11-03",
+  "kind": "publication",
+  "source": {
+   "identifier": "2026-0078-PUB-2026-11-03",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:00:29Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2026-0078-PUB-2026-11-03"
+  },
+  "title": "Establishing the Programme for agile and rapid defence innovation (AGILE): Final act published in the Official Journal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2026-0078",
+  "id": "chg:2026-0078:ev:act-32026R2387-entry_into_force-2026-11-04",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026R2387",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2387",
+   "published": "2026-11-04",
+   "retrieved_at": "2026-11-05T09:14:21Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2387"
+  },
+  "title": "Establishing the Programme for agile and rapid defence innovation (AGILE): Entered into force",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2026-0085",
+  "id": "chg:2026-0085:stage:provisional_agreement:2026-11-04",
+  "kind": "status_change",
+  "source": {
+   "identifier": "2026-0085",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2026/0085(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:00:25Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0085(COD)"
+  },
+  "title": "Amending Decision (EU) 2015/1814 as regards ceasing the invalidation of allowances in the market stability…: status now “Provisional agreement reached” (previously “Mandate to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2026-0085",
+  "id": "chg:2026-0085:ev:2026-0085-DEC-VOAGT-2026-11-04",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2026-0085-DEC-VOAGT-2026-11-04",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-05T09:00:25Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2026-0085-DEC-VOAGT-2026-11-04"
+  },
+  "title": "Amending Decision (EU) 2015/1814 as regards ceasing the invalidation of allowances in the market stability…: Parliament committee approved the provisional agreement with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-03",
+  "detected_at": "2026-11-05T09:26:44Z",
+  "dossier_id": "2026-0292",
+  "id": "chg:2026-0292:ev:OEIL-2026-0292-2026-11-03-vote-in-committee",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2026/0292(CNS)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-05T08:59:13Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0292(CNS)"
+  },
+  "title": "VAT fraud: extension of the application period of the optional reverse charge mechanism and Quick Reaction…: Parliament committee voted on its report",
+  "vote_id": null
  }
 ]
