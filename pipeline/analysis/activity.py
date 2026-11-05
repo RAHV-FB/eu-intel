@@ -797,6 +797,22 @@ def _read(path: Path, default: Any) -> Any:
         return default
 
 
+def _read_history(path: Path, default: list | None, kind: type) -> Any:
+    """A committed history file (data/state/activity.json, a list; digest.json, a dict): `default` when there is none
+    yet (the first recorded run). One that exists but cannot be read is an error, never an empty history: read as empty,
+    the next recorded run wrote its own changes over every change recorded before (the dates on which they were seen,
+    which no later run can rebuild), and the strict build passed."""
+    if not path.exists():
+        return default
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise RuntimeError(f"{path} cannot be read ({e}); restore it from git, it is not rebuilt") from e
+    if not isinstance(data, kind):
+        raise RuntimeError(f"{path} holds a {type(data).__name__}, not a {kind.__name__}; restore it from git")
+    return data
+
+
 def _write(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
@@ -807,13 +823,13 @@ def _write(path: Path, data: Any) -> None:
 def update_state(b: Any, state_dir: Path, record: bool = False) -> list[dict]:
     """Return recorded change items; with record=True, detect and append new ones first."""
     act_path, dig_path = state_dir / "activity.json", state_dir / "digest.json"
-    recorded: list[dict] = _read(act_path, [])
+    recorded: list[dict] = _read_history(act_path, [], list)
     if not record:
         return recorded
     if not b.dossier_ids:  # procedures unavailable: nothing reliable to compare
         return recorded
     new = digest(b)
-    stored = _read(dig_path, None)
+    stored = _read_history(dig_path, None, dict)
     detected_at = os.environ.get("EU_INTEL_NOW") or now_iso()
     present = sources_present(b)
     # Stages computed from this snapshot are stored only if its procedure and act fetches were complete, or

@@ -337,7 +337,11 @@ def recheck_slot(slug: str) -> int:
 
 
 def week_slot(today: date) -> int:
-    return (today.toordinal() // 7) % RECHECK_WEEKS  # weeks start on Mondays
+    """The rotation week of `today`, Monday to Sunday (as ep_procedures.week_number counts them): ordinal 1, 1 January
+    of year 1, is a Monday. `toordinal() // 7` started the weeks on Sundays, so a Sunday run took the next week's
+    files, and the files of its own week waited another RECHECK_WEEKS weeks when no run came between Monday and
+    Saturday."""
+    return ((today.toordinal() - 1) // 7) % RECHECK_WEEKS
 
 
 def needs_page(

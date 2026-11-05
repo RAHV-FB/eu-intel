@@ -129,6 +129,16 @@ def test_planned_events_one_per_event_with_the_authority_labels_verbatim():
     assert (vote.institution, vote.label, vote.phase) == ("EP", "Vote in EP plenary", "Second reading")
 
 
+def test_a_planned_step_on_a_part_of_a_split_procedure_is_kept():
+    """Cellar records the parts of a split procedure as "2023/0077B/COD" (the Council adopted that part's act on 21 May
+    2024 by an event of that reference); such a planned step was counted as having no reference and left out."""
+    rows = sparql_rows("planned.sparql.json")
+    vote = next(r for r in rows if r["ref"] == "2023/0167/COD" and r["type"].endswith("VOTE_byEP"))
+    part = {**vote, "ev": vote["ev"] + "b", "same": vote["same"].replace("2023_167.", "2023_77B."), "ref": "2023/0077B/COD"}
+    steps, skipped = build_planned([part], RETRIEVED)
+    assert [s.reference for s in steps] == ["2023/0077B(COD)"] and skipped["no_reference"] == 0
+
+
 def test_a_planned_event_without_its_label_or_not_planned_is_left_out():
     rows = sparql_rows("planned.sparql.json")
     vote = next(r for r in rows if r["ref"] == "2023/0167/COD" and r["type"].endswith("VOTE_byEP"))

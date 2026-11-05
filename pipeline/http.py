@@ -233,10 +233,15 @@ class Http:
                 else:
                     # 202 from EU WAF challenge pages, 403 bot checks, 404 etc. are permanent here
                     raise HttpError(url, status, r.text[:300].replace("\n", " "))
-            except (httpx.TransportError, httpx.TimeoutException) as e:
+            except httpx.TooManyRedirects as e:  # a redirect loop: permanent, as a 404 is
+                raise HttpError(url, None, f"too many redirects ({e})") from e
+            except httpx.RequestError as e:
+                # a connection, a timeout, or a body that could not be decoded (a transfer cut short): retried. Callers
+                # handle a failed request as HttpError; httpx's DecodingError and TooManyRedirects escaped as themselves
+                # and failed a whole source (ep_votes keeps only a sitting that raised HttpError pending)
                 last_err = repr(e)
                 delay = min(2**attempt, 60)
-                kind = f"transport error {e}"
+                kind = f"request error {e}"
             if attempt == attempts - 1:
                 break
             if retry_end is not None and _now() + delay >= retry_end:

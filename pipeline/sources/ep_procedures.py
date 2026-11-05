@@ -79,6 +79,7 @@ from pipeline.models.entities import (
 )
 from pipeline.snapshot import (
     CURATED,
+    attempt_time,
     fetch_deadline,
     global_deadline,
     now_iso,
@@ -1935,7 +1936,7 @@ def fetch(http: Http) -> SourceStatus:
     - A stored record whose new EP record no longer passes validation is removed, up to MAX_SHRINK of the stored
       records in a run; beyond that the stored records are kept and the run is "partial".
     """
-    attempted = now_iso()
+    attempted = attempt_time()  # as the manifest entry records it, also if this run is interrupted
     deadline = fetch_deadline()
     hard_deadline = global_deadline()
     today = _today()

@@ -1203,6 +1203,45 @@ def test_unsettled_ids_are_recorded_for_change_detection(snapshot_dir):
     assert state_of(snapshot_dir)["unsettled"]["ids"] == []
 
 
+def test_an_interrupted_fetch_and_its_manifest_entry_name_the_same_attempt(snapshot_dir, monkeypatch):
+    """`pipeline fetch` interrupted at the time limit (SIGINT) keeps the chunks written, and _state.json names the files
+    they leave unsettled, stamped with the attempt; the manifest entry it records for the source (not_refreshed) must
+    carry the same attempted_at, or change detection takes the list for another fetch's (activity.unsettled_record) and
+    holds every file's status instead of those. The two stamps were two calls of now_iso(), here one second apart, as
+    when the source's module takes a while to import between them."""
+    from types import SimpleNamespace
+
+    import pipeline.__main__ as cli
+    from pipeline import snapshot
+    from pipeline.analysis import activity
+
+    seconds = iter(range(60))
+    monkeypatch.setattr(snapshot, "now_iso", lambda: f"2026-10-22T05:17:{next(seconds):02d}Z")
+    monkeypatch.setattr(m, "now_iso", snapshot.now_iso)
+    monkeypatch.setattr(cli, "now_iso", snapshot.now_iso)
+    monkeypatch.setattr(m, "CHUNK_SIZE", 3)
+    real_chunk = m._fetch_chunk
+    calls = {"n": 0}
+
+    def interrupted_chunk(run, ids):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise KeyboardInterrupt  # what cmd_fetch's SIGINT handler raises
+        return real_chunk(run, ids)
+
+    monkeypatch.setattr(m, "_fetch_chunk", interrupted_chunk)
+    monkeypatch.setattr(cli, "default_http", FakeHttp)
+    monkeypatch.setattr(cli, "SOURCES", {m.SOURCE_ID: m.__name__})
+    assert cli.cmd_fetch([m.SOURCE_ID]) == 130
+    entry = snapshot.read_manifest()[m.SOURCE_ID]
+    state = state_of(snapshot_dir)
+    assert entry.status == "failed" and "Interrupted" in (entry.note or "")
+    assert state["pending"] and state["unsettled"]["ids"] == sorted(state["pending"])
+    assert state["unsettled"]["attempted_at"] == entry.attempted_at
+    b = SimpleNamespace(s=SimpleNamespace(manifest={m.SOURCE_ID: entry}, root=snapshot_dir))
+    assert activity.unsettled_record(b, m.SOURCE_ID) == state["unsettled"]
+
+
 def test_listing_remembers_the_page_size_and_fails_fast(snapshot_dir):
     class SmallPagesOnly(FakeHttp):
         def __init__(self):

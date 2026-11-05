@@ -2265,6 +2265,24 @@ def test_a_checked_act_date_must_cite_its_provision_and_the_texts_checked(tmp_pa
     ]
 
 
+def test_strict_build_fails_when_snapshot_records_are_left_out(tmp_path: Path):
+    """A snapshot file that cannot be read was built as an empty source, and records that fail validation were dropped,
+    each with a log line only: `build --strict` said "OK" with every act gone."""
+    import pipeline.build as B
+
+    snap = tmp_path / "snapshot"
+    shutil.copytree(FIX / "snapshot", snap)
+    votes = json.loads((snap / "ep_votes" / "votes.json").read_text(encoding="utf-8"))
+    votes[0]["date"] = None  # a required field
+    (snap / "ep_votes" / "votes.json").write_text(json.dumps(votes), encoding="utf-8")
+    (snap / "eurlex" / "acts.json").write_text('[{"celex": "32099R0001",', encoding="utf-8")  # cut short
+    assert _fixture_build(tmp_path) == 0  # not strict: built without them, as before
+    assert _fixture_build(tmp_path, strict=True) == 1
+    assert len(B.PROBLEMS) == 2, B.PROBLEMS
+    assert "snapshot ep_votes/votes.json: 1 invalid records skipped" in B.PROBLEMS
+    assert any(p.startswith("snapshot eurlex/acts.json unreadable (") for p in B.PROBLEMS)
+
+
 def test_strict_build_fails_when_a_status_or_an_assessment_falls_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     import pipeline.analysis.council_qmv as council_qmv
     import pipeline.analysis.ep_margin as ep_margin

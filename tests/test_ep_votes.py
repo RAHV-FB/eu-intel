@@ -1209,6 +1209,33 @@ def test_a_failing_sitting_stays_pending_without_blocking_its_chunk(fetch_env, m
     assert ev.fetch(FixtureHttp()).status == "ok" and "195775" in _stored()
 
 
+def test_a_sitting_in_a_redirect_loop_stays_pending_without_failing_the_source(fetch_env, monkeypatch):
+    """Through the real Http client: a sitting whose address redirects in a loop. httpx raises TooManyRedirects, which
+    escaped Http as itself, not as HttpError: the sitting was not kept pending, the chunk loop did not stop cleanly, and
+    the whole source failed (as it did for a body that could not be decoded, httpx's DecodingError)."""
+    import httpx
+
+    from pipeline import http as H
+    from pipeline import snapshot
+
+    fixture = FixtureHttp()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "/meetings/MTG-PL-2026-07-09/" in request.url.path:
+            return httpx.Response(302, headers={"Location": str(request.url)})
+        params = {k: int(v) if v.isdigit() else v for k, v in request.url.params.items()}
+        return httpx.Response(200, content=fixture.get(str(request.url.copy_with(query=None)), params))
+
+    monkeypatch.setattr(H, "HOST_MIN_INTERVAL", {})
+    monkeypatch.setattr(ev, "_out_of_time", lambda _deadline: False)
+    monkeypatch.setattr(ev, "RETRY_WAIT_S", 0)
+    http = H.Http(cache_dir=None, min_interval_s=0.0, deadline=None, transport=httpx.MockTransport(handler))
+    status = ev.fetch(http)
+    assert status.status == "partial" and snapshot.read_state(ev.SOURCE_ID)["pending"] == ["MTG-PL-2026-07-09"]
+    stored = _stored()
+    assert "195361" in stored and "195775" not in stored  # 2026-07-08 kept, 2026-07-09 to be resumed
+
+
 def _sittings_read(http: FixtureHttp) -> set[str]:
     return {p.split("/")[2] for p in http.requests if p.startswith("/meetings/MTG-PL-")}
 
