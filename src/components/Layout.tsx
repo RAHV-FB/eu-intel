@@ -107,6 +107,12 @@ export function Layout() {
           setMenuOpen(false);
           menuToggleRef.current?.focus();
         }}
+        onBlur={(e) => {
+          // Tabbing out of the open phone menu closes it: on a short screen (a phone held sideways, 400% zoom) the open
+          // menu fills the screen, and the element focused next would be hidden below it (WCAG 2.4.11)
+          const to = e.relatedTarget as Node | null;
+          if (menuOpen && to && !e.currentTarget.contains(to)) setMenuOpen(false);
+        }}
       >
         <div className="container site-header__inner">
           <Link to="/" className="brand" aria-label={`${SITE_NAME} — home`}>
@@ -123,7 +129,7 @@ export function Layout() {
           {!isHome && (
             <>
               <div className="site-header__search">
-                <SearchBox compact />
+                <SearchBox compact label="Quick search" />
               </div>
               {/* Phones and narrow tablets: the search field above is hidden, so offer it behind a button. */}
               <button
@@ -185,7 +191,7 @@ export function Layout() {
               searchToggleRef.current?.focus();
             }}
           >
-            <div className="container">{searchOpen && <SearchBox compact autoFocus />}</div>
+            <div className="container">{searchOpen && <SearchBox compact autoFocus label="Quick search" />}</div>
           </div>
         )}
         <nav id="primary-nav" className={`primary-nav${menuOpen ? ' is-open' : ''}`} aria-label="Primary">

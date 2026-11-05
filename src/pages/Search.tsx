@@ -305,7 +305,7 @@ export default function Search() {
       <header className="page-header">
         <div className="eyebrow">Search</div>
         <h1>{q ? <>Results for “{q}”</> : 'Search'}</h1>
-        <form className="sr-form" role="search" onSubmit={onSubmit}>
+        <form className="sr-form" role="search" aria-label="Search the site" onSubmit={onSubmit}>
           <label htmlFor={inputId} className="visually-hidden">
             Search legislation, people, parties and countries
           </label>
