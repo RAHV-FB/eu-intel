@@ -1199,8 +1199,11 @@ def _reconcile_with_oeil(proc: Procedure, s: _S, events: list[Event]) -> _S:
     target = allowed[0]
     if RANK[target] <= RANK[s.stage]:
         return s  # label lags behind dated events; keep the recorded events
-    if s.since and any((e.raw_type or "").startswith("ep_vote:") and e.date == s.since for e in events):
-        return s  # a plenary vote that OEIL does not record yet (e.g. a referral back for negotiations)
+    if s.since and any((e.raw_type or "").startswith(("ep_vote:", "council_vote:")) and e.date == s.since for e in events):
+        # a plenary vote that OEIL does not record yet (e.g. a referral back for negotiations), or a Council vote
+        # (build.Builder.council_dated: the Council's first-reading position, which OEIL's "Awaiting Council's 1st
+        # reading position" precedes)
+        return s
     position = {
         "CNS": "Parliament has given its opinion; the Council takes the final decision.",
         "APP": "Parliament has decided on its consent; the Council takes the final decision.",

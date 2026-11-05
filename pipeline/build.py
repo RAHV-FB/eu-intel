@@ -50,6 +50,7 @@ from pipeline.models.entities import (
     Procedure,
     ProcedureNotice,
     RegulationOptIn,
+    SourceRef,
     SourceStatus,
     TrainFile,
 )
@@ -1363,25 +1364,34 @@ def decision_vote_near(e: Event, votes_by_date: dict[str, list[EpVote]]) -> EpVo
     return pick[0] if len(pick) == 1 else None
 
 
+def council_vote_kind(cv: dict) -> str:
+    """The kind of step a Council vote is (council_vote_event): the Council's first-reading position; its adoption of
+    the act, or its consent to an act Parliament adopts (the step OEIL records as the Council's adoption), when it
+    adopted it; else "other"."""
+    on = cv.get("vote_on")
+    if on == "first_reading_position":
+        return "council_position"
+    if on == "act" or COUNCIL_CONSENT_RE.match(cv.get("stage") or ""):
+        return "council_adoption" if cv["outcome"] == "adopted" else "other"
+    return "other"
+
+
 def council_vote_event(cv: dict) -> dict:
     """Timeline event for a Council vote, dated and sourced by the Council's voting-result document."""
     on, outcome = cv.get("vote_on"), cv["outcome"]
-    kind = "other"
+    kind = council_vote_kind(cv)
     if on == "first_reading_position":
-        kind = "council_position"
         title = {
             "adopted": "Council adopted its position at first reading",
             "not_adopted": "Council did not adopt a position at first reading",
         }.get(outcome, "Council voted on its position at first reading")
     elif on == "act":
-        kind = "council_adoption" if outcome == "adopted" else "other"
         title = {
             "adopted": "Council adopted the act",
             "not_adopted": "Council did not adopt the act",
         }.get(outcome, "Council voted on adopting the act")
     elif COUNCIL_CONSENT_RE.match(cv.get("stage") or ""):
         # the Council's consent to an act Parliament adopts: the step OEIL records as the Council's adoption
-        kind = "council_adoption" if outcome == "adopted" else "other"
         title = {
             "adopted": "Council gave its consent",
             "not_adopted": "Council did not give its consent",
@@ -1397,7 +1407,7 @@ def council_vote_event(cv: dict) -> dict:
     if cv.get("written_procedure"):
         title += " (written procedure)"
     detail = None
-    if cv["positions"]:
+    if cv.get("positions"):
         n = Counter(cv["positions"].values())
         detail = f"{n['for']} Member States in favour, {n['against']} against, {n['abstain']} abstained"
         if n["not_participating"]:
@@ -4114,7 +4124,12 @@ class Builder:
 
     def council_dated(self, p: Procedure) -> Procedure:
         """For the status: OEIL's Council steps dated by the Council's own voting results (OEIL dates the
-        first-reading position by its publication, days after the vote), as the timeline shows them."""
+        first-reading position by its publication, days after the vote), as the timeline shows them; and the
+        Council's adopted votes on its first-reading position, on the act or on its consent that the procedure
+        record does not have yet, as the steps the timeline lists from them (council_vote_event). OEIL lags the
+        Council: 2025/0312(COD), OEIL "Awaiting Council's 1st reading position" (retrieved 22 October 2026), while
+        the Council's voting result ST 14961/26 records the act adopted on 26 October 2026, 27-0-0; without the
+        vote the status said the Council had still to approve an act whose adoption the timeline showed."""
         cvotes = [cv for cv in self.council_of.get(p.id, []) if cv["date"] <= self.today and cv["outcome"] == "adopted"]
         positions = sorted(cv["date"] for cv in cvotes if cv.get("vote_on") == "first_reading_position")
         acts = sorted(cv["date"] for cv in cvotes if cv.get("vote_on") == "act")
@@ -4123,6 +4138,23 @@ class Builder:
             dates = positions if e.kind == EventKind.council_position else acts if e.kind == EventKind.council_adoption else []
             earlier = [d for d in dates if d <= e.date and (date.fromisoformat(e.date) - date.fromisoformat(d)).days <= 31]
             events.append(e.model_copy(update={"date": earlier[-1]}) if earlier and e.institution == "Council" else e)
+        for cv in sorted(cvotes, key=lambda c: (c["date"], c.get("id") or "")):
+            kind = council_vote_kind(cv)
+            if kind == "other" or not cv.get("source"):
+                continue
+            # a Council step of that kind near the vote is the same decision, dated by the vote above when it follows
+            # it; OEIL's step can also precede the voting result (2021/0176(COD): OEIL 6 December 2022, ST 15798/22 of
+            # 8 December 2022; 2018/0114(COD): OEIL 17 October 2019, ST 14768/19 of 18 November 2019). 92 days, as in
+            # council_step_dated
+            k = EventKind(kind)
+            if any(e.kind == k and e.institution == "Council" and abs(_days_between(e.date, cv["date"])) <= 92
+                   for e in events):  # fmt: skip
+                continue
+            ev = council_vote_event(cv)
+            events.append(Event(
+                id=ev["id"], date=cv["date"], kind=k, raw_type=f"council_vote:{kind}",
+                institution="Council", title=ev["title"], source=SourceRef.model_validate(cv["source"]),
+            ))  # fmt: skip
         return p if events == p.events else p.model_copy(update={"events": events})
 
     def parts_proposal(self, pid: str) -> DocRef | None:

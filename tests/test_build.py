@@ -1301,6 +1301,86 @@ def test_council_steps_dated_by_the_council_voting_result():
     assert Builder.council_dated(me, p).events[0].date == "2026-10-01"  # type: ignore[arg-type]
 
 
+def _council_vote(vid: str, day: str, vote_on: str, outcome: str = "adopted") -> dict:
+    """A Council voting result as build_council lists it on a file (constructed: 27 Member States in favour)."""
+    return {
+        "id": vid, "date": day, "vote_on": vote_on, "outcome": outcome, "stage": "Adoption of the legislative act",
+        "written_procedure": False, "positions": dict.fromkeys(("AT", "BE", "BG"), "for"),
+        "source": {"institution": "Council", "url": f"https://example.invalid/{vid}", "label": f"Voting result {vid}",
+                   "identifier": vid, "retrieved_at": "2026-11-02T00:00:00Z", "published": None},
+    }  # fmt: skip
+
+
+def _agreed_cod(pid: str, *extra) -> object:
+    """An ordinary procedure up to Parliament's first-reading position on the text agreed with the Council
+    (constructed; the shape of 2025/0312(COD) on 2 November 2026)."""
+    from pipeline.models.entities import Event, EventKind, Procedure, SourceRef
+
+    src = SourceRef(institution="EP", url="https://example.invalid/ep", retrieved_at="2026-10-22T00:00:00Z")
+    steps = [("2025-10-02", EventKind.proposal, "Commission"), ("2025-10-23", EventKind.referral, "EP"),
+             ("2026-07-15", EventKind.provisional_agreement, "EP"), ("2026-10-06", EventKind.ep_position, "EP"), *extra]
+    events = [Event(id=f"e{i}", date=d, kind=k, institution=inst, title=k.value, source=src,
+                    raw_type="def/ep-activities/PLENARY_ADOPT_POSITION" if k == EventKind.ep_position else None)
+              for i, (d, k, inst) in enumerate(steps)]  # fmt: skip
+    return Procedure(id=pid, reference=f"{pid.replace('-', '/')}(COD)", type="COD", title="t", oeil_url="u", source=src,
+                     events=events, stage_raw="Awaiting Council's 1st reading position")  # fmt: skip
+
+
+def test_a_council_vote_the_procedure_record_lacks_counts_for_the_status():
+    """2025/0312(COD) on 2 November 2026: the Council's voting result ST 14961/26 records the act adopted on 26 October
+    2026, 27-0-0, and the timeline listed it, but OEIL (retrieved 22 October) still awaited the Council: the status
+    said the Council had still to approve the act. The vote counts for the status, and is listed once."""
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import Builder
+    from pipeline.models.entities import EventKind
+
+    today = "2026-11-02"
+    p = _agreed_cod("2099-0312")
+    me = _builder(today=today, council_of={"2099-0312": [_council_vote("ST-1-2026", "2026-10-26", "act")]})
+    dated = Builder.council_dated(me, p)  # type: ignore[arg-type]
+    added = [e for e in dated.events if e.kind == EventKind.council_adoption]
+    assert [(e.date, e.institution, e.source.url) for e in added] == [
+        ("2026-10-26", "Council", "https://example.invalid/ST-1-2026")]  # fmt: skip
+    st = classify(dated, [], [], date.fromisoformat(today))
+    assert (st.stage, st.label, st.since) == ("adopted", "Adopted by Parliament and Council", "2026-10-26")
+    assert st.next_step.text.startswith("Signature by the Presidents of Parliament and the Council")
+    assert Builder.adoption_dates(me, p, []) == ("2026-10-26", None)  # type: ignore[arg-type]
+    tl = Builder.timeline(me, p, [], [])  # type: ignore[arg-type]
+    assert [(e["date"], e["title"]) for e in tl if e["kind"] == "council_adoption"] == [
+        ("2026-10-26", "Council adopted the act")]  # fmt: skip
+
+    # once OEIL records the step (dated by OEIL after the vote), the vote dates it and adds none
+    p = _agreed_cod("2099-0312", ("2026-10-29", EventKind.council_adoption, "Council"))
+    dated = Builder.council_dated(me, p)  # type: ignore[arg-type]
+    assert [e.date for e in dated.events if e.kind == EventKind.council_adoption] == ["2026-10-26"]
+    assert len([e for e in Builder.timeline(me, p, [], []) if e["kind"] == "council_adoption"]) == 1  # type: ignore[arg-type]
+
+    # a vote that did not adopt the act, or a vote on another item, adds nothing
+    for cv in (_council_vote("ST-2-2026", "2026-10-26", "act", "not_adopted"), _council_vote("ST-3-2026", "2026-10-26", "other")):
+        me = _builder(today=today, council_of={"2099-0312": [cv]})
+        st = classify(Builder.council_dated(me, _agreed_cod("2099-0312")), [], [], date.fromisoformat(today))  # type: ignore[arg-type]
+        assert (st.stage, st.label) == ("parliament_position", "Approved by Parliament")
+
+
+def test_a_council_first_reading_position_vote_the_procedure_record_lacks_counts_for_the_status():
+    """The Council's adopted first-reading position, recorded only by its voting result: the file is at second
+    reading in Parliament (Art. 294(5) and (7) TFEU), not still awaiting the Council."""
+    from datetime import date
+
+    from pipeline.analysis.status import classify
+    from pipeline.build import Builder
+    from pipeline.models.entities import EventKind
+
+    p = _agreed_cod("2099-0313")
+    p = p.model_copy(update={"events": [e for e in p.events if e.kind != EventKind.provisional_agreement]})  # type: ignore[attr-defined]
+    me = _builder(today="2026-11-02", council_of={
+        "2099-0313": [_council_vote("ST-4-2026", "2026-10-27", "first_reading_position")]})  # fmt: skip
+    st = classify(Builder.council_dated(me, p), [], [], date.fromisoformat("2026-11-02"))  # type: ignore[arg-type]
+    assert (st.stage, st.label, st.since) == ("negotiations", "Second reading in Parliament", "2026-10-27")
+
+
 # ------------------------------------------------------------------------------- EP vote labels
 # Labels exactly as Parliament published them (data/snapshot/ep_votes/votes.json, by vote id).
 LABEL_164581 = (
