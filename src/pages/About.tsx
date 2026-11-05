@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { CountrySummary, Meta, SourceStatusInfo } from '../types/data';
 import { useData } from '../lib/data';
-import { formatDateTime, formatNumber } from '../lib/format';
+import { formatDate, formatDateTime, formatNumber, plural } from '../lib/format';
+import { classifications, isStale } from '../lib/freshness';
 import { legislationScope, votesPeriod } from '../lib/scope';
 import { ErrorState, ExtLink, Loading, PageHeader, Term, institutionLabel } from '../components/ui';
 import { useDocumentTitle } from '../features/legislation/labels';
@@ -54,8 +55,11 @@ function recordsText(s: SourceStatusInfo): string | null {
   return parts.length ? parts.join(' · ') : null;
 }
 
-function SourceCard({ s }: { s: SourceStatusInfo }) {
+/** One source: its latest attempt (the status), its last successful retrieval and whether that is up to date on the
+ * reader's date (`now`), by the threshold the data gives it, as the home page and the footer judge it. */
+function SourceCard({ s, now }: { s: SourceStatusInfo; now: number }) {
   const summary = s.summary || recordsText(s);
+  const stale = isStale(s, now);
   return (
     <article className="source-card" aria-labelledby={`src-${s.id}`}>
       <div className="source-card__head">
@@ -66,7 +70,27 @@ function SourceCard({ s }: { s: SourceStatusInfo }) {
         <dt>Publisher</dt>
         <dd>{institutionLabel(s.institution)}</dd>
         <dt>Last successful retrieval</dt>
-        <dd>{s.fetched_at ? formatDateTime(s.fetched_at) : 'Not retrieved'}</dd>
+        <dd>
+          {s.fetched_at ? formatDateTime(s.fetched_at) : 'Not retrieved'}
+          {stale && <strong className="source-card__stale"> · Not up to date</strong>}
+        </dd>
+        {s.status === 'failed' && s.attempted_at && s.attempted_at !== s.fetched_at && (
+          <>
+            <dt>Latest attempt</dt>
+            <dd>{formatDateTime(s.attempted_at)} (failed)</dd>
+          </>
+        )}
+        {s.stale_after_days != null && (
+          <>
+            <dt>Up to date for</dt>
+            <dd>
+              {plural(s.stale_after_days, 'day')} after a successful retrieval
+              {s.labels_expire_after_days != null && (
+                <>; its classifications are no longer shown after {plural(s.labels_expire_after_days, 'day')}</>
+              )}
+            </dd>
+          </>
+        )}
         {summary && (
           <>
             <dt>In this release</dt>
@@ -97,6 +121,8 @@ function SourceCard({ s }: { s: SourceStatusInfo }) {
 export default function About() {
   useDocumentTitle('About & methodology');
   const { data: meta, error, loading } = useData<Meta>('meta.json');
+  const now = Date.now(); // the reader's clock: the data is rebuilt weekly but read for a week or more
+  const train = classifications(meta, now);
   const countries = useData<CountrySummary[]>('countries/index.json');
   const hasIndicators = !!countries.data?.some((c) => c.indicators.length > 0);
   useHashScroll(!loading);
@@ -146,11 +172,19 @@ export default function About() {
             <>
               <p className="meta">
                 This version was built on {formatDateTime(meta.built_at)}
-                {meta.snapshot_at && <>; the latest successful retrieval from a source was on {formatDateTime(meta.snapshot_at)}</>}.
+                {meta.core_data_at && (
+                  <>
+                    ; procedures, votes and acts are current to {formatDateTime(meta.core_data_at)}, the oldest last retrieval of
+                    their sources
+                  </>
+                )}
+                {meta.snapshot_at && <>; the latest successful retrieval from a source was on {formatDateTime(meta.snapshot_at)}</>}. A
+                source is marked “Not up to date” once its last successful retrieval is older, on today’s date, than the period
+                given for it.
               </p>
               <div className="sources">
                 {meta.sources.map((s) => (
-                  <SourceCard key={s.id} s={s} />
+                  <SourceCard key={s.id} s={s} now={now} />
                 ))}
               </div>
             </>
@@ -336,10 +370,15 @@ export default function About() {
           <p>
             We call a file <strong>officially blocked</strong> only when Parliament’s Legislative Train Schedule labels it “blocked” (no
             progress for at least nine months, in the Train’s own definition). Otherwise we state only a fact: the number of days since the
-            last recorded procedural step. The homepage’s “Stalled” list shows officially blocked files first (the Train’s most recent
-            classifications, longest without a recorded step first, saying how many of them it shows), then files in the ordinary
-            legislative procedure, where both Parliament and the Council must still act, with no recorded step for a year or more,
-            described that way — this is not an official assessment, and work can continue without a recorded step.
+            last recorded procedural step. The Train’s labels are shown with the date of our copy of the Train
+            {train?.retrievedAt ? <> (currently {formatDate(train.retrievedAt)})</> : null}, and only while that copy is at most{' '}
+            {train?.expireAfterDays != null ? plural(train.expireAfterDays, 'day') : 'six weeks'} old on the day you read the page;
+            after that, no file is shown as officially blocked until a newer copy is retrieved
+            {train && !train.current ? <>, which is the case today</> : null}. The homepage’s “Stalled” list shows officially blocked
+            files first (the Train’s most recent classifications, longest without a recorded step first, saying how many of them it
+            shows), then files in the ordinary legislative procedure, where both Parliament and the Council must still act, with no
+            recorded step for a year or more, described that way — this is not an official assessment, and work can continue without a
+            recorded step.
           </p>
 
           <h3>Votes and margins</h3>

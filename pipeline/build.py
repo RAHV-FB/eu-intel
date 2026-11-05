@@ -4974,9 +4974,30 @@ class Builder:
         self.files["search.json"] = build_search_docs(self)
 
     # ---------------------------------------------------------------- meta
+    # The source's name in the site's freshness note ("Not up to date: Legislative Train (last retrieved …)").
+    SOURCE_SHORT_NAMES: dict[str, str] = {
+        "ep_people": "MEPs and political groups",
+        "ep_procedures": "Parliament's procedure files",
+        "ep_votes": "Parliament votes",
+        "eurlex": "EUR-Lex legal acts",
+        "council": "Council votes",
+        "implementation": "National transposition and infringements",
+        "optouts": "Danish and Irish participation",
+        "train": "Legislative Train",
+    }
+    # Official classifications from a source (the Legislative Train's "Blocked") are no longer shown as current once
+    # the copy is older than this on the reader's date (src/lib/freshness.ts): about six weeks without a new one.
+    LABELS_EXPIRE_AFTER_DAYS: dict[str, int] = {"train": 42}
+
     def build_meta(self) -> None:
+        from pipeline.freshness import oldest_core_fetch, source_health
+
         s = self.s
         m = s.manifest
+        # Each source's health as the site judges it on the reader's date: the last successful retrieval, the last
+        # attempt and the threshold (pipeline/freshness.py), not whether it was stale on the day of the build
+        listed = {sid: m.get(sid) or {"status": "unavailable"} for sid in SOURCES}
+        health = {h["source"]: h for h in source_health(listed)}
         sources = []
         for sid, info in SOURCES.items():
             st = m.get(sid)
@@ -4984,19 +5005,29 @@ class Builder:
             if sid == "implementation" and s.indicators:  # named only in a release that has them (About page)
                 name = name.replace(" and infringements", ", infringements and indicators")
             sources.append({
-                "id": sid, "name": name, "institution": info["institution"], "url": info["url"],
+                "id": sid, "name": name, "short_name": self.SOURCE_SHORT_NAMES.get(sid, name),
+                "institution": info["institution"], "url": info["url"],
                 "licence": info["licence"], "status": st.status if st else "unavailable",
-                "fetched_at": st.fetched_at if st else None, "records": dict(sorted(st.records.items())) if st else {},
+                "fetched_at": st.fetched_at if st else None, "attempted_at": st.attempted_at if st else None,
+                "stale_after_days": health[sid]["stale_after_days"], "core": health[sid]["core"],
+                **({"labels_expire_after_days": self.LABELS_EXPIRE_AFTER_DAYS[sid]}
+                   if sid in self.LABELS_EXPIRE_AFTER_DAYS else {}),
+                "records": dict(sorted(st.records.items())) if st else {},
                 "note": st.note if st else "Not yet retrieved in this release.",
                 "summary": self.source_summary(sid, st),
             })  # fmt: skip
-        # only sources listed on the About page date "Data refreshed", so a reader can trace it to one of them
+        # only sources listed on the About page date a retrieval, so a reader can trace it to one of them
         fetched = [m[sid].fetched_at for sid in SOURCES if sid in m and m[sid].fetched_at]
         scope = self.coverage_scope()
         notes = self.coverage_notes(scope)
         self.files["meta.json"] = {
             "built_at": os.environ.get("EU_INTEL_BUILT_AT") or now_iso(),
+            # the latest successful retrieval of any listed source: it identifies the snapshot (docs/DEPLOYMENT.md,
+            # restoring data), but says nothing of the sources retrieved earlier
             "snapshot_at": max(fetched) if fetched else None,
+            # the date up to which statuses, votes and acts are all current: the oldest last successful retrieval of
+            # the core sources (pipeline/freshness.py), which home and the footer show
+            "core_data_at": oldest_core_fetch(listed),
             "sources": sources,
             "counts": {
                 "dossiers": len(self.dossier_summary),

@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import type { DossierSummary, LegalInstrument, Meta } from '../types/data';
 import { useData, DATA_BASE } from '../lib/data';
 import { formatNumber } from '../lib/format';
+import { asRetrieved, asShownNow, classifications, expiredReason } from '../lib/freshness';
 import { legislationScope } from '../lib/scope';
 import { loadSearch, similarWords, type SearchEngine } from '../lib/search';
 import { useWatchlist } from '../lib/watchlist';
 import { clearAllParams, useParamState, useParamText, type ParamPatch } from '../lib/urlState';
-import { EmptyState, ErrorState, Loading, LookupNotice, PageHeader } from '../components/ui';
+import { EmptyState, ErrorState, ExtLink, Loading, LookupNotice, PageHeader } from '../components/ui';
 import { useMediaQuery } from '../components/useMediaQuery';
 import { useFittingPlaceholder } from '../components/useFittingPlaceholder';
 import { ResultCount } from '../components/ResultCount';
@@ -95,7 +96,12 @@ export default function Legislation() {
     if (hasQuery && !engine) loadSearch().then(setEngine, () => setEngineFailed(true));
   }, [hasQuery, engine]);
 
-  const rows = index.data ?? [];
+  // the Legislative Train's "blocked" is shown as current only while our copy of it is: once it has expired no file is
+  // shown as blocked, so the filter, its count, the sorting and the rows agree (src/lib/freshness.ts)
+  const train = classifications(meta.data, Date.now());
+  const trainCurrent = !!train?.current;
+  const rows = useMemo(() => asShownNow(index.data ?? [], trainCurrent), [index.data, trainCurrent]);
+  const trainExpired = !!train && !trainCurrent;
   // the words of each file, for the keyword box until the search index is loaded: only once there is a query
   const haystacks = useMemo(() => (hasQuery ? buildHaystacksOnce(rows) : new Map<string, Haystack>()), [rows, hasQuery]);
 
@@ -365,9 +371,18 @@ export default function Legislation() {
                       Only files officially reported as blocked ({formatNumber(facets.blocked)})
                     </label>
                     <span className="meta" id={`${ids}-blocked-d`}>
-                      As recorded by the European Parliament’s Legislative Train Schedule.
+                      {train && trainCurrent ? (
+                        <>As recorded by the European Parliament’s Legislative Train Schedule ({asRetrieved(train)}).</>
+                      ) : train ? (
+                        <>Not shown: {expiredReason(train)}.</>
+                      ) : null}
                     </span>
                   </>
+                ) : trainExpired ? (
+                  <span className="meta">
+                    The files the European Parliament’s Legislative Train Schedule reports as blocked are not shown:{' '}
+                    {expiredReason(train)}.
+                  </span>
                 ) : (
                   <span className="meta">
                     No file is officially reported as blocked in the current data (source: the European Parliament’s Legislative
@@ -469,6 +484,14 @@ export default function Legislation() {
                 </li>
               )}
             </ul>
+          )}
+
+          {trainExpired && (state.blocked || state.sort === 'blocked') && (
+            <p className="callout lx-sortnote">
+              The files the European Parliament’s Legislative Train Schedule reports as blocked are not shown:{' '}
+              {`${expiredReason(train)}, and its classifications may have changed since.`} See the{' '}
+              <ExtLink href={train.source.url}>Legislative Train Schedule</ExtLink>.
+            </p>
           )}
 
           {state.sort === 'adopted' && !hasAdopted && (

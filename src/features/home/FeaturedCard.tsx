@@ -6,15 +6,24 @@ import { EURLEX_CELEX, dossierPath } from '../legislation/labels';
 
 /**
  * One editorially selected file on the homepage, as an overview: where it stands, what it is and what's next. Why it
- * matters, the latest step and the other official records are on the file's own page.
+ * matters, the latest step and the other official records are on the file's own page. `blockedShown`: whether the
+ * Legislative Train's "blocked" classification is current on the reader's date (src/lib/freshness.ts).
  */
-export function FeaturedCard({ item, topicLabel }: { item: FeaturedItem; topicLabel: (slug: string) => string }) {
+export function FeaturedCard({
+  item,
+  topicLabel,
+  blockedShown,
+}: {
+  item: FeaturedItem;
+  topicLabel: (slug: string) => string;
+  blockedShown: boolean;
+}) {
   const d = item.dossier;
   const topic = d.topics[0];
   return (
     <article className="fcard">
       <div className="fcard__top">
-        <StatusBadge stage={item.status.stage} label={item.status.label} blocked={d.officially_blocked} />
+        <StatusBadge stage={item.status.stage} label={item.status.label} blocked={d.officially_blocked && blockedShown} />
         {topic && <span className="fcard__topic">{topicLabel(topic)}</span>}
       </div>
       <h3 className="fcard__title">

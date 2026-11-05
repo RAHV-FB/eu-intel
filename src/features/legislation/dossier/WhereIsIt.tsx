@@ -1,6 +1,7 @@
 import type { DossierDetail, EventKind, ISODate, LifecycleStage, TimelineEvent } from '../../../types/data';
 import { ExtLink, Term } from '../../../components/ui';
 import { formatDate, noUpdateText } from '../../../lib/format';
+import { asRetrieved, expiredReason, type Classifications } from '../../../lib/freshness';
 import { institutionSuffix } from '../labels';
 
 interface Step {
@@ -57,7 +58,9 @@ export function currentStepKey(d: Pick<DossierDetail, 'stage' | 'timeline'>): st
   return step?.key === 'deciding' && firstOf(d.timeline, ['provisional_agreement']) ? 'adopted' : step?.key;
 }
 
-export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
+/** `train`: the Legislative Train's classifications on the reader's date (src/lib/freshness.ts); null until meta.json
+ * has loaded. */
+export function WhereIsIt({ d, today, train }: { d: DossierDetail; today: ISODate; train: Classifications | null }) {
   const current = currentStepKey(d);
   const currentIdx = OLP_STEPS.findIndex((s) => s.key === current);
   const showPath = d.type === 'COD' && currentIdx >= 0;
@@ -134,7 +137,9 @@ export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
         )}
       </dl>
 
-      {stall?.official_label && (
+      {/* the Train's classification, dated by our copy of it; once that copy has expired it is not shown, and the
+          reader is told so and sent to the current entry */}
+      {stall?.official_label && train?.current && (
         <div className={`dz-official-status${d.officially_blocked ? ' is-blocked' : ''}`}>
           <p className="dz-official-status__label">
             {d.officially_blocked ? 'Officially reported as blocked' : 'Official monitoring status'}
@@ -143,9 +148,26 @@ export function WhereIsIt({ d, today }: { d: DossierDetail; today: ISODate }) {
             The European Parliament’s Legislative Train Schedule lists this file as: <q>{stall.official_label}</q>
             {stall.official_label_date && <> (information updated as of {formatDate(stall.official_label_date, true)})</>}.
           </p>
+          <p className="meta dot-list">
+            <span>{asRetrieved(train, true)}</span>
+            {stall.official_source_url && (
+              <span>
+                <ExtLink href={stall.official_source_url}>Legislative Train Schedule entry</ExtLink>
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+      {stall?.official_label && train && !train.current && (
+        <div className="dz-official-status">
+          <p className="dz-official-status__label">Official monitoring status</p>
+          <p>
+            The Legislative Train Schedule’s classification of this file is not shown: {expiredReason(train, true)}, and it may
+            have changed since.
+          </p>
           {stall.official_source_url && (
             <p className="meta">
-              <ExtLink href={stall.official_source_url}>Legislative Train Schedule entry</ExtLink>
+              <ExtLink href={stall.official_source_url}>Current Legislative Train Schedule entry</ExtLink>
             </p>
           )}
         </div>

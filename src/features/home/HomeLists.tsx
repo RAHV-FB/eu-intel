@@ -51,7 +51,9 @@ function Row({ it }: { it: HomeListItem }) {
   );
 }
 
-export function HomeLists({ lists }: { lists: HomeList[] }) {
+/** `noMore`: lists shown without their "see more" link (Stalled, while the Legislative Train's reports of blocked files
+ * are not shown: src/lib/freshness.ts). */
+export function HomeLists({ lists, noMore = [] }: { lists: HomeList[]; noMore?: HomeList['id'][] }) {
   if (!lists.length) return null;
   const filled = lists.filter((l) => l.items.length > 0);
   const empty = lists.filter((l) => l.items.length === 0);
@@ -60,7 +62,7 @@ export function HomeLists({ lists }: { lists: HomeList[] }) {
       {filled.length > 0 && (
         <div className="hl-grid">
           {filled.map((l) => {
-            const more = MORE[l.id];
+            const more = noMore.includes(l.id) ? undefined : MORE[l.id];
             const headingId = `hl-${l.id}`;
             return (
               <section key={l.id} className={WHOLE_ON_PHONES.has(l.id) ? 'hl' : 'hl hl--preview'} aria-labelledby={headingId}>

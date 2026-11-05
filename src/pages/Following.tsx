@@ -1,7 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import type { DossierDetail } from '../types/data';
-import { loadData } from '../lib/data';
+import type { DossierDetail, Meta } from '../types/data';
+import { loadData, useData } from '../lib/data';
+import { classifications } from '../lib/freshness';
 import { asOfToday, formatDate, formatDateTime, formatNumber } from '../lib/format';
 import {
   changeSince,
@@ -57,6 +58,7 @@ function Item({
   shared,
   followingIds,
   today,
+  blockedShown,
   onRemove,
   onSeen,
   onFollow,
@@ -67,6 +69,7 @@ function Item({
   shared: boolean;
   followingIds: Set<string>;
   today: string;
+  blockedShown: boolean; // the Legislative Train's "blocked" is current on the reader's date (src/lib/freshness.ts)
   onRemove: (id: string, title: string) => void;
   onSeen: (d: DossierDetail) => void;
   onFollow: (d: DossierDetail) => void;
@@ -116,7 +119,7 @@ function Item({
           </Link>
         </h3>
         <div className="following__status">
-          <StatusBadge stage={d.stage} label={d.status_label} blocked={d.officially_blocked} />
+          <StatusBadge stage={d.stage} label={d.status_label} blocked={d.officially_blocked && blockedShown} />
           {change?.changed && (
             <span className="lx-changed">
               Changed since you last looked
@@ -171,6 +174,8 @@ export default function Following() {
   const ids = shared ? sharedIds : watch.map((w) => w.id);
   const loaded = useDossiers(ids);
   const today = todayISO();
+  const meta = useData<Meta>('meta.json');
+  const blockedShown = !!classifications(meta.data, Date.now())?.current;
   // checked without writing: nothing is stored before a click; a write that fails then shows the same notice
   const readable = useMemo(() => storageReadable(), []);
   const [writeFailed, setWriteFailed] = useState(false);
@@ -417,6 +422,7 @@ export default function Following() {
                 shared={shared}
                 followingIds={followingIds}
                 today={today}
+                blockedShown={blockedShown}
                 onRemove={remove}
                 onSeen={seen}
                 onFollow={followOne}
