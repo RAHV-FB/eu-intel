@@ -40,6 +40,13 @@ credentials). Details are refined from each ingestion module's findings.
 - EUR-Lex / Publications Office: reuse authorised under Commission Decision 2011/833/EU, with attribution. EUR-Lex's
   summaries of EU legislation are quoted unchanged, in part, labelled with their date and linked (law context section).
 - Council and Commission websites: reuse authorised with acknowledgement of the source, unless stated otherwise.
+- The open dataset (`data/open/`, released weekly; docs/DEPLOYMENT.md, "Open-data releases"): the compilation (the
+  selection, the structure, the derived fields and the checked corrections) is offered under CC BY 4.0 (proposed, for
+  the owner to confirm), with the credit line in its `datapackage.json` (`attribution`); the official records it
+  contains keep the terms above, which `datapackage.json` (`sources`) and its README repeat per source. Its rows keep
+  the address of the record they come from where the table has one (a procedure file, a vote's minutes, a Legislative
+  Train page, a voting result, an act on EUR-Lex, an infringement case), as the Parliament's legal notice asks of a
+  partial reproduction.
 
 The site footer and About page credit each source. MEP portraits are not used (avoids hot-linking third-party
 images that would expose visitors' IP addresses to another host). Home and the footer date the data by

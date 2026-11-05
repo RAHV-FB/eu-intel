@@ -286,7 +286,7 @@ export default function Vote() {
             </p>
             <LookupNotice failed={groups.failed} what="Political group names" />
             {v.groups.length > 0 ? (
-              <GroupBreakdownTable rows={v.groups} groupNames={groupNames} />
+              <GroupBreakdownTable rows={v.groups} groupNames={groupNames} csvName={`ep-vote-${v.id}`} />
             ) : (
               <p className="meta">Group breakdown not available for this vote.</p>
             )}
@@ -305,7 +305,7 @@ export default function Vote() {
               )}
             </p>
             {v.countries.length > 0 ? (
-              <CountryBreakdownTable rows={v.countries} />
+              <CountryBreakdownTable rows={v.countries} csvName={`ep-vote-${v.id}`} />
             ) : (
               <p className="meta">Country breakdown not available for this vote.</p>
             )}
@@ -339,7 +339,7 @@ export default function Vote() {
               </ExtLink>
               , an independent website that is not an official source.
             </p>
-            <BallotList ballots={v.ballots} names={v.mep_names} groupCodes={groupCodes} />
+            <BallotList ballots={v.ballots} names={v.mep_names} groupCodes={groupCodes} csvName={`ep-vote-${v.id}`} />
           </section>
 
           <section className="section" aria-labelledby="notes-h">

@@ -5970,9 +5970,10 @@ def build_search_docs(b: Builder) -> list[dict]:
 
 
 # ------------------------------------------------------------------------------------------- feeds/out
-def write_output(files: dict[str, Any], extra: dict[str, str], out: Path = OUT) -> None:
+def write_output(files: dict[str, Any], extra: dict[str, str | bytes], out: Path = OUT) -> None:
     """Write into a private temp dir, then swap it in (old dir renamed away first, deleted last), so
-    readers and concurrent builds see either the old or the new tree, never a half-written one."""
+    readers and concurrent builds see either the old or the new tree, never a half-written one. `extra`: files
+    written as they are (text as UTF-8; bytes unchanged, e.g. the open dataset's CSV with its CRLF line ends)."""
     tmp = out.with_name(f"{out.name}.tmp-{os.getpid()}")
     if tmp.exists():
         shutil.rmtree(tmp)
@@ -5982,7 +5983,10 @@ def write_output(files: dict[str, Any], extra: dict[str, str], out: Path = OUT) 
     for rel, text in sorted(extra.items()):
         p = _inside(tmp, rel)
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8", newline="")  # as given: a calendar's lines end in CRLF (RFC 5545)
+        if isinstance(text, bytes):
+            p.write_bytes(text)
+        else:
+            p.write_text(text, encoding="utf-8", newline="")  # as given: a calendar's lines end in CRLF (RFC 5545)
     old = out.with_name(f"{out.name}.old-{os.getpid()}")
     if out.exists():
         out.rename(old)
@@ -6012,9 +6016,16 @@ def build(
     b = Builder(snap, today=today, curated=curated or CURATED, state=state or STATE)
     files = b.run()
     site = os.environ.get("SITE_URL") or DEFAULT_SITE_URL
-    extra = feeds.build_feeds(b, site_url=site)
+    extra: dict[str, str | bytes] = dict(feeds.build_feeds(b, site_url=site))
     extra |= applies.build_feeds(b, files["applies.json"], site_url=site)  # when new rules apply: Atom and iCalendar
     extra.update(tracker.country_feeds(b, site_url=site))  # feeds/countries/<CC>.xml
+    # the open dataset (public/data/open: CSV tables, datapackage.json, README), from the files just built
+    build_open_data = _lazy("pipeline.analysis.opendata", "build_open_data")
+    if build_open_data is not None:
+        try:
+            extra |= build_open_data(b, files, site_url=site)
+        except Exception as e:  # noqa: BLE001 - the site is built without it; --strict fails
+            _problem("open dataset (pipeline/analysis/opendata.py) not written: %r", e)
     write_output(files, extra, out)
     sizes = {
         k: len(json.dumps(v, ensure_ascii=False, separators=(",", ":")).encode()) for k, v in files.items()
@@ -6024,6 +6035,9 @@ def build(
         log.info("%-22s %8.1f KB", k, sizes.get(k, 0) / 1024)
     total = sum(sizes.values())
     log.info("wrote %d files (%.1f MB) to %s", len(files) + len(extra), total / 1e6, out)
+    opened = [len(v) for k, v in extra.items() if k.startswith("open/")]
+    if opened:
+        log.info("open dataset: %d files (%.1f MB) in %s", len(opened), sum(opened) / 1e6, out / "open")
     # (snap.issues: each is also among PROBLEMS, listed below)
     for k in ("dossiers/index.json", "search.json"):
         if sizes.get(k, 0) > 1_500_000:

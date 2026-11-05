@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import type { CountrySummary, Meta, SourceStatusInfo } from '../types/data';
-import { useData } from '../lib/data';
+import type { CountrySummary, DataPackage, Meta, SourceStatusInfo } from '../types/data';
+import { DATA_BASE, useData } from '../lib/data';
 import { formatDate, formatDateTime, formatNumber, plural } from '../lib/format';
 import { classifications, isStale } from '../lib/freshness';
 import { legislationScope, votesPeriod } from '../lib/scope';
@@ -126,6 +126,8 @@ export default function About() {
   const train = classifications(meta, now);
   const countries = useData<CountrySummary[]>('countries/index.json');
   const hasIndicators = !!countries.data?.some((c) => c.indicators.length > 0);
+  // the open dataset of this version: its tables, from its descriptor (pipeline/analysis/opendata.py)
+  const openData = useData<DataPackage>('open/datapackage.json');
   useHashScroll(!loading);
 
   return (
@@ -246,6 +248,100 @@ export default function About() {
           ) : (
             !loading && <p className="meta">Coverage information is unavailable.</p>
           )}
+        </section>
+
+        <section id="reuse" aria-labelledby="reuse-h">
+          <h2 id="reuse-h">Reuse the data</h2>
+          <p>
+            <strong>Open dataset.</strong> The data of this site is published as CSV tables with a schema: legislative files,
+            adopted acts, Parliament and Council votes, the transposition of directives with the national measures notified,
+            infringement cases, and a crosswalk of the official identifiers that join them. Its{' '}
+            <a href={`${DATA_BASE}open/README.md`}>README</a> and{' '}
+            <a href={`${DATA_BASE}open/datapackage.json`}>datapackage.json</a> (a Frictionless Data Package) give each
+            column’s type and meaning. In each week the data changes, it is also released as a zip tagged data-YYYY-MM-DD
+            among the repository’s <ExtLink href={`${REPOSITORY}/releases`} official={false}>releases</ExtLink>; cite a
+            release by its tag, as the repository’s{' '}
+            <ExtLink href={`${REPOSITORY}/blob/main/CITATION.cff`} official={false}>citation file</ExtLink> says.
+          </p>
+          {openData.data ? (
+            <div className="table-wrap table-card">
+              <table className="table">
+                <caption>
+                  The open dataset in this version: statuses as of {formatDate(openData.data.as_of)}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">File</th>
+                    <th scope="col">Contents</th>
+                    <th scope="col" className="num">
+                      Rows
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {openData.data.resources.map((r) => (
+                    <tr key={r.name}>
+                      <th scope="row" style={{ fontWeight: 400 }}>
+                        <a href={`${DATA_BASE}open/${r.path}`} className="mono">
+                          {r.path}
+                        </a>
+                      </th>
+                      <td>{r.title}</td>
+                      <td className="num">{formatNumber(r.rows)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            openData.error && <p className="meta">The list of the dataset’s tables could not be loaded; its README lists them.</p>
+          )}
+          <p>
+            <strong>The site’s JSON files.</strong> Each page reads static JSON files under{' '}
+            <span className="mono">data/</span>, shaped for the pages: they can change with the site, and their current form
+            is in <ExtLink href={`${REPOSITORY}/blob/main/src/types/data.ts`} official={false}>src/types/data.ts</ExtLink>.
+            The open dataset is the stable form, with its columns documented in each release.
+          </p>
+          <ul>
+            <li>
+              <a href={`${DATA_BASE}meta.json`} className="mono">meta.json</a>: the sources, their last retrieval and reuse terms,
+              the record counts and the coverage;
+            </li>
+            <li>
+              <span className="mono">dossiers/index.json</span>, <span className="mono">dossiers/&lt;id&gt;.json</span>: the
+              legislative files, each with its steps, acts, votes and transposition;
+            </li>
+            <li>
+              <span className="mono">votes/index.json</span>, <span className="mono">votes/&lt;id&gt;.json</span>: the
+              Parliament votes listed, each with every MEP’s recorded vote;
+            </li>
+            <li>
+              <span className="mono">council/index.json</span>: Council votes, with each Member State’s position;
+            </li>
+            <li>
+              <span className="mono">people/</span>, <span className="mono">countries/</span>: MEPs, political groups and
+              national parties; for each Member State its MEPs, Council positions, transposition and infringement cases;
+            </li>
+            <li>
+              <span className="mono">activity.json</span>: the steps recorded between weekly updates.
+            </li>
+          </ul>
+          <p>
+            <strong>Feeds.</strong> An <a href={`${DATA_BASE}feeds/updates.xml`}>Atom feed of all recorded steps</a>, and one for
+            each topic, linked from its list of files. Their entries keep their ids if the site moves.
+          </p>
+          <p>
+            <strong>CSV downloads.</strong> The tables of a vote page and the list of legislative files have a “Download CSV”
+            button: the file is made in your browser from what the page shows, and nothing is sent.
+          </p>
+          <p>
+            <strong>Licence.</strong> The dataset as compiled here (the selection, the structure, the derived fields and the
+            checked corrections) is offered under{' '}
+            <ExtLink href="https://creativecommons.org/licenses/by/4.0/" official={false}>CC BY 4.0</ExtLink>: credit
+            “EU Legislative Intelligence (RAHV-FB)” with a link to this site. The official records in it keep their
+            publishers’ terms, which also require acknowledging the source: see{' '}
+            <a href="#sources">Data sources and licences</a>.
+          </p>
         </section>
 
         <section id="selection" aria-labelledby="selection-h">

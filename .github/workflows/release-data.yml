@@ -1,0 +1,198 @@
+# Weekly open-data release: the open dataset (pipeline/analysis/opendata.py: the CSV tables, datapackage.json and
+# README.md that the site serves under data/open/), built from main's committed data and published as a GitHub release
+# tagged data-YYYY-MM-DD when its content changed since the latest data-* release.
+#
+# - Schedule: Tuesdays 10:41 UTC, after Monday's refresh (05:17 UTC and a second try at 22:37 UTC, each up to two hours
+#   and at times hours late) and the daily rebuild (01:23 UTC); off the hour, and outside 13:00-17:00 UTC, when GitHub
+#   delays scheduled runs most. By hand: Actions -> Data release -> Run workflow.
+# - Main's code only once CI has passed on it (scripts/ci-passed.sh), and only from main's workflow: an unattended run
+#   publishes what CI has tested.
+# - The data steps of the data gate: snapshot validation, the strict data build, `validate --built`, which checks the
+#   open dataset against its datapackage.json (open-data). Its content hash (`python -m pipeline opendata content-hash`:
+#   every table's SHA-256 and the schema, not the day statuses are computed for nor the retrieval times) is compared
+#   with the one in the notes of the latest data-* release; the same hash releases nothing.
+# - The release: the tag data-YYYY-MM-DD (data-YYYY-MM-DD.2 for a second one the same day) on the commit built, the zip
+#   of the dataset and datapackage.json as assets, notes with the snapshot's dates, each table's rows and the hash.
+# - Permissions: the jobs that run the repository's code read only. Only the last job can write (contents: write, to
+#   create the release and its tag), and it runs nothing but `gh` on the files built. No credentials are kept in
+#   .git/config (persist-credentials: false); gh takes GITHUB_TOKEN from GH_TOKEN in the steps that call it.
+# - Zenodo archives each published release and gives it a DOI once the repository owner has switched the repository on
+#   at zenodo.org (docs/DEPLOYMENT.md, one-time setup); .zenodo.json gives the record's metadata.
+name: Data release
+
+on:
+  schedule:
+    - cron: "41 10 * * 2" # Tuesdays 10:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One release run at a time; never cancel one that is running.
+concurrency:
+  group: release-data
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  plan:
+    name: Main's code has passed CI
+    # Scheduled runs only in the canonical repository (forks can still dispatch manually).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'rahv-fb/eu-intel' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read # the CI runs that passed on main's code
+    outputs:
+      sha: ${{ steps.main.outputs.sha }}
+      release: ${{ steps.tested.outputs.release }}
+    steps:
+      # main's commits and trees, without file contents beyond its own (filter: blob:none): scripts/ci-passed.sh compares
+      # commits and trees
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Main's commit
+        id: main
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Release only code that CI has passed
+        id: tested
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.main.outputs.sha }}
+        run: scripts/ci-passed.sh "$SHA" release
+
+  build:
+    name: Build the open dataset
+    needs: plan
+    if: ${{ needs.plan.outputs.release == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      release: ${{ steps.compare.outputs.release }}
+      tag: ${{ steps.compare.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        # the pinned, hash-checked runtime dependencies (requirements.txt); the pipeline runs from the checkout
+        run: python -m pip install --require-hashes -r requirements.txt
+
+      - name: Validate snapshot
+        run: python -m pipeline validate
+
+      - name: Build site data (public/data, strict)
+        env:
+          EU_INTEL_STRICT: "1"
+        run: python -m pipeline build
+
+      - name: Validate built data
+        # includes the open dataset against its datapackage.json: sizes and hashes, headers, types, keys, the crosswalk
+        run: python -m pipeline validate --built
+
+      - name: Content hash of the open dataset
+        id: hash
+        run: echo "hash=$(python -m pipeline opendata content-hash)" >> "$GITHUB_OUTPUT"
+
+      - name: Compare with the latest data release
+        id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HASH: ${{ steps.hash.outputs.hash }}
+        run: |
+          if ! [[ "$HASH" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::no content hash of the open dataset"
+            exit 1
+          fi
+          # the latest data release (not a draft; other releases, e.g. of the code, are left out)
+          latest=$(gh release list --limit 100 --exclude-drafts --json tagName,createdAt \
+            --jq '[.[] | select(.tagName | startswith("data-"))] | sort_by(.createdAt) | last | .tagName // ""')
+          previous=""
+          if [ -n "$latest" ]; then
+            previous=$(gh release view "$latest" --json body --jq .body |
+              sed -n 's/.*<!-- content-sha256: \([0-9a-f]\{64\}\) -->.*/\1/p' | tail -n 1)
+          fi
+          if [ "$previous" = "$HASH" ]; then
+            echo "The open dataset has not changed since $latest (content hash $HASH): no release." |
+              tee -a "$GITHUB_STEP_SUMMARY"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # data-YYYY-MM-DD, or .2, .3, ... after a release earlier the same day (its tag exists)
+          base="data-$(date -u +%Y-%m-%d)"
+          tag=$base
+          n=1
+          while git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; do
+            n=$((n + 1))
+            if [ "$n" -gt 9 ]; then
+              echo "::error::$base to $base.9 are all taken"
+              exit 1
+            fi
+            tag="$base.$n"
+          done
+          echo "The open dataset changed since ${latest:-the first data release} (content hash ${previous:-none}, now $HASH): releasing $tag." |
+            tee -a "$GITHUB_STEP_SUMMARY"
+          { echo "release=true"; echo "tag=$tag"; } >> "$GITHUB_OUTPUT"
+
+      - name: Package the release
+        if: ${{ steps.compare.outputs.release == 'true' }}
+        env:
+          TAG: ${{ steps.compare.outputs.tag }}
+          SHA: ${{ needs.plan.outputs.sha }}
+        run: python -m pipeline opendata package --tag "$TAG" --out release --commit "$SHA"
+
+      - name: Upload the release's files
+        if: ${{ steps.compare.outputs.release == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: open-data
+          path: release/
+          retention-days: 3
+          if-no-files-found: error
+
+  release:
+    name: Publish the release
+    needs: [plan, build]
+    if: ${{ needs.build.outputs.release == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the release and its tag
+    steps:
+      - name: Download the release's files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: open-data
+          path: release
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.build.outputs.tag }}
+          SHA: ${{ needs.plan.outputs.sha }}
+        run: |
+          gh release create "$TAG" --target "$SHA" --title "Open data $TAG" --notes-file release/notes.md \
+            "release/eu-intel-$TAG.zip" release/datapackage.json
+          echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG) on $SHA." >> "$GITHUB_STEP_SUMMARY"

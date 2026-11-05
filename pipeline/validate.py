@@ -100,7 +100,7 @@ PUBLIC_FILES = [
     "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json",
     "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
     "topics.json", "search.json", "activity.json", "applies.json", "feeds/updates.xml", "feeds/applies/all.xml",
-    "transposition.json", "feeds/countries/DE.xml",  # the implementation tracker; one of the 27 country feeds
+    "transposition.json", "feeds/countries/DE.xml", "open/datapackage.json",  # the implementation tracker; one of the 27 country feeds
 ]  # fmt: skip
 
 # (source, file, model name, id function)
@@ -160,6 +160,9 @@ ERROR_CHECKS = {
     "applies": "a date of applies.json that its file's own record contradicts: not a date of the file's act of that "
     "kind, a transposition date whose role is not established, a date after the act's validity ended, a row listed "
     "twice, or Member States not each listed once in its `where`",
+    "open-data": "the open dataset (public/data/open) does not match its datapackage.json: a table's size or hash, its "
+    "header, a value's type, a required value or an enumeration, a primary or foreign key, or a crosswalk identifier "
+    "that its table does not list",
 }
 # Findings that the dataset's scope makes expected: printed as INFO, not counted as warnings.
 BY_DESIGN = {
@@ -929,6 +932,11 @@ def check_built(public: Path, data: dict[tuple[str, str], list[Any]], rep: Repor
             if missing:
                 incomplete(f"public {index}: {len(missing)} of {len(entries)} listed files not written (e.g. {missing[:3]})")
     check_contract(public, rep, docs)
+    if (public / "open" / "datapackage.json").exists():  # missing: reported above (PUBLIC_FILES)
+        from pipeline.analysis.opendata import check as check_open_data
+
+        for msg in check_open_data(public / "open"):
+            rep.error(f"public open/{msg}", "public", "open-data")
 
 
 # The detail files that an index lists: (index, folder, key of the file name)

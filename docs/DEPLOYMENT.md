@@ -1,6 +1,6 @@
 # Deployment and operations
 
-The site is a static build deployed to **GitHub Pages** by GitHub Actions. Five workflows:
+The site is a static build deployed to **GitHub Pages** by GitHub Actions. Six workflows:
 
 | Workflow | Trigger | Does | Permissions |
 | --- | --- | --- | --- |
@@ -9,6 +9,7 @@ The site is a static build deployed to **GitHub Pages** by GitHub Actions. Five 
 | `refresh.yml` (Data refresh) | Mondays 05:17 and 22:37 UTC, Fridays 05:17 UTC (a scheduled run is skipped if every core source on `main` was retrieved in the last 20 h), manual | fetch all sources (incremental, see below; a full refresh in the first week of each month); on Fridays the core sources and `agenda` only → validate per source → data gate (with activity recording) → commit `data/snapshot/` + `data/state/` to `main` → deploy that commit once CI has passed on its code | `contents: write`, `actions: read`; its deploy job: as `pages.yml` |
 | `rebuild.yml` (Daily rebuild) | daily 01:23 UTC, manual | no fetch, no commit: deploys `main` (its committed data built with today's date) through `pages.yml` once CI has passed on its code, unless a refresh is running | `contents: read`, `actions: read`; its deploy job: as `pages.yml` |
 | `watchdog.yml` (Watchdog) | after each *Data refresh*, *CI* run on `main`, deploy and *Daily rebuild*, daily 19:41 UTC, manual | opens, updates or closes the [Data health](#data-health) issue | `contents: read`, `issues: write`, `actions: read` |
+| `release-data.yml` (Data release) | Tuesdays 10:41 UTC, manual | the [open dataset](#open-data-releases) of `main`, once CI has passed on its code: validate, strict build, `validate --built` → a GitHub release tagged `data-YYYY-MM-DD` with the zip and `datapackage.json`, only when its content changed since the latest one | plan: `contents: read`, `actions: read`; build: `contents: read`; the release job only: `contents: write` |
 
 All actions are pinned to full commit SHAs (with the version in a comment); Dependabot
 (`.github/dependabot.yml`) proposes weekly grouped updates. The Python runtime dependencies in `pyproject.toml` have a
@@ -67,6 +68,14 @@ check → size check (fails over 900 MB; Pages allows 1 GB).
    the new address, for the watchdog's check of the live site.
 6. **Issues** must stay enabled (*Settings → General → Features*): the watchdog reports in a "Data health" issue. Watch
    the repository (at least *Issues*) to be notified when it opens or lists a new problem.
+7. **A DOI for each data release (Zenodo)**, once: sign in at <https://zenodo.org> with the GitHub account that owns the
+   repository (*Log in → GitHub*), open *Account → GitHub* (<https://zenodo.org/account/settings/github/>), and switch
+   `RAHV-FB/eu-intel` on (*Sync now* if it is not listed). Nothing else is needed in the repository: from then on Zenodo
+   archives every **published** release (the weekly `data-YYYY-MM-DD` ones, and any other) and gives it a DOI, with the
+   metadata of `.zenodo.json` (title, description, creators, licence, related identifiers); releases published before
+   the switch are not archived. The first archived release also gets a *concept DOI* that always resolves to the latest
+   version: add it to `CITATION.cff` (`doi:`) and to the README, so that citations use it. What a record holds, and how
+   to archive the CSV files themselves, is under [Open-data releases](#open-data-releases).
 
 The site will be at `https://rahv-fb.github.io/eu-intel/`.
 
@@ -150,14 +159,15 @@ have fetched it; their own tools (for example LinkedIn's Post Inspector) show wh
   no rotation share: the Monday run of the same week took it ("What a weekly run re-reads"). If it is dropped or fails,
   the Monday run covers it.
 - **Schedules switched off after 60 days without a commit**: GitHub disables every scheduled workflow of a public
-  repository after 60 days without activity in it, all three here at once (the refresh, the daily rebuild and the
-  watchdog). A commit is activity: a refresh whose data passes the gate always commits (`_manifest.json` records each
+  repository after 60 days without activity in it, all four here at once (the refresh, the daily rebuild, the watchdog
+  and the weekly data release). A commit is activity: a refresh whose data passes the gate always commits (`_manifest.json` records each
   run's attempt), so the repository stays active as long as refreshes pass. A scheduled run that commits nothing (the
-  watchdog's, the daily rebuild's) is not activity. Sixty days without a commit are sixty days of refreshes that failed
+  watchdog's, the daily rebuild's, the data release's) is not activity. Sixty days without a commit are sixty days of refreshes that failed
   or did not run, and from the eighth the watchdog reports the live data as overdue (`MAX_AGE_DAYS`). Once the schedules
   are off, so is the watchdog's daily run: it then runs only after a CI run for a push to `main` or a deploy, and the
   first of those reports the live data as overdue. Re-enable each under *Actions → <workflow> → Enable workflow* (`gh
-  workflow enable refresh.yml`, `gh workflow enable rebuild.yml`, `gh workflow enable watchdog.yml`).
+  workflow enable refresh.yml`, `gh workflow enable rebuild.yml`, `gh workflow enable watchdog.yml`, `gh workflow enable
+  release-data.yml`).
 - **Daily rebuild** (`rebuild.yml`, 01:23 UTC): the site is built again from `main`'s committed data with that day's date
   and deployed, without fetching or committing anything. Statuses and labels are written when the site is built, while
   the explanations beside them follow the reader's date (`src/lib/format.ts`): between weekly refreshes a file published
@@ -473,6 +483,45 @@ step comments on the issue, once per spell of failures (or opens the issue): the
 `python -m pipeline health` runs the source and site checks locally (`--meta FILE` for a downloaded `meta.json`,
 `--markdown` for the issue body, `--json`); it exits 1 when anything is wrong.
 
+## Open-data releases
+
+Every data build also writes the **open dataset** to `public/data/open/` (`pipeline/analysis/opendata.py`): nine CSV
+tables (files, acts, EP votes, Council votes and positions, transposition, national measures, infringements, the
+identifier crosswalk), `datapackage.json` (a Frictionless Tabular Data Package: each field's type and description, the
+keys, the sources with their attribution, the licence) and a `README.md`. The site serves them under `data/open/`
+(about 28 MB of the Pages budget), and `validate --built` checks them against their descriptor (`open-data`: sizes and
+hashes, headers, types and enumerations, primary and foreign keys, every crosswalk identifier in its table).
+
+`release-data.yml` publishes them weekly as a GitHub release, Tuesdays at 10:41 UTC (after Monday's refresh and its
+second try, and the daily rebuild) and by hand (*Actions → Data release → Run workflow*, on `main`):
+
+1. **Plan**: `main`'s commit, released only if CI has passed on its code (`scripts/ci-passed.sh <sha> release`, as the
+   refresh's deploy) and only from `main`'s workflow.
+2. **Build** (read-only): `pipeline validate`, the strict data build, `pipeline validate --built`, then
+   `python -m pipeline opendata content-hash`: a SHA-256 of `datapackage.json` without the values that change while no
+   row does (`as_of`, the day statuses are computed for, and the sources' retrieval times), which lists each table's
+   SHA-256. It is compared with the hash in the notes of the latest `data-*` release (`<!-- content-sha256: … -->`): the
+   same hash ends the run without a release. Otherwise `python -m pipeline opendata package` writes the zip
+   (`eu-intel-<tag>.zip`, the same bytes for the same files), `datapackage.json` and the notes (the snapshot's dates,
+   each table's rows, the caveats, the licence, the hash).
+3. **Release** (the only job with `contents: write`, running nothing but `gh`): `gh release create data-YYYY-MM-DD
+   --target <sha>` with the zip and `datapackage.json`. A second release the same day is `data-YYYY-MM-DD.2`.
+
+A failed run publishes nothing and changes nothing; GitHub notifies the account that last changed the schedule (the
+watchdog does not watch this workflow). Re-run it, or run it by hand once the cause is fixed.
+
+**What Zenodo archives.** Once the repository is switched on at Zenodo (one-time setup, point 7), each published release
+gets a DOI. Zenodo's GitHub integration archives the source tree of the release's tag, not the files attached to the
+release (zenodo/zenodo#1235, still open in July 2026). A record therefore holds the code and the committed snapshot
+from which the dataset is built, reproducibly: `EU_INTEL_TODAY=<as_of> python -m pipeline build` (with `as_of` from the
+release's `datapackage.json`); the CSV files are on the GitHub release, which `.zenodo.json` links. To have Zenodo
+hold the CSV files themselves, the release would tag a commit whose tree is the dataset (a commit outside `main`,
+e.g. on an `open-data` branch, about 5 MB compressed at first and the changed rows after), or upload the zip through
+Zenodo's API with a token; both are left to the owner's decision.
+
+Locally, after a build: `python -m pipeline opendata content-hash`, and `python -m pipeline opendata package --tag
+data-YYYY-MM-DD --out DIR` for the release's files (each exits 1 if the dataset does not match its descriptor).
+
 ## Known limitations
 
 - **Re-apply onto new code**: a refresh whose push is rejected because a code commit reached `main` re-applies its data on
@@ -491,7 +540,7 @@ step comments on the issue, once per spell of failures (or opens the issue): the
 
 Public repositories get unlimited standard GitHub-hosted runner minutes. Every job has a `timeout-minutes` cap
 (CI: check 30, e2e 40; deploy: build 25, deploy 15; refresh: plan 5, refresh 120, with the fetch step capped at 100;
-watchdog 10; daily rebuild: plan 5, its deploy as above). Pages limits: published site ≤ 1 GB (checked at build time), soft
+watchdog 10; daily rebuild: plan 5, its deploy as above; data release: plan 5, build 20, release 10). Pages limits: published site ≤ 1 GB (checked at build time), soft
 bandwidth limit 100 GB/month. Artifacts are kept 1–7 days.
 
 **Site size.** The size check (CI, the refresh's data gate, the deploy) measures `dist` with `du -sk`, which counts disk

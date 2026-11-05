@@ -34,6 +34,8 @@ const TYPES = {
   '.webp': 'image/webp',
   '.ico': 'image/x-icon',
   '.txt': 'text/plain; charset=utf-8',
+  '.csv': 'text/csv; charset=utf-8', // the open dataset (data/open/), as Pages serves it
+  '.md': 'text/markdown; charset=utf-8',
   '.webmanifest': 'application/manifest+json',
   '.woff2': 'font/woff2',
   '.map': 'application/json',
