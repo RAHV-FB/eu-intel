@@ -56,6 +56,7 @@ jobs:
     timeout-minutes: 25
     outputs:
       built_at: ${{ steps.record.outputs.built_at }}
+      commit: ${{ steps.record.outputs.commit }}
     steps:
       # The commit to deploy, with every commit and tree of the history but no file contents beyond this commit's
       # (filter: blob:none, about 0.1 MB for the whole history): the next step only compares commits and trees.
@@ -120,7 +121,12 @@ jobs:
           # Absolute links in the Atom feeds: the Pages URL, so a custom domain is used once it is set.
           # (The feed and entry ids do not depend on it: pipeline/analysis/feeds.py TAG_BASE.)
           SITE_URL: ${{ steps.pages.outputs.base_url }}/
-        run: python -m pipeline build
+        run: |
+          # the commit checked out (after the step above): meta.json says which commit the live site was built from,
+          # since GitHub records a refresh's deploy under the commit the refresh started from (github.sha)
+          EU_INTEL_COMMIT=$(git rev-parse HEAD)
+          export EU_INTEL_COMMIT
+          python -m pipeline build
 
       - name: Validate built data
         # The built-output checks of pipeline/validate.py; --built fails if public/data is missing.
@@ -186,8 +192,10 @@ jobs:
       - name: Record what is deployed
         id: record
         run: |
-          built_at=$(python3 -c 'import json; print(json.load(open("dist/data/meta.json"))["built_at"])')
-          echo "built_at=$built_at" >> "$GITHUB_OUTPUT"
+          read -r built_at commit < <(python3 -c 'import json; m = json.load(open("dist/data/meta.json")); print(m["built_at"], m["commit"])')
+          test "$commit" = "$(git rev-parse HEAD)"
+          { echo "built_at=$built_at"; echo "commit=$commit"; } >> "$GITHUB_OUTPUT"
+          echo "Built commit \`$commit\` (\`built_at\` $built_at) for ${GITHUB_EVENT_NAME}." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
@@ -216,6 +224,7 @@ jobs:
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
           BUILT_AT: ${{ needs.build.outputs.built_at }}
+          COMMIT: ${{ needs.build.outputs.commit }}
         run: |
           set -euo pipefail
           test -n "$PAGE_URL"
@@ -246,6 +255,7 @@ jobs:
               python3 -c 'import json,sys; print(json.load(sys.stdin)["built_at"])' || true)
             if [ "$live" = "$BUILT_AT" ]; then
               echo "The public URL serves this deployment (data/meta.json built_at $live)."
+              echo "Deployed commit \`$COMMIT\` (\`built_at\` $BUILT_AT) to $base." >> "$GITHUB_STEP_SUMMARY"
               break
             fi
             if [ "$attempt" -eq "$attempts" ]; then

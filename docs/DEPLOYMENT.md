@@ -272,12 +272,18 @@ starts from whatever `main` holds and fetches again, so a rollback alone does no
    and *Deploy to GitHub Pages* once CI has passed. To deploy without waiting for CI: *Actions → Deploy to GitHub Pages → Run
    workflow* on `main` (`gh workflow run pages.yml --ref main`). When it has succeeded, `snapshot_at` in
    `https://rahv-fb.github.io/eu-intel/data/meta.json` (the latest retrieval of any source) is that of the restored data, and
-   the footer's "Procedures, votes and acts current to" date (`core_data_at`, the oldest retrieval of the core sources) is too.
+   the footer's "Procedures, votes and acts current to" date (`core_data_at`, the oldest retrieval of the core sources) is too,
+   and `commit` is the commit the deploy built (`git log -1 <commit>`: your restore, or a later commit with the same data).
    `built_at` moves with every deploy, so it does not show that the data is the good one.
-5. **While you prepare that, an earlier version can be deployed again.** *Actions → Deploy to GitHub Pages*, an earlier successful
-   run, *Re-run all jobs* (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`,
-   then `gh run rerun <run-id>`), or, for the data of an earlier refresh, the *deploy / Build site* job of that *Data refresh* run
-   (*Re-run this job*, which also re-runs the jobs that depend on it). A re-run builds what the original run built (a re-run keeps the
+5. **While you prepare that, an earlier version can be deployed again.** Each deploy's job summary names the commit it built
+   (*Built commit … / Deployed commit …*), and so does the live `data/meta.json` (`commit`). Deploys after CI or by hand are
+   *Deploy to GitHub Pages* runs; a refresh's deploy is the *Deploy* jobs of its *Data refresh* run, and GitHub's Pages
+   deployment history (and `headSha`) lists it under the commit the refresh started from, not the data commit it deployed:
+   find it by the summary or with `gh run list --workflow refresh.yml --status success --json databaseId,createdAt` then
+   `gh run view <run-id>`. Redeploy one: *Actions → Deploy to GitHub Pages*, an earlier successful run, *Re-run all jobs*
+   (`gh run list --workflow pages.yml --status success --json databaseId,headSha,createdAt,displayTitle`, then `gh run rerun
+   <run-id>`), or, for the data of an earlier refresh, the *Deploy / Build site* job of that *Data refresh* run (*Re-run this
+   job*, which also re-runs the jobs that depend on it). A re-run builds what the original run built (a re-run keeps the
    original event, commit and job outputs), so it deploys that commit's data; GitHub allows re-runs for 30 days. It changes what is published only: `main`
    still has the bad data, and the next deploy (after CI passes on a push to `main`, or after the next refresh) publishes `main` again. Step 3 must
    follow. Dispatching `pages.yml` on another branch does not help: it builds but does not deploy (setup, point 4).

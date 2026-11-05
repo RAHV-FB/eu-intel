@@ -322,13 +322,45 @@ def test_a_deploy_fails_unless_the_public_url_serves_what_it_built(tmp_path):
         env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "CURL_LOG": str(log),
                "PAGE_URL": "https://example.org/eu-intel/", "BUILT_AT": "2026-11-05T14:19:00Z",
                "NEW_BUILT_AT": "2026-11-05T14:19:00Z", "SWITCH_AFTER": str(switch_after), "GITHUB_RUN_ID": "5",
-               "GITHUB_RUN_ATTEMPT": "1", "VERIFY_ATTEMPTS": "4", "VERIFY_SLEEP": "0"}  # fmt: skip
+               "GITHUB_RUN_ATTEMPT": "1", "VERIFY_ATTEMPTS": "4", "VERIFY_SLEEP": "0", "COMMIT": "9" * 40,
+               "GITHUB_STEP_SUMMARY": os.devnull}  # fmt: skip
         return subprocess.run(["bash", "-e", "-c", verify["run"]], cwd=tmp_path, env=env, capture_output=True).returncode == 0
 
     assert verify_with(switch_after=3)  # the old deployment twice more (the routes' check fetched it once), then this one
     urls = log.read_text(encoding="utf-8").splitlines()
     assert "https://example.org/eu-intel/data/meta.json?deploy=5-1-2" in urls  # each attempt past the cache
     assert not verify_with(switch_after=10)  # never served: the release fails
+
+
+def test_the_deployed_site_names_the_commit_it_was_built_from(tmp_path):
+    # GitHub records a refresh's deploy under the commit the refresh started from (github.sha in the called workflow),
+    # e.g. 43342c0 for the data of 9aba253 on 5 Nov 2026: meta.json and the job summaries say what was built
+    s = steps("pages.yml", "build")
+    build = s[strict_build(s)]["run"]
+    assert build.index("EU_INTEL_COMMIT=$(git rev-parse HEAD)") < build.index("export EU_INTEL_COMMIT") < build.index(
+        "python -m pipeline build"
+    )
+    assert named(s, "Build the newest data on the tested code") < strict_build(s)  # after the checkout of main, if any
+    assert workflow("pages.yml")["jobs"]["build"]["outputs"]["commit"] == "${{ steps.record.outputs.commit }}"
+    record = s[named(s, "Record what is deployed")]["run"]
+    work = tmp_path / "repo"
+    work.mkdir()
+    git, commit = git_repo(work)
+    sha = commit({"src/app.ts": "1"}, "code")
+    (work / "dist" / "data").mkdir(parents=True)
+    summary = tmp_path / "summary.md"
+
+    def run(meta_commit: str | None) -> dict[str, str]:
+        meta = {"built_at": "2026-11-05T14:19:00Z", "commit": meta_commit}
+        (work / "dist" / "data" / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+        return run_step(record, work, {"GITHUB_STEP_SUMMARY": str(summary), "GITHUB_EVENT_NAME": "workflow_dispatch"})
+
+    assert run(sha) == {"built_at": "2026-11-05T14:19:00Z", "commit": sha}
+    assert f"Built commit `{sha}`" in summary.read_text(encoding="utf-8")
+    with pytest.raises(subprocess.CalledProcessError):  # a build that did not record its commit is not uploaded
+        run(None)
+    verify = steps("pages.yml", "deploy")[named(steps("pages.yml", "deploy"), "Verify published site and deep links")]
+    assert verify["env"]["COMMIT"] == "${{ needs.build.outputs.commit }}" and "Deployed commit" in verify["run"]
 
 
 def git_repo(path: Path):

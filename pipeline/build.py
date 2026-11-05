@@ -5120,8 +5120,12 @@ class Builder:
         fetched = [m[sid].fetched_at for sid in SOURCES if sid in m and m[sid].fetched_at]
         scope = self.coverage_scope()
         notes = self.coverage_notes(scope)
+        commit = os.environ.get("EU_INTEL_COMMIT", "")
         self.files["meta.json"] = {
             "built_at": os.environ.get("EU_INTEL_BUILT_AT") or now_iso(),
+            # the commit the site was built from: set by the deploy (pages.yml), so that the live site says which data
+            # and code it serves, whichever way it was deployed (docs/DEPLOYMENT.md, rolling back); null in other builds
+            "commit": commit if re.fullmatch(r"[0-9a-f]{40}", commit) else None,
             # the latest successful retrieval of any listed source: it identifies the snapshot (docs/DEPLOYMENT.md,
             # restoring data), but says nothing of the sources retrieved earlier
             "snapshot_at": max(fetched) if fetched else None,
