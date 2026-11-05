@@ -367,3 +367,83 @@ EP votes fall Tue–Thu, so this cuts the average lag from about 5 days to about
 - The CSP and privacy checks.
 - Hash-pinned dependencies.
 - The search engine.
+
+---
+
+## 9. Status after Phase 0–1 (5 November 2026)
+
+Phase 0 and Phase 1 were merged as #14 and #17 and ran in production the same day. A second, independent audit
+of the merged code, the data, the workflows and the docs followed; its findings are fixed in the follow-up PR or
+listed below. Measured, not estimated, unless marked otherwise.
+
+### What production showed
+
+| Check | Result |
+|---|---|
+| CI on `main` (frozen-data tests, live-data gate, e2e in 3 engines) | green on 43342c0 |
+| A refresh: fetch → validate → strict build → gate → commit → deploy of that commit (`workflow_call`) | run 42038313824 (the first on the new workflow): green, live 14:19 UTC |
+| Refresh → `main` stays green | the tests that pin values read frozen data, so a refresh no longer moves them; the first CI run on refreshed data is the follow-up PR's |
+| Data health issue | #20 opened by the watchdog (the Legislative Train, failing since 22 Oct), edited in place on the next run |
+| Storage per refresh (thin pack, as pushed) | 0.06 MB, down from 0.92 MB: `measures.json` is no longer rewritten |
+| Dependabot | vite + `@vitejs/plugin-react` bumped together (#18); dependency PRs no longer fail on red `main` |
+
+**Correction to §3.2.** "Each refresh adds about 12 MB" counted whole files without delta compression. Git's
+delta-compressed growth was about 0.9 MB per refresh before the snapshot-writer fix and is now under 0.1 MB, so the
+repository-size limits in §3.2 are decades away, not 2027–2028.
+
+### Plan items
+
+| # | Status | Evidence / remaining |
+|---|---|---|
+| 0.1–0.3 | Done | 2025/0177, 2023/0421, 2025/0312, 2010/0208 correct live; feeds carry none of the withdrawn claims |
+| 1.1 Corroborate the leading edge | Done | an EP publication or signature record alone no longer moves a file; differential build on the 2 Nov and 5 Nov snapshots: only intended changes |
+| 1.2 Validator gates | Done; strengthened in follow-up | follow-up: `act-procedure-mismatch` an error (2020/3521), identity-based ratchet, published ⇒ act invariant, duplicate check per file |
+| 1.3 Strict build | Done; gaps closed in follow-up | follow-up: skipped `council_dates` / `unlinked_acts` entries fail `--strict` |
+| 1.4 Frozen test data | Done | `tests/frozen-data.txt` (5f83a06), `scripts/test-frozen.sh` |
+| 1.5 Gated promotion | Done; extended in follow-up | follow-up: a Chromium smoke of live data before every deploy (the data gate had no browser step) |
+| 1.6 Alerting | Done; blind spots closed in follow-up | follow-up: watch deploys too, escalate a worsening source, a data-age check against `main` |
+| 1.7 Freshness on the site | Done | "current to" date; stale notes on the reader's clock; Train labels withdrawn after 42 days |
+| 1.8 Re-read blind spots | Done | 8-week rotation, carried-forward ids, `PARSER_VERSION`; first scheduled full refresh 7 Dec 2026 |
+| 1.9 Storage churn | Done | see above |
+| Per-source quarantine | Not done | a failed gate commits nothing (documented TODO in `refresh.yml`) |
+
+### Found by the second audit
+
+Fixed in the follow-up PR (each with a test that fails without it):
+
+- **2020/3521(COD)** was still shown as an ordinary legislative procedure "In force": Council Decision (EU) 2020/2059,
+  a position in the EU–Pacific trade committee, tagged COD by Cellar. Excluded as a checked correction.
+- **Activity history**:
+  - a status change was withdrawn when only its date moved within a stage (a file signed after its adoption lost its
+    "Adopted" entry);
+  - the same step was listed twice when a second source reported it under a new id (2025/0232, 2025/0380, 2023/0134);
+  - an item still repeated a withdrawn claim in its "previously" text (2023/0421).
+- **Two of the new checks were themselves wrong**:
+  - the duplicate check would have failed future refreshes on twin files that share a title;
+  - a Legislative Train run that read nothing looked fresh.
+- **Council votes**: one listing query against Cellar replicas that disagree. ST 14946/26 was missed by two snapshots,
+  and a known note missing from one answer was dropped. Now the union of three passes, keeping known notes.
+- **/legislation** said "No file is officially reported as blocked" when `meta.json` had not loaded (15 were).
+- **Workflows**:
+  - a manual CI run could cancel the push run that a deploy waits for;
+  - the skip guard was fooled by manifest-only commits;
+  - the refresh job exposed its push token to npm install scripts;
+  - deploys were labelled with the caller's commit;
+  - e2e jobs were cancelled while installing OS packages from a slow apt mirror (now run in the Playwright image).
+- **Status labels were fixed at build time** while explanations follow the reader's date ("Published, not yet in
+  force" beside "It entered into force on 17 November"). A daily rebuild without fetching now keeps them within a day.
+- **Docs**: 20 statements that #17 had made false (deploy paths, schedules, the Scoreboard, the Train), and the
+  competitor table (EuropeScope, the EU Law Tracker).
+
+Left as known limitations: a pending deploy can be replaced by a newer one; a re-applied refresh push is not
+re-gated with newly merged code (the deploy re-gates it); a short "not yet blocked" flash before `meta.json` loads;
+the home "Stalled" list keys on display strings; the WebKit stylesheet-hash flake (Plan 4.5).
+
+### Next
+
+Phase 2 is under way:
+- 2.1 Coming up (Cellar planned events, EP plenary agenda);
+- 2.2 What changed, with a feed per file;
+- 2.3 Official EUR-Lex summaries and 2.7 law context;
+- 2.6 the national-party breakdown;
+- 2.4 (calendar) and 2.5 (implementation tracker) follow.
