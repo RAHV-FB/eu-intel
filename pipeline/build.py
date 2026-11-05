@@ -4488,6 +4488,9 @@ class Builder:
                 "last_event": done[-1]["date"] if done else None,
                 "last_step": last_step(done),
                 **({"steps_ahead": ahead} if ahead else {}),
+                # the earliest planned step after the build (pipeline/analysis/scheduled.py), for the explorer's
+                # "Next scheduled step" order that the home page's "Scheduled in the next 3 weeks" list leads to
+                **({"next_scheduled": self.scheduled[pid][0]["date"]} if pid in self.scheduled else {}),
                 "adopted": adopted,
                 "published": published,
                 "next_date": fut[0] if fut else None,

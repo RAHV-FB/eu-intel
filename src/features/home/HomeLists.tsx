@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import type { HomeData, HomeListItem } from '../../types/data';
 import { formatDate } from '../../lib/format';
 import { dossierPath } from '../legislation/labels';
-import { STUCK_VIEW } from '../legislation/explorer';
+import { SCHEDULED_VIEW, STUCK_VIEW } from '../legislation/explorer';
 
 type HomeList = HomeData['lists'][number];
 
@@ -11,6 +11,7 @@ const MORE: Partial<Record<HomeList['id'], { to: string; label: string }>> = {
   recently_adopted: { to: '/legislation?stage=law&sort=adopted', label: 'Adopted legislation in our dataset' },
   under_debate: { to: '/legislation?stage=active&sort=updated', label: 'All files still being decided' },
   // the stuck view: files of the ordinary legislative procedure still being decided, the longest without a step first
+  scheduled: { to: SCHEDULED_VIEW, label: 'All files with a planned step, soonest first' },
   stalled: { to: STUCK_VIEW, label: 'Ordinary-procedure files still being decided, longest without a recorded step first' },
   upcoming: { to: '/legislation?sort=deadline', label: 'All upcoming dates' },
   close_votes: { to: '/votes?kind=final&close=1', label: 'All close final votes' },

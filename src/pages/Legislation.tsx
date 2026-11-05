@@ -175,6 +175,8 @@ export default function Legislation() {
   const years = useMemo(() => [...new Set(rows.map(dossierYear).filter((y): y is number => !!y))].sort((a, b) => b - a), [rows]);
   const hasAdopted = rows.some((d) => d.adopted);
   const hasNextDates = rows.some((d) => d.next_date);
+  // offered while some file has a planned step on or after the reader's date (the `agenda` source)
+  const hasScheduled = rows.some((d) => d.next_scheduled && d.next_scheduled >= today);
   const anyBlocked = rows.some((d) => d.officially_blocked);
 
   const advancedActive = !!(state.type || state.instrument || state.year || state.blocked);
@@ -320,6 +322,7 @@ export default function Legislation() {
               {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => {
                 if (k === 'relevance' && !hasQuery) return null;
                 if (k === 'deadline' && !hasNextDates) return null;
+                if (k === 'scheduled' && !hasScheduled && state.sort !== 'scheduled') return null;
                 if (k === 'blocked' && !anyBlocked) return null;
                 return (
                   <option key={k} value={k}>
@@ -540,6 +543,13 @@ export default function Legislation() {
           {state.sort === 'adopted' && !hasAdopted && (
             <p className="meta lx-sortnote">
               Adoption dates are not yet in the summary data, so adopted files are ordered by their latest recorded step.
+            </p>
+          )}
+
+          {state.sort === 'scheduled' && (
+            <p className="meta lx-sortnote">
+              Files with a planned step ahead come first, the soonest first: planned dates as the Council and Parliament publish
+              them, which can change. A file's page lists its scheduled steps and their sources.
             </p>
           )}
 

@@ -5,7 +5,7 @@ import type { DossierSummary, LegalInstrument } from '../../types/data';
 import { dossierScores, hasWord, keywordTokens, wordSet, type SearchEngine } from '../../lib/search';
 import { ACTIVE_STAGES, ADOPTED_STAGES, dossierYear, stagesFor } from './labels';
 
-export type SortKey = 'relevance' | 'updated' | 'newest' | 'adopted' | 'blocked' | 'deadline' | 'stuck';
+export type SortKey = 'relevance' | 'updated' | 'newest' | 'adopted' | 'blocked' | 'deadline' | 'stuck' | 'scheduled';
 
 export const SORT_LABEL: Record<SortKey, string> = {
   relevance: 'Best match',
@@ -15,7 +15,11 @@ export const SORT_LABEL: Record<SortKey, string> = {
   blocked: 'Officially blocked first',
   deadline: 'Upcoming application dates & deadlines',
   stuck: 'Longest without a recorded step',
+  scheduled: 'Next scheduled step',
 };
+
+/** Files with a planned step ahead, soonest first (the home page's "Scheduled in the next 3 weeks" leads here). */
+export const SCHEDULED_VIEW = '/legislation?sort=scheduled';
 
 /** The stuck view (the home page's "Stalled" list leads to it): files still being decided, longest without a recorded
  * procedural step first. */
@@ -229,6 +233,20 @@ export function sortRows(rows: DossierSummary[], sort: SortKey, scores: Map<stri
         return a.last_event.localeCompare(b.last_event) || a.id.localeCompare(b.id);
       });
       break;
+    case 'scheduled': {
+      // a planned step on or after the reader's date first, soonest first (a date that has passed is no longer ahead:
+      // the file's page says it was scheduled); the others after, by their latest recorded step
+      const ahead = (d: DossierSummary) => (d.next_scheduled && d.next_scheduled >= today ? d.next_scheduled : null);
+      out.sort((a, b) => {
+        const da = ahead(a);
+        const db = ahead(b);
+        if (da && db) return da.localeCompare(db) || a.id.localeCompare(b.id);
+        if (da) return -1;
+        if (db) return 1;
+        return desc(a.last_event, b.last_event);
+      });
+      break;
+    }
     case 'deadline':
       out.sort((a, b) => {
         const da = upcomingDate(a, today);

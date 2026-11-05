@@ -183,6 +183,9 @@ export interface DossierSummary {
   names?: string[];
   featured: boolean;
   officially_blocked: boolean; // only true when an official source (Legislative Train) says so
+  // the date of the file's earliest planned step after the build (Council and Parliament schedules, the `agenda`
+  // source); absent when none is published
+  next_scheduled?: ISODate;
   has_ep_votes: boolean;
   has_council_votes: boolean;
 }

@@ -54,6 +54,17 @@ test.describe('scheduled steps', () => {
     await expect(page.locator('#scheduled-next')).toBeVisible();
   });
 
+  test('the home page’s list leads to every file with a planned step, soonest first', async ({ page }) => {
+    await open(page, './');
+    const more = page.locator('section[aria-labelledby="hl-scheduled"] .hl__more');
+    await expect(more).toHaveText(/All files with a planned step, soonest first/);
+    await more.click();
+    await expect(page).toHaveURL(/sort=scheduled/);
+    await expect(page.getByLabel('Sort by')).toHaveValue('scheduled');
+    await expect(page.locator('main')).toContainText('Files with a planned step ahead come first, the soonest first');
+    await expect(page.locator('.drow').first()).toContainText(file!.title);
+  });
+
   test('a file’s page gives each step with its date, meeting, documents and source', async ({ page }) => {
     await open(page, `legislation/${first!.dossier_id}`);
     const box = page.locator('#scheduled-next');
