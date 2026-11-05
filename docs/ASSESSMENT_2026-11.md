@@ -450,9 +450,9 @@ Phase 2, first wave (built 5 November 2026; measured on that day's data):
 |---|---|---|
 | 2.1 Coming up | Yes | the steps the Council and Parliament have scheduled (Cellar planned events, Parliament's plenary agenda): 42 on 37 files, on each file's page and on home; the explorer's "Next scheduled step" order |
 | 2.2 What changed | Yes | a What changed page and a "This week in EU law" strip; list rows name the latest step; full feed titles, one feed per file, OPML export of the Following list |
-| 2.3 Official summaries | Yes | EUR-Lex's own summary on 535 files with no curated summary (30 had a plain explanation before); 85 flagged as older than the latest amending act; official short names (NIS2, CSDDD…) |
+| 2.3 Official summaries | Yes | EUR-Lex's own summary on 535 files: shown on the 520 with no curated summary and linked from 15 of the 30 that have one (30 had a plain explanation before, 550 now); 85 flagged as older than the latest amending act; official short names (NIS2, CSDDD…) |
 | 2.6 National parties | Yes | how each national party's MEPs voted on each vote with recorded votes; a party page's votes on whole texts; a link to the vote on HowTheyVote.eu, labelled independent |
-| 2.7 Law context | Yes | court rulings interpreting or annulling an act (135 files), pending cases, the current consolidated text (551 acts), EESC and CoR opinions; C-727/25 against the withdrawal of 2023/0133 is now shown |
+| 2.7 Law context | Yes | court rulings interpreting an act (82 files) or annulling one (3; 85 with either), pending cases (98 files; 137 files with any of these), the current consolidated text (551 acts), EESC and CoR opinions; C-727/25 against the withdrawal of 2023/0133 is now shown |
 | 2.8 Stuck view | Yes | "Longest without a recorded step" (the home link: ordinary-procedure files only) |
 | 2.9 Empty states | Yes | a search with no result says what the site covers and links to the same search on EUR-Lex |
 | 2.4 Calendar, 2.5 Implementation tracker | Next | |

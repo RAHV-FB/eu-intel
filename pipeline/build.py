@@ -5163,7 +5163,7 @@ class Builder:
         from pipeline.analysis.activity import is_discharge_vote
 
         # close final votes as the /votes page defines them (CLOSE_RELATIVE), newest first; over all the votes
-        # covered, as few final votes are that close (one in the 12 months to October 2026)
+        # covered, as few final votes are that close (two in the 12 months to October 2026: 181828 and 193557)
         close = [
             v for v in self.vote_summary.values()
             if v["kind"] == "final" and v.get("margin") and v["outcome"] in ("adopted", "rejected")
