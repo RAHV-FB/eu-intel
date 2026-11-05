@@ -1126,9 +1126,10 @@ class _Result:
     base: str
     vote: CouncilVote | None
     problem: str | None
-    state: CouncilNoteState | None  # None: transient failure, retry next run
+    state: CouncilNoteState | None  # None: nothing to keep (a note never processed), retried next run
     reused: bool = False
     deferred: bool = False  # not processed: time budget reached (previous record kept, retried next run)
+    transient: bool = False  # a download failed (not 404): previous record kept, retried next run
 
 
 def process_note(
@@ -1163,8 +1164,10 @@ def process_note(
             if e.status == 404:  # withdrawn version (e.g. declared null and void)
                 log.warning("council: %s not in the register (404)", v.doc_id)
                 continue
-            # Transient: keep the previous record (if any) and retry next run.
-            return _Result(base, prev_vote, f"download failed ({e.status}); previous record kept", None)
+            # Transient: keep the previous record (if any) and its entry, marked to be read again next run. Without the
+            # entry the record was no longer linked to its note, and a second failure in a row dropped it.
+            keep = prev.model_copy(update={"fingerprint": DEFERRED_FINGERPRINT}) if prev else None
+            return _Result(base, prev_vote, f"download failed ({e.status}); previous record kept", keep, transient=True)
         try:
             parsed.append(parse_document(v, pdf))
         except (subprocess.SubprocessError, ValueError) as e:
@@ -1204,7 +1207,7 @@ def reprocess(http: Http, bases: list[str]) -> dict[str, str | None]:
         results = list(ex.map(work, bases))
     for r in results:
         out[r.base] = r.problem
-        if r.state is None:  # transient failure: keep the previous records
+        if r.transient or r.state is None:  # transient failure: keep the previous records
             continue
         prev = states.get(r.base)
         if prev and prev.vote_id:
@@ -1256,8 +1259,7 @@ def fetch(http: Http) -> SourceStatus:
                 votes.append(r.vote)
             if r.state is not None:
                 states.append(r.state)
-            elif not r.deferred:
-                transient += 1
+            transient += r.transient
             deferred += r.deferred
             reused += r.reused
             if r.problem:
