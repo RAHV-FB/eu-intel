@@ -164,7 +164,8 @@ open http://127.0.0.1:4174/eu-intel/).
 
   After CI or a refresh, if `main` has moved on since that commit only by data refresh commits, the deploy builds `main`
   (same code, newer data), so that it does not take refreshed data off the site. A failed or cancelled CI run (a newer
-  push cancels it) deploys nothing; CI on pull requests and manual CI runs never deploy. A refresh whose code has not
+  push cancels it) deploys nothing; CI on pull requests and manual CI runs never deploy, and a manual run does not cancel
+  the run of a push (the event is part of CI's concurrency group). A refresh whose code has not
   passed CI (yet), e.g. a commit pushed while the refresh ran, commits its data but does not deploy it: the deploy that
   follows the next successful CI run on `main` does.
 - Commits made by the refresh use `GITHUB_TOKEN`, which by design does not trigger workflows: the refresh deploys its

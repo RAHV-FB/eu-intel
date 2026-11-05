@@ -215,8 +215,26 @@ def test_ci_does_not_run_after_a_data_refresh():
     # with the tests on frozen data it would re-test the same code on the same data; the refresh gates its own data
     assert "workflow_run" not in triggers("ci.yml")
     assert workflow("ci.yml")["concurrency"]["group"] == (
-        "ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}"
+        "ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}"
     )
+
+
+def test_a_manual_ci_run_does_not_cancel_the_run_of_a_push():
+    # both were in the group ci-CI-refs/heads/main: a manual run cancelled the push's run, the only kind that deploys
+    # (pages.yml) and that a refresh's deploy waits for, and the watchdog ignores cancelled runs
+    c = workflow("ci.yml")["concurrency"]
+    assert c["cancel-in-progress"] is True and "${{ github.event_name }}" in c["group"]
+    group = c["group"].replace("${{ github.workflow }}", "CI")
+
+    def evaluate(event: str, ref: str, pr: str = "") -> str:  # the group's expression for one event
+        return group.replace("${{ github.event_name }}", event).replace(
+            "${{ github.event.pull_request.number || github.ref }}", pr or ref
+        )
+
+    assert evaluate("push", "refs/heads/main") != evaluate("workflow_dispatch", "refs/heads/main")
+    assert evaluate("pull_request", "refs/pull/7/merge", "7") == evaluate("pull_request", "refs/pull/7/merge", "7")
+    assert triggers("pages.yml")["workflow_run"]["workflows"] == ["CI"]
+    assert "--event push" in steps("refresh.yml", "refresh")[named(steps("refresh.yml", "refresh"), "Deploy only code that CI has passed")]["run"]
 
 
 # ---------------------------------------------------------------- paths to production
