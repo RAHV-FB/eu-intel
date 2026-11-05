@@ -1381,6 +1381,30 @@ def test_a_council_first_reading_position_vote_the_procedure_record_lacks_counts
     assert (st.stage, st.label, st.since) == ("negotiations", "Second reading in Parliament", "2026-10-27")
 
 
+def test_the_eps_unconfirmed_publication_is_shown_as_its_record():
+    """2023/0421(COD) on 2 November 2026: the EP's "Final act published in the Official Journal" of 30 October 2026,
+    with no act in Cellar, no position of Parliament and no Council adoption, was a key "publication" step labelled
+    EUR-Lex (sources.ep_procedures.ACTIVITY_INSTITUTION), and dated the file's publication. Constructed records."""
+    from pipeline.build import Builder
+    from pipeline.models.entities import Event, EventKind, Procedure, SourceRef
+
+    src = SourceRef(institution="EP", url="https://example.invalid/ep", retrieved_at="2026-11-02T13:33:44Z")
+    pub = Event(id="2099-0421-PUB-2026-10-30", date="2026-10-30", kind=EventKind.publication, institution="EUR-Lex",
+                raw_type="def/ep-activities/PUBLICATION_OFFICIAL_JOURNAL", title="Final act published in the Official "
+                "Journal", source=src)  # fmt: skip
+    ref = Event(id="2099-0421-ANPRO-2023-12-14", date="2023-12-14", kind=EventKind.referral, institution="EP",
+                raw_type="def/ep-activities/REFERRAL", title="Announced in Parliament", source=src)  # fmt: skip
+    p = Procedure(id="2099-0421", reference="2099/0421(COD)", type="COD", title="t", oeil_url="u", source=src,
+                  events=[ref, pub])  # fmt: skip
+    me = _builder(today="2026-11-02")
+    step = next(e for e in Builder.timeline(me, p, [], []) if e["id"] == pub.id)  # type: ignore[arg-type]
+    assert (step["kind"], step["institution"], step["key"], step["title"]) == (
+        "other", "EP", False, "The European Parliament's record lists the final act as published in the Official Journal")
+    assert step["detail"].startswith("No act published under this procedure is recorded in our EUR-Lex data")
+    assert step["source"]["url"] == "https://example.invalid/ep"
+    assert Builder.adoption_dates(me, p, []) == (None, None)  # type: ignore[arg-type]
+
+
 # ------------------------------------------------------------------------------- EP vote labels
 # Labels exactly as Parliament published them (data/snapshot/ep_votes/votes.json, by vote id).
 LABEL_164581 = (

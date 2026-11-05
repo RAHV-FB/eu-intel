@@ -223,6 +223,8 @@ const PAST = [
   /adopted its (?:first-reading position|proposal for the act) on/, /delivered its opinion on/, /approved, on \d/,
   /first recorded meeting: \d/, /Parliament referred the file back/, /to negotiate with the Council was recorded/,
   /\(checked on \d/,
+  // the European Parliament's record of a signature that no other record confirms (status.unconfirmed_text)
+  /lists the final act as signed on/,
   // a rule for financial years (data/curated/transposition.yaml application_exceptions): true before and after the date
   /are to apply for financial years starting on or after/,
 ];

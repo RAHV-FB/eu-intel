@@ -3290,6 +3290,13 @@ class Builder:
         # EP gives that day to 2016/0074(COD), whose Regulation (EU) 2019/1241 is in OJ L 198, 25.7.2019)
         act_pubs = {a.date_publication for a in acts if a.date_publication}
         ep_pubs: set[str] = set()
+        # The EP's records of a publication or signature that no act or adoption in our data confirms (status.
+        # unconfirmed_final_steps) are shown as its records, not as the steps: the status does not count them
+        # (2023/0421(COD): "Final act published in the Official Journal", 30 October 2026, with no act in Cellar, no
+        # position of Parliament and no Council adoption; the EP later deleted it). The snapshot labels the EP's
+        # publication record "EUR-Lex" (sources.ep_procedures.ACTIVITY_INSTITUTION), which has no such record then
+        confirm = _lazy("pipeline.analysis.status", "unconfirmed_final_steps")
+        unconfirmed = {e.id for e in confirm(p.events, acts, act_adopted)} if confirm else set()
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
         # (kind, date, title, detail) -> the day's steps so far: position in `out`, documents other than the sitting's
@@ -3328,6 +3335,16 @@ class Builder:
                 continue
             inst = e.institution
             when, detail = e.date, e.detail
+            if e.id in unconfirmed:
+                if kind == "publication":
+                    title = "The European Parliament's record lists the final act as published in the Official Journal"
+                    detail = ("No act published under this procedure is recorded in our EUR-Lex data, so this page does "
+                              "not show the act as published.")  # fmt: skip
+                else:
+                    title = "The European Parliament's record lists the final act as signed"
+                    detail = ("Neither the Council's adoption of the act nor the act itself is recorded in our data, so "
+                              "this page does not show the act as adopted.")  # fmt: skip
+                kind, key, inst = "other", False, "EP"
             if kind == "signature" and p.type == "COD":
                 # "Legislative acts adopted under the ordinary legislative procedure shall be signed by the President
                 # of the European Parliament and by the President of the Council" (Art. 297(1) TFEU); the EP's date
@@ -4061,9 +4078,13 @@ class Builder:
                        if cv["date"] <= t and cv.get("vote_on") == "act" and cv["outcome"] == "adopted")  # fmt: skip
         council = sorted(e.date for e in p.events if e.kind == EventKind.council_adoption and e.date <= t)
         docs = sorted(a.date_document for a in acts if a.date_document and a.date_document <= t)
-        sigs = sorted(e.date for e in p.events if e.kind == EventKind.signature and e.date <= t)
+        # not the EP's records of a signature or publication that nothing confirms (status.unconfirmed_final_steps)
+        confirm = _lazy("pipeline.analysis.status", "unconfirmed_final_steps")
+        unconfirmed = {e.id for e in confirm(p.events, acts)} if confirm else set()
+        sigs = sorted(e.date for e in p.events if e.kind == EventKind.signature and e.date <= t and e.id not in unconfirmed)
         pubs = sorted(a.date_publication for a in acts if a.date_publication and a.date_publication <= t)
-        pubs = pubs or sorted(e.date for e in p.events if e.kind == EventKind.publication and e.date <= t)
+        pubs = pubs or sorted(e.date for e in p.events if e.kind == EventKind.publication and e.date <= t
+                              and e.id not in unconfirmed)  # fmt: skip
         published = pubs[0] if pubs else None
         adopts = _lazy("pipeline.analysis.status", "parliament_adopts")
         if adopts and adopts(p, acts):  # Parliament's decision after the Council's consent

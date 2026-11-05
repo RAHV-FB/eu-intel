@@ -50,7 +50,7 @@ PUBLIC_LIMIT = 400
 # Version of the lifecycle-stage logic (pipeline/analysis/status.py and the inputs build.py gives it).
 # Bump it whenever the status logic changes: the next recorded run then re-baselines every stored stage
 # instead of reporting the reclassification as status changes.
-CLASSIFIER_VERSION = "2026-10-23.2"
+CLASSIFIER_VERSION = "2026-11-05.1"
 # Sources whose fetch must have been complete ("ok") for a stage difference to count as a change.
 STAGE_SOURCES = ("ep_procedures", "eurlex")
 SNAPSHOT_EVENT_KINDS = {

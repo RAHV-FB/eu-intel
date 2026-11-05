@@ -962,3 +962,96 @@ def test_procedure_completed_without_any_recorded_act_is_not_called_adopted():
     s = classify(rec("2021-0415"), [], [], TODAY)
     assert (s.stage, s.label, s.basis) == ("unknown", "Procedure completed", "source")
     assert s.next_step.basis == "unknown" and s.stall is None
+
+
+# ====================================================================== the EP's records of the final act, corroborated
+def _ep_step(kind: str, d: str, activity: str, title: str, institution: str = "EP"):
+    """An EP Open Data API step as sources.ep_procedures records it (constructed)."""
+    from pipeline.models.entities import Event, EventKind, SourceRef
+
+    pid = "2099-0421"
+    return Event(
+        id=f"{pid}-{activity}-{d}", date=d, kind=EventKind(kind), raw_type=f"def/ep-activities/{activity}",
+        institution=institution, title=title,
+        source=SourceRef(institution="EP", url=f"https://data.europarl.europa.eu/api/v2/events/{pid}-{activity}-{d}",
+                         retrieved_at="2026-11-02T13:33:44Z"),
+    )  # fmt: skip
+
+
+def _ep_file(*events, stage_raw: str | None = "Awaiting committee decision") -> Procedure:
+    """An ordinary procedure with its proposal and referral, then `events` (constructed)."""
+    from pipeline.models.entities import SourceRef
+
+    src = SourceRef(institution="EP", url="https://data.europarl.europa.eu/", retrieved_at="2026-11-02T13:33:44Z")
+    start = [_event("proposal", "2023-11-27", "oeil:Legislative proposal published", "Commission published its legislative "
+                    "proposal", "Commission", ["COM(2023)0738"]),
+             _ep_step("referral", "2023-12-14", "REFERRAL", "Announced in Parliament and referred to committee")]  # fmt: skip
+    return Procedure(
+        id="2099-0421", reference="2099/0421(COD)", type="COD", title="t", stage_raw=stage_raw, oeil_url="u",
+        source=src, events=sorted([*start, *events], key=lambda e: e.date),
+        committees=[{"code": "EMPL", "role": "responsible"}],
+    )  # fmt: skip
+
+
+PUBLISHED = ("publication", "PUBLICATION_OFFICIAL_JOURNAL", "Final act published in the Official Journal", "EUR-Lex")
+SIGNED = ("signature", "SIGNATURE", "Final act signed")
+
+
+def test_a_publication_only_the_ep_records_does_not_make_the_file_published():
+    # 2023/0421(COD) on 2 November 2026: proposal, referral and the EP's "Final act published in the Official
+    # Journal" of 30 October 2026 (2023-0421-PUB-2026-10-30); no position of Parliament, no Council adoption, no act
+    # in Cellar, OEIL "Awaiting committee decision". The EP later deleted the event.
+    k, activity, title, inst = PUBLISHED
+    s = classify(_ep_file(_ep_step(k, "2026-10-30", activity, title, inst)), [], [], date(2026, 11, 2))
+    assert (s.stage, s.label, s.since) == ("proposed", "Proposal under examination", "2023-12-14")
+    assert s.explanation.endswith(
+        " The European Parliament's procedure record lists the final act as published in the Official Journal on 30 "
+        "October 2026, but no act published under this procedure is recorded in our EUR-Lex data."
+    )
+    assert s.next_step.text == "Parliament's responsible committee prepares and votes on its report."
+    assert s.stall is not None and s.stall.last_event_date == "2026-10-30"  # the EP did record a step that day
+
+
+def test_a_signature_needs_a_recorded_adoption_or_act():
+    # 2025/0177(COD) on 2 November 2026: the Council adopted the act (OEIL; ST 14295/26), the EP records its
+    # signature on 21 October and a publication on 28 October that it later deleted (the act was published on 3
+    # November); no act of the file in our EUR-Lex data
+    k, activity, title, inst = PUBLISHED
+    ep_pos = _ep_step("ep_position", "2026-09-16", "PLENARY_ADOPT_POSITION", "Parliament took its decision")
+    council = _event("council_adoption", "2026-10-09", "oeil:Act adopted by Council after Parliament's 1st reading",
+                     "Council adopted the act", "Council")  # fmt: skip
+    sig = _ep_step(SIGNED[0], "2026-10-21", SIGNED[1], SIGNED[2])
+    pub = _ep_step(k, "2026-10-28", activity, title, inst)
+    today = date(2026, 11, 2)
+    s = classify(_ep_file(ep_pos, council, sig, pub, stage_raw=None), [], [], today)
+    assert (s.stage, s.label, s.since) == ("adopted", "Signed, awaiting publication", "2026-10-21")
+    assert "lists the final act as published in the Official Journal on 28 October 2026" in s.explanation
+    assert s.next_step.text == "Publication in the Official Journal of the EU."
+    # without the Council's adoption the EP's signature is not confirmed either: Parliament's position is the stage
+    s = classify(_ep_file(ep_pos, sig, stage_raw=None), [], [], today)
+    assert (s.stage, s.label, s.since) == ("parliament_position", "Parliament adopted its first-reading position",
+                                           "2026-09-16")  # fmt: skip
+    assert s.explanation.endswith(
+        " The European Parliament's procedure record lists the final act as signed on 21 October 2026, but neither the "
+        "Council's adoption of the act nor the act itself is recorded in our data."
+    )
+
+
+def test_the_eps_final_act_steps_count_once_the_act_is_linked():
+    # with an act of the file in our EUR-Lex data the EP's records count as before: an act without a publication date
+    # in our data is published on the EP's date
+    from pipeline.analysis.status import unconfirmed_final_steps
+
+    k, activity, title, inst = PUBLISHED
+    pub = _ep_step(k, "2026-10-30", activity, title, inst)
+    act = LegalAct.model_validate({
+        "celex": "32099L0421", "act_type": "directive", "date_document": "2026-10-21",
+        "title": "Directive (EU) 2099/421 of the European Parliament and of the Council", "eurlex_url": "u",
+        "procedure_refs": ["2099/0421(COD)"],
+        "source": {"institution": "EUR-Lex", "url": "u", "retrieved_at": "2026-11-02T13:33:44Z"},
+    })  # fmt: skip
+    p = _ep_file(pub)
+    assert unconfirmed_final_steps(p.events, [act]) == [] and unconfirmed_final_steps(p.events, []) == [pub]
+    s = classify(p, [act], [], date(2026, 11, 2))
+    assert (s.stage, s.label, s.since) == ("published", "Published in the Official Journal", "2026-10-30")
+    assert "European Parliament's procedure record" not in s.explanation
