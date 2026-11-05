@@ -239,10 +239,19 @@ export default function Legislation() {
             {scopeText} <Link to="/about#coverage">What’s covered</Link>
           </p>
         )}
-        <p className="lx-changes">
-          <Link to={currentTopic ? `/legislation/changes?topic=${encodeURIComponent(currentTopic.slug)}` : '/legislation/changes'}>
-            What changed recently{currentTopic ? ` in ${currentTopic.label}` : ''}, week by week
-          </Link>
+        {/* the views of the same files by week and by the dates their rules apply (a wrapped line never starts with
+            the separator: .dot-list) */}
+        <p className="lx-changes dot-list">
+          <span>
+            <Link to={currentTopic ? `/legislation/changes?topic=${encodeURIComponent(currentTopic.slug)}` : '/legislation/changes'}>
+              What changed recently{currentTopic ? ` in ${currentTopic.label}` : ''}, week by week
+            </Link>
+          </span>
+          <span>
+            <Link to={currentTopic ? `/legislation/applies?topic=${encodeURIComponent(currentTopic.slug)}` : '/legislation/applies'}>
+              When new rules apply{currentTopic ? ` in ${currentTopic.label}` : ''}, by Member State
+            </Link>
+          </span>
         </p>
       </PageHeader>
 

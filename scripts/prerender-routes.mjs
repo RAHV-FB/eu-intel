@@ -103,8 +103,17 @@ const routes = [
 ];
 // titles as the pages set them with useDocumentTitle (/people/ is the MEPs view until a view is chosen in the address)
 for (const [r, t, d] of routes) page(r, t, d);
+// When new rules apply, with its Atom feed of every date announced as the page announces it (src/pages/Applies.tsx:
+// useFeedLink, the same id and title)
+page(
+  'legislation/applies',
+  'When new rules apply – Legislation',
+  'Dates set in EU law from which rules start to apply, by topic and Member State: entry into force, application, transposition deadlines. With Atom feeds and calendars.',
+  undefined,
+  `<link rel="alternate" type="application/atom+xml" id="page-feed" title="When new rules apply (Atom)" href="${esc(`${BASE}data/feeds/applies/all.xml`)}" />`,
+);
 
-let n = routes.length;
+let n = routes.length + 1;
 for (const d of readJson('dossiers/index.json')) {
   // the procedure reference tells apart files of the same title (Energy performance of buildings: 2021/0426(COD), 2016/0381(COD))
   page(

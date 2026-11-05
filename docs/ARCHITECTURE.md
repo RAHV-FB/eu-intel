@@ -5,7 +5,7 @@ Official EU sources ──fetch──▶ data/snapshot/** (normalized, validated
                                      │
 data/curated/*.yaml ─────────────────┤ build (offline, deterministic)
                                      ▼
-                              public/data/** (compact static JSON, Atom feeds)
+                              public/data/** (compact static JSON, Atom feeds, calendars)
                                      │
                               React SPA (Vite) ──▶ GitHub Pages (static)
 ```
@@ -46,6 +46,8 @@ data/curated/*.yaml ─────────────────┤ build
 | `analysis/activity.py`, `feeds.py` | Snapshot diffing → verified activity; Atom feeds: all recent activity, one per topic, and one per file (`feeds/dossiers/<id>.xml`: its latest 10 entries of any date) |
 | `analysis/changes.py` | How activity items read, for the What changed page and the feeds: what happened apart from the file's title (`event` in `activity.json`), the file's full title in a headline, and a status change paired with the item of the step that gave the status (`step_id`: the same file and day, the record it cites, else a step of a kind that dates the status). It never adds, drops or re-dates an item |
 | `analysis/scheduled.py` | Planned steps joined to files by procedure reference, those dated after the build only: each file's `scheduled` and the home page's "Scheduled in the next 3 weeks" |
+| `analysis/applies.py` | When new rules apply → `applies.json`: one row per act, date and kind (entry into force; application, in general or for some provisions; transposition deadline; national measures applying), from 31 days before the build on, as the file's timeline states the dates (EUR-Lex's, or those of `data/curated/act_dates.yaml` with the provisions each covers; `other` transposition dates and dates after an act's validity left out), with where: the Member States bound, those not bound with the reason the data give (recitals, the Council's voting result, the directive's own exemption), and those the data cannot tell (Denmark and Ireland without a record, a decision's addressees). Its feeds under `feeds/applies/` (`all`, `topics/<slug>`, `countries/<code>`): Atom of the next 90 days and iCalendar of every row, with entry ids, UIDs and timestamps that do not change from build to build |
+| `analysis/ical.py` | iCalendar (RFC 5545): CRLF lines folded at 75 octets, TEXT escaping, whole-day events |
 | `analysis/lawcontext.py` | A file's official summaries, court cases, consolidated texts and advisory opinions for its page, by the CELEX of its acts and its procedure reference (fields left out when there are none) |
 | `build.py` | Joins everything by official identifiers → `public/data/**` per `src/types/data.ts`; `--strict` (`EU_INTEL_STRICT=1`) fails when it had to work around a problem |
 | `freshness.py` | How old each source's data may get before the site and the Data health issue call it stale; the core sources behind `core_data_at`; when the Legislative Train's "blocked" stops being shown |
@@ -80,6 +82,16 @@ the UI; every institutional fact on a page has a reachable origin.
   (docs/PRODUCT.md): the home page, the explorer and the footer lead to it. The home page's **This week in EU law** shows
   the changes of the latest week of recording, with counts by kind; it is called "this week" only while the latest
   refresh is at most a week old on the reader's date.
+- **When new rules apply** (`/legislation/applies`, `src/pages/Applies.tsx`, `src/features/applies/`) reads `applies.json`:
+  the dates fixed in law from which rules start to apply, by month, in the next 30 or 90 days (the default), the next 12
+  months, every date ahead or the last 30 days, by topic and Member State (kept in the address). Which window a date is
+  in, and its tense, are judged on the reader's date by the rule of `src/lib/format.ts` (an entry into force or
+  application has come on its day, a transposition deadline passes once its day is over; `stepTitle` gives the past
+  tense). A Member State's view lists the acts that bind it and those the data cannot tell, each row saying where it
+  applies and why a Member State is not bound or not known; "All 27 Member States" only when all are bound. Unlike the
+  steps the Council and Parliament schedule (`ScheduledNext.tsx`), these dates are fixed in law. The page links the Atom
+  feed and calendar of every date, of its topic and of its Member State, and announces its feed in `<head>`
+  (prerendered too). The explorer, a file's "When it applies" and the home page's "Coming up" lead to it.
 - List rows name each file's **latest recorded step** ("Latest step: Council adopted the act · 26 Oct 2026"): the
   explorer and search results from `last_step` (`dossiers/index.json`) and `e` (`search.json`), the home lists from
   `step`. A step dated in the law that passes after the build (`steps_ahead`, the next 60 days) becomes the latest step

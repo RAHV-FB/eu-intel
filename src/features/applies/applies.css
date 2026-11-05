@@ -1,0 +1,83 @@
+/* When new rules apply (/legislation/applies). The rows are those of What changed (.ch, changes.css): the date beside
+   what happens, the file it happens on and the record it comes from; these rules add what applies and where. */
+
+/* running text keeps a readable line length beside the date column, in its own font size (as .dz-block p: at most
+   about 75 characters a line), and so do the notes in small print and the subscription links */
+.ap .ch__body > *,
+.ap .ch__meta,
+.ap__why,
+.ap-page .chg__scope,
+.ap-page .chg__feeds,
+.ap-sub__note,
+.ap__country-note {
+  max-width: 34em;
+}
+
+.ap__arts,
+.ap__names {
+  font-weight: var(--fw-regular);
+  color: var(--text-2);
+}
+
+.ap__prov,
+.ap__where p {
+  margin: var(--sp-1) 0 0;
+  line-height: var(--lh-snug);
+  overflow-wrap: anywhere;
+}
+
+.ap__prov--none {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.ap__label {
+  font-weight: var(--fw-semibold);
+  color: var(--text-2);
+}
+
+/* why a Member State is not bound, or not known: the reason the record gives, in small print */
+.ap__why {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: var(--lh-snug);
+}
+
+.ap__why li + li {
+  margin-top: 2px;
+}
+
+/* three filters of one width (.lx-filters gives the explorer's keyword box a wider first column); two classes, so that
+   the rule holds whatever order the shared style sheets load in */
+@media (min-width: 40rem) {
+  .lx-filters.ap__filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .lx-filters.ap__filters {
+    grid-template-columns: repeat(3, minmax(0, 18rem));
+  }
+}
+
+/* how the feeds and calendars work, after the dates */
+.ap-sub {
+  margin-top: var(--sp-6);
+}
+
+.ap-sub__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  color: var(--navy);
+}
+
+.ap-sub__note,
+.ap__country-note {
+  margin: var(--sp-1) 0 0;
+}

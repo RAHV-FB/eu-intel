@@ -99,7 +99,7 @@ SAME_SIZE_COUNTS = ("legal_acts", "meps", "national_measures", "infringements")
 PUBLIC_FILES = [
     "meta.json", "home.json", "dossiers/index.json", "votes/index.json", "votes/titles.json", "council/index.json",
     "people/meps.json", "people/groups.json", "people/parties.json", "countries/index.json",
-    "topics.json", "search.json", "activity.json", "feeds/updates.xml",
+    "topics.json", "search.json", "activity.json", "applies.json", "feeds/updates.xml", "feeds/applies/all.xml",
 ]  # fmt: skip
 
 # (source, file, model name, id function)
@@ -154,6 +154,9 @@ ERROR_CHECKS = {
     "act-procedure-mismatch": "an act linked to a procedure of another kind or a number range no legislative "
     "procedure uses: the file would show it as its law (Cellar tags Council Decision (EU) 2020/2059 with 2020/3521(COD); "
     "drop such a link in data/curated/act_links.yaml, quoting the act's legal basis)",
+    "applies": "a date of applies.json that its file's own record contradicts: not a date of the file's act of that "
+    "kind, a transposition date whose role is not established, a date after the act's validity ended, a row listed "
+    "twice, or Member States not each listed once in its `where`",
 }
 # Findings that the dataset's scope makes expected: printed as INFO, not counted as warnings.
 BY_DESIGN = {
@@ -724,6 +727,17 @@ def check(
                 rep.error(f"public activity.json: {msg}", "public", "activity-duplicate")
             for msg in activity_sources(items, dossier, today):
                 rep.error(f"public activity.json: {msg}", "public", "activity-source")
+        if (public / "applies.json").exists():
+            files: dict[str, Any] = {}
+
+            def file_of(pid: str) -> dict | None:
+                if pid not in files:
+                    p = public / "dossiers" / f"{pid}.json"
+                    files[pid] = _public_json(public, f"dossiers/{pid}.json", rep) if p.exists() else None
+                return files[pid]
+
+            for msg in applies_problems(_public_json(public, "applies.json", rep, docs), file_of):
+                rep.error(f"public applies.json: {msg}", "public", "applies")
         owners: dict[str, list[str]] = {}
         for f in sorted((public / "dossiers").glob("*.json")):
             if f.name != "index.json":
@@ -1013,6 +1027,57 @@ def activity_sources(items: list[dict], dossier: Callable[[str | None], dict | N
             step = next((e for e in det.get("timeline") or [] if e["id"] == key or keys.get(e["id"]) == key), None)
             if step is not None and step.get("source") and src.get("url") != step["source"].get("url"):
                 out.append(f"{it['id']}: cites {src.get('url')}, not the record of its step ({step['source'].get('url')})")
+    return out
+
+
+def applies_problems(doc: Any, file_of: Callable[[str], dict | None]) -> list[str]:
+    """Rows of applies.json (pipeline/analysis/applies.py) that their file's built record contradicts: the act is not
+    the file's, the date is not one the act has for that kind (or before the list's first day), a transposition date
+    is one the file's page gives as "other" or of another kind, the date is after the end of the act's validity (not
+    a retroactive one), the row is listed twice, or its `where` does not list each Member State exactly once."""
+    if not isinstance(doc, dict):
+        return []  # the contract check reports it
+    out: list[str] = []
+    seen: set[str] = set()
+    for r in doc.get("rows") or []:
+        rid, day, kind = r.get("id"), r.get("date") or "", r.get("kind")
+        if rid in seen:
+            out.append(f"{rid}: listed twice")
+            continue
+        seen.add(rid)
+        d = file_of(r.get("dossier_id") or "")
+        if d is None:  # its page is missing or unreadable: reported by the checks of the built files
+            continue
+        acts = d.get("acts") or []
+        act = next((a for a in acts if a.get("celex") == (r.get("act") or {}).get("celex")), None)
+        if act is None:
+            out.append(f"{rid}: not an act of file {r.get('dossier_id')}")
+            continue
+        eif = act.get("entry_into_force")
+        if kind == "entry_into_force":
+            ok = day == eif
+        elif kind == "applies":  # from the entry into force for some provisions, as the act's text or EUR-Lex says
+            ok = day in (act.get("other_application_dates") or []) or day == eif
+        else:
+            ok = day in (act.get("transposition_deadlines") or [])
+            # the classified dates on the file's page are those of its first directive with transposition dates
+            first = next((a for a in acts if a.get("act_type") == "directive" and a.get("transposition_deadlines")), None)
+            given = {x["date"]: x["kind"] for x in (d.get("application") or {}).get("transposition") or []}
+            if first is act and day in given:
+                want = ("deadline", "further_deadline") if kind == "transposition_deadline" else ("application",)
+                if given[day] not in want:
+                    out.append(f"{rid}: the file's page gives {day} as a transposition date of kind {given[day]!r}")
+        if not ok:
+            out.append(f"{rid}: {day} is not a date of {act['celex']} of kind {kind}")
+        if day < (doc.get("from") or ""):
+            out.append(f"{rid}: before the first day listed ({doc.get('from')})")
+        eov, made = act.get("end_of_validity"), act.get("date_document") or act.get("date_publication") or ""
+        if eov and eov >= made and day > eov:
+            out.append(f"{rid}: after the end of the act's validity ({eov})")
+        w = r.get("where") or {}
+        listed = [*w.get("bound", []), *w.get("unknown", []), *(x.get("country") for x in w.get("not_bound", []))]
+        if sorted(listed) != sorted(MEMBER_STATES):
+            out.append(f"{rid}: where does not list each Member State once ({len(listed)} entries)")
     return out
 
 

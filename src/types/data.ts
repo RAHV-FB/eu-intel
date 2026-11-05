@@ -30,8 +30,12 @@
  *   topics.json                     Topic[]
  *   search.json                     SearchDoc[]
  *   activity.json                   ActivityItem[]
+ *   applies.json                    AppliesData
  *   feeds/updates.xml, feeds/<topic>.xml   Atom feeds (all recent activity; the activity on one topic's files)
  *   feeds/dossiers/<id>.xml         Atom feed of one legislative file (id as for dossiers/<id>.json)
+ *   feeds/applies/all.xml, .ics     when new rules apply: Atom (the next 90 days) and iCalendar (every date of
+ *                                   applies.json); also feeds/applies/topics/<topic>.xml|.ics and
+ *                                   feeds/applies/countries/<code>.xml|.ics (code as for countries/<code>.json)
  */
 
 export type ISODate = string;
@@ -1029,6 +1033,72 @@ export interface HomeData {
     items: HomeListItem[];
   }[];
   topics: Topic[];
+}
+
+// ---------------------------------------------------------------- when new rules apply
+
+/**
+ * The dates fixed in EU law from which rules start to apply (pipeline/analysis/applies.py), for /legislation/applies:
+ * one row per act, date and kind, the dates as the file's page states them. Left out: transposition dates whose role
+ * the data do not establish (TranspositionDateInfo 'other') and dates after the end of an act's validity.
+ */
+export interface AppliesData {
+  // the earliest date listed: 31 days before the build, so that the page lists what started to apply in the 30 days
+  // before the reader's date; every later date of the acts follows
+  from: ISODate;
+  rows: ApplyingRule[]; // by date; on a day: entry into force, application, transposition deadline, national measures
+}
+
+/** entry_into_force; applies: the act applies, in general or only some provisions; transposition_deadline: a
+ * directive's deadline to transpose it (or specific provisions); national_application: a date from which the national
+ * measures transposing a directive (must or may) apply. */
+export type AppliesKind = 'entry_into_force' | 'applies' | 'transposition_deadline' | 'national_application';
+
+export interface ApplyingRule {
+  id: string; // "<celex>/<kind>/<date>": also the Atom entry's and the calendar event's (tag URI, UID)
+  date: ISODate;
+  kind: AppliesKind;
+  // applies: only some provisions apply from the date; transposition_deadline: a deadline for specific provisions;
+  // national_application: a date for specific provisions, after the one from which the national measures apply
+  partial: boolean;
+  further?: boolean; // applies: a date from which the act applies in general, after an earlier one; set only when true
+  // what happens, as the file's timeline says it while the date is ahead ("Some provisions start to apply"); the page
+  // gives it in the past tense once the date has come (src/lib/format.ts stepTitle)
+  title: string;
+  provisions: string | null; // what applies, checked against the act's text (data/curated/act_dates.yaml)
+  articles: string[]; // the articles EUR-Lex names for a transposition date ("Art. 48(1)"); [] for other dates
+  exceptions?: string; // what the directive's text provides beside the date, checked (data/curated/transposition.yaml)
+  // the act's dates were checked against its text (data/curated/act_dates.yaml): when, and whether EUR-Lex records
+  // this date as it stands (false: EUR-Lex records another date, or none; the file's page says why)
+  checked?: { reviewed: ISODate | null; eurlex: boolean };
+  source: SourceRef; // the act's EUR-Lex record, or the text the date was checked against
+  act: {
+    celex: string;
+    label: string; // its number as its title cites it: "Regulation (EU) 2024/1689"
+    type: LegalInstrument;
+    names: string[]; // its official short title and the names its file is known by, besides the file's title
+    url: string; // on EUR-Lex
+  };
+  dossier_id: string;
+  dossier_title: string;
+  topics: string[]; // the file's topic slugs
+  where: RuleWhere;
+}
+
+/**
+ * Which Member States the act binds, on the records in the data: every Member State is in one of the three lists. A
+ * regulation binds all Member States, and a directive those to which it is addressed (Article 288 TFEU), except a
+ * Member State its recitals or the Council's voting result record as not taking part (Protocols No 21 and 22, Denmark
+ * and Ireland), unless it took part later, and one a directive's text does not require to transpose it. Whether
+ * Denmark and Ireland are bound is not known when no record settles it; a decision binds its addressees, which the
+ * data do not record (`note`).
+ */
+export interface RuleWhere {
+  bound: string[]; // ISO codes
+  not_bound: { country: string; reason: string; url: string | null }[]; // the reason the data give, and its record
+  unknown: string[];
+  note?: string; // why whom it binds is not known (a decision's addressees, enhanced cooperation)
+  opted_in?: { country: string; label: string; url: string }[]; // took part after adoption (Protocol No 21, Art. 4)
 }
 
 // ---------------------------------------------------------------- search

@@ -324,7 +324,8 @@ export default function About() {
             <ul>
               <li>
                 <strong>Dates of entry into force and application</strong>, where EUR-Lex’s record differs from the text of the act or of
-                the act that amended it. The file’s page says “Dates checked against the act’s text” and links the texts.
+                the act that amended it, and, for some acts, which provisions apply from each date, as the act’s text says. The file’s
+                page says “Dates checked against the act’s text” and links the texts.
               </li>
               <li>
                 <strong>The day the Council adopted an act</strong>, where the date in our sources differs from the one in the act’s own
@@ -454,6 +455,27 @@ export default function About() {
               We never combine different measures into a single score or ranking.
             </li>
           </ul>
+
+          <h3 id="applies">When new rules apply</h3>
+          <p>
+            <Link to="/legislation/applies">When new rules apply</Link> lists the dates fixed in law from which an adopted act enters
+            into force or applies (in general, or only some of its provisions), a directive’s transposition deadlines, and the dates from
+            which the national measures transposing it apply: the dates each file’s page gives, as EUR-Lex records them or as we checked
+            them against the act’s text, with the provisions each covers (see <a href="#corrections">Corrections</a>). A transposition
+            date whose role EUR-Lex’s data do not establish, and a date after the end of an act’s validity, are left out. Which dates
+            are ahead is judged on the day you read the page.
+          </p>
+          <p>
+            Where: a regulation binds every Member State, and a directive each Member State to which it is addressed, except a Member
+            State that the act’s recitals or the Council’s voting result record as not taking part in its adoption (Denmark and Ireland,
+            under Protocols No 21 and 22 to the Treaties), unless a Commission decision confirms that it took part later, and one that a
+            directive’s own text does not require to transpose it. Where no record in our data says whether Denmark or Ireland took part,
+            the page says so. A decision binds those to whom it is addressed, which our data do not record.
+          </p>
+          <p>
+            For every date, each topic and each Member State there is an Atom feed of the next 90 days and a calendar (iCalendar) of
+            every date ahead. An entry keeps its identifier and its date from one data refresh to the next.
+          </p>
 
           <h3>Official summaries, court cases and opinions</h3>
           <p>
