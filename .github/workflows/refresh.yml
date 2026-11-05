@@ -46,7 +46,7 @@ on:
   workflow_dispatch:
     inputs:
       sources:
-        description: "Sources to fetch, space-separated (blank = all): ep_people ep_procedures ep_votes eurlex council implementation optouts train"
+        description: "Sources to fetch, space-separated (blank = all): ep_people ep_procedures ep_votes eurlex council implementation optouts train agenda lawcontext"
         required: false
         default: ""
       full_refresh:

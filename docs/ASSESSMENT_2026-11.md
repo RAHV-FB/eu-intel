@@ -444,9 +444,18 @@ the home "Stalled" list keys on display strings; the WebKit stylesheet-hash flak
 
 ### Next
 
-Phase 2 is under way:
-- 2.1 Coming up (Cellar planned events, EP plenary agenda);
-- 2.2 What changed, with a feed per file;
-- 2.3 Official EUR-Lex summaries and 2.7 law context;
-- 2.6 the national-party breakdown;
-- 2.4 (calendar) and 2.5 (implementation tracker) follow.
+Phase 2, first wave (built 5 November 2026; measured on that day's data):
+
+| # | Done | What a reader gets |
+|---|---|---|
+| 2.1 Coming up | Yes | the steps the Council and Parliament have scheduled (Cellar planned events, Parliament's plenary agenda): 42 on 37 files, on each file's page and on home; the explorer's "Next scheduled step" order |
+| 2.2 What changed | Yes | a What changed page and a "This week in EU law" strip; list rows name the latest step; full feed titles, one feed per file, OPML export of the Following list |
+| 2.3 Official summaries | Yes | EUR-Lex's own summary on 535 files with no curated summary (30 had a plain explanation before); 85 flagged as older than the latest amending act; official short names (NIS2, CSDDD…) |
+| 2.6 National parties | Yes | how each national party's MEPs voted on each vote with recorded votes; a party page's votes on whole texts; a link to the vote on HowTheyVote.eu, labelled independent |
+| 2.7 Law context | Yes | court rulings interpreting or annulling an act (135 files), pending cases, the current consolidated text (551 acts), EESC and CoR opinions; C-727/25 against the withdrawal of 2023/0133 is now shown |
+| 2.8 Stuck view | Yes | "Longest without a recorded step" (the home link: ordinary-procedure files only) |
+| 2.9 Empty states | Yes | a search with no result says what the site covers and links to the same search on EUR-Lex |
+| 2.4 Calendar, 2.5 Implementation tracker | Next | |
+
+The two new sources (`agenda`, `lawcontext`) are fetched by the refresh: until their first retrieval the site shows
+nothing from them and names them as not yet retrieved.
