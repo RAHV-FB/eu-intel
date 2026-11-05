@@ -1,0 +1,50 @@
+# The form behind "Report an error on this page" in the site's footer (src/components/Layout.tsx), which fills in
+# `page` with the page's address. Field ids are part of that link: keep them stable.
+name: Report an error in the data
+description: Something on the site is wrong, out of date or missing compared with the official record.
+title: "Data error: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting it. The site shows what official EU sources record, joined by their official
+        identifiers (see "About & methodology" on the site). The most useful report names the page and links the
+        official record that shows the correct information. Issues here are public.
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: The address of the page with the error.
+      placeholder: https://rahv-fb.github.io/eu-intel/legislation/2021-0106
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of error
+      options:
+        - A date or status is wrong
+        - A vote or its figures are wrong
+        - A national measure, opt-out or infringement case is wrong
+        - Something is missing
+        - A plain-language text is wrong or unclear
+        - A link is broken
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wrong
+      description: What the page says, and what it should say.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Official record
+      description: >-
+        A link to the official record that shows the correct information (EUR-Lex, the Legislative Observatory,
+        Parliament's minutes, the Council's register, the Commission's infringement decisions), if you have one.
+    validations:
+      required: false

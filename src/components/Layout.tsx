@@ -6,11 +6,13 @@ import { formatDate } from '../lib/format';
 import { freshness, staleNote } from '../lib/freshness';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SearchBox } from './SearchBox';
-import { Loading } from './ui';
+import { ExtLink, Loading } from './ui';
 import { NAV } from './nav';
 import { useScrollableTables } from './scrollableTables';
 
 export const SITE_NAME = 'EU Legislative Intelligence';
+// the repository's issue form for errors in the data (.github/ISSUE_TEMPLATE/data-error.yml)
+const REPORT_FORM = 'https://github.com/RAHV-FB/eu-intel/issues/new?template=data-error.yml';
 
 /**
  * On every route change after the first page load: scroll to the top, move keyboard focus to the main
@@ -215,7 +217,14 @@ export function Layout() {
   );
 }
 
+/** The repository's "Report an error in the data" form, with the page's address (path, query and hash) filled in. */
+function reportUrl(loc: { pathname: string; search: string; hash: string }): string {
+  const page = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}${loc.pathname}${loc.search}${loc.hash}`;
+  return `${REPORT_FORM}&page=${encodeURIComponent(page)}`;
+}
+
 function Footer() {
+  const location = useLocation();
   const { data: meta } = useData<Meta>('meta.json');
   // judged on the reader's date: the data is rebuilt weekly but read for a week or more (src/lib/freshness.ts)
   const f = meta && freshness(meta, Date.now());
@@ -260,6 +269,12 @@ function Footer() {
             </li>
             <li>
               <a href={`${import.meta.env.BASE_URL}data/feeds/updates.xml`}>Atom feed (for feed readers)</a>
+            </li>
+            <li>
+              {/* GitHub's issue form (.github/ISSUE_TEMPLATE/data-error.yml) with the page's address filled in */}
+              <ExtLink href={reportUrl(location)} official={false}>
+                Report an error on this page
+              </ExtLink>
             </li>
           </ul>
         </nav>
