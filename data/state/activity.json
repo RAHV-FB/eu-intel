@@ -1120,5 +1120,57 @@
   },
   "title": "Amending Directive 1999/62/EC, Council Directive 1999/37/EC and Directive (EU) 2019/520 as regards the CO2…: Council adopted the act",
   "vote_id": null
+ },
+ {
+  "date": "2026-11-06",
+  "detected_at": "2026-11-06T13:21:43Z",
+  "dossier_id": "2023-0210",
+  "id": "chg:2023-0210:stage:parliament_position:2026-11-06",
+  "kind": "status_change",
+  "previous_stage": "negotiations",
+  "source": {
+   "identifier": "2023-0210",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) – procedure file 2023/0210(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-06T13:05:13Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2023/0210(COD)"
+  },
+  "title": "Payment services in the internal market and amending Regulation (EU) No 1093/2010: status now “Awaiting Council action” (previously “Second reading in Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-05",
+  "detected_at": "2026-11-06T13:21:43Z",
+  "dossier_id": "2023-0210",
+  "id": "chg:2023-0210:ev:OEIL-2023-0210-2026-11-05-council-position-published",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2023/0210(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-06T13:05:13Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2023/0210(COD)"
+  },
+  "title": "Payment services in the internal market and amending Regulation (EU) No 1093/2010: Council's first-reading position published",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-04",
+  "detected_at": "2026-11-06T13:21:43Z",
+  "dossier_id": "2025-0384",
+  "id": "chg:2025-0384:ev:OEIL-2025-0384-2026-11-04-committee-decision-to-open-interinstitut",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025/0384(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-06T13:03:16Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2025/0384(COD)"
+  },
+  "title": "Monitoring and controlling drug precursors and repealing Regulations (EC) No 273/2004 and (EC) No 111/2005: Parliament committee decided to open negotiations with the Council",
+  "vote_id": null
  }
 ]

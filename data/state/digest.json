@@ -32846,6 +32846,7 @@
     "2023-0166-MEET-TRI1-2025-12-17",
     "A-9-2024-0160-AM-001-001-DEPOT-2026-11-04+2",
     "A-9-2024-0160-AM-001-001-DEPOT-2026-11-05",
+    "A-9-2024-0160-AM-001-001-DEPOT-2026-11-06",
     "A-9-2024-0160-AM-002-002-DEPOT-2026-11-04+1",
     "ECON-PR-753665-DEPOT-2023-10-02",
     "OEIL-2023-0166-2023-05-24-legislative-proposal-published",
@@ -32876,6 +32877,7 @@
     "2023-0167-MEET-TRI1-2025-12-17",
     "A-9-2024-0162-AM-001-001-DEPOT-2026-11-04+1",
     "A-9-2024-0162-AM-001-001-DEPOT-2026-11-05",
+    "A-9-2024-0162-AM-001-001-DEPOT-2026-11-06",
     "A-9-2024-0162-AM-002-002-DEPOT-2026-11-04",
     "ECON-PR-753711-DEPOT-2023-10-09",
     "OEIL-2023-0167-2023-05-24-legislative-proposal-published",
@@ -33360,6 +33362,7 @@
     "2023-0208-MEET-TRI1-2026-09-30",
     "2023-0208-MEET-TRI1-2026-10-08",
     "2023-0208-MEET-TRI1-2026-10-20",
+    "2023-0208-MEET-TRI1-2026-11-05",
     "ECON-AM-781237-DEPOT-2025-12-19",
     "ECON-PR-758001-DEPOT-2024-01-11",
     "ECON-PR-778137-DEPOT-2025-11-03",
@@ -33369,9 +33372,7 @@
     "OEIL-2023-0208-2026-07-06-committee-decision-to-enter-into-interin"
    ],
    "label": "Negotiations with the Council",
-   "sigs": [
-    "2026-07-08|negotiation_mandate"
-   ],
+   "sigs": [],
    "stage": "negotiations",
    "title": "Legal tender of euro banknotes and coins",
    "votes": []
@@ -33431,14 +33432,16 @@
     "OEIL-2023-0210-2024-10-21-committee-decision-to-open-interinstitut",
     "OEIL-2023-0210-2024-11-13-committee-decision-to-enter-into-interin",
     "OEIL-2023-0210-2024-11-13-resumption-of-business-from-the-previous",
+    "OEIL-2023-0210-2026-11-05-council-position-published",
     "council-ST-15154-2026",
     "vote-168470-ep_position"
    ],
-   "label": "Second reading in Parliament",
+   "label": "Awaiting Council action",
    "sigs": [
-    "2026-10-29|council_position"
+    "2026-10-29|council_position",
+    "2026-11-05|council_position"
    ],
-   "stage": "negotiations",
+   "stage": "parliament_position",
    "title": "Payment services in the internal market and amending Regulation (EU) No 1093/2010",
    "votes": [
     "168470"
@@ -33457,6 +33460,7 @@
     "2023-0211-MEET-TRI1-2026-09-30",
     "2023-0211-MEET-TRI1-2026-10-08",
     "2023-0211-MEET-TRI1-2026-10-20",
+    "2023-0211-MEET-TRI1-2026-11-05",
     "ECON-AM-759645-DEPOT-2024-02-21",
     "ECON-AM-781236-DEPOT-2025-12-19",
     "ECON-PR-758975-DEPOT-2024-02-09",
@@ -33490,6 +33494,7 @@
     "2023-0212-MEET-TRI1-2026-09-30",
     "2023-0212-MEET-TRI1-2026-10-08",
     "2023-0212-MEET-TRI1-2026-10-20",
+    "2023-0212-MEET-TRI1-2026-11-05",
     "ECON-AM-781235-DEPOT-2025-12-19+3",
     "ECON-PR-758954-DEPOT-2024-02-09",
     "ECON-PR-778136-DEPOT-2025-11-03",
@@ -33993,7 +33998,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-08|signature",
     "2026-07-24|publication",
     "2026-08-13|entry_into_force"
    ],
@@ -36553,7 +36557,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-08|signature",
     "2026-07-29|publication",
     "2026-08-18|entry_into_force"
    ],
@@ -38881,7 +38884,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-08|signature",
     "2026-07-24|publication",
     "2026-07-27|entry_into_force"
    ],
@@ -39059,11 +39061,13 @@
     "2025-0384-DEC-ADCP-2026-11-04",
     "CJ75-AM-790130-DEPOT-2026-06-23+1",
     "CJ75-PR-788848-DEPOT-2026-05-20",
-    "OEIL-2025-0384-2025-12-03-legislative-proposal-published"
+    "OEIL-2025-0384-2025-12-03-legislative-proposal-published",
+    "OEIL-2025-0384-2026-11-04-committee-decision-to-open-interinstitut"
    ],
-   "label": "Committee report adopted",
+   "label": "Committee decided to negotiate with the Council",
    "sigs": [
-    "2026-11-04|committee_report"
+    "2026-11-04|committee_report",
+    "2026-11-04|negotiation_mandate"
    ],
    "stage": "proposed",
    "title": "Monitoring and controlling drug precursors and repealing Regulations (EC) No 273/2004 and (EC) No 111/2005",
@@ -39312,9 +39316,7 @@
     "OEIL-2025-0400-2026-07-06-committee-decision-to-enter-into-interin"
    ],
    "label": "Negotiations with the Council",
-   "sigs": [
-    "2026-07-08|negotiation_mandate"
-   ],
+   "sigs": [],
    "stage": "negotiations",
    "title": "Amending Directives (EU) 2018/2001, (EU) 2019/944, (EU) 2024/1788 as regards acceleration of permit-granting procedures",
    "votes": []
@@ -39912,6 +39914,8 @@
     "2025-0545-DEC-ADCP-TRAN-2026-09-02",
     "CJ13-AM-797489-DEPOT-2026-11-03+5",
     "CJ13-AM-797489-DEPOT-2026-11-03+6",
+    "CJ13-AM-797489-DEPOT-2026-11-03+8",
+    "CJ13-AM-797542-DEPOT-2026-11-04",
     "CJ13-PR-787767-DEPOT-2026-10-05",
     "OEIL-2025-0545-2025-07-16-legislative-proposal-published"
    ],
@@ -40229,9 +40233,7 @@
     "OEIL-2025-0847-2026-07-06-committee-decision-to-enter-into-interin"
    ],
    "label": "Negotiations with the Council",
-   "sigs": [
-    "2026-07-08|negotiation_mandate"
-   ],
+   "sigs": [],
    "stage": "negotiations",
    "title": "Framework of measures to facilitate the transport of military equipment, goods and personnel across the Union",
    "votes": []
@@ -40402,6 +40404,7 @@
     "2026-0044-DEPOT-2026-07-20",
     "A-10-2026-0211-AM-001-035-DEPOT-2026-11-04+1",
     "A-10-2026-0211-AM-001-035-DEPOT-2026-11-05",
+    "A-10-2026-0211-AM-001-035-DEPOT-2026-11-06",
     "A-10-2026-0211-AM-036-036-DEPOT-2026-11-04",
     "JURI-AM-790209-DEPOT-2026-06-25",
     "JURI-PR-789976-DEPOT-2026-06-18",
@@ -40512,7 +40515,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-08|negotiation_mandate",
     "2026-09-02|provisional_agreement",
     "2026-10-06|ep_position",
     "2026-10-12|council_adoption",
@@ -40591,7 +40593,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-08|signature",
     "2026-07-10|publication",
     "2026-07-30|entry_into_force"
    ],
@@ -41314,7 +41315,7 @@
     "2026-10-23|proposal"
    ],
    "stage": "proposed",
-   "title": "European Heritage Label",
+   "title": "European Heritage List",
    "votes": []
   },
   "2026-0336": {
