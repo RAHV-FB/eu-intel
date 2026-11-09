@@ -1172,5 +1172,390 @@
   },
   "title": "Monitoring and controlling drug precursors and repealing Regulations (EC) No 273/2004 and (EC) No 111/2005: Parliament committee decided to open negotiations with the Council",
   "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2020-0331",
+  "id": "chg:2020-0331:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "2020/0331(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2020/0331(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2020_331"
+  },
+  "title": "Amending Directive 2006/112/EC as regards conferral of implementing powers to the Commission to determine…: status now “Withdrawn by the Commission” (previously “Parliament gave its opinion”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2020-0331",
+  "id": "chg:2020-0331:ev:cellar-2020/0331(CNS):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2020/0331(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2020/0331(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2020_331"
+  },
+  "title": "Amending Directive 2006/112/EC as regards conferral of implementing powers to the Commission to determine…: Commission withdrew the proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2021-0060",
+  "id": "chg:2021-0060:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2021/0060(COD)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2021/0060(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2021_60"
+  },
+  "title": "Implementing the Kimberley Process certification scheme for the international trade in rough diamonds: status now “Withdrawn by the Commission” (previously “Proposal under examination”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2021-0060",
+  "id": "chg:2021-0060:ev:cellar-2021/0060(COD):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2021/0060(COD)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2021/0060(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2021_60"
+  },
+  "title": "Implementing the Kimberley Process certification scheme for the international trade in rough diamonds: Commission withdrew the proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2021-0430",
+  "id": "chg:2021-0430:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "2021/0430(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2021/0430(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2021_430"
+  },
+  "title": "Amending Decision (EU, Euratom) 2020/2053 on the system of own resources of the European Union: status now “Withdrawn by the Commission” (previously “Parliament gave its opinion”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2021-0430",
+  "id": "chg:2021-0430:ev:cellar-2021/0430(CNS):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2021/0430(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2021/0430(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2021_430"
+  },
+  "title": "Amending Decision (EU, Euratom) 2020/2053 on the system of own resources of the European Union: Commission withdrew the proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2021-0434",
+  "id": "chg:2021-0434:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "2021/0434(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2021/0434(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2021_434"
+  },
+  "title": "Laying down rules to prevent the misuse of shell entities for tax purposes and amending Directive 2011/16/EU: status now “Withdrawn by the Commission” (previously “Parliament gave its opinion”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2021-0434",
+  "id": "chg:2021-0434:ev:cellar-2021/0434(CNS):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2021/0434(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2021/0434(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2021_434"
+  },
+  "title": "Laying down rules to prevent the misuse of shell entities for tax purposes and amending Directive 2011/16/EU: Commission withdrew the proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2022-0072",
+  "id": "chg:2022-0072:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2022/0072(APP)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2022/0072(APP)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2022_72"
+  },
+  "title": "Amending Regulation (EU, Euratom) 2021/768 of 30 April 2021 as regards implementing measures for new own…: status now “Withdrawn by the Commission” (previously “Under examination in Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2022-0072",
+  "id": "chg:2022-0072:ev:cellar-2022/0072(APP):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2022/0072(APP)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2022/0072(APP)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2022_72"
+  },
+  "title": "Amending Regulation (EU, Euratom) 2021/768 of 30 April 2021 as regards implementing measures for new own…: Commission withdrew the proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2022-0154",
+  "id": "chg:2022-0154:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "2022/0154(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2022/0154(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2022_154"
+  },
+  "title": "Laying down rules on a debt-equity bias reduction allowance and on limiting the deductibility of interest…: status now “Withdrawn by the Commission” (previously “Parliament gave its opinion”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2022-0154",
+  "id": "chg:2022-0154:ev:cellar-2022/0154(CNS):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2022/0154(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2022/0154(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2022_154"
+  },
+  "title": "Laying down rules on a debt-equity bias reduction allowance and on limiting the deductibility of interest…: Commission withdrew the proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-05",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0209",
+  "id": "chg:2023-0209:ev:OEIL-2023-0209-2026-11-05-council-position-published",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2023/0209(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-09T13:59:41Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2023/0209(COD)"
+  },
+  "title": "Payment services and electronic money services in the Internal Market amending Directive 98/26/EC and…: Council's first-reading position published",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0210",
+  "id": "chg:2023-0210:stage:negotiations:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "ST 15154/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 15154/26",
+   "published": "2026-10-30",
+   "retrieved_at": "2026-11-05T09:17:35Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-15154-2026-INIT/EN/pdf"
+  },
+  "title": "Payment services in the internal market and amending Regulation (EU) No 1093/2010: status now “Second reading in Parliament” (previously “Awaiting Council action”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0322",
+  "id": "chg:2023-0322:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "2023/0322(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2023/0322(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2023_322"
+  },
+  "title": "Transfer pricing: status now “Withdrawn by the Commission” (previously “Parliament gave its opinion”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0322",
+  "id": "chg:2023-0322:ev:cellar-2023/0322(CNS):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2023/0322(CNS)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2023/0322(CNS)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2023_322"
+  },
+  "title": "Transfer pricing: Commission withdrew the proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0410",
+  "id": "chg:2023-0410:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "negotiations",
+  "source": {
+   "identifier": "2023/0410(COD)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2023/0410(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2023_410"
+  },
+  "title": "Amending Council Decision 89/367/EEC setting up a Standing Forestry Committee: status now “Withdrawn by the Commission” (previously “Mandate to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0410",
+  "id": "chg:2023-0410:ev:cellar-2023/0410(COD):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2023/0410(COD)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2023/0410(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2023_410"
+  },
+  "title": "Amending Council Decision 89/367/EEC setting up a Standing Forestry Committee: Commission withdrew the proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0413",
+  "id": "chg:2023-0413:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "rejected",
+  "source": {
+   "identifier": "2023/0413(COD)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2023/0413(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2023_413"
+  },
+  "title": "Monitoring framework for resilient European forests: status now “Withdrawn by the Commission” (previously “Rejected by Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0413",
+  "id": "chg:2023-0413:ev:cellar-2023/0413(COD):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2023/0413(COD)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2023/0413(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2023_413"
+  },
+  "title": "Monitoring framework for resilient European forests: Commission withdrew the proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0421",
+  "id": "chg:2023-0421:stage:withdrawn:2026-10-29",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2023/0421(COD)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2023/0421(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2023_421"
+  },
+  "title": "Protection of workers from the risks related to exposure to carcinogens, mutagens or reprotoxic substances…: status now “Withdrawn by the Commission” (previously “Proposal under examination”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-10-29",
+  "detected_at": "2026-11-09T14:22:38Z",
+  "dossier_id": "2023-0421",
+  "id": "chg:2023-0421:ev:cellar-2023/0421(COD):withdrawn:2026-10-29",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2023/0421(COD)",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex procedure 2023/0421(COD)",
+   "published": null,
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/procedure/EN/2023_421"
+  },
+  "title": "Protection of workers from the risks related to exposure to carcinogens, mutagens or reprotoxic substances…: Commission withdrew the proposal",
+  "vote_id": null
  }
 ]

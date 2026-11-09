@@ -1,6 +1,6 @@
 {
  "failing": {},
- "last_complete": "2026-11-06T13:08:26Z",
+ "last_complete": "2026-11-09T14:06:08Z",
  "last_mode": "incremental",
  "list_page": {
   "APP": 500,
@@ -11,7 +11,7 @@
  "oeil_gone": {},
  "parser": "2026-11-05.1",
  "pending": [],
- "rotation_week": 105703,
+ "rotation_week": 105704,
  "started_at": null,
  "unavailable": {
   "2011-0901": "404 at /procedures/{id}",
@@ -33,7 +33,7 @@
   "2022-0430": "404 at /procedures/{id}"
  },
  "unsettled": {
-  "attempted_at": "2026-11-06T12:59:39Z",
+  "attempted_at": "2026-11-09T13:52:33Z",
   "ids": []
  }
 }

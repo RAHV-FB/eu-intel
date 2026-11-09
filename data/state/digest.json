@@ -23071,11 +23071,14 @@
     "2020-0331-DEC-DCPL-2021-07-07",
     "OEIL-2020-0331-2020-12-18-legislative-proposal-published",
     "OEIL-2020-0331-2021-06-15-vote-in-committee",
-    "OEIL-2020-0331-2021-06-16-committee-report-tabled-for-plenary-1st-"
+    "OEIL-2020-0331-2021-06-16-committee-report-tabled-for-plenary-1st-",
+    "cellar-2020/0331(CNS):withdrawn:2026-10-29"
    ],
-   "label": "Parliament gave its opinion",
-   "sigs": [],
-   "stage": "parliament_position",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Amending Directive 2006/112/EC as regards conferral of implementing powers to the Commission to determine the meaning of the terms used in certain provisions of that Directive",
    "votes": [
     "134869"
@@ -24115,11 +24118,14 @@
     "2021-0060-ANPRO-2021-03-24",
     "INTA-PR-694952-DEPOT-2021-07-20",
     "OEIL-2021-0060-2021-03-12-legislative-proposal-published",
-    "OEIL-2021-0060-2024-11-13-resumption-of-business-from-the-previous"
+    "OEIL-2021-0060-2024-11-13-resumption-of-business-from-the-previous",
+    "cellar-2021/0060(COD):withdrawn:2026-10-29"
    ],
-   "label": "Proposal under examination",
-   "sigs": [],
-   "stage": "proposed",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Implementing the Kimberley Process certification scheme for the international trade in rough diamonds",
    "votes": []
   },
@@ -27038,12 +27044,15 @@
     "OEIL-2021-0430-2022-10-26-vote-in-committee",
     "OEIL-2021-0430-2022-11-04-committee-report-tabled-for-plenary-1st-",
     "OEIL-2021-0430-2023-06-20-amended-legislative-proposal-for-reconsu",
+    "cellar-2021/0430(CNS):withdrawn:2026-10-29",
     "vote-150122-ep_position",
     "vote-159781-ep_position"
    ],
-   "label": "Parliament gave its opinion",
-   "sigs": [],
-   "stage": "parliament_position",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Amending Decision (EU, Euratom) 2020/2053 on the system of own resources of the European Union",
    "votes": [
     "150122",
@@ -27134,11 +27143,14 @@
     "OEIL-2021-0434-2021-12-22-legislative-proposal-published",
     "OEIL-2021-0434-2022-11-30-vote-in-committee",
     "OEIL-2021-0434-2022-12-12-committee-report-tabled-for-plenary-1st-",
+    "cellar-2021/0434(CNS):withdrawn:2026-10-29",
     "vote-151562-ep_position"
    ],
-   "label": "Parliament gave its opinion",
-   "sigs": [],
-   "stage": "parliament_position",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Laying down rules to prevent the misuse of shell entities for tax purposes and amending Directive 2011/16/EU",
    "votes": [
     "151562"
@@ -27771,11 +27783,14 @@
    "council": [],
    "events": [
     "OEIL-2022-0072-2022-03-14-initial-legislative-proposal-published",
-    "OEIL-2022-0072-2023-06-20-preparatory-document"
+    "OEIL-2022-0072-2023-06-20-preparatory-document",
+    "cellar-2022/0072(APP):withdrawn:2026-10-29"
    ],
-   "label": "Under examination in Parliament",
-   "sigs": [],
-   "stage": "proposed",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Amending Regulation (EU, Euratom) 2021/768 of 30 April 2021 as regards implementing measures for new own resources of the European Union",
    "votes": []
   },
@@ -28699,11 +28714,14 @@
     "2022-0154-DEPOT-2023-12-04",
     "ECON-PR-738463-DEPOT-2022-12-06",
     "OEIL-2022-0154-2022-05-11-legislative-proposal-published",
+    "cellar-2022/0154(CNS):withdrawn:2026-10-29",
     "vote-163120-ep_position"
    ],
-   "label": "Parliament gave its opinion",
-   "sigs": [],
-   "stage": "parliament_position",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Laying down rules on a debt-equity bias reduction allowance and on limiting the deductibility of interest for corporate income tax purposes",
    "votes": [
     "163120"
@@ -33398,12 +33416,14 @@
     "OEIL-2023-0209-2024-10-21-committee-decision-to-open-interinstitut",
     "OEIL-2023-0209-2024-11-13-committee-decision-to-enter-into-interin",
     "OEIL-2023-0209-2024-11-13-resumption-of-business-from-the-previous",
+    "OEIL-2023-0209-2026-11-05-council-position-published",
     "council-ST-15152-2026",
     "vote-168337-ep_position"
    ],
    "label": "Second reading in Parliament",
    "sigs": [
-    "2026-10-29|council_position"
+    "2026-10-29|council_position",
+    "2026-11-05|council_position"
    ],
    "stage": "negotiations",
    "title": "Payment services and electronic money services in the Internal Market amending Directive 98/26/EC and repealing Directives 2015/2366/EU and 2009/110/EC",
@@ -33436,12 +33456,12 @@
     "council-ST-15154-2026",
     "vote-168470-ep_position"
    ],
-   "label": "Awaiting Council action",
+   "label": "Second reading in Parliament",
    "sigs": [
     "2026-10-29|council_position",
     "2026-11-05|council_position"
    ],
-   "stage": "parliament_position",
+   "stage": "negotiations",
    "title": "Payment services in the internal market and amending Regulation (EU) No 1093/2010",
    "votes": [
     "168470"
@@ -33471,9 +33491,7 @@
     "OEIL-2023-0211-2026-07-06-committee-decision-to-enter-into-interin"
    ],
    "label": "Negotiations with the Council",
-   "sigs": [
-    "2026-07-09|negotiation_mandate"
-   ],
+   "sigs": [],
    "stage": "negotiations",
    "title": "Provision of digital euro services by payment services providers incorporated in Member States whose currency is not the euro and amending Regulation (EU) 2021/1230 of the European Parliament and the Council",
    "votes": [
@@ -33505,9 +33523,7 @@
     "OEIL-2023-0212-2026-07-06-committee-decision-to-enter-into-interin"
    ],
    "label": "Negotiations with the Council",
-   "sigs": [
-    "2026-07-09|negotiation_mandate"
-   ],
+   "sigs": [],
    "stage": "negotiations",
    "title": "Digital euro",
    "votes": [
@@ -34262,11 +34278,14 @@
     "2023-0322-DEPOT-2024-03-01",
     "ECON-PR-756000-DEPOT-2023-11-14",
     "OEIL-2023-0322-2023-09-12-legislative-proposal-published",
+    "cellar-2023/0322(CNS):withdrawn:2026-10-29",
     "vote-166922-ep_position"
    ],
-   "label": "Parliament gave its opinion",
-   "sigs": [],
-   "stage": "parliament_position",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Transfer pricing",
    "votes": [
     "166922"
@@ -34892,11 +34911,14 @@
     "CJ14-PR-766936-DEPOT-2025-01-22",
     "OEIL-2023-0410-2023-11-22-legislative-proposal-published",
     "OEIL-2023-0410-2024-11-13-resumption-of-business-from-the-previous",
+    "cellar-2023/0410(COD):withdrawn:2026-10-29",
     "vote-179801-negotiation_mandate"
    ],
-   "label": "Mandate to negotiate with the Council",
-   "sigs": [],
-   "stage": "negotiations",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Amending Council Decision 89/367/EEC setting up a Standing Forestry Committee",
    "votes": [
     "179801"
@@ -34916,11 +34938,14 @@
     "CJ14-PR-766935-DEPOT-2025-01-29",
     "OEIL-2023-0413-2023-11-22-legislative-proposal-published",
     "OEIL-2023-0413-2024-11-13-resumption-of-business-from-the-previous",
+    "cellar-2023/0413(COD):withdrawn:2026-10-29",
     "vote-179804-rejected"
    ],
-   "label": "Rejected by Parliament",
-   "sigs": [],
-   "stage": "rejected",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Monitoring framework for resilient European forests",
    "votes": [
     "179804"
@@ -34958,11 +34983,14 @@
    "events": [
     "2023-0421-ANPRO-2023-12-14",
     "2023-0421-PUB-2026-10-30",
-    "OEIL-2023-0421-2023-11-27-legislative-proposal-published"
+    "OEIL-2023-0421-2023-11-27-legislative-proposal-published",
+    "cellar-2023/0421(COD):withdrawn:2026-10-29"
    ],
-   "label": "Proposal under examination",
-   "sigs": [],
-   "stage": "proposed",
+   "label": "Withdrawn by the Commission",
+   "sigs": [
+    "2026-10-29|withdrawal"
+   ],
+   "stage": "withdrawn",
    "title": "Protection of workers from the risks related to exposure to carcinogens, mutagens or reprotoxic substances at work (Sixth individual Directive within the meaning of Article 16(1) of Council Directive 89/391/EEC)",
    "votes": []
   },
@@ -38039,6 +38067,8 @@
     "2025-0223-DEC-ADCP-REGI-2026-05-06",
     "2025-0223-DEC-ADCP-SEDE-2026-06-03",
     "2025-0223-DEPOT-2026-10-12",
+    "A-10-2026-0271-AM-333-334-DEPOT-2026-11-03",
+    "A-10-2026-0271-AM-335-338-DEPOT-2026-11-04+5",
     "CJ64-AM-786979-DEPOT-2026-04-14+3",
     "CJ64-PR-782236-DEPOT-2026-03-09",
     "OEIL-2025-0223-2025-07-16-legislative-proposal-published"
@@ -38510,6 +38540,7 @@
     "2025-0264-DEC-ADCP-AFET-2026-05-05",
     "2025-0264-DEC-ADCP-BUDG-2026-06-03",
     "2025-0264-DEPOT-2026-10-19",
+    "A-10-2026-0275-AM-087-089-DEPOT-2026-11-04",
     "DEVE-AM-788989-DEPOT-2026-05-26",
     "DEVE-PR-782513-DEPOT-2026-05-04",
     "OEIL-2025-0264-2025-09-03-legislative-proposal-published"
@@ -38777,7 +38808,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-10|council_adoption",
     "2026-07-27|publication",
     "2026-08-16|entry_into_force"
    ],
@@ -39684,7 +39714,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-09|ep_position",
     "2026-07-23|council_adoption",
     "2026-07-24|signature",
     "2026-07-28|publication",
@@ -39915,7 +39944,10 @@
     "CJ13-AM-797489-DEPOT-2026-11-03+5",
     "CJ13-AM-797489-DEPOT-2026-11-03+6",
     "CJ13-AM-797489-DEPOT-2026-11-03+8",
+    "CJ13-AM-797489-DEPOT-2026-11-03+9",
+    "CJ13-AM-797494-DEPOT-2026-10-29",
     "CJ13-AM-797542-DEPOT-2026-11-04",
+    "CJ13-AM-797588-DEPOT-2026-11-05",
     "CJ13-PR-787767-DEPOT-2026-10-05",
     "OEIL-2025-0545-2025-07-16-legislative-proposal-published"
    ],
@@ -40593,7 +40625,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-10|publication",
     "2026-07-30|entry_into_force"
    ],
    "stage": "in_force",
