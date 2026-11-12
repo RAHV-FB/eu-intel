@@ -110,7 +110,7 @@ function TableLink({ d, impl, anchor }: { d: DossierDetail; impl: DossierImpleme
 function ImplementationTable({ impl, today, selected }: { impl: DossierImplementation; today: ISODate; selected: string | null }) {
   const [filter, setFilter] = useState<TranspositionStatus | 'all'>('all');
   // each Member State's status on the reader's date: the build states it on its own (src/lib/deadline.ts statusOn)
-  const countries = impl.countries.map((c) => ({ ...c, status: statusOn(c.status, impl.deadline, today) }));
+  const countries = impl.countries.map((c) => ({ ...c, status: statusOn(c.status, impl.first_deadline ?? impl.deadline, today) }));
   const since = afterDeadline(impl.deadline, today);
   const counts = new Map<TranspositionStatus, number>();
   for (const c of countries) counts.set(c.status, (counts.get(c.status) ?? 0) + 1);

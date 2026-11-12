@@ -288,6 +288,11 @@ function DirectiveTable({ rows, country, today, caption }: { rows: TrackedDirect
                 <span>
                   <time dateTime={d.deadline}>{formatDate(d.deadline)}</time>
                   <span className="meta as-block">{fromToday(d.deadline, today)}</span>
+                  {d.first_deadline && (
+                    <span className="meta as-block">
+                      Some provisions by <time dateTime={d.first_deadline}>{formatDate(d.first_deadline)}</time>
+                    </span>
+                  )}
                 </span>
               </td>
               {country ? <CountryCells d={d} c={d.countries.find((x) => x.country === country)} today={today} /> : <OverviewCells d={d} />}
@@ -347,7 +352,7 @@ function CountryCells({ d, c, today }: { d: TrackedDirective; c: TrackedCountry 
         <td role="cell" />
       </>
     );
-  const since = c.status === 'none_found' ? afterDeadline(d.deadline, today) : null;
+  const since = c.status === 'none_found' ? afterDeadline(d.first_deadline ?? d.deadline, today) : null;
   return (
     <>
       <td role="cell">

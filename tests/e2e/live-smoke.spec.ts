@@ -54,7 +54,6 @@ const PAGES: [name: string, path: string][] = [
   ['votes', 'votes/'],
   ['people', 'people/'],
   ['countries', 'countries/'],
-  ['insights', 'insights/'],
   ['about', 'about/'],
   ['how the EU works', 'how-the-eu-works/'],
   ...spread(data.dossiers, 'stage', 20).map((d): [string, string] => [`file ${d.id} (${d.stage})`, `legislation/${d.id}/`]),

@@ -179,6 +179,16 @@ def general_deadline(act: LegalAct) -> str | None:
     return next((x.date for x in classify(act) if x.kind == "deadline"), None)
 
 
+def first_deadline(act: LegalAct) -> str | None:
+    """The earliest date by which Member States had to transpose any of the directive: a deadline for some of its
+    provisions can come before the general one (Directive (EU) 2024/1640: Art. 74 by 10 July 2025, Arts 11-13 and 15 by
+    10 July 2026, the rest by 10 July 2027). A Member State with no measure notified is late from then on: the
+    Commission opened non-communication cases against several in September 2025."""
+    dates = [x.date for x in classify(act) if x.kind in ("deadline", "further_deadline")]
+    general = general_deadline(act)
+    return min(dates) if general and dates else general
+
+
 def general_deadline_basis(act: LegalAct) -> Basis | None:
     """How the general deadline was established; None without transposition dates."""
     return _classify(act)[1]

@@ -7,7 +7,7 @@
  * Nothing here ranks or scores a Member State: a directive's Member States are counted by status, the bound ones only,
  * and the opt-outs and exemptions are named apart; no count is added up across directives or Member States.
  */
-import type { ISODate, TrackedCountry, TrackedDirective, TranspositionStatus, TranspositionTracker } from '../../types/data';
+import type { ISODate, TrackedDirective, TranspositionStatus, TranspositionTracker } from '../../types/data';
 import { addMonths, deadlinePassed, statusOn } from '../../lib/deadline';
 
 export type When = 'passed' | 'ahead';
@@ -29,11 +29,8 @@ export function directivesOn(t: TranspositionTracker, today: ISODate): TrackedDi
   const { from, to } = windowOn(t, today);
   return t.directives
     .filter((d) => d.deadline >= from && d.deadline <= to)
-    .map((d) => ({ ...d, countries: d.countries.map((c) => ({ ...c, status: statusOn(c.status, d.deadline, today) })) }));
+    .map((d) => ({ ...d, countries: d.countries.map((c) => ({ ...c, status: statusOn(c.status, d.first_deadline ?? d.deadline, today) })) }));
 }
-
-/** Not bound by the directive (opt-outs under Protocols 21 and 22) or exempted by its own text: named apart. */
-const NOT_BOUND: TranspositionStatus[] = ['not_participating', 'not_required'];
 
 /** The order in which a directive's bound Member States are counted (as on its own page). */
 export const BOUND_ORDER: TranspositionStatus[] = ['measures_notified', 'none_found', 'deadline_not_reached', 'no_deadline', 'unavailable'];
@@ -64,11 +61,6 @@ export function statusCounts(d: TrackedDirective): StatusCounts {
   }
   out.bound = BOUND_ORDER.filter((s) => counts.get(s)).map((s) => [s, counts.get(s)!]);
   return out;
-}
-
-/** Whether a Member State is bound by the directive as far as the records show. */
-export function isBound(c: TrackedCountry): boolean {
-  return !NOT_BOUND.includes(c.status) && !c.participation_unknown;
 }
 
 /** The Commission's open cases on the directive for not notifying transposition measures (one per Member State). */

@@ -115,11 +115,20 @@ so that nobody reads a gap as a fact about EU law.
 
 ## Next steps
 
-- The ordered plan of November 2026 (trust, autonomy, value, reach) is in `docs/ASSESSMENT_2026-11.md`, section 5.
+The product is the join no free tool offers: for each law, when each part applies, whether each Member State has
+transposed it and whether the Commission has opened a case, beside who passed it (value audit of 12 November 2026;
+the November plan and its status are in `docs/ASSESSMENT_2026-11.md`). Work that deepens it comes first:
+
+- A country-first view of overdue transposition ("which directives has this country not notified, with the deadline,
+  the case and its stage"), with a CSV and a feed: the data is in the tracker (2,295 country rows on 85 directives).
+- Plain sentences for application dates: 77 of 213 dates say only that "some provisions start to apply".
+- A deeper transposition window than three years back, for readers who need the history.
+- The open dataset (`data/open`) linked from the main navigation, not only from About.
 - Editorial summaries for more files (each reviewed against the act and its sources, see `docs/EDITORIAL.md`).
 - More checked date corrections for amended acts, starting with featured files.
-- Smaller vote files: individual ballots as compact arrays keyed by MEP id (the published site is about
-  340 MB, more than half of it the per-vote lists of ballots and MEP names).
+- Smaller vote files: individual ballots as compact arrays keyed by MEP id, and MEP names in one shared file (the
+  built site is about 450 MB, more than half of it the per-vote lists of ballots and MEP names; about 30% of a vote
+  file is its `mep_names`).
 - Merge each national party's per-term records on one page.
 - Run the browser tests on the current Ubuntu image once the Playwright version supports it (the e2e job is
   pinned to Ubuntu 24.04).
