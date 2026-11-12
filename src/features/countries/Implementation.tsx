@@ -53,7 +53,7 @@ export function TranspositionTable({
   // each status on the reader's date (the build states it on its own: src/lib/deadline.ts statusOn), and each deadline
   // told from it ("2 years ago", "in 4 months")
   const today = todayISO();
-  const rows = useMemo(() => built.map((r) => ({ ...r, status: statusOn(r.status, r.deadline, today) })), [built, today]);
+  const rows = useMemo(() => built.map((r) => ({ ...r, status: statusOn(r.status, r.first_deadline ?? r.deadline, today) })), [built, today]);
   // filters, order and rows shown are kept in the address (tr-…), so that Back from a file returns to the same list
   const [params, patch] = useParamState();
   // directives this country is in an open non-communication case for, said under the status as the law page's table

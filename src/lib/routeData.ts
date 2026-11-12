@@ -51,8 +51,6 @@ export function routeData(pathname: string, search = ''): string[] {
       return sub === undefined && VOTE_ID.test(id) ? page(`votes/${id}.json`, 'people/groups.json', 'people/parties.json') : files;
     case 'search':
       return id === undefined ? page('search.json') : files;
-    case 'insights':
-      return id === undefined ? page('dossiers/index.json', 'votes/index.json', 'countries/index.json') : files;
     case 'countries':
       if (id === undefined) return page('countries/index.json');
       if (sub !== undefined) return files;

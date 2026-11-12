@@ -253,7 +253,7 @@ jobs:
           done
           # Then the routes of this deployment, past the cache as above: without the query string, the CDN could
           # answer them from the previous deployment, and a route this one lacks would pass.
-          for route in "" "insights/" "legislation/" "votes/" "people/" "countries/" "data/meta.json"; do
+          for route in "" "legislation/transposition/" "legislation/" "votes/" "people/" "countries/" "data/meta.json"; do
             url="${base}${route}?deploy=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
             echo "Checking $url"
             curl --fail --silent --show-error --location \
@@ -263,8 +263,8 @@ jobs:
               python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["counts"]["dossiers"] > 0; assert d["counts"]["ep_votes"] > 0' "$tmp"
             else
               grep -q '<title>' "$tmp"
-              if [[ "$route" == "insights/" ]]; then
-                grep -q 'Data insights' "$tmp"
+              if [[ "$route" == "legislation/transposition/" ]]; then
+                grep -q 'Directives into national law' "$tmp"
               fi
             fi
           done
