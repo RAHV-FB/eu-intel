@@ -351,6 +351,7 @@
 {"fingerprint":"e32626c0ebc8abfd9a7698ee20890c48e5433c1a13dfb3f31da0937bda3aa85a","id":"ST-15576-2025","problem":null,"versions":["ST-15576-2025-INIT"],"vote_id":"ST-15576-2025"},
 {"fingerprint":"a77f525d1b4e38edca25dbca9245e1bbf9f633c54f0652e197b2460e677a42ab","id":"ST-15585-2025","problem":null,"versions":["ST-15585-2025-INIT"],"vote_id":"ST-15585-2025"},
 {"fingerprint":"e54ce594b45fd06dedbe269cd1ec91f908dadaa2a49da30e1cdd2a4535122e7d","id":"ST-15589-2025","problem":null,"versions":["ST-15589-2025-INIT"],"vote_id":"ST-15589-2025"},
+{"fingerprint":"f354f08004744fd11df1b20ebb345b47de9a3479f30e003385dca0b8df7f5c8d","id":"ST-15589-2026","problem":null,"versions":["ST-15589-2026-INIT"],"vote_id":"ST-15589-2026"},
 {"fingerprint":"c62a9b78d526d6b24461f3f5c07c6ab8a9110b1f11f20f8c9d7996bcf2915af7","id":"ST-15593-2025","problem":null,"versions":["ST-15593-2025-INIT"],"vote_id":"ST-15593-2025"},
 {"fingerprint":"c0f1561989e4b2929410c3c77dbc9ae58783e4177f2fc9064904f1f3af9789c9","id":"ST-15603-2025","problem":null,"versions":["ST-15603-2025-INIT"],"vote_id":"ST-15603-2025"},
 {"fingerprint":"57c3913dcf8f1f34a1c35683f23295367e3d84fac2329674dee0b29391a00037","id":"ST-15642-2018","problem":null,"versions":["ST-15642-2018-INIT"],"vote_id":null},

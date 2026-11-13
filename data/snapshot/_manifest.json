@@ -1,22 +1,22 @@
 {
  "agenda": {
-  "attempted_at": "2026-11-09T14:21:29Z",
-  "fetched_at": "2026-11-09T14:22:06Z",
-  "note": "Cellar: 43 planned events from 2026-11-09 on (28 of the Council, 15 of Parliament); 13 of 15 Council documents named have a public copy; Parliament: 40 vote and debate items naming a procedure on the agendas of 6 of the 10 plenary sittings of the next 42 days (the others not yet published)",
+  "attempted_at": "2026-11-13T13:25:05Z",
+  "fetched_at": "2026-11-13T13:25:19Z",
+  "note": "Cellar: 29 planned events from 2026-11-13 on (19 of the Council, 10 of Parliament); 5 of 5 Council documents named have a public copy; Parliament: 24 vote and debate items naming a procedure on the agendas of 4 of the 8 plenary sittings of the next 42 days (the others not yet published)",
   "records": {
-   "planned": 43,
-   "plenary": 40
+   "planned": 29,
+   "plenary": 24
   },
   "source": "agenda",
   "status": "ok"
  },
  "council": {
-  "attempted_at": "2026-11-09T14:14:58Z",
-  "fetched_at": "2026-11-09T14:15:41Z",
-  "note": "752 Council voting results since 2019-01-01 from GSC 'Voting result' notes (Cellar list + data.consilium.europa.eu PDFs); 750 with per-country positions read from the annexed voting sheet; rules {'qmv': 708, 'unanimity': 44}. 0 notes (re)processed, 773 unchanged and reused; 0 transient download failures. 2 notes with problems, e.g. ST-7080-2024: ST-7080-2024-INIT: p2: slot (390, row 13) unreadable: colour [0, 0, 0], grey 0; slot (658, row 13) unreadable: colour [0, 0, 0], grey 0; ST-7085-2020: ST-7085-2020-INIT: several voting sheets in one note. The Council's open-data datasets were discontinued (2025) and its web voting-results pages are bot-protected.",
+  "attempted_at": "2026-11-13T13:24:45Z",
+  "fetched_at": "2026-11-13T13:25:03Z",
+  "note": "753 Council voting results since 2019-01-01 from GSC 'Voting result' notes (Cellar list + data.consilium.europa.eu PDFs); 751 with per-country positions read from the annexed voting sheet; rules {'qmv': 709, 'unanimity': 44}. 1 notes (re)processed, 772 unchanged and reused; 0 transient download failures. 2 notes with problems, e.g. ST-7080-2024: ST-7080-2024-INIT: p2: slot (390, row 13) unreadable: colour [0, 0, 0], grey 0; slot (658, row 13) unreadable: colour [0, 0, 0], grey 0; ST-7085-2020: ST-7085-2020-INIT: several voting sheets in one note. 1 notes known from earlier runs not listed by Cellar this run, kept. The Council's open-data datasets were discontinued (2025) and its web voting-results pages are bot-protected.",
   "records": {
-   "votes": 752,
-   "votes_with_positions": 750
+   "votes": 753,
+   "votes_with_positions": 751
   },
   "source": "council",
   "status": "ok"
@@ -33,40 +33,40 @@
   "status": "ok"
  },
  "ep_procedures": {
-  "attempted_at": "2026-11-09T13:52:33Z",
-  "fetched_at": "2026-11-09T14:06:09Z",
-  "note": "Scope: COD, CNS, APP with reference year >= 2014: 1246 ids from the paged list (API totals all years, with repeats: {'COD': 2972, 'CNS': 2664, 'APP': 58}) + 338 more referenced by other snapshots ({'eurlex': 328, 'train': 8, 'ep_votes': 2}) + 30 featured + 7 stored or pending ids the list did not return. Mode incremental, rotation slots [0] of 8: fetched 431 ({'open': 96, 'recent event': 147, 'rotation': 156, 'featured': 30, 'no OEIL data': 2, 'new': 6}), reused 1143 from the snapshot. OEIL enrichment for 1572/1574. 17 ids skipped (no usable EP record; split/merged ones are retried on full refresh, others every run): 2011-0901 (404 at /procedures/{id}); 2016-0282 (404; split procedure, parts: 2016-0282A, 2016-0282B); 2016-0357 (404; split procedure, parts: 2016-0357A, 2016-0357B); 2016-0360 (404; split procedure, parts: 2016-0360A, 2016-0360B); 2016-0400 (404; split procedure, parts: 2016-0400A, 2016-0400B); 2017-0398 (404 at /procedures/{id}); 2018-0063 (404; split procedure, parts: 2018-0063A, 2018-0063B); 2018-0152 (404; split procedure, parts: 2018-0152A, 2018-0152B); 2018-0302 (404 at /procedures/{id}); 2018-0330 (404; split procedure, parts: 2018-0330A, 2018-0330B); 2018-0900 (EP record 2018-0900 merges several procedures (labels: 2018/0900(COD), 2018/0900(NLE))); 2019-0001 (404; split procedure, parts: 2019-0001A, 2019-0001B); 2019-0197 (404 at /procedures/{id}); 2020-3521 (404 at /procedures/{id}); 2021-0211 (no English title for 2021/0211(COD) in the EP record or OEIL; split procedure, parts: 2021-0211A, 2021-0211B); 2022-0132 (no English title for 2022/0132(COD) in the EP record or OEIL; split procedure, parts: 2022-0132A, 2022-0132B); 2022-0430 (404 at /procedures/{id}). No OEIL procedure file (404) for: 2016/0224(COD), 2023/0077(COD).",
+  "attempted_at": "2026-11-13T13:11:12Z",
+  "fetched_at": "2026-11-13T13:20:25Z",
+  "note": "Scope: COD, CNS, APP with reference year >= 2014: 1329 ids from the paged list (API totals all years, with repeats: {'COD': 2976, 'CNS': 2664, 'APP': 58}) + 263 more referenced by other snapshots ({'eurlex': 256, 'train': 6, 'ep_votes': 1}) + 30 featured + 3 stored or pending ids the list did not return. Mode incremental: fetched 278 ({'open': 105, 'new': 10, 'recent event': 138, 'featured': 30, 'no OEIL data': 2}), reused 1299 from the snapshot. OEIL enrichment for 1572/1577. 18 ids skipped (no usable EP record; split/merged ones are retried on full refresh, others every run): 2011-0901 (404 at /procedures/{id}); 2016-0282 (404; split procedure, parts: 2016-0282A, 2016-0282B); 2016-0357 (404; split procedure, parts: 2016-0357A, 2016-0357B); 2016-0360 (404; split procedure, parts: 2016-0360A, 2016-0360B); 2016-0400 (404; split procedure, parts: 2016-0400A, 2016-0400B); 2017-0398 (404 at /procedures/{id}); 2018-0063 (404; split procedure, parts: 2018-0063A, 2018-0063B); 2018-0152 (404; split procedure, parts: 2018-0152A, 2018-0152B); 2018-0302 (404 at /procedures/{id}); 2018-0330 (404; split procedure, parts: 2018-0330A, 2018-0330B); 2018-0900 (EP record 2018-0900 merges several procedures (labels: 2018/0900(COD), 2018/0900(NLE))); 2019-0001 (404; split procedure, parts: 2019-0001A, 2019-0001B); 2019-0197 (404 at /procedures/{id}); 2020-3521 (404 at /procedures/{id}); 2021-0211 (no English title for 2021/0211(COD) in the EP record or OEIL; split procedure, parts: 2021-0211A, 2021-0211B); 2022-0132 (no English title for 2022/0132(COD) in the EP record or OEIL; split procedure, parts: 2022-0132A, 2022-0132B); 2022-0430 (404 at /procedures/{id}); 2026-0346 (no English title for 2026/0346(COD) in the EP record or OEIL). No OEIL procedure file (404) for: 2016/0224(COD), 2023/0077(COD), 2026/0346(COD), 2026/0356(COD), 2026/0357(COD), 2026/0358(COD).",
   "records": {
-   "events": 18340,
-   "fetched_this_run": 431,
+   "events": 18398,
+   "fetched_this_run": 278,
    "pending": 0,
-   "procedures": 1574,
-   "requests_this_run": 875,
+   "procedures": 1577,
+   "requests_this_run": 571,
    "type_APP": 46,
    "type_CNS": 178,
-   "type_COD": 1343,
+   "type_COD": 1346,
    "type_NLE": 7,
-   "unavailable": 17,
+   "unavailable": 18,
    "with_oeil": 1572
   },
   "source": "ep_procedures",
   "status": "ok"
  },
  "ep_votes": {
-  "attempted_at": "2026-11-09T14:06:09Z",
-  "fetched_at": "2026-11-09T14:12:47Z",
-  "note": "window from 2026-08-23 + 57 older sittings (rotation slots [0] of 8): 69/69 sittings fetched (7163 votes, 0 document lookups, 0 procedures by id). Snapshot: 35465 votes (26267 roll-call, 2996 with ballots), 33843 linked to procedures; kinds {'amendment': 20771, 'final': 1360, 'mandate': 139, 'motion': 277, 'other': 77, 'procedural': 509, 'resolution': 2479, 'split_or_separate': 9853}; 0 fetched votes whose voter lists differ from the counts; 398s",
+  "attempted_at": "2026-11-13T13:20:25Z",
+  "fetched_at": "2026-11-13T13:21:22Z",
+  "note": "window from 2026-08-23: 14/14 sittings fetched (2110 votes, 0 document lookups, 12 procedures by id). Snapshot: 35691 votes (26362 roll-call, 3009 with ballots), 34069 linked to procedures; kinds {'amendment': 20889, 'final': 1367, 'mandate': 140, 'motion': 278, 'other': 78, 'procedural': 510, 'resolution': 2492, 'split_or_separate': 9937}; 0 fetched votes whose voter lists differ from the counts; 57s",
   "records": {
-   "ballots": 2996,
-   "sittings": 359,
-   "votes": 35465
+   "ballots": 3009,
+   "sittings": 360,
+   "votes": 35691
   },
   "source": "ep_votes",
   "status": "ok"
  },
  "eurlex": {
-  "attempted_at": "2026-11-09T14:12:48Z",
-  "fetched_at": "2026-11-09T14:14:58Z",
+  "attempted_at": "2026-11-13T13:21:23Z",
+  "fetched_at": "2026-11-13T13:24:45Z",
   "note": "1256 acts in scope (COD/CNS/APP procedures, date >= 2014-01-01); 24 featured; 23 more recorded by OEIL as final acts of procedures in the EP snapshot; 1258 with procedure reference; 291 withdrawal/replacement notices on procedures",
   "records": {
    "acts": 1279
