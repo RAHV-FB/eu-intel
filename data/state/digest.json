@@ -32856,6 +32856,7 @@
    "events": [
     "2023-0166-ANPRO-2023-07-10",
     "2023-0166-DEC-ADCP-2024-03-20",
+    "2023-0166-DEC-DCPL-2026-11-12",
     "2023-0166-DEC-PLEIN1-2024-04-11",
     "2023-0166-DEC-VOAGT-2026-06-23",
     "2023-0166-DEPOT-2024-03-25",
@@ -33587,9 +33588,7 @@
     "vote-168478-ep_position"
    ],
    "label": "In force",
-   "sigs": [
-    "2026-07-16|entry_into_force"
-   ],
+   "sigs": [],
    "stage": "in_force",
    "title": "New genomic techniques (NGT) plants",
    "votes": [
@@ -33661,9 +33660,7 @@
     "vote-168422-ep_position"
    ],
    "label": "In force",
-   "sigs": [
-    "2026-07-16|entry_into_force"
-   ],
+   "sigs": [],
    "stage": "in_force",
    "title": "Production and marketing of forest reproductive material, amending Regulations (EU) 2016/2031 and 2017/625 of the European Parliament and of the Council and repealing Council Directive 1999/105/EC (Regulation on forest reproductive material)",
    "votes": [
@@ -35615,9 +35612,7 @@
     "vote-192436-ep_position"
    ],
    "label": "In force",
-   "sigs": [
-    "2026-07-16|entry_into_force"
-   ],
+   "sigs": [],
    "stage": "in_force",
    "title": "The screening of foreign investments in the Union and repealing Regulation (EU) 2019/452 of the European Parliament and of the Council",
    "votes": [
@@ -37990,6 +37985,7 @@
     "2025-0207-DEC-ADCP-2026-04-15",
     "2025-0207-DEC-ADCP-BUDG-2026-03-17",
     "2025-0207-DEC-DCPL-2026-04-29",
+    "2025-0207-DEC-DCPL-2026-11-12",
     "2025-0207-DEC-REFBAK-2026-04-29",
     "2025-0207-DEC-VOAGT-2026-09-10",
     "2025-0207-DEPOT-2026-04-16",
@@ -38084,6 +38080,8 @@
     "2025-0223-DEC-ADCP-DEVE-2026-06-25",
     "2025-0223-DEC-ADCP-REGI-2026-05-06",
     "2025-0223-DEC-ADCP-SEDE-2026-06-03",
+    "2025-0223-DEC-DCPL-2026-11-12",
+    "2025-0223-DEC-REFBAK-2026-11-12",
     "2025-0223-DEPOT-2026-10-12",
     "A-10-2026-0271-AM-333-334-DEPOT-2026-11-03",
     "A-10-2026-0271-AM-335-338-DEPOT-2026-11-04+5",
@@ -38576,6 +38574,7 @@
     "2025-0264-DEC-ADCP-2026-10-05",
     "2025-0264-DEC-ADCP-AFET-2026-05-05",
     "2025-0264-DEC-ADCP-BUDG-2026-06-03",
+    "2025-0264-DEC-DCPL-2026-11-12",
     "2025-0264-DEPOT-2026-10-19",
     "A-10-2026-0275-AM-087-089-DEPOT-2026-11-04",
     "DEVE-AM-788989-DEPOT-2026-05-26",
@@ -39208,7 +39207,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-17|publication",
     "2026-08-06|entry_into_force"
    ],
    "stage": "in_force",
@@ -39477,10 +39475,7 @@
     "vote-195010-ep_position"
    ],
    "label": "In force",
-   "sigs": [
-    "2026-07-17|entry_into_force",
-    "2026-07-17|publication"
-   ],
+   "sigs": [],
    "stage": "in_force",
    "title": "Empowering Austria to amend its existing bilateral road transport agreement with Switzerland with a view to authorising cabotage operations in the course of the provision of international road passenger transport services by coach and bus in the border regions between the two countries",
    "votes": [
@@ -39956,6 +39951,7 @@
     "2025-0543-DEC-ADCP-CULT-2026-03-18",
     "2025-0543-DEC-ADCP-REGI-2026-03-25",
     "2025-0543-DEC-ADCP-SEDE-2026-03-19",
+    "2025-0543-DEPOT-2026-11-13",
     "ITRE-AM-786953-DEPOT-2026-04-10+3",
     "ITRE-PR-785237-DEPOT-2026-03-13",
     "OEIL-2025-0543-2025-07-16-legislative-proposal-published",
@@ -40503,6 +40499,7 @@
     "2026-0044-ANPRO-2026-03-09",
     "2026-0044-DEC-ADCP-2026-07-15",
     "2026-0044-DEC-ADCP-AGRI-2026-06-12",
+    "2026-0044-DEC-DCPL-2026-11-12",
     "2026-0044-DEC-PLEIN1-2026-09-16",
     "2026-0044-DEC-VOAGT-2026-10-08",
     "2026-0044-DEPOT-2026-07-20",
@@ -40730,7 +40727,8 @@
    "council": [],
    "events": [
     "2026-0113-ANPRO-2026-07-09",
-    "OEIL-2026-0113-2026-05-13-legislative-proposal-published"
+    "OEIL-2026-0113-2026-05-13-legislative-proposal-published",
+    "TRAN-PR-797434-DEPOT-2026-11-12"
    ],
    "label": "Proposal under examination",
    "sigs": [],
@@ -40756,7 +40754,8 @@
    "council": [],
    "events": [
     "2026-0115-ANPRO-2026-06-15",
-    "OEIL-2026-0115-2026-05-13-legislative-proposal-published"
+    "OEIL-2026-0115-2026-05-13-legislative-proposal-published",
+    "TRAN-PR-797604-DEPOT-2026-11-11"
    ],
    "label": "Proposal under examination",
    "sigs": [],
@@ -40796,6 +40795,7 @@
    "council": [],
    "events": [
     "2026-0139-ANPRO-2026-09-14",
+    "ITRE-PR-797426-DEPOT-2026-11-09",
     "OEIL-2026-0139-2026-06-03-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
@@ -40977,9 +40977,7 @@
     "OEIL-2026-0203-2026-07-17-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
-   "sigs": [
-    "2026-07-17|proposal"
-   ],
+   "sigs": [],
    "stage": "proposed",
    "title": "Electricity market: network charges, taxation, smart grids and grid connections",
    "votes": []
@@ -40994,9 +40992,7 @@
     "OEIL-2026-0210-2026-07-17-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
-   "sigs": [
-    "2026-07-17|proposal"
-   ],
+   "sigs": [],
    "stage": "proposed",
    "title": "Maritime transport: monitoring, reporting and verification and alignment with revisions of the EU Emissions Trading System",
    "votes": []
@@ -41018,7 +41014,6 @@
    ],
    "label": "Mandate to negotiate with the Council",
    "sigs": [
-    "2026-07-17|proposal",
     "2026-10-19|committee_report",
     "2026-10-22|negotiation_mandate"
    ],
@@ -41041,9 +41036,7 @@
     "OEIL-2026-0212-2026-07-17-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
-   "sigs": [
-    "2026-07-17|proposal"
-   ],
+   "sigs": [],
    "stage": "proposed",
    "title": "EU Emissions Trading System and market stability reserve: competitiveness and cost-effective decarbonisation",
    "votes": []
@@ -41476,9 +41469,13 @@
   "2026-0356": {
    "acts": [],
    "council": [],
-   "events": [],
+   "events": [
+    "OEIL-2026-0356-2026-11-11-legislative-proposal-published"
+   ],
    "label": "Proposal under examination",
-   "sigs": [],
+   "sigs": [
+    "2026-11-11|proposal"
+   ],
    "stage": "proposed",
    "title": "Digital Fairness Act",
    "votes": []
@@ -41486,9 +41483,13 @@
   "2026-0357": {
    "acts": [],
    "council": [],
-   "events": [],
+   "events": [
+    "OEIL-2026-0357-2026-11-11-legislative-proposal-published"
+   ],
    "label": "Proposal under examination",
-   "sigs": [],
+   "sigs": [
+    "2026-11-11|proposal"
+   ],
    "stage": "proposed",
    "title": "Simplification of certain consumer protection rules",
    "votes": []
@@ -41496,9 +41497,13 @@
   "2026-0358": {
    "acts": [],
    "council": [],
-   "events": [],
+   "events": [
+    "OEIL-2026-0358-2026-11-11-legislative-proposal-published"
+   ],
    "label": "Proposal under examination",
-   "sigs": [],
+   "sigs": [
+    "2026-11-11|proposal"
+   ],
    "stage": "proposed",
    "title": "Cooperation in the enforcement of consumer protection laws in the Union",
    "votes": []

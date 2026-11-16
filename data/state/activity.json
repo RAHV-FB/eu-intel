@@ -2196,5 +2196,56 @@
   },
   "title": "New file: Cooperation in the enforcement of consumer protection laws in the Union",
   "vote_id": null
+ },
+ {
+  "date": "2026-11-11",
+  "detected_at": "2026-11-16T14:08:30Z",
+  "dossier_id": "2026-0356",
+  "id": "chg:2026-0356:ev:OEIL-2026-0356-2026-11-11-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0356(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-16T13:37:21Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0356(COD)"
+  },
+  "title": "Digital Fairness Act: Commission published its legislative proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-11",
+  "detected_at": "2026-11-16T14:08:30Z",
+  "dossier_id": "2026-0357",
+  "id": "chg:2026-0357:ev:OEIL-2026-0357-2026-11-11-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0357(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-16T13:37:21Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0357(COD)"
+  },
+  "title": "Simplification of certain consumer protection rules: Commission published its legislative proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-11",
+  "detected_at": "2026-11-16T14:08:30Z",
+  "dossier_id": "2026-0358",
+  "id": "chg:2026-0358:ev:OEIL-2026-0358-2026-11-11-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0358(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-16T13:37:20Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0358(COD)"
+  },
+  "title": "Cooperation in the enforcement of consumer protection laws in the Union: Commission published its legislative proposal",
+  "vote_id": null
  }
 ]

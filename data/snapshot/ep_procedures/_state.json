@@ -1,6 +1,6 @@
 {
  "failing": {},
- "last_complete": "2026-11-13T13:20:24Z",
+ "last_complete": "2026-11-16T13:51:28Z",
  "last_mode": "incremental",
  "list_page": {
   "APP": 500,
@@ -11,7 +11,7 @@
  "oeil_gone": {},
  "parser": "2026-11-05.1",
  "pending": [],
- "rotation_week": 105704,
+ "rotation_week": 105705,
  "started_at": null,
  "unavailable": {
   "2011-0901": "404 at /procedures/{id}",
@@ -34,7 +34,7 @@
   "2026-0346": "no English title for 2026/0346(COD) in the EP record or OEIL"
  },
  "unsettled": {
-  "attempted_at": "2026-11-13T13:11:12Z",
+  "attempted_at": "2026-11-16T13:37:06Z",
   "ids": []
  }
 }
