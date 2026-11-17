@@ -277,6 +277,9 @@ function Footer() {
               <Link to="/about#sources">Data sources & licences</Link>
             </li>
             <li>
+              <Link to="/about#reuse">Open data (CSV tables)</Link>
+            </li>
+            <li>
               <Link to="/legislation/changes">What changed</Link>
             </li>
             <li>

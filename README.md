@@ -155,7 +155,7 @@ data/curated/        editorial YAML: featured files, topics, search aliases, che
                      named but not officially linked (unlinked_acts.yaml) and procedure links that the act's
                      own text rules out (act_links.yaml)
 data/state/          refresh state (snapshot digest, verified activity log); created by the first recorded refresh
-src/                 React app: pages/, features/ (one folder per area, insights/ included), components/, lib/,
+src/                 React app: pages/, features/ (one folder per area), components/, lib/,
                      types/data.ts (public data contract)
 scripts/             prerender-routes.mjs (with seo.mjs), render-og-image.mjs, check_privacy.mjs, check_links.py, test-frozen.sh,
                      ci-passed.sh, latest_run.py

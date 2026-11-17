@@ -25,7 +25,7 @@ they reach `main`. To regenerate the file (Python 3.12, as the workflows use): `
 --python-version 3.12 --generate-hashes -o requirements.txt` (or `pip-compile --generate-hashes`).
 
 The deploy job also makes an independent HTTP smoke check **against the public Pages URL**, including the
-homepage, Insights, legislation, votes, people, countries, and data/meta.json. A successful GitHub Pages
+homepage, the transposition tracker, legislation, votes, people, countries, and data/meta.json. A successful GitHub Pages
 publish that serves missing routes or empty data is treated as a failed release, and so is one the public URL does not
 serve: the check waits (up to 5 minutes) until `data/meta.json`, fetched with a query string past Pages' 10-minute
 cache, has the `built_at` of the build it deployed.

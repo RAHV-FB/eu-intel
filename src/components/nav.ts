@@ -6,7 +6,6 @@ export const NAV = [
   { to: '/', label: 'Discover', end: true },
   { to: '/legislation', label: 'Legislation' },
   { to: '/votes', label: 'Votes' },
-  { to: '/insights', label: 'Insights' },
   { to: '/people', label: 'People & Parties' },
   { to: '/countries', label: 'Countries' },
   { to: '/how-the-eu-works', label: 'How the EU Works' },

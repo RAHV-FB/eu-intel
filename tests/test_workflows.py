@@ -383,7 +383,7 @@ if "data/meta.json" in url:
     built = os.environ["NEW_BUILT_AT"] if n > int(os.environ["SWITCH_AFTER"]) else "2026-01-01T00:00:00Z"
     body = json.dumps({"built_at": built, "counts": {"dossiers": 1, "ep_votes": 1}})
 else:
-    body = "<html><title>EU Legislative Intelligence</title>Data insights</html>"
+    body = "<html><title>EU Legislative Intelligence</title>Directives into national law</html>"
 if out:
     open(out, "w").write(body)
 else:
@@ -436,7 +436,7 @@ if query and route == os.environ["MISSING"]:
     sys.exit(22)
 built = os.environ["NEW_BUILT_AT"] if query else "2026-01-01T00:00:00Z"
 body = json.dumps({"built_at": built, "counts": {"dossiers": 1, "ep_votes": 1}}) if route == "data/meta.json" else (
-    "<html><title>EU Legislative Intelligence</title>Data insights</html>")
+    "<html><title>EU Legislative Intelligence</title>Directives into national law</html>")
 open(out, "w").write(body) if out else sys.stdout.write(body)
 """
 
@@ -458,7 +458,7 @@ def test_the_deploy_checks_the_routes_of_the_new_deployment_not_the_cached_one(t
         return subprocess.run(["bash", "-e", "-c", verify["run"]], cwd=tmp_path, env=env, capture_output=True).returncode == 0
 
     assert verify_with(missing="none")
-    assert not verify_with(missing="insights/")
+    assert not verify_with(missing="legislation/transposition/")
     assert not verify_with(missing="")  # the home page
 
 

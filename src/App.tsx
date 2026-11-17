@@ -11,7 +11,6 @@ import { useDocumentTitle } from './features/legislation/labels';
  */
 const Home = lazy(() => import('./pages/Home'));
 const Legislation = lazy(() => import('./pages/Legislation'));
-const Insights = lazy(() => import('./pages/Insights'));
 const Dossier = lazy(() => import('./pages/Dossier'));
 const Changes = lazy(() => import('./pages/Changes'));
 const Applies = lazy(() => import('./pages/Applies'));
@@ -49,7 +48,6 @@ export function App() {
           <Route element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="legislation" element={<Legislation />} />
-            <Route path="insights" element={<Insights />} />
             {/* What changed and When new rules apply: views of Legislation, not primary destinations (src/components/nav.ts) */}
             <Route path="legislation/changes" element={<Changes />} />
             <Route path="legislation/applies" element={<Applies />} />

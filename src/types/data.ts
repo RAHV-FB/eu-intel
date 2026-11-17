@@ -924,6 +924,7 @@ export interface CountryDetail extends CountrySummary {
     names?: string[]; // names its file is known by (official short titles, curated common names): "NIS 2 Directive"
     dossier_id?: string | null;
     deadline?: ISODate | null;
+    first_deadline?: ISODate | null; // an earlier deadline for some provisions (statuses are judged on it)
     measures: number; // notified measures in the dataset
     status: TranspositionStatus;
     // not_required: the directive's provision and its condition, "Art. 33(4): for as long as no rail system …";
@@ -958,6 +959,7 @@ export interface InfringementInfo {
 export interface DossierImplementation {
   celex: string;
   deadline?: ISODate | null;
+  first_deadline?: ISODate | null; // an earlier deadline for some provisions (statuses are judged on it)
   countries: {
     country: string;
     measures: number;
@@ -999,6 +1001,7 @@ export interface TrackedDirective {
   names: string[]; // names its file is known by: "NIS 2 Directive", "NIS2"
   dossier_id?: string | null;
   deadline: ISODate; // the general transposition deadline
+  first_deadline?: ISODate; // an earlier deadline for some provisions, from which a Member State without measures is late
   topics: string[]; // its file's topics
   countries: TrackedCountry[]; // the 27 Member States, by code
 }

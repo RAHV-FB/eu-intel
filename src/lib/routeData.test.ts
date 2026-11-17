@@ -20,7 +20,6 @@ const READERS: [address: string, files: string[]][] = [
   ['/votes', ['pages/Votes.tsx', 'features/legislation/labels.ts']],
   ['/votes/166051', ['pages/Vote.tsx', 'features/people/labels.ts']],
   ['/search', ['pages/Search.tsx', 'lib/search.ts']],
-  ['/insights', ['pages/Insights.tsx']],
   ['/countries', ['pages/Countries.tsx']],
   ['/countries/ie', ['pages/Country.tsx', 'features/people/labels.ts']],
   ['/countries/GB', ['pages/Country.tsx']],

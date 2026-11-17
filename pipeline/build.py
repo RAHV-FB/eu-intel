@@ -37,6 +37,7 @@ from pipeline.analysis.transposition import (
     article_label,
     articles_text,
     before_the_act,
+    first_deadline,
     general_deadline,
 )
 from pipeline.analysis.transposition import classify as classify_transposition
@@ -4052,6 +4053,7 @@ class Builder:
 
     def implementation_table(self, a: LegalAct) -> dict:
         deadline = general_deadline(a)
+        first = first_deadline(a)  # a Member State without measures is late from the earliest deadline
         countries = []
         for c in sorted(MEMBER_STATES):
             ms = self.measures_by.get((a.celex, c), [])
@@ -4059,7 +4061,7 @@ class Builder:
             # decades older than the directive, e.g. a civil code)
             dates = sorted(m.notified for m in ms if m.notified)
             oo = self.optouts.get(a.celex)
-            status = self.transposition_status(a.celex, c, deadline)
+            status = self.transposition_status(a.celex, c, first)
             schengen = self.schengen_note(a.celex, c) if status == "not_participating" else None
             countries.append({
                 "country": c, "measures": len(ms), "status": status,
@@ -4079,7 +4081,8 @@ class Builder:
                      f"{_long_date(INFRINGEMENTS_FROM)}; cases closed before then are not included.")  # fmt: skip
         exemption = (self.transposition_checks.get(a.celex) or {}).get("exemption")
         return {
-            "celex": a.celex, "act": act_label(a), "deadline": deadline, "countries": countries,
+            "celex": a.celex, "act": act_label(a), "deadline": deadline,
+            **({"first_deadline": first} if first != deadline else {}), "countries": countries,
             "nim_url": f"https://eur-lex.europa.eu/legal-content/EN/NIM/?uri=CELEX:{a.celex}",
             "source": _src(a.source), "note": note,
             # Denmark/Ireland without measures where neither the recitals nor a Council vote say whether they are bound
@@ -4988,6 +4991,7 @@ class Builder:
             "celex": a.celex, "title": title,
             "act": act_label(a) if act_label(a) != a.celex else celex_act_label(a.celex), "names": names,
             "dossier_id": ds[0] if len(ds) == 1 else None, "deadline": general_deadline(a),
+            **({"first_deadline": first} if (first := first_deadline(a)) != general_deadline(a) else {}),
         }  # fmt: skip
 
     def build_countries(self) -> None:
@@ -5031,11 +5035,12 @@ class Builder:
             trans = []
             for a in directives:
                 d = info[a.celex]
-                status = self.transposition_status(a.celex, code, d["deadline"])
+                status = self.transposition_status(a.celex, code, d.get("first_deadline") or d["deadline"])
                 schengen = self.schengen_note(a.celex, code) if status == "not_participating" else None
                 trans.append({
                     "celex": a.celex, "title": d["title"], "act": d["act"], "names": d["names"],
                     "dossier_id": d["dossier_id"], "deadline": d["deadline"],
+                    **({"first_deadline": d["first_deadline"]} if d.get("first_deadline") else {}),
                     "measures": len(self.measures_by.get((a.celex, code), [])),
                     "status": status,
                     # the exemption and its condition (Directive (EU) 2016/798, Art. 33(4)), not the bare label

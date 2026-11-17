@@ -47,6 +47,13 @@ describe('the window on the reader’s date', () => {
     expect(builtTooLongAgo(T, '2026-12-07')).toBe(true);
   });
 
+  it('judges a Member State without measures on the earliest deadline, not only the general one', () => {
+    // Directive (EU) 2024/1640: general deadline 10 July 2027, Art. 74 due 10 July 2025
+    const aml = { ...directive('AML', '2027-07-10', [row('EE', 'deadline_not_reached'), row('DE', 'measures_notified')]), first_deadline: '2025-07-10' };
+    const [d] = directivesOn({ ...T, directives: [aml] }, '2026-11-12');
+    expect(d.countries.map((c) => c.status)).toEqual(['none_found', 'measures_notified']);
+  });
+
   it('restates each status on the reader’s date', () => {
     // C's deadline (6 November 2026) is still ahead on its day, and has passed the day after
     const on = (today: string) => directivesOn(T, today).find((d) => d.celex === 'C')!.countries.map((c) => c.status);

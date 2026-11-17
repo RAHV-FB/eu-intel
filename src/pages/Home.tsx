@@ -125,16 +125,6 @@ export default function Home() {
         {home.error && <ErrorState error={home.error} title="The legislative data could not be loaded" />}
         {/* what the latest refresh recorded, first: activity.json, read on the reader's date */}
         {home.data && <ThisWeek items={activity.data} />}
-        {home.data && (
-          <Link to="/insights" className="home-insights-feature">
-            <span className="home-insights-feature__label">Explore the evidence <span aria-hidden="true">/</span> Data insights</span>
-            <span className="home-insights-feature__main">
-              <strong>What do the records reveal?</strong>
-              <span>Explore legislative progress, Parliament's close decisions and the Council's recorded votes by country — with the sources and limits shown beside the charts.</span>
-            </span>
-            <span className="home-insights-feature__arrow" aria-hidden="true">↗</span>
-          </Link>
-        )}
 
         {featured.length > 0 && (
           <section className="section home__featured" aria-labelledby="featured-title">

@@ -16,6 +16,7 @@ from pipeline.analysis.transposition import (
     application_start,
     article_label,
     classify,
+    first_deadline,
     general_deadline,
     general_deadline_basis,
 )
@@ -159,6 +160,16 @@ def test_amld6_general_deadline_is_the_checked_one_not_the_earliest():
         ("2027-07-10", "deadline"),
         ("2029-07-10", "further_deadline"),
     ]
+
+
+def test_a_member_state_is_late_from_the_earliest_deadline():
+    # Directive (EU) 2024/1640: the tracker showed Estonia, Croatia and Poland as "Deadline not yet reached" (general
+    # deadline 10 July 2027) beside the Commission's non-communication cases of 24 September 2025, opened after the
+    # deadline for Art. 74 (10 July 2025)
+    assert first_deadline(real("32024L1640")) == "2025-07-10"
+    assert first_deadline(real("32023L2864")) == "2025-07-10"  # Art. 17(2), for Article 3
+    assert first_deadline(directive({"2027-01-01": []})) == "2027-01-01"  # only the general deadline
+    assert first_deadline(directive({})) is None
 
 
 @pytest.mark.parametrize(

@@ -148,7 +148,6 @@ const routes = [
     'Directives into national law – Legislation',
     'Each directive due in the last three years or the next twelve months, with every Member State’s notified national measures and the Commission’s open cases.',
   ],
-  ['insights', 'Data insights', 'Evidence-led analysis of tracked EU legislative files, Parliament votes and Council positions, with careful limitations.'],
   ['votes', 'Parliament votes', 'How the European Parliament voted: final votes, close votes, political groups and countries.'],
   ['people', 'MEPs', 'Members of the European Parliament, political groups and national parties.'],
   ['countries', 'Countries', 'How each EU Member State takes part in EU decisions and applies EU law.'],
