@@ -1,6 +1,6 @@
 {
  "failing": {},
- "last_complete": "2026-11-16T13:51:28Z",
+ "last_complete": "2026-11-20T14:13:48Z",
  "last_mode": "incremental",
  "list_page": {
   "APP": 500,
@@ -30,11 +30,10 @@
   "2020-3521": "404 at /procedures/{id}",
   "2021-0211": "no English title for 2021/0211(COD) in the EP record or OEIL; split procedure, parts: 2021-0211A, 2021-0211B",
   "2022-0132": "no English title for 2022/0132(COD) in the EP record or OEIL; split procedure, parts: 2022-0132A, 2022-0132B",
-  "2022-0430": "404 at /procedures/{id}",
-  "2026-0346": "no English title for 2026/0346(COD) in the EP record or OEIL"
+  "2022-0430": "404 at /procedures/{id}"
  },
  "unsettled": {
-  "attempted_at": "2026-11-16T13:37:06Z",
+  "attempted_at": "2026-11-20T14:05:05Z",
   "ids": []
  }
 }
