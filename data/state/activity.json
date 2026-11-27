@@ -2504,5 +2504,1415 @@
   },
   "title": "New file: Multiannual financial framework 2021-2027: extension of the EU budget guarantee for loans to Ukraine",
   "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0131",
+  "id": "chg:2023-0131:stage:adopted:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "negotiations",
+  "source": {
+   "identifier": "2023-0131-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:18:47Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0131-SIGN-2026-11-25"
+  },
+  "title": "Laying down Union procedures for the authorisation and supervision of medicinal products for human use and…: status now “Signed, awaiting publication” (previously “Second reading in Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0131",
+  "id": "chg:2023-0131:ev:2023-0131-DEC-DCPL-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2023-0131-DEC-DCPL-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:18:47Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0131-DEC-DCPL-2026-11-25"
+  },
+  "title": "Laying down Union procedures for the authorisation and supervision of medicinal products for human use and…: Parliament approved the Council's position at second reading",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0131",
+  "id": "chg:2023-0131:ev:2023-0131-SIGN-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "2023-0131-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:18:47Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0131-SIGN-2026-11-25"
+  },
+  "title": "Laying down Union procedures for the authorisation and supervision of medicinal products for human use and…: Final act signed",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0132",
+  "id": "chg:2023-0132:stage:adopted:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "negotiations",
+  "source": {
+   "identifier": "2023-0132-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:18:55Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0132-SIGN-2026-11-25"
+  },
+  "title": "Union code relating to medicinal products for human use, and repealing Directive 2001/83/EC and Directive…: status now “Signed, awaiting publication” (previously “Second reading in Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0132",
+  "id": "chg:2023-0132:ev:2023-0132-DEC-DCPL-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2023-0132-DEC-DCPL-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:18:55Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0132-DEC-DCPL-2026-11-25"
+  },
+  "title": "Union code relating to medicinal products for human use, and repealing Directive 2001/83/EC and Directive…: Parliament approved the Council's position at second reading",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0132",
+  "id": "chg:2023-0132:ev:2023-0132-SIGN-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "2023-0132-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:18:55Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0132-SIGN-2026-11-25"
+  },
+  "title": "Union code relating to medicinal products for human use, and repealing Directive 2001/83/EC and Directive…: Final act signed",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-27",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0134",
+  "id": "chg:2023-0134:stage:published:2026-11-27",
+  "kind": "status_change",
+  "previous_stage": "adopted",
+  "source": {
+   "identifier": "32026L2610",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L2610",
+   "published": "2026-11-27",
+   "retrieved_at": "2026-11-27T15:31:51Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L2610"
+  },
+  "title": "Amending Directive 1999/62/EC as regards the variation of charges for heavy-duty vehicles based on their CO2…: status now “Published, not yet in force” (previously “Adopted by Parliament and Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0134",
+  "id": "chg:2023-0134:ev:act-32026L2610-signature-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026L2610",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L2610",
+   "published": "2026-11-27",
+   "retrieved_at": "2026-11-27T15:31:51Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L2610"
+  },
+  "title": "Amending Directive 1999/62/EC as regards the variation of charges for heavy-duty vehicles based on their CO2…: Signed by the Presidents of Parliament and Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-27",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0134",
+  "id": "chg:2023-0134:ev:act-32026L2610-publication-2026-11-27",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026L2610",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L2610",
+   "published": "2026-11-27",
+   "retrieved_at": "2026-11-27T15:31:51Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L2610"
+  },
+  "title": "Amending Directive 1999/62/EC as regards the variation of charges for heavy-duty vehicles based on their CO2…: Published in the Official Journal of the EU",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0169",
+  "id": "chg:2023-0169:stage:adopted:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "2023-0169-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:18:32Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0169-SIGN-2026-11-25"
+  },
+  "title": "Jurisdiction, applicable law, recognition and enforcement of measures and cooperation in matters relating to…: status now “Signed, awaiting publication” (previously “Approved by Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-19",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0169",
+  "id": "chg:2023-0169:ev:council-ST-16130-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 16130/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 16130/26",
+   "published": "2026-11-20",
+   "retrieved_at": "2026-11-27T15:34:11Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-16130-2026-INIT/EN/pdf"
+  },
+  "title": "Jurisdiction, applicable law, recognition and enforcement of measures and cooperation in matters relating to…: Council adopted the act",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0169",
+  "id": "chg:2023-0169:ev:2023-0169-SIGN-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "2023-0169-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:18:32Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0169-SIGN-2026-11-25"
+  },
+  "title": "Jurisdiction, applicable law, recognition and enforcement of measures and cooperation in matters relating to…: Final act signed",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0437",
+  "id": "chg:2023-0437:stage:adopted:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "2023-0437-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:17:10Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0437-SIGN-2026-11-25"
+  },
+  "title": "Amending Regulations (EC) No 261/2004, (EC) No 1107/2006, (EU) No 1177/2010, (EU) No 181/2011 and (EU)…: status now “Signed, awaiting publication” (previously “Approved by Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-19",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0437",
+  "id": "chg:2023-0437:ev:council-ST-16138-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 16138/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 16138/26",
+   "published": "2026-11-20",
+   "retrieved_at": "2026-11-27T15:34:11Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-16138-2026-INIT/EN/pdf"
+  },
+  "title": "Amending Regulations (EC) No 261/2004, (EC) No 1107/2006, (EU) No 1177/2010, (EU) No 181/2011 and (EU)…: Council adopted the act",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2023-0437",
+  "id": "chg:2023-0437:ev:2023-0437-SIGN-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "2023-0437-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:17:10Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2023-0437-SIGN-2026-11-25"
+  },
+  "title": "Amending Regulations (EC) No 261/2004, (EC) No 1107/2006, (EU) No 1177/2010, (EU) No 181/2011 and (EU)…: Final act signed",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2024-0098",
+  "id": "chg:2024-0098:stage:in_force:2026-11-24",
+  "kind": "status_change",
+  "previous_stage": "published",
+  "source": {
+   "identifier": "32026R2473",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2473",
+   "published": "2026-11-24",
+   "retrieved_at": "2026-11-27T15:31:51Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2473"
+  },
+  "title": "Amending Regulation (EU) No 2023/2124 on certain provisions for fishing in the GFCM (General Fisheries…: status now “In force” (previously “Published, not yet in force”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2024-0301",
+  "id": "chg:2024-0301:stage:adopted:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "2024-0301-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:16:02Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2024-0301-SIGN-2026-11-25"
+  },
+  "title": "Public interface connected to the Internal Market Information System for the declaration of posting of…: status now “Signed, awaiting publication” (previously “Approved by Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-19",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2024-0301",
+  "id": "chg:2024-0301:ev:council-ST-16134-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 16134/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 16134/26",
+   "published": "2026-11-20",
+   "retrieved_at": "2026-11-27T15:34:11Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-16134-2026-INIT/EN/pdf"
+  },
+  "title": "Public interface connected to the Internal Market Information System for the declaration of posting of…: Council adopted the act",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2024-0301",
+  "id": "chg:2024-0301:ev:2024-0301-SIGN-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "2024-0301-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:16:02Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2024-0301-SIGN-2026-11-25"
+  },
+  "title": "Public interface connected to the Internal Market Information System for the declaration of posting of…: Final act signed",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0102",
+  "id": "chg:2025-0102:stage:parliament_position:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "provisional_agreement",
+  "source": {
+   "identifier": "2025-0102-DEC-DCPL-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:48Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0102-DEC-DCPL-2026-11-25"
+  },
+  "title": "Laying a framework for strengthening the availability and security of supply of critical medicinal products…: status now “Approved by Parliament” (previously “Provisional agreement reached”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0102",
+  "id": "chg:2025-0102:ev:vote-200563-ep_position",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0102-DEC-DCPL-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:48Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0102-DEC-DCPL-2026-11-25"
+  },
+  "title": "Laying a framework for strengthening the availability and security of supply of critical medicinal products…: Parliament took its decision (first reading)",
+  "vote_id": "200563"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0102",
+  "id": "chg:2025-0102:vote:201175",
+  "kind": "ep_vote",
+  "source": {
+   "identifier": "MTG-PL-2026-11-25-DEC-201175",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2026-11-25 – results of roll-call votes (EP Open Data API decision MTG-PL-2026-11-25-DEC-201175)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:26:44Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-10-2026-11-25-RCV_EN.html"
+  },
+  "title": "Parliament did not reject the Commission proposal: Laying a framework for strengthening the availability and security of supply of critical medicinal products…",
+  "vote_id": "201175"
+ },
+ {
+  "date": "2026-11-27",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0106",
+  "id": "chg:2025-0106:stage:published:2026-11-27",
+  "kind": "status_change",
+  "previous_stage": "adopted",
+  "source": {
+   "identifier": "32026R2534",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2534",
+   "published": "2026-11-27",
+   "retrieved_at": "2026-11-27T15:31:51Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2534"
+  },
+  "title": "Implementation into Union law of measures adopted by several Regional Fisheries Management Organisations: status now “Published, not yet in force” (previously “Signed, awaiting publication”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-27",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0106",
+  "id": "chg:2025-0106:ev:act-32026R2534-publication-2026-11-27",
+  "kind": "publication",
+  "source": {
+   "identifier": "32026R2534",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2534",
+   "published": "2026-11-27",
+   "retrieved_at": "2026-11-27T15:31:51Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2534"
+  },
+  "title": "Implementation into Union law of measures adopted by several Regional Fisheries Management Organisations: Published in the Official Journal of the EU",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0130",
+  "id": "chg:2025-0130:stage:parliament_position:2026-11-24",
+  "kind": "status_change",
+  "previous_stage": "provisional_agreement",
+  "source": {
+   "identifier": "2025-0130-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:45Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0130-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Regulations (EU) 2016/679, (EU) 2016/1036, (EU) 2016/1037, (EU) 2017/1129, (EU) 2023/1542 and (EU)…: status now “Approved by Parliament” (previously “Provisional agreement reached”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0130",
+  "id": "chg:2025-0130:ev:vote-200541-ep_position",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0130-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:45Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0130-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Regulations (EU) 2016/679, (EU) 2016/1036, (EU) 2016/1037, (EU) 2017/1129, (EU) 2023/1542 and (EU)…: Parliament took its decision (first reading)",
+  "vote_id": "200541"
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0131",
+  "id": "chg:2025-0131:stage:parliament_position:2026-11-24",
+  "kind": "status_change",
+  "previous_stage": "provisional_agreement",
+  "source": {
+   "identifier": "2025-0131-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:44Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0131-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Directives 2014/65/EU and (EU) 2022/2557 as regards the extension of certain mitigating measures…: status now “Approved by Parliament” (previously “Provisional agreement reached”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0131",
+  "id": "chg:2025-0131:ev:vote-200539-ep_position",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0131-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:44Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0131-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Directives 2014/65/EU and (EU) 2022/2557 as regards the extension of certain mitigating measures…: Parliament took its decision (first reading)",
+  "vote_id": "200539"
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0133",
+  "id": "chg:2025-0133:stage:parliament_position:2026-11-24",
+  "kind": "status_change",
+  "previous_stage": "provisional_agreement",
+  "source": {
+   "identifier": "2025-0133-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:43Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0133-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Directives 2000/14/EC, 2011/65/EU, 2013/53/EU, 2014/29/EU, 2014/30/EU, 2014/31/EU, 2014/32/EU…: status now “Approved by Parliament” (previously “Provisional agreement reached”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0133",
+  "id": "chg:2025-0133:ev:vote-200531-ep_position",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0133-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:43Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0133-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Directives 2000/14/EC, 2011/65/EU, 2013/53/EU, 2014/29/EU, 2014/30/EU, 2014/31/EU, 2014/32/EU…: Parliament took its decision (first reading)",
+  "vote_id": "200531"
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0134",
+  "id": "chg:2025-0134:stage:parliament_position:2026-11-24",
+  "kind": "status_change",
+  "previous_stage": "provisional_agreement",
+  "source": {
+   "identifier": "2025-0134-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:41Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0134-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Regulations (EU) No 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU)…: status now “Approved by Parliament” (previously “Provisional agreement reached”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0134",
+  "id": "chg:2025-0134:ev:vote-200533-ep_position",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0134-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:41Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0134-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Regulations (EU) No 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU)…: Parliament took its decision (first reading)",
+  "vote_id": "200533"
+ },
+ {
+  "date": "2026-11-23",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0172",
+  "id": "chg:2025-0172:stage:in_force:2026-11-23",
+  "kind": "status_change",
+  "previous_stage": "published",
+  "source": {
+   "identifier": "32026R2381",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2381",
+   "published": "2026-11-23",
+   "retrieved_at": "2026-11-27T15:31:51Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2381"
+  },
+  "title": "Acceleration of permit-granting for defence readiness projects: status now “In force” (previously “Published, not yet in force”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-23",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0176",
+  "id": "chg:2025-0176:stage:in_force:2026-11-23",
+  "kind": "status_change",
+  "previous_stage": "published",
+  "source": {
+   "identifier": "32026R2382",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026R2382",
+   "published": "2026-11-09",
+   "retrieved_at": "2026-11-09T14:12:48Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R2382"
+  },
+  "title": "Amending Regulations (EC) No 1907/2006, (EC) No 1272/2008, (EU) No 528/2012, (EU) 2019/1021 and (EU)…: status now “In force” (previously “Published, not yet in force”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-23",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0177",
+  "id": "chg:2025-0177:stage:in_force:2026-11-23",
+  "kind": "status_change",
+  "previous_stage": "published",
+  "source": {
+   "identifier": "32026L2383",
+   "institution": "EUR-Lex",
+   "label": "EUR-Lex / Cellar – CELEX 32026L2383",
+   "published": "2026-11-23",
+   "retrieved_at": "2026-11-27T15:31:51Z",
+   "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026L2383"
+  },
+  "title": "Amending Directives 2009/43/EC and 2009/81/EC, as regards the simplification of intra-EU transfers of…: status now “In force” (previously “Published, not yet in force”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0221",
+  "id": "chg:2025-0221:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0221-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:37Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0221-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the Connecting Europe Facility for the period 2028-2034, amending Regulation (EU) 2024/1679 and…: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0221",
+  "id": "chg:2025-0221:ev:2025-0221-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0221-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:37Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0221-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the Connecting Europe Facility for the period 2028-2034, amending Regulation (EU) 2024/1679 and…: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": "201348"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0227",
+  "id": "chg:2025-0227:ev:2025-0227-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0227-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:31Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0227-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing Global Europe: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": "200609"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0239",
+  "id": "chg:2025-0239:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0239-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:23Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0239-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the European Social Fund as part of the National and Regional Partnership Plan set out in…: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0239",
+  "id": "chg:2025-0239:ev:2025-0239-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0239-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:23Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0239-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the European Social Fund as part of the National and Regional Partnership Plan set out in…: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": "201349"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0311",
+  "id": "chg:2025-0311:ev:2025-0311-SIGN-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0311-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:03Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0311-SIGN-2026-11-25"
+  },
+  "title": "Amending Regulations (EU) No 1173/2011 and (EU) No 473/2013 as regards alignment with the EU economic…: Final act signed",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0312",
+  "id": "chg:2025-0312:ev:2025-0312-SIGN-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0312-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:15:02Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0312-SIGN-2026-11-25"
+  },
+  "title": "Amending Regulation (EU) No 472/2013 as regards the economic and budgetary surveillance of Member States in…: Final act signed",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0335",
+  "id": "chg:2025-0335:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0335-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:14:54Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0335-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Safety, resilience and sustainability of space activities in the Union: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0335",
+  "id": "chg:2025-0335:ev:2025-0335-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0335-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:14:54Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0335-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Safety, resilience and sustainability of space activities in the Union: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0349",
+  "id": "chg:2025-0349:ev:2025-0349-SIGN-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0349-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:14:48Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0349-SIGN-2026-11-25"
+  },
+  "title": "Empowering France to accede to the Inter-American Convention for the Protection and Conservation of Sea…: Final act signed",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0362",
+  "id": "chg:2025-0362:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0362-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:14:38Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0362-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Amending Directives (EU) 2016/2341 and 2016/97 as regards the strengthening of the framework for…: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0362",
+  "id": "chg:2025-0362:ev:2025-0362-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0362-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:14:38Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0362-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Amending Directives (EU) 2016/2341 and 2016/97 as regards the strengthening of the framework for…: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0391",
+  "id": "chg:2025-0391:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0391-DEC-REFBAK-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:14:16Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0391-DEC-REFBAK-2026-11-25"
+  },
+  "title": "Speeding-up environmental assessments: status now “Mandate to negotiate with the Council” (previously “Committee report adopted”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0391",
+  "id": "chg:2025-0391:ev:vote-201445-negotiation_mandate",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0391-DEC-REFBAK-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:14:16Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0391-DEC-REFBAK-2026-11-25"
+  },
+  "title": "Speeding-up environmental assessments: Parliament sent the file back to committee to negotiate with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0391",
+  "id": "chg:2025-0391:vote:201352",
+  "kind": "ep_vote",
+  "source": {
+   "identifier": "MTG-PL-2026-11-25-DEC-201352",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2026-11-25 – results of roll-call votes (EP Open Data API decision MTG-PL-2026-11-25-DEC-201352)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:26:44Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-10-2026-11-25-RCV_EN.html"
+  },
+  "title": "Parliament did not reject the Commission proposal: Speeding-up environmental assessments",
+  "vote_id": "201352"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0405",
+  "id": "chg:2025-0405:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "MTG-PL-2026-11-25-DEC-200637",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2026-11-25 – results of roll-call votes (EP Open Data API decision MTG-PL-2026-11-25-DEC-200637)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:26:44Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-10-2026-11-25-RCV_EN.html"
+  },
+  "title": "Amending Directives 2001/18/EC and 2010/53/EU as regards the placing on the market of genetically modified…: status now “Mandate to negotiate with the Council” (previously “Committee report adopted”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0405",
+  "id": "chg:2025-0405:ev:vote-200637-negotiation_mandate",
+  "kind": "milestone",
+  "source": {
+   "identifier": "MTG-PL-2026-11-25-DEC-200637",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2026-11-25 – results of roll-call votes (EP Open Data API decision MTG-PL-2026-11-25-DEC-200637)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:26:44Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-10-2026-11-25-RCV_EN.html"
+  },
+  "title": "Amending Directives 2001/18/EC and 2010/53/EU as regards the placing on the market of genetically modified…: Parliament voted to open negotiations with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0405",
+  "id": "chg:2025-0405:vote:201119",
+  "kind": "ep_vote",
+  "source": {
+   "identifier": "MTG-PL-2026-11-25-DEC-201119",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2026-11-25 – results of roll-call votes (EP Open Data API decision MTG-PL-2026-11-25-DEC-201119)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:26:44Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-10-2026-11-25-RCV_EN.html"
+  },
+  "title": "Parliament did not reject the Commission proposal: Amending Directives 2001/18/EC and 2010/53/EU as regards the placing on the market of genetically modified…",
+  "vote_id": "201119"
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0417",
+  "id": "chg:2025-0417:stage:parliament_position:2026-11-24",
+  "kind": "status_change",
+  "previous_stage": "provisional_agreement",
+  "source": {
+   "identifier": "2025-0417-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:48Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0417-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Regulation (EU) 2018/848 as regards certain production, labelling and certification rules and…: status now “Approved by Parliament” (previously “Provisional agreement reached”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0417",
+  "id": "chg:2025-0417:ev:vote-200577-ep_position",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0417-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:48Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0417-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Regulation (EU) 2018/848 as regards certain production, labelling and certification rules and…: Parliament took its decision (first reading)",
+  "vote_id": "200577"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0531",
+  "id": "chg:2025-0531:stage:adopted:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "parliament_position",
+  "source": {
+   "identifier": "2025-0531-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:38Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0531-SIGN-2026-11-25"
+  },
+  "title": "Amending Regulations (EC) No 1272/2008, (EC) No 1223/2009 and (EU) 2019/1009 as regards simplification of…: status now “Signed, awaiting publication” (previously “Approved by Parliament”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-19",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0531",
+  "id": "chg:2025-0531:ev:council-ST-16125-2026",
+  "kind": "milestone",
+  "source": {
+   "identifier": "ST 16125/26",
+   "institution": "Council",
+   "label": "Council of the EU – Voting result ST 16125/26",
+   "published": "2026-11-20",
+   "retrieved_at": "2026-11-27T15:34:11Z",
+   "url": "https://data.consilium.europa.eu/doc/document/ST-16125-2026-INIT/EN/pdf"
+  },
+  "title": "Amending Regulations (EC) No 1272/2008, (EC) No 1223/2009 and (EU) 2019/1009 as regards simplification of…: Council adopted the act",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0531",
+  "id": "chg:2025-0531:ev:2025-0531-SIGN-2026-11-25",
+  "kind": "publication",
+  "source": {
+   "identifier": "2025-0531-SIGN-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:38Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0531-SIGN-2026-11-25"
+  },
+  "title": "Amending Regulations (EC) No 1272/2008, (EC) No 1223/2009 and (EU) 2019/1009 as regards simplification of…: Final act signed",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0540",
+  "id": "chg:2025-0540:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0540-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:36Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0540-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the Union support for asylum, migration and integration for the period from 2028 to 2034: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0540",
+  "id": "chg:2025-0540:ev:2025-0540-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0540-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:36Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0540-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the Union support for asylum, migration and integration for the period from 2028 to 2034: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": "201345"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0541",
+  "id": "chg:2025-0541:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0541-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:35Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0541-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the Union support for the Schengen area, for European integrated border management and for the…: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0541",
+  "id": "chg:2025-0541:ev:2025-0541-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0541-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:35Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0541-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the Union support for the Schengen area, for European integrated border management and for the…: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0543",
+  "id": "chg:2025-0543:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0543-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:34Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0543-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing Horizon Europe, the Framework Programme for Research and Innovation, for the period 2028-2034…: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0543",
+  "id": "chg:2025-0543:ev:2025-0543-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0543-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:34Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0543-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing Horizon Europe, the Framework Programme for Research and Innovation, for the period 2028-2034…: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": "201347"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0550",
+  "id": "chg:2025-0550:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0550-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:26Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0550-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the 'AgoraEU' programme for the period 2028-2034, and repealing Regulations (EU) 2021/692 and…: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0550",
+  "id": "chg:2025-0550:ev:2025-0550-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0550-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:26Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0550-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the 'AgoraEU' programme for the period 2028-2034, and repealing Regulations (EU) 2021/692 and…: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": "201344"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0555",
+  "id": "chg:2025-0555:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2025-0555-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:25Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0555-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the European Competitiveness Fund ('ECF’), including the specific programme for defence…: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2025-0555",
+  "id": "chg:2025-0555:ev:2025-0555-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2025-0555-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:13:25Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2025-0555-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Establishing the European Competitiveness Fund ('ECF’), including the specific programme for defence…: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": "201346"
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0085",
+  "id": "chg:2026-0085:stage:parliament_position:2026-11-24",
+  "kind": "status_change",
+  "previous_stage": "provisional_agreement",
+  "source": {
+   "identifier": "2026-0085-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:12:57Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2026-0085-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Decision (EU) 2015/1814 as regards ceasing the invalidation of allowances in the market stability…: status now “Approved by Parliament” (previously “Provisional agreement reached”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-24",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0085",
+  "id": "chg:2026-0085:ev:vote-200575-ep_position",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2026-0085-DEC-DCPL-2026-11-24",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:12:57Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2026-0085-DEC-DCPL-2026-11-24"
+  },
+  "title": "Amending Decision (EU) 2015/1814 as regards ceasing the invalidation of allowances in the market stability…: Parliament took its decision (first reading)",
+  "vote_id": "200575"
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0134",
+  "id": "chg:2026-0134:stage:negotiations:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2026-0134-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:11:51Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2026-0134-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Mobile satellite services: selection and authorisation of systems using the harmonised 2 GHz frequency band: status now “Mandate to negotiate with the Council” (previously “Committee decided to negotiate with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0134",
+  "id": "chg:2026-0134:ev:2026-0134-DEC-PLEIN1-2026-11-25",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2026-0134-DEC-PLEIN1-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:11:51Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2026-0134-DEC-PLEIN1-2026-11-25"
+  },
+  "title": "Mobile satellite services: selection and authorisation of systems using the harmonised 2 GHz frequency band: Parliament confirmed the committee's mandate to negotiate with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0292",
+  "id": "chg:2026-0292:stage:parliament_position:2026-11-25",
+  "kind": "status_change",
+  "previous_stage": "proposed",
+  "source": {
+   "identifier": "2026-0292-DEC-DCPL-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:11:17Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2026-0292-DEC-DCPL-2026-11-25"
+  },
+  "title": "VAT fraud: extension of the application period of the optional reverse charge mechanism and Quick Reaction…: status now “Parliament gave its opinion” (previously “Committee report adopted”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0292",
+  "id": "chg:2026-0292:ev:vote-200586-ep_position",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2026-0292-DEC-DCPL-2026-11-25",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:11:17Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2026-0292-DEC-DCPL-2026-11-25"
+  },
+  "title": "VAT fraud: extension of the application period of the optional reverse charge mechanism and Quick Reaction…: Parliament delivered its opinion",
+  "vote_id": "200586"
+ },
+ {
+  "date": "2026-11-26",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0325",
+  "id": "chg:2026-0325:stage:parliament_position:2026-11-26",
+  "kind": "status_change",
+  "previous_stage": "negotiations",
+  "source": {
+   "identifier": "MTG-PL-2026-11-26-DEC-201321",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2026-11-26 – results of roll-call votes (EP Open Data API decision MTG-PL-2026-11-26-DEC-201321)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:26:44Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-10-2026-11-26-RCV_EN.html"
+  },
+  "title": "Reduction of methane emissions in the energy sector: postponement of certain obligations: status now “Approved by Parliament” (previously “Negotiations with the Council”)",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-23",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0325",
+  "id": "chg:2026-0325:ev:2026-0325-DEC-VOAGT-2026-11-23",
+  "kind": "milestone",
+  "source": {
+   "identifier": "2026-0325-DEC-VOAGT-2026-11-23",
+   "institution": "EP",
+   "label": "Machine-readable record (EP Open Data API)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:11:09Z",
+   "url": "https://data.europarl.europa.eu/api/v2/events/2026-0325-DEC-VOAGT-2026-11-23"
+  },
+  "title": "Reduction of methane emissions in the energy sector: postponement of certain obligations: Parliament committee approved the provisional agreement with the Council",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-26",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0325",
+  "id": "chg:2026-0325:ev:vote-201321-ep_position",
+  "kind": "milestone",
+  "source": {
+   "identifier": "MTG-PL-2026-11-26-DEC-201321",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2026-11-26 – results of roll-call votes (EP Open Data API decision MTG-PL-2026-11-26-DEC-201321)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:26:44Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-10-2026-11-26-RCV_EN.html"
+  },
+  "title": "Reduction of methane emissions in the energy sector: postponement of certain obligations: Parliament adopted its position in a plenary vote",
+  "vote_id": "201321"
+ },
+ {
+  "date": "2026-11-26",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0325",
+  "id": "chg:2026-0325:vote:201499",
+  "kind": "ep_vote",
+  "source": {
+   "identifier": "MTG-PL-2026-11-26-DEC-201499",
+   "institution": "EP",
+   "label": "European Parliament plenary minutes, 2026-11-26 – results of roll-call votes (EP Open Data API decision MTG-PL-2026-11-26-DEC-201499)",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:26:44Z",
+   "url": "https://www.europarl.europa.eu/doceo/document/PV-10-2026-11-26-RCV_EN.html"
+  },
+  "title": "Parliament did not reject the Commission proposal: Reduction of methane emissions in the energy sector: postponement of certain obligations",
+  "vote_id": "201499"
+ },
+ {
+  "date": "2026-11-18",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0363",
+  "id": "chg:2026-0363:ev:OEIL-2026-0363-2026-11-18-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0363(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:10:56Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0363(COD)"
+  },
+  "title": "Instrument for Coordinated Support to Ukraine for 2027: Commission published its legislative proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-18",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0364",
+  "id": "chg:2026-0364:ev:OEIL-2026-0364-2026-11-18-preparatory-document",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0364(APP)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:10:56Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0364(APP)"
+  },
+  "title": "Multiannual financial framework 2021-2027: extension of the EU budget guarantee for loans to Ukraine: Commission published its proposal",
+  "vote_id": null
+ },
+ {
+  "date": "2026-11-25",
+  "detected_at": "2026-11-27T15:37:37Z",
+  "dossier_id": "2026-0365",
+  "id": "chg:2026-0365:ev:OEIL-2026-0365-2026-11-25-legislative-proposal-published",
+  "kind": "new_dossier",
+  "source": {
+   "identifier": "2026/0365(COD)",
+   "institution": "OEIL",
+   "label": "Legislative Observatory (OEIL) key events",
+   "published": null,
+   "retrieved_at": "2026-11-27T15:10:55Z",
+   "url": "https://oeil.europarl.europa.eu/oeil/en/procedure-file?reference=2026/0365(COD)"
+  },
+  "title": "Quantum Act: Commission published its legislative proposal",
+  "vote_id": null
  }
 ]

@@ -24035,6 +24035,7 @@
    "events": [
     "2021-0051-ANPRO-2021-03-24",
     "2021-0051-DEC-DCPL-2021-05-18",
+    "2021-0051-PUB-2021-06-21",
     "OEIL-2021-0051-2021-03-03-legislative-proposal-published",
     "OEIL-2021-0051-2021-04-22-vote-in-committee",
     "OEIL-2021-0051-2021-04-23-committee-report-tabled-for-plenary-1st-",
@@ -32295,6 +32296,7 @@
     "2023-0131-DEC-ADCP-BUDG-2024-02-14",
     "2023-0131-DEC-ADCP-ITRE-2024-02-22",
     "2023-0131-DEC-DCPL-2024-04-10",
+    "2023-0131-DEC-DCPL-2026-11-25",
     "2023-0131-DEC-VOAGT-2026-03-18",
     "2023-0131-DEPOT-2024-03-21",
     "2023-0131-DEPOT-2026-11-13",
@@ -32302,6 +32304,7 @@
     "2023-0131-MEET-TRI2-2025-10-07",
     "2023-0131-MEET-TRI2-2025-11-11",
     "2023-0131-MEET-TRI2-2025-12-10",
+    "2023-0131-SIGN-2026-11-25",
     "ENVI-AM-756131-DEPOT-2023-11-21+7",
     "ENVI-PR-753550-DEPOT-2023-10-20",
     "MTG-PL-2024-04-10-PVCRE-ITM-18",
@@ -32314,13 +32317,15 @@
     "council-ST-13737-2026",
     "vote-166879-ep_position"
    ],
-   "label": "Second reading in Parliament",
+   "label": "Signed, awaiting publication",
    "sigs": [
     "2026-09-28|council_position",
     "2026-10-01|council_position",
-    "2026-11-10|committee_report"
+    "2026-11-10|committee_report",
+    "2026-11-25|ep_position",
+    "2026-11-25|signature"
    ],
-   "stage": "negotiations",
+   "stage": "adopted",
    "title": "Laying down Union procedures for the authorisation and supervision of medicinal products for human use and establishing rules governing the European Medicines Agency, amending Regulation (EC) No 1394/2007 and Regulation (EU) No 536/2014 and repealing Regulation (EC) No 726/2004, Regulation (EC) No 141/2000 and Regulation (EC) No 1901/2006",
    "votes": [
     "166879"
@@ -32339,6 +32344,7 @@
     "2023-0132-DEC-ADCP-ITRE-2024-02-22",
     "2023-0132-DEC-ADCP-JURI-2024-02-13",
     "2023-0132-DEC-DCPL-2024-04-10",
+    "2023-0132-DEC-DCPL-2026-11-25",
     "2023-0132-DEC-VOAGT-2026-03-18",
     "2023-0132-DEPOT-2024-03-21",
     "2023-0132-DEPOT-2026-11-13",
@@ -32346,6 +32352,7 @@
     "2023-0132-MEET-TRI2-2025-10-07",
     "2023-0132-MEET-TRI2-2025-11-11",
     "2023-0132-MEET-TRI2-2025-12-10",
+    "2023-0132-SIGN-2026-11-25",
     "ENVI-AM-754916-DEPOT-2023-11-21+3",
     "ENVI-PR-753470-DEPOT-2023-10-03",
     "MTG-PL-2024-04-10-PVCRE-ITM-18",
@@ -32358,13 +32365,15 @@
     "council-ST-13739-2026",
     "vote-166975-ep_position"
    ],
-   "label": "Second reading in Parliament",
+   "label": "Signed, awaiting publication",
    "sigs": [
     "2026-09-28|council_position",
     "2026-10-01|council_position",
-    "2026-11-10|committee_report"
+    "2026-11-10|committee_report",
+    "2026-11-25|ep_position",
+    "2026-11-25|signature"
    ],
-   "stage": "negotiations",
+   "stage": "adopted",
    "title": "Union code relating to medicinal products for human use, and repealing Directive 2001/83/EC and Directive 2009/35/EC",
    "votes": [
     "166975"
@@ -32397,7 +32406,9 @@
    ]
   },
   "2023-0134": {
-   "acts": [],
+   "acts": [
+    "32026L2610"
+   ],
    "council": [
     "ST-14946-2026"
    ],
@@ -32423,14 +32434,16 @@
     "council-ST-14946-2026",
     "vote-197486-ep_position"
    ],
-   "label": "Adopted by Parliament and Council",
+   "label": "Published, not yet in force",
    "sigs": [
     "2026-09-02|provisional_agreement",
     "2026-10-07|ep_position",
-    "2026-10-26|council_adoption"
+    "2026-10-26|council_adoption",
+    "2026-11-25|signature",
+    "2026-11-27|publication"
    ],
-   "stage": "adopted",
-   "title": "Amending Directive 1999/62/EC, Council Directive 1999/37/EC and Directive (EU) 2019/520 as regards the CO2 emission class of heavy-duty vehicles with trailers",
+   "stage": "published",
+   "title": "Amending Directive 1999/62/EC as regards the variation of charges for heavy-duty vehicles based on their CO2 emissions and to clarify and simplify certain provisions",
    "votes": [
     "197486"
    ]
@@ -32930,7 +32943,9 @@
   },
   "2023-0169": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-16130-2026"
+   ],
    "events": [
     "2023-0169-ANPRO-2023-07-10",
     "2023-0169-DEC-ADCP-2025-06-24",
@@ -32940,6 +32955,7 @@
     "2023-0169-DEPOT-2025-07-01",
     "2023-0169-MEET-TRI1-2026-03-17",
     "2023-0169-MEET-TRI1-2026-05-12",
+    "2023-0169-SIGN-2026-11-25",
     "A-10-2025-0128-AM-001-139-DEPOT-2026-10-14+1",
     "JURI-AM-771915-DEPOT-2025-03-24",
     "JURI-PR-769996-DEPOT-2025-03-03",
@@ -32947,13 +32963,16 @@
     "OEIL-2023-0169-2024-11-13-resumption-of-business-from-the-previous",
     "OEIL-2023-0169-2025-06-24-committee-decision-to-open-interinstitut",
     "OEIL-2023-0169-2025-07-07-committee-decision-to-enter-into-interin",
+    "council-ST-16130-2026",
     "vote-198290-ep_position"
    ],
-   "label": "Approved by Parliament",
+   "label": "Signed, awaiting publication",
    "sigs": [
-    "2026-10-20|ep_position"
+    "2026-10-20|ep_position",
+    "2026-11-19|council_adoption",
+    "2026-11-25|signature"
    ],
-   "stage": "parliament_position",
+   "stage": "adopted",
    "title": "Jurisdiction, applicable law, recognition and enforcement of measures and cooperation in matters relating to the protection of adults",
    "votes": [
     "198290"
@@ -33398,6 +33417,7 @@
     "2023-0208-MEET-TRI1-2026-10-08",
     "2023-0208-MEET-TRI1-2026-10-20",
     "2023-0208-MEET-TRI1-2026-11-05",
+    "2023-0208-MEET-TRI1-2026-11-18",
     "ECON-AM-781237-DEPOT-2025-12-19",
     "ECON-PR-758001-DEPOT-2024-01-11",
     "ECON-PR-778137-DEPOT-2025-11-03",
@@ -33430,6 +33450,7 @@
     "2023-0209-MEET-TRI2-2025-11-26",
     "ECON-AM-757022-DEPOT-2023-12-04",
     "ECON-PR-753780-DEPOT-2023-11-13",
+    "ECON-PR-797726-DEPOT-2026-11-20",
     "OEIL-2023-0209-2023-06-28-legislative-proposal-published",
     "OEIL-2023-0209-2024-10-21-committee-decision-to-open-interinstitut",
     "OEIL-2023-0209-2024-11-13-committee-decision-to-enter-into-interin",
@@ -33467,6 +33488,7 @@
     "2023-0210-MEET-TRI2-2025-11-26",
     "ECON-AM-757115-DEPOT-2023-12-04+1",
     "ECON-PR-755995-DEPOT-2023-11-13",
+    "ECON-PR-797709-DEPOT-2026-11-20",
     "OEIL-2023-0210-2023-06-28-legislative-proposal-published",
     "OEIL-2023-0210-2024-10-21-committee-decision-to-open-interinstitut",
     "OEIL-2023-0210-2024-11-13-committee-decision-to-enter-into-interin",
@@ -33500,6 +33522,7 @@
     "2023-0211-MEET-TRI1-2026-10-08",
     "2023-0211-MEET-TRI1-2026-10-20",
     "2023-0211-MEET-TRI1-2026-11-05",
+    "2023-0211-MEET-TRI1-2026-11-18",
     "ECON-AM-759645-DEPOT-2024-02-21",
     "ECON-AM-781236-DEPOT-2025-12-19",
     "ECON-PR-758975-DEPOT-2024-02-09",
@@ -33532,6 +33555,7 @@
     "2023-0212-MEET-TRI1-2026-10-08",
     "2023-0212-MEET-TRI1-2026-10-20",
     "2023-0212-MEET-TRI1-2026-11-05",
+    "2023-0212-MEET-TRI1-2026-11-18",
     "ECON-AM-781235-DEPOT-2025-12-19+3",
     "ECON-PR-758954-DEPOT-2024-02-09",
     "ECON-PR-778136-DEPOT-2025-11-03",
@@ -34025,7 +34049,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-24|publication",
     "2026-08-13|entry_into_force"
    ],
    "stage": "in_force",
@@ -35074,7 +35097,9 @@
   },
   "2023-0437": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-16138-2026"
+   ],
    "events": [
     "2023-0437-ANPRO-2024-02-08",
     "2023-0437-DEC-ADCP-2025-06-24",
@@ -35086,6 +35111,7 @@
     "2023-0437-MEET-TRI1-2025-10-15",
     "2023-0437-MEET-TRI1-2026-05-18",
     "2023-0437-MEET-TRI1-2026-06-25",
+    "2023-0437-SIGN-2026-11-25",
     "A-10-2025-0136-AM-001-171-DEPOT-2026-10-15",
     "A-10-2025-0136-AM-172-172-DEPOT-2026-10-14+1",
     "OEIL-2023-0437-2023-11-29-legislative-proposal-published",
@@ -35094,14 +35120,17 @@
     "OEIL-2023-0437-2025-07-07-committee-decision-to-enter-into-interin",
     "TRAN-AM-771913-DEPOT-2025-04-01",
     "TRAN-PR-768111-DEPOT-2025-02-20",
+    "council-ST-16138-2026",
     "vote-198338-ep_position"
    ],
-   "label": "Approved by Parliament",
+   "label": "Signed, awaiting publication",
    "sigs": [
     "2026-09-02|provisional_agreement",
-    "2026-10-20|ep_position"
+    "2026-10-20|ep_position",
+    "2026-11-19|council_adoption",
+    "2026-11-25|signature"
    ],
-   "stage": "parliament_position",
+   "stage": "adopted",
    "title": "Amending Regulations (EC) No 261/2004, (EC) No 1107/2006, (EU) No 1177/2010, (EU) No 181/2011 and (EU) 2021/782 as regards enforcement of passenger rights in the Union",
    "votes": [
     "198338"
@@ -36036,14 +36065,15 @@
     "council-ST-14472-2026",
     "vote-195835-ep_position"
    ],
-   "label": "Published, not yet in force",
+   "label": "In force",
    "sigs": [
     "2026-09-15|ep_position",
     "2026-10-13|council_adoption",
     "2026-10-21|signature",
-    "2026-11-04|publication"
+    "2026-11-04|publication",
+    "2026-11-24|entry_into_force"
    ],
-   "stage": "published",
+   "stage": "in_force",
    "title": "Amending Regulation (EU) No 2023/2124 on certain provisions for fishing in the GFCM (General Fisheries Commission for the Mediterranean) Agreement area",
    "votes": [
     "195835"
@@ -36426,7 +36456,9 @@
   },
   "2024-0301": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-16134-2026"
+   ],
    "events": [
     "2024-0301-ANPRO-2025-02-10",
     "2024-0301-DEC-ADCP-2025-09-08",
@@ -36436,19 +36468,23 @@
     "2024-0301-DEPOT-2025-09-12",
     "2024-0301-MEET-TRI1-2025-10-13",
     "2024-0301-MEET-TRI1-2026-06-23",
+    "2024-0301-SIGN-2026-11-25",
     "A-10-2025-0162-AM-001-064-DEPOT-2026-10-14+2",
     "CJ52-AM-774325-DEPOT-2025-06-04+1",
     "CJ52-PR-772171-DEPOT-2025-04-30",
     "OEIL-2024-0301-2024-11-13-legislative-proposal-published",
     "OEIL-2024-0301-2025-09-08-committee-decision-to-open-interinstitut",
     "OEIL-2024-0301-2025-10-06-committee-decision-to-enter-into-interin",
+    "council-ST-16134-2026",
     "vote-198311-ep_position"
    ],
-   "label": "Approved by Parliament",
+   "label": "Signed, awaiting publication",
    "sigs": [
-    "2026-10-20|ep_position"
+    "2026-10-20|ep_position",
+    "2026-11-19|council_adoption",
+    "2026-11-25|signature"
    ],
-   "stage": "parliament_position",
+   "stage": "adopted",
    "title": "Public interface connected to the Internal Market Information System for the declaration of posting of workers and amending Regulation (EU) No 1024/2012",
    "votes": [
     "198311"
@@ -36593,7 +36629,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-29|publication",
     "2026-08-18|entry_into_force"
    ],
    "stage": "in_force",
@@ -37436,6 +37471,7 @@
     "2025-0102-DEC-ADCP-IMCO-2025-11-11",
     "2025-0102-DEC-ADCP-ITRE-2025-11-11",
     "2025-0102-DEC-DCPL-2026-01-20",
+    "2025-0102-DEC-DCPL-2026-11-25",
     "2025-0102-DEC-REFBAK-2026-01-20",
     "2025-0102-DEC-VOAGT-2026-07-14",
     "2025-0102-DEPOT-2025-12-19",
@@ -37451,15 +37487,20 @@
     "SANT-AM-778025-DEPOT-2025-09-26",
     "SANT-AM-778031-DEPOT-2025-10-13+1",
     "SANT-PR-775742-DEPOT-2025-07-18",
-    "vote-183050-negotiation_mandate"
+    "vote-183050-negotiation_mandate",
+    "vote-200563-ep_position"
    ],
-   "label": "Provisional agreement reached",
-   "sigs": [],
-   "stage": "provisional_agreement",
+   "label": "Approved by Parliament",
+   "sigs": [
+    "2026-11-25|ep_position"
+   ],
+   "stage": "parliament_position",
    "title": "Laying a framework for strengthening the availability and security of supply of critical medicinal products as well as the availability of, and accessibility of, medicinal products of common interest, and amending Regulation (EU) 2024/795",
    "votes": [
     "183050",
-    "183244"
+    "183244",
+    "200563",
+    "201175"
    ]
   },
   "2025-0103": {
@@ -37529,7 +37570,9 @@
    ]
   },
   "2025-0106": {
-   "acts": [],
+   "acts": [
+    "32026R2534"
+   ],
    "council": [
     "ST-14475-2026"
    ],
@@ -37551,13 +37594,14 @@
     "council-ST-14475-2026",
     "vote-195833-ep_position"
    ],
-   "label": "Signed, awaiting publication",
+   "label": "Published, not yet in force",
    "sigs": [
     "2026-09-15|ep_position",
     "2026-10-13|council_adoption",
-    "2026-10-21|signature"
+    "2026-10-21|signature",
+    "2026-11-27|publication"
    ],
-   "stage": "adopted",
+   "stage": "published",
    "title": "Implementation into Union law of measures adopted by several Regional Fisheries Management Organisations",
    "votes": [
     "195833"
@@ -37627,6 +37671,7 @@
     "2025-0130-DEC-ADCP-2026-02-25",
     "2025-0130-DEC-ADCP-IMCO-2026-01-27",
     "2025-0130-DEC-ADCP-INTA-2025-12-02",
+    "2025-0130-DEC-DCPL-2026-11-24",
     "2025-0130-DEC-PLEIN1-2026-03-11",
     "2025-0130-DEC-VOAGT-2026-07-02",
     "2025-0130-DEPOT-2026-03-03",
@@ -37638,13 +37683,18 @@
     "CJ58-PR-775772-DEPOT-2025-11-07",
     "OEIL-2025-0130-2025-05-21-legislative-proposal-published",
     "OEIL-2025-0130-2026-02-25-committee-decision-to-open-interinstitut",
-    "OEIL-2025-0130-2026-03-09-committee-decision-to-enter-into-interin"
+    "OEIL-2025-0130-2026-03-09-committee-decision-to-enter-into-interin",
+    "vote-200541-ep_position"
    ],
-   "label": "Provisional agreement reached",
-   "sigs": [],
-   "stage": "provisional_agreement",
+   "label": "Approved by Parliament",
+   "sigs": [
+    "2026-11-24|ep_position"
+   ],
+   "stage": "parliament_position",
    "title": "Amending Regulations (EU) 2016/679, (EU) 2016/1036, (EU) 2016/1037, (EU) 2017/1129, (EU) 2023/1542 and (EU) 2024/573 as regards the extension of certain mitigating measures available for small and medium sized enterprises to small mid-cap enterprises and further simplification measures",
-   "votes": []
+   "votes": [
+    "200541"
+   ]
   },
   "2025-0131": {
    "acts": [],
@@ -37653,6 +37703,7 @@
     "2025-0131-ANPRO-2025-07-07",
     "2025-0131-DEC-ADCP-2026-02-25",
     "2025-0131-DEC-ADCP-IMCO-2026-01-27",
+    "2025-0131-DEC-DCPL-2026-11-24",
     "2025-0131-DEC-PLEIN1-2026-03-11",
     "2025-0131-DEC-VOAGT-2026-07-02",
     "2025-0131-DEPOT-2026-02-27",
@@ -37664,13 +37715,18 @@
     "CJ12-PR-775765-DEPOT-2025-11-14",
     "OEIL-2025-0131-2025-05-21-legislative-proposal-published",
     "OEIL-2025-0131-2026-02-25-committee-decision-to-open-interinstitut",
-    "OEIL-2025-0131-2026-03-09-committee-decision-to-enter-into-interin"
+    "OEIL-2025-0131-2026-03-09-committee-decision-to-enter-into-interin",
+    "vote-200539-ep_position"
    ],
-   "label": "Provisional agreement reached",
-   "sigs": [],
-   "stage": "provisional_agreement",
+   "label": "Approved by Parliament",
+   "sigs": [
+    "2026-11-24|ep_position"
+   ],
+   "stage": "parliament_position",
    "title": "Amending Directives 2014/65/EU and (EU) 2022/2557 as regards the extension of certain mitigating measures available for small and medium sized enterprises to small mid-cap enterprises and further simplifying measures",
-   "votes": []
+   "votes": [
+    "200539"
+   ]
   },
   "2025-0132": {
    "acts": [
@@ -37717,23 +37773,30 @@
     "2025-0133-DEC-ADCP-2026-01-27",
     "2025-0133-DEC-ADCP-ENVI-2025-12-03",
     "2025-0133-DEC-ADCP-JURI-2026-09-07",
+    "2025-0133-DEC-DCPL-2026-11-24",
     "2025-0133-DEC-PLEIN1-2026-03-11",
     "2025-0133-DEC-VOAGT-2026-07-14",
     "2025-0133-DEPOT-2026-02-16",
     "2025-0133-MEET-TRI1-2026-04-15",
     "2025-0133-MEET-TRI1-2026-06-09",
+    "A-10-2026-0023-AM-001-180-DEPOT-2026-11-18+1",
     "A-10-2026-0023-AM-001-180-DEPOT-2026-11-20",
     "A-10-2026-0023-AM-181-181-DEPOT-2026-11-18",
     "IMCO-AM-779372-DEPOT-2025-10-24+1",
     "OEIL-2025-0133-2025-05-21-legislative-proposal-published",
     "OEIL-2025-0133-2026-01-27-committee-decision-to-open-interinstitut",
-    "OEIL-2025-0133-2026-03-09-committee-decision-to-enter-into-interin"
+    "OEIL-2025-0133-2026-03-09-committee-decision-to-enter-into-interin",
+    "vote-200531-ep_position"
    ],
-   "label": "Provisional agreement reached",
-   "sigs": [],
-   "stage": "provisional_agreement",
+   "label": "Approved by Parliament",
+   "sigs": [
+    "2026-11-24|ep_position"
+   ],
+   "stage": "parliament_position",
    "title": "Amending Directives 2000/14/EC, 2011/65/EU, 2013/53/EU, 2014/29/EU, 2014/30/EU, 2014/31/EU, 2014/32/EU, 2014/33/EU, 2014/34/EU, 2014/35/EU, 2014/53/EU, 2014/68/EU and 2014/90/EU of the European Parliament and of the Council as regards digitalisation and common specifications",
-   "votes": []
+   "votes": [
+    "200531"
+   ]
   },
   "2025-0134": {
    "acts": [],
@@ -37742,23 +37805,30 @@
     "2025-0134-ANPRO-2025-07-10",
     "2025-0134-DEC-ADCP-2026-01-27",
     "2025-0134-DEC-ADCP-ENVI-2025-12-03",
+    "2025-0134-DEC-DCPL-2026-11-24",
     "2025-0134-DEC-PLEIN1-2026-03-11",
     "2025-0134-DEC-VOAGT-2026-07-14",
     "2025-0134-DEPOT-2026-02-17",
     "2025-0134-MEET-TRI1-2026-04-15",
     "2025-0134-MEET-TRI1-2026-06-09",
+    "A-10-2026-0024-AM-001-085-DEPOT-2026-11-18+1",
     "A-10-2026-0024-AM-001-085-DEPOT-2026-11-20",
     "A-10-2026-0024-AM-086-086-DEPOT-2026-11-18",
     "IMCO-AM-779374-DEPOT-2025-10-24",
     "OEIL-2025-0134-2025-05-21-legislative-proposal-published",
     "OEIL-2025-0134-2026-01-27-committee-decision-to-open-interinstitut",
-    "OEIL-2025-0134-2026-03-09-committee-decision-to-enter-into-interin"
+    "OEIL-2025-0134-2026-03-09-committee-decision-to-enter-into-interin",
+    "vote-200533-ep_position"
    ],
-   "label": "Provisional agreement reached",
-   "sigs": [],
-   "stage": "provisional_agreement",
+   "label": "Approved by Parliament",
+   "sigs": [
+    "2026-11-24|ep_position"
+   ],
+   "stage": "parliament_position",
    "title": "Amending Regulations (EU) No 765/2008, (EU) 2016/424, (EU) 2016/425, (EU) 2016/426, (EU) 2023/1230, (EU) 2023/1542 and (EU) 2024/1781 as regards digitalisation and common specifications",
-   "votes": []
+   "votes": [
+    "200533"
+   ]
   },
   "2025-0172": {
    "acts": [
@@ -37791,14 +37861,15 @@
     "council-ST-14290-2026",
     "vote-196114-ep_position"
    ],
-   "label": "Published, not yet in force",
+   "label": "In force",
    "sigs": [
     "2026-09-16|ep_position",
     "2026-10-09|council_adoption",
     "2026-10-21|signature",
-    "2026-11-03|publication"
+    "2026-11-03|publication",
+    "2026-11-23|entry_into_force"
    ],
-   "stage": "published",
+   "stage": "in_force",
    "title": "Acceleration of permit-granting for defence readiness projects",
    "votes": [
     "196114",
@@ -37833,14 +37904,15 @@
     "council-ST-14294-2026",
     "vote-196161-ep_position"
    ],
-   "label": "Published, not yet in force",
+   "label": "In force",
    "sigs": [
     "2026-09-16|ep_position",
     "2026-10-09|council_adoption",
     "2026-10-21|signature",
-    "2026-11-03|publication"
+    "2026-11-03|publication",
+    "2026-11-23|entry_into_force"
    ],
-   "stage": "published",
+   "stage": "in_force",
    "title": "Amending Regulations (EC) No 1907/2006, (EC) No 1272/2008, (EU) No 528/2012, (EU) 2019/1021 and (EU) 2021/697 as regards defence readiness and facilitating defence investments and conditions for defence industry",
    "votes": [
     "196161",
@@ -37880,14 +37952,15 @@
     "council-ST-14295-2026",
     "vote-196116-ep_position"
    ],
-   "label": "Published, not yet in force",
+   "label": "In force",
    "sigs": [
     "2026-09-16|ep_position",
     "2026-10-09|council_adoption",
     "2026-10-21|signature",
-    "2026-11-03|publication"
+    "2026-11-03|publication",
+    "2026-11-23|entry_into_force"
    ],
-   "stage": "published",
+   "stage": "in_force",
    "title": "Amending Directives 2009/43/EC and 2009/81/EC, as regards the simplification of intra-EU transfers of defence-related products and the simplification of security and defence procurement",
    "votes": [
     "196116"
@@ -38028,21 +38101,26 @@
     "2025-0221-DEC-ADCP-ENVI-2026-05-05",
     "2025-0221-DEC-ADCP-REGI-2026-04-14",
     "2025-0221-DEC-ADCP-SEDE-2026-04-14",
+    "2025-0221-DEC-PLEIN1-2026-11-25",
     "2025-0221-DEPOT-2026-11-16",
     "CJ05-AM-787835-DEPOT-2026-04-24+2",
     "CJ05-AM-787838-DEPOT-2026-04-27",
     "CJ05-PR-786701-DEPOT-2026-03-25",
     "OEIL-2025-0221-2025-07-16-legislative-proposal-published",
-    "OEIL-2025-0221-2026-11-10-committee-decision-to-open-interinstitut"
+    "OEIL-2025-0221-2026-11-10-committee-decision-to-open-interinstitut",
+    "OEIL-2025-0221-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-10|committee_report",
-    "2026-11-10|negotiation_mandate"
+    "2026-11-10|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Establishing the Connecting Europe Facility for the period 2028-2034, amending Regulation (EU) 2024/1679 and repealing Regulation (EU) 2021/1153",
-   "votes": []
+   "votes": [
+    "201348"
+   ]
   },
   "2025-0222": {
    "acts": [],
@@ -38122,6 +38200,7 @@
     "2025-0227-DEC-ADCP-BUDG-2026-09-10",
     "2025-0227-DEC-ADCP-FEMM-2026-06-03",
     "2025-0227-DEC-ADCP-PECH-2026-07-09",
+    "2025-0227-DEC-PLEIN1-2026-11-25",
     "2025-0227-DEPOT-2026-10-20",
     "CJ19-AM-789067-DEPOT-2026-05-26+5",
     "CJ19-PR-784222-DEPOT-2026-04-17",
@@ -38132,11 +38211,14 @@
    "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-10-19|committee_report",
-    "2026-10-19|negotiation_mandate"
+    "2026-10-19|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
    "stage": "negotiations",
    "title": "Establishing Global Europe",
-   "votes": []
+   "votes": [
+    "200609"
+   ]
   },
   "2025-0232": {
    "acts": [
@@ -38284,20 +38366,25 @@
     "2025-0239-DEC-ADCP-CULT-2026-06-03",
     "2025-0239-DEC-ADCP-FEMM-2026-06-23",
     "2025-0239-DEC-ADCP-REGI-2026-07-15",
+    "2025-0239-DEC-PLEIN1-2026-11-25",
     "2025-0239-DEPOT-2026-11-11",
     "EMPL-AM-788859-DEPOT-2026-05-12+1",
     "EMPL-PR-784181-DEPOT-2026-04-20",
     "OEIL-2025-0239-2025-07-16-legislative-proposal-published",
-    "OEIL-2025-0239-2026-11-10-committee-decision-to-open-interinstitut"
+    "OEIL-2025-0239-2026-11-10-committee-decision-to-open-interinstitut",
+    "OEIL-2025-0239-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-10|committee_report",
-    "2026-11-10|negotiation_mandate"
+    "2026-11-10|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Establishing the European Social Fund as part of the National and Regional Partnership Plan set out in Regulation (EU) […] [NRPPlan] establishing conditions for the implementation of the Union support to quality employment, skills and social inclusion for the period from 2028 to 2034",
-   "votes": []
+   "votes": [
+    "201349"
+   ]
   },
   "2025-0240": {
    "acts": [],
@@ -38669,6 +38756,7 @@
     "2025-0311-DEPOT-2026-04-17",
     "2025-0311-MEET-TRI1-2026-05-06",
     "2025-0311-MEET-TRI1-2026-06-08",
+    "2025-0311-SIGN-2026-11-25",
     "A-10-2026-0099-AM-001-001-DEPOT-2026-10-02",
     "A-10-2026-0099-AM-002-002-DEPOT-2026-09-30+1",
     "ECON-AM-785223-DEPOT-2026-03-02",
@@ -38679,10 +38767,11 @@
     "council-ST-14960-2026",
     "vote-197356-ep_position"
    ],
-   "label": "Adopted by Parliament and Council",
+   "label": "Signed, awaiting publication",
    "sigs": [
     "2026-10-06|ep_position",
-    "2026-10-26|council_adoption"
+    "2026-10-26|council_adoption",
+    "2026-11-25|signature"
    ],
    "stage": "adopted",
    "title": "Amending Regulations (EU) No 1173/2011 and (EU) No 473/2013 as regards alignment with the EU economic governance framework and further simplification of that framework",
@@ -38704,6 +38793,7 @@
     "2025-0312-DEPOT-2026-04-17",
     "2025-0312-MEET-TRI1-2026-05-06",
     "2025-0312-MEET-TRI1-2026-06-08",
+    "2025-0312-SIGN-2026-11-25",
     "A-10-2026-0097-AM-001-001-DEPOT-2026-10-02",
     "A-10-2026-0097-AM-002-002-DEPOT-2026-09-30+1",
     "ECON-AM-785222-DEPOT-2026-03-03",
@@ -38714,10 +38804,11 @@
     "council-ST-14961-2026",
     "vote-197352-ep_position"
    ],
-   "label": "Adopted by Parliament and Council",
+   "label": "Signed, awaiting publication",
    "sigs": [
     "2026-10-06|ep_position",
-    "2026-10-26|council_adoption"
+    "2026-10-26|council_adoption",
+    "2026-11-25|signature"
    ],
    "stage": "adopted",
    "title": "Amending Regulation (EU) No 472/2013 as regards the economic and budgetary surveillance of Member States in the euro area experiencing or threatened with serious difficulties with respect to their financial stability",
@@ -38826,17 +38917,21 @@
     "2025-0335-DEC-ADCP-2026-11-19",
     "2025-0335-DEC-ADCP-ENVI-2026-03-17",
     "2025-0335-DEC-ADCP-IMCO-2026-03-24",
+    "2025-0335-DEC-PLEIN1-2026-11-25",
+    "2025-0335-DEPOT-2026-11-20",
     "ITRE-AM-786873-DEPOT-2026-04-14+8",
     "ITRE-PR-784432-DEPOT-2026-03-03",
     "OEIL-2025-0335-2025-06-25-legislative-proposal-published",
-    "OEIL-2025-0335-2026-11-19-committee-decision-to-open-interinstitut"
+    "OEIL-2025-0335-2026-11-19-committee-decision-to-open-interinstitut",
+    "OEIL-2025-0335-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-19|committee_report",
-    "2026-11-19|negotiation_mandate"
+    "2026-11-19|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Safety, resilience and sustainability of space activities in the Union",
    "votes": []
   },
@@ -38862,7 +38957,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-27|publication",
     "2026-08-16|entry_into_force"
    ],
    "stage": "in_force",
@@ -38884,6 +38978,7 @@
     "2025-0349-DEC-VOAGT-2026-09-10",
     "2025-0349-DEPOT-2026-04-16",
     "2025-0349-MEET-TRI1-2026-06-29",
+    "2025-0349-SIGN-2026-11-25",
     "A-10-2026-0095-AM-001-005-DEPOT-2026-10-02",
     "A-10-2026-0095-AM-006-006-DEPOT-2026-09-30",
     "CJ59-AM-785282-DEPOT-2026-03-05",
@@ -38893,11 +38988,12 @@
     "council-ST-14951-2026",
     "vote-197470-ep_position"
    ],
-   "label": "Adopted by Parliament and Council",
+   "label": "Signed, awaiting publication",
    "sigs": [
     "2026-09-10|provisional_agreement",
     "2026-10-07|ep_position",
-    "2026-10-26|council_adoption"
+    "2026-10-26|council_adoption",
+    "2026-11-25|signature"
    ],
    "stage": "adopted",
    "title": "Empowering France to accede to the Inter-American Convention for the Protection and Conservation of Sea Turtles",
@@ -38967,10 +39063,7 @@
     "vote-193665-ep_position"
    ],
    "label": "In force",
-   "sigs": [
-    "2026-07-24|publication",
-    "2026-07-27|entry_into_force"
-   ],
+   "sigs": [],
    "stage": "in_force",
    "title": "Digital Omnibus on AI",
    "votes": [
@@ -39003,13 +39096,15 @@
     "2025-0361-DEC-ADCP-2026-09-10",
     "2025-0361-DEC-PLEIN1-2026-10-07",
     "2025-0361-DEPOT-2026-09-15",
+    "2025-0361-MEET-TRI1-2026-10-22",
+    "2025-0361-MEET-TRI1-2026-11-19",
     "ECON-AM-789857-DEPOT-2026-06-10+1",
     "ECON-PR-787886-DEPOT-2026-04-28",
     "OEIL-2025-0361-2025-11-20-legislative-proposal-published",
     "OEIL-2025-0361-2026-09-10-committee-decision-to-open-interinstitut",
     "OEIL-2025-0361-2026-10-05-committee-decision-to-enter-into-interin"
    ],
-   "label": "Mandate to negotiate with the Council",
+   "label": "Negotiations with the Council",
    "sigs": [
     "2026-09-10|committee_report",
     "2026-09-10|negotiation_mandate",
@@ -39026,18 +39121,21 @@
     "2025-0362-ANPRO-2026-02-12",
     "2025-0362-DEC-ADCP-2026-11-10",
     "2025-0362-DEC-ADCP-EMPL-2026-07-15",
+    "2025-0362-DEC-PLEIN1-2026-11-25",
     "2025-0362-DEPOT-2026-11-16",
     "ECON-AM-789865-DEPOT-2026-07-07+1",
     "ECON-PR-787037-DEPOT-2026-06-02",
     "OEIL-2025-0362-2025-11-20-legislative-proposal-published",
-    "OEIL-2025-0362-2026-11-10-committee-decision-to-open-interinstitut"
+    "OEIL-2025-0362-2026-11-10-committee-decision-to-open-interinstitut",
+    "OEIL-2025-0362-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-10|committee_report",
-    "2026-11-10|negotiation_mandate"
+    "2026-11-10|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Amending Directives (EU) 2016/2341 and 2016/97 as regards the strengthening of the framework for occupational retirement provision",
    "votes": []
   },
@@ -39153,13 +39251,14 @@
     "2025-0384-DEC-ADCP-2026-11-04",
     "2025-0384-DEC-PLEIN1-2026-11-13",
     "2025-0384-DEPOT-2026-11-09",
+    "2025-0384-MEET-TRI1-2026-11-18",
     "CJ75-AM-790130-DEPOT-2026-06-23+1",
     "CJ75-PR-788848-DEPOT-2026-05-20",
     "OEIL-2025-0384-2025-12-03-legislative-proposal-published",
     "OEIL-2025-0384-2026-11-04-committee-decision-to-open-interinstitut",
     "OEIL-2025-0384-2026-11-11-committee-decision-to-enter-into-interin"
    ],
-   "label": "Mandate to negotiate with the Council",
+   "label": "Negotiations with the Council",
    "sigs": [
     "2026-11-04|committee_report",
     "2026-11-04|negotiation_mandate",
@@ -39238,6 +39337,8 @@
    "events": [
     "2025-0391-ANPRO-2026-02-09",
     "2025-0391-DEC-ADCP-2026-11-04",
+    "2025-0391-DEC-DCPL-2026-11-25",
+    "2025-0391-DEC-REFBAK-2026-11-25",
     "2025-0391-DEPOT-2026-11-11",
     "A-10-2026-0290-AM-001-081-DEPOT-2026-11-20",
     "A-10-2026-0290-AM-082-089-DEPOT-2026-11-18+7",
@@ -39245,15 +39346,21 @@
     "A-10-2026-0290-AM-131-131-DEPOT-2026-11-19",
     "ENVI-AM-790190-DEPOT-2026-06-24+1",
     "ENVI-PR-788874-DEPOT-2026-05-22",
-    "OEIL-2025-0391-2025-12-10-legislative-proposal-published"
+    "MTG-PL-2026-11-24-PVCRE-ITM-6-6",
+    "OEIL-2025-0391-2025-12-10-legislative-proposal-published",
+    "vote-201445-negotiation_mandate"
    ],
-   "label": "Committee report adopted",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
-    "2026-11-04|committee_report"
+    "2026-11-04|committee_report",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Speeding-up environmental assessments",
-   "votes": []
+   "votes": [
+    "201352",
+    "201445"
+   ]
   },
   "2025-0393": {
    "acts": [],
@@ -39446,21 +39553,29 @@
    "events": [
     "2025-0405-ANPRO-2026-02-12",
     "2025-0405-DEC-ADCP-2026-11-10",
+    "2025-0405-DEC-DCPL-2026-11-25",
     "2025-0405-DEPOT-2026-11-16",
     "A-10-2026-0304-AM-001-117-DEPOT-2026-11-20",
+    "A-10-2026-0304-AM-001-117-DEPOT-2026-11-23",
     "A-10-2026-0304-AM-118-118-DEPOT-2026-11-18+1",
+    "A-10-2026-0304-AM-118-118-DEPOT-2026-11-18+2",
     "CJ64-AM-792138-DEPOT-2026-09-10+1",
     "CJ64-AM-792139-DEPOT-2026-09-10",
     "CJ64-PR-789094-DEPOT-2026-07-13",
-    "OEIL-2025-0405-2025-12-16-legislative-proposal-published"
+    "OEIL-2025-0405-2025-12-16-legislative-proposal-published",
+    "vote-200637-negotiation_mandate"
    ],
-   "label": "Committee report adopted",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
-    "2026-11-10|committee_report"
+    "2026-11-10|committee_report",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Amending Directives 2001/18/EC and 2010/53/EU as regards the placing on the market of genetically modified micro-organisms and the processing of organs",
-   "votes": []
+   "votes": [
+    "200637",
+    "201119"
+   ]
   },
   "2025-0406": {
    "acts": [],
@@ -39570,6 +39685,7 @@
    "events": [
     "2025-0417-ANPRO-2026-01-27",
     "2025-0417-DEC-ADCP-2026-07-14",
+    "2025-0417-DEC-DCPL-2026-11-24",
     "2025-0417-DEC-PLEIN1-2026-09-16",
     "2025-0417-DEC-VOAGT-2026-11-04",
     "2025-0417-DEPOT-2026-07-29",
@@ -39578,16 +39694,20 @@
     "AGRI-AM-785380-DEPOT-2026-03-26",
     "OEIL-2025-0417-2025-12-16-legislative-proposal-published",
     "OEIL-2025-0417-2026-07-14-committee-decision-to-open-interinstitut",
-    "OEIL-2025-0417-2026-09-14-committee-decision-to-enter-into-interin"
+    "OEIL-2025-0417-2026-09-14-committee-decision-to-enter-into-interin",
+    "vote-200577-ep_position"
    ],
-   "label": "Provisional agreement reached",
+   "label": "Approved by Parliament",
    "sigs": [
     "2026-09-16|negotiation_mandate",
-    "2026-11-04|provisional_agreement"
+    "2026-11-04|provisional_agreement",
+    "2026-11-24|ep_position"
    ],
-   "stage": "provisional_agreement",
+   "stage": "parliament_position",
    "title": "Amending Regulation (EU) 2018/848 as regards certain production, labelling and certification rules and certain rules on trade with third countries",
-   "votes": []
+   "votes": [
+    "200577"
+   ]
   },
   "2025-0418": {
    "acts": [],
@@ -39699,6 +39819,7 @@
     "2025-0422-ANPRO-2026-02-09",
     "2025-0422-DEC-ADCP-2026-11-04",
     "2025-0422-DEC-ADCP-ITRE-2026-10-22",
+    "2025-0422-DEPOT-2026-11-16",
     "CJ76-AM-789089-DEPOT-2026-06-26+1",
     "CJ76-AM-789167-DEPOT-2026-06-30",
     "OEIL-2025-0422-2025-12-16-legislative-proposal-published"
@@ -39789,9 +39910,6 @@
    ],
    "label": "In force",
    "sigs": [
-    "2026-07-23|council_adoption",
-    "2026-07-24|signature",
-    "2026-07-28|publication",
     "2026-07-31|entry_into_force"
    ],
    "stage": "in_force",
@@ -39873,7 +39991,9 @@
   },
   "2025-0531": {
    "acts": [],
-   "council": [],
+   "council": [
+    "ST-16125-2026"
+   ],
    "events": [
     "2025-0531-ANPRO-2025-09-08",
     "2025-0531-DEC-ADCP-2026-04-15",
@@ -39884,6 +40004,7 @@
     "2025-0531-DEC-VOAGT-2026-07-14",
     "2025-0531-DEPOT-2026-04-20",
     "2025-0531-MEET-TRI1-2026-06-16",
+    "2025-0531-SIGN-2026-11-25",
     "A-10-2026-0104-AM-118-118-DEPOT-2026-10-14+4",
     "CJ45-AM-784138-DEPOT-2026-01-28",
     "CJ45-AM-784152-DEPOT-2026-02-06",
@@ -39892,14 +40013,17 @@
     "CJ45-PR-782180-DEPOT-2026-01-09",
     "MTG-PL-2026-10-22-PVCRE-ITM-3",
     "OEIL-2025-0531-2025-07-08-legislative-proposal-published",
+    "council-ST-16125-2026",
     "vote-190979-negotiation_mandate",
     "vote-198430-ep_position"
    ],
-   "label": "Approved by Parliament",
+   "label": "Signed, awaiting publication",
    "sigs": [
-    "2026-10-22|ep_position"
+    "2026-10-22|ep_position",
+    "2026-11-19|council_adoption",
+    "2026-11-25|signature"
    ],
-   "stage": "parliament_position",
+   "stage": "adopted",
    "title": "Amending Regulations (EC) No 1272/2008, (EC) No 1223/2009 and (EU) 2019/1009 as regards simplification of certain requirements and procedures for chemical products",
    "votes": [
     "190979",
@@ -39916,20 +40040,25 @@
     "2025-0540-DEC-ADCP-2026-11-19",
     "2025-0540-DEC-ADCP-BUDG-2026-07-15",
     "2025-0540-DEC-ADCP-DEVE-2026-07-15",
+    "2025-0540-DEC-PLEIN1-2026-11-25",
     "2025-0540-DEPOT-2026-11-20",
     "LIBE-AM-790113-DEPOT-2026-06-24+2",
     "LIBE-PR-788886-DEPOT-2026-06-03",
     "OEIL-2025-0540-2025-07-16-legislative-proposal-published",
-    "OEIL-2025-0540-2026-11-19-committee-decision-to-open-interinstitut"
+    "OEIL-2025-0540-2026-11-19-committee-decision-to-open-interinstitut",
+    "OEIL-2025-0540-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-19|committee_report",
-    "2026-11-19|negotiation_mandate"
+    "2026-11-19|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Establishing the Union support for asylum, migration and integration for the period from 2028 to 2034",
-   "votes": []
+   "votes": [
+    "201345"
+   ]
   },
   "2025-0541": {
    "acts": [],
@@ -39938,18 +40067,21 @@
     "2025-0541-ANPRO-2025-10-23",
     "2025-0541-DEC-ADCP-2026-11-19",
     "2025-0541-DEC-ADCP-BUDG-2026-07-15",
+    "2025-0541-DEC-PLEIN1-2026-11-25",
     "2025-0541-DEPOT-2026-11-20",
     "LIBE-AM-790132-DEPOT-2026-06-24+1",
     "LIBE-PR-788793-DEPOT-2026-05-19",
     "OEIL-2025-0541-2025-07-16-legislative-proposal-published",
-    "OEIL-2025-0541-2026-11-19-committee-decision-to-open-interinstitut"
+    "OEIL-2025-0541-2026-11-19-committee-decision-to-open-interinstitut",
+    "OEIL-2025-0541-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-19|committee_report",
-    "2026-11-19|negotiation_mandate"
+    "2026-11-19|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Establishing the Union support for the Schengen area, for European integrated border management and for the common policy on visas for the period from 2028 to 2034",
    "votes": []
   },
@@ -39990,20 +40122,25 @@
     "2025-0543-DEC-ADCP-CULT-2026-03-18",
     "2025-0543-DEC-ADCP-REGI-2026-03-25",
     "2025-0543-DEC-ADCP-SEDE-2026-03-19",
+    "2025-0543-DEC-PLEIN1-2026-11-25",
     "2025-0543-DEPOT-2026-11-13",
     "ITRE-AM-786953-DEPOT-2026-04-10+3",
     "ITRE-PR-785237-DEPOT-2026-03-13",
     "OEIL-2025-0543-2025-07-16-legislative-proposal-published",
-    "OEIL-2025-0543-2026-11-10-committee-decision-to-open-interinstitut"
+    "OEIL-2025-0543-2026-11-10-committee-decision-to-open-interinstitut",
+    "OEIL-2025-0543-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-10|committee_report",
-    "2026-11-10|negotiation_mandate"
+    "2026-11-10|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Establishing Horizon Europe, the Framework Programme for Research and Innovation, for the period 2028-2034 laying down its rules for participation and dissemination, and repealing Regulation (EU) 2021/695",
-   "votes": []
+   "votes": [
+    "201347"
+   ]
   },
   "2025-0544": {
    "acts": [],
@@ -40046,9 +40183,11 @@
     "CJ13-AM-797489-DEPOT-2026-11-03+8",
     "CJ13-AM-797489-DEPOT-2026-11-03+9",
     "CJ13-AM-797494-DEPOT-2026-10-29",
+    "CJ13-AM-797494-DEPOT-2026-11-26+3",
     "CJ13-AM-797542-DEPOT-2026-11-04",
     "CJ13-AM-797543-DEPOT-2026-11-10",
     "CJ13-AM-797588-DEPOT-2026-11-05",
+    "CJ13-AM-797588-DEPOT-2026-11-25",
     "CJ13-PR-787767-DEPOT-2026-10-05",
     "OEIL-2025-0545-2025-07-16-legislative-proposal-published"
    ],
@@ -40067,19 +40206,25 @@
     "2025-0550-DEC-ADCP-BUDG-2026-07-15",
     "2025-0550-DEC-ADCP-CONT-2026-06-02",
     "2025-0550-DEC-ADCP-FEMM-2026-06-23",
+    "2025-0550-DEC-PLEIN1-2026-11-25",
+    "2025-0550-DEPOT-2026-11-20",
     "CJ65-AM-790057-DEPOT-2026-06-19+5",
     "CJ65-PR-787746-DEPOT-2026-05-07",
     "OEIL-2025-0550-2025-07-16-legislative-proposal-published",
-    "OEIL-2025-0550-2026-11-19-committee-decision-to-open-interinstitut"
+    "OEIL-2025-0550-2026-11-19-committee-decision-to-open-interinstitut",
+    "OEIL-2025-0550-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-19|committee_report",
-    "2026-11-19|negotiation_mandate"
+    "2026-11-19|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Establishing the 'AgoraEU' programme for the period 2028-2034, and repealing Regulations (EU) 2021/692 and (EU) 2021/818",
-   "votes": []
+   "votes": [
+    "201344"
+   ]
   },
   "2025-0555": {
    "acts": [],
@@ -40097,22 +40242,27 @@
     "2025-0555-DEC-ADCP-REGI-2026-05-06",
     "2025-0555-DEC-ADCP-SANT-2026-05-06",
     "2025-0555-DEC-ADCP-SEDE-2026-04-14",
+    "2025-0555-DEC-PLEIN1-2026-11-25",
     "2025-0555-DEPOT-2026-11-18",
     "ITRE-AM-788849-DEPOT-2026-05-18+13",
     "ITRE-AM-788849-DEPOT-2026-05-18+6",
     "ITRE-AM-788898-DEPOT-2026-06-05",
     "ITRE-PR-784506-DEPOT-2026-04-20",
     "OEIL-2025-0555-2025-07-16-legislative-proposal-published",
-    "OEIL-2025-0555-2026-11-10-committee-decision-to-open-interinstitut"
+    "OEIL-2025-0555-2026-11-10-committee-decision-to-open-interinstitut",
+    "OEIL-2025-0555-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-10|committee_report",
-    "2026-11-10|negotiation_mandate"
+    "2026-11-10|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Establishing the European Competitiveness Fund ('ECF’), including the specific programme for defence research and innovation activities",
-   "votes": []
+   "votes": [
+    "201346"
+   ]
   },
   "2025-0571": {
    "acts": [],
@@ -40529,6 +40679,7 @@
    "events": [
     "2026-0013-ANPRO-2026-04-27",
     "2026-0013-DEC-ADCP-LIBE-2026-11-04",
+    "ITRE-AM-798562-DEPOT-2026-11-26+10",
     "ITRE-PR-791994-DEPOT-2026-10-20",
     "OEIL-2026-0013-2026-01-21-legislative-proposal-published"
    ],
@@ -40703,6 +40854,7 @@
     "2026-0085-ANPRO-2026-04-27",
     "2026-0085-DEC-ADCP-2026-09-10",
     "2026-0085-DEC-DCPL-2026-09-15",
+    "2026-0085-DEC-DCPL-2026-11-24",
     "2026-0085-DEC-REFBAK-2026-09-15",
     "2026-0085-DEC-VOAGT-2026-11-04",
     "2026-0085-DEPOT-2026-09-10",
@@ -40714,18 +40866,21 @@
     "ENVI-PR-789007-DEPOT-2026-06-11",
     "MTG-PL-2026-09-14-PVCRE-ITM-17",
     "OEIL-2026-0085-2026-04-01-legislative-proposal-published",
-    "vote-196438-negotiation_mandate"
+    "vote-196438-negotiation_mandate",
+    "vote-200575-ep_position"
    ],
-   "label": "Provisional agreement reached",
+   "label": "Approved by Parliament",
    "sigs": [
     "2026-09-10|committee_report",
     "2026-09-15|negotiation_mandate",
-    "2026-11-04|provisional_agreement"
+    "2026-11-04|provisional_agreement",
+    "2026-11-24|ep_position"
    ],
-   "stage": "provisional_agreement",
+   "stage": "parliament_position",
    "title": "Amending Decision (EU) 2015/1814 as regards ceasing the invalidation of allowances in the market stability reserve",
    "votes": [
-    "196438"
+    "196438",
+    "200575"
    ]
   },
   "2026-0099": {
@@ -40817,17 +40972,20 @@
    "events": [
     "2026-0134-ANPRO-2026-09-14",
     "2026-0134-DEC-ADCP-2026-11-19",
+    "2026-0134-DEC-PLEIN1-2026-11-25",
     "2026-0134-DEPOT-2026-11-19",
     "ITRE-AM-792052-DEPOT-2026-09-17+1",
     "OEIL-2026-0134-2026-05-27-legislative-proposal-published",
-    "OEIL-2026-0134-2026-11-19-committee-decision-to-open-interinstitut"
+    "OEIL-2026-0134-2026-11-19-committee-decision-to-open-interinstitut",
+    "OEIL-2026-0134-2026-11-23-committee-decision-to-enter-into-interin"
    ],
-   "label": "Committee decided to negotiate with the Council",
+   "label": "Mandate to negotiate with the Council",
    "sigs": [
     "2026-11-19|committee_report",
-    "2026-11-19|negotiation_mandate"
+    "2026-11-19|negotiation_mandate",
+    "2026-11-25|negotiation_mandate"
    ],
-   "stage": "proposed",
+   "stage": "negotiations",
    "title": "Mobile satellite services: selection and authorisation of systems using the harmonised 2 GHz frequency band",
    "votes": []
   },
@@ -40836,6 +40994,7 @@
    "council": [],
    "events": [
     "2026-0138-ANPRO-2026-09-17",
+    "CJ18-PR-797430-DEPOT-2026-11-17",
     "OEIL-2026-0138-2026-06-03-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
@@ -41040,6 +41199,7 @@
    "council": [],
    "events": [
     "2026-0210-ANPRO-2026-09-17",
+    "2026-0210-DEC-ADCP-TRAN-2026-11-23",
     "ENVI-AM-796426-DEPOT-2026-10-15",
     "ENVI-PR-791997-DEPOT-2026-09-15",
     "OEIL-2026-0210-2026-07-17-legislative-proposal-published"
@@ -41084,6 +41244,7 @@
    "events": [
     "2026-0212-ANPRO-2026-09-17",
     "2026-0212-DEC-ADCP-BUDG-2026-11-19",
+    "2026-0212-DEC-ADCP-TRAN-2026-11-23",
     "ENVI-AM-796250-DEPOT-2026-10-21+3",
     "ENVI-AM-796487-DEPOT-2026-10-13+2",
     "ENVI-AM-796489-DEPOT-2026-10-20+6",
@@ -41104,9 +41265,7 @@
     "OEIL-2026-0215-2026-07-23-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
-   "sigs": [
-    "2026-07-23|proposal"
-   ],
+   "sigs": [],
    "stage": "proposed",
    "title": "Specific stability requirements for ro-ro passenger ships",
    "votes": []
@@ -41119,9 +41278,7 @@
     "OEIL-2026-0229-2026-07-29-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
-   "sigs": [
-    "2026-07-29|proposal"
-   ],
+   "sigs": [],
    "stage": "proposed",
    "title": "Farm Sustainability Data Network",
    "votes": []
@@ -41343,19 +41500,24 @@
    "events": [
     "2026-0292-ANPRO-2026-11-11",
     "2026-0292-DEC-ADCP-2026-11-03",
+    "2026-0292-DEC-DCPL-2026-11-25",
     "2026-0292-DEPOT-2026-11-04",
     "ECON-PR-797362-DEPOT-2026-10-22",
     "OEIL-2026-0292-2026-10-01-legislative-proposal-published",
-    "OEIL-2026-0292-2026-11-03-vote-in-committee"
+    "OEIL-2026-0292-2026-11-03-vote-in-committee",
+    "vote-200586-ep_position"
    ],
-   "label": "Committee report adopted",
+   "label": "Parliament gave its opinion",
    "sigs": [
     "2026-10-01|proposal",
-    "2026-11-03|committee_report"
+    "2026-11-03|committee_report",
+    "2026-11-25|ep_position"
    ],
-   "stage": "proposed",
+   "stage": "parliament_position",
    "title": "VAT fraud: extension of the application period of the optional reverse charge mechanism and Quick Reaction Mechanism",
-   "votes": []
+   "votes": [
+    "200586"
+   ]
   },
   "2026-0294": {
    "acts": [],
@@ -41405,6 +41567,7 @@
    "acts": [],
    "council": [],
    "events": [
+    "2026-0307-ANPRO-2026-11-26",
     "OEIL-2026-0307-2026-10-06-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
@@ -41433,6 +41596,7 @@
    "acts": [],
    "council": [],
    "events": [
+    "2026-0324-ANPRO-2026-11-23",
     "OEIL-2026-0324-2026-10-22-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
@@ -41450,27 +41614,35 @@
     "2026-0325-ANPRO-2026-10-19",
     "2026-0325-DEC-DCPL-2026-10-22",
     "2026-0325-DEC-REFBAK-2026-10-22",
+    "2026-0325-DEC-VOAGT-2026-11-23",
     "2026-0325-MEET-TRI1-2026-11-18",
     "MTG-PL-2026-10-20-PVCRE-ITM-6-1",
+    "MTG-PL-2026-11-26-PVCRE-ITM-8-4",
     "OEIL-2026-0325-2026-10-14-legislative-proposal-published",
-    "vote-199592-negotiation_mandate"
+    "vote-199592-negotiation_mandate",
+    "vote-201321-ep_position"
    ],
-   "label": "Negotiations with the Council",
+   "label": "Approved by Parliament",
    "sigs": [
     "2026-10-14|proposal",
-    "2026-10-22|negotiation_mandate"
+    "2026-10-22|negotiation_mandate",
+    "2026-11-23|provisional_agreement",
+    "2026-11-26|ep_position"
    ],
-   "stage": "negotiations",
+   "stage": "parliament_position",
    "title": "Reduction of methane emissions in the energy sector: postponement of certain obligations",
    "votes": [
     "199567",
-    "199592"
+    "199592",
+    "201321",
+    "201499"
    ]
   },
   "2026-0329": {
    "acts": [],
    "council": [],
    "events": [
+    "2026-0329-ANPRO-2026-11-23",
     "OEIL-2026-0329-2026-10-23-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
@@ -41499,6 +41671,7 @@
    "acts": [],
    "council": [],
    "events": [
+    "2026-0340-ANPRO-2026-11-23",
     "OEIL-2026-0340-2026-10-27-legislative-proposal-published"
    ],
    "label": "Proposal under examination",
@@ -41582,9 +41755,13 @@
   "2026-0363": {
    "acts": [],
    "council": [],
-   "events": [],
+   "events": [
+    "OEIL-2026-0363-2026-11-18-legislative-proposal-published"
+   ],
    "label": "Proposal under examination",
-   "sigs": [],
+   "sigs": [
+    "2026-11-18|proposal"
+   ],
    "stage": "proposed",
    "title": "Instrument for Coordinated Support to Ukraine for 2027",
    "votes": []
@@ -41592,11 +41769,29 @@
   "2026-0364": {
    "acts": [],
    "council": [],
-   "events": [],
+   "events": [
+    "OEIL-2026-0364-2026-11-18-preparatory-document"
+   ],
    "label": "Under examination in Parliament",
-   "sigs": [],
+   "sigs": [
+    "2026-11-18|proposal"
+   ],
    "stage": "proposed",
    "title": "Multiannual financial framework 2021-2027: extension of the EU budget guarantee for loans to Ukraine",
+   "votes": []
+  },
+  "2026-0365": {
+   "acts": [],
+   "council": [],
+   "events": [
+    "OEIL-2026-0365-2026-11-25-legislative-proposal-published"
+   ],
+   "label": "Proposal under examination",
+   "sigs": [
+    "2026-11-25|proposal"
+   ],
+   "stage": "proposed",
+   "title": "Quantum Act",
    "votes": []
   },
   "2026-0900": {
